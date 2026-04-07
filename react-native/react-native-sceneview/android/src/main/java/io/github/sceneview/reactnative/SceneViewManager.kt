@@ -215,7 +215,17 @@ class SceneViewManager : SimpleViewManager<FrameLayout>() {
                 } else {
                     true
                 }
-                state.modelPaths.add(ModelNodeData(src = src, scale = scale, animate = animate))
+                val position = readPosition(map, "position")
+                val rotation = readRotation(map, "rotation")
+                state.modelPaths.add(
+                    ModelNodeData(
+                        src = src,
+                        scale = scale,
+                        animate = animate,
+                        position = position,
+                        rotation = rotation,
+                    )
+                )
             }
         }
     }

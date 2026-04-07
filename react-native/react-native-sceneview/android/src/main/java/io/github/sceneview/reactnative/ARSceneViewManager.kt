@@ -2,8 +2,10 @@ package io.github.sceneview.reactnative
 
 import android.widget.FrameLayout
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import com.facebook.react.bridge.ReadableArray
