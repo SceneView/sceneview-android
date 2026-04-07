@@ -165,7 +165,17 @@ public class AugmentedFaceNode {
 
             if let existing = meshEntity {
                 // Update existing mesh in place (iOS 15+)
-                try existing.model?.mesh.replace(with: meshResource.contents)
+                if #available(iOS 15.0, *) {
+                    try existing.model?.mesh.replace(with: meshResource.contents)
+                } else {
+                    // Fallback: recreate the entity on older iOS
+                    existing.removeFromParent()
+                    let mat = material ?? SimpleMaterial(color: .white.withAlphaComponent(0.0), isMetallic: false)
+                    let entity = ModelEntity(mesh: meshResource, materials: [mat])
+                    entity.name = "faceMesh"
+                    anchorEntity.addChild(entity)
+                    meshEntity = entity
+                }
             } else {
                 // Create new entity with the mesh
                 let mat = material ?? SimpleMaterial(
