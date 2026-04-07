@@ -55,7 +55,8 @@ public class AugmentedFaceNode {
     }
 
     /// The ARKit face anchor being tracked.
-    public let faceAnchor: ARFaceAnchor
+    /// Updated on every `session(_:didUpdate:)` callback with the latest geometry and blend shapes.
+    public private(set) var faceAnchor: ARFaceAnchor
 
     /// The RealityKit anchor entity positioned at the face.
     public let anchorEntity: AnchorEntity
@@ -318,7 +319,7 @@ public class AugmentedFaceNode {
 
     /// Removes all child content from the face anchor.
     public func removeAll() {
-        for child in anchorEntity.children {
+        for child in Array(anchorEntity.children) {
             anchorEntity.removeChild(child)
         }
     }
@@ -454,6 +455,7 @@ public struct ARFaceSceneView: UIViewRepresentable {
 
                 if faceAnchor.isTracked {
                     node.trackingState = .tracking
+                    node.faceAnchor = faceAnchor // Update with latest geometry + blend shapes
                     onFaceUpdated?(faceAnchor, node)
                 } else {
                     node.trackingState = .limited
