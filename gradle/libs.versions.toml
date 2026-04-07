@@ -38,7 +38,7 @@ tvMaterial = "1.0.1"
 playAppUpdate = "2.1.0"
 
 # Publishing & Docs
-mavenPublish = "0.33.0"
+mavenPublish = "0.36.0"
 dokka = "2.2.0"
 
 # Testing
