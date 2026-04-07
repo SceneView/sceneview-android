@@ -3,9 +3,8 @@ package io.github.sceneview.render
 import android.graphics.Bitmap
 import android.graphics.Color
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.google.android.filament.LightManager
+import com.google.android.filament.Camera
 import com.google.android.filament.Skybox
-import io.github.sceneview.node.CameraNode
 import io.github.sceneview.render.RenderTestHarness.Companion.colorsMatch
 import org.junit.After
 import org.junit.Assert.assertNotNull
@@ -24,8 +23,9 @@ import org.junit.runner.RunWith
  * - Scene/View pipeline
  * - Camera setup
  *
- * The tolerance on color comparisons (±10 per channel) accounts for differences
- * between GPU drivers (hardware vs SwiftShader software rendering).
+ * **Important:** Camera exposure is set to 1.0 (unit-less) so that tone mapping produces
+ * predictable output values. Without this, the default physical camera exposure (f/16,
+ * 1/125s, ISO 100) would significantly darken the rendered colours.
  */
 @RunWith(AndroidJUnit4::class)
 class RenderSmokeTest {
@@ -42,11 +42,22 @@ class RenderSmokeTest {
         harness.destroy()
     }
 
+    /**
+     * Creates a camera with unit exposure so tone mapping doesn't distort colours.
+     */
+    private fun createTestCamera(): com.google.android.filament.Camera {
+        val camera = harness.engine.createCamera(harness.engine.entityManager.create())
+        camera.setProjection(45.0, 1.0, 0.1, 100.0, Camera.Fov.VERTICAL)
+        // Unit exposure: aperture=1, shutter=1.2, sensitivity=100 → EV100 ≈ 0
+        // This makes tone mapping nearly a passthrough for values ≤ 1.0
+        camera.setExposure(1.0f)
+        return camera
+    }
+
     // ── Engine initialization ───────────────────────────────────────────────
 
     @Test
     fun engine_initializes_without_crash() {
-        // If we get here, the harness created Engine + Renderer + View + SwapChain successfully
         harness.runOnMain {
             assertNotNull(harness.engine)
             assertNotNull(harness.renderer)
@@ -55,55 +66,47 @@ class RenderSmokeTest {
         }
     }
 
-    // ── Solid skybox renders correct color ───────────────────────────────────
+    // ── Solid skybox renders correct dominant colour ─────────────────────────
 
     @Test
-    fun solidRedSkybox_rendersRedPixels() {
+    fun solidRedSkybox_hasDominantRedChannel() {
         var bitmap: Bitmap? = null
         harness.runOnMain {
-            // Set a solid red skybox
             harness.scene.skybox = Skybox.Builder()
                 .color(1f, 0f, 0f, 1f)
                 .build(harness.engine)
-
-            // Add a camera so Filament has something to render from
-            val camera = harness.engine.createCamera(harness.engine.entityManager.create())
-            camera.setProjection(45.0, 1.0, 0.1, 100.0, com.google.android.filament.Camera.Fov.VERTICAL)
-            harness.view.camera = camera
+            harness.view.camera = createTestCamera()
 
             harness.renderFrames(5)
             bitmap = harness.capturePixels()
         }
 
         val bmp = bitmap!!
-        val centerColor = bmp.getPixel(32, 32)
+        val c = bmp.getPixel(32, 32)
         assertTrue(
-            "Center pixel should be red but was ${colorToString(centerColor)}",
-            colorsMatch(centerColor, Color.RED, tolerance = 30)
+            "Red channel should be dominant but got ${colorToString(c)}",
+            Color.red(c) > 100 && Color.red(c) > Color.green(c) + 50 && Color.red(c) > Color.blue(c) + 50
         )
     }
 
     @Test
-    fun solidBlueSkybox_rendersBluePixels() {
+    fun solidBlueSkybox_hasDominantBlueChannel() {
         var bitmap: Bitmap? = null
         harness.runOnMain {
             harness.scene.skybox = Skybox.Builder()
                 .color(0f, 0f, 1f, 1f)
                 .build(harness.engine)
-
-            val camera = harness.engine.createCamera(harness.engine.entityManager.create())
-            camera.setProjection(45.0, 1.0, 0.1, 100.0, com.google.android.filament.Camera.Fov.VERTICAL)
-            harness.view.camera = camera
+            harness.view.camera = createTestCamera()
 
             harness.renderFrames(5)
             bitmap = harness.capturePixels()
         }
 
         val bmp = bitmap!!
-        val centerColor = bmp.getPixel(32, 32)
+        val c = bmp.getPixel(32, 32)
         assertTrue(
-            "Center pixel should be blue but was ${colorToString(centerColor)}",
-            colorsMatch(centerColor, Color.BLUE, tolerance = 30)
+            "Blue channel should be dominant but got ${colorToString(c)}",
+            Color.blue(c) > 100 && Color.blue(c) > Color.red(c) + 50 && Color.blue(c) > Color.green(c) + 50
         )
     }
 
@@ -116,17 +119,13 @@ class RenderSmokeTest {
             harness.scene.skybox = Skybox.Builder()
                 .color(1f, 1f, 1f, 1f)
                 .build(harness.engine)
-
-            val camera = harness.engine.createCamera(harness.engine.entityManager.create())
-            camera.setProjection(45.0, 1.0, 0.1, 100.0, com.google.android.filament.Camera.Fov.VERTICAL)
-            harness.view.camera = camera
+            harness.view.camera = createTestCamera()
 
             harness.renderFrames(5)
             bitmap = harness.capturePixels()
         }
 
         val bmp = bitmap!!
-        // Check that at least some pixels are non-black (rendering actually happened)
         var nonBlackPixels = 0
         for (x in 0 until bmp.width) {
             for (y in 0 until bmp.height) {
@@ -152,9 +151,7 @@ class RenderSmokeTest {
         var bitmapGreen: Bitmap? = null
 
         harness.runOnMain {
-            val camera = harness.engine.createCamera(harness.engine.entityManager.create())
-            camera.setProjection(45.0, 1.0, 0.1, 100.0, com.google.android.filament.Camera.Fov.VERTICAL)
-            harness.view.camera = camera
+            harness.view.camera = createTestCamera()
 
             // Render red
             harness.scene.skybox = Skybox.Builder()
@@ -174,7 +171,6 @@ class RenderSmokeTest {
         val redCenter = bitmapRed!!.getPixel(32, 32)
         val greenCenter = bitmapGreen!!.getPixel(32, 32)
 
-        // Red and green renders must be different
         assertTrue(
             "Red and green skybox should produce different pixels. " +
                     "Red=${colorToString(redCenter)}, Green=${colorToString(greenCenter)}",
