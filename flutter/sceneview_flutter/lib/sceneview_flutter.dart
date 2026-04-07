@@ -279,16 +279,35 @@ class SceneView extends StatefulWidget {
 class _SceneViewState extends State<SceneView> {
   static const String _viewType = 'io.github.sceneview.flutter/sceneview';
 
+  /// Internal controller created when the widget has callbacks but no
+  /// explicit controller. This ensures onTap is never silently dropped.
+  SceneViewController? _internalController;
+
+  SceneViewController get _effectiveController {
+    if (widget.controller != null) return widget.controller!;
+    _internalController ??= SceneViewController();
+    return _internalController!;
+  }
+
   void _onPlatformViewCreated(int id) {
-    widget.controller?.attach(id);
-    if (widget.onTap != null) {
-      widget.controller?.onTap = widget.onTap;
-    }
+    final controller = _effectiveController;
+    controller.attach(id);
+    controller.onTap = widget.onTap;
     widget.onViewCreated?.call();
   }
 
   @override
+  void didUpdateWidget(covariant SceneView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final controller = widget.controller ?? _internalController;
+    if (controller != null && controller.isAttached) {
+      controller.onTap = widget.onTap;
+    }
+  }
+
+  @override
   void dispose() {
+    _internalController?.dispose();
     widget.controller?.dispose();
     super.dispose();
   }
@@ -379,19 +398,38 @@ class ARSceneView extends StatefulWidget {
 class _ARSceneViewState extends State<ARSceneView> {
   static const String _viewType = 'io.github.sceneview.flutter/arsceneview';
 
+  /// Internal controller created when the widget has callbacks but no
+  /// explicit controller. This ensures onTap/onPlaneDetected are never
+  /// silently dropped.
+  SceneViewController? _internalController;
+
+  SceneViewController get _effectiveController {
+    if (widget.controller != null) return widget.controller!;
+    _internalController ??= SceneViewController();
+    return _internalController!;
+  }
+
   void _onPlatformViewCreated(int id) {
-    widget.controller?.attach(id);
-    if (widget.onTap != null) {
-      widget.controller?.onTap = widget.onTap;
-    }
-    if (widget.onPlaneDetected != null) {
-      widget.controller?.onPlaneDetected = widget.onPlaneDetected;
-    }
+    final controller = _effectiveController;
+    controller.attach(id);
+    controller.onTap = widget.onTap;
+    controller.onPlaneDetected = widget.onPlaneDetected;
     widget.onViewCreated?.call();
   }
 
   @override
+  void didUpdateWidget(covariant ARSceneView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final controller = widget.controller ?? _internalController;
+    if (controller != null && controller.isAttached) {
+      controller.onTap = widget.onTap;
+      controller.onPlaneDetected = widget.onPlaneDetected;
+    }
+  }
+
+  @override
   void dispose() {
+    _internalController?.dispose();
     widget.controller?.dispose();
     super.dispose();
   }

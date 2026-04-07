@@ -369,17 +369,22 @@ public struct ARFaceSceneView: UIViewRepresentable {
     /// - Parameters:
     ///   - maxFaces: Maximum number of faces to track simultaneously. Default 1.
     ///     ARKit supports up to 3 on A12+ devices.
+    ///   - isWorldTrackingEnabled: Whether to enable world tracking alongside face tracking.
+    ///     Only effective on devices that support it (`ARFaceTrackingConfiguration.supportsWorldTracking`).
+    ///     Default `false`.
     ///   - onFaceDetected: Called when a new face is detected. Return an
     ///     `AugmentedFaceNode` to track it, or nil to ignore.
     ///   - onFaceUpdated: Called each frame while a face is tracked.
     ///   - onFaceLost: Called when a face is no longer tracked.
     public init(
         maxFaces: Int = 1,
+        isWorldTrackingEnabled: Bool = false,
         onFaceDetected: ((ARFaceAnchor, ARView) -> AugmentedFaceNode?)? = nil,
         onFaceUpdated: ((ARFaceAnchor, AugmentedFaceNode) -> Void)? = nil,
         onFaceLost: ((AugmentedFaceNode) -> Void)? = nil
     ) {
         self.maxFaces = maxFaces
+        self.isWorldTrackingEnabled = isWorldTrackingEnabled
         self.onFaceDetected = onFaceDetected
         self.onFaceUpdated = onFaceUpdated
         self.onFaceLost = onFaceLost
