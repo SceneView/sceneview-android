@@ -75,10 +75,31 @@
 - #785 Filament bump (duplicate)
 - #782 maven-publish 0.36 (replaced by manual 0.35 upgrade)
 
+### Cross-platform parity (new)
+- **Flutter**: +onTap, +onPlaneDetected callbacks, +model rotation (rotationX/Y/Z)
+- **React Native**: +GeometryNode rendering (cube/sphere/cylinder/plane), +LightNode (directional/point/spot)
+- **Web**: +GeometryConfig DSL, +GeometryGLBBuilder (in-memory GLB from KMP core geometries)
+- **iOS**: +AugmentedFaceNode (ARKit face mesh, 52 blend shapes, region poses, ARFaceSceneView)
+
+### Visual verification system (new)
+- VisualVerificationTest: 7 tests rendering every geometry type at 256x256
+- HTML report generation (visual-report.html) with pass/fail badges
+- CI: screenshots pulled from emulator and uploaded as GitHub Actions artifacts
+
+### Publication status
+- npm (MCP, Web, RN): PUBLISHED 3.6.1
+- pub.dev (Flutter): PUBLISHED 3.6.1
+- GitHub Release: PUBLISHED v3.6.1
+- Website: PUBLISHED 3.6.1
+- Maven Central: FAILED — maven-publish bumped 0.33→0.35, needs maintainer re-trigger
+- Play Store: versionName fixed 3.6.0→3.6.1
+- SPM (Swift): needs git tag v3.6.1
+
 ### State after session
 - **0 open PRs**, **1 open issue** (#780 Maven Central — needs maintainer re-trigger)
 - All Dependabot alerts resolved (21 Vite vulns fixed)
 - All deps up to date: Filament 1.70.2, kotlin-math 1.8.0, Dokka 2.2.0, Material3 alpha16, maven-publish 0.35.0
+- **35 commits this session**
 
 ### Commits
 1. `dbc7842` — Filament 1.70.2
