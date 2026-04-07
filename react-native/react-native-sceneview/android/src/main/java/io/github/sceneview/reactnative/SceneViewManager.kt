@@ -2,8 +2,10 @@ package io.github.sceneview.reactnative
 
 import android.widget.FrameLayout
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import com.facebook.react.bridge.ReadableArray
@@ -90,16 +92,27 @@ class SceneViewManager : SimpleViewManager<FrameLayout>() {
                                 modelInstance = it,
                                 scaleToUnits = model.scale,
                                 autoAnimate = model.animate,
+                                position = model.position,
+                                rotation = model.rotation,
                             )
                         }
                     }
 
                     state.geometryNodes.forEach { geom ->
-                        val color = geom.color?.let {
+                        val colorInt = geom.color?.let {
                             runCatching { android.graphics.Color.parseColor(it) }.getOrNull()
                         }
-                        val mat = color?.let {
-                            materialLoader.createColorInstance(it)
+                        // Cache material instance per color to avoid leaking on recomposition.
+                        val mat = colorInt?.let { c ->
+                            val instance = remember(c) {
+                                materialLoader.createColorInstance(c)
+                            }
+                            DisposableEffect(c) {
+                                onDispose {
+                                    materialLoader.destroyMaterialInstance(instance)
+                                }
+                            }
+                            instance
                         }
                         when (geom.type) {
                             "cube", "box" -> CubeNode(
