@@ -63,7 +63,7 @@ jobs:
           disable-animations: true
           script: |
             ./gradlew :sceneview:connectedDebugAndroidTest \
-              -Pandroid.testInstrumentationRunnerArguments.class=io.github.sceneview.render.RenderSmokeTest \
+              -Pandroid.testInstrumentationRunnerArguments.package=io.github.sceneview.render \
               --stacktrace
 
       - name: Upload test results
