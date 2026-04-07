@@ -3,35 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SceneView Web Demo — 3D &amp; AR Viewer</title>
-    <meta name="description" content="SceneView Web Demo: 3D model viewer with Sketchfab search, geometry DSL showcase, and WebXR AR/VR — powered by Filament.js (WASM).">
+    <title>SceneView Web Demo — 3D Model Viewer</title>
+    <meta name="description" content="SceneView Web Demo: 3D model viewer powered by Filament.js (WASM) with WebXR AR/VR support.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --sv-blue: #005bc1;
-            --sv-blue-light: #a4c1ff;
-            --sv-purple: #6446cd;
-            --sv-purple-light: #d2a8ff;
-            --sv-green: #00b894;
-            --sv-green-light: #55efc4;
-            --sv-dark: #0D1117;
-            --sv-dark-surface: #161B22;
-            --sv-dark-card: #1c2333;
-            --sv-dark-overlay: rgba(13, 17, 23, 0.88);
-            --sv-text: #f3f4f6;
-            --sv-text-dim: #9ca3af;
-            --sv-text-faint: #6b7280;
-            --sv-border: rgba(255,255,255,0.08);
-            --sv-border-hover: rgba(255,255,255,0.18);
-            --sv-radius-sm: 8px;
+            --sv-blue-light: #3d7fd9;
+            --sv-dark: #0d1117;
+            --sv-dark-surface: #161b22;
+            --sv-dark-overlay: rgba(13, 17, 23, 0.85);
+            --sv-text: #e8edf2;
+            --sv-text-muted: rgba(232, 237, 242, 0.6);
             --sv-radius: 12px;
             --sv-radius-lg: 16px;
-            --sv-radius-pill: 28px;
             --sv-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            --sv-glass: rgba(22, 27, 34, 0.75);
-            --sv-glass-border: rgba(255,255,255,0.06);
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -42,18 +30,18 @@
             color: var(--sv-text);
         }
 
-        /* ---- Canvas ---- */
+        /* Canvas */
         #scene-canvas {
             width: 100%; height: 100%; display: block;
             position: absolute; top: 0; left: 0; z-index: 0;
         }
 
-        /* ---- Top bar ---- */
+        /* Top bar */
         .top-bar {
-            position: fixed; top: 0; left: 0; right: 0; z-index: 30;
+            position: fixed; top: 0; left: 0; right: 0; z-index: 20;
             display: flex; align-items: center; justify-content: space-between;
-            padding: 12px 20px; gap: 12px;
-            background: linear-gradient(180deg, var(--sv-dark-overlay) 60%, transparent 100%);
+            padding: 12px 20px;
+            background: linear-gradient(180deg, var(--sv-dark-overlay) 0%, transparent 100%);
             pointer-events: none;
         }
         .top-bar > * { pointer-events: auto; }
@@ -61,296 +49,117 @@
         .logo {
             display: flex; align-items: center; gap: 10px;
             text-decoration: none; color: var(--sv-text);
-            flex-shrink: 0;
         }
         .logo-icon {
             width: 32px; height: 32px;
-            background: linear-gradient(135deg, var(--sv-blue), var(--sv-purple));
-            border-radius: var(--sv-radius-sm);
+            background: var(--sv-blue);
+            border-radius: 8px;
             display: flex; align-items: center; justify-content: center;
             font-weight: 700; font-size: 16px; color: white;
         }
-        .logo-text { font-weight: 700; font-size: 18px; letter-spacing: -0.02em; }
-        .logo-version {
-            font-size: 11px; font-weight: 500;
-            color: var(--sv-blue-light);
+        .logo-text {
+            font-weight: 700; font-size: 18px; letter-spacing: -0.02em;
+        }
+        .logo-badge {
+            font-size: 11px; font-weight: 500; color: var(--sv-blue-light);
             background: rgba(0, 91, 193, 0.15);
             padding: 2px 8px; border-radius: 6px;
+            margin-left: 4px;
         }
 
-        .top-right {
-            display: flex; align-items: center; gap: 8px;
-            flex-shrink: 0;
+        .top-actions {
+            display: flex; gap: 8px; align-items: center;
         }
         .icon-btn {
             width: 36px; height: 36px;
-            border: 1px solid var(--sv-border);
+            border: 1px solid rgba(255,255,255,0.12);
             border-radius: 10px;
-            background: rgba(255,255,255,0.04);
-            color: var(--sv-text-dim);
+            background: rgba(255,255,255,0.06);
+            color: var(--sv-text);
             cursor: pointer; display: flex; align-items: center; justify-content: center;
-            transition: background 0.15s, border-color 0.15s, color 0.15s;
+            transition: background 0.15s, border-color 0.15s;
             font-size: 16px;
         }
         .icon-btn:hover {
-            background: rgba(255,255,255,0.1);
-            border-color: var(--sv-border-hover);
-            color: var(--sv-text);
+            background: rgba(255,255,255,0.12);
+            border-color: rgba(255,255,255,0.2);
         }
 
-        /* ---- Tab bar ---- */
-        .tab-bar {
-            position: fixed; top: 56px; left: 50%; transform: translateX(-50%);
-            z-index: 25;
-            display: flex; gap: 4px;
-            background: var(--sv-glass);
-            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-            border: 1px solid var(--sv-glass-border);
-            border-radius: var(--sv-radius-pill);
-            padding: 4px;
+        /* Model selector panel */
+        .model-selector {
+            position: fixed; left: 20px; top: 50%; transform: translateY(-50%);
+            z-index: 15; display: flex; flex-direction: column; gap: 6px;
         }
-        .tab-btn {
-            padding: 8px 18px;
-            border: none; border-radius: 24px;
-            background: transparent;
-            color: var(--sv-text-dim);
-            font-size: 13px; font-weight: 600; font-family: var(--sv-font);
+        .model-chip {
+            padding: 8px 14px;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            background: var(--sv-dark-overlay);
+            color: var(--sv-text-muted);
+            font-size: 13px; font-weight: 500; font-family: var(--sv-font);
             cursor: pointer; white-space: nowrap;
             transition: all 0.2s;
-        }
-        .tab-btn:hover { color: var(--sv-text); background: rgba(255,255,255,0.06); }
-        .tab-btn.active {
-            background: var(--sv-blue);
-            color: white;
-        }
-
-        /* ---- Panels ---- */
-        .panel {
-            position: fixed; z-index: 20;
-            display: none;
-        }
-        .panel.active { display: flex; }
-
-        /* Search panel (Model Viewer tab) */
-        .search-panel {
-            left: 20px; top: 110px; bottom: 80px;
-            width: 320px;
-            flex-direction: column; gap: 10px;
-        }
-        .search-box {
-            display: flex; gap: 0;
-            border-radius: var(--sv-radius);
-            overflow: hidden;
-            border: 1px solid var(--sv-border);
-            background: var(--sv-glass);
-            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-        }
-        .search-input {
-            flex: 1;
-            padding: 12px 14px;
-            border: none; outline: none;
-            background: transparent;
-            color: var(--sv-text);
-            font-size: 14px; font-family: var(--sv-font);
-        }
-        .search-input::placeholder { color: var(--sv-text-faint); }
-        .search-btn {
-            padding: 12px 16px;
-            border: none;
-            background: var(--sv-blue);
-            color: white;
-            font-size: 14px; font-weight: 600; font-family: var(--sv-font);
-            cursor: pointer;
-            transition: background 0.15s;
-        }
-        .search-btn:hover { background: #0050aa; }
-
-        .search-results {
-            flex: 1;
-            overflow-y: auto;
-            display: flex; flex-direction: column; gap: 8px;
-            scrollbar-width: thin;
-            scrollbar-color: rgba(255,255,255,0.1) transparent;
-        }
-        .search-results::-webkit-scrollbar { width: 4px; }
-        .search-results::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
-
-        .result-card {
-            display: flex; gap: 10px; align-items: center;
-            padding: 10px;
-            background: var(--sv-glass);
             backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-            border: 1px solid var(--sv-border);
-            border-radius: var(--sv-radius);
-            cursor: pointer;
-            transition: all 0.2s;
         }
-        .result-card:hover {
-            border-color: var(--sv-blue);
-            background: rgba(0, 91, 193, 0.12);
-        }
-        .result-card.active {
-            border-color: var(--sv-blue);
+        .model-chip:hover {
             background: rgba(0, 91, 193, 0.2);
+            border-color: var(--sv-blue);
+            color: var(--sv-text);
         }
-        .result-thumb {
-            width: 56px; height: 56px;
-            border-radius: var(--sv-radius-sm);
-            object-fit: cover;
-            background: var(--sv-dark-surface);
-            flex-shrink: 0;
-        }
-        .result-info { flex: 1; min-width: 0; }
-        .result-name {
-            font-size: 13px; font-weight: 600;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        }
-        .result-author {
-            font-size: 11px; color: var(--sv-text-faint);
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-            margin-top: 2px;
-        }
-        .result-views {
-            font-size: 10px; color: var(--sv-text-faint);
-            margin-top: 2px;
-        }
-
-        .search-status {
-            text-align: center;
-            padding: 20px;
-            color: var(--sv-text-faint);
-            font-size: 13px;
-        }
-        .search-status.error { color: #f87171; }
-
-        /* Geometry panel */
-        .geometry-panel {
-            left: 20px; top: 110px; bottom: 80px;
-            width: 320px;
-            flex-direction: column; gap: 10px;
-            overflow-y: auto;
-        }
-        .geo-card {
-            background: var(--sv-glass);
-            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-            border: 1px solid var(--sv-border);
-            border-radius: var(--sv-radius);
-            padding: 14px;
-            display: flex; flex-direction: column; gap: 10px;
-        }
-        .geo-card-header {
-            display: flex; align-items: center; justify-content: space-between;
-        }
-        .geo-card-title {
-            font-size: 14px; font-weight: 600;
-        }
-        .geo-add-btn {
-            padding: 6px 14px;
-            border: none; border-radius: 20px;
+        .model-chip.active {
             background: var(--sv-blue);
+            border-color: var(--sv-blue);
             color: white;
-            font-size: 12px; font-weight: 600; font-family: var(--sv-font);
-            cursor: pointer;
-            transition: background 0.15s, transform 0.1s;
-        }
-        .geo-add-btn:hover { background: #0050aa; }
-        .geo-add-btn:active { transform: scale(0.95); }
-
-        .geo-controls {
-            display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
-        }
-        .geo-controls label {
-            font-size: 12px; color: var(--sv-text-dim);
-            display: flex; align-items: center; gap: 6px;
-        }
-        .color-picker {
-            width: 28px; height: 28px;
-            border: 2px solid var(--sv-border);
-            border-radius: 6px;
-            cursor: pointer;
-            background: none;
-            padding: 0;
-        }
-        .color-picker::-webkit-color-swatch-wrapper { padding: 0; }
-        .color-picker::-webkit-color-swatch { border: none; border-radius: 4px; }
-        .color-picker::-moz-color-swatch { border: none; border-radius: 4px; }
-
-        .geo-slider {
-            width: 80px; height: 4px;
-            -webkit-appearance: none; appearance: none;
-            background: rgba(255,255,255,0.1);
-            border-radius: 2px;
-            outline: none;
-        }
-        .geo-slider::-webkit-slider-thumb {
-            -webkit-appearance: none; appearance: none;
-            width: 14px; height: 14px;
-            background: var(--sv-blue);
-            border-radius: 50%;
-            cursor: pointer;
-        }
-        .geo-slider::-moz-range-thumb {
-            width: 14px; height: 14px;
-            background: var(--sv-blue);
-            border: none; border-radius: 50%;
-            cursor: pointer;
         }
 
-        .geo-clear-btn {
-            padding: 8px 16px;
-            border: 1px solid var(--sv-border);
-            border-radius: 20px;
-            background: transparent;
-            color: var(--sv-text-dim);
-            font-size: 12px; font-weight: 500; font-family: var(--sv-font);
-            cursor: pointer;
-            transition: all 0.15s;
-            align-self: center;
-        }
-        .geo-clear-btn:hover {
-            border-color: #f87171;
-            color: #f87171;
-            background: rgba(248, 113, 113, 0.08);
-        }
-
-        /* ---- Controls info ---- */
+        /* Controls overlay (bottom-left) */
         .controls-info {
             position: fixed; bottom: 20px; left: 20px; z-index: 15;
             display: flex; flex-direction: column; gap: 4px;
-            font-size: 12px; color: var(--sv-text-faint);
+            font-size: 12px; color: var(--sv-text-muted);
             pointer-events: none;
         }
-        .controls-info .row { display: flex; align-items: center; gap: 6px; }
+        .controls-info .row {
+            display: flex; align-items: center; gap: 6px;
+        }
         .controls-info kbd {
-            display: inline-block; padding: 1px 6px;
-            border: 1px solid rgba(255,255,255,0.12);
+            display: inline-block;
+            padding: 1px 6px;
+            border: 1px solid rgba(255,255,255,0.15);
             border-radius: 4px;
             font-family: var(--sv-font); font-size: 11px;
-            background: rgba(255,255,255,0.04);
-            color: var(--sv-text-faint);
+            background: rgba(255,255,255,0.06);
+            color: var(--sv-text-muted);
         }
 
-        /* ---- Bottom bar ---- */
+        /* Bottom bar */
         .bottom-bar {
-            position: fixed; bottom: 0; left: 0; right: 0; z-index: 20;
+            position: fixed; bottom: 0; left: 0; right: 0; z-index: 15;
             display: flex; align-items: center; justify-content: space-between;
             padding: 12px 20px;
-            background: linear-gradient(0deg, var(--sv-dark-overlay) 60%, transparent 100%);
+            background: linear-gradient(0deg, var(--sv-dark-overlay) 0%, transparent 100%);
             pointer-events: none;
         }
         .bottom-bar > * { pointer-events: auto; }
 
-        .powered-by { font-size: 12px; color: var(--sv-text-faint); }
+        .powered-by {
+            font-size: 12px; color: var(--sv-text-muted);
+        }
         .powered-by a {
-            color: var(--sv-blue-light); text-decoration: none; font-weight: 500;
+            color: var(--sv-blue-light);
+            text-decoration: none;
+            font-weight: 500;
         }
         .powered-by a:hover { text-decoration: underline; }
 
-        .xr-buttons { display: flex; gap: 8px; }
+        /* XR buttons (bottom-right) */
+        .xr-buttons {
+            display: flex; gap: 8px;
+        }
         .xr-btn {
-            display: none;
+            display: none; /* shown when supported */
             padding: 10px 20px;
-            border: none; border-radius: var(--sv-radius-pill);
+            border: none; border-radius: 28px;
             font-family: var(--sv-font);
             font-size: 13px; font-weight: 600;
             cursor: pointer; letter-spacing: 0.01em;
@@ -370,7 +179,7 @@
             color: var(--sv-dark);
         }
 
-        /* ---- Loading overlay ---- */
+        /* Loading overlay */
         .loading-overlay {
             position: fixed; inset: 0; z-index: 100;
             display: flex; flex-direction: column;
@@ -378,7 +187,9 @@
             background: var(--sv-dark);
             transition: opacity 0.5s ease;
         }
-        .loading-overlay.hidden { opacity: 0; pointer-events: none; }
+        .loading-overlay.hidden {
+            opacity: 0; pointer-events: none;
+        }
 
         .loading-spinner {
             width: 48px; height: 48px;
@@ -390,17 +201,21 @@
         @keyframes spin { to { transform: rotate(360deg); } }
 
         .loading-text {
-            margin-top: 16px; font-size: 14px; font-weight: 500;
-            color: var(--sv-text-dim);
+            margin-top: 16px;
+            font-size: 14px; font-weight: 500;
+            color: var(--sv-text-muted);
         }
         .loading-model-name {
-            margin-top: 6px; font-size: 12px;
-            color: var(--sv-text-faint);
+            margin-top: 6px;
+            font-size: 12px;
+            color: rgba(232, 237, 242, 0.35);
         }
         .loading-bar-track {
-            width: 200px; height: 3px; margin-top: 20px;
+            width: 200px; height: 3px;
+            margin-top: 20px;
             background: rgba(255,255,255,0.06);
-            border-radius: 2px; overflow: hidden;
+            border-radius: 2px;
+            overflow: hidden;
         }
         .loading-bar-fill {
             width: 0%; height: 100%;
@@ -409,20 +224,23 @@
             animation: loading-progress 2s ease-in-out infinite;
         }
         @keyframes loading-progress {
-            0% { width: 0%; } 50% { width: 60%; } 100% { width: 100%; }
+            0% { width: 0%; transform: translateX(0); }
+            50% { width: 60%; }
+            100% { width: 100%; transform: translateX(0); }
         }
 
-        /* Inline loading chip */
+        /* Inline loading chip (when switching models) */
         .loading-chip {
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            z-index: 50; display: none;
+            z-index: 50;
+            display: none;
             padding: 10px 20px;
-            background: var(--sv-glass);
-            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-            border: 1px solid var(--sv-glass-border);
-            border-radius: var(--sv-radius-pill);
+            background: var(--sv-dark-overlay);
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 28px;
             font-size: 13px; font-weight: 500;
-            color: var(--sv-text-dim);
+            color: var(--sv-text-muted);
             gap: 10px; align-items: center;
         }
         .loading-chip.visible { display: flex; }
@@ -437,17 +255,18 @@
         /* Auto-rotate toggle */
         .auto-rotate-btn {
             padding: 8px 14px;
-            border: 1px solid var(--sv-border);
+            border: 1px solid rgba(255,255,255,0.1);
             border-radius: 10px;
-            background: rgba(255,255,255,0.04);
-            color: var(--sv-text-dim);
+            background: rgba(255,255,255,0.06);
+            color: var(--sv-text-muted);
             font-size: 12px; font-weight: 500; font-family: var(--sv-font);
             cursor: pointer;
             transition: all 0.2s;
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
         }
         .auto-rotate-btn:hover {
-            background: rgba(255,255,255,0.08);
-            border-color: var(--sv-border-hover);
+            background: rgba(255,255,255,0.12);
+            border-color: rgba(255,255,255,0.2);
         }
         .auto-rotate-btn.active {
             background: rgba(0, 91, 193, 0.2);
@@ -455,20 +274,27 @@
             color: var(--sv-blue-light);
         }
 
-        /* ---- Responsive ---- */
-        @media (max-width: 768px) {
-            .search-panel, .geometry-panel {
-                left: 10px; right: 10px; top: auto; bottom: 70px;
-                width: auto; max-height: 45vh;
+        /* Mobile responsive */
+        @media (max-width: 640px) {
+            .model-selector {
+                position: fixed; left: 0; right: 0; top: auto; bottom: 64px;
+                transform: none;
+                flex-direction: row; overflow-x: auto;
+                padding: 0 12px; gap: 6px;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
             }
-            .tab-bar { top: 52px; }
+            .model-selector::-webkit-scrollbar { display: none; }
+            .model-chip { flex-shrink: 0; font-size: 12px; padding: 6px 12px; }
+
+            .controls-info { display: none; }
+
             .top-bar { padding: 10px 14px; }
             .logo-text { font-size: 16px; }
-            .logo-version { font-size: 10px; }
+            .logo-badge { font-size: 10px; }
             .bottom-bar { padding: 10px 14px; }
-            .controls-info { display: none; }
+
             .xr-btn { padding: 8px 16px; font-size: 12px; }
-            .tab-btn { padding: 6px 14px; font-size: 12px; }
         }
     </style>
 </head>
@@ -481,7 +307,7 @@
         <div class="loading-bar-track"><div class="loading-bar-fill"></div></div>
     </div>
 
-    <!-- Loading chip for model switching -->
+    <!-- Inline loading chip for model switching -->
     <div id="loading-chip" class="loading-chip">
         <div class="mini-spinner"></div>
         <span id="loading-chip-text">Loading model...</span>
@@ -495,9 +321,9 @@
         <a href="https://sceneview.github.io" target="_blank" class="logo" title="SceneView — 3D and AR for Compose and SwiftUI">
             <div class="logo-icon">S</div>
             <span class="logo-text">SceneView</span>
-            <span id="version-badge" class="logo-version">v3.6.1</span>
+            <span class="logo-badge">Web</span>
         </a>
-        <div class="top-right">
+        <div class="top-actions">
             <button id="auto-rotate-toggle" class="auto-rotate-btn active" title="Toggle auto-rotation">Auto-rotate</button>
             <a href="https://github.com/sceneview/sceneview" target="_blank" class="icon-btn" title="View on GitHub">
                 <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
@@ -505,70 +331,11 @@
         </div>
     </header>
 
-    <!-- Tab bar -->
-    <nav class="tab-bar">
-        <button class="tab-btn active" data-tab="viewer">Model Viewer</button>
-        <button class="tab-btn" data-tab="geometry">Geometry</button>
-    </nav>
-
-    <!-- Search panel (Model Viewer tab) -->
-    <div id="panel-viewer" class="panel search-panel active">
-        <div class="search-box">
-            <input id="search-input" class="search-input" type="text" placeholder="Search Sketchfab models..." autocomplete="off">
-            <button id="search-btn" class="search-btn">Search</button>
-        </div>
-        <div id="search-results" class="search-results">
-            <div class="search-status">Type a query and press Search to find downloadable 3D models on Sketchfab.</div>
-        </div>
-    </div>
-
-    <!-- Geometry panel -->
-    <div id="panel-geometry" class="panel geometry-panel">
-        <div class="geo-card">
-            <div class="geo-card-header">
-                <span class="geo-card-title">Cube</span>
-                <button class="geo-add-btn" data-geo="cube">Add</button>
-            </div>
-            <div class="geo-controls">
-                <label>Color <input type="color" class="color-picker" data-geo-color="cube" value="#4488ff"></label>
-                <label>Size <input type="range" class="geo-slider" data-geo-size="cube" min="0.2" max="3" step="0.1" value="1"></label>
-            </div>
-        </div>
-        <div class="geo-card">
-            <div class="geo-card-header">
-                <span class="geo-card-title">Sphere</span>
-                <button class="geo-add-btn" data-geo="sphere">Add</button>
-            </div>
-            <div class="geo-controls">
-                <label>Color <input type="color" class="color-picker" data-geo-color="sphere" value="#ff4488"></label>
-                <label>Radius <input type="range" class="geo-slider" data-geo-size="sphere" min="0.2" max="2" step="0.1" value="0.5"></label>
-            </div>
-        </div>
-        <div class="geo-card">
-            <div class="geo-card-header">
-                <span class="geo-card-title">Cylinder</span>
-                <button class="geo-add-btn" data-geo="cylinder">Add</button>
-            </div>
-            <div class="geo-controls">
-                <label>Color <input type="color" class="color-picker" data-geo-color="cylinder" value="#44ff88"></label>
-                <label>Radius <input type="range" class="geo-slider" data-geo-size="cylinder" min="0.2" max="2" step="0.1" value="0.5"></label>
-            </div>
-        </div>
-        <div class="geo-card">
-            <div class="geo-card-header">
-                <span class="geo-card-title">Plane</span>
-                <button class="geo-add-btn" data-geo="plane">Add</button>
-            </div>
-            <div class="geo-controls">
-                <label>Color <input type="color" class="color-picker" data-geo-color="plane" value="#ffaa44"></label>
-                <label>Size <input type="range" class="geo-slider" data-geo-size="plane" min="0.5" max="5" step="0.5" value="2"></label>
-            </div>
-        </div>
-        <button id="geo-clear" class="geo-clear-btn">Clear All Geometry</button>
-    </div>
+    <!-- Model selector (left side on desktop, bottom horizontal on mobile) -->
+    <nav id="model-selector" class="model-selector"></nav>
 
     <!-- Camera controls info -->
-    <div id="controls-info" class="controls-info">
+    <div class="controls-info">
         <div class="row"><kbd>Drag</kbd> Orbit</div>
         <div class="row"><kbd>Scroll</kbd> Zoom</div>
         <div class="row"><kbd>Right-drag</kbd> Pan</div>

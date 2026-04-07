@@ -9,35 +9,63 @@ import kotlinx.browser.document
 import kotlinx.browser.window
 import org.w3c.dom.HTMLButtonElement
 import org.w3c.dom.HTMLCanvasElement
+import org.w3c.dom.HTMLDivElement
 import org.w3c.dom.HTMLElement
-import org.w3c.dom.HTMLInputElement
 
 /**
- * SceneView Web Demo — rewritten showcase application.
+ * SceneView Web Demo — branded showcase application.
  *
  * Features:
- * - Sketchfab search bar (fetch API) replaces hardcoded model list
- * - Geometry showcase: cube, sphere, cylinder, plane with color pickers
- * - WebXR AR/VR toggle buttons
- * - Tab-based navigation (Model Viewer / Geometry)
- * - Responsive dark theme
- * - SDK version 3.6.1 badge
+ * - Model selector with popular glTF sample models
+ * - Orbit camera controls (drag, scroll, pinch)
+ * - Auto-rotation toggle
+ * - Loading indicator (initial + model switching)
+ * - WebXR AR/VR buttons (shown when browser supports it)
+ * - Mobile responsive layout
+ * - SceneView blue branding (#1a73e8)
  *
- * Uses Filament.js (WASM) — same rendering engine as SceneView Android.
+ * Uses Filament.js (WASM) — the same rendering engine as SceneView Android.
  */
 
-private const val SDK_VERSION = "3.6.1"
-
-/** Sketchfab public API endpoint for searching downloadable models. */
-private const val SKETCHFAB_API =
-    "https://api.sketchfab.com/v3/search?type=models&downloadable=true"
+/** Available demo models — name to local path mapping (self-hosted GLB files). */
+private val MODELS = linkedMapOf(
+    "Damaged Helmet" to "models/khronos_damaged_helmet.glb",
+    "Toy Car" to "models/khronos_toy_car.glb",
+    "Game Boy" to "models/game_boy_classic.glb",
+    "Sheen Chair" to "models/khronos_sheen_chair.glb",
+    "Crystal Dragon" to "models/khronos_dragon_attenuation.glb",
+    "Iridescent Dish" to "models/khronos_iridescent_dish.glb",
+    "Butterfly" to "models/animated_butterfly.glb",
+    "Phoenix" to "models/phoenix_bird.glb",
+    "Cyberpunk Car" to "models/cyberpunk_car.glb",
+    "Fantasy Book" to "models/fantasy_book.glb",
+    "Retro Piano" to "models/retro_piano.glb",
+    "Mosquito Amber" to "models/mosquito_amber.glb",
+    "Shelby Cobra" to "models/shelby_cobra.glb",
+    "Audi TT" to "models/audi_tt.glb",
+    "Earthquake" to "models/earthquake_california.glb",
+    "Lamborghini" to "models/lamborghini_countach.glb",
+    "Nike Jordan" to "models/nike_air_jordan.glb",
+    "Ferrari F40" to "models/ferrari_f40.glb",
+    "Porsche Turbo" to "models/porsche_911_turbo.glb",
+    "PS5 Controller" to "models/ps5_dualsense.glb",
+    "Cybertruck" to "models/tesla_cybertruck.glb",
+    "Mercedes AMG" to "models/mercedes_a45_amg.glb",
+    "Switch" to "models/nintendo_switch.glb",
+    "BMW M3 E30" to "models/bmw_m3_e30.glb",
+    "Koi Fish" to "models/koi_fish.glb",
+    "Toon Cat" to "models/toon_cat.glb",
+    "Elephant" to "models/animated_elephant.glb",
+    "Casio Keyboard" to "models/casio_keyboard.glb",
+    "Trumpet" to "models/trumpet.glb",
+    "Coffee Cart" to "models/coffee_cart.glb",
+    "Night City" to "models/night_city.glb",
+    "Kindred" to "models/kindred_lol.glb"
+)
 
 private var currentSceneView: SceneView? = null
+private var currentModelName: String = MODELS.keys.first()
 private var autoRotateEnabled = true
-private var currentTab = "viewer"
-
-/** Counter for geometry placement offset so shapes don't overlap. */
-private var geometryCount = 0
 
 fun main() {
     val canvas = document.getElementById("scene-canvas") as? HTMLCanvasElement
@@ -46,26 +74,22 @@ fun main() {
         return
     }
 
+    // Resize canvas to fill viewport
     canvas.width = canvas.clientWidth
     canvas.height = canvas.clientHeight
 
-    // Initialize the 3D scene with a default model
-    initSceneView(canvas, "https://sceneview.github.io/assets/models/khronos_damaged_helmet.glb")
+    // Build the model selector UI
+    buildModelSelector()
 
-    // Wire up tabs
-    setupTabs()
-
-    // Wire up Sketchfab search
-    setupSearch()
-
-    // Wire up geometry buttons
-    setupGeometry()
+    // Initialize SceneView with the first model
+    initSceneView(canvas, MODELS.values.first())
 }
 
-// ---- Scene initialization ----
-
+/**
+ * Initialize (or re-initialize) SceneView with a given model URL.
+ */
 private fun initSceneView(canvas: HTMLCanvasElement, modelUrl: String) {
-    showLoadingOverlay("Loading scene...")
+    showLoadingOverlay("Loading ${currentModelName}...")
 
     SceneView.create(
         canvas = canvas,
@@ -75,6 +99,8 @@ private fun initSceneView(canvas: HTMLCanvasElement, modelUrl: String) {
                 target(0.0, 0.0, 0.0)
                 fov(45.0)
             }
+            // IBL environment is loaded automatically by default
+            // — just add a fill light for soft shadows
             light {
                 directional()
                 intensity(50_000.0)
@@ -83,7 +109,8 @@ private fun initSceneView(canvas: HTMLCanvasElement, modelUrl: String) {
             model(modelUrl) {
                 onLoaded {
                     hideLoadingOverlay()
-                    console.log("Default model loaded")
+                    hideLoadingChip()
+                    console.log("Model loaded: $currentModelName")
                 }
             }
             autoRotate(autoRotateEnabled)
@@ -92,26 +119,62 @@ private fun initSceneView(canvas: HTMLCanvasElement, modelUrl: String) {
             currentSceneView = sceneView
             sceneView.startRendering()
 
+            // Handle window resize
             window.addEventListener("resize", {
                 canvas.width = canvas.clientWidth
                 canvas.height = canvas.clientHeight
             })
 
-            console.log("SceneView Web Demo initialized — SDK v$SDK_VERSION")
+            console.log("SceneView Web initialized — Filament.js renderer active")
 
+            // Set up WebXR buttons
             setupXRButtons(canvas)
+
+            // Set up auto-rotate toggle
             setupAutoRotateToggle(sceneView)
         }
     )
 }
 
 /**
- * Load a model URL into the current scene by destroying and recreating.
+ * Build the model selector chips in the left panel.
  */
-private fun loadModelIntoScene(url: String, name: String) {
-    val canvas = document.getElementById("scene-canvas") as? HTMLCanvasElement ?: return
+private fun buildModelSelector() {
+    val container = document.getElementById("model-selector") as? HTMLElement ?: return
+
+    MODELS.entries.forEachIndexed { index, (name, url) ->
+        val chip = document.createElement("button") as HTMLButtonElement
+        chip.className = if (index == 0) "model-chip active" else "model-chip"
+        chip.textContent = name
+        chip.title = "Load $name"
+        chip.addEventListener("click", {
+            if (name != currentModelName) {
+                switchModel(name, url)
+            }
+        })
+        container.appendChild(chip)
+    }
+}
+
+/**
+ * Switch to a different model — shows inline loading chip.
+ */
+private fun switchModel(name: String, url: String) {
+    currentModelName = name
+
+    // Update chip active states
+    val chips = document.querySelectorAll(".model-chip")
+    for (i in 0 until chips.length) {
+        val chip = chips.item(i) as? HTMLElement ?: continue
+        chip.className = if (chip.textContent == name) "model-chip active" else "model-chip"
+    }
+
+    // Show inline loading chip
     showLoadingChip("Loading $name...")
 
+    val canvas = document.getElementById("scene-canvas") as? HTMLCanvasElement ?: return
+
+    // Destroy current scene and re-create with the new model
     currentSceneView?.destroy()
     currentSceneView = null
 
@@ -123,6 +186,8 @@ private fun loadModelIntoScene(url: String, name: String) {
                 target(0.0, 0.0, 0.0)
                 fov(45.0)
             }
+            // IBL environment is loaded automatically by default
+            // — just add a fill light for soft shadows
             light {
                 directional()
                 intensity(50_000.0)
@@ -131,7 +196,7 @@ private fun loadModelIntoScene(url: String, name: String) {
             model(url) {
                 onLoaded {
                     hideLoadingChip()
-                    console.log("Model loaded: $name")
+                    console.log("Model switched to: $name")
                 }
             }
             autoRotate(autoRotateEnabled)
@@ -140,6 +205,7 @@ private fun loadModelIntoScene(url: String, name: String) {
             currentSceneView = sceneView
             sceneView.startRendering()
 
+            // Handle window resize
             window.addEventListener("resize", {
                 canvas.width = canvas.clientWidth
                 canvas.height = canvas.clientHeight
@@ -151,333 +217,14 @@ private fun loadModelIntoScene(url: String, name: String) {
     )
 }
 
-// ---- Tab navigation ----
-
-private fun setupTabs() {
-    val tabButtons = document.querySelectorAll(".tab-btn")
-    for (i in 0 until tabButtons.length) {
-        val btn = tabButtons.item(i) as? HTMLElement ?: continue
-        btn.addEventListener("click", {
-            val tab = btn.getAttribute("data-tab") ?: return@addEventListener
-            switchTab(tab)
-        })
-    }
-}
-
-private fun switchTab(tab: String) {
-    currentTab = tab
-
-    // Update tab button states
-    val tabButtons = document.querySelectorAll(".tab-btn")
-    for (i in 0 until tabButtons.length) {
-        val btn = tabButtons.item(i) as? HTMLElement ?: continue
-        val btnTab = btn.getAttribute("data-tab")
-        btn.className = if (btnTab == tab) "tab-btn active" else "tab-btn"
-    }
-
-    // Show/hide panels
-    val panels = arrayOf("viewer", "geometry")
-    panels.forEach { panelName ->
-        val panel = document.getElementById("panel-$panelName") as? HTMLElement
-        panel?.className = if (panelName == tab) {
-            panel.className.replace(" active", "") + " active"
-        } else {
-            panel.className.replace(" active", "")
-        }
-    }
-
-    // Move controls info out of the way when side panel is active
-    val controlsInfo = document.getElementById("controls-info") as? HTMLElement
-    controlsInfo?.style?.left = if (tab == "viewer" || tab == "geometry") "360px" else "20px"
-}
-
-// ---- Sketchfab search ----
-
-private fun setupSearch() {
-    val searchInput = document.getElementById("search-input") as? HTMLInputElement ?: return
-    val searchBtn = document.getElementById("search-btn") as? HTMLButtonElement ?: return
-
-    searchBtn.addEventListener("click", {
-        val query = searchInput.value.trim()
-        if (query.isNotEmpty()) {
-            performSearch(query)
-        }
-    })
-
-    searchInput.addEventListener("keydown", { event ->
-        val keyEvent = event.asDynamic()
-        if (keyEvent.key == "Enter") {
-            val query = searchInput.value.trim()
-            if (query.isNotEmpty()) {
-                performSearch(query)
-            }
-        }
-    })
-}
-
-private fun performSearch(query: String) {
-    val resultsContainer = document.getElementById("search-results") as? HTMLElement ?: return
-    resultsContainer.innerHTML = "<div class='search-status'>Searching for \"$query\"...</div>"
-
-    val url = "$SKETCHFAB_API&q=${encodeURIComponent(query)}"
-
-    window.fetch(url).then { response ->
-        if (!response.ok) {
-            throw Error("HTTP ${response.status}")
-        }
-        response.json()
-    }.then { data ->
-        val json = data.asDynamic()
-        val results = json.results
-        val count = (results.length as? Number)?.toInt() ?: 0
-
-        if (count == 0) {
-            resultsContainer.innerHTML =
-                "<div class='search-status'>No downloadable models found for \"$query\".</div>"
-            return@then
-        }
-
-        resultsContainer.innerHTML = ""
-
-        for (i in 0 until count) {
-            val model = results[i]
-            val name = (model.name as? String) ?: "Untitled"
-            val uid = (model.uid as? String) ?: continue
-            val authorName = model.user?.displayName as? String ?: model.user?.username as? String ?: "Unknown"
-            val viewCount = (model.viewCount as? Number)?.toInt() ?: 0
-
-            // Get thumbnail URL
-            val thumbUrl = extractThumbnail(model)
-
-            val card = document.createElement("div") as HTMLElement
-            card.className = "result-card"
-            card.innerHTML = """
-                <img class="result-thumb" src="$thumbUrl" alt="$name" loading="lazy" onerror="this.style.display='none'">
-                <div class="result-info">
-                    <div class="result-name" title="$name">$name</div>
-                    <div class="result-author">by $authorName</div>
-                    <div class="result-views">$viewCount views</div>
-                </div>
-            """.trimIndent()
-
-            card.addEventListener("click", {
-                // Highlight active card
-                val cards = document.querySelectorAll(".result-card")
-                for (j in 0 until cards.length) {
-                    (cards.item(j) as? HTMLElement)?.className = "result-card"
-                }
-                card.className = "result-card active"
-
-                // Try to get the direct GLB download URL via the Sketchfab download API
-                fetchModelDownloadUrl(uid, name)
-            })
-
-            resultsContainer.appendChild(card)
-        }
-    }.catch { error ->
-        resultsContainer.innerHTML =
-            "<div class='search-status error'>Search failed: ${error.asDynamic().message ?: error}</div>"
-        console.error("Sketchfab search error:", error)
-    }
-}
-
 /**
- * Extract the best thumbnail URL from a Sketchfab search result.
+ * Set up the auto-rotate toggle button.
  */
-private fun extractThumbnail(model: dynamic): String {
-    val thumbnails = model.thumbnails
-    if (thumbnails == null) return ""
-    val images = thumbnails.images
-    if (images == null) return ""
-    val count = (images.length as? Number)?.toInt() ?: 0
-    // Pick a medium-sized thumbnail
-    for (i in 0 until count) {
-        val img = images[i]
-        val width = (img.width as? Number)?.toInt() ?: 0
-        if (width in 100..400) {
-            return (img.url as? String) ?: ""
-        }
-    }
-    // Fallback: first image
-    if (count > 0) {
-        return (images[0].url as? String) ?: ""
-    }
-    return ""
-}
-
-/**
- * Fetch the download URL for a Sketchfab model.
- * Note: The Sketchfab download API requires authentication for most models.
- * For the demo, we attempt the public glTF download endpoint.
- * If it fails, we show a message suggesting the user use a direct GLB URL.
- */
-private fun fetchModelDownloadUrl(uid: String, name: String) {
-    val downloadUrl = "https://api.sketchfab.com/v3/models/$uid/download"
-
-    window.fetch(downloadUrl).then { response ->
-        if (!response.ok) {
-            // Most Sketchfab models require auth for download.
-            // Show a helpful message with the Sketchfab page link.
-            showLoadingChip("Auth required — open model on Sketchfab")
-            window.setTimeout({
-                hideLoadingChip()
-            }, 3000)
-            // Open the model page so user can download manually
-            window.open("https://sketchfab.com/3d-models/$uid", "_blank")
-            return@then Unit.asDynamic()
-        }
-        response.json()
-    }.then { data ->
-        if (data == null || data == Unit.asDynamic()) return@then
-        val json = data.asDynamic()
-        // The download response has gltf.url for the GLB file
-        val glbUrl = json.gltf?.url as? String
-        if (glbUrl != null) {
-            loadModelIntoScene(glbUrl, name)
-        } else {
-            showLoadingChip("No GLB available for this model")
-            window.setTimeout({ hideLoadingChip() }, 3000)
-        }
-    }.catch { error ->
-        console.error("Download API error for $uid:", error)
-        showLoadingChip("Download unavailable — opening on Sketchfab")
-        window.setTimeout({ hideLoadingChip() }, 3000)
-        window.open("https://sketchfab.com/3d-models/$uid", "_blank")
-    }
-}
-
-// ---- Geometry showcase ----
-
-private fun setupGeometry() {
-    // Add buttons
-    val addButtons = document.querySelectorAll(".geo-add-btn")
-    for (i in 0 until addButtons.length) {
-        val btn = addButtons.item(i) as? HTMLButtonElement ?: continue
-        val geoType = btn.getAttribute("data-geo") ?: continue
-        btn.addEventListener("click", {
-            addGeometryToScene(geoType)
-        })
-    }
-
-    // Clear button
-    val clearBtn = document.getElementById("geo-clear") as? HTMLButtonElement
-    clearBtn?.addEventListener("click", {
-        clearAndReinitScene()
-    })
-}
-
-/**
- * Parse hex color to RGBA doubles (0.0-1.0).
- */
-private fun hexToRgb(hex: String): Triple<Double, Double, Double> {
-    val clean = hex.removePrefix("#")
-    val r = clean.substring(0, 2).toInt(16) / 255.0
-    val g = clean.substring(2, 4).toInt(16) / 255.0
-    val b = clean.substring(4, 6).toInt(16) / 255.0
-    return Triple(r, g, b)
-}
-
-private fun addGeometryToScene(geoType: String) {
-    val canvas = document.getElementById("scene-canvas") as? HTMLCanvasElement ?: return
-    val sceneView = currentSceneView
-
-    // Get color from the picker
-    val colorPicker = document.querySelector("[data-geo-color='$geoType']") as? HTMLInputElement
-    val colorHex = colorPicker?.value ?: "#4488ff"
-    val (r, g, b) = hexToRgb(colorHex)
-
-    // Get size from slider
-    val sizeSlider = document.querySelector("[data-geo-size='$geoType']") as? HTMLInputElement
-    val sizeVal = sizeSlider?.value?.toDoubleOrNull() ?: 1.0
-
-    // Offset each new geometry so they don't stack
-    val offsetX = (geometryCount % 5 - 2) * 2.0
-    val offsetZ = (geometryCount / 5) * -2.0
-    geometryCount++
-
-    if (sceneView == null) {
-        // No scene yet — create one with this geometry
-        SceneView.create(
-            canvas = canvas,
-            configure = {
-                camera {
-                    eye(0.0, 3.0, 8.0)
-                    target(0.0, 0.0, 0.0)
-                    fov(45.0)
-                }
-                geometry {
-                    type(geoType)
-                    color(r, g, b)
-                    position(offsetX, 0.5, offsetZ)
-                    when (geoType) {
-                        "cube" -> size(sizeVal)
-                        "sphere" -> radius(sizeVal)
-                        "cylinder" -> { radius(sizeVal); height(sizeVal * 2.0) }
-                        "plane" -> size(sizeVal, 0.01, sizeVal)
-                    }
-                }
-                autoRotate(autoRotateEnabled)
-            },
-            onReady = { sv ->
-                currentSceneView = sv
-                sv.startRendering()
-                setupXRButtons(canvas)
-                setupAutoRotateToggle(sv)
-                console.log("Scene created with $geoType geometry")
-            }
-        )
-    } else {
-        // Add geometry to existing scene
-        sceneView.addGeometry(
-            io.github.sceneview.web.nodes.GeometryConfig().apply {
-                type(geoType)
-                color(r, g, b)
-                position(offsetX, 0.5, offsetZ)
-                when (geoType) {
-                    "cube" -> size(sizeVal)
-                    "sphere" -> radius(sizeVal)
-                    "cylinder" -> { radius(sizeVal); height(sizeVal * 2.0) }
-                    "plane" -> size(sizeVal, 0.01, sizeVal)
-                }
-            }
-        )
-        console.log("Added $geoType geometry (color=$colorHex, size=$sizeVal)")
-    }
-}
-
-private fun clearAndReinitScene() {
-    val canvas = document.getElementById("scene-canvas") as? HTMLCanvasElement ?: return
-    currentSceneView?.destroy()
-    currentSceneView = null
-    geometryCount = 0
-
-    // Reinitialize with empty scene
-    SceneView.create(
-        canvas = canvas,
-        configure = {
-            camera {
-                eye(0.0, 3.0, 8.0)
-                target(0.0, 0.0, 0.0)
-                fov(45.0)
-            }
-            autoRotate(autoRotateEnabled)
-        },
-        onReady = { sv ->
-            currentSceneView = sv
-            sv.startRendering()
-            setupXRButtons(canvas)
-            setupAutoRotateToggle(sv)
-            console.log("Scene cleared")
-        }
-    )
-}
-
-// ---- Auto-rotate toggle ----
-
 private fun setupAutoRotateToggle(sceneView: SceneView) {
     val btn = document.getElementById("auto-rotate-toggle") as? HTMLButtonElement ?: return
     btn.className = if (autoRotateEnabled) "auto-rotate-btn active" else "auto-rotate-btn"
 
+    // Remove previous listener by cloning
     val newBtn = btn.cloneNode(true) as HTMLButtonElement
     btn.parentNode?.replaceChild(newBtn, btn)
 
@@ -488,7 +235,7 @@ private fun setupAutoRotateToggle(sceneView: SceneView) {
     })
 }
 
-// ---- Loading UI ----
+// --- Loading UI helpers ---
 
 private fun showLoadingOverlay(text: String) {
     val overlay = document.getElementById("loading-overlay") as? HTMLElement ?: return
@@ -514,8 +261,11 @@ private fun hideLoadingChip() {
     chip.className = "loading-chip"
 }
 
-// ---- WebXR ----
+// --- WebXR ---
 
+/**
+ * Check for WebXR support and show AR/VR buttons if available.
+ */
 private fun setupXRButtons(canvas: HTMLCanvasElement) {
     WebXRSession.checkSupport(XRSessionMode.IMMERSIVE_AR) { arSupported ->
         if (arSupported) {
@@ -542,7 +292,12 @@ private fun setupXRButtons(canvas: HTMLCanvasElement) {
     }
 }
 
+/**
+ * Enter an immersive AR session via WebXR.
+ */
 private fun enterAR(canvas: HTMLCanvasElement) {
+    val modelUrl = MODELS[currentModelName] ?: MODELS.values.first()
+
     ARSceneView.create(
         canvas = canvas,
         onError = { error ->
@@ -557,9 +312,7 @@ private fun enterAR(canvas: HTMLCanvasElement) {
             }
 
             arSession.onSelect = { inputSource ->
-                arSession.loadModel(
-                    "https://sceneview.github.io/assets/models/khronos_damaged_helmet.glb"
-                ) { asset ->
+                arSession.loadModel(modelUrl) { asset ->
                     console.log("Model placed in AR")
                 }
             }
@@ -573,7 +326,12 @@ private fun enterAR(canvas: HTMLCanvasElement) {
     )
 }
 
+/**
+ * Enter an immersive VR session via WebXR.
+ */
 private fun enterVR(canvas: HTMLCanvasElement) {
+    val modelUrl = MODELS[currentModelName] ?: MODELS.values.first()
+
     VRSceneView.create(
         canvas = canvas,
         onError = { error ->
@@ -583,9 +341,7 @@ private fun enterVR(canvas: HTMLCanvasElement) {
         onReady = { vrSession ->
             console.log("VR session started")
 
-            vrSession.loadModel(
-                "https://sceneview.github.io/assets/models/khronos_damaged_helmet.glb"
-            )
+            vrSession.loadModel(modelUrl)
 
             vrSession.onInputSelect = { source, pose ->
                 console.log("VR select from ${source.handedness} hand")
@@ -598,13 +354,4 @@ private fun enterVR(canvas: HTMLCanvasElement) {
             vrSession.start()
         }
     )
-}
-
-// ---- Utility ----
-
-/**
- * URL-encode a string for query parameters.
- */
-private fun encodeURIComponent(value: String): String {
-    return js("encodeURIComponent(value)") as String
 }

@@ -3,16 +3,14 @@
     <string name="app_name">3D &amp; AR Explorer</string>
 
     <!-- Navigation -->
-    <string name="tab_3d">3D Viewer</string>
+    <string name="tab_3d">Explore</string>
     <string name="tab_ar">AR</string>
-    <string name="tab_features">Features</string>
+    <string name="tab_samples">Samples</string>
     <string name="tab_about">About</string>
 
     <!-- Explore screen -->
     <string name="explore_title">3D &amp; AR Explorer</string>
     <string name="explore_subtitle">Explore stunning 3D models in AR</string>
-    <string name="explore_search">Search Sketchfab</string>
-    <string name="explore_search_hint">Search 3D models on Sketchfab\u2026</string>
     <string name="explore_gesture_hint">Pinch to zoom \u00B7 Drag to orbit \u00B7 Double-tap to enlarge</string>
     <string name="explore_pause">Pause animation</string>
     <string name="explore_play">Play animation</string>

@@ -132,10 +132,6 @@ import io.github.sceneview.rememberView
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 
-/** CDN base URL for on-demand model loading (no bundled assets). */
-private const val CDN = "https://github.com/sceneview/sceneview/releases/download/assets-v1"
-private const val KHRONOS = "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models"
-
 private data class SampleDemo(
     val title: String,
     val subtitle: String,
@@ -417,7 +413,7 @@ private fun ModelViewerDemo() {
         environmentLoader.createHDREnvironment("environments/studio_warm_2k.hdr")
             ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
-    val modelInstance = rememberModelInstance(modelLoader, "$KHRONOS/DamagedHelmet/glTF-Binary/DamagedHelmet.glb")
+    val modelInstance = rememberModelInstance(modelLoader, "models/toy_car.glb")
 
     Box(modifier = Modifier.fillMaxSize()) {
         SceneView(
@@ -495,7 +491,7 @@ private fun AnimationDemo() {
         environmentLoader.createHDREnvironment("environments/sunset_2k.hdr")
             ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
-    val modelInstance = rememberModelInstance(modelLoader, "$KHRONOS/Fox/glTF-Binary/Fox.glb")
+    val modelInstance = rememberModelInstance(modelLoader, "models/animated_robot_mantis.glb")
 
     Box(modifier = Modifier.fillMaxSize()) {
         SceneView(
@@ -532,7 +528,7 @@ private fun AnimationControlDemo() {
         environmentLoader.createHDREnvironment("environments/studio_warm_2k.hdr")
             ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
-    val modelInstance = rememberModelInstance(modelLoader, "$KHRONOS/Fox/glTF-Binary/Fox.glb")
+    val modelInstance = rememberModelInstance(modelLoader, "models/fox.glb")
 
     var animationSpeed by remember { mutableFloatStateOf(1.0f) }
     var isLooping by remember { mutableStateOf(true) }
@@ -629,7 +625,7 @@ private fun DynamicSkyDemo() {
         environmentLoader.createHDREnvironment("environments/outdoor_cloudy_2k.hdr")
             ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
-    val modelInstance = rememberModelInstance(modelLoader, "$KHRONOS/DamagedHelmet/glTF-Binary/DamagedHelmet.glb")
+    val modelInstance = rememberModelInstance(modelLoader, "models/space_helmet.glb")
     var timeOfDay by remember { mutableFloatStateOf(16f) }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -665,7 +661,7 @@ private fun LightingDemo() {
     val environment = rememberEnvironment(environmentLoader) {
         environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
-    val modelInstance = rememberModelInstance(modelLoader, "$KHRONOS/Avocado/glTF-Binary/Avocado.glb")
+    val modelInstance = rememberModelInstance(modelLoader, "models/seal_statuette.glb")
     var sunIntensity by remember { mutableFloatStateOf(80000f) }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -704,7 +700,7 @@ private fun DynamicLightingDemo() {
     val environment = rememberEnvironment(environmentLoader) {
         environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
-    val modelInstance = rememberModelInstance(modelLoader, "$KHRONOS/DamagedHelmet/glTF-Binary/DamagedHelmet.glb")
+    val modelInstance = rememberModelInstance(modelLoader, "models/damaged_helmet.glb")
 
     data class LightColor(val name: String, val r: Float, val g: Float, val b: Float, val chipColor: Color)
     val lightColors = remember {
@@ -778,7 +774,7 @@ private fun CameraControlsDemo() {
         environmentLoader.createHDREnvironment("environments/studio_warm_2k.hdr")
             ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
-    val modelInstance = rememberModelInstance(modelLoader, "$KHRONOS/Avocado/glTF-Binary/Avocado.glb")
+    val modelInstance = rememberModelInstance(modelLoader, "models/iridescence_lamp.glb")
 
     Box(modifier = Modifier.fillMaxSize()) {
         SceneView(
@@ -822,10 +818,10 @@ private fun MultiModelDemo() {
         environmentLoader.createHDREnvironment("environments/comfy_cafe_2k.hdr")
             ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
-    val sofa = rememberModelInstance(modelLoader, "$KHRONOS/DamagedHelmet/glTF-Binary/DamagedHelmet.glb")
-    val lamp = rememberModelInstance(modelLoader, "$KHRONOS/Avocado/glTF-Binary/Avocado.glb")
-    val plant = rememberModelInstance(modelLoader, "$KHRONOS/WaterBottle/glTF-Binary/WaterBottle.glb")
-    val vase = rememberModelInstance(modelLoader, "$KHRONOS/Suzanne/glTF/Suzanne.gltf")
+    val sofa = rememberModelInstance(modelLoader, "models/velvet_sofa.glb")
+    val lamp = rememberModelInstance(modelLoader, "models/candle_holder.glb")
+    val plant = rememberModelInstance(modelLoader, "models/plant.glb")
+    val vase = rememberModelInstance(modelLoader, "models/glass_vase_flowers.glb")
     val allLoaded = sofa != null && lamp != null && plant != null && vase != null
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -876,7 +872,7 @@ private fun FogDemo() {
         environmentLoader.createHDREnvironment("environments/outdoor_cloudy_2k.hdr")
             ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
-    val modelInstance = rememberModelInstance(modelLoader, "$KHRONOS/DamagedHelmet/glTF-Binary/DamagedHelmet.glb")
+    val modelInstance = rememberModelInstance(modelLoader, "models/geisha_mask.glb")
     var fogDensity by remember { mutableFloatStateOf(0.05f) }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -917,7 +913,7 @@ private fun EnvironmentGalleryDemo() {
             environmentLoader.createHDREnvironment(selectedEnv.second) ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
         }
     }
-    val modelInstance = rememberModelInstance(modelLoader, "$KHRONOS/DamagedHelmet/glTF-Binary/DamagedHelmet.glb")
+    val modelInstance = rememberModelInstance(modelLoader, "models/damaged_helmet.glb")
 
     Box(modifier = Modifier.fillMaxSize()) {
         SceneView(modifier = Modifier.fillMaxSize(), engine = engine, modelLoader = modelLoader, cameraNode = cameraNode, cameraManipulator = rememberCameraManipulator(orbitHomePosition = Position(z = 2.5f, y = 0.3f), targetPosition = Position(0f, 0f, 0f)), environment = environment) {
@@ -950,7 +946,7 @@ private fun PostProcessingDemo() {
     val environmentLoader = rememberEnvironmentLoader(engine)
     val cameraNode = rememberCameraNode(engine) { position = Float3(z = 3.5f, y = 0.5f); lookAt(Float3(0f, 0f, 0f)) }
     val environment = rememberEnvironment(environmentLoader) { environmentLoader.createHDREnvironment("environments/studio_warm_2k.hdr") ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!! }
-    val modelInstance = rememberModelInstance(modelLoader, "$KHRONOS/DamagedHelmet/glTF-Binary/DamagedHelmet.glb")
+    val modelInstance = rememberModelInstance(modelLoader, "models/sheen_chair.glb")
 
     var ssaoEnabled by remember { mutableStateOf(true) }
     var fxaaEnabled by remember { mutableStateOf(true) }
@@ -1051,7 +1047,7 @@ private fun GestureEditingDemo() {
     val environmentLoader = rememberEnvironmentLoader(engine)
     val cameraNode = rememberCameraNode(engine) { position = Float3(z = 4.0f, y = 1.5f); lookAt(Float3(0f, 0.3f, 0f)) }
     val environment = rememberEnvironment(environmentLoader) { environmentLoader.createHDREnvironment("environments/studio_warm_2k.hdr") ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!! }
-    val modelInstance = rememberModelInstance(modelLoader, "$KHRONOS/Avocado/glTF-Binary/Avocado.glb")
+    val modelInstance = rememberModelInstance(modelLoader, "models/sunglasses.glb")
 
     Box(modifier = Modifier.fillMaxSize()) {
         SceneView(modifier = Modifier.fillMaxSize(), engine = engine, modelLoader = modelLoader, materialLoader = materialLoader, cameraNode = cameraNode, cameraManipulator = rememberCameraManipulator(orbitHomePosition = Position(z = 4.0f, y = 1.5f), targetPosition = Position(0f, 0.3f, 0f)), environment = environment, onGestureListener = rememberOnGestureListener(onDoubleTap = { _, node -> node?.apply { scale = Float3(1f) } })) {
@@ -1180,7 +1176,7 @@ private fun ReflectionProbesDemo() {
     val selectedEnv = envs[selectedEnvIndex]
     val cameraNode = rememberCameraNode(engine) { position = Float3(z = 2.5f, y = 0.3f); lookAt(Float3(0f, 0f, 0f)) }
     val environment = key(selectedEnv.second) { rememberEnvironment(environmentLoader) { environmentLoader.createHDREnvironment(selectedEnv.second) ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!! } }
-    val modelInstance = rememberModelInstance(modelLoader, "$KHRONOS/DamagedHelmet/glTF-Binary/DamagedHelmet.glb")
+    val modelInstance = rememberModelInstance(modelLoader, "models/space_helmet.glb")
 
     Box(modifier = Modifier.fillMaxSize()) {
         SceneView(modifier = Modifier.fillMaxSize(), engine = engine, modelLoader = modelLoader, cameraNode = cameraNode, cameraManipulator = rememberCameraManipulator(orbitHomePosition = Position(z = 2.5f, y = 0.3f), targetPosition = Position(0f, 0f, 0f)), environment = environment) {
@@ -1224,7 +1220,7 @@ private fun GltfCamerasDemo() {
     LaunchedEffect(selected) { cameraNode.position = selected.position; cameraNode.lookAt(selected.target) }
 
     val environment = rememberEnvironment(environmentLoader) { environmentLoader.createHDREnvironment("environments/studio_2k.hdr") ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!! }
-    val modelInstance = rememberModelInstance(modelLoader, "$KHRONOS/Fox/glTF-Binary/Fox.glb")
+    val modelInstance = rememberModelInstance(modelLoader, "models/animated_bunny_detective.glb")
 
     Box(modifier = Modifier.fillMaxSize()) {
         SceneView(modifier = Modifier.fillMaxSize(), engine = engine, modelLoader = modelLoader, cameraNode = cameraNode, cameraManipulator = null, environment = environment) {

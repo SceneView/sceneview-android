@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -63,7 +63,7 @@ private fun NavigationShellPreview(selectedTab: Int) {
     val tabs = listOf(
         Triple("Explore", Icons.Default.ViewInAr, "explore"),
         Triple("AR", Icons.Default.CameraAlt, "ar"),
-        Triple("Features", Icons.Default.AutoAwesome, "samples"),
+        Triple("Samples", Icons.Default.GridView, "samples"),
         Triple("About", Icons.Default.Info, "about")
     )
 
