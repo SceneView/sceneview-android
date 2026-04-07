@@ -84,7 +84,7 @@ class GoldenImageComparator(
                 if (channelMax > maxChannelDiff) {
                     failingPixels++
                     // Highlight failing pixels in red, with brightness proportional to diff
-                    val intensity = (channelMax * 255 / 256).coerceIn(50, 255)
+                    val intensity = channelMax.coerceIn(50, 255)
                     diffBitmap.setPixel(x, y, Color.argb(255, intensity, 0, 0))
                 } else {
                     // Passing pixel — show dim green
@@ -124,8 +124,9 @@ class GoldenImageComparator(
      * @return the saved [File].
      */
     fun saveToDisk(bitmap: Bitmap, name: String): File {
-        val dir = InstrumentationRegistry.getInstrumentation()
-            .targetContext.getExternalFilesDir("render-test-output")!!
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val dir = context.getExternalFilesDir("render-test-output")
+            ?: File(context.filesDir, "render-test-output")
         dir.mkdirs()
         val file = File(dir, "$name.png")
         FileOutputStream(file).use { out ->
