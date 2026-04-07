@@ -60,8 +60,8 @@ To set up: `npm install @google/stitch-sdk`, then add the Stitch MCP server in C
 
 ## When writing any SceneView code
 
-- Use `SceneView { }` for 3D-only scenes (`io.github.sceneview:sceneview:3.6.1`)
-- Use `ARSceneView { }` for augmented reality (`io.github.sceneview:arsceneview:3.6.1`)
+- Use `SceneView { }` for 3D-only scenes (`io.github.sceneview:sceneview:3.6.2`)
+- Use `ARSceneView { }` for augmented reality (`io.github.sceneview:arsceneview:3.6.2`)
 - Declare nodes as composables inside the trailing content block — not imperatively
 - Load models with `rememberModelInstance(modelLoader, "models/file.glb")` — returns `null`
   while loading, always handle the null case
@@ -165,11 +165,11 @@ Never say "everything is good" without verifying published packages.
 ### Current state (last updated: 2026-04-02, session 25)
 
 - **Active branch**: `main`
-- **Latest release**: v3.6.1 (GitHub Release + npm — published; **Maven Central: NOT YET** — #780)
+- **Latest release**: v3.6.2 (GitHub Release + npm — published; **Maven Central: NOT YET** — #780)
 - **Android rewrite**: SceneRenderer, NodeGestureDelegate/AnimationDelegate/State, ARPermissionHandler
 - **Demo app**: Material 3 Expressive, 4 tabs, 40 models, 19 sample demos
 - **MCP servers**: sceneview-mcp 3.5.4 on npm (26 tools, 2360 tests), 9 MCPs total
-- **sceneview-web**: v3.6.1 on npm (Kotlin/JS + Filament.js)
+- **sceneview-web**: v3.6.2 on npm (Kotlin/JS + Filament.js)
 - **GitHub orgs**: `sceneview`, `sceneview-tools`, `mcp-tools-lab`
 - **Website**: redesigned — 8 sections on index, showcase rewritten, playground enhanced (7 platforms, camera manipulator, Open in Claude), docs 404 fixed
 - **Playground**: 13 examples, 7 platforms, 23 models, camera manipulator, Open in Claude + AI dropdown
