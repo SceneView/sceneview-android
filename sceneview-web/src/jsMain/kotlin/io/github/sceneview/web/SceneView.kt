@@ -2,6 +2,7 @@ package io.github.sceneview.web
 
 import io.github.sceneview.web.bindings.*
 import io.github.sceneview.web.nodes.CameraConfig
+import io.github.sceneview.web.nodes.GeometryConfig
 import io.github.sceneview.web.nodes.LightConfig
 import io.github.sceneview.web.nodes.LightType
 import io.github.sceneview.web.nodes.ModelConfig
@@ -364,6 +365,45 @@ class SceneView private constructor(
         builder.build(engine, entity)
         scene.addEntity(entity)
         lightEntities.add(entity)
+    }
+
+    /**
+     * Add a procedural geometry primitive to the scene.
+     *
+     * Generates an in-memory GLB from the KMP core geometry generators
+     * and loads it through the gltfio pipeline, giving geometry nodes
+     * the same PBR material system as loaded glTF models.
+     *
+     * @param config Geometry configuration (type, size, color, position, scale)
+     */
+    fun addGeometry(config: GeometryConfig) {
+        val glbBuffer = GeometryGLBBuilder.buildGLB(config)
+        val loader = assetLoader ?: engine.createAssetLoader().also { assetLoader = it }
+
+        try {
+            val asset = loader.createAsset(glbBuffer)
+            if (asset != null) {
+                val entities = asset.getEntities()
+                scene.addEntity(asset.getRoot())
+                scene.addEntities(entities)
+
+                val animator = try {
+                    asset.getInstance().getAnimator()
+                } catch (e: Throwable) {
+                    null
+                }
+
+                models.add(LoadedModel(asset, animator))
+
+                // Release source data -- geometry GLBs have no external resources
+                asset.releaseSourceData()
+                console.log("SceneView: Geometry '${config.geometryType.name.lowercase()}' added")
+            } else {
+                console.error("SceneView: Failed to create geometry asset for ${config.geometryType}")
+            }
+        } catch (e: Throwable) {
+            console.error("SceneView: Error creating geometry ${config.geometryType}", e)
+        }
     }
 
     /**

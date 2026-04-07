@@ -21,7 +21,7 @@ import io.flutter.plugin.platform.PlatformViewFactory
 import io.github.sceneview.Scene
 import io.github.sceneview.ar.arcore.getUpdatedPlanes
 import io.github.sceneview.math.Position
-import Rotation
+import io.github.sceneview.math.Rotation
 import io.github.sceneview.rememberCameraNode
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberEnvironment
