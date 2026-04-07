@@ -5,6 +5,7 @@ import android.graphics.Color
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.google.android.filament.Camera
+import com.google.android.filament.LightManager
 import com.google.android.filament.Skybox
 import io.github.sceneview.geometries.Cube
 import io.github.sceneview.geometries.Sphere
@@ -14,6 +15,7 @@ import io.github.sceneview.math.Position
 import io.github.sceneview.math.Size
 import io.github.sceneview.math.colorOf
 import io.github.sceneview.node.CubeNode
+import io.github.sceneview.node.LightNode
 import io.github.sceneview.node.PlaneNode
 import io.github.sceneview.node.SphereNode
 import io.github.sceneview.render.RenderTestHarness.Companion.colorsMatch
@@ -24,11 +26,13 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Render tests for geometry nodes (CubeNode, SphereNode, etc.).
+ * Render tests for geometry nodes (CubeNode, SphereNode, PlaneNode).
  *
  * These tests verify that procedural geometry actually appears in the rendered output.
- * A [MaterialLoader] is used to create coloured materials, and the rendered pixels
- * are compared against expected values.
+ * A [MaterialLoader] is used to create coloured PBR materials, and a directional light
+ * is added so PBR-lit meshes are actually visible (without a light, PBR materials render black).
+ *
+ * Camera exposure is set to 1.0 (unit-less) to avoid tone-mapping distortion.
  *
  * Requires an Android device or emulator with GPU support (SwiftShader OK).
  */
@@ -37,6 +41,7 @@ class GeometryRenderTest {
 
     private lateinit var harness: RenderTestHarness
     private lateinit var materialLoader: MaterialLoader
+    private lateinit var light: LightNode
 
     @Before
     fun setup() {
@@ -44,15 +49,38 @@ class GeometryRenderTest {
         harness.runOnMain {
             val context = InstrumentationRegistry.getInstrumentation().targetContext
             materialLoader = MaterialLoader(harness.engine, context)
+
+            // Directional light — required for PBR materials to be visible
+            light = LightNode(
+                engine = harness.engine,
+                type = LightManager.Type.DIRECTIONAL
+            ) {
+                direction(0f, -1f, -1f)
+                intensity(100_000f)
+            }
+            harness.scene.addEntity(light.entity)
         }
     }
 
     @After
     fun teardown() {
         harness.runOnMain {
+            harness.scene.removeEntity(light.entity)
+            light.destroy()
             materialLoader.destroy()
         }
         harness.destroy()
+    }
+
+    /**
+     * Creates a camera with unit exposure looking at the origin from z=5.
+     */
+    private fun createTestCamera(): com.google.android.filament.Camera {
+        val camera = harness.engine.createCamera(harness.engine.entityManager.create())
+        camera.setProjection(45.0, 1.0, 0.1, 100.0, Camera.Fov.VERTICAL)
+        camera.lookAt(0.0, 0.0, 5.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0)
+        camera.setExposure(1.0f)
+        return camera
     }
 
     // ── CubeNode renders visible pixels ─────────────────────────────────────
@@ -61,25 +89,12 @@ class GeometryRenderTest {
     fun cubeNode_rendersNonBlackPixels() {
         var bitmap: Bitmap? = null
         harness.runOnMain {
-            // White background so we can detect the cube
             harness.scene.skybox = Skybox.Builder()
-                .color(1f, 1f, 1f, 1f)
+                .color(0f, 0f, 0f, 1f)
                 .build(harness.engine)
+            harness.view.camera = createTestCamera()
 
-            // Camera looking at origin
-            val camera = harness.engine.createCamera(harness.engine.entityManager.create())
-            camera.setProjection(45.0, 1.0, 0.1, 100.0, Camera.Fov.VERTICAL)
-            camera.lookAt(
-                0.0, 0.0, 5.0,   // eye position
-                0.0, 0.0, 0.0,   // target
-                0.0, 1.0, 0.0    // up
-            )
-            harness.view.camera = camera
-
-            // Red cube at origin
-            val redMaterial = materialLoader.createColorInstance(
-                color = colorOf(1f, 0f, 0f, 1f)
-            )
+            val redMaterial = materialLoader.createColorInstance(colorOf(1f, 0f, 0f, 1f))
             val cubeNode = CubeNode(
                 engine = harness.engine,
                 size = Cube.DEFAULT_SIZE,
@@ -91,31 +106,26 @@ class GeometryRenderTest {
             harness.renderFrames(5)
             bitmap = harness.capturePixels()
 
-            // Cleanup
             harness.scene.removeEntity(cubeNode.entity)
             cubeNode.destroy()
         }
 
         val bmp = bitmap!!
-        // The cube should occlude some of the white background at the center
-        // Count pixels that are NOT white (i.e. the cube is rendering something)
-        var nonWhitePixels = 0
         val cx = bmp.width / 2
         val cy = bmp.height / 2
-        val region = 20 // check a 40x40 region around center
+        var nonBlackPixels = 0
+        val region = 20
         for (x in (cx - region) until (cx + region)) {
             for (y in (cy - region) until (cy + region)) {
                 val pixel = bmp.getPixel(x, y)
-                if (!colorsMatch(pixel, Color.WHITE, tolerance = 30)) {
-                    nonWhitePixels++
+                if (Color.red(pixel) > 10 || Color.green(pixel) > 10 || Color.blue(pixel) > 10) {
+                    nonBlackPixels++
                 }
             }
         }
-
         assertTrue(
-            "Cube should render visible pixels at the center. " +
-                    "Found $nonWhitePixels non-white pixels in center region",
-            nonWhitePixels > 50 // at least some pixels should be from the cube
+            "Cube should render visible pixels at center. Found $nonBlackPixels non-black pixels",
+            nonBlackPixels > 50
         )
     }
 
@@ -128,13 +138,9 @@ class GeometryRenderTest {
 
         harness.runOnMain {
             harness.scene.skybox = Skybox.Builder()
-                .color(0f, 0f, 0f, 1f)  // black background
+                .color(0f, 0f, 0f, 1f)
                 .build(harness.engine)
-
-            val camera = harness.engine.createCamera(harness.engine.entityManager.create())
-            camera.setProjection(45.0, 1.0, 0.1, 100.0, Camera.Fov.VERTICAL)
-            camera.lookAt(0.0, 0.0, 5.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0)
-            harness.view.camera = camera
+            harness.view.camera = createTestCamera()
 
             // Red cube
             val redMaterial = materialLoader.createColorInstance(colorOf(1f, 0f, 0f, 1f))
@@ -150,7 +156,7 @@ class GeometryRenderTest {
             harness.scene.removeEntity(redCube.entity)
             redCube.destroy()
 
-            // Blue cube (same position)
+            // Blue cube
             val blueMaterial = materialLoader.createColorInstance(colorOf(0f, 0f, 1f, 1f))
             val blueCube = CubeNode(
                 engine = harness.engine,
@@ -186,11 +192,7 @@ class GeometryRenderTest {
             harness.scene.skybox = Skybox.Builder()
                 .color(0f, 0f, 0f, 1f)
                 .build(harness.engine)
-
-            val camera = harness.engine.createCamera(harness.engine.entityManager.create())
-            camera.setProjection(45.0, 1.0, 0.1, 100.0, Camera.Fov.VERTICAL)
-            camera.lookAt(0.0, 0.0, 5.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0)
-            harness.view.camera = camera
+            harness.view.camera = createTestCamera()
 
             val greenMaterial = materialLoader.createColorInstance(colorOf(0f, 1f, 0f, 1f))
             val sphereNode = SphereNode(
@@ -237,10 +239,11 @@ class GeometryRenderTest {
                 .color(0f, 0f, 0f, 1f)
                 .build(harness.engine)
 
+            // Look down at the plane from above
             val camera = harness.engine.createCamera(harness.engine.entityManager.create())
             camera.setProjection(45.0, 1.0, 0.1, 100.0, Camera.Fov.VERTICAL)
-            // Look down at the plane from above
             camera.lookAt(0.0, 5.0, 0.1, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0)
+            camera.setExposure(1.0f)
             harness.view.camera = camera
 
             val yellowMaterial = materialLoader.createColorInstance(colorOf(1f, 1f, 0f, 1f))
@@ -283,8 +286,6 @@ class GeometryRenderTest {
 
     @Test
     fun cubeNode_goldenComparison_selfConsistent() {
-        // Render the same scene twice and verify the outputs are identical
-        // (within tolerance). This validates the golden comparison pipeline itself.
         var bitmap1: Bitmap? = null
         var bitmap2: Bitmap? = null
 
@@ -292,11 +293,7 @@ class GeometryRenderTest {
             harness.scene.skybox = Skybox.Builder()
                 .color(0.2f, 0.2f, 0.2f, 1f)
                 .build(harness.engine)
-
-            val camera = harness.engine.createCamera(harness.engine.entityManager.create())
-            camera.setProjection(45.0, 1.0, 0.1, 100.0, Camera.Fov.VERTICAL)
-            camera.lookAt(0.0, 0.0, 5.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0)
-            harness.view.camera = camera
+            harness.view.camera = createTestCamera()
 
             val material = materialLoader.createColorInstance(colorOf(0.8f, 0.2f, 0.1f, 1f))
             val cubeNode = CubeNode(
