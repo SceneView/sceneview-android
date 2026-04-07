@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   SafeAreaView,
   StyleSheet,
@@ -12,7 +12,6 @@ import {
   ScrollView,
   Alert,
   StatusBar,
-  Dimensions,
   Platform,
 } from 'react-native';
 import {
@@ -653,8 +652,6 @@ export default function App() {
 // ---------------------------------------------------------------------------
 // Styles
 // ---------------------------------------------------------------------------
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
   container: {
