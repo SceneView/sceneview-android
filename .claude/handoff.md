@@ -99,7 +99,24 @@
 - **0 open PRs**, **1 open issue** (#780 Maven Central — needs maintainer re-trigger)
 - All Dependabot alerts resolved (21 Vite vulns fixed)
 - All deps up to date: Filament 1.70.2, kotlin-math 1.8.0, Dokka 2.2.0, Material3 alpha16, maven-publish 0.35.0
-- **35 commits this session**
+- **53 commits this session**
+- Final audit: **40/40 items verified, nothing forgotten**
+
+### NEXT SESSION PLAN (session 27)
+**Read `.claude/plans/session-27-overnight.md` for full details.**
+
+Priority tasks:
+1. **Rewrite ALL sample apps** — replace hardcoded 40-model galleries with Sketchfab search + feature showcase
+2. **Visual verification on ALL platforms** — screenshot tests for Android, iOS, Web, Flutter, RN
+3. **Store publication check** — verify all apps/packages are live
+4. **Sketchfab API module** — shared search in `samples/common/`
+
+Design principles for new samples:
+- Showcase ALL SDK features (every node type, every interaction)
+- Sketchfab search instead of bundled models (saves 259MB)
+- Visually impressive — show SDK power
+- Each feature has an automated screenshot test
+- Material 3 / native platform design
 
 ### Commits
 1. `dbc7842` — Filament 1.70.2
