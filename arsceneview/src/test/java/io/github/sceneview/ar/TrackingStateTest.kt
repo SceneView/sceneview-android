@@ -24,8 +24,9 @@ class TrackingStateTest {
     }
 
     @Test
-    fun `TrackingState has exactly 3 values`() {
-        assertEquals(3, TrackingState.values().size)
+    fun `TrackingState has at least 3 values`() {
+        // Use >= instead of == to avoid breaking if ARCore adds new states
+        assertTrue(TrackingState.values().size >= 3)
     }
 
     @Test
