@@ -591,6 +591,26 @@ SceneView {
 }
 ```
 
+### DynamicSkyNode — time-of-day sun lighting
+
+```kotlin
+@Composable fun SceneScope.DynamicSkyNode(
+    timeOfDay: Float = 12f,          // 0-24: 0=midnight, 6=sunrise, 12=noon, 18=sunset
+    turbidity: Float = 2f,           // atmospheric haze [1.0, 10.0]
+    sunIntensity: Float = 110_000f   // lux at solar noon
+)
+```
+
+Creates a SUN light whose colour, intensity and direction update with `timeOfDay`.
+Sun rises at 6h, peaks at 12h, sets at 18h. Colour: cool blue (night) → warm orange (horizon) → white-yellow (noon).
+
+```kotlin
+SceneView {
+    DynamicSkyNode(timeOfDay = 14.5f)
+    ModelNode(modelInstance = instance!!)
+}
+```
+
 ### SecondaryCamera — secondary camera (formerly CameraNode)
 ```kotlin
 @Composable fun SecondaryCamera(
