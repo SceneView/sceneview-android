@@ -26,11 +26,43 @@
 - ARPermissionFlowTest: +7 integration scenario tests
 - TrackingStateTest: +3 enum contract tests
 
-### Render test infrastructure (new)
+### Render test infrastructure (new — 11 tests)
 - **RenderTestHarness.kt**: headless Filament setup (EGL pbuffer + offscreen SwapChain + Texture.PixelBufferDescriptor readPixels → Bitmap)
 - **RenderSmokeTest.kt**: 4 pixel spot-check tests (engine init, red/blue skybox, white scene, color differentiation)
+- **GeometryRenderTest.kt**: 5 tests (CubeNode, SphereNode, PlaneNode + material colors + golden self-consistency)
+- **LightingRenderTest.kt**: 2 tests (directional light brightness, point light localisation)
 - **GoldenImageComparator.kt**: Filament-style diff (per-channel threshold + max-diff-pixels-percent + diff image generation)
 - **render-tests.yml**: CI workflow (GitHub Actions + Android emulator + SwiftShader GPU)
+
+### Critical bugs found & fixed
+- **Frame.hitTest(ray) CRASH** (pre-existing): passed `origin.size` as array offset instead of `0` → ArrayIndexOutOfBoundsException on every ray-based AR hit test
+- **HitResult.set() throw** (pre-existing): used throwing `other.node` getter instead of `other.nodeOrNull`
+
+### Security
+- **21 Dependabot vulns fixed**: Vite 8.0.3 → 8.0.7 across 7 MCP packages (14 HIGH, 7 MODERATE)
+
+### PRs reviewed
+- **#789** (APPROVED): AugmentedFaceNode crash fix — 2 bugs confirmed (zero-size buffers, wrong buffer slot), fix is safe
+- **#785**: Filament bump — commented as duplicate (already done manually)
+- **#788**: kotlin-math 1.6→1.8 — flagged as major bump, needs changelog review
+- **#782**: maven-publish 0.33→0.36 — flagged as related to #780 publish failure
+
+### Commits (16 total)
+1. `dbc7842` — Filament 1.70.2
+2. `f02cb69` — Doc Maven Central failure
+3. `358b9e6` — Null safety, KDoc, dead code, AR tests
+4. `a6badcb` — TrackingStateTest resilience
+5. `1cf28de` — ModelNode onFrameError, Deprecated, Pose, KDoc
+6. `159ee7c` — Render test infra (harness + smoke + golden + CI)
+7. `8219b4a` — Fix readPixels API + handoff
+8. `b54c682` — Geometry render tests
+9. `239af04` — SphereNode, PlaneNode, golden self-consistency
+10. `284200c` — Lighting render tests
+11. `17911c0` — Fix 21 Dependabot vulns
+12. `9132e6c` — Fix render tests (exposure + light)
+13. `12b190d` — SwapChainFlags.CONFIG_DEFAULT + CLAUDE.md version
+14. `4259f33` — GeometryRenderTest null safety
+15. `cf22861` — Frame.hitTest crash + HitResult.set throwing getter
 
 ### Commits
 1. `dbc7842` — Filament 1.70.2
