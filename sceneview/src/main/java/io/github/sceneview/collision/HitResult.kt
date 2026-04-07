@@ -37,7 +37,7 @@ class HitResult(
 
     internal fun set(other: HitResult) {
         super.set(other)
-        _node = other.node
+        _node = other.nodeOrNull
     }
 
     override fun reset() {

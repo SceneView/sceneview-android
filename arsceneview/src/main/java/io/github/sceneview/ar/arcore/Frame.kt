@@ -29,7 +29,7 @@ import io.github.sceneview.utils.intervalSeconds
 fun Frame.hitTest(ray: Ray): List<HitResult> {
     val origin = ray.origin.toFloatArray()
     val direction = ray.direction.toFloatArray()
-    return hitTest(origin, origin.size, direction, direction.size)
+    return hitTest(origin, 0, direction, 0)
 }
 
 /**
