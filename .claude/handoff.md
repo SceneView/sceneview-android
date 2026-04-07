@@ -90,6 +90,7 @@
 - Module merge (sceneview + arsceneview → sceneview-android) after stability confirmed
 
 ### Known issues
+- **v3.6.1 NOT on Maven Central** (#780) — GitHub Release + npm published, but Maven Central upload silently failed. Need to re-trigger `publishAndReleaseToMavenCentral` via release workflow or manually. Latest on Maven Central is 3.6.0.
 - GitHub Pages CDN can be slow (10+ min)
 - KMP iOS sim tests: local gradle cache corrupt (not a real bug, `rm -rf` fixes it)
 
