@@ -33,7 +33,7 @@ jobs:
           cache: gradle
 
       - run: chmod +x ./gradlew
-      - uses: gradle/actions/wrapper-validation@v5
+      - uses: gradle/actions/wrapper-validation@v6
 
       - name: Assemble all
         run: |
