@@ -33,7 +33,6 @@ import io.github.sceneview.collision.HitResult
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.math.Size
 import io.github.sceneview.node.ViewNode.WindowManager
-import io.github.sceneview.safeDestroyMaterialInstance
 import io.github.sceneview.safeDestroyStream
 import io.github.sceneview.safeDestroyTexture
 
