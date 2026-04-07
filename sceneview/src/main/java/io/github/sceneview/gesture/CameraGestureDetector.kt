@@ -28,7 +28,10 @@ open class CameraGestureDetector(
      * `cameraManipulator = CameraGestureDetector.DefaultCameraManipulator(manipulator =
      * Manipulator.Builder().build())`
      */
-    @Deprecated("Use CameraGestureDetector.CameraManipulator")
+    @Deprecated(
+        "Use CameraGestureDetector.CameraManipulator",
+        ReplaceWith("CameraGestureDetector(viewHeight, createDefaultCameraManipulator(manipulator))")
+    )
     constructor(
         viewHeight: () -> Int,
         manipulator: Manipulator?

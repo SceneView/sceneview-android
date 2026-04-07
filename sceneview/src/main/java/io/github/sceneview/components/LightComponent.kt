@@ -15,11 +15,21 @@ import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.toColor
 
+/**
+ * ECS component for Filament lights (directional, point, spot, sun).
+ *
+ * Provides typed accessors to [LightManager] properties such as intensity, colour,
+ * direction, falloff, and shadow configuration.
+ */
 interface LightComponent : Component {
 
+    /** The Filament [LightManager] that owns all light instances. */
     val lightManager get() = engine.lightManager
+
+    /** The light-manager instance handle for this entity. */
     val lightInstance: EntityInstance get() = lightManager.getInstance(entity)
 
+    /** The type of this light (directional, point, spot, or sun). */
     val type: LightManager.Type get() = lightManager.getType(lightInstance)
 
     /**
@@ -219,6 +229,9 @@ interface LightComponent : Component {
         get() = lightManager.isShadowCaster(lightInstance)
         set(value) = lightManager.setShadowCaster(lightInstance, value)
 
+    /** The outer cone angle of this spot light in radians. */
     val outerConeAngle: Float get() = lightManager.getOuterConeAngle(lightInstance)
+
+    /** The inner cone angle of this spot light in radians (full-intensity region). */
     val innerConeAngle: Float get() = lightManager.getInnerConeAngle(lightInstance)
 }
