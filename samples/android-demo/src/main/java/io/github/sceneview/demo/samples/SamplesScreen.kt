@@ -822,9 +822,9 @@ private fun MultiModelDemo() {
             ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
     val sofa = rememberModelInstance(modelLoader, "$CDN/velvet_sofa.glb")
-    val lamp = rememberModelInstance(modelLoader, "models/candle_holder.glb")
-    val plant = rememberModelInstance(modelLoader, "models/plant.glb")
-    val vase = rememberModelInstance(modelLoader, "models/glass_vase_flowers.glb")
+    val lamp = rememberModelInstance(modelLoader, "$CDN/candle_holder.glb")
+    val plant = rememberModelInstance(modelLoader, "$CDN/plant.glb")
+    val vase = rememberModelInstance(modelLoader, "$CDN/glass_vase_flowers.glb")
     val allLoaded = sofa != null && lamp != null && plant != null && vase != null
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -875,7 +875,7 @@ private fun FogDemo() {
         environmentLoader.createHDREnvironment("environments/outdoor_cloudy_2k.hdr")
             ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
-    val modelInstance = rememberModelInstance(modelLoader, "models/geisha_mask.glb")
+    val modelInstance = rememberModelInstance(modelLoader, "$CDN/geisha_mask.glb")
     var fogDensity by remember { mutableFloatStateOf(0.05f) }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -949,7 +949,7 @@ private fun PostProcessingDemo() {
     val environmentLoader = rememberEnvironmentLoader(engine)
     val cameraNode = rememberCameraNode(engine) { position = Float3(z = 3.5f, y = 0.5f); lookAt(Float3(0f, 0f, 0f)) }
     val environment = rememberEnvironment(environmentLoader) { environmentLoader.createHDREnvironment("environments/studio_warm_2k.hdr") ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!! }
-    val modelInstance = rememberModelInstance(modelLoader, "models/sheen_chair.glb")
+    val modelInstance = rememberModelInstance(modelLoader, "$CDN/sheen_chair.glb")
 
     var ssaoEnabled by remember { mutableStateOf(true) }
     var fxaaEnabled by remember { mutableStateOf(true) }
@@ -1050,7 +1050,7 @@ private fun GestureEditingDemo() {
     val environmentLoader = rememberEnvironmentLoader(engine)
     val cameraNode = rememberCameraNode(engine) { position = Float3(z = 4.0f, y = 1.5f); lookAt(Float3(0f, 0.3f, 0f)) }
     val environment = rememberEnvironment(environmentLoader) { environmentLoader.createHDREnvironment("environments/studio_warm_2k.hdr") ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!! }
-    val modelInstance = rememberModelInstance(modelLoader, "models/sunglasses.glb")
+    val modelInstance = rememberModelInstance(modelLoader, "$CDN/sunglasses.glb")
 
     Box(modifier = Modifier.fillMaxSize()) {
         SceneView(modifier = Modifier.fillMaxSize(), engine = engine, modelLoader = modelLoader, materialLoader = materialLoader, cameraNode = cameraNode, cameraManipulator = rememberCameraManipulator(orbitHomePosition = Position(z = 4.0f, y = 1.5f), targetPosition = Position(0f, 0.3f, 0f)), environment = environment, onGestureListener = rememberOnGestureListener(onDoubleTap = { _, node -> node?.apply { scale = Float3(1f) } })) {
@@ -1223,7 +1223,7 @@ private fun GltfCamerasDemo() {
     LaunchedEffect(selected) { cameraNode.position = selected.position; cameraNode.lookAt(selected.target) }
 
     val environment = rememberEnvironment(environmentLoader) { environmentLoader.createHDREnvironment("environments/studio_2k.hdr") ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!! }
-    val modelInstance = rememberModelInstance(modelLoader, "models/animated_bunny_detective.glb")
+    val modelInstance = rememberModelInstance(modelLoader, "$CDN/animated_bunny_detective.glb")
 
     Box(modifier = Modifier.fillMaxSize()) {
         SceneView(modifier = Modifier.fillMaxSize(), engine = engine, modelLoader = modelLoader, cameraNode = cameraNode, cameraManipulator = null, environment = environment) {

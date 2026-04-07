@@ -353,8 +353,11 @@ class _ViewerPageState extends State<ViewerPage> {
     });
   }
 
+  String? _currentModelUrl;
+
   void _loadModelUrl(String url, String name) {
     if (!_sceneReady) return;
+    _currentModelUrl = url;
     _controller.clearScene();
     _controller.loadModel(ModelNode(
       modelPath: url,
@@ -368,8 +371,6 @@ class _ViewerPageState extends State<ViewerPage> {
       _lastTappedNode = null;
     });
   }
-
-  String? _currentModelUrl;
 
   void _reloadWithTransform() {
     if (!_sceneReady || _currentModelUrl == null) return;
