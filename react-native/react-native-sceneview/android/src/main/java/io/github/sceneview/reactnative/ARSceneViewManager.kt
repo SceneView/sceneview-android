@@ -159,6 +159,12 @@ class ARSceneViewManager : SimpleViewManager<FrameLayout>() {
         return container
     }
 
+    override fun onDropViewInstance(view: FrameLayout) {
+        // Remove the ComposeView so its Composition is disposed, releasing Filament resources.
+        view.removeAllViews()
+        super.onDropViewInstance(view)
+    }
+
     @ReactProp(name = "environment")
     fun setEnvironment(view: FrameLayout, environment: String?) {
         // AR scenes use camera feed as background; environment HDR
@@ -190,7 +196,17 @@ class ARSceneViewManager : SimpleViewManager<FrameLayout>() {
                 } else {
                     true
                 }
-                state.modelPaths.add(ModelNodeData(src = src, scale = scale, animate = animate))
+                val position = readPosition(map, "position")
+                val rotation = readRotation(map, "rotation")
+                state.modelPaths.add(
+                    ModelNodeData(
+                        src = src,
+                        scale = scale,
+                        animate = animate,
+                        position = position,
+                        rotation = rotation,
+                    )
+                )
             }
         }
     }

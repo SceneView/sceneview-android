@@ -319,7 +319,7 @@ data class LightNodeData(
 // Helpers for reading ReadableMap arrays into SceneView math types
 // ---------------------------------------------------------------------------
 
-private fun readFloatArray3(
+internal fun readFloatArray3(
     map: com.facebook.react.bridge.ReadableMap,
     key: String
 ): FloatArray? {
@@ -333,7 +333,7 @@ private fun readFloatArray3(
     )
 }
 
-private fun readPosition(
+internal fun readPosition(
     map: com.facebook.react.bridge.ReadableMap,
     key: String
 ): Position {
@@ -347,7 +347,7 @@ private fun readPosition(
     )
 }
 
-private fun readRotation(
+internal fun readRotation(
     map: com.facebook.react.bridge.ReadableMap,
     key: String
 ): Rotation {
