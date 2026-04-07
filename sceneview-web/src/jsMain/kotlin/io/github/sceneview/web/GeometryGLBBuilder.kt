@@ -157,6 +157,23 @@ internal object GeometryGLBBuilder {
             node.scale.push(config.scaleX, config.scaleY, config.scaleZ)
         }
 
+        // Set rotation (Euler degrees → quaternion for glTF)
+        if (config.rotationX != 0.0 || config.rotationY != 0.0 || config.rotationZ != 0.0) {
+            val rx = config.rotationX * kotlin.math.PI / 180.0
+            val ry = config.rotationY * kotlin.math.PI / 180.0
+            val rz = config.rotationZ * kotlin.math.PI / 180.0
+            // Euler XYZ to quaternion
+            val cx = kotlin.math.cos(rx / 2); val sx = kotlin.math.sin(rx / 2)
+            val cy = kotlin.math.cos(ry / 2); val sy = kotlin.math.sin(ry / 2)
+            val cz = kotlin.math.cos(rz / 2); val sz = kotlin.math.sin(rz / 2)
+            val qx = sx * cy * cz - cx * sy * sz
+            val qy = cx * sy * cz + sx * cy * sz
+            val qz = cx * cy * sz - sx * sy * cz
+            val qw = cx * cy * cz + sx * sy * sz
+            node.rotation = js("[]")
+            node.rotation.push(qx, qy, qz, qw)
+        }
+
         // Build glTF JSON
         val gltf = js("{}")
         gltf.asset = js("({version: '2.0', generator: 'SceneView-Web'})")

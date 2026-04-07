@@ -75,7 +75,7 @@ class ARSceneViewManager : SimpleViewManager<FrameLayout>() {
 
                     state.geometryNodes.forEach { geom ->
                         val color = geom.color?.let {
-                            android.graphics.Color.parseColor(it)
+                            runCatching { android.graphics.Color.parseColor(it) }.getOrNull()
                         }
                         val mat = color?.let {
                             materialLoader.createColorInstance(it)
@@ -129,7 +129,7 @@ class ARSceneViewManager : SimpleViewManager<FrameLayout>() {
                             position = light.position,
                             apply = {
                                 light.color?.let { hex ->
-                                    val c = android.graphics.Color.parseColor(hex)
+                                    val c = runCatching { android.graphics.Color.parseColor(hex) }.getOrNull() ?: return@let
                                     color(
                                         android.graphics.Color.red(c) / 255f,
                                         android.graphics.Color.green(c) / 255f,
