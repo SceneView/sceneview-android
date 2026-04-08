@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased (v3.6.1 or v4.0.0)
+## v3.6.2 — Cross-Platform Parity + Render Testing
 
 ### Architecture
 - Extract `SceneRenderer` — shared render loop between SceneView and ARSceneView

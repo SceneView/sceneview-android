@@ -18,8 +18,8 @@ The `sceneview` and `arsceneview` Maven coordinates **do not change** for v4.0:
 
 ```kotlin
 // v3 — two modules
-implementation("io.github.sceneview:sceneview:3.6.0")
-implementation("io.github.sceneview:arsceneview:3.6.0")
+implementation("io.github.sceneview:sceneview:3.6.2")
+implementation("io.github.sceneview:arsceneview:3.6.2")
 
 // v4 — same coordinates, bumped version
 implementation("io.github.sceneview:sceneview:4.0.0")
@@ -33,8 +33,8 @@ dependency. Apps that do not use AR will not pull ARCore into their APK.
 
 ```kotlin
 // v3
-implementation("io.github.sceneview:sceneview:3.6.0")
-implementation("io.github.sceneview:arsceneview:3.6.0")
+implementation("io.github.sceneview:sceneview:3.6.2")
+implementation("io.github.sceneview:arsceneview:3.6.2")
 
 // v4 (merged)
 implementation("io.github.sceneview:sceneview:4.0.0")
@@ -265,7 +265,7 @@ class FakeARPermissionHandler : ARPermissionHandler {
 
 Use this checklist when upgrading a project from v3 to v4:
 
-- [ ] **Bump dependencies** — update `3.6.0` to `4.0.0` in `build.gradle` (both modules or merged)
+- [ ] **Bump dependencies** — update `3.6.2` to `4.0.0` in `build.gradle` (both modules or merged)
 - [ ] **Replace `Scene { }`** with `SceneView { }` (was already required since v3.6)
 - [ ] **Replace `ARScene { }`** with `ARSceneView { }` (was already required since v3.6)
 - [ ] **Remove `raycast` / `raycastAll` calls** — migrate to `CollisionSystem`

@@ -63,7 +63,7 @@ enum ModelCategory: String, CaseIterable {
 
 /// The main explore tab -- a model gallery for browsing, viewing, and favoriting 3D models.
 struct ExploreTab: View {
-    @State private var selectedModel: ModelItem? = ModelItem.all.first
+    @State private var selectedModel: ModelItem?
     @State private var selectedCategory: ModelCategory = .vehicles
     @State private var autoRotate = true
     @State private var showViewer = false

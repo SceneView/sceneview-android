@@ -10,16 +10,16 @@ SceneView is a declarative 3D and AR SDK for Android (Jetpack Compose, Filament,
 
 | Platform | Renderer | Framework | Status | Version |
 |---|---|---|---|---|
-| Android | Filament | Jetpack Compose | Stable | 3.6.1 |
-| Android TV | Filament | Compose TV | Alpha | 3.6.1 |
+| Android | Filament | Jetpack Compose | Stable | 3.6.2 |
+| Android TV | Filament | Compose TV | Alpha | 3.6.2 |
 | Android XR | Jetpack XR SceneCore | Compose XR | Planned | -- |
-| iOS | RealityKit | SwiftUI | Alpha | 3.6.0 |
-| macOS | RealityKit | SwiftUI | Alpha | 3.6.0 |
-| visionOS | RealityKit | SwiftUI | Alpha | 3.6.0 |
-| Web | Filament.js (WASM) | Kotlin/JS | Alpha | 3.6.1 |
+| iOS | RealityKit | SwiftUI | Alpha | 3.6.2 |
+| macOS | RealityKit | SwiftUI | Alpha | 3.6.2 |
+| visionOS | RealityKit | SwiftUI | Alpha | 3.6.2 |
+| Web | Filament.js (WASM) | Kotlin/JS | Alpha | 3.6.2 |
 | Desktop | Wireframe placeholder | Compose Desktop | Placeholder | -- |
-| Flutter | Filament / RealityKit | PlatformView | Alpha | 3.6.1 |
-| React Native | Filament / RealityKit | Fabric | Alpha | 3.6.1 |
+| Flutter | Filament / RealityKit | PlatformView | Alpha | 3.6.2 |
+| React Native | Filament / RealityKit | Fabric | Alpha | 3.6.2 |
 
 ---
 
@@ -79,10 +79,10 @@ SceneView follows a "native renderer per platform" architecture. Kotlin Multipla
 ```kotlin
 dependencies {
     // 3D only
-    implementation("io.github.sceneview:sceneview:3.6.1")
+    implementation("io.github.sceneview:sceneview:3.6.2")
 
     // AR + 3D (includes sceneview)
-    implementation("io.github.sceneview:arsceneview:3.6.1")
+    implementation("io.github.sceneview:arsceneview:3.6.2")
 }
 ```
 

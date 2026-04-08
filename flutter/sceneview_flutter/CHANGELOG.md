@@ -1,3 +1,7 @@
+## 3.6.2
+
+- Version alignment with SceneView v3.6.2
+
 ## 3.6.1
 
 - Initial public release

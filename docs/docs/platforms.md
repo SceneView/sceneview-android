@@ -13,10 +13,10 @@ SceneView uses **native renderers per platform** for the best performance and to
 
 | Platform | Renderer | Framework | Module | Status |
 |---|---|---|---|---|
-| **Android** | Filament | Jetpack Compose | `sceneview` / `arsceneview` | Stable (v3.6.0) |
-| **iOS** | RealityKit | SwiftUI | `SceneViewSwift` | Alpha (v3.6.0) |
-| **macOS** | RealityKit | SwiftUI | `SceneViewSwift` | Alpha (v3.6.0) |
-| **visionOS** | RealityKit | SwiftUI | `SceneViewSwift` | Alpha (v3.6.0) |
+| **Android** | Filament | Jetpack Compose | `sceneview` / `arsceneview` | Stable (v3.6.2) |
+| **iOS** | RealityKit | SwiftUI | `SceneViewSwift` | Alpha (v3.6.2) |
+| **macOS** | RealityKit | SwiftUI | `SceneViewSwift` | Alpha (v3.6.2) |
+| **visionOS** | RealityKit | SwiftUI | `SceneViewSwift` | Alpha (v3.6.2) |
 | **Web** | Filament.js (WASM) | Kotlin/JS | `sceneview-web` | Alpha |
 | **Desktop** | Software wireframe (placeholder) | Compose Desktop | `samples/desktop-demo` | Placeholder (not SceneView) |
 | **Android TV** | Filament | Compose TV | `sceneview` | Alpha |
