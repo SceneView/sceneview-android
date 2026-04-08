@@ -380,7 +380,7 @@ struct ModelViewerScreen: View {
         if autoRotate {
             SceneView { root in
                 if let loadedModel {
-                    loadedModel.entity.position = .init(x: 0, y: 0, z: -1.5)
+                    loadedModel.entity.position = .zero
                     root.addChild(loadedModel.entity)
                 }
             }
@@ -391,7 +391,7 @@ struct ModelViewerScreen: View {
         } else {
             SceneView { root in
                 if let loadedModel {
-                    loadedModel.entity.position = .init(x: 0, y: 0, z: -1.5)
+                    loadedModel.entity.position = .zero
                     root.addChild(loadedModel.entity)
                 }
             }

@@ -107,6 +107,17 @@ public struct SceneView: View {
     }
 }
 
+// MARK: - Scene entities holder
+
+/// Holds the persistent RealityKit entity references for a scene.
+/// Using a class ensures the Entity objects are never accidentally copied
+/// or recreated across SwiftUI re-renders — critical because @State on a
+/// reference type does not guarantee identity stability in all SwiftUI versions.
+private final class SceneEntities: ObservableObject {
+    let root = Entity()
+    let ibl = Entity()
+}
+
 // MARK: - Internal implementation
 
 /// Internal view that manages the RealityView, camera, gestures, and environment.
@@ -119,8 +130,7 @@ private struct SceneViewRepresentation: View {
     let autoRotateSpeed: Float
 
     @State private var camera = CameraControls(mode: .orbit)
-    @State private var rootEntity = Entity()
-    @State private var iblEntity = Entity()
+    @StateObject private var entities = SceneEntities()
     @State private var lastDragTranslation: CGSize = .zero
     @State private var initialPinchRadius: Float? = nil
     @State private var isDragging = false
@@ -157,7 +167,7 @@ private struct SceneViewRepresentation: View {
     private var realityViewContent: some View {
         #if os(iOS) || os(visionOS) || os(macOS)
         RealityView { realityContent in
-            setupScene(realityContent)
+            setupScene(&realityContent)
         } update: { _ in
             applyCamera()
         }
@@ -171,12 +181,32 @@ private struct SceneViewRepresentation: View {
     // MARK: - Scene Setup
 
     #if os(iOS) || os(visionOS) || os(macOS)
-    private func setupScene(_ realityContent: RealityViewCameraContent) {
+    private func setupScene(_ realityContent: inout RealityViewCameraContent) {
+        // Use virtual camera (fixed perspective) instead of AR spatial tracking.
+        // Without this, RealityKit defaults to .spatialTracking which requires a
+        // physical device camera — causing a black screen in the simulator.
+        #if !os(visionOS)
+        // Virtual camera: fixed perspective, no AR spatial tracking.
+        // spatialTracking (the default) requires a physical device camera →
+        // black screen in the simulator.
+        realityContent.camera = .virtual
+
+        // Perspective camera: positioned for a nice 3/4 view.
+        // Content is placed at origin (0,0,0) and rotated by applyCamera() to
+        // simulate orbit. The slight Y elevation gives a natural bird's-eye angle.
+        // look(at:from:) handles both position and orientation — in RealityKit,
+        // entities face +Z by default so explicit orientation is required.
+        let perspCamera = PerspectiveCamera()
+        perspCamera.camera.fieldOfViewInDegrees = 60
+        perspCamera.look(at: .zero, from: [0, 0.3, 2], relativeTo: nil)
+        realityContent.add(perspCamera)
+        #endif
+
         // Root entity holds all user content
-        realityContent.add(rootEntity)
+        realityContent.add(entities.root)
 
         // IBL entity (will be configured when environment loads)
-        realityContent.add(iblEntity)
+        realityContent.add(entities.ibl)
 
         // Default directional light (sun)
         let sun = DirectionalLight()
@@ -203,7 +233,7 @@ private struct SceneViewRepresentation: View {
         realityContent.add(fill)
 
         // Populate user content
-        content(rootEntity)
+        content(entities.root)
     }
     #endif
 
@@ -215,15 +245,15 @@ private struct SceneViewRepresentation: View {
             let resource = try await env.load()
             #if os(iOS) || os(visionOS) || os(macOS)
             // Apply IBL to the scene via ImageBasedLightComponent
-            iblEntity.components.set(
+            entities.ibl.components.set(
                 ImageBasedLightComponent(
                     source: .single(resource),
                     intensityExponent: env.intensity
                 )
             )
             // Make root entity receive IBL
-            rootEntity.components.set(
-                ImageBasedLightReceiverComponent(imageBasedLight: iblEntity)
+            entities.root.components.set(
+                ImageBasedLightReceiverComponent(imageBasedLight: entities.ibl)
             )
             #endif
         } catch {
@@ -237,10 +267,10 @@ private struct SceneViewRepresentation: View {
     private func applyCamera() {
         let yaw = simd_quatf(angle: -camera.azimuth, axis: [0, 1, 0])
         let pitch = simd_quatf(angle: -camera.elevation, axis: [1, 0, 0])
-        rootEntity.orientation = yaw * pitch
+        entities.root.orientation = yaw * pitch
 
         let zoomScale = 5.0 / camera.orbitRadius
-        rootEntity.scale = SIMD3<Float>(repeating: zoomScale)
+        entities.root.scale = SIMD3<Float>(repeating: zoomScale)
     }
 
     // MARK: - Gestures
@@ -284,7 +314,7 @@ private struct SceneViewRepresentation: View {
     private var tapGesture: some Gesture {
         SpatialTapGesture()
             .onEnded { _ in
-                onEntityTapped?(rootEntity)
+                onEntityTapped?(entities.root)
             }
     }
 }
