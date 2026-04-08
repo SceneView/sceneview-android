@@ -30,12 +30,15 @@ struct SceneViewDemoApp: App {
 }
 
 struct ContentView: View {
+    @State private var selectedTab = 0
+
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             ExploreTab()
                 .tabItem {
                     Label("Explore", systemImage: "cube.fill")
                 }
+                .tag(0)
                 .accessibilityLabel("3D Model Gallery")
 
             #if os(iOS)
@@ -43,6 +46,7 @@ struct ContentView: View {
                 .tabItem {
                     Label("AR View", systemImage: "arkit")
                 }
+                .tag(1)
                 .accessibilityLabel("Augmented Reality Viewer")
             #endif
 
@@ -50,12 +54,14 @@ struct ContentView: View {
                 .tabItem {
                     Label("Scenes", systemImage: "square.grid.2x2.fill")
                 }
+                .tag(2)
                 .accessibilityLabel("Scene Presets")
 
             AboutTab()
                 .tabItem {
                     Label("About", systemImage: "info.circle.fill")
                 }
+                .tag(3)
                 .accessibilityLabel("About This App")
         }
         .tint(SceneViewTheme.primary)

@@ -4,8 +4,24 @@
 
 ## Last Session Summary
 
-**Date:** 8 avril 2026 (session 27)
+**Date:** 8 avril 2026 (session 28)
 **Branch:** main
+
+## ÉTAT ACTUEL : DEMO APPS COMPLÈTEMENT REFAITES ✅
+
+### Android demo (commits 8c207493, d562eacd — poussés ✅)
+- **ExploreScreen** : BottomSheetScaffold, 40+ modèles CDN + 4 bundled GLB (duck/fox/toon_cat/shiba), timeout 20s + retry, color env picker
+- **SamplesScreen** : filter chips par catégorie, affichage groupé
+- **ARScreen** : modèles bundled + CDN, paths corrects
+- **MainActivity** : outlined/filled icons nav, bold text selected tab
+- Tous testés visuellement sur émulateur Pixel 7a
+
+### iOS demo (commit a052779d — poussé ✅)
+- **Bug root cause** : `RealityView` defaults to `.spatialTracking` camera (needs physical device) → black screen in simulator
+- **Fix 1** : `realityContent.camera = .virtual` + `PerspectiveCamera` at (0, 0.3, 2) looking at origin
+- **Fix 2** : `@State var rootEntity = Entity()` broke entity identity across SwiftUI re-renders → changed to `@StateObject SceneEntities` class  
+- **Fix 3** : Model at z=-1.5 with auto-rotate exits view frustum → move model to `.zero`
+- Testé : voiture rouge tourne avec rendu 3D propre sur simulateur iPhone 17 Pro
 
 ## CRITICAL: NEXT SESSION MUST DO THIS FIRST
 
@@ -16,40 +32,14 @@ git config user.email "thomas.gorisse@gmail.com"
 ```
 **NEVER use AjaxMusic@gmail.com or octopuscommunity — see memory/feedback_git_email.md**
 
-### 2. Refaire les sample apps PROPREMENT
+### 2. Prochaines étapes demo apps
 
-**Décision Thomas :** SceneView Explorer — galerie + viewer 3D + AR, modèles réseau, Android + iOS
+**Prochaines étapes :**
 
-**RÈGLE ABSOLUE : tester VISUELLEMENT dans l'émulateur/simulateur AVANT chaque push**
-
-L'état actuel :
-- **Android demo** : reverté à l'état pré-session-26 (commit 3e92ee7d). Fonctionne mais c'est l'ancien design.
-- **iOS demo** : les fichiers Swift ajoutés par session 26 ont été revertés. Le rendu 3D est NOIR dans le simulateur — bug à investiguer.
-- **iOS/macOS App Store** : resoumis à Apple Review avec métadonnées corrigées (nom "SceneView", sous-titre "3D Model Viewer & AR Explorer", catégorie "Utilitaires")
-
-**Plan de refonte (une étape = un commit = un test visuel) :**
-
-1. **Android — améliorer l'ExploreScreen** :
-   - Charger les modèles depuis les URLs Khronos/GitHub (déjà fait avant)
-   - Ajouter timeout + message d'erreur si le modèle ne charge pas
-   - Ajouter un modèle GLB local en fallback (pour fonctionner hors-ligne)
-   - **TESTER dans l'émulateur Pixel 7a**
-
-2. **Android — refaire le design Material 3 Expressive** :
-   - Mettre à jour les couleurs, typographie, shapes
-   - 4 tabs : Explore, AR, Samples, About
-   - **TESTER visuellement chaque changement**
-
-3. **iOS — investiguer le rendu noir** :
-   - Le SceneView SwiftUI utilise RealityView
-   - Tester si un RealityView basique rend dans le simulateur
-   - Si c'est une limitation simulateur, tester sur device physique
-   - Si c'est un bug SceneViewSwift, le fixer
-
-4. **iOS — refaire l'ExploreTab** :
-   - Même approche qu'Android
-   - Modèles USDZ embarqués ou téléchargés
-   - **TESTER dans le simulateur iPhone 17 Pro**
+1. **Android — push Play Store** : vérifier que le bundle release build passe, puis soumettre
+2. **iOS — tester autres modèles** : vérifier que Ferrari, Dragon, etc. se chargent bien
+3. **iOS — ARTab** : vérifier que l'AR View fonctionne (sur device physique)
+4. **iOS App Store** : en attente de review Apple, vérifier statut
 
 ### 3. Bugs connus à ne pas oublier
 - Render Tests CI : workflow_dispatch only (émulateur instable)
