@@ -16,11 +16,14 @@ import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Size
 import io.github.sceneview.math.colorOf
+import io.github.sceneview.node.BillboardNode
 import io.github.sceneview.node.CubeNode
 import io.github.sceneview.node.CylinderNode
+import io.github.sceneview.node.ImageNode
 import io.github.sceneview.node.LightNode
 import io.github.sceneview.node.PlaneNode
 import io.github.sceneview.node.SphereNode
+import io.github.sceneview.node.TextNode
 import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -346,6 +349,92 @@ class VisualVerificationTest {
             result.message
         ))
         assertTrue("Consistency check failed: ${result.message}", result.passed)
+    }
+
+    // ── ImageNode test ───────────────────────────────────────────────────────
+
+    @Test
+    fun renderAll_imageNode() {
+        renderAndCapture(
+            name = "08_image_checkerboard",
+            description = "ImageNode showing a procedurally generated checkerboard bitmap",
+            setupScene = {
+                // Create a simple 64x64 checkerboard bitmap
+                val bmpWidth = 64
+                val bmpHeight = 64
+                val checkerboard = Bitmap.createBitmap(bmpWidth, bmpHeight, Bitmap.Config.ARGB_8888)
+                for (y in 0 until bmpHeight) {
+                    for (x in 0 until bmpWidth) {
+                        val isWhite = ((x / 8) + (y / 8)) % 2 == 0
+                        checkerboard.setPixel(x, y, if (isWhite) Color.WHITE else Color.DKGRAY)
+                    }
+                }
+                val node = ImageNode(
+                    materialLoader = materialLoader,
+                    bitmap = checkerboard,
+                    size = Size(2f, 2f)
+                )
+                harness.scene.addEntity(node.entity)
+            },
+            cleanupScene = {}
+        )
+    }
+
+    // ── TextNode test ────────────────────────────────────────────────────────
+
+    @Test
+    fun renderAll_textNode() {
+        renderAndCapture(
+            name = "09_text_hello",
+            description = "TextNode showing 'Hello 3D' white text on dark background",
+            setupScene = {
+                val node = TextNode(
+                    materialLoader = materialLoader,
+                    text = "Hello 3D",
+                    fontSize = 64f,
+                    textColor = Color.WHITE,
+                    backgroundColor = 0xCC000000.toInt(),
+                    widthMeters = 1.5f,
+                    heightMeters = 0.5f,
+                    cameraPositionProvider = null
+                )
+                harness.scene.addEntity(node.entity)
+            },
+            cleanupScene = {}
+        )
+    }
+
+    // ── BillboardNode test ───────────────────────────────────────────────────
+
+    @Test
+    fun renderAll_billboardNode() {
+        renderAndCapture(
+            name = "10_billboard_gradient",
+            description = "BillboardNode showing a gradient bitmap quad facing camera",
+            setupScene = {
+                // Create a gradient bitmap
+                val bmpWidth = 128
+                val bmpHeight = 64
+                val gradientBmp = Bitmap.createBitmap(bmpWidth, bmpHeight, Bitmap.Config.ARGB_8888)
+                for (y in 0 until bmpHeight) {
+                    for (x in 0 until bmpWidth) {
+                        val r = (x * 255 / bmpWidth)
+                        val g = (y * 255 / bmpHeight)
+                        val b = 128
+                        gradientBmp.setPixel(x, y, Color.argb(255, r, g, b))
+                    }
+                }
+                val node = BillboardNode(
+                    materialLoader = materialLoader,
+                    bitmap = gradientBmp,
+                    widthMeters = 2.0f,
+                    heightMeters = 1.0f,
+                    cameraPositionProvider = null
+                )
+                harness.scene.addEntity(node.entity)
+            },
+            cleanupScene = {}
+        )
     }
 
     // ── HTML Report ─────────────────────────────────────────────────────────

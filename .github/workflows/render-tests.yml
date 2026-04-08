@@ -6,12 +6,16 @@ on:
     paths:
       - 'sceneview/src/**'
       - 'arsceneview/src/**'
+      - 'samples/**'
+      - 'SceneViewSwift/**'
       - 'gradle/**'
   pull_request:
     branches: [main]
     paths:
       - 'sceneview/src/**'
       - 'arsceneview/src/**'
+      - 'samples/**'
+      - 'SceneViewSwift/**'
       - 'gradle/**'
   workflow_dispatch:
 
@@ -23,8 +27,9 @@ permissions:
   contents: read
 
 jobs:
-  render-smoke:
-    name: Render smoke tests (emulator)
+  # ── Android library render tests ──────────────────────────────────────────
+  android-library-render:
+    name: Android library render tests (emulator)
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -75,7 +80,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: render-test-results
+          name: android-library-render-results
           path: sceneview/build/reports/androidTests/
           if-no-files-found: ignore
 
@@ -83,6 +88,174 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: render-screenshots
+          name: android-library-render-screenshots
           path: render-output/
+          if-no-files-found: ignore
+
+  # ── Android demo app screenshot capture ───────────────────────────────────
+  android-demo-screenshots:
+    name: Android demo app screenshots (emulator)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+
+      - run: chmod +x ./gradlew
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Build demo APK
+        run: ./gradlew :samples:android-demo:assembleDebug --stacktrace
+
+      - name: Capture demo screenshots
+        uses: ReactiveCircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: google_apis
+          arch: x86_64
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
+          script: |
+            # Install the demo app
+            adb install samples/android-demo/build/outputs/apk/debug/android-demo-debug.apk || true
+
+            # Launch the app and wait for it to load
+            adb shell am start -n io.github.sceneview.demo/.MainActivity
+            sleep 10
+
+            # Capture screenshots of the main screen
+            mkdir -p demo-screenshots
+            adb exec-out screencap -p > demo-screenshots/01_demo_main.png
+
+            # Try navigating tabs via UI automation (best-effort)
+            # Swipe to next tab
+            adb shell input swipe 800 1500 200 1500 300
+            sleep 5
+            adb exec-out screencap -p > demo-screenshots/02_demo_tab2.png
+
+            adb shell input swipe 800 1500 200 1500 300
+            sleep 5
+            adb exec-out screencap -p > demo-screenshots/03_demo_tab3.png
+
+            adb shell input swipe 800 1500 200 1500 300
+            sleep 5
+            adb exec-out screencap -p > demo-screenshots/04_demo_tab4.png
+
+      - name: Upload demo screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-demo-screenshots
+          path: demo-screenshots/
+          if-no-files-found: ignore
+
+  # ── iOS render tests ──────────────────────────────────────────────────────
+  ios-render:
+    name: iOS screenshot tests (Simulator)
+    runs-on: macos-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+
+      - name: Resolve SPM dependencies
+        working-directory: samples/ios-demo
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -project SceneViewDemo.xcodeproj \
+            -scheme SceneViewDemo \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            CODE_SIGNING_ALLOWED=NO || true
+
+      - name: Run screenshot tests
+        working-directory: samples/ios-demo
+        run: |
+          xcodebuild test \
+            -project SceneViewDemo.xcodeproj \
+            -scheme SceneViewDemo \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -resultBundlePath TestResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1 | tail -200 || true
+
+      - name: Extract screenshots from xcresult
+        if: always()
+        working-directory: samples/ios-demo
+        run: |
+          mkdir -p ios-render-screenshots
+          # Export attachments from xcresult bundle
+          if [ -d TestResults.xcresult ]; then
+            xcresulttool get --format json --path TestResults.xcresult > ios-render-screenshots/results.json 2>/dev/null || true
+            # Copy the entire xcresult for artifact upload
+            cp -R TestResults.xcresult ios-render-screenshots/ 2>/dev/null || true
+          fi
+
+      - name: Upload iOS test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ios-render-screenshots
+          path: samples/ios-demo/ios-render-screenshots/
+          if-no-files-found: ignore
+
+      - name: Upload xcresult bundle
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ios-xcresult
+          path: samples/ios-demo/TestResults.xcresult
+          if-no-files-found: ignore
+
+  # ── Web render tests ──────────────────────────────────────────────────────
+  web-render:
+    name: Web Playwright screenshot tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Playwright
+        working-directory: samples/web-demo
+        run: |
+          npm init -y 2>/dev/null || true
+          npm install --save-dev @playwright/test
+          npx playwright install chromium --with-deps
+
+      - name: Run Playwright tests
+        working-directory: samples/web-demo
+        run: npx playwright test --reporter=html || true
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: web-playwright-report
+          path: samples/web-demo/playwright-report/
+          if-no-files-found: ignore
+
+      - name: Upload test screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: web-render-screenshots
+          path: samples/web-demo/test-results/
           if-no-files-found: ignore

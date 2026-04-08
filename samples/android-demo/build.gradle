@@ -9,14 +9,15 @@ android {
 
     compileSdk 36
 
-    assetPacks = [":samples:android-demo-assets"]
+    // Asset packs removed — models now loaded on-demand via Sketchfab search
+    // assetPacks = [":samples:android-demo-assets"]
 
     defaultConfig {
         applicationId "io.github.sceneview.demo"
         minSdk 28
         targetSdk 36
         versionCode project.hasProperty('versionCode') ? project.property('versionCode').toInteger() : 350
-        versionName project.hasProperty('versionName') ? project.property('versionName') : "3.6.1"
+        versionName project.hasProperty('versionName') ? project.property('versionName') : "3.6.2"
     }
 
     signingConfigs {

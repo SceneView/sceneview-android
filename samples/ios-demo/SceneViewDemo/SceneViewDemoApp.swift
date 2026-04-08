@@ -13,10 +13,10 @@ extension NSColor {
 }
 #endif
 
-/// 3D & AR Explorer — Explore, visualize, and interact with 3D models.
+/// 3D & AR Explorer -- feature showcase for SceneView iOS SDK.
 ///
-/// Browse a curated gallery of 3D models, view them in augmented reality,
-/// save favorites, and share screenshots with friends.
+/// Three-tab app: 3D model search (Sketchfab), AR placement, and
+/// feature demos for all SceneView node types.
 @main
 struct SceneViewDemoApp: App {
     var body: some SwiftUI.Scene {
@@ -34,29 +34,23 @@ struct ContentView: View {
         TabView {
             ExploreTab()
                 .tabItem {
-                    Label("Explore", systemImage: "cube.fill")
+                    Label("3D", systemImage: "cube.fill")
                 }
-                .accessibilityLabel("3D Model Gallery")
+                .accessibilityLabel("3D Model Search")
 
             #if os(iOS)
             ARTab()
                 .tabItem {
-                    Label("AR View", systemImage: "arkit")
+                    Label("AR", systemImage: "arkit")
                 }
-                .accessibilityLabel("Augmented Reality Viewer")
+                .accessibilityLabel("Augmented Reality")
             #endif
 
-            SamplesTab()
+            FeaturesTab()
                 .tabItem {
-                    Label("Scenes", systemImage: "square.grid.2x2.fill")
+                    Label("Features", systemImage: "square.grid.2x2.fill")
                 }
-                .accessibilityLabel("Scene Presets")
-
-            AboutTab()
-                .tabItem {
-                    Label("About", systemImage: "info.circle.fill")
-                }
-                .accessibilityLabel("About This App")
+                .accessibilityLabel("Feature Demos")
         }
         .tint(SceneViewTheme.primary)
     }
