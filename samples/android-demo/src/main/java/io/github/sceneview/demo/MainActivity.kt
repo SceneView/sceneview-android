@@ -16,9 +16,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.ViewInAr
+import androidx.compose.material.icons.outlined.CameraAlt
+import androidx.compose.material.icons.outlined.Code
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.ViewInAr
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -34,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.annotation.StringRes
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -77,11 +83,16 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-sealed class Screen(val route: String, @StringRes val labelRes: Int, val icon: ImageVector) {
-    data object ThreeD : Screen("3d", R.string.tab_3d, Icons.Default.ViewInAr)
-    data object AR : Screen("ar", R.string.tab_ar, Icons.Default.CameraAlt)
-    data object Samples : Screen("samples", R.string.tab_samples, Icons.Default.GridView)
-    data object About : Screen("about", R.string.tab_about, Icons.Default.Info)
+sealed class Screen(
+    val route: String,
+    @StringRes val labelRes: Int,
+    val icon: ImageVector,
+    val iconSelected: ImageVector
+) {
+    data object ThreeD : Screen("3d", R.string.tab_3d, Icons.Outlined.ViewInAr, Icons.Default.ViewInAr)
+    data object AR : Screen("ar", R.string.tab_ar, Icons.Outlined.CameraAlt, Icons.Default.CameraAlt)
+    data object Samples : Screen("samples", R.string.tab_samples, Icons.Outlined.Code, Icons.Default.Code)
+    data object About : Screen("about", R.string.tab_about, Icons.Outlined.Info, Icons.Default.Info)
 }
 
 @Composable
@@ -113,16 +124,16 @@ fun SceneViewDemoApp(updateManager: InAppUpdateManager) {
                     NavigationBarItem(
                         icon = {
                             Icon(
-                                imageVector = screen.icon,
+                                imageVector = if (selected) screen.iconSelected else screen.icon,
                                 contentDescription = label,
                                 modifier = Modifier.scale(scale)
                             )
                         },
-                        label = { Text(label, style = MaterialTheme.typography.labelMedium) },
+                        label = { Text(label, style = MaterialTheme.typography.labelMedium, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal) },
                         selected = selected,
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                            selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
                             indicatorColor = MaterialTheme.colorScheme.primaryContainer,
                             unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant

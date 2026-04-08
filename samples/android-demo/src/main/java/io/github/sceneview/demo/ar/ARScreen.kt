@@ -96,13 +96,19 @@ private data class ARModel(
     val scaleRange: ClosedFloatingPointRange<Float>
 )
 
+private const val CDN = "https://github.com/sceneview/sceneview/releases/download/assets-v1"
+
 private val arModels = listOf(
-    ARModel("Toy Car", "models/toy_car.glb", 0.4f, 0.15f..0.8f),
-    ARModel("Space Helmet", "models/space_helmet.glb", 0.4f, 0.15f..0.8f),
-    ARModel("Chair", "models/sheen_chair.glb", 0.3f, 0.1f..0.6f),
-    ARModel("Mask", "models/geisha_mask.glb", 0.3f, 0.1f..0.6f),
-    ARModel("Lamp", "models/iridescence_lamp.glb", 0.3f, 0.1f..0.6f),
-    ARModel("Seal", "models/seal_statuette.glb", 0.3f, 0.1f..0.6f),
+    // Bundled (always available)
+    ARModel("Duck",     "models/khronos_duck.glb",  0.3f, 0.1f..0.6f),
+    ARModel("Fox",      "models/khronos_fox.glb",   0.4f, 0.15f..0.8f),
+    ARModel("Toon Cat", "models/toon_cat.glb",      0.3f, 0.1f..0.6f),
+    ARModel("Shiba",    "models/shiba.glb",         0.3f, 0.1f..0.6f),
+    // CDN models
+    ARModel("Toy Car",  "$CDN/toy_car.glb",         0.4f, 0.15f..0.8f),
+    ARModel("Chair",    "$CDN/sheen_chair.glb",     0.3f, 0.1f..0.6f),
+    ARModel("Helmet",   "$CDN/khronos_damaged_helmet.glb", 0.3f, 0.1f..0.6f),
+    ARModel("Lamp",     "$CDN/iridescence_lamp.glb",0.3f, 0.1f..0.6f),
 )
 
 @Composable

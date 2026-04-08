@@ -309,11 +309,20 @@ private fun rememberSampleDemos(): List<SampleDemo> = remember {
 fun SamplesScreen() {
     val sampleDemos = rememberSampleDemos()
     var selectedDemo by remember { mutableStateOf<SampleDemo?>(null) }
+    var selectedCategory by remember { mutableStateOf<String?>(null) }
+
+    val filteredDemos = remember(selectedCategory) {
+        if (selectedCategory == null) sampleDemos
+        else sampleDemos.filter { it.category == selectedCategory }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         // Main grid
         SamplesGrid(
-            demos = sampleDemos,
+            demos = filteredDemos,
+            allDemos = sampleDemos,
+            selectedCategory = selectedCategory,
+            onCategorySelected = { selectedCategory = it },
             onDemoClick = { demo ->
                 if (demo.content != null) {
                     selectedDemo = demo
@@ -340,9 +349,13 @@ fun SamplesScreen() {
 @Composable
 private fun SamplesGrid(
     demos: List<SampleDemo>,
+    allDemos: List<SampleDemo>,
+    selectedCategory: String?,
+    onCategorySelected: (String?) -> Unit,
     onDemoClick: (SampleDemo) -> Unit
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val categories = remember(allDemos) { allDemos.map { it.category }.distinct() }
 
     Scaffold(
         topBar = {
@@ -354,7 +367,10 @@ private fun SamplesGrid(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            stringResource(R.string.samples_feature_count, demos.size),
+                            if (selectedCategory == null)
+                                stringResource(R.string.samples_feature_count, allDemos.size)
+                            else
+                                "${demos.size} in $selectedCategory",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -378,27 +394,60 @@ private fun SamplesGrid(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Category headers and items
-            val categories = demos.groupBy { it.category }
-            categories.forEach { (category, categoryDemos) ->
-                item(span = { GridItemSpan(2) }) {
-                    Text(
-                        text = category,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+            // Category filter chips
+            item(span = { GridItemSpan(2) }) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(bottom = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(
+                        selected = selectedCategory == null,
+                        onClick = { onCategorySelected(null) },
+                        label = { Text("All") },
+                        shape = RoundedCornerShape(50)
                     )
-                }
-                items(categoryDemos, key = { it.title }) { demo ->
-                    SampleCard(
-                        demo = demo,
-                        onClick = { onDemoClick(demo) }
-                    )
+                    categories.forEach { cat ->
+                        FilterChip(
+                            selected = selectedCategory == cat,
+                            onClick = { onCategorySelected(cat) },
+                            label = { Text(cat) },
+                            shape = RoundedCornerShape(50),
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        )
+                    }
                 }
             }
 
-            // Bottom spacer
+            if (selectedCategory == null) {
+                // Grouped by category
+                val grouped = demos.groupBy { it.category }
+                grouped.forEach { (category, categoryDemos) ->
+                    item(span = { GridItemSpan(2) }) {
+                        Text(
+                            text = category,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                        )
+                    }
+                    items(categoryDemos, key = { it.title }) { demo ->
+                        SampleCard(demo = demo, onClick = { onDemoClick(demo) })
+                    }
+                }
+            } else {
+                // Flat list for filtered view
+                items(demos, key = { it.title }) { demo ->
+                    SampleCard(demo = demo, onClick = { onDemoClick(demo) })
+                }
+            }
+
             item(span = { GridItemSpan(2) }) {
                 Spacer(modifier = Modifier.height(16.dp))
             }
