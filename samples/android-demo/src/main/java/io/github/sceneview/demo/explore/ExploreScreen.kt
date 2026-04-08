@@ -96,46 +96,50 @@ private val exploreEnvironments = listOf(
 )
 
 private val exploreModels = listOf(
-    ExploreModel("Toy Car", "models/toy_car.glb", 0.8f, 3.0f),
-    ExploreModel("Red Car", "models/red_car.glb", 1.0f, 3.5f),
-    ExploreModel("Game Boy", "models/game_boy_classic.glb", 0.7f, 2.5f),
-    ExploreModel("Chair", "models/sheen_chair.glb", 0.6f, 3.5f),
-    ExploreModel("Lamp", "models/iridescence_lamp.glb", 0.5f, 3.0f),
-    ExploreModel("Geisha Mask", "models/geisha_mask.glb", 1.0f, 2.0f),
-    ExploreModel("Space Helmet", "models/space_helmet.glb", 0.8f, 3.0f),
-    ExploreModel("Robot Mantis", "models/animated_robot_mantis.glb", 0.7f, 3.5f),
-    ExploreModel("Kawaii Meka", "models/animated_kawaii_meka.glb", 0.8f, 3.0f),
-    ExploreModel("Carnotaurus", "models/animated_carnotaurus.glb", 0.7f, 3.5f),
-    ExploreModel("Dragon", "$CDN/animated_dragon.glb", 0.6f, 4.0f),
-    ExploreModel("Butterfly", "models/animated_butterfly.glb", 0.8f, 2.5f),
-    ExploreModel("Piano", "models/retro_piano.glb", 0.7f, 3.0f),
-    ExploreModel("Phoenix", "models/phoenix_bird.glb", 0.8f, 2.5f),
-    ExploreModel("Cyberpunk Car", "models/cyberpunk_car.glb", 0.8f, 3.5f),
-    ExploreModel("Fantasy Book", "models/fantasy_book.glb", 0.7f, 2.5f),
-    ExploreModel("Mosquito", "models/mosquito_amber.glb", 1.0f, 2.0f),
-    ExploreModel("Ship in Clouds", "$CDN/ship_in_clouds.glb", 0.5f, 4.0f),
-    ExploreModel("Hovercar", "$CDN/cyberpunk_hovercar.glb", 0.6f, 4.0f),
-    ExploreModel("Cyber Guy", "$CDN/cyberpunk_character.glb", 0.7f, 3.0f),
+    // Vehicles
+    ExploreModel("Toy Car", "$CDN/toy_car.glb", 0.8f, 3.0f),
+    ExploreModel("Red Car", "$CDN/red_car.glb", 1.0f, 3.5f),
     ExploreModel("Porsche 911", "$CDN/porsche_911.glb", 0.6f, 4.0f),
-    ExploreModel("Black Dragon", "$CDN/black_dragon.glb", 0.5f, 4.5f),
+    ExploreModel("Porsche Turbo", "$CDN/porsche_911_turbo.glb", 0.5f, 4.0f),
+    ExploreModel("Ferrari F40", "$CDN/ferrari_f40.glb", 0.6f, 4.0f),
+    ExploreModel("Lamborghini", "$CDN/lamborghini_countach.glb", 0.5f, 4.0f),
+    ExploreModel("Shelby Cobra", "$CDN/shelby_cobra.glb", 0.6f, 4.0f),
+    ExploreModel("Audi TT", "$CDN/audi_tt.glb", 0.7f, 3.5f),
+    ExploreModel("BMW M3 E30", "$CDN/bmw_m3_e30.glb", 0.6f, 4.0f),
+    ExploreModel("Mercedes AMG", "$CDN/mercedes_a45_amg.glb", 0.5f, 4.0f),
     ExploreModel("Fiat Punto", "$CDN/fiat_punto.glb", 0.7f, 3.5f),
-    ExploreModel("Damaged Helmet", "models/khronos_damaged_helmet.glb", 0.8f, 2.5f),
+    ExploreModel("Cybertruck", "$CDN/tesla_cybertruck.glb", 0.6f, 4.0f),
+    ExploreModel("Cyberpunk Car", "$CDN/cyberpunk_car.glb", 0.8f, 3.5f),
+    ExploreModel("Hovercar", "$CDN/cyberpunk_hovercar.glb", 0.6f, 4.0f),
+    // Creatures
+    ExploreModel("Dragon", "$CDN/animated_dragon.glb", 0.6f, 4.0f),
+    ExploreModel("Black Dragon", "$CDN/black_dragon.glb", 0.5f, 4.5f),
+    ExploreModel("Crystal Dragon", "$CDN/khronos_dragon_attenuation.glb", 0.6f, 3.0f),
+    ExploreModel("Carnotaurus", "$CDN/animated_carnotaurus.glb", 0.7f, 3.5f),
+    ExploreModel("Robot Mantis", "$CDN/animated_robot_mantis.glb", 0.7f, 3.5f),
+    ExploreModel("Kawaii Meka", "$CDN/animated_kawaii_meka.glb", 0.8f, 3.0f),
+    ExploreModel("Butterfly", "$CDN/animated_butterfly.glb", 0.8f, 2.5f),
+    ExploreModel("Phoenix", "$CDN/phoenix_bird.glb", 0.8f, 2.5f),
+    ExploreModel("Cyber Guy", "$CDN/cyberpunk_character.glb", 0.7f, 3.0f),
+    ExploreModel("Mosquito", "$CDN/mosquito_amber.glb", 1.0f, 2.0f),
+    // Objects
+    ExploreModel("Damaged Helmet", "$CDN/khronos_damaged_helmet.glb", 0.8f, 2.5f),
+    ExploreModel("Space Helmet", "$CDN/space_helmet.glb", 0.8f, 3.0f),
+    ExploreModel("Game Boy", "$CDN/game_boy_classic.glb", 0.7f, 2.5f),
+    ExploreModel("PS5 Controller", "$CDN/ps5_dualsense.glb", 0.8f, 2.5f),
+    ExploreModel("Switch", "$CDN/nintendo_switch.glb", 0.8f, 2.5f),
+    ExploreModel("Nike Jordan", "$CDN/nike_air_jordan.glb", 0.8f, 2.0f),
+    ExploreModel("Chair", "$CDN/sheen_chair.glb", 0.6f, 3.5f),
+    ExploreModel("Lamp", "$CDN/iridescence_lamp.glb", 0.5f, 3.0f),
+    ExploreModel("Piano", "$CDN/retro_piano.glb", 0.7f, 3.0f),
+    ExploreModel("Geisha Mask", "$CDN/geisha_mask.glb", 1.0f, 2.0f),
+    ExploreModel("Fantasy Book", "$CDN/fantasy_book.glb", 0.7f, 2.5f),
     ExploreModel("Water Bottle", "$CDN/khronos_water_bottle.glb", 1.0f, 2.0f),
     ExploreModel("Antique Camera", "$CDN/khronos_antique_camera.glb", 0.7f, 2.5f),
     ExploreModel("Corset", "$CDN/khronos_corset.glb", 0.8f, 2.5f),
-    ExploreModel("Crystal Dragon", "models/khronos_dragon_attenuation.glb", 0.6f, 3.0f),
-    ExploreModel("Shelby Cobra", "$CDN/shelby_cobra.glb", 0.6f, 4.0f),
-    ExploreModel("Audi TT", "models/audi_tt.glb", 0.7f, 3.5f),
+    // Scenes
+    ExploreModel("Ship in Clouds", "$CDN/ship_in_clouds.glb", 0.5f, 4.0f),
     ExploreModel("Earthquake", "$CDN/earthquake_california.glb", 0.4f, 5.0f),
-    ExploreModel("Lamborghini", "$CDN/lamborghini_countach.glb", 0.5f, 4.0f),
-    ExploreModel("Nike Jordan", "$CDN/nike_air_jordan.glb", 0.8f, 2.0f),
-    ExploreModel("Ferrari F40", "$CDN/ferrari_f40.glb", 0.6f, 4.0f),
-    ExploreModel("Porsche Turbo", "$CDN/porsche_911_turbo.glb", 0.5f, 4.0f),
-    ExploreModel("PS5 Controller", "models/ps5_dualsense.glb", 0.8f, 2.5f),
-    ExploreModel("Cybertruck", "models/tesla_cybertruck.glb", 0.6f, 4.0f),
-    ExploreModel("Mercedes AMG", "$CDN/mercedes_a45_amg.glb", 0.5f, 4.0f),
-    ExploreModel("Switch", "models/nintendo_switch.glb", 0.8f, 2.5f),
-    ExploreModel("BMW M3 E30", "$CDN/bmw_m3_e30.glb", 0.6f, 4.0f),
 )
 
 @Composable
@@ -224,12 +228,20 @@ fun ExploreScreen() {
                     .semantics { contentDescription = loadingDescription },
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(48.dp),
-                    color = Color.White.copy(alpha = 0.8f),
-                    strokeWidth = 3.dp,
-                    strokeCap = StrokeCap.Round
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(48.dp),
+                        color = Color.White.copy(alpha = 0.8f),
+                        strokeWidth = 3.dp,
+                        strokeCap = StrokeCap.Round
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Loading model…",
+                        color = Color.White.copy(alpha = 0.7f),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
             }
         }
 
