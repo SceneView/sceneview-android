@@ -24,7 +24,7 @@ plugins.withType(org.jetbrains.kotlin.gradle.targets.js.yarn.YarnPlugin) {
 subprojects {
     plugins.withId("com.vanniktech.maven.publish") {
         mavenPublishing {
-            publishToMavenCentral(com.vanniktech.maven.publish.SonatypeHost.CENTRAL_PORTAL)
+            publishToMavenCentral()
             signAllPublications()
         }
     }
