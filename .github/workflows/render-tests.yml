@@ -1,6 +1,22 @@
 name: Render Tests
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'sceneview/src/**'
+      - 'arsceneview/src/**'
+      - 'samples/**'
+      - 'SceneViewSwift/**'
+      - 'gradle/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'sceneview/src/**'
+      - 'arsceneview/src/**'
+      - 'samples/**'
+      - 'SceneViewSwift/**'
+      - 'gradle/**'
   workflow_dispatch:
 
 concurrency:
@@ -52,9 +68,7 @@ jobs:
           disable-animations: true
           script: |
             # Run all render tests
-            ./gradlew :sceneview:connectedDebugAndroidTest \
-              -Pandroid.testInstrumentationRunnerArguments.package=io.github.sceneview.render \
-              --stacktrace
+            ./gradlew :sceneview:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.package=io.github.sceneview.render --stacktrace
 
             # Pull rendered screenshots from device for visual inspection
             mkdir -p render-output
