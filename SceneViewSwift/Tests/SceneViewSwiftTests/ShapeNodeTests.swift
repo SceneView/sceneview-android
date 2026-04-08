@@ -1,5 +1,6 @@
 #if os(iOS) || os(macOS) || os(visionOS)
 import XCTest
+import simd
 @testable import SceneViewSwift
 
 final class ShapeNodeTests: XCTestCase {

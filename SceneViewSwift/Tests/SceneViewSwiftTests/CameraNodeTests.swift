@@ -75,7 +75,7 @@ final class CameraNodeTests: XCTestCase {
             .fieldOfView(60.0)
         let component = camera.entity.components[PerspectiveCameraComponent.self]
         XCTAssertNotNil(component)
-        XCTAssertEqual(component?.fieldOfViewInDegrees, 60.0, accuracy: 0.001)
+        XCTAssertEqual(Double(component?.fieldOfViewInDegrees ?? 0),60.0, accuracy: 0.001)
     }
     #endif
 
@@ -114,9 +114,9 @@ final class CameraNodeTests: XCTestCase {
         XCTAssertEqual(camera.position.y, 1.5, accuracy: 0.001)
         let component = camera.entity.components[PerspectiveCameraComponent.self]
         XCTAssertNotNil(component)
-        XCTAssertEqual(component?.fieldOfViewInDegrees, 75.0, accuracy: 0.001)
-        XCTAssertEqual(component?.near, 0.1, accuracy: 0.001)
-        XCTAssertEqual(component?.far, 500.0, accuracy: 0.001)
+        XCTAssertEqual(Double(component?.fieldOfViewInDegrees ?? 0),75.0, accuracy: 0.001)
+        XCTAssertEqual(Double(component?.near ?? 0),0.1, accuracy: 0.001)
+        XCTAssertEqual(Double(component?.far ?? 0),500.0, accuracy: 0.001)
     }
     #endif
 
@@ -176,13 +176,13 @@ final class CameraNodeTests: XCTestCase {
         let camera = CameraNode().fieldOfView(120.0)
         let component = camera.entity.components[PerspectiveCameraComponent.self]
         XCTAssertNotNil(component)
-        XCTAssertEqual(component?.fieldOfViewInDegrees, 120.0, accuracy: 0.001)
+        XCTAssertEqual(Double(component?.fieldOfViewInDegrees ?? 0),120.0, accuracy: 0.001)
     }
 
     func testFieldOfViewNarrow() {
         let camera = CameraNode().fieldOfView(10.0)
         let component = camera.entity.components[PerspectiveCameraComponent.self]
-        XCTAssertEqual(component?.fieldOfViewInDegrees, 10.0, accuracy: 0.001)
+        XCTAssertEqual(Double(component?.fieldOfViewInDegrees ?? 0),10.0, accuracy: 0.001)
     }
     #endif
 
@@ -205,7 +205,7 @@ final class CameraNodeTests: XCTestCase {
             .fieldOfView(60.0)
         let component = camera.entity.components[PerspectiveCameraComponent.self]
         XCTAssertNotNil(component)
-        XCTAssertEqual(component?.fieldOfViewInDegrees, 60.0, accuracy: 0.001)
+        XCTAssertEqual(Double(component?.fieldOfViewInDegrees ?? 0),60.0, accuracy: 0.001)
     }
     #endif
 }

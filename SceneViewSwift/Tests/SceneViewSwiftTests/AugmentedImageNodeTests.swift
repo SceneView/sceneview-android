@@ -1,5 +1,6 @@
 #if os(iOS)
 import XCTest
+import RealityKit
 @testable import SceneViewSwift
 
 final class AugmentedImageNodeTests: XCTestCase {
