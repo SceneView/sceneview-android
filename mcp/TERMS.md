@@ -1,6 +1,6 @@
 # Terms of Service — sceneview-mcp
 
-**Last updated:** March 25, 2026
+**Last updated:** April 8, 2026
 
 ## 1. Acceptance of Terms
 
@@ -55,29 +55,44 @@ You agree that:
 - Generated code output is provided without claim of ownership — you may use it freely
 - SceneView SDK and its documentation remain under their respective licenses
 
-## 9. Service Availability
+## 9. Paid Subscriptions (Pro Tier)
+
+The Service offers a free tier and a paid "Pro" subscription tier:
+
+- **Free tier:** 15 core tools (learning, validation, setup, guides) are available at no cost.
+- **Pro tier (€9.99/month):** Unlocks 36+ additional tools including multi-platform setup, scene generation, 3D artifacts, and specialized packages (Automotive, Gaming, Healthcare, Interior).
+
+Pro subscriptions are billed through Stripe via Polar.sh. By subscribing, you agree to:
+- Recurring monthly billing until cancelled
+- Cancellation takes effect at the end of the current billing period
+- No refunds for partial months
+- Pro features become inaccessible once the subscription lapses
+
+API keys are validated against your active Stripe subscription. Sharing API keys is prohibited.
+
+## 10. Service Availability
 
 Thomas Gorisse reserves the right to:
 - Modify, suspend, or discontinue the Service at any time without notice
 - Update these Terms at any time; continued use constitutes acceptance
 - Limit or restrict access to the Service at any time
 
-## 10. Data and Privacy
+## 11. Data and Privacy
 
-See [PRIVACY.md](./PRIVACY.md) for our privacy policy. In summary: we collect no personal data, use no cookies, perform no tracking, and log no API requests.
+See [PRIVACY.md](./PRIVACY.md) for our privacy policy. In summary: for free-tier users, we collect no personal data. For Pro subscribers, we process only the data necessary for billing (see PRIVACY.md for details).
 
-## 11. Governing Law
+## 12. Governing Law
 
 These Terms are governed by the laws of **France**. Any disputes shall be subject to the exclusive jurisdiction of the courts of **Nantes, France** (Tribunal judiciaire de Nantes).
 
-## 12. GDPR Compliance
+## 13. GDPR Compliance
 
-This Service does not process personal data as defined under the EU General Data Protection Regulation (GDPR). All API interactions are stateless and no data is stored, logged, or transmitted to third parties.
+For free-tier users, the Service does not process personal data. For Pro subscribers, billing data (email, payment method) is processed by Stripe and Polar.sh under their respective privacy policies. API key validation is cached in-memory for 5 minutes and not persisted.
 
-## 13. Severability
+## 14. Severability
 
 If any provision of these Terms is found unenforceable, the remaining provisions shall continue in full force and effect.
 
-## 14. Contact
+## 15. Contact
 
 Thomas Gorisse — [https://github.com/sceneview/sceneview](https://github.com/sceneview/sceneview)

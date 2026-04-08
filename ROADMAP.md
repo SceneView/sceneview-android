@@ -38,7 +38,7 @@
 - [ ] App Store: SceneView Demo on TestFlight
 
 ### AI & monetization
-- [ ] MCP Pro with API key + Stripe Billing
+- [x] MCP Pro with API key + Stripe Billing (free/pro tiers, 15 free + 36 pro tools)
 - [ ] Claude playground on website (describe in natural language → 3D code)
 - [ ] OpenAI GPT Store entry
 
