@@ -327,8 +327,8 @@ private fun fetchModelDownloadUrl(uid: String, name: String) {
             return@then Unit.asDynamic()
         }
         response.json()
-    }.then { data ->
-        if (data == null || data == Unit.asDynamic()) return@then
+    }.then<dynamic> { data ->
+        if (data == null || data == Unit.asDynamic()) return@then Unit.asDynamic()
         val json = data.asDynamic()
         // The download response has gltf.url for the GLB file
         val glbUrl = json.gltf?.url as? String
