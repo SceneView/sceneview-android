@@ -12,12 +12,6 @@ name: Deploy iOS App to App Store
 #    - APP_STORE_CONNECT_KEY_ID, APP_STORE_CONNECT_ISSUER_ID, APP_STORE_CONNECT_API_KEY
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'SceneViewSwift/**'
-      - 'samples/ios-demo/**'
-      - '.github/workflows/app-store.yml'
   workflow_dispatch:
 
 concurrency:
