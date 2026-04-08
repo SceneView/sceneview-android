@@ -321,6 +321,158 @@
       pointer-events: none;
     }
 
+    /* ===== AI GENERATE PANEL ===== */
+    .pg__ai-panel {
+      padding: 0 16px 12px;
+      flex-shrink: 0;
+    }
+
+    .pg__ai-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px dashed var(--color-outline-variant, #c4c7cf);
+      border-radius: var(--pg-radius-sm);
+      background: linear-gradient(135deg, rgba(217, 119, 87, 0.06), rgba(0, 91, 193, 0.06));
+      color: var(--color-on-surface, #2e333a);
+      font-size: 0.8rem;
+      font-weight: 600;
+      font-family: var(--font-body, 'Inter', sans-serif);
+      cursor: pointer;
+      transition: all var(--pg-transition);
+    }
+
+    .pg__ai-toggle:hover {
+      border-color: #d97757;
+      background: linear-gradient(135deg, rgba(217, 119, 87, 0.12), rgba(0, 91, 193, 0.08));
+    }
+
+    .pg__ai-toggle .material-symbols-outlined {
+      font-size: 18px;
+      color: #d97757;
+    }
+
+    .pg__ai-toggle-arrow {
+      margin-left: auto;
+      font-size: 14px !important;
+      color: var(--color-outline, #777b84) !important;
+      transition: transform var(--pg-transition);
+    }
+
+    .pg__ai-panel--open .pg__ai-toggle-arrow {
+      transform: rotate(180deg);
+    }
+
+    .pg__ai-form {
+      display: none;
+      margin-top: 10px;
+    }
+
+    .pg__ai-panel--open .pg__ai-form {
+      display: block;
+    }
+
+    .pg__ai-textarea {
+      width: 100%;
+      min-height: 72px;
+      max-height: 140px;
+      padding: 10px 12px;
+      border: 1px solid var(--color-outline-variant, #c4c7cf);
+      border-radius: var(--pg-radius-sm);
+      background: var(--color-surface-container, #ecedf6);
+      color: var(--color-on-surface, #2e333a);
+      font-size: 0.8rem;
+      font-family: var(--font-body, 'Inter', sans-serif);
+      line-height: 1.5;
+      resize: vertical;
+      outline: none;
+      transition: border-color var(--pg-transition), box-shadow var(--pg-transition);
+    }
+
+    .pg__ai-textarea::placeholder {
+      color: var(--color-outline, #777b84);
+    }
+
+    .pg__ai-textarea:focus {
+      border-color: #d97757;
+      box-shadow: 0 0 0 2px rgba(217, 119, 87, 0.15);
+    }
+
+    [data-theme="dark"] .pg__ai-textarea {
+      background: #21262d;
+      color: #f0f6fc;
+      border-color: #30363d;
+    }
+
+    [data-theme="dark"] .pg__ai-toggle {
+      border-color: #30363d;
+      background: linear-gradient(135deg, rgba(217, 119, 87, 0.08), rgba(0, 91, 193, 0.05));
+      color: #c9d1d9;
+    }
+
+    [data-theme="dark"] .pg__ai-toggle:hover {
+      border-color: #d97757;
+      background: linear-gradient(135deg, rgba(217, 119, 87, 0.15), rgba(0, 91, 193, 0.08));
+    }
+
+    .pg__ai-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .pg__ai-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 10px;
+      border: none;
+      border-radius: var(--pg-radius-sm);
+      font-size: 0.75rem;
+      font-weight: 600;
+      font-family: var(--font-body, 'Inter', sans-serif);
+      cursor: pointer;
+      text-decoration: none;
+      transition: all var(--pg-transition);
+    }
+
+    .pg__ai-btn--claude {
+      background: #d97757;
+      color: #fff;
+    }
+
+    .pg__ai-btn--claude:hover {
+      background: #c4622e;
+      color: #fff;
+    }
+
+    .pg__ai-btn--chatgpt {
+      background: #10a37f;
+      color: #fff;
+    }
+
+    .pg__ai-btn--chatgpt:hover {
+      background: #0d8a6b;
+      color: #fff;
+    }
+
+    .pg__ai-btn svg {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+    }
+
+    .pg__ai-hint {
+      margin-top: 6px;
+      font-size: 0.7rem;
+      color: var(--color-outline, #777b84);
+      line-height: 1.4;
+    }
+
     .pg__examples {
       flex: 1;
       overflow-y: auto;
@@ -1230,6 +1382,29 @@
             <input type="text" class="pg__search-input" id="searchInput" placeholder="Search examples..." autocomplete="off" aria-label="Search examples">
           </div>
         </div>
+        <!-- AI Generate panel -->
+        <div class="pg__ai-panel" id="aiPanel">
+          <button class="pg__ai-toggle" id="aiToggle" aria-expanded="false">
+            <span class="material-symbols-outlined">auto_awesome</span>
+            Describe your 3D/AR app
+            <span class="material-symbols-outlined pg__ai-toggle-arrow">expand_more</span>
+          </button>
+          <div class="pg__ai-form">
+            <textarea class="pg__ai-textarea" id="aiPromptInput" placeholder="e.g. An AR app that lets users place furniture in their room with tap-to-place and pinch-to-scale..." rows="3"></textarea>
+            <div class="pg__ai-actions">
+              <a class="pg__ai-btn pg__ai-btn--claude" id="aiGenClaude" href="#" target="_blank" rel="noopener">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.1 2.96l-4.44 11.87L7.22 2.96H2L9.8 21.04h3.6L21.2 2.96h-5.1z"/></svg>
+                Open in Claude
+              </a>
+              <a class="pg__ai-btn pg__ai-btn--chatgpt" id="aiGenChatGPT" href="#" target="_blank" rel="noopener">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M22.28 9.37a5.9 5.9 0 00-.51-4.85 5.97 5.97 0 00-6.44-2.87A5.9 5.9 0 0010.88 0a5.97 5.97 0 00-5.7 4.15 5.9 5.9 0 00-3.95 2.86 5.97 5.97 0 00.74 7.01 5.9 5.9 0 00.51 4.85 5.97 5.97 0 006.44 2.87A5.9 5.9 0 0013.37 24a5.97 5.97 0 005.7-4.15 5.9 5.9 0 003.95-2.86 5.97 5.97 0 00-.74-7.01zM13.37 22.5a4.43 4.43 0 01-2.85-1.03l.14-.08 4.73-2.73a.77.77 0 00.39-.67v-6.67l2 1.15a.07.07 0 01.04.05v5.53a4.46 4.46 0 01-4.45 4.45zM3.63 18.37a4.43 4.43 0 01-.53-2.98l.14.08 4.73 2.73a.77.77 0 00.77 0l5.78-3.34v2.31a.07.07 0 01-.03.06l-4.79 2.76a4.46 4.46 0 01-6.07-1.62zM2.34 7.87a4.43 4.43 0 012.32-1.95V11.6a.77.77 0 00.39.67l5.78 3.34-2 1.15a.07.07 0 01-.07 0L4 14.01a4.46 4.46 0 01-1.66-6.14zm17.14 3.99l-5.78-3.34 2-1.15a.07.07 0 01.07 0l4.79 2.76a4.46 4.46 0 01-.69 8.05v-5.65a.77.77 0 00-.39-.67zM21.6 9.55l-.14-.08-4.73-2.73a.77.77 0 00-.77 0L10.18 10.08V7.77a.07.07 0 01.03-.06l4.79-2.76a4.46 4.46 0 016.6 4.6zM8.99 13.3l-2-1.15a.07.07 0 01-.04-.06V6.56A4.46 4.46 0 0114.28 3.2l-.14.08-4.73 2.73a.77.77 0 00-.39.67l-.03 6.62zm1.09-2.34L12 9.72l1.92 1.11v2.22L12 14.16l-1.92-1.11v-2.09z"/></svg>
+                Open in ChatGPT
+              </a>
+            </div>
+            <div class="pg__ai-hint">AI will generate SceneView code for <strong id="aiPlatformLabel">Android</strong></div>
+          </div>
+        </div>
+
         <div class="pg__examples" id="exampleList"></div>
       </aside>
 
@@ -2344,6 +2519,97 @@
     });
 
     // ====================================================================
+    //  AI GENERATE PANEL
+    // ====================================================================
+    function initAIPanel() {
+      var aiPanel = $('aiPanel');
+      var aiToggle = $('aiToggle');
+      var aiInput = $('aiPromptInput');
+      var aiClaude = $('aiGenClaude');
+      var aiChatGPT = $('aiGenChatGPT');
+      var aiPlatLabel = $('aiPlatformLabel');
+
+      aiToggle.addEventListener('click', function() {
+        aiPanel.classList.toggle('pg__ai-panel--open');
+        aiToggle.setAttribute('aria-expanded', aiPanel.classList.contains('pg__ai-panel--open'));
+        if (aiPanel.classList.contains('pg__ai-panel--open')) {
+          setTimeout(function() { aiInput.focus(); }, 100);
+        }
+      });
+
+      function buildPrompt(userDesc) {
+        var plat = currentPlatform;
+        var platNames = {
+          android: 'Android (Kotlin + Jetpack Compose)',
+          ios: 'iOS (Swift + SwiftUI + RealityKit)',
+          web: 'Web (JavaScript + Filament.js)',
+          flutter: 'Flutter (Dart + PlatformView)',
+          reactnative: 'React Native (TypeScript + Fabric)',
+          desktop: 'Desktop (Kotlin + Compose Desktop)',
+          claude: 'any platform'
+        };
+        var platLabel = platNames[plat] || plat;
+
+        var prompt = 'Build me a SceneView ' + platLabel + ' app:\n\n' + userDesc + '\n\n';
+        prompt += '--- SceneView Quick Reference ---\n';
+        prompt += 'SDK: io.github.sceneview:sceneview:3.6.1 (3D) / arsceneview:3.6.1 (AR)\n';
+        prompt += 'iOS: SPM https://github.com/sceneview/sceneview-swift.git\n';
+        prompt += 'Web: npm install sceneview-web@3.6.1\n\n';
+
+        if (plat === 'android' || plat === 'flutter' || plat === 'reactnative' || plat === 'desktop') {
+          prompt += 'Key composables: SceneView { }, ARSceneView { }\n';
+          prompt += 'Load models: rememberModelInstance(modelLoader, "models/file.glb")?.let { ModelNode(it) }\n';
+          prompt += 'Environment: rememberEnvironment(envLoader, "envs/sky.hdr")\n';
+          prompt += 'Camera: rememberCameraManipulator()\n';
+          prompt += 'LightNode: apply = { intensity(100_000f) } (named param, NOT trailing lambda)\n';
+          prompt += 'AR: tap-to-place with AnchorNode, HitResultNode for surface cursor\n';
+          prompt += 'Threading: Filament calls MUST be on main thread. rememberModelInstance handles this.\n';
+        } else if (plat === 'ios') {
+          prompt += 'SwiftUI: SceneView { ModelNode("model.usdz") }, ARSceneView { }\n';
+          prompt += 'Renderer: RealityKit (NOT Filament)\n';
+          prompt += 'Model formats: USDZ and .reality only\n';
+        } else if (plat === 'web') {
+          prompt += 'API: SceneView.modelViewer("canvas", "model.glb", { autoRotate: true })\n';
+          prompt += 'Or: SceneView.create("canvas") then .loadModel(), .addLight(), etc.\n';
+          prompt += 'Engine: Filament.js WASM (WebGL2)\n';
+        }
+
+        prompt += '\nFor advanced tools, install the MCP server: npx sceneview-mcp\n';
+        prompt += 'Docs: https://sceneview.github.io/docs\n';
+        return prompt;
+      }
+
+      function updateAIGenerateLinks() {
+        var desc = aiInput.value.trim();
+        if (!desc) {
+          desc = 'a 3D model viewer with orbit controls and environment lighting';
+        }
+        var prompt = buildPrompt(desc);
+        aiClaude.href = 'https://claude.ai/new?q=' + encodeURIComponent(prompt);
+        aiChatGPT.href = 'https://chatgpt.com/?q=' + encodeURIComponent(prompt);
+
+        var platNames = {
+          android: 'Android', ios: 'iOS', web: 'Web',
+          flutter: 'Flutter', reactnative: 'React Native',
+          desktop: 'Desktop', claude: 'any platform'
+        };
+        aiPlatLabel.textContent = platNames[currentPlatform] || currentPlatform;
+      }
+
+      aiInput.addEventListener('input', updateAIGenerateLinks);
+
+      // Update links when platform changes
+      var origPlatformChange = null;
+      document.querySelectorAll('.pg__platform-pill').forEach(function(pill) {
+        pill.addEventListener('click', function() {
+          setTimeout(updateAIGenerateLinks, 50);
+        });
+      });
+
+      updateAIGenerateLinks();
+    }
+
+    // ====================================================================
     //  URL STATE RESTORE
     // ====================================================================
     (function() {
@@ -2360,6 +2626,7 @@
       }
 
       renderSidebar();
+      initAIPanel();
 
       if (ex && EXAMPLES[ex]) {
         loadExample(ex);

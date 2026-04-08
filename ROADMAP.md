@@ -39,7 +39,7 @@
 
 ### AI & monetization
 - [x] MCP Pro with API key + Stripe Billing (free/pro tiers, 15 free + 36 pro tools)
-- [ ] Claude playground on website (describe in natural language → 3D code)
+- [x] Claude playground on website (describe in natural language → opens Claude/ChatGPT with rich prompt)
 - [x] OpenAI GPT Store entry (system prompt, 4 knowledge files, OpenAPI schema)
 
 ### Quality
