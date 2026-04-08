@@ -4,52 +4,57 @@
 
 ## Last Session Summary
 
-**Date:** 7-8 avril 2026 (session 26)
+**Date:** 8 avril 2026 (session 27)
 **Branch:** main
 
 ## CRITICAL: NEXT SESSION MUST DO THIS FIRST
 
-### 1. Check CI is green on the revert commit (845b7f31)
-If not green, investigate and fix before doing anything else.
-
-### 2. Re-apply reverted work (in this exact order)
-The revert (845b7f31) undid 15 commits that mixed good code with broken sample rewrites.
-The good code must be re-applied. The broken code must be fixed.
-
-**Good code to re-apply (copy from git show of each commit):**
-- Version bump 3.6.1 → 3.6.2 (run `/version-bump 3.6.2`)
-- Publish workflow `.github/workflows/publish-v3.6.2.yml`
-- Sketchfab API module (`samples/common/src/.../SketchfabApi.kt` + `SketchfabModel.kt`)
-- VisualVerificationTest extensions (TextNode, ImageNode, BillboardNode tests)
-- iOS RenderScreenshotTest.swift
-- Web Playwright tests (`samples/web-demo/tests/render.spec.ts` + `playwright.config.ts`)
-- render-tests.yml 4-job CI update
-- `.claude/plans/rewrite-git-history.md`
-- `.claude/plans/session-27-overnight.md`
-
-**Sample rewrites to redo CAREFULLY (verify compilation each time):**
-- Android demo: `onFrame = { ... }` must be `onFrame = { _ -> ... }` (2 places)
-- iOS demo: FeaturesTab, FaceTrackingDemo, ShapeNodeDemo
-- Flutter demo: pages/, services/, integration_test/
-- React Native demo: App.tsx rewrite
-- Web demo: Main.kt updates
-
-### 3. Rewrite git history
-All "claude authored" commits should be "Thomas Gorisse authored + Co-authored-by: Claude".
-See `.claude/plans/rewrite-git-history.md` for the exact commands.
-**Do this on Mac where you can force-push.**
-
-### 4. Publish v3.6.2
-After CI is green with all code re-applied:
-```bash
-git tag -a v3.6.2 -m "Release v3.6.2" && git push origin v3.6.2
-```
-
-### 5. Git config for future sessions
+### 1. Git config
 ```bash
 git config user.name "Thomas Gorisse"
-git config user.email "AjaxMusic@gmail.com"
+git config user.email "thomas.gorisse@gmail.com"
 ```
+**NEVER use AjaxMusic@gmail.com or octopuscommunity — see memory/feedback_git_email.md**
+
+### 2. Refaire les sample apps PROPREMENT
+
+**Décision Thomas :** SceneView Explorer — galerie + viewer 3D + AR, modèles réseau, Android + iOS
+
+**RÈGLE ABSOLUE : tester VISUELLEMENT dans l'émulateur/simulateur AVANT chaque push**
+
+L'état actuel :
+- **Android demo** : reverté à l'état pré-session-26 (commit 3e92ee7d). Fonctionne mais c'est l'ancien design.
+- **iOS demo** : les fichiers Swift ajoutés par session 26 ont été revertés. Le rendu 3D est NOIR dans le simulateur — bug à investiguer.
+- **iOS/macOS App Store** : resoumis à Apple Review avec métadonnées corrigées (nom "SceneView", sous-titre "3D Model Viewer & AR Explorer", catégorie "Utilitaires")
+
+**Plan de refonte (une étape = un commit = un test visuel) :**
+
+1. **Android — améliorer l'ExploreScreen** :
+   - Charger les modèles depuis les URLs Khronos/GitHub (déjà fait avant)
+   - Ajouter timeout + message d'erreur si le modèle ne charge pas
+   - Ajouter un modèle GLB local en fallback (pour fonctionner hors-ligne)
+   - **TESTER dans l'émulateur Pixel 7a**
+
+2. **Android — refaire le design Material 3 Expressive** :
+   - Mettre à jour les couleurs, typographie, shapes
+   - 4 tabs : Explore, AR, Samples, About
+   - **TESTER visuellement chaque changement**
+
+3. **iOS — investiguer le rendu noir** :
+   - Le SceneView SwiftUI utilise RealityView
+   - Tester si un RealityView basique rend dans le simulateur
+   - Si c'est une limitation simulateur, tester sur device physique
+   - Si c'est un bug SceneViewSwift, le fixer
+
+4. **iOS — refaire l'ExploreTab** :
+   - Même approche qu'Android
+   - Modèles USDZ embarqués ou téléchargés
+   - **TESTER dans le simulateur iPhone 17 Pro**
+
+### 3. Bugs connus à ne pas oublier
+- Render Tests CI : workflow_dispatch only (émulateur instable)
+- App Store iOS/macOS : en attente de review Apple
+- v3.6.2 publié sur Maven Central ✅
 
 ## WHAT WAS DONE THIS SESSION (session 26)
 
