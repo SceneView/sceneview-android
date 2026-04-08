@@ -13,6 +13,7 @@ import com.facebook.react.uimanager.SimpleViewManager
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.annotations.ReactProp
 import com.google.android.filament.LightManager
+import io.github.sceneview.SurfaceType
 import io.github.sceneview.math.Size
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberMaterialLoader
@@ -59,6 +60,7 @@ class ARSceneViewManager : SimpleViewManager<FrameLayout>() {
 
                 io.github.sceneview.ar.ARScene(
                     modifier = Modifier.fillMaxSize(),
+                    surfaceType = SurfaceType.TextureSurface,
                     engine = engine,
                     modelLoader = modelLoader,
                     materialLoader = materialLoader,

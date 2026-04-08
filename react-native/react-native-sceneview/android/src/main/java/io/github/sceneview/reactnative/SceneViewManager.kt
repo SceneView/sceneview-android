@@ -14,6 +14,7 @@ import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.annotations.ReactProp
 import com.google.android.filament.LightManager
 import io.github.sceneview.Scene
+import io.github.sceneview.SurfaceType
 import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
@@ -79,6 +80,7 @@ class SceneViewManager : SimpleViewManager<FrameLayout>() {
 
                 Scene(
                     modifier = Modifier.fillMaxSize(),
+                    surfaceType = SurfaceType.TextureSurface,
                     engine = engine,
                     modelLoader = modelLoader,
                     materialLoader = materialLoader,

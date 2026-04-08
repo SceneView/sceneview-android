@@ -21,6 +21,7 @@ import io.flutter.plugin.common.StandardMessageCodec
 import io.flutter.plugin.platform.PlatformView
 import io.flutter.plugin.platform.PlatformViewFactory
 import io.github.sceneview.Scene
+import io.github.sceneview.SurfaceType
 import io.github.sceneview.ar.arcore.getUpdatedPlanes
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
@@ -125,6 +126,7 @@ class SceneViewPlatformView(
 
             Scene(
                 modifier = Modifier.fillMaxSize(),
+                surfaceType = SurfaceType.TextureSurface,
                 engine = engine,
                 modelLoader = modelLoader,
                 cameraNode = cameraNode,
@@ -254,6 +256,7 @@ class ARSceneViewPlatformView(
 
             io.github.sceneview.ar.ARScene(
                 modifier = Modifier.fillMaxSize(),
+                surfaceType = SurfaceType.TextureSurface,
                 engine = engine,
                 modelLoader = modelLoader,
                 planeRenderer = true,
