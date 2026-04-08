@@ -4,8 +4,52 @@
 
 ## Last Session Summary
 
-**Date:** 7 avril 2026 (session 26)
+**Date:** 7-8 avril 2026 (session 26)
 **Branch:** main
+
+## CRITICAL: NEXT SESSION MUST DO THIS FIRST
+
+### 1. Check CI is green on the revert commit (845b7f31)
+If not green, investigate and fix before doing anything else.
+
+### 2. Re-apply reverted work (in this exact order)
+The revert (845b7f31) undid 15 commits that mixed good code with broken sample rewrites.
+The good code must be re-applied. The broken code must be fixed.
+
+**Good code to re-apply (copy from git show of each commit):**
+- Version bump 3.6.1 → 3.6.2 (run `/version-bump 3.6.2`)
+- Publish workflow `.github/workflows/publish-v3.6.2.yml`
+- Sketchfab API module (`samples/common/src/.../SketchfabApi.kt` + `SketchfabModel.kt`)
+- VisualVerificationTest extensions (TextNode, ImageNode, BillboardNode tests)
+- iOS RenderScreenshotTest.swift
+- Web Playwright tests (`samples/web-demo/tests/render.spec.ts` + `playwright.config.ts`)
+- render-tests.yml 4-job CI update
+- `.claude/plans/rewrite-git-history.md`
+- `.claude/plans/session-27-overnight.md`
+
+**Sample rewrites to redo CAREFULLY (verify compilation each time):**
+- Android demo: `onFrame = { ... }` must be `onFrame = { _ -> ... }` (2 places)
+- iOS demo: FeaturesTab, FaceTrackingDemo, ShapeNodeDemo
+- Flutter demo: pages/, services/, integration_test/
+- React Native demo: App.tsx rewrite
+- Web demo: Main.kt updates
+
+### 3. Rewrite git history
+All "claude authored" commits should be "Thomas Gorisse authored + Co-authored-by: Claude".
+See `.claude/plans/rewrite-git-history.md` for the exact commands.
+**Do this on Mac where you can force-push.**
+
+### 4. Publish v3.6.2
+After CI is green with all code re-applied:
+```bash
+git tag -a v3.6.2 -m "Release v3.6.2" && git push origin v3.6.2
+```
+
+### 5. Git config for future sessions
+```bash
+git config user.name "Thomas Gorisse"
+git config user.email "AjaxMusic@gmail.com"
+```
 
 ## WHAT WAS DONE THIS SESSION (session 26)
 
