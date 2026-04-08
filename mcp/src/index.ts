@@ -25,6 +25,8 @@ import { getDebugGuide, autoDetectIssue, DEBUG_CATEGORIES, type DebugCategory } 
 import { generateScene, formatGeneratedScene } from "./generate-scene.js";
 import { ANIMATION_GUIDE, GESTURE_GUIDE, PERFORMANCE_TIPS } from "./advanced-guides.js";
 import { MATERIAL_GUIDE, COLLISION_GUIDE, MODEL_OPTIMIZATION_GUIDE, WEB_RENDERING_GUIDE } from "./extra-guides.js";
+import { checkToolAccess, filterToolsForTier, createAccessDeniedResponse } from "./auth.js";
+import { recordUsage, getConfiguredApiKey } from "./billing.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -97,8 +99,8 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
 
 // ─── Tools ───────────────────────────────────────────────────────────────────
 
-server.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: [
+server.setRequestHandler(ListToolsRequestSchema, async () => {
+  const allTools = [
     {
       name: "get_sample",
       description:
@@ -545,13 +547,29 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: [],
       },
     },
-  ],
-}));
+  ];
+  const tools = await filterToolsForTier(allTools);
+  return { tools };
+});
 
 // ─── Tool handlers ────────────────────────────────────────────────────────────
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  switch (request.params.name) {
+  const toolName = request.params.name;
+
+  // ── Pro tier access check ──────────────────────────────────────────────────
+  const access = await checkToolAccess(toolName);
+  if (!access.allowed) {
+    return createAccessDeniedResponse(toolName, access.message!);
+  }
+
+  // Record usage for billing (async, fire-and-forget)
+  const apiKey = getConfiguredApiKey();
+  if (apiKey) {
+    recordUsage(apiKey, toolName).catch(() => {});
+  }
+
+  switch (toolName) {
     // ── get_sample ────────────────────────────────────────────────────────────
     case "get_sample": {
       const scenario = request.params.arguments?.scenario as string;
@@ -1250,7 +1268,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     default:
       return {
-        content: [{ type: "text", text: `Unknown tool: ${request.params.name}` }],
+        content: [{ type: "text", text: `Unknown tool: ${toolName}` }],
         isError: true,
       };
   }
