@@ -1,0 +1,415 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "SceneView 3D & AR API",
+    "version": "3.6.1",
+    "description": "SceneView SDK tools for 3D/AR code generation, validation, and interactive previews. Used by the SceneView GPT Store assistant."
+  },
+  "servers": [
+    {
+      "url": "https://api.sceneview.dev/v1",
+      "description": "SceneView API"
+    }
+  ],
+  "paths": {
+    "/validate": {
+      "post": {
+        "operationId": "validateSceneViewCode",
+        "summary": "Validate SceneView code for common mistakes",
+        "description": "Checks Kotlin or Swift code for threading violations, null-safety issues, wrong imports, deprecated APIs, and other SceneView-specific problems.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["code"],
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "description": "The Kotlin or Swift source code to validate"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Validation results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/generate-scene": {
+      "post": {
+        "operationId": "generateScene",
+        "summary": "Generate a 3D scene from a natural language description",
+        "description": "Takes a plain English description of a 3D scene and generates compilable SceneView code for the specified platform.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["description"],
+                "properties": {
+                  "description": {
+                    "type": "string",
+                    "description": "Natural language description of the desired 3D scene (e.g., 'a red car on a table with soft lighting')"
+                  },
+                  "platform": {
+                    "type": "string",
+                    "enum": ["android", "ios", "web"],
+                    "default": "android",
+                    "description": "Target platform for code generation"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Generated scene code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeneratedScene"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/samples": {
+      "get": {
+        "operationId": "listSamples",
+        "summary": "List all available SceneView code samples",
+        "description": "Returns a list of compilable code samples with filtering by tag or platform.",
+        "parameters": [
+          {
+            "name": "tag",
+            "in": "query",
+            "description": "Filter by tag (e.g., 'ar', 'animation', 'physics', 'ios')",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "platform",
+            "in": "query",
+            "description": "Filter by platform",
+            "schema": {
+              "type": "string",
+              "enum": ["android", "ios", "web"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of samples",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "samples": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/SampleSummary" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/samples/{id}": {
+      "get": {
+        "operationId": "getSample",
+        "summary": "Get a complete, compilable code sample",
+        "description": "Returns the full source code for a specific sample, ready to copy into a project.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Sample ID (e.g., 'model-viewer', 'ar-model-viewer', 'ios-model-viewer')",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Full sample with code",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Sample" }
+              }
+            }
+          },
+          "404": {
+            "description": "Sample not found"
+          }
+        }
+      }
+    },
+    "/reference/{nodeType}": {
+      "get": {
+        "operationId": "getNodeReference",
+        "summary": "Get API reference for a SceneView node type",
+        "description": "Returns the full API documentation for a node type, including signature, parameters, and usage examples.",
+        "parameters": [
+          {
+            "name": "nodeType",
+            "in": "path",
+            "required": true,
+            "description": "Node type name (e.g., 'ModelNode', 'LightNode', 'CameraNode', 'AnchorNode')",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Node API reference",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NodeReference" }
+              }
+            }
+          },
+          "404": {
+            "description": "Node type not found"
+          }
+        }
+      }
+    },
+    "/migrate": {
+      "post": {
+        "operationId": "migrateCode",
+        "summary": "Migrate code from SceneView 2.x to 3.x",
+        "description": "Automatically applies 40+ migration rules to update deprecated APIs, renamed classes, and changed patterns.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["code"],
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "description": "SceneView 2.x Kotlin code to migrate"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Migrated code with changelog",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MigrationResult" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/artifact": {
+      "post": {
+        "operationId": "create3DArtifact",
+        "summary": "Create an interactive 3D HTML artifact",
+        "description": "Generates a self-contained HTML page with an embedded 3D viewer using Filament.js (WASM). Can display models, charts, scenes, product 360s, or procedural geometry.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["type"],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["model-viewer", "chart-3d", "scene", "product-360", "geometry"],
+                    "description": "Type of 3D artifact to create"
+                  },
+                  "modelUrl": {
+                    "type": "string",
+                    "description": "URL to a GLB model file (for model-viewer and product-360 types)"
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "Title displayed on the artifact"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Self-contained HTML artifact",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Artifact" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/setup/{platform}": {
+      "get": {
+        "operationId": "getPlatformSetup",
+        "summary": "Get setup instructions for a platform",
+        "description": "Returns step-by-step setup instructions including dependencies, manifest configuration, and a minimal working example.",
+        "parameters": [
+          {
+            "name": "platform",
+            "in": "path",
+            "required": true,
+            "description": "Target platform",
+            "schema": {
+              "type": "string",
+              "enum": ["android", "ios", "web", "flutter", "react-native", "desktop", "tv"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Setup instructions",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SetupGuide" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ValidationResult": {
+        "type": "object",
+        "properties": {
+          "issues": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "rule": { "type": "string", "description": "Rule ID (e.g., 'threading/filament-off-main-thread')" },
+                "message": { "type": "string", "description": "Human-readable description of the issue" },
+                "severity": { "type": "string", "enum": ["error", "warning", "info"] }
+              }
+            }
+          },
+          "summary": { "type": "string", "description": "Overall validation summary" },
+          "passedRules": { "type": "integer", "description": "Number of rules that passed" },
+          "failedRules": { "type": "integer", "description": "Number of rules that failed" }
+        }
+      },
+      "GeneratedScene": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string", "description": "Generated source code" },
+          "language": { "type": "string", "enum": ["kotlin", "swift", "kotlin-js"] },
+          "objects": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "List of detected objects in the scene"
+          },
+          "dependencies": { "type": "string", "description": "Required Gradle/SPM/npm dependencies" }
+        }
+      },
+      "SampleSummary": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "platform": { "type": "string" },
+          "type": { "type": "string", "enum": ["3d", "ar"] },
+          "tags": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "Sample": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "code": { "type": "string", "description": "Complete, compilable source code" },
+          "language": { "type": "string", "enum": ["kotlin", "swift", "kotlin-js"] },
+          "dependencies": { "type": "string", "description": "Required dependencies" },
+          "tags": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "NodeReference": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "signature": { "type": "string", "description": "Full composable function signature" },
+          "description": { "type": "string" },
+          "parameters": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "type": { "type": "string" },
+                "default": { "type": "string" },
+                "description": { "type": "string" }
+              }
+            }
+          },
+          "examples": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Code examples showing usage"
+          }
+        }
+      },
+      "MigrationResult": {
+        "type": "object",
+        "properties": {
+          "migratedCode": { "type": "string", "description": "Updated code with v3 APIs" },
+          "changes": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "List of changes applied"
+          },
+          "warnings": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Manual migration steps still needed"
+          }
+        }
+      },
+      "Artifact": {
+        "type": "object",
+        "properties": {
+          "html": { "type": "string", "description": "Self-contained HTML with embedded 3D viewer" },
+          "type": { "type": "string" },
+          "title": { "type": "string" }
+        }
+      },
+      "SetupGuide": {
+        "type": "object",
+        "properties": {
+          "platform": { "type": "string" },
+          "instructions": { "type": "string", "description": "Step-by-step setup in Markdown" },
+          "dependencies": { "type": "string", "description": "Dependency declarations to add" },
+          "minimalExample": { "type": "string", "description": "Minimal working code example" }
+        }
+      }
+    }
+  }
+}
