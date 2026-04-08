@@ -83,11 +83,13 @@ fun AboutScreen() {
         ) {
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Hero card
+            // Hero card with logo and branding
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(28.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.Transparent
+                )
             ) {
                 Box(
                     modifier = Modifier
@@ -150,14 +152,18 @@ fun AboutScreen() {
                 description = stringResource(R.string.about_feature_3d_desc),
                 accentColor = SceneViewBlue
             )
+
             Spacer(modifier = Modifier.height(12.dp))
+
             FeatureCard(
                 icon = Icons.Default.CameraAlt,
                 title = stringResource(R.string.about_feature_ar_title),
                 description = stringResource(R.string.about_feature_ar_desc),
                 accentColor = Color(0xFF34A853)
             )
+
             Spacer(modifier = Modifier.height(12.dp))
+
             FeatureCard(
                 icon = Icons.Default.AutoAwesome,
                 title = stringResource(R.string.about_feature_ai_title),

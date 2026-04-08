@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -29,9 +29,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import io.github.sceneview.demo.about.AboutScreen
 import io.github.sceneview.demo.theme.SceneViewDemoTheme
 
-@Preview(showSystemUi = true, name = "App - Explore Tab")
+@Preview(showSystemUi = true, name = "App - 3D Tab")
 @Composable
-private fun AppExplorePreview() {
+private fun App3DPreview() {
     SceneViewDemoTheme(dynamicColor = false) {
         NavigationShellPreview(selectedTab = 0)
     }
@@ -45,11 +45,7 @@ private fun AppAboutPreview() {
     }
 }
 
-@Preview(
-    showSystemUi = true,
-    name = "App - Dark",
-    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES
-)
+@Preview(showSystemUi = true, name = "App - Dark", uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun AppDarkPreview() {
     SceneViewDemoTheme(darkTheme = true, dynamicColor = false) {
@@ -61,10 +57,10 @@ private fun AppDarkPreview() {
 private fun NavigationShellPreview(selectedTab: Int) {
     var selected by remember { mutableIntStateOf(selectedTab) }
     val tabs = listOf(
-        Triple("Explore", Icons.Default.ViewInAr, "explore"),
-        Triple("AR", Icons.Default.CameraAlt, "ar"),
-        Triple("Features", Icons.Default.AutoAwesome, "samples"),
-        Triple("About", Icons.Default.Info, "about")
+        Triple("3D", Icons.Default.ViewInAr, "3D"),
+        Triple("AR", Icons.Default.CameraAlt, "AR"),
+        Triple("Samples", Icons.Default.GridView, "Samples"),
+        Triple("About", Icons.Default.Info, "About")
     )
 
     Scaffold(
@@ -99,17 +95,17 @@ private fun NavigationShellPreview(selectedTab: Int) {
         ) {
             when (selected) {
                 0 -> Text(
-                    "3D Scene\n(Filament -- not available in preview)",
+                    "3D Scene\n(Filament — not available in preview)",
                     style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 1 -> Text(
-                    "AR Scene\n(ARCore -- not available in preview)",
+                    "AR Scene\n(ARCore — not available in preview)",
                     style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 2 -> Text(
-                    "Samples Grid\n(3D scenes -- not available in preview)",
+                    "Samples Grid\n(3D scenes — not available in preview)",
                     style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

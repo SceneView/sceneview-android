@@ -2,10 +2,6 @@
 
 package io.github.sceneview.demo.ar
 
-import android.Manifest
-import android.content.pm.PackageManager
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -66,28 +62,32 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
+import io.github.sceneview.demo.R
 import com.google.ar.core.Anchor
 import com.google.ar.core.ArCoreApk
 import com.google.ar.core.Config
 import com.google.ar.core.Frame
+import com.google.ar.core.Plane
 import com.google.ar.core.TrackingFailureReason
 import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.arcore.createAnchorOrNull
+import io.github.sceneview.ar.arcore.getUpdatedPlanes
 import io.github.sceneview.ar.arcore.isValid
 import io.github.sceneview.ar.getDescription
 import io.github.sceneview.ar.rememberARCameraNode
-import io.github.sceneview.demo.R
 import io.github.sceneview.rememberCollisionSystem
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberMaterialLoader
 import io.github.sceneview.rememberModelInstance
 import io.github.sceneview.rememberModelLoader
 import io.github.sceneview.rememberOnGestureListener
-import io.github.sceneview.rememberARView
+import io.github.sceneview.rememberView
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.delay
-
-// ── Data ──────────────────────────────────────────────────────────────────────
 
 private data class ARModel(
     val label: String,
@@ -96,26 +96,22 @@ private data class ARModel(
     val scaleRange: ClosedFloatingPointRange<Float>
 )
 
-private const val CDN = "https://github.com/sceneview/sceneview/releases/download/assets-v1"
-private const val KHRONOS = "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models"
-
 private val arModels = listOf(
-    ARModel("Damaged Helmet", "$KHRONOS/DamagedHelmet/glTF-Binary/DamagedHelmet.glb", 0.3f, 0.1f..0.6f),
-    ARModel("Avocado", "$KHRONOS/Avocado/glTF-Binary/Avocado.glb", 0.4f, 0.15f..0.8f),
-    ARModel("Dragon", "$CDN/animated_dragon.glb", 0.3f, 0.1f..0.6f),
+    ARModel("Toy Car", "models/toy_car.glb", 0.4f, 0.15f..0.8f),
+    ARModel("Space Helmet", "models/space_helmet.glb", 0.4f, 0.15f..0.8f),
+    ARModel("Chair", "models/sheen_chair.glb", 0.3f, 0.1f..0.6f),
+    ARModel("Mask", "models/geisha_mask.glb", 0.3f, 0.1f..0.6f),
+    ARModel("Lamp", "models/iridescence_lamp.glb", 0.3f, 0.1f..0.6f),
+    ARModel("Seal", "models/seal_statuette.glb", 0.3f, 0.1f..0.6f),
 )
-
-// ── Screen ────────────────────────────────────────────────────────────────────
 
 @Composable
 fun ARScreen() {
     val context = LocalContext.current
-
-    // Check ARCore availability
     val arAvailability = remember {
         try {
             ArCoreApk.getInstance().checkAvailability(context)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
             ArCoreApk.Availability.UNSUPPORTED_DEVICE_NOT_CAPABLE
         }
     }
@@ -126,7 +122,7 @@ fun ARScreen() {
     }
 
     // Camera permission gate
-    var cameraGranted by remember {
+    var cameraPermissionGranted by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
                     PackageManager.PERMISSION_GRANTED
@@ -134,36 +130,31 @@ fun ARScreen() {
     }
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { granted -> cameraGranted = granted }
+    ) { granted -> cameraPermissionGranted = granted }
 
     LaunchedEffect(Unit) {
-        if (!cameraGranted) permissionLauncher.launch(Manifest.permission.CAMERA)
+        if (!cameraPermissionGranted) {
+            permissionLauncher.launch(Manifest.permission.CAMERA)
+        }
     }
 
-    if (!cameraGranted) {
-        CameraPermissionScreen(
-            onRequestPermission = { permissionLauncher.launch(Manifest.permission.CAMERA) }
-        )
+    if (!cameraPermissionGranted) {
+        CameraPermissionScreen(onRequestPermission = {
+            permissionLauncher.launch(Manifest.permission.CAMERA)
+        })
         return
     }
 
-    // AR content
-    ARContent()
-}
-
-@Composable
-private fun ARContent() {
     val arSceneDescription = stringResource(R.string.cd_ar_scene)
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .semantics { contentDescription = arSceneDescription }
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .semantics { contentDescription = arSceneDescription }
     ) {
         val engine = rememberEngine()
         val modelLoader = rememberModelLoader(engine)
         val materialLoader = rememberMaterialLoader(engine)
         val cameraNode = rememberARCameraNode(engine)
-        val view = rememberARView(engine)
+        val view = rememberView(engine)
         val collisionSystem = rememberCollisionSystem(view)
 
         var selectedModel by remember { mutableStateOf(arModels[0]) }
@@ -174,16 +165,14 @@ private fun ARContent() {
 
         val modelInstance = rememberModelInstance(modelLoader, selectedModel.assetFile)
 
-        val clearAnchor = {
-            anchor?.detach()
-            anchor = null
-        }
+        val clearAnchor = { anchor?.detach(); anchor = null }
 
+        // Detach anchor when composable leaves composition
         DisposableEffect(Unit) {
             onDispose { anchor?.detach() }
         }
 
-        // Show gesture hints briefly after placement
+        // Show gesture hints briefly after the model is placed
         LaunchedEffect(anchor) {
             if (anchor != null) {
                 showGestureHint = true
@@ -210,7 +199,9 @@ private fun ARContent() {
                 config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
             },
             onTrackingFailureChanged = { trackingFailureReason = it },
-            onSessionUpdated = { _, updatedFrame -> frame = updatedFrame },
+            onSessionUpdated = { _, updatedFrame ->
+                frame = updatedFrame
+            },
             onGestureListener = rememberOnGestureListener(
                 onSingleTapConfirmed = { motionEvent, node ->
                     if (node == null) {
@@ -236,7 +227,7 @@ private fun ARContent() {
             }
         }
 
-        // Scanning reticle
+        // Scanning reticle — visible while searching for a surface
         AnimatedVisibility(
             visible = anchor == null,
             modifier = Modifier.align(Alignment.Center),
@@ -246,7 +237,7 @@ private fun ARContent() {
             ScanningReticle()
         }
 
-        // Status pill
+        // Status pill — top center
         AnimatedContent(
             modifier = Modifier
                 .statusBarsPadding()
@@ -261,7 +252,7 @@ private fun ARContent() {
             if (text.isNotBlank()) {
                 Surface(
                     color = Color.Black.copy(alpha = 0.55f),
-                    shape = RoundedCornerShape(50)
+                    shape = RoundedCornerShape(50),
                 ) {
                     Text(
                         text = text,
@@ -274,7 +265,7 @@ private fun ARContent() {
             }
         }
 
-        // Gesture hint after placement
+        // Gesture hint — appears briefly after placement
         AnimatedVisibility(
             visible = showGestureHint,
             modifier = Modifier
@@ -299,7 +290,7 @@ private fun ARContent() {
             }
         }
 
-        // Bottom bar: model picker + remove
+        // Bottom bar — model picker + remove button
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -309,6 +300,7 @@ private fun ARContent() {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            // Remove button
             AnimatedVisibility(visible = anchor != null) {
                 OutlinedButton(
                     onClick = { clearAnchor() },
@@ -323,13 +315,14 @@ private fun ARContent() {
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
-                        "  ${stringResource(R.string.ar_remove)}",
+                        "  " + stringResource(R.string.ar_remove),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium
                     )
                 }
             }
 
+            // Model picker chips
             Row(
                 modifier = Modifier.horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -369,8 +362,6 @@ private fun ARContent() {
         }
     }
 }
-
-// ── Scanning Reticle ──────────────────────────────────────────────────────────
 
 @Composable
 private fun ScanningReticle(modifier: Modifier = Modifier) {
@@ -415,8 +406,6 @@ private fun ScanningReticle(modifier: Modifier = Modifier) {
         drawCircle(color = Color.White.copy(alpha = 0.9f), radius = 3.dp.toPx())
     }
 }
-
-// ── Fallback Screens ──────────────────────────────────────────────────────────
 
 @Composable
 private fun ARNotAvailableScreen() {

@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -32,9 +32,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.annotation.StringRes
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.annotation.StringRes
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -77,25 +77,19 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-/**
- * Navigation destinations for the bottom navigation bar.
- */
-sealed class Screen(
-    val route: String,
-    @StringRes val labelRes: Int,
-    val icon: ImageVector
-) {
-    data object Explore : Screen("explore", R.string.tab_3d, Icons.Default.ViewInAr)
+sealed class Screen(val route: String, @StringRes val labelRes: Int, val icon: ImageVector) {
+    data object ThreeD : Screen("3d", R.string.tab_3d, Icons.Default.ViewInAr)
     data object AR : Screen("ar", R.string.tab_ar, Icons.Default.CameraAlt)
-    data object Samples : Screen("samples", R.string.tab_features, Icons.Default.AutoAwesome)
+    data object Samples : Screen("samples", R.string.tab_samples, Icons.Default.GridView)
     data object About : Screen("about", R.string.tab_about, Icons.Default.Info)
 }
 
 @Composable
 fun SceneViewDemoApp(updateManager: InAppUpdateManager) {
     val navController = rememberNavController()
-    val screens = listOf(Screen.Explore, Screen.AR, Screen.Samples, Screen.About)
+    val screens = listOf(Screen.ThreeD, Screen.AR, Screen.Samples, Screen.About)
 
+    // Auto-check for updates on launch
     LaunchedEffect(Unit) {
         updateManager.checkForUpdate()
     }
@@ -108,16 +102,14 @@ fun SceneViewDemoApp(updateManager: InAppUpdateManager) {
             ) {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentDestination = navBackStackEntry?.destination
-
                 screens.forEach { screen ->
-                    val selected =
-                        currentDestination?.hierarchy?.any { it.route == screen.route } == true
+                    val selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true
                     val scale by animateFloatAsState(
                         targetValue = if (selected) 1f else 0.92f,
                         label = "navScale"
                     )
-                    val label = stringResource(screen.labelRes)
 
+                    val label = stringResource(screen.labelRes)
                     NavigationBarItem(
                         icon = {
                             Icon(
@@ -126,9 +118,7 @@ fun SceneViewDemoApp(updateManager: InAppUpdateManager) {
                                 modifier = Modifier.scale(scale)
                             )
                         },
-                        label = {
-                            Text(label, style = MaterialTheme.typography.labelMedium)
-                        },
+                        label = { Text(label, style = MaterialTheme.typography.labelMedium) },
                         selected = selected,
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -151,26 +141,33 @@ fun SceneViewDemoApp(updateManager: InAppUpdateManager) {
             }
         }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .padding(innerPadding)) {
+            // Global update banner — visible across all tabs
             UpdateBanner(updateManager)
 
             NavHost(
                 navController = navController,
-                startDestination = Screen.Explore.route,
+                startDestination = Screen.ThreeD.route,
                 modifier = Modifier.weight(1f),
                 enterTransition = { fadeIn() + scaleIn(initialScale = 0.96f) },
                 exitTransition = { fadeOut() + scaleOut(targetScale = 0.96f) },
                 popEnterTransition = { fadeIn() + scaleIn(initialScale = 0.96f) },
                 popExitTransition = { fadeOut() + scaleOut(targetScale = 0.96f) }
             ) {
-                composable(Screen.Explore.route) { ExploreScreen() }
-                composable(Screen.AR.route) { ARScreen() }
-                composable(Screen.Samples.route) { SamplesScreen() }
-                composable(Screen.About.route) { AboutScreen() }
+                composable(Screen.ThreeD.route) {
+                    ExploreScreen()
+                }
+                composable(Screen.AR.route) {
+                    ARScreen()
+                }
+                composable(Screen.Samples.route) {
+                    SamplesScreen()
+                }
+                composable(Screen.About.route) {
+                    AboutScreen()
+                }
             }
         }
     }
