@@ -11,16 +11,16 @@ fragmentKtx = "1.8.9"
 
 # Compose
 composeBom = "2026.03.00"
-composeMaterial3Expressive = "1.5.0-alpha15"
+composeMaterial3Expressive = "1.5.0-alpha16"
 activityCompose = "1.13.0"
 navigationCompose = "2.9.7"
 
 # Kotlin Libraries
 coroutines = "1.10.2"
-kotlinMath = "1.6.0"
+kotlinMath = "1.8.0"
 
 # 3D / AR
-filament = "1.70.1"
+filament = "1.70.2"
 arCore = "1.53.0"
 
 # Networking
@@ -38,8 +38,8 @@ tvMaterial = "1.0.1"
 playAppUpdate = "2.1.0"
 
 # Publishing & Docs
-mavenPublish = "0.33.0"
-dokka = "2.1.0"
+mavenPublish = "0.35.0"
+dokka = "2.2.0"
 
 # Testing
 androidxTestJunit = "1.2.1"

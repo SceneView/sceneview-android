@@ -2,20 +2,28 @@ package io.github.sceneview.reactnative
 
 import android.widget.FrameLayout
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.uimanager.SimpleViewManager
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.annotations.ReactProp
+import com.google.android.filament.LightManager
 import io.github.sceneview.Scene
+import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position
+import io.github.sceneview.math.Rotation
+import io.github.sceneview.math.Scale
+import io.github.sceneview.math.Size
 import io.github.sceneview.rememberCameraNode
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberEnvironment
 import io.github.sceneview.rememberEnvironmentLoader
+import io.github.sceneview.rememberMaterialLoader
 import io.github.sceneview.rememberModelInstance
 import io.github.sceneview.rememberModelLoader
 
@@ -25,6 +33,8 @@ import io.github.sceneview.rememberModelLoader
  */
 class SceneViewState {
     val modelPaths = mutableStateListOf<ModelNodeData>()
+    val geometryNodes = mutableStateListOf<GeometryNodeData>()
+    val lightNodes = mutableStateListOf<LightNodeData>()
     val environmentPath = mutableStateOf<String?>(null)
     val orbitEnabled = mutableStateOf(true)
 }
@@ -53,6 +63,7 @@ class SceneViewManager : SimpleViewManager<FrameLayout>() {
             setContent {
                 val engine = rememberEngine()
                 val modelLoader = rememberModelLoader(engine)
+                val materialLoader = rememberMaterialLoader(engine)
                 val environmentLoader = rememberEnvironmentLoader(engine)
 
                 val cameraNode = rememberCameraNode(engine) {
@@ -70,6 +81,7 @@ class SceneViewManager : SimpleViewManager<FrameLayout>() {
                     modifier = Modifier.fillMaxSize(),
                     engine = engine,
                     modelLoader = modelLoader,
+                    materialLoader = materialLoader,
                     cameraNode = cameraNode,
                     environment = environment ?: rememberEnvironment(environmentLoader),
                 ) {
@@ -80,14 +92,98 @@ class SceneViewManager : SimpleViewManager<FrameLayout>() {
                                 modelInstance = it,
                                 scaleToUnits = model.scale,
                                 autoAnimate = model.animate,
+                                position = model.position,
+                                rotation = model.rotation,
                             )
                         }
+                    }
+
+                    state.geometryNodes.forEach { geom ->
+                        val colorInt = geom.color?.let {
+                            runCatching { android.graphics.Color.parseColor(it) }.getOrNull()
+                        }
+                        // Cache material instance per color to avoid leaking on recomposition.
+                        val mat = colorInt?.let { c ->
+                            val instance = remember(c) {
+                                materialLoader.createColorInstance(c)
+                            }
+                            DisposableEffect(c) {
+                                onDispose {
+                                    materialLoader.destroyMaterialInstance(instance)
+                                }
+                            }
+                            instance
+                        }
+                        when (geom.type) {
+                            "cube", "box" -> CubeNode(
+                                size = geom.size?.let { Size(it[0], it[1], it[2]) }
+                                    ?: Size(1f, 1f, 1f),
+                                materialInstance = mat,
+                                position = geom.position,
+                                rotation = geom.rotation,
+                                scale = geom.scale,
+                            )
+                            "sphere" -> SphereNode(
+                                radius = geom.size?.let { it[0] / 2f } ?: 0.5f,
+                                materialInstance = mat,
+                                position = geom.position,
+                                rotation = geom.rotation,
+                                scale = geom.scale,
+                            )
+                            "cylinder" -> CylinderNode(
+                                radius = geom.size?.let { it[0] / 2f } ?: 0.5f,
+                                height = geom.size?.let { it[1] } ?: 1f,
+                                materialInstance = mat,
+                                position = geom.position,
+                                rotation = geom.rotation,
+                                scale = geom.scale,
+                            )
+                            "plane" -> PlaneNode(
+                                size = geom.size?.let { Size(it[0], it[1]) }
+                                    ?: Size(1f, 1f),
+                                materialInstance = mat,
+                                position = geom.position,
+                                rotation = geom.rotation,
+                                scale = geom.scale,
+                            )
+                        }
+                    }
+
+                    state.lightNodes.forEach { light ->
+                        val lightType = when (light.type) {
+                            "directional" -> LightManager.Type.DIRECTIONAL
+                            "point" -> LightManager.Type.POINT
+                            "spot" -> LightManager.Type.SPOT
+                            else -> LightManager.Type.DIRECTIONAL
+                        }
+                        LightNode(
+                            type = lightType,
+                            intensity = light.intensity,
+                            direction = light.direction,
+                            position = light.position,
+                            apply = {
+                                light.color?.let { hex ->
+                                    val c = runCatching { android.graphics.Color.parseColor(hex) }.getOrNull() ?: return@let
+                                    color(
+                                        android.graphics.Color.red(c) / 255f,
+                                        android.graphics.Color.green(c) / 255f,
+                                        android.graphics.Color.blue(c) / 255f,
+                                    )
+                                }
+                            },
+                        )
                     }
                 }
             }
         }
         container.addView(composeView)
         return container
+    }
+
+    override fun onDropViewInstance(view: FrameLayout) {
+        // Remove the ComposeView so its Composition is disposed, releasing Filament resources.
+        view.removeAllViews()
+        super.onDropViewInstance(view)
     }
 
     @ReactProp(name = "environment")
@@ -119,7 +215,71 @@ class SceneViewManager : SimpleViewManager<FrameLayout>() {
                 } else {
                     true
                 }
-                state.modelPaths.add(ModelNodeData(src = src, scale = scale, animate = animate))
+                val position = readPosition(map, "position")
+                val rotation = readRotation(map, "rotation")
+                state.modelPaths.add(
+                    ModelNodeData(
+                        src = src,
+                        scale = scale,
+                        animate = animate,
+                        position = position,
+                        rotation = rotation,
+                    )
+                )
+            }
+        }
+    }
+
+    @ReactProp(name = "geometryNodes")
+    fun setGeometryNodes(view: FrameLayout, nodes: ReadableArray?) {
+        val state = getState(view)
+        state.geometryNodes.clear()
+        nodes?.let { array ->
+            for (i in 0 until array.size()) {
+                val map = array.getMap(i) ?: continue
+                val type = map.getString("type") ?: continue
+                val size = readFloatArray3(map, "size")
+                val position = readPosition(map, "position")
+                val rotation = readRotation(map, "rotation")
+                val scale = readScale(map, "scale")
+                val color = if (map.hasKey("color")) map.getString("color") else null
+                state.geometryNodes.add(
+                    GeometryNodeData(
+                        type = type,
+                        size = size,
+                        position = position,
+                        rotation = rotation,
+                        scale = scale,
+                        color = color,
+                    )
+                )
+            }
+        }
+    }
+
+    @ReactProp(name = "lightNodes")
+    fun setLightNodes(view: FrameLayout, nodes: ReadableArray?) {
+        val state = getState(view)
+        state.lightNodes.clear()
+        nodes?.let { array ->
+            for (i in 0 until array.size()) {
+                val map = array.getMap(i) ?: continue
+                val type = map.getString("type") ?: continue
+                val intensity = if (map.hasKey("intensity")) {
+                    map.getDouble("intensity").toFloat()
+                } else null
+                val color = if (map.hasKey("color")) map.getString("color") else null
+                val position = readPosition(map, "position")
+                val direction = readDirection(map, "direction")
+                state.lightNodes.add(
+                    LightNodeData(
+                        type = type,
+                        intensity = intensity,
+                        color = color,
+                        position = position,
+                        direction = direction,
+                    )
+                )
             }
         }
     }
@@ -133,5 +293,103 @@ class SceneViewManager : SimpleViewManager<FrameLayout>() {
 data class ModelNodeData(
     val src: String,
     val scale: Float = 1.0f,
-    val animate: Boolean = true
+    val animate: Boolean = true,
+    val position: Position = Position(x = 0f),
+    val rotation: Rotation = Rotation(x = 0f),
 )
+
+data class GeometryNodeData(
+    val type: String,
+    val size: FloatArray? = null,
+    val position: Position = Position(x = 0f),
+    val rotation: Rotation = Rotation(x = 0f),
+    val scale: Scale = Scale(1f),
+    val color: String? = null,
+)
+
+data class LightNodeData(
+    val type: String,
+    val intensity: Float? = null,
+    val color: String? = null,
+    val position: Position = Position(x = 0f),
+    val direction: Direction? = null,
+)
+
+// ---------------------------------------------------------------------------
+// Helpers for reading ReadableMap arrays into SceneView math types
+// ---------------------------------------------------------------------------
+
+internal fun readFloatArray3(
+    map: com.facebook.react.bridge.ReadableMap,
+    key: String
+): FloatArray? {
+    if (!map.hasKey(key)) return null
+    val arr = map.getArray(key) ?: return null
+    if (arr.size() < 3) return null
+    return floatArrayOf(
+        arr.getDouble(0).toFloat(),
+        arr.getDouble(1).toFloat(),
+        arr.getDouble(2).toFloat(),
+    )
+}
+
+internal fun readPosition(
+    map: com.facebook.react.bridge.ReadableMap,
+    key: String
+): Position {
+    if (!map.hasKey(key)) return Position(x = 0f)
+    val arr = map.getArray(key) ?: return Position(x = 0f)
+    if (arr.size() < 3) return Position(x = 0f)
+    return Position(
+        x = arr.getDouble(0).toFloat(),
+        y = arr.getDouble(1).toFloat(),
+        z = arr.getDouble(2).toFloat(),
+    )
+}
+
+internal fun readRotation(
+    map: com.facebook.react.bridge.ReadableMap,
+    key: String
+): Rotation {
+    if (!map.hasKey(key)) return Rotation(x = 0f)
+    val arr = map.getArray(key) ?: return Rotation(x = 0f)
+    if (arr.size() < 3) return Rotation(x = 0f)
+    return Rotation(
+        x = arr.getDouble(0).toFloat(),
+        y = arr.getDouble(1).toFloat(),
+        z = arr.getDouble(2).toFloat(),
+    )
+}
+
+internal fun readScale(
+    map: com.facebook.react.bridge.ReadableMap,
+    key: String
+): Scale {
+    if (!map.hasKey(key)) return Scale(1f)
+    return try {
+        val v = map.getDouble(key).toFloat()
+        Scale(v)
+    } catch (_: Exception) {
+        val arr = map.getArray(key) ?: return Scale(1f)
+        if (arr.size() < 3) return Scale(1f)
+        Scale(
+            x = arr.getDouble(0).toFloat(),
+            y = arr.getDouble(1).toFloat(),
+            z = arr.getDouble(2).toFloat(),
+        )
+    }
+}
+
+internal fun readDirection(
+    map: com.facebook.react.bridge.ReadableMap,
+    key: String
+): Direction? {
+    if (!map.hasKey(key)) return null
+    val arr = map.getArray(key) ?: return null
+    if (arr.size() < 3) return null
+    return Direction(
+        x = arr.getDouble(0).toFloat(),
+        y = arr.getDouble(1).toFloat(),
+        z = arr.getDouble(2).toFloat(),
+    )
+}

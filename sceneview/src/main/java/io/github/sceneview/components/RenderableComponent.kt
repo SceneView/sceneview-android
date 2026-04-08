@@ -4,7 +4,6 @@ import androidx.annotation.IntRange
 import com.google.android.filament.Box
 import com.google.android.filament.IndexBuffer
 import com.google.android.filament.MaterialInstance
-import com.google.android.filament.MorphTargetBuffer
 import com.google.android.filament.RenderableManager
 import com.google.android.filament.SkinningBuffer
 import com.google.android.filament.VertexBuffer
@@ -22,9 +21,18 @@ const val PRIORITY_DEFAULT = 4
 const val PRIORITY_FIRST = 0
 const val PRIORITY_LAST = 7
 
+/**
+ * ECS component for Filament renderables (meshes, geometries, models).
+ *
+ * Provides typed accessors to [RenderableManager] properties such as geometry,
+ * materials, visibility, shadows, skinning, and morph targets.
+ */
 interface RenderableComponent : Component {
 
+    /** The Filament [RenderableManager] that owns all renderable instances. */
     val renderableManager get() = engine.renderableManager
+
+    /** The renderable-manager instance handle for this entity. */
     val renderableInstance: RenderableInstance get() = renderableManager.getInstance(entity)
 
     /**

@@ -139,6 +139,14 @@ open class ModelNode(
     val model get() = modelInstance.model
 
     /**
+     * Called when an exception occurs during [onFrame] (e.g. bone matrix update, popRenderable).
+     *
+     * Set this to handle frame errors programmatically (crash reporting, analytics, UI feedback).
+     * When `null` (default), errors are logged via `android.util.Log.e`.
+     */
+    var onFrameError: ((Exception) -> Unit)? = null
+
+    /**
      * Gets the bounding box computed from the supplied min / max values in glTF accessors.
      *
      * This does not return a bounding box over all FilamentInstance, it's just a straightforward
@@ -449,7 +457,8 @@ open class ModelNode(
             applyAnimations(frameTimeNanos)
             animator.updateBoneMatrices()
         } catch (e: Exception) {
-            android.util.Log.e("SceneView", "ModelNode.onFrame error", e)
+            onFrameError?.invoke(e)
+                ?: android.util.Log.e("SceneView", "ModelNode.onFrame error", e)
         }
     }
 

@@ -92,4 +92,19 @@ class HitResultTest {
         hit.reset()
         hit.node // should throw
     }
+
+    // ── nodeOrNull ──────────────────────────────────────────────────────────
+
+    @Test
+    fun `nodeOrNull returns null after default construction`() {
+        val hit = HitResult()
+        assertEquals(null, hit.nodeOrNull)
+    }
+
+    @Test
+    fun `nodeOrNull returns null after reset`() {
+        val hit = HitResult()
+        hit.reset()
+        assertEquals(null, hit.nodeOrNull)
+    }
 }

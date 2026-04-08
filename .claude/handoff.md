@@ -4,8 +4,173 @@
 
 ## Last Session Summary
 
-**Date:** 2-3 avril 2026 (session 25 — 55 commits)
+**Date:** 7-8 avril 2026 (session 26)
 **Branch:** main
+
+## CRITICAL: NEXT SESSION MUST DO THIS FIRST
+
+### 1. Check CI is green on the revert commit (845b7f31)
+If not green, investigate and fix before doing anything else.
+
+### 2. Re-apply reverted work (in this exact order)
+The revert (845b7f31) undid 15 commits that mixed good code with broken sample rewrites.
+The good code must be re-applied. The broken code must be fixed.
+
+**Good code to re-apply (copy from git show of each commit):**
+- Version bump 3.6.1 → 3.6.2 (run `/version-bump 3.6.2`)
+- Publish workflow `.github/workflows/publish-v3.6.2.yml`
+- Sketchfab API module (`samples/common/src/.../SketchfabApi.kt` + `SketchfabModel.kt`)
+- VisualVerificationTest extensions (TextNode, ImageNode, BillboardNode tests)
+- iOS RenderScreenshotTest.swift
+- Web Playwright tests (`samples/web-demo/tests/render.spec.ts` + `playwright.config.ts`)
+- render-tests.yml 4-job CI update
+- `.claude/plans/rewrite-git-history.md`
+- `.claude/plans/session-27-overnight.md`
+
+**Sample rewrites to redo CAREFULLY (verify compilation each time):**
+- Android demo: `onFrame = { ... }` must be `onFrame = { _ -> ... }` (2 places)
+- iOS demo: FeaturesTab, FaceTrackingDemo, ShapeNodeDemo
+- Flutter demo: pages/, services/, integration_test/
+- React Native demo: App.tsx rewrite
+- Web demo: Main.kt updates
+
+### 3. Rewrite git history
+All "claude authored" commits should be "Thomas Gorisse authored + Co-authored-by: Claude".
+See `.claude/plans/rewrite-git-history.md` for the exact commands.
+**Do this on Mac where you can force-push.**
+
+### 4. Publish v3.6.2
+After CI is green with all code re-applied:
+```bash
+git tag -a v3.6.2 -m "Release v3.6.2" && git push origin v3.6.2
+```
+
+### 5. Git config for future sessions
+```bash
+git config user.name "Thomas Gorisse"
+git config user.email "AjaxMusic@gmail.com"
+```
+
+## WHAT WAS DONE THIS SESSION (session 26)
+
+### Issues GitHub
+- **#779** (closed) — Filament bumped 1.70.1 → 1.70.2
+- **#780** (documented) — v3.6.1 NOT on Maven Central, need to re-trigger release workflow
+
+### Code quality audit & fixes
+- **Null safety**: CameraComponent, ARCameraStream (!! → checkNotNull), Pose.kt axis directions
+- **HitResult.nodeOrNull**: new safe accessor (non-throwing alternative)
+- **ModelNode.onFrameError**: callback replacing silent Log.e
+- **CameraGestureDetector**: added ReplaceWith to @Deprecated constructor
+- **KDoc**: Component, Model.kt, LightComponent, RenderableComponent interfaces documented
+- **Dead code removed**: ~210 lines (ViewNode, Frame.kt, ARCameraStream, CameraGestureDetector)
+
+### Tests added
+- HitResult: +2 tests (nodeOrNull)
+- ARPermissionFlowTest: +7 integration scenario tests
+- TrackingStateTest: +3 enum contract tests
+
+### Render test infrastructure (new — 11 tests)
+- **RenderTestHarness.kt**: headless Filament setup (EGL pbuffer + offscreen SwapChain + Texture.PixelBufferDescriptor readPixels → Bitmap)
+- **RenderSmokeTest.kt**: 4 pixel spot-check tests (engine init, red/blue skybox, white scene, color differentiation)
+- **GeometryRenderTest.kt**: 5 tests (CubeNode, SphereNode, PlaneNode + material colors + golden self-consistency)
+- **LightingRenderTest.kt**: 2 tests (directional light brightness, point light localisation)
+- **GoldenImageComparator.kt**: Filament-style diff (per-channel threshold + max-diff-pixels-percent + diff image generation)
+- **render-tests.yml**: CI workflow (GitHub Actions + Android emulator + SwiftShader GPU)
+
+### Critical bugs found & fixed
+- **Frame.hitTest(ray) CRASH** (pre-existing): passed `origin.size` as array offset instead of `0` → ArrayIndexOutOfBoundsException on every ray-based AR hit test
+- **HitResult.set() throw** (pre-existing): used throwing `other.node` getter instead of `other.nodeOrNull`
+
+### Security
+- **21 Dependabot vulns fixed**: Vite 8.0.3 → 8.0.7 across 7 MCP packages (14 HIGH, 7 MODERATE)
+
+### PRs reviewed
+- **#789** (APPROVED): AugmentedFaceNode crash fix — 2 bugs confirmed (zero-size buffers, wrong buffer slot), fix is safe
+- **#785**: Filament bump — commented as duplicate (already done manually)
+- **#788**: kotlin-math 1.6→1.8 — flagged as major bump, needs changelog review
+- **#782**: maven-publish 0.33→0.36 — flagged as related to #780 publish failure
+
+### Commits (16 total)
+1. `dbc7842` — Filament 1.70.2
+2. `f02cb69` — Doc Maven Central failure
+3. `358b9e6` — Null safety, KDoc, dead code, AR tests
+4. `a6badcb` — TrackingStateTest resilience
+5. `1cf28de` — ModelNode onFrameError, Deprecated, Pose, KDoc
+6. `159ee7c` — Render test infra (harness + smoke + golden + CI)
+7. `8219b4a` — Fix readPixels API + handoff
+8. `b54c682` — Geometry render tests
+9. `239af04` — SphereNode, PlaneNode, golden self-consistency
+10. `284200c` — Lighting render tests
+11. `17911c0` — Fix 21 Dependabot vulns
+12. `9132e6c` — Fix render tests (exposure + light)
+13. `12b190d` — SwapChainFlags.CONFIG_DEFAULT + CLAUDE.md version
+14. `4259f33` — GeometryRenderTest null safety
+15. `cf22861` — Frame.hitTest crash + HitResult.set throwing getter
+16. `4a9cb1a` — Handoff update
+17. `f2f5c93` — maven-publish 0.33 → 0.35 (Central Portal validation)
+
+### PRs merged (7 total + 1 community)
+- #781 gradle/actions 5→6, #783 setup-node 4→6, #784 stale 9→10
+- #786 Material3 alpha16, #787 Dokka 2.2.0, #788 kotlin-math 1.8.0
+- #789 AugmentedFaceNode crash fix (by @LaoNastasy) — APPROVED + MERGED
+
+### PRs closed (2)
+- #785 Filament bump (duplicate)
+- #782 maven-publish 0.36 (replaced by manual 0.35 upgrade)
+
+### Cross-platform parity (new)
+- **Flutter**: +onTap, +onPlaneDetected callbacks, +model rotation (rotationX/Y/Z)
+- **React Native**: +GeometryNode rendering (cube/sphere/cylinder/plane), +LightNode (directional/point/spot)
+- **Web**: +GeometryConfig DSL, +GeometryGLBBuilder (in-memory GLB from KMP core geometries)
+- **iOS**: +AugmentedFaceNode (ARKit face mesh, 52 blend shapes, region poses, ARFaceSceneView)
+
+### Visual verification system (new)
+- VisualVerificationTest: 7 tests rendering every geometry type at 256x256
+- HTML report generation (visual-report.html) with pass/fail badges
+- CI: screenshots pulled from emulator and uploaded as GitHub Actions artifacts
+
+### Publication status
+- npm (MCP, Web, RN): PUBLISHED 3.6.1
+- pub.dev (Flutter): PUBLISHED 3.6.1
+- GitHub Release: PUBLISHED v3.6.1
+- Website: PUBLISHED 3.6.1
+- Maven Central: FAILED — maven-publish bumped 0.33→0.35, needs maintainer re-trigger
+- Play Store: versionName fixed 3.6.0→3.6.1
+- SPM (Swift): needs git tag v3.6.1
+
+### State after session
+- **0 open PRs**, **1 open issue** (#780 Maven Central — needs maintainer re-trigger)
+- All Dependabot alerts resolved (21 Vite vulns fixed)
+- All deps up to date: Filament 1.70.2, kotlin-math 1.8.0, Dokka 2.2.0, Material3 alpha16, maven-publish 0.35.0
+- **53 commits this session**
+- Final audit: **40/40 items verified, nothing forgotten**
+
+### NEXT SESSION PLAN (session 27)
+**Read `.claude/plans/session-27-overnight.md` for full details.**
+
+Priority tasks:
+1. **Rewrite ALL sample apps** — replace hardcoded 40-model galleries with Sketchfab search + feature showcase
+2. **Visual verification on ALL platforms** — screenshot tests for Android, iOS, Web, Flutter, RN
+3. **Store publication check** — verify all apps/packages are live
+4. **Sketchfab API module** — shared search in `samples/common/`
+
+Design principles for new samples:
+- Showcase ALL SDK features (every node type, every interaction)
+- Sketchfab search instead of bundled models (saves 259MB)
+- Visually impressive — show SDK power
+- Each feature has an automated screenshot test
+- Material 3 / native platform design
+
+### Commits
+1. `dbc7842` — Filament 1.70.2
+2. `f02cb69` — Doc Maven Central failure
+3. `358b9e6` — Null safety, KDoc, dead code, AR tests
+4. `a6badcb` — TrackingStateTest resilience fix
+5. `1cf28de` — ModelNode onFrameError, Deprecated ReplaceWith, Pose null safety, KDoc
+6. `159ee7c` — Render test infrastructure + CI workflow
+
+---
 
 ## WHAT WAS DONE THIS SESSION (session 25)
 
@@ -90,6 +255,7 @@
 - Module merge (sceneview + arsceneview → sceneview-android) after stability confirmed
 
 ### Known issues
+- **v3.6.1 NOT on Maven Central** (#780) — GitHub Release + npm published, but Maven Central upload silently failed. Need to re-trigger `publishAndReleaseToMavenCentral` via release workflow or manually. Latest on Maven Central is 3.6.0.
 - GitHub Pages CDN can be slow (10+ min)
 - KMP iOS sim tests: local gradle cache corrupt (not a real bug, `rm -rf` fixes it)
 

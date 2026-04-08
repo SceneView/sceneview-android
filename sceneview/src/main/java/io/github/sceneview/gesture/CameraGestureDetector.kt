@@ -28,7 +28,10 @@ open class CameraGestureDetector(
      * `cameraManipulator = CameraGestureDetector.DefaultCameraManipulator(manipulator =
      * Manipulator.Builder().build())`
      */
-    @Deprecated("Use CameraGestureDetector.CameraManipulator")
+    @Deprecated(
+        "Use CameraGestureDetector.CameraManipulator",
+        ReplaceWith("CameraGestureDetector(viewHeight, createDefaultCameraManipulator(manipulator))")
+    )
     constructor(
         viewHeight: () -> Int,
         manipulator: Manipulator?
@@ -72,7 +75,6 @@ open class CameraGestureDetector(
                     orbitHomePosition?.let { orbitHomePosition(it) }
                     targetPosition?.let { targetPosition(it) }
                 }
-//                .viewport(min(width, 1), min(height, 1))
                 .orbitSpeed(0.005f, 0.005f)
                 .zoomSpeed(0.05f)
                 .build(Manipulator.Mode.ORBIT),

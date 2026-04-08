@@ -32,7 +32,7 @@ export interface ModelNode {
 
 /** A procedural geometry node (box, sphere, cylinder, plane). */
 export interface GeometryNode {
-  type: 'box' | 'sphere' | 'cylinder' | 'plane';
+  type: 'box' | 'cube' | 'sphere' | 'cylinder' | 'plane';
   size?: [number, number, number];
   position?: [number, number, number];
   rotation?: [number, number, number];

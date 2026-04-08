@@ -2,6 +2,7 @@ package io.github.sceneview.web
 
 import io.github.sceneview.web.bindings.*
 import io.github.sceneview.web.nodes.CameraConfig
+import io.github.sceneview.web.nodes.GeometryConfig
 import io.github.sceneview.web.nodes.LightConfig
 import io.github.sceneview.web.nodes.LightType
 import io.github.sceneview.web.nodes.ModelConfig
@@ -367,6 +368,50 @@ class SceneView private constructor(
     }
 
     /**
+     * Add a procedural geometry primitive to the scene.
+     *
+     * Generates an in-memory GLB from the KMP core geometry generators
+     * and loads it through the gltfio pipeline, giving geometry nodes
+     * the same PBR material system as loaded glTF models.
+     *
+     * @param config Geometry configuration (type, size, color, position, scale)
+     */
+    fun addGeometry(config: GeometryConfig) {
+        val glbBuffer = GeometryGLBBuilder.buildGLB(config)
+        val loader = assetLoader ?: engine.createAssetLoader().also { assetLoader = it }
+
+        try {
+            val asset = loader.createAsset(glbBuffer)
+            if (asset != null) {
+                val entities = asset.getEntities()
+                scene.addEntities(entities)
+
+                val animator = try {
+                    asset.getInstance().getAnimator()
+                } catch (e: Throwable) {
+                    null
+                }
+
+                models.add(LoadedModel(asset, animator))
+
+                // Finalize the asset — loadResources uploads vertex/index buffers to GPU.
+                // Even for self-contained GLBs (no external resources), this step is required.
+                asset.loadResources(
+                    onDone = { asset.releaseSourceData() },
+                    onFetched = null,
+                    basePath = "",
+                    asyncInterval = null
+                )
+                console.log("SceneView: Geometry '${config.geometryType.name.lowercase()}' added")
+            } else {
+                console.error("SceneView: Failed to create geometry asset for ${config.geometryType}")
+            }
+        } catch (e: Throwable) {
+            console.error("SceneView: Error creating geometry ${config.geometryType}", e)
+        }
+    }
+
+    /**
      * Auto-fit the camera to frame all loaded models.
      * Computes the bounding box of all assets and adjusts the orbit controller distance.
      */
@@ -503,6 +548,7 @@ class SceneViewBuilder(private val sceneView: SceneView) {
     private var cameraConfig: CameraConfig? = null
     private var lightConfig: LightConfig? = null
     private val modelConfigs = mutableListOf<ModelConfig>()
+    private val geometryConfigs = mutableListOf<GeometryConfig>()
     private var iblUrl: String? = null
     private var skyboxUrl: String? = null
     private var cameraControlsEnabled = true
@@ -522,6 +568,11 @@ class SceneViewBuilder(private val sceneView: SceneView) {
     /** Add a glTF/GLB model by URL. */
     fun model(url: String, block: ModelConfig.() -> Unit = {}) {
         modelConfigs.add(ModelConfig(url).apply(block))
+    }
+
+    /** Add a procedural geometry primitive (cube, sphere, cylinder, plane). */
+    fun geometry(block: GeometryConfig.() -> Unit) {
+        geometryConfigs.add(GeometryConfig().apply(block))
     }
 
     /** Set environment lighting from KTX IBL files. */
@@ -589,6 +640,9 @@ class SceneViewBuilder(private val sceneView: SceneView) {
 
         modelConfigs.forEach { config ->
             sceneView.loadModel(config.url, config.onLoaded)
+        }
+        geometryConfigs.forEach { config ->
+            sceneView.addGeometry(config)
         }
         if (cameraControlsEnabled) {
             val cam = cameraConfig

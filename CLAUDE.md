@@ -165,7 +165,7 @@ Never say "everything is good" without verifying published packages.
 ### Current state (last updated: 2026-04-02, session 25)
 
 - **Active branch**: `main`
-- **Latest release**: v3.6.1 (GitHub Release + Maven Central + npm — ALL PUBLISHED)
+- **Latest release**: v3.6.1 (GitHub Release + npm — published; **Maven Central: NOT YET** — #780)
 - **Android rewrite**: SceneRenderer, NodeGestureDelegate/AnimationDelegate/State, ARPermissionHandler
 - **Demo app**: Material 3 Expressive, 4 tabs, 40 models, 19 sample demos
 - **MCP servers**: sceneview-mcp 3.5.4 on npm (26 tools, 2360 tests), 9 MCPs total
@@ -176,7 +176,7 @@ Never say "everything is good" without verifying published packages.
 - **Branding**: 22 PNG exports generated, organized in branding/exports/
 - **Open Collective**: logo + cover + tiers (Backer $10, Sponsor $50, Gold $200) + 10 tags
 - **Claude Artifacts**: documented in llms.txt with CDN templates + 26 model URLs
-- **Filament**: 1.70.1 (bumped from 1.70.0, #762 closed)
+- **Filament**: 1.70.2 (bumped from 1.70.1, #779 closed)
 
 For full session history, see memory file `project_session_history.md`.
 For current priorities and next steps, see `.claude/handoff.md`.
