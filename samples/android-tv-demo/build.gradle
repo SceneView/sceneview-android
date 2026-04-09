@@ -34,14 +34,6 @@ android {
     androidResources {
         noCompress 'filamat', 'ktx'
     }
-    sourceSets {
-        main {
-            // Reuse the shared demo assets (models + environments)
-            assets.srcDirs += [
-                "../android-demo-assets/src/main/assets"
-            ]
-        }
-    }
 }
 
 dependencies {
