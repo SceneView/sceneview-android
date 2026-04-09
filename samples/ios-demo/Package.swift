@@ -18,10 +18,9 @@ let package = Package(
                 .product(name: "SceneViewSwift", package: "SceneViewSwift")
             ],
             path: "SceneViewDemo"
-        ),
-        // NOTE: Snapshot tests are in SceneViewDemoTests/ but require an Xcode test target,
-        // not a SPM test target, because the main target is an executable.
-        // To generate iOS goldens: add SceneViewDemoTests as an XCTest target in the Xcode project,
-        // set record = true in ScreenshotTests.swift, run tests, then set record = false.
+        )
+        // iOS snapshot tests are run via generate-ios-goldens.py + verify-ios-goldens.py
+        // which use xcrun simctl screenshots + Python Pillow for pixel comparison.
+        // See .claude/scripts/generate-ios-goldens.py
     ]
 )

@@ -1,7 +1,7 @@
 import XCTest
 import SnapshotTesting
 import SwiftUI
-@testable import SceneViewDemo
+@testable import SceneViewDemoLib
 
 /// Screenshot tests (swift-snapshot-testing) — s'exécutent sur simulateur iOS.
 ///

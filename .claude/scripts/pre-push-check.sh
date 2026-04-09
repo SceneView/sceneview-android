@@ -63,20 +63,22 @@ else
     echo -e "${YELLOW}  ⚠ No goldens yet — run: ./gradlew :samples:android-demo:recordRoborazziDebug${NC}"
 fi
 
-# 4. Screenshot tests iOS (swift-snapshot-testing)
-echo -e "${YELLOW}[6/8] Verifying iOS snapshot goldens...${NC}"
-IOS_SNAPSHOTS="samples/ios-demo/SceneViewDemoTests/__Snapshots__"
-if [ -d "$IOS_SNAPSHOTS" ] && [ "$(ls -A $IOS_SNAPSHOTS 2>/dev/null)" ]; then
-    if cd samples/ios-demo && swift test --filter ScreenshotTests --quiet 2>/dev/null; then
-        echo -e "${GREEN}  ✓ iOS snapshots match goldens${NC}"
-        cd - > /dev/null
+# 4. Screenshot tests iOS (Pillow pixel comparison against simulator goldens)
+echo -e "${YELLOW}[6/8] Verifying iOS screenshot goldens...${NC}"
+IOS_GOLDENS="samples/ios-demo/goldens"
+if xcrun simctl list devices | grep -q "Booted" 2>/dev/null; then
+    if [ -d "$IOS_GOLDENS" ] && [ "$(ls -A $IOS_GOLDENS/*.png 2>/dev/null)" ]; then
+        if python3 .claude/scripts/generate-ios-goldens.py verify explore_current 2>/dev/null; then
+            echo -e "${GREEN}  ✓ iOS screenshots match goldens${NC}"
+        else
+            echo -e "${RED}  ✗ iOS screenshot regression — run: python3 .claude/scripts/generate-ios-goldens.py capture explore_current${NC}"
+            ERRORS=$((ERRORS + 1))
+        fi
     else
-        echo -e "${RED}  ✗ iOS snapshot regression detected — set record = true to update goldens${NC}"
-        ERRORS=$((ERRORS + 1))
-        cd - > /dev/null
+        echo -e "${YELLOW}  ⚠ No iOS goldens yet — navigate to Explore tab and run: python3 .claude/scripts/generate-ios-goldens.py capture explore_current${NC}"
     fi
 else
-    echo -e "${YELLOW}  ⚠ No goldens yet — run iOS tests once with record = true${NC}"
+    echo -e "${YELLOW}  ⚠ No iOS simulator booted — skip${NC}"
 fi
 
 # 5. Version sync
