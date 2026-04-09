@@ -1,30 +1,33 @@
 # SceneView Web Demo
 
-Browser-based 3D viewer using SceneView Web (Kotlin/JS + Filament.js WASM).
+Browser-based 3D viewer using SceneView.js (Filament.js WASM engine).
 
 ## Features
 
-- **Sketchfab search** — search and load downloadable 3D models from Sketchfab
-- **Geometry showcase** — create cubes, spheres, cylinders, and planes with color pickers using the `geometry {}` DSL
+- **Model Gallery** — 40 curated CDN models across 5 categories (Showcase, Vehicles, Animated, Characters, Objects)
+- **Sketchfab Search** — search and browse downloadable 3D models from Sketchfab
+- **Geometry Showcase** — create cubes, spheres, cylinders, and planes with color pickers and size sliders
+- **Settings Panel** — quality (low/medium/high), bloom toggle, auto-rotate toggle, background color
 - **WebXR AR/VR** — enter immersive AR or VR sessions (when browser supports WebXR)
-- **Tab navigation** — Model Viewer and Geometry tabs
+- **Tab Navigation** — Models, Geometry, and Settings tabs
 - **Responsive dark theme** — works on desktop and mobile
-- **SDK version badge** — displays SceneView v3.6.1
+- **SDK version badge** — displays SceneView v3.6.2
 
 ## Run
+
+Open `src/jsMain/resources/index.html` directly in a browser, or:
 
 ```bash
 ./gradlew :samples:web-demo:jsBrowserRun
 ```
 
-Opens a development server in your browser.
-
 ## Architecture
 
-- `Main.kt` — application entry point, tab/search/geometry logic
-- `index.html` — responsive dark-themed layout with glassmorphism panels
-- Uses `SceneView.create()` DSL with `geometry {}` blocks for procedural primitives
+- `index.html` — self-contained single-file app (HTML + CSS + JS)
+- Uses `SceneView.js` from CDN (`sceneview.modelViewer()`, `createBox()`, `createSphere()`, etc.)
+- Filament.js WASM engine loaded from CDN
 - Sketchfab API: `GET /v3/search?type=models&downloadable=true&q={query}`
+- CDN models: `https://cdn.jsdelivr.net/gh/sceneview/sceneview@main/assets/models/glb/`
 
 ## Requirements
 

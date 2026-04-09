@@ -3,11 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SceneView Web Demo — 3D &amp; AR Viewer</title>
-    <meta name="description" content="SceneView Web Demo: 3D model viewer with Sketchfab search, geometry DSL showcase, and WebXR AR/VR — powered by Filament.js (WASM).">
+    <title>SceneView Web Demo — 3D Viewer, Sketchfab Search &amp; Geometry Showcase</title>
+    <meta name="description" content="SceneView Web Demo: 3D model viewer with Sketchfab search, geometry showcase, HDR environments, and WebXR AR/VR — powered by Filament.js (WASM).">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Filament.js WASM engine -->
+    <script src="https://cdn.jsdelivr.net/gh/sceneview/sceneview@main/website-static/js/filament/filament.js"></script>
+    <!-- SceneView.js -->
+    <script src="https://cdn.jsdelivr.net/gh/sceneview/sceneview@main/website-static/js/sceneview.js"></script>
+
     <style>
         :root {
             --sv-blue: #005bc1;
@@ -90,7 +96,7 @@
             color: var(--sv-text-dim);
             cursor: pointer; display: flex; align-items: center; justify-content: center;
             transition: background 0.15s, border-color 0.15s, color 0.15s;
-            font-size: 16px;
+            font-size: 16px; text-decoration: none;
         }
         .icon-btn:hover {
             background: rgba(255,255,255,0.1);
@@ -131,12 +137,41 @@
         }
         .panel.active { display: flex; }
 
-        /* Search panel (Model Viewer tab) */
+        /* Search panel (Models tab) */
         .search-panel {
             left: 20px; top: 110px; bottom: 80px;
-            width: 320px;
+            width: 340px;
             flex-direction: column; gap: 10px;
         }
+
+        /* Source toggle (CDN / Sketchfab) */
+        .source-toggle {
+            display: flex; gap: 0;
+            border-radius: var(--sv-radius);
+            overflow: hidden;
+            border: 1px solid var(--sv-border);
+            background: var(--sv-glass);
+            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+        }
+        .source-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: none;
+            background: transparent;
+            color: var(--sv-text-dim);
+            font-size: 12px; font-weight: 600; font-family: var(--sv-font);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .source-btn.active {
+            background: rgba(0, 91, 193, 0.25);
+            color: var(--sv-blue-light);
+        }
+        .source-btn:hover:not(.active) {
+            background: rgba(255,255,255,0.04);
+            color: var(--sv-text);
+        }
+
         .search-box {
             display: flex; gap: 0;
             border-radius: var(--sv-radius);
@@ -165,15 +200,15 @@
         }
         .search-btn:hover { background: #0050aa; }
 
-        .search-results {
+        .model-results {
             flex: 1;
             overflow-y: auto;
             display: flex; flex-direction: column; gap: 8px;
             scrollbar-width: thin;
             scrollbar-color: rgba(255,255,255,0.1) transparent;
         }
-        .search-results::-webkit-scrollbar { width: 4px; }
-        .search-results::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+        .model-results::-webkit-scrollbar { width: 4px; }
+        .model-results::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
 
         .result-card {
             display: flex; gap: 10px; align-items: center;
@@ -210,7 +245,7 @@
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
             margin-top: 2px;
         }
-        .result-views {
+        .result-badge {
             font-size: 10px; color: var(--sv-text-faint);
             margin-top: 2px;
         }
@@ -226,7 +261,7 @@
         /* Geometry panel */
         .geometry-panel {
             left: 20px; top: 110px; bottom: 80px;
-            width: 320px;
+            width: 340px;
             flex-direction: column; gap: 10px;
             overflow-y: auto;
         }
@@ -243,6 +278,9 @@
         }
         .geo-card-title {
             font-size: 14px; font-weight: 600;
+        }
+        .geo-card-icon {
+            font-size: 18px; margin-right: 8px;
         }
         .geo-add-btn {
             padding: 6px 14px;
@@ -295,6 +333,10 @@
             border: none; border-radius: 50%;
             cursor: pointer;
         }
+        .slider-value {
+            font-size: 11px; color: var(--sv-text-faint);
+            min-width: 24px; text-align: right;
+        }
 
         .geo-clear-btn {
             padding: 8px 16px;
@@ -313,12 +355,86 @@
             background: rgba(248, 113, 113, 0.08);
         }
 
+        /* Environment panel */
+        .env-panel {
+            right: 20px; top: 110px;
+            width: 260px;
+            flex-direction: column; gap: 10px;
+        }
+        .env-card {
+            background: var(--sv-glass);
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--sv-border);
+            border-radius: var(--sv-radius);
+            padding: 14px;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        .env-card-title {
+            font-size: 13px; font-weight: 600;
+        }
+        .env-select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--sv-border);
+            border-radius: var(--sv-radius-sm);
+            background: var(--sv-dark-surface);
+            color: var(--sv-text);
+            font-size: 13px; font-family: var(--sv-font);
+            cursor: pointer;
+            outline: none;
+        }
+        .env-select option { background: var(--sv-dark-surface); color: var(--sv-text); }
+        .bg-color-row {
+            display: flex; align-items: center; gap: 8px;
+        }
+        .bg-color-row label {
+            font-size: 12px; color: var(--sv-text-dim);
+        }
+        .quality-select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--sv-border);
+            border-radius: var(--sv-radius-sm);
+            background: var(--sv-dark-surface);
+            color: var(--sv-text);
+            font-size: 13px; font-family: var(--sv-font);
+            cursor: pointer;
+            outline: none;
+        }
+        .quality-select option { background: var(--sv-dark-surface); color: var(--sv-text); }
+
+        .toggle-row {
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .toggle-label {
+            font-size: 12px; color: var(--sv-text-dim);
+        }
+        .toggle-switch {
+            position: relative;
+            width: 36px; height: 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .toggle-switch.active { background: var(--sv-blue); }
+        .toggle-switch::after {
+            content: '';
+            position: absolute; top: 2px; left: 2px;
+            width: 16px; height: 16px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.2s;
+        }
+        .toggle-switch.active::after { transform: translateX(16px); }
+
         /* ---- Controls info ---- */
         .controls-info {
             position: fixed; bottom: 20px; left: 20px; z-index: 15;
             display: flex; flex-direction: column; gap: 4px;
             font-size: 12px; color: var(--sv-text-faint);
             pointer-events: none;
+            transition: left 0.3s;
         }
         .controls-info .row { display: flex; align-items: center; gap: 6px; }
         .controls-info kbd {
@@ -461,6 +577,11 @@
                 left: 10px; right: 10px; top: auto; bottom: 70px;
                 width: auto; max-height: 45vh;
             }
+            .env-panel {
+                right: 10px; top: auto; bottom: 70px;
+                width: calc(100% - 20px); left: 10px;
+                max-height: 35vh;
+            }
             .tab-bar { top: 52px; }
             .top-bar { padding: 10px 14px; }
             .logo-text { font-size: 16px; }
@@ -494,8 +615,8 @@
     <header class="top-bar">
         <a href="https://sceneview.github.io" target="_blank" class="logo" title="SceneView — 3D and AR for Compose and SwiftUI">
             <div class="logo-icon">S</div>
-            <span class="logo-text">SceneView</span>
-            <span id="version-badge" class="logo-version">v3.6.1</span>
+            <span class="logo-text">SceneView Web Demo</span>
+            <span class="logo-version">v3.6.2</span>
         </a>
         <div class="top-right">
             <button id="auto-rotate-toggle" class="auto-rotate-btn active" title="Toggle auto-rotation">Auto-rotate</button>
@@ -507,19 +628,22 @@
 
     <!-- Tab bar -->
     <nav class="tab-bar">
-        <button class="tab-btn active" data-tab="viewer">Model Viewer</button>
+        <button class="tab-btn active" data-tab="models">Models</button>
         <button class="tab-btn" data-tab="geometry">Geometry</button>
+        <button class="tab-btn" data-tab="settings">Settings</button>
     </nav>
 
-    <!-- Search panel (Model Viewer tab) -->
-    <div id="panel-viewer" class="panel search-panel active">
-        <div class="search-box">
+    <!-- Models panel -->
+    <div id="panel-models" class="panel search-panel active">
+        <div class="source-toggle">
+            <button class="source-btn active" data-source="cdn">SceneView CDN</button>
+            <button class="source-btn" data-source="sketchfab">Sketchfab Search</button>
+        </div>
+        <div id="search-box" class="search-box" style="display:none">
             <input id="search-input" class="search-input" type="text" placeholder="Search Sketchfab models..." autocomplete="off">
             <button id="search-btn" class="search-btn">Search</button>
         </div>
-        <div id="search-results" class="search-results">
-            <div class="search-status">Type a query and press Search to find downloadable 3D models on Sketchfab.</div>
-        </div>
+        <div id="model-results" class="model-results"></div>
     </div>
 
     <!-- Geometry panel -->
@@ -531,7 +655,7 @@
             </div>
             <div class="geo-controls">
                 <label>Color <input type="color" class="color-picker" data-geo-color="cube" value="#4488ff"></label>
-                <label>Size <input type="range" class="geo-slider" data-geo-size="cube" min="0.2" max="3" step="0.1" value="1"></label>
+                <label>Size <input type="range" class="geo-slider" data-geo-size="cube" min="0.2" max="3" step="0.1" value="1"> <span class="slider-value">1.0</span></label>
             </div>
         </div>
         <div class="geo-card">
@@ -541,7 +665,7 @@
             </div>
             <div class="geo-controls">
                 <label>Color <input type="color" class="color-picker" data-geo-color="sphere" value="#ff4488"></label>
-                <label>Radius <input type="range" class="geo-slider" data-geo-size="sphere" min="0.2" max="2" step="0.1" value="0.5"></label>
+                <label>Radius <input type="range" class="geo-slider" data-geo-size="sphere" min="0.2" max="2" step="0.1" value="0.5"> <span class="slider-value">0.5</span></label>
             </div>
         </div>
         <div class="geo-card">
@@ -551,7 +675,7 @@
             </div>
             <div class="geo-controls">
                 <label>Color <input type="color" class="color-picker" data-geo-color="cylinder" value="#44ff88"></label>
-                <label>Radius <input type="range" class="geo-slider" data-geo-size="cylinder" min="0.2" max="2" step="0.1" value="0.5"></label>
+                <label>Radius <input type="range" class="geo-slider" data-geo-size="cylinder" min="0.2" max="2" step="0.1" value="0.5"> <span class="slider-value">0.5</span></label>
             </div>
         </div>
         <div class="geo-card">
@@ -561,10 +685,38 @@
             </div>
             <div class="geo-controls">
                 <label>Color <input type="color" class="color-picker" data-geo-color="plane" value="#ffaa44"></label>
-                <label>Size <input type="range" class="geo-slider" data-geo-size="plane" min="0.5" max="5" step="0.5" value="2"></label>
+                <label>Size <input type="range" class="geo-slider" data-geo-size="plane" min="0.5" max="5" step="0.5" value="2"> <span class="slider-value">2.0</span></label>
             </div>
         </div>
         <button id="geo-clear" class="geo-clear-btn">Clear All Geometry</button>
+    </div>
+
+    <!-- Settings panel -->
+    <div id="panel-settings" class="panel env-panel">
+        <div class="env-card">
+            <div class="env-card-title">Rendering</div>
+            <label style="font-size:12px;color:var(--sv-text-dim)">Quality</label>
+            <select id="quality-select" class="quality-select">
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+            </select>
+            <div class="toggle-row">
+                <span class="toggle-label">Bloom</span>
+                <div id="bloom-toggle" class="toggle-switch"></div>
+            </div>
+            <div class="toggle-row">
+                <span class="toggle-label">Auto-rotate</span>
+                <div id="rotate-toggle" class="toggle-switch active"></div>
+            </div>
+        </div>
+        <div class="env-card">
+            <div class="env-card-title">Background</div>
+            <div class="bg-color-row">
+                <label>Color</label>
+                <input type="color" id="bg-color" class="color-picker" value="#0D1117">
+            </div>
+        </div>
     </div>
 
     <!-- Camera controls info -->
@@ -577,7 +729,7 @@
     <!-- Bottom bar -->
     <footer class="bottom-bar">
         <div class="powered-by">
-            Powered by <a href="https://sceneview.github.io" target="_blank">SceneView</a> + <a href="https://github.com/google/filament" target="_blank">Filament.js</a> + WebXR
+            Powered by <a href="https://sceneview.github.io" target="_blank">SceneView</a> + <a href="https://github.com/google/filament" target="_blank">Filament.js</a> (WASM)
         </div>
         <div class="xr-buttons">
             <button id="enter-ar" class="xr-btn">Enter AR</button>
@@ -585,6 +737,568 @@
         </div>
     </footer>
 
-    <script src="web-model-viewer.js"></script>
+    <script>
+    (function() {
+      'use strict';
+
+      // ---- Configuration ----
+      var CDN_BASE = 'https://cdn.jsdelivr.net/gh/sceneview/sceneview@main/assets/models/glb/';
+      var SKETCHFAB_API = 'https://api.sketchfab.com/v3/search?type=models&downloadable=true';
+
+      // Curated CDN model catalog — categories with model file names
+      var CDN_MODELS = [
+        { name: 'Damaged Helmet', file: 'khronos_damaged_helmet.glb', category: 'Showcase' },
+        { name: 'Sheen Chair', file: 'khronos_sheen_chair.glb', category: 'Showcase' },
+        { name: 'Iridescent Dish', file: 'khronos_iridescent_dish.glb', category: 'Showcase' },
+        { name: 'Dragon Attenuation', file: 'khronos_dragon_attenuation.glb', category: 'Showcase' },
+        { name: 'Sunglasses', file: 'khronos_sunglasses.glb', category: 'Showcase' },
+        { name: 'Material Variants Shoe', file: 'khronos_materials_variants_shoe.glb', category: 'Showcase' },
+        { name: 'Antique Camera', file: 'khronos_antique_camera.glb', category: 'Showcase' },
+        { name: 'Chronograph Watch', file: 'khronos_chronograph_watch.glb', category: 'Showcase' },
+        { name: 'Ferrari F40', file: 'ferrari_f40.glb', category: 'Vehicles' },
+        { name: 'Porsche 911', file: 'porsche_911.glb', category: 'Vehicles' },
+        { name: 'Lamborghini Countach', file: 'lamborghini_countach.glb', category: 'Vehicles' },
+        { name: 'Tesla Cybertruck', file: 'tesla_cybertruck.glb', category: 'Vehicles' },
+        { name: 'BMW M3 E30', file: 'bmw_m3_e30.glb', category: 'Vehicles' },
+        { name: 'Cyberpunk Car', file: 'cyberpunk_car.glb', category: 'Vehicles' },
+        { name: 'Shelby Cobra', file: 'shelby_cobra.glb', category: 'Vehicles' },
+        { name: 'Speeder Bike', file: 'speeder_bike.glb', category: 'Vehicles' },
+        { name: 'Animated Dragon', file: 'animated_dragon.glb', category: 'Animated' },
+        { name: 'Animated T-Rex', file: 'animated_trex.glb', category: 'Animated' },
+        { name: 'Animated Astronaut', file: 'animated_astronaut.glb', category: 'Animated' },
+        { name: 'Animated Butterfly', file: 'animated_butterfly.glb', category: 'Animated' },
+        { name: 'Animated Dog', file: 'animated_dog.glb', category: 'Animated' },
+        { name: 'Animated Cat', file: 'animated_cat.glb', category: 'Animated' },
+        { name: 'Animated Shark', file: 'animated_shark.glb', category: 'Animated' },
+        { name: 'Phoenix Bird', file: 'phoenix_bird.glb', category: 'Animated' },
+        { name: 'Khronos Fox', file: 'khronos_fox.glb', category: 'Characters' },
+        { name: 'Shiba', file: 'shiba.glb', category: 'Characters' },
+        { name: 'Koi Fish', file: 'koi_fish.glb', category: 'Characters' },
+        { name: 'Wall-E', file: 'wall_e.glb', category: 'Characters' },
+        { name: 'Cyberpunk Character', file: 'cyberpunk_character.glb', category: 'Characters' },
+        { name: 'Robo Bun', file: 'robo_bun.glb', category: 'Characters' },
+        { name: 'Realistic Wolf', file: 'realistic_wolf.glb', category: 'Characters' },
+        { name: 'Coffee Cart', file: 'coffee_cart.glb', category: 'Objects' },
+        { name: 'Casio Keyboard', file: 'casio_keyboard.glb', category: 'Objects' },
+        { name: 'Nike Air Jordan', file: 'nike_air_jordan.glb', category: 'Objects' },
+        { name: 'PS5 DualSense', file: 'ps5_dualsense.glb', category: 'Objects' },
+        { name: 'Game Boy Classic', file: 'game_boy_classic.glb', category: 'Objects' },
+        { name: 'Nintendo Switch', file: 'nintendo_switch.glb', category: 'Objects' },
+        { name: 'Fantasy Book', file: 'fantasy_book.glb', category: 'Objects' },
+        { name: 'Trumpet', file: 'trumpet.glb', category: 'Objects' },
+        { name: 'Retro Piano', file: 'retro_piano.glb', category: 'Objects' }
+      ];
+
+      // ---- State ----
+      var sceneViewInstance = null;
+      var currentSource = 'cdn';
+      var currentTab = 'models';
+      var autoRotate = true;
+      var bloomEnabled = false;
+      var geometryCount = 0;
+
+      // ---- DOM references ----
+      var canvas = document.getElementById('scene-canvas');
+      var loadingOverlay = document.getElementById('loading-overlay');
+      var loadingModelName = document.getElementById('loading-model-name');
+      var loadingChip = document.getElementById('loading-chip');
+      var loadingChipText = document.getElementById('loading-chip-text');
+      var searchInput = document.getElementById('search-input');
+      var searchBtn = document.getElementById('search-btn');
+      var searchBox = document.getElementById('search-box');
+      var modelResults = document.getElementById('model-results');
+      var controlsInfo = document.getElementById('controls-info');
+
+      // ---- Initialization ----
+
+      function init() {
+        setupCanvas();
+        initSceneView('khronos_damaged_helmet.glb', 'Damaged Helmet');
+        setupTabs();
+        setupSourceToggle();
+        setupSearch();
+        setupGeometry();
+        setupSettings();
+        setupXR();
+        showCDNModels();
+      }
+
+      function setupCanvas() {
+        canvas.width = canvas.clientWidth * (window.devicePixelRatio || 1);
+        canvas.height = canvas.clientHeight * (window.devicePixelRatio || 1);
+        window.addEventListener('resize', function() {
+          canvas.width = canvas.clientWidth * (window.devicePixelRatio || 1);
+          canvas.height = canvas.clientHeight * (window.devicePixelRatio || 1);
+        });
+      }
+
+      function initSceneView(modelFile, modelName) {
+        loadingModelName.textContent = modelName || modelFile;
+
+        var modelUrl = CDN_BASE + modelFile;
+        SceneView.modelViewer('scene-canvas', modelUrl)
+          .then(function(instance) {
+            sceneViewInstance = instance;
+            instance.setAutoRotate(autoRotate);
+            instance.setQuality('medium');
+            loadingOverlay.classList.add('hidden');
+            console.log('SceneView Web Demo initialized — v3.6.2');
+          })
+          .catch(function(err) {
+            console.error('SceneView init failed:', err);
+            loadingOverlay.querySelector('.loading-text').textContent = 'Failed to initialize: ' + err.message;
+          });
+      }
+
+      // ---- Load model ----
+
+      function loadModel(url, name) {
+        if (!sceneViewInstance) return;
+        showChip('Loading ' + (name || 'model') + '...');
+        sceneViewInstance.loadModel(url)
+          .then(function() {
+            hideChip();
+            sceneViewInstance.setAutoRotate(autoRotate);
+            console.log('Model loaded: ' + name);
+          })
+          .catch(function(err) {
+            hideChip();
+            showChip('Failed to load model');
+            setTimeout(hideChip, 3000);
+            console.error('Load error:', err);
+          });
+      }
+
+      // ---- Tab navigation ----
+
+      function setupTabs() {
+        var buttons = document.querySelectorAll('.tab-btn');
+        for (var i = 0; i < buttons.length; i++) {
+          (function(btn) {
+            btn.addEventListener('click', function() {
+              var tab = btn.getAttribute('data-tab');
+              switchTab(tab);
+            });
+          })(buttons[i]);
+        }
+      }
+
+      function switchTab(tab) {
+        currentTab = tab;
+        var buttons = document.querySelectorAll('.tab-btn');
+        for (var i = 0; i < buttons.length; i++) {
+          var btn = buttons[i];
+          btn.classList.toggle('active', btn.getAttribute('data-tab') === tab);
+        }
+        var panels = ['models', 'geometry', 'settings'];
+        panels.forEach(function(p) {
+          var panel = document.getElementById('panel-' + p);
+          if (panel) {
+            if (p === tab) {
+              panel.classList.add('active');
+            } else {
+              panel.classList.remove('active');
+            }
+          }
+        });
+        // Adjust controls-info position
+        controlsInfo.style.left = (tab === 'models' || tab === 'geometry') ? '380px' : '20px';
+      }
+
+      // ---- Source toggle (CDN / Sketchfab) ----
+
+      function setupSourceToggle() {
+        var buttons = document.querySelectorAll('.source-btn');
+        for (var i = 0; i < buttons.length; i++) {
+          (function(btn) {
+            btn.addEventListener('click', function() {
+              var source = btn.getAttribute('data-source');
+              setSource(source);
+            });
+          })(buttons[i]);
+        }
+      }
+
+      function setSource(source) {
+        currentSource = source;
+        var buttons = document.querySelectorAll('.source-btn');
+        for (var i = 0; i < buttons.length; i++) {
+          buttons[i].classList.toggle('active', buttons[i].getAttribute('data-source') === source);
+        }
+        if (source === 'cdn') {
+          searchBox.style.display = 'none';
+          showCDNModels();
+        } else {
+          searchBox.style.display = 'flex';
+          modelResults.innerHTML = '<div class="search-status">Search Sketchfab for downloadable 3D models.</div>';
+        }
+      }
+
+      // ---- CDN Model Gallery ----
+
+      function showCDNModels() {
+        modelResults.innerHTML = '';
+        var categories = {};
+        CDN_MODELS.forEach(function(m) {
+          if (!categories[m.category]) categories[m.category] = [];
+          categories[m.category].push(m);
+        });
+
+        var catOrder = ['Showcase', 'Vehicles', 'Animated', 'Characters', 'Objects'];
+        catOrder.forEach(function(cat) {
+          var models = categories[cat];
+          if (!models) return;
+
+          // Category label
+          var label = document.createElement('div');
+          label.style.cssText = 'font-size:11px;font-weight:700;color:var(--sv-text-faint);text-transform:uppercase;letter-spacing:0.06em;padding:8px 4px 2px;';
+          label.textContent = cat;
+          modelResults.appendChild(label);
+
+          models.forEach(function(m) {
+            var card = document.createElement('div');
+            card.className = 'result-card';
+            card.innerHTML = '<div class="result-info">' +
+              '<div class="result-name">' + escapeHtml(m.name) + '</div>' +
+              '<div class="result-badge">CDN ' + m.file.split('.').pop().toUpperCase() + '</div>' +
+              '</div>';
+            card.addEventListener('click', function() {
+              highlightCard(card);
+              loadModel(CDN_BASE + m.file, m.name);
+            });
+            modelResults.appendChild(card);
+          });
+        });
+      }
+
+      // ---- Sketchfab Search ----
+
+      function setupSearch() {
+        searchBtn.addEventListener('click', function() {
+          var q = searchInput.value.trim();
+          if (q) searchSketchfab(q);
+        });
+        searchInput.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') {
+            var q = searchInput.value.trim();
+            if (q) searchSketchfab(q);
+          }
+        });
+      }
+
+      function searchSketchfab(query) {
+        modelResults.innerHTML = '<div class="search-status">Searching "' + escapeHtml(query) + '"...</div>';
+
+        fetch(SKETCHFAB_API + '&q=' + encodeURIComponent(query) + '&count=20')
+          .then(function(r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+          })
+          .then(function(data) {
+            var results = data.results || [];
+            if (results.length === 0) {
+              modelResults.innerHTML = '<div class="search-status">No downloadable models found for "' + escapeHtml(query) + '".</div>';
+              return;
+            }
+            modelResults.innerHTML = '';
+
+            results.forEach(function(model) {
+              var name = model.name || 'Untitled';
+              var uid = model.uid;
+              var author = (model.user && (model.user.displayName || model.user.username)) || 'Unknown';
+              var views = model.viewCount || 0;
+              var thumb = extractThumb(model);
+
+              var card = document.createElement('div');
+              card.className = 'result-card';
+
+              var imgHtml = thumb
+                ? '<img class="result-thumb" src="' + thumb + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
+                : '';
+              card.innerHTML = imgHtml +
+                '<div class="result-info">' +
+                '<div class="result-name" title="' + escapeHtml(name) + '">' + escapeHtml(name) + '</div>' +
+                '<div class="result-author">by ' + escapeHtml(author) + '</div>' +
+                '<div class="result-badge">' + formatViews(views) + ' views</div>' +
+                '</div>';
+
+              card.addEventListener('click', function() {
+                highlightCard(card);
+                downloadSketchfabModel(uid, name);
+              });
+
+              modelResults.appendChild(card);
+            });
+          })
+          .catch(function(err) {
+            modelResults.innerHTML = '<div class="search-status error">Search failed: ' + escapeHtml(err.message) + '</div>';
+          });
+      }
+
+      function extractThumb(model) {
+        if (!model.thumbnails || !model.thumbnails.images) return '';
+        var imgs = model.thumbnails.images;
+        for (var i = 0; i < imgs.length; i++) {
+          if (imgs[i].width >= 100 && imgs[i].width <= 400) return imgs[i].url || '';
+        }
+        return imgs.length > 0 ? (imgs[0].url || '') : '';
+      }
+
+      function downloadSketchfabModel(uid, name) {
+        showChip('Fetching download link...');
+
+        fetch('https://api.sketchfab.com/v3/models/' + uid + '/download')
+          .then(function(r) {
+            if (!r.ok) {
+              // Most models require auth for download — open Sketchfab page
+              showChip('Auth required — opening on Sketchfab');
+              setTimeout(hideChip, 3000);
+              window.open('https://sketchfab.com/3d-models/' + uid, '_blank');
+              return null;
+            }
+            return r.json();
+          })
+          .then(function(data) {
+            if (!data) return;
+            var glbUrl = data.gltf && data.gltf.url;
+            if (glbUrl) {
+              loadModel(glbUrl, name);
+            } else {
+              showChip('No GLB available — opening on Sketchfab');
+              setTimeout(hideChip, 3000);
+              window.open('https://sketchfab.com/3d-models/' + uid, '_blank');
+            }
+          })
+          .catch(function() {
+            showChip('Download unavailable — opening on Sketchfab');
+            setTimeout(hideChip, 3000);
+            window.open('https://sketchfab.com/3d-models/' + uid, '_blank');
+          });
+      }
+
+      // ---- Geometry Showcase ----
+
+      function setupGeometry() {
+        // Slider value display
+        var sliders = document.querySelectorAll('.geo-slider');
+        for (var i = 0; i < sliders.length; i++) {
+          (function(slider) {
+            var display = slider.parentElement.querySelector('.slider-value');
+            slider.addEventListener('input', function() {
+              if (display) display.textContent = parseFloat(slider.value).toFixed(1);
+            });
+          })(sliders[i]);
+        }
+
+        // Add buttons
+        var addBtns = document.querySelectorAll('.geo-add-btn');
+        for (var i = 0; i < addBtns.length; i++) {
+          (function(btn) {
+            var geoType = btn.getAttribute('data-geo');
+            btn.addEventListener('click', function() {
+              addGeometry(geoType);
+            });
+          })(addBtns[i]);
+        }
+
+        // Clear button
+        document.getElementById('geo-clear').addEventListener('click', function() {
+          if (sceneViewInstance) {
+            sceneViewInstance.clearScene();
+            geometryCount = 0;
+          }
+        });
+      }
+
+      function addGeometry(type) {
+        if (!sceneViewInstance) return;
+
+        var colorInput = document.querySelector('[data-geo-color="' + type + '"]');
+        var sizeInput = document.querySelector('[data-geo-size="' + type + '"]');
+        var hex = colorInput ? colorInput.value : '#888888';
+        var size = sizeInput ? parseFloat(sizeInput.value) : 1;
+
+        var rgb = hexToRgb(hex);
+        var color = [rgb[0], rgb[1], rgb[2], 1.0];
+
+        // Offset each primitive so they don't overlap
+        var col = geometryCount % 5;
+        var row = Math.floor(geometryCount / 5);
+        var x = (col - 2) * 2.5;
+        var z = row * -2.5;
+        geometryCount++;
+
+        switch (type) {
+          case 'cube':
+            sceneViewInstance.createBox([x, size / 2, z], [size, size, size], color);
+            break;
+          case 'sphere':
+            sceneViewInstance.createSphere([x, size, z], size, color);
+            break;
+          case 'cylinder':
+            var height = size * 2;
+            sceneViewInstance.createCylinder([x, height / 2, z], size, height, color);
+            break;
+          case 'plane':
+            // Flat box as plane
+            sceneViewInstance.createBox([x, 0.025, z], [size, 0.05, size], color);
+            break;
+        }
+      }
+
+      function hexToRgb(hex) {
+        var c = hex.replace('#', '');
+        return [
+          parseInt(c.substring(0, 2), 16) / 255,
+          parseInt(c.substring(2, 4), 16) / 255,
+          parseInt(c.substring(4, 6), 16) / 255
+        ];
+      }
+
+      // ---- Settings ----
+
+      function setupSettings() {
+        // Quality
+        var qualitySelect = document.getElementById('quality-select');
+        qualitySelect.addEventListener('change', function() {
+          if (sceneViewInstance) {
+            sceneViewInstance.setQuality(qualitySelect.value);
+          }
+        });
+
+        // Bloom toggle
+        var bloomToggle = document.getElementById('bloom-toggle');
+        bloomToggle.addEventListener('click', function() {
+          bloomEnabled = !bloomEnabled;
+          bloomToggle.classList.toggle('active', bloomEnabled);
+          if (sceneViewInstance) {
+            sceneViewInstance.setBloom(bloomEnabled);
+          }
+        });
+
+        // Rotate toggle (settings panel)
+        var rotateToggle = document.getElementById('rotate-toggle');
+        rotateToggle.addEventListener('click', function() {
+          autoRotate = !autoRotate;
+          rotateToggle.classList.toggle('active', autoRotate);
+          if (sceneViewInstance) {
+            sceneViewInstance.setAutoRotate(autoRotate);
+          }
+          // Sync the top-bar button
+          var topBtn = document.getElementById('auto-rotate-toggle');
+          topBtn.classList.toggle('active', autoRotate);
+        });
+
+        // Auto-rotate top-bar button
+        var autoRotateBtn = document.getElementById('auto-rotate-toggle');
+        autoRotateBtn.addEventListener('click', function() {
+          autoRotate = !autoRotate;
+          autoRotateBtn.classList.toggle('active', autoRotate);
+          if (sceneViewInstance) {
+            sceneViewInstance.setAutoRotate(autoRotate);
+          }
+          // Sync settings panel toggle
+          var rotateToggle2 = document.getElementById('rotate-toggle');
+          rotateToggle2.classList.toggle('active', autoRotate);
+        });
+
+        // Background color
+        var bgColor = document.getElementById('bg-color');
+        bgColor.addEventListener('input', function() {
+          if (sceneViewInstance) {
+            var rgb = hexToRgb(bgColor.value);
+            sceneViewInstance.setBackgroundColor(rgb[0], rgb[1], rgb[2], 1.0);
+          }
+        });
+      }
+
+      // ---- WebXR ----
+
+      function setupXR() {
+        // Check AR support
+        if (navigator.xr) {
+          navigator.xr.isSessionSupported('immersive-ar').then(function(supported) {
+            if (supported) {
+              document.getElementById('enter-ar').style.display = 'inline-block';
+            }
+          }).catch(function() {});
+
+          navigator.xr.isSessionSupported('immersive-vr').then(function(supported) {
+            if (supported) {
+              document.getElementById('enter-vr').style.display = 'inline-block';
+            }
+          }).catch(function() {});
+        }
+
+        document.getElementById('enter-ar').addEventListener('click', function() {
+          if (navigator.xr) {
+            navigator.xr.requestSession('immersive-ar', { requiredFeatures: ['hit-test'] })
+              .then(function(session) {
+                console.log('AR session started');
+                session.addEventListener('end', function() {
+                  console.log('AR session ended');
+                });
+              })
+              .catch(function(err) {
+                alert('Failed to start AR: ' + err.message);
+              });
+          }
+        });
+
+        document.getElementById('enter-vr').addEventListener('click', function() {
+          if (navigator.xr) {
+            navigator.xr.requestSession('immersive-vr')
+              .then(function(session) {
+                console.log('VR session started');
+                session.addEventListener('end', function() {
+                  console.log('VR session ended');
+                });
+              })
+              .catch(function(err) {
+                alert('Failed to start VR: ' + err.message);
+              });
+          }
+        });
+      }
+
+      // ---- Loading UI helpers ----
+
+      function showChip(text) {
+        loadingChipText.textContent = text;
+        loadingChip.classList.add('visible');
+      }
+      function hideChip() {
+        loadingChip.classList.remove('visible');
+      }
+
+      // ---- Utility ----
+
+      function highlightCard(card) {
+        var all = document.querySelectorAll('.result-card');
+        for (var i = 0; i < all.length; i++) all[i].classList.remove('active');
+        card.classList.add('active');
+      }
+
+      function escapeHtml(str) {
+        var div = document.createElement('div');
+        div.appendChild(document.createTextNode(str));
+        return div.innerHTML;
+      }
+
+      function formatViews(n) {
+        if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+        if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+        return String(n);
+      }
+
+      // ---- Boot ----
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
+
+    })();
+    </script>
 </body>
 </html>
