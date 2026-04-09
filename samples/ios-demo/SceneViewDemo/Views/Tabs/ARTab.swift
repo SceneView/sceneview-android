@@ -47,7 +47,7 @@ struct ARTab: View {
             .navigationTitle("AR View")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItemGroup(placement: .topBarTrailing) {
+                ToolbarItemGroup(placement: .primaryAction) {
                     Button {
                         shareARScreenshot()
                     } label: {

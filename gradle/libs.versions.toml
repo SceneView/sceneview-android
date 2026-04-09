@@ -45,6 +45,8 @@ dokka = "2.2.0"
 androidxTestJunit = "1.2.1"
 androidxTestRunner = "1.7.0"
 androidxTestRules = "1.7.0"
+robolectric = "4.14.1"
+roborazzi = "1.43.0"
 
 # Code Quality
 detekt = "1.23.8"
@@ -106,6 +108,10 @@ play-app-update-ktx = { group = "com.google.android.play", name = "app-update-kt
 androidx-test-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxTestJunit" }
 androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidxTestRunner" }
 androidx-test-rules = { group = "androidx.test", name = "rules", version.ref = "androidxTestRules" }
+robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
+roborazzi = { group = "io.github.takahirom.roborazzi", name = "roborazzi", version.ref = "roborazzi" }
+roborazzi-compose = { group = "io.github.takahirom.roborazzi", name = "roborazzi-compose", version.ref = "roborazzi" }
+roborazzi-rule = { group = "io.github.takahirom.roborazzi", name = "roborazzi-junit-rule", version.ref = "roborazzi" }
 
 # Gradle Plugins (for buildSrc / build-logic compileOnly)
 kotlin-gradlePlugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "kotlin" }
@@ -125,3 +131,4 @@ compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "composeMu
 publish = { id = "com.vanniktech.maven.publish", version.ref = "mavenPublish" }
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
+roborazzi = { id = "io.github.takahirom.roborazzi", version.ref = "roborazzi" }

@@ -130,6 +130,23 @@ import io.github.sceneview.rememberModelLoader
 import io.github.sceneview.rememberOnGestureListener
 import io.github.sceneview.rememberView
 
+private const val CDN = "https://github.com/sceneview/sceneview/releases/download/assets-v1"
+
+// Local asset aliases — use these instead of CDN to avoid network dependency
+private const val MODEL_TOY_CAR = "models/khronos_toy_car.glb"
+private const val MODEL_ANIMATED = "models/animated_dragon.glb"
+private const val MODEL_HELMET = "models/khronos_damaged_helmet.glb"
+private const val MODEL_CORSET = "models/khronos_corset.glb"
+private const val MODEL_IRIDESCENT = "models/khronos_iridescent_dish.glb"
+private const val MODEL_SOFA = "models/khronos_glam_velvet_sofa.glb"
+private const val MODEL_LANTERN = "models/khronos_lantern.glb"
+private const val MODEL_AVOCADO = "models/khronos_avocado.glb"
+private const val MODEL_WATER_BOTTLE = "models/khronos_water_bottle.glb"
+private const val MODEL_POTION = "models/mushroom_potion.glb"
+private const val MODEL_SNEAKER = "models/nike_air_jordan.glb"
+private const val MODEL_SHEEN_CHAIR = "models/khronos_sheen_chair.glb"
+private const val MODEL_ROBOT = "models/robo_bun.glb"
+
 /**
  * Represents a feature demo in the Samples grid.
  */
@@ -637,7 +654,7 @@ private fun ModelViewerDemo() {
         environmentLoader.createHDREnvironment("environments/studio_warm_2k.hdr")
             ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
-    val modelInstance = rememberModelInstance(modelLoader, "models/toy_car.glb")
+    val modelInstance = rememberModelInstance(modelLoader, MODEL_TOY_CAR)
 
     Box(
         modifier = Modifier
@@ -754,7 +771,7 @@ private fun AnimationDemo() {
         environmentLoader.createHDREnvironment("environments/sunset_2k.hdr")
             ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
-    val modelInstance = rememberModelInstance(modelLoader, "models/animated_robot_mantis.glb")
+    val modelInstance = rememberModelInstance(modelLoader, MODEL_ANIMATED)
 
     Box(modifier = Modifier.fillMaxSize()) {
         SceneView(
@@ -798,7 +815,7 @@ private fun AnimationControlDemo() {
     }
 
     // Fox has multiple animations typically
-    val modelInstance = rememberModelInstance(modelLoader, "models/fox.glb")
+    val modelInstance = rememberModelInstance(modelLoader, "models/khronos_fox.glb")
 
     var animationSpeed by remember { mutableFloatStateOf(1.0f) }
     var isLooping by remember { mutableStateOf(true) }
@@ -943,7 +960,7 @@ private fun DynamicSkyDemo() {
         environmentLoader.createHDREnvironment("environments/outdoor_cloudy_2k.hdr")
             ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
-    val modelInstance = rememberModelInstance(modelLoader, "models/space_helmet.glb")
+    val modelInstance = rememberModelInstance(modelLoader, MODEL_HELMET)
 
     var timeOfDay by remember { mutableFloatStateOf(16f) }
 
@@ -1018,7 +1035,7 @@ private fun LightingDemo() {
     val environment = rememberEnvironment(environmentLoader) {
         environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
-    val modelInstance = rememberModelInstance(modelLoader, "models/seal_statuette.glb")
+    val modelInstance = rememberModelInstance(modelLoader, MODEL_CORSET)
 
     var sunIntensity by remember { mutableFloatStateOf(80000f) }
 
@@ -1121,7 +1138,7 @@ private fun DynamicLightingDemo() {
     val environment = rememberEnvironment(environmentLoader) {
         environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
-    val modelInstance = rememberModelInstance(modelLoader, "models/damaged_helmet.glb")
+    val modelInstance = rememberModelInstance(modelLoader, MODEL_HELMET)
 
     data class LightColor(val name: String, val r: Float, val g: Float, val b: Float, val chipColor: Color)
     val lightColors = remember {
@@ -1277,7 +1294,7 @@ private fun CameraControlsDemo() {
         orbitHomePosition = Position(z = 4.0f, y = 1.0f),
         targetPosition = Position(0f, 0f, 0f)
     )
-    val modelInstance = rememberModelInstance(modelLoader, "models/iridescence_lamp.glb")
+    val modelInstance = rememberModelInstance(modelLoader, MODEL_IRIDESCENT)
 
     Box(modifier = Modifier.fillMaxSize()) {
         SceneView(
@@ -1352,10 +1369,10 @@ private fun MultiModelDemo() {
     }
 
     // Load multiple models simultaneously
-    val sofa = rememberModelInstance(modelLoader, "models/velvet_sofa.glb")
-    val lamp = rememberModelInstance(modelLoader, "models/candle_holder.glb")
-    val plant = rememberModelInstance(modelLoader, "models/plant.glb")
-    val vase = rememberModelInstance(modelLoader, "models/glass_vase_flowers.glb")
+    val sofa = rememberModelInstance(modelLoader, MODEL_SOFA)
+    val lamp = rememberModelInstance(modelLoader, MODEL_LANTERN)
+    val plant = rememberModelInstance(modelLoader, MODEL_AVOCADO)
+    val vase = rememberModelInstance(modelLoader, MODEL_WATER_BOTTLE)
 
     val allLoaded = sofa != null && lamp != null && plant != null && vase != null
 
@@ -1468,7 +1485,7 @@ private fun FogDemo() {
         environmentLoader.createHDREnvironment("environments/outdoor_cloudy_2k.hdr")
             ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
-    val modelInstance = rememberModelInstance(modelLoader, "models/geisha_mask.glb")
+    val modelInstance = rememberModelInstance(modelLoader, MODEL_POTION)
 
     var fogDensity by remember { mutableFloatStateOf(0.05f) }
 
@@ -1575,7 +1592,7 @@ private fun EnvironmentGalleryDemo() {
         }
     }
 
-    val modelInstance = rememberModelInstance(modelLoader, "models/damaged_helmet.glb")
+    val modelInstance = rememberModelInstance(modelLoader, MODEL_HELMET)
 
     Box(modifier = Modifier.fillMaxSize()) {
         SceneView(
@@ -1812,7 +1829,7 @@ private fun GestureEditingDemo() {
         environmentLoader.createHDREnvironment("environments/studio_warm_2k.hdr")
             ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
-    val modelInstance = rememberModelInstance(modelLoader, "models/sunglasses.glb")
+    val modelInstance = rememberModelInstance(modelLoader, MODEL_SNEAKER)
 
     Box(modifier = Modifier.fillMaxSize()) {
         SceneView(
@@ -2008,7 +2025,7 @@ private fun PostProcessingDemo() {
         environmentLoader.createHDREnvironment("environments/studio_warm_2k.hdr")
             ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
-    val modelInstance = rememberModelInstance(modelLoader, "models/sheen_chair.glb")
+    val modelInstance = rememberModelInstance(modelLoader, MODEL_SHEEN_CHAIR)
 
     var ssaoEnabled by remember { mutableStateOf(true) }
     var fxaaEnabled by remember { mutableStateOf(true) }
@@ -2289,7 +2306,7 @@ private fun ReflectionProbesDemo() {
     }
 
     // Use a highly reflective model
-    val modelInstance = rememberModelInstance(modelLoader, "models/space_helmet.glb")
+    val modelInstance = rememberModelInstance(modelLoader, MODEL_HELMET)
 
     Box(modifier = Modifier.fillMaxSize()) {
         SceneView(
@@ -2399,7 +2416,7 @@ private fun GltfCamerasDemo() {
         environmentLoader.createHDREnvironment("environments/studio_2k.hdr")
             ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
-    val modelInstance = rememberModelInstance(modelLoader, "models/animated_bunny_detective.glb")
+    val modelInstance = rememberModelInstance(modelLoader, MODEL_ROBOT)
 
     Box(modifier = Modifier.fillMaxSize()) {
         SceneView(

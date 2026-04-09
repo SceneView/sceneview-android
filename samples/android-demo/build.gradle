@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.roborazzi)
 }
 
 android {
@@ -61,6 +62,14 @@ android {
     androidResources {
         noCompress 'filamat', 'ktx'
     }
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+            all {
+                systemProperty 'robolectric.logging.enabled', 'true'
+            }
+        }
+    }
 }
 
 dependencies {
@@ -81,4 +90,13 @@ dependencies {
     // Google Play In-App Updates
     implementation libs.play.app.update
     implementation libs.play.app.update.ktx
+
+    // Screenshot testing (Roborazzi — JVM, no emulator needed)
+    testImplementation libs.robolectric
+    testImplementation libs.roborazzi
+    testImplementation libs.roborazzi.compose
+    testImplementation libs.roborazzi.rule
+    testImplementation libs.androidx.test.junit
+    testImplementation platform(libs.androidx.compose.bom)
+    testImplementation libs.androidx.compose.ui
 }

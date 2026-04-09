@@ -16,40 +16,40 @@ struct ModelItem: Identifiable, Hashable {
 
     static let all: [ModelItem] = [
         // Vehicles
-        ModelItem(id: "red_car", name: "Red Car", icon: "car.fill", asset: "red_car", scale: 1.0, category: .vehicles),
-        ModelItem(id: "ferrari_f40", name: "Ferrari F40", icon: "car.fill", asset: "ferrari_f40", scale: 0.6, category: .vehicles),
-        ModelItem(id: "porsche_911", name: "Porsche 911", icon: "car.fill", asset: "porsche_911", scale: 0.6, category: .vehicles),
-        ModelItem(id: "porsche_911_turbo", name: "Porsche Turbo", icon: "car.side.fill", asset: "porsche_911_turbo", scale: 0.5, category: .vehicles),
-        ModelItem(id: "lamborghini_countach", name: "Lamborghini", icon: "car.fill", asset: "lamborghini_countach", scale: 0.5, category: .vehicles),
-        ModelItem(id: "shelby_cobra", name: "Shelby Cobra", icon: "car.fill", asset: "shelby_cobra", scale: 0.6, category: .vehicles),
-        ModelItem(id: "bmw_m3_e30", name: "BMW M3 E30", icon: "car.fill", asset: "bmw_m3_e30", scale: 0.6, category: .vehicles),
-        ModelItem(id: "mercedes_a45_amg", name: "Mercedes AMG", icon: "car.rear.fill", asset: "mercedes_a45_amg", scale: 0.5, category: .vehicles),
-        ModelItem(id: "audi_tt", name: "Audi TT", icon: "car.side.fill", asset: "audi_tt", scale: 0.7, category: .vehicles),
-        ModelItem(id: "fiat_punto", name: "Fiat Punto", icon: "car.rear.fill", asset: "fiat_punto", scale: 0.7, category: .vehicles),
-        ModelItem(id: "tesla_cybertruck", name: "Cybertruck", icon: "truck.box.fill", asset: "tesla_cybertruck", scale: 0.6, category: .vehicles),
-        ModelItem(id: "cyberpunk_car", name: "Cyberpunk Car", icon: "car.side.fill", asset: "cyberpunk_car", scale: 0.8, category: .vehicles),
-        ModelItem(id: "cyberpunk_hovercar", name: "Hovercar", icon: "bolt.car.fill", asset: "cyberpunk_hovercar", scale: 0.6, category: .vehicles),
+        ModelItem(id: "red_car",              name: "Red Car",       icon: "car.fill",         asset: "red_car",              scale: 1.0, category: .vehicles),
+        ModelItem(id: "ferrari_f40",          name: "Ferrari F40",   icon: "car.side.fill",    asset: "ferrari_f40",          scale: 0.6, category: .vehicles),
+        ModelItem(id: "porsche_911",          name: "Porsche 911",   icon: "car.rear.fill",    asset: "porsche_911",          scale: 0.6, category: .vehicles),
+        ModelItem(id: "porsche_911_turbo",    name: "Porsche Turbo", icon: "car.side.fill",    asset: "porsche_911_turbo",    scale: 0.5, category: .vehicles),
+        ModelItem(id: "lamborghini_countach", name: "Lamborghini",   icon: "car.fill",         asset: "lamborghini_countach", scale: 0.5, category: .vehicles),
+        ModelItem(id: "shelby_cobra",         name: "Shelby Cobra",  icon: "car.rear.fill",    asset: "shelby_cobra",         scale: 0.6, category: .vehicles),
+        ModelItem(id: "bmw_m3_e30",           name: "BMW M3 E30",    icon: "car.side.fill",    asset: "bmw_m3_e30",           scale: 0.6, category: .vehicles),
+        ModelItem(id: "mercedes_a45_amg",     name: "Mercedes AMG",  icon: "car.fill",         asset: "mercedes_a45_amg",     scale: 0.5, category: .vehicles),
+        ModelItem(id: "audi_tt",              name: "Audi TT",       icon: "car.rear.fill",    asset: "audi_tt",              scale: 0.7, category: .vehicles),
+        ModelItem(id: "fiat_punto",           name: "Fiat Punto",    icon: "car.side.fill",    asset: "fiat_punto",           scale: 0.7, category: .vehicles),
+        ModelItem(id: "tesla_cybertruck",     name: "Cybertruck",    icon: "truck.box.fill",   asset: "tesla_cybertruck",     scale: 0.6, category: .vehicles),
+        ModelItem(id: "cyberpunk_car",        name: "Cyberpunk Car", icon: "bolt.car.fill",    asset: "cyberpunk_car",        scale: 0.8, category: .vehicles),
+        ModelItem(id: "cyberpunk_hovercar",   name: "Hovercar",      icon: "airplane",         asset: "cyberpunk_hovercar",   scale: 0.6, category: .vehicles),
 
         // Creatures
-        ModelItem(id: "animated_dragon", name: "Dragon", icon: "flame.fill", asset: "animated_dragon", scale: 0.6, category: .creatures),
-        ModelItem(id: "black_dragon", name: "Black Dragon", icon: "lizard.fill", asset: "black_dragon", scale: 0.5, category: .creatures),
-        ModelItem(id: "phoenix_bird", name: "Phoenix", icon: "bird.fill", asset: "phoenix_bird", scale: 0.8, category: .creatures),
-        ModelItem(id: "animated_butterfly", name: "Butterfly", icon: "leaf.fill", asset: "animated_butterfly", scale: 0.8, category: .creatures),
-        ModelItem(id: "mosquito_amber", name: "Mosquito in Amber", icon: "ant.fill", asset: "mosquito_amber", scale: 1.0, category: .creatures),
-        ModelItem(id: "cyberpunk_character", name: "Cyber Guy", icon: "figure.stand", asset: "cyberpunk_character", scale: 0.7, category: .creatures),
+        ModelItem(id: "animated_dragon",     name: "Dragon",            icon: "flame.fill",        asset: "animated_dragon",     scale: 0.6, category: .creatures),
+        ModelItem(id: "black_dragon",        name: "Black Dragon",      icon: "lizard.fill",       asset: "black_dragon",        scale: 0.5, category: .creatures),
+        ModelItem(id: "phoenix_bird",        name: "Phoenix",           icon: "bird.fill",         asset: "phoenix_bird",        scale: 0.8, category: .creatures),
+        ModelItem(id: "animated_butterfly",  name: "Butterfly",         icon: "sparkles",          asset: "animated_butterfly",  scale: 0.8, category: .creatures),
+        ModelItem(id: "mosquito_amber",      name: "Mosquito in Amber", icon: "ant.fill",          asset: "mosquito_amber",      scale: 1.0, category: .creatures),
+        ModelItem(id: "cyberpunk_character", name: "Cyber Guy",         icon: "figure.run",        asset: "cyberpunk_character", scale: 0.7, category: .creatures),
 
         // Objects
-        ModelItem(id: "game_boy_classic", name: "Game Boy", icon: "gamecontroller.fill", asset: "game_boy_classic", scale: 0.8, category: .objects),
-        ModelItem(id: "nintendo_switch", name: "Switch", icon: "gamecontroller.fill", asset: "nintendo_switch", scale: 0.8, category: .objects),
-        ModelItem(id: "ps5_dualsense", name: "PS5 Controller", icon: "gamecontroller.fill", asset: "ps5_dualsense", scale: 0.8, category: .objects),
-        ModelItem(id: "nike_air_jordan", name: "Nike Air Jordan", icon: "shoe.fill", asset: "nike_air_jordan", scale: 0.8, category: .objects),
-        ModelItem(id: "retro_piano", name: "Retro Piano", icon: "pianokeys", asset: "retro_piano", scale: 0.7, category: .objects),
-        ModelItem(id: "fantasy_book", name: "Fantasy Book", icon: "book.fill", asset: "fantasy_book", scale: 0.7, category: .objects),
+        ModelItem(id: "game_boy_classic", name: "Game Boy",       icon: "gamecontroller.fill",    asset: "game_boy_classic", scale: 0.8, category: .objects),
+        ModelItem(id: "nintendo_switch",  name: "Switch",         icon: "square.grid.2x2.fill",  asset: "nintendo_switch",  scale: 0.8, category: .objects),
+        ModelItem(id: "ps5_dualsense",    name: "PS5 Controller", icon: "gamecontroller",         asset: "ps5_dualsense",    scale: 0.8, category: .objects),
+        ModelItem(id: "nike_air_jordan",  name: "Air Jordan",     icon: "shoe.fill",              asset: "nike_air_jordan",  scale: 0.8, category: .objects),
+        ModelItem(id: "retro_piano",      name: "Retro Piano",    icon: "pianokeys",              asset: "retro_piano",      scale: 0.7, category: .objects),
+        ModelItem(id: "fantasy_book",     name: "Fantasy Book",   icon: "book.fill",              asset: "fantasy_book",     scale: 0.7, category: .objects),
 
         // Scenes
-        ModelItem(id: "tree_scene", name: "Tree Scene", icon: "tree.fill", asset: "tree_scene", scale: 0.6, category: .scenes),
-        ModelItem(id: "ship_in_clouds", name: "Ship in Clouds", icon: "cloud.fill", asset: "ship_in_clouds", scale: 0.5, category: .scenes),
-        ModelItem(id: "earthquake_california", name: "Earthquake", icon: "waveform.path", asset: "earthquake_california", scale: 0.4, category: .scenes),
+        ModelItem(id: "tree_scene",           name: "Tree Scene",  icon: "tree.fill",      asset: "tree_scene",           scale: 0.6, category: .scenes),
+        ModelItem(id: "ship_in_clouds",       name: "Ship in Sky", icon: "cloud.fill",     asset: "ship_in_clouds",       scale: 0.5, category: .scenes),
+        ModelItem(id: "earthquake_california", name: "Earthquake", icon: "waveform.path",  asset: "earthquake_california", scale: 0.4, category: .scenes),
     ]
 }
 
@@ -59,6 +59,26 @@ enum ModelCategory: String, CaseIterable {
     case objects = "Objects"
     case scenes = "Scenes"
     case favorites = "Favorites"
+
+    var gradientColors: [Color] {
+        switch self {
+        case .vehicles:  return [Color.blue.opacity(0.3), Color.cyan.opacity(0.15)]
+        case .creatures: return [Color.orange.opacity(0.3), Color.yellow.opacity(0.15)]
+        case .objects:   return [Color.purple.opacity(0.3), Color.pink.opacity(0.15)]
+        case .scenes:    return [Color.green.opacity(0.3), Color.teal.opacity(0.15)]
+        case .favorites: return [Color.red.opacity(0.3), Color.pink.opacity(0.15)]
+        }
+    }
+
+    var iconColor: Color {
+        switch self {
+        case .vehicles:  return .blue
+        case .creatures: return .orange
+        case .objects:   return .purple
+        case .scenes:    return .green
+        case .favorites: return .red
+        }
+    }
 }
 
 /// The main explore tab -- a model gallery for browsing, viewing, and favoriting 3D models.
@@ -203,10 +223,7 @@ private struct ModelCard: View {
                     RoundedRectangle(cornerRadius: 12)
                         .fill(
                             LinearGradient(
-                                colors: [
-                                    Color(.systemGray5),
-                                    Color(.systemGray6)
-                                ],
+                                colors: model.category.gradientColors,
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
@@ -215,7 +232,7 @@ private struct ModelCard: View {
                         .overlay {
                             Image(systemName: model.icon)
                                 .font(.system(size: 36))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(model.category.iconColor)
                         }
 
                     // Favorite button
@@ -319,7 +336,7 @@ struct ModelViewerScreen: View {
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .toolbar {
-            ToolbarItemGroup(placement: .topBarTrailing) {
+            ToolbarItemGroup(placement: .primaryAction) {
                 Button {
                     favoritesManager.toggle(model.id)
                     #if os(iOS)

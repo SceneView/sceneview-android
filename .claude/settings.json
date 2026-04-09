@@ -113,6 +113,42 @@
             "command": "echo 'PUSHED — Remember: if this is a release, update CLAUDE.md session state and website version references. Run .claude/scripts/sync-versions.sh to verify.'"
           }
         ]
+      },
+      {
+        "matcher": "Edit(*/samples/android-demo/src/main/java/**/*.kt)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'UI ANDROID MODIFIÉ — OBLIGATION: capturer un screenshot et vérifier visuellement AVANT de continuer. Commande: bash .claude/scripts/visual-check.sh after && lire les images /tmp/sceneview-visual/android_after.png'"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit(*/samples/android-demo/src/main/res/**)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'RESSOURCES ANDROID MODIFIÉES — OBLIGATION: capturer un screenshot et vérifier visuellement AVANT de continuer. Commande: bash .claude/scripts/visual-check.sh after && lire les images /tmp/sceneview-visual/android_after.png'"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit(*/samples/ios-demo/**/*.swift)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'UI iOS MODIFIÉ — OBLIGATION: capturer un screenshot et vérifier visuellement AVANT de continuer. Commande: bash .claude/scripts/visual-check.sh after && lire les images /tmp/sceneview-visual/ios_after.png'"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit(*/website-static/**)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'WEBSITE MODIFIÉ — OBLIGATION: ouvrir website-static/index.html dans le navigateur et vérifier visuellement desktop + mobile. Vérifier: layout, couleurs, dark mode, responsive.'"
+          }
+        ]
       }
     ]
   }
