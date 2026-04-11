@@ -1087,7 +1087,7 @@
     <div class="web-api__container">
       <div class="web-api__header">
         <h2 class="web-api__title">API reference</h2>
-        <p class="web-api__subtitle">Five functions. That's the entire surface.</p>
+        <p class="web-api__subtitle">A compact surface that covers model loading, primitives, lights, animation and AR.</p>
       </div>
 
       <div class="web-api__grid">
@@ -1134,6 +1134,79 @@
           <p class="web-api-card__desc">
             Sets the orbit camera distance from the model center.
             Useful for controlling the initial zoom level.
+          </p>
+        </div>
+
+        <div class="web-api-card reveal">
+          <div class="web-api-card__name">viewer.loadEnvironment</div>
+          <div class="web-api-card__sig">loadEnvironment(ktxUrl, intensity?) &rarr; Promise</div>
+          <p class="web-api-card__desc">
+            Loads a KTX IBL environment for physically-based lighting and reflections.
+            Works with any KTX2 cubemap exported from cmgen or a baked HDR.
+          </p>
+        </div>
+
+        <div class="web-api-card reveal">
+          <div class="web-api-card__name">viewer.addLight</div>
+          <div class="web-api-card__sig">addLight({type, color, intensity, direction, position, falloff})</div>
+          <p class="web-api-card__desc">
+            Adds a <code>directional</code>, <code>point</code>, or <code>spot</code>
+            light to the scene. Returns an entity handle you can pass to
+            <code>removeLight()</code>.
+          </p>
+        </div>
+
+        <div class="web-api-card reveal">
+          <div class="web-api-card__name">viewer.clearLights</div>
+          <div class="web-api-card__sig">clearLights() &rarr; viewer</div>
+          <p class="web-api-card__desc">
+            Removes every light from the scene, including the default 3-point
+            studio rig. Use this when you want a fully custom lighting setup.
+          </p>
+        </div>
+
+        <div class="web-api-card reveal">
+          <div class="web-api-card__name">viewer.createBox / Sphere / Cylinder</div>
+          <div class="web-api-card__sig">createBox(center, [w,h,d], [r,g,b,a])</div>
+          <p class="web-api-card__desc">
+            Procedural primitives built as inline glTF — no external model file needed.
+            Perfect for quick prototypes, physics placeholders, or ground planes.
+          </p>
+        </div>
+
+        <div class="web-api-card reveal">
+          <div class="web-api-card__name">viewer.playAnimation</div>
+          <div class="web-api-card__sig">playAnimation(index=0, loop=true)</div>
+          <p class="web-api-card__desc">
+            Plays a glTF keyframe animation with full skinning and morph-target support.
+            Use <code>stopAnimation()</code> to return to the rest pose.
+          </p>
+        </div>
+
+        <div class="web-api-card reveal">
+          <div class="web-api-card__name">viewer.setBloom</div>
+          <div class="web-api-card__sig">setBloom(true | false | {strength, resolution, threshold})</div>
+          <p class="web-api-card__desc">
+            Toggles the bloom post-processing effect for cinematic highlights
+            on emissive materials. Fine-tune strength and threshold for dramatic looks.
+          </p>
+        </div>
+
+        <div class="web-api-card reveal">
+          <div class="web-api-card__name">viewer.createText / Image / Video</div>
+          <div class="web-api-card__sig">createText({text, fontSize, color, position, billboard})</div>
+          <p class="web-api-card__desc">
+            In-scene HUD elements: rich text billboards, 2D images, and looping
+            videos rendered as world-space quads.
+          </p>
+        </div>
+
+        <div class="web-api-card reveal">
+          <div class="web-api-card__name">viewer.clearScene</div>
+          <div class="web-api-card__sig">clearScene() &rarr; viewer</div>
+          <p class="web-api-card__desc">
+            Removes all loaded models, primitives, and media nodes from the scene.
+            Lights, IBL, and camera are preserved.
           </p>
         </div>
 
