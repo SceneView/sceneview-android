@@ -136,11 +136,30 @@ extract_refs() {
                 continue
                 ;;
         esac
-        # Pull out every quoted literal ending with one of the extensions.
-        # -o gives just the match; awk strips the surrounding quotes.
+        # 1. Quoted literals with a known extension ("models/foo.glb", "bar.hdr")
         # `|| true` so files with no match (grep exit 1) don't abort pipefail.
         grep -oE "\"[^\"]*\.($ext_pattern)\"" "$file" 2>/dev/null |
             awk -v f="$file" '{ gsub(/"/, "", $0); printf "%s|%s\n", $0, f }' || true
+
+        # 2. iOS Swift pattern — `asset: "name"` without extension. We emit the
+        #    name with an implicit .usdz suffix so check_bundled_ref can find
+        #    it in Models/. Only applied to .swift files to avoid false matches.
+        if [[ "$file" == *.swift ]]; then
+            grep -oE 'asset:[[:space:]]*"[^"]+"' "$file" 2>/dev/null |
+                awk -v f="$file" '{
+                    # pull the quoted name
+                    match($0, /"[^"]+"/);
+                    name = substr($0, RSTART+1, RLENGTH-2);
+                    printf "%s.usdz|%s\n", name, f;
+                }' || true
+            # Also catch `ModelNode.load("name")`
+            grep -oE 'ModelNode\.load\([[:space:]]*"[^"]+"' "$file" 2>/dev/null |
+                awk -v f="$file" '{
+                    match($0, /"[^"]+"/);
+                    name = substr($0, RSTART+1, RLENGTH-2);
+                    printf "%s.usdz|%s\n", name, f;
+                }' || true
+        fi
     done
 }
 
