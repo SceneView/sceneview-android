@@ -4,6 +4,83 @@
 
 ---
 
+## 🟢 MCP GATEWAY #1 IS LIVE — 2026-04-11 21:51 (worktree `bold-rhodes`, guided walkthrough)
+
+**Read `.claude/NOTICE-2026-04-11-mcp-gateway-live.md` for the full story.** TL;DR below.
+
+**The SceneView MCP gateway went from TEST mode to LIVE-accepting-real-payments in one session.** From commit `6c938b3d` onward, any user who clicks Subscribe on [`https://sceneview-mcp.mcp-tools-lab.workers.dev/pricing`](https://sceneview-mcp.mcp-tools-lab.workers.dev/pricing) hits a real Stripe Checkout session and gets charged a real card.
+
+### What shipped to `main`
+
+```
+6c938b3d  feat(mcp-gateway): wire live Stripe price ids — GO-LIVE
+88aec77b  fix(mcp-gateway): drop customer_creation=always in subscription mode  ⚠️ CRITICAL BUG FIX
+25ce60f9  chore(mcp-gateway): add go-live script for Stripe TEST → LIVE cutover
+73509a95  feat(mcp): v4.0.0-beta.1 lite package — Pro tools proxied to hosted gateway
+```
+
+### Stripe state (LIVE mode, activated today)
+
+- **KYC validated instantly** (entity shared with Thomas Gorisse / GitHub Sponsors / Polar Stripe entity)
+- **Fiscal structure:** auto-entrepreneur existant (no SASU), franchise en base de TVA → Stripe Tax disabled on purpose
+- **4 products in LIVE catalogue**, mapped in `mcp-gateway/wrangler.toml`:
+  - Pro Monthly `price_1TL6FLEr7tnnFQbdmgSwz5Ow` (19 EUR/mo)
+  - Pro Yearly `price_1TL6KREr7tnnFQbdifEbYYcG` (190 EUR/yr)
+  - Team Monthly `price_1TL6L9Er7tnnFQbdC9CDxQNY` (49 EUR/mo)
+  - Team Yearly `price_1TL6NVEr7tnnFQbdVNLFF9lN` (490 EUR/yr)
+- **Webhook `we_1TL7HfEr7tnnFQbdFDu7bmUr`** listening on 5 events: `checkout.session.completed`, `customer.subscription.{created,updated,deleted}`, `invoice.payment_failed`
+- **Cloudflare Secrets rotated TEST → LIVE:** `STRIPE_SECRET_KEY` (sk_live_...), `STRIPE_WEBHOOK_SECRET` (whsec_...)
+- **Worker deployed:** version id `5947f365-b55b-425c-ab28-f3392caba1c4`
+
+### End-to-end smoke test passed (all 4 plans return `cs_live_...`)
+
+```
+/billing/checkout plan=pro-monthly   → 303 cs_live_a1LlcMRmSBw0DeQJlv
+/billing/checkout plan=pro-yearly    → 303 cs_live_a1hsz6TXoXEZcqWUVx
+/billing/checkout plan=team-monthly  → 303 cs_live_a1QUAFSJu7BXLNoQpA
+/billing/checkout plan=team-yearly   → 303 cs_live_a1DrR2H2FupqAmJXVD
+```
+
+### ⚠️ Critical production bug that was fixed this session (commit `88aec77b`)
+
+`POST /billing/checkout` was returning **502** on every anonymous request since the Stripe-first refactor `673ddd88` shipped:
+```
+Stripe error: `customer_creation` can only be used in `payment` mode.
+```
+**No paying customer could have completed a checkout.** The fix drops `form.customer_creation = "always"` from `mcp-gateway/src/billing/stripe-client.ts:createCheckoutSession()`. In `mode: "subscription"`, Stripe auto-creates the customer anyway. 168/168 gateway tests pass.
+
+**If your worktree touches `mcp-gateway/src/billing/stripe-client.ts`, do not re-introduce this flag unconditionally.** If you add a new `mode: "payment"` code path, guard it with `if (mode === "payment")`.
+
+### ⚠️ Do NOT re-publish `sceneview-mcp@latest` to 4.x yet
+
+`npm view sceneview-mcp dist-tags` → `{ latest: '3.6.4', beta: '4.0.0-beta.1' }`. The `@latest` tag stays on 3.6.4 until at least one real checkout end-to-end succeeds. Bumping `@latest` to 4.x now would silently break the 3 450 DL/mo existing users (they'd lose local Pro tool access). The `@beta` channel is the opt-in path for anyone testing the proxy/gateway flow.
+
+### Impact on Session B (`multi-gateway-sprint`, branch `claude/multi-gateway-sprint`)
+
+Session B scaffolds Gateway #2 (11 libraries, 35 tools, at `hub-mcp.mcp-tools-lab.workers.dev`) sharing the **same D1 `8aaddcda-...` + KV `9a40d334...`** as Gateway #1. Since my go-live session:
+- **D1 / KV are now seeing real users once the first customer pays** (none yet at 21:51). The `users`, `api_keys`, `usage_records` tables are production data from this commit forward. Any schema migration on Gateway #2's side must be **non-destructive** and **backwards-compatible** with Gateway #1.
+- **Gateway #2 must NOT copy the pre-fix `stripe-client.ts`**. When Gateway #2 gets its own Stripe checkout flow, use the current main version of `createCheckoutSession()` (post-`88aec77b`).
+
+### ❌ What's NOT done (still manual / follow-up)
+
+- **First real paying customer** — needs a human with a real card to click Subscribe and submit on `/pricing`. Not a tech blocker.
+- **Promotion / marketing** — the go-live was silent. No post, no announcement yet.
+- **Custom domain** `mcp.sceneview.dev` — still serving on `sceneview-mcp.mcp-tools-lab.workers.dev`.
+
+### Cumulative work in the Session A / guided-go-live track (whole afternoon, all merged to main)
+
+| Commit | What |
+|---|---|
+| `efd296f1` | chore(filament): bump 1.70.2 → 1.71.0 + recompile 10 .filamat (Session C, closed #800) |
+| `73509a95` | feat(mcp): v4.0.0-beta.1 lite package — proxy dispatching Pro tools to hosted gateway |
+| `88aec77b` | fix(mcp-gateway): drop customer_creation=always in subscription mode (CRITICAL) |
+| `25ce60f9` | chore(mcp-gateway): go-live script (now obsolete, kept as reference) |
+| `6c938b3d` | feat(mcp-gateway): wire live Stripe price ids — GO-LIVE |
+
+Plus `sceneview-mcp@4.0.0-beta.1` published on npm with `@beta` tag, Claude Desktop config wired in LITE mode, and the compromised `rk_live_51TKzezEr7tnnFQbdyOTv...` restricted key revoked from the Stripe dashboard.
+
+---
+
 ## 🚀 SESSION B PROGRESS — 2026-04-11 20:15 (worktree `multi-gateway-sprint`, branch `claude/multi-gateway-sprint`)
 
 **Rebased on `origin/main` @ `dac1c080` (includes Session A's LIVE package + gateway fixes). Pushed to `origin/claude/multi-gateway-sprint`. No PR opened yet — awaiting user decision.**
@@ -132,6 +209,13 @@ main                                   main         → canonical
 - **Purge 18 broken Polar funding links** across standalone MCPs (cleanup pass, low priority)
 - **Render tests `@Ignore`'d** at class level (issue #803) — investigate SwiftShader JNI crash when re-enabled
 - **Stitch Phase 2** — regenerate Android + iOS demo UI via Google Stitch MCP. Blocked on user running `gcloud auth application-default login` + `npx -y @_davideast/stitch-mcp init` outside Claude Code
+
+### Daily triage — 2026-04-11 (automated)
+
+- **#792 (camera washed out)** — acknowledged, workaround documented in comments (setExposure + Flutter AndroidView fix via SurfaceType.TextureSurface already in c72d66d3)
+- **#800 (Filament 1.71.0)** — commented: requires dedicated session (filamat recompile), tracked in Session C worktree
+- **#803 (Render tests SwiftShader crash)** — open, @Ignore in place, tracked in open follow-ups above
+- **CI failures (quality-gate + flutter-demo APK)** — **FIXED**: Flutter plugin was using `sceneview:3.6.0` (missing `SceneScope.ModelNode`). Bumped to 3.6.2, added explicit `MotionEvent`/`HitResult` types to `onTouch` lambda. Commit `ebcab171` pushed to main.
 
 ---
 
