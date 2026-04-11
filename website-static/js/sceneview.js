@@ -414,6 +414,16 @@
       this._videoElements = new Map(); // entity -> { video, canvas, ctx, rafId }
       this._quadGLB = null; // Cached quad GLB bytes
 
+      // Animation state — glTF skinning / keyframe playback
+      this._animator = null;
+      this._animationIndex = -1;
+      this._animationLoop = false;
+      this._animationStart = 0;
+      this._animationPauseTime = -1;
+
+      // Base lights created by _createEngine — tracked so clearLights() can remove them
+      this._baseLights = [];
+
       this._setupControls();
       this._setupResizeObserver();
       this._startRenderLoop();
@@ -452,6 +462,18 @@
         } catch (e) { /* ignore cleanup errors */ }
         this._asset = null;
       }
+      // Also remove any primitives added by createBox/Sphere/Cylinder — otherwise
+      // they'd linger on top of the newly loaded model.
+      if (this._primitiveAssets && this._primitiveAssets.length > 0) {
+        var self = this;
+        this._primitiveAssets.forEach(function(pa) {
+          try {
+            pa.getRenderableEntities().forEach(function(e) { self._scene.remove(e); });
+            self._scene.remove(pa.getRoot());
+          } catch (e) { /* ignore */ }
+        });
+        this._primitiveAssets = [];
+      }
 
       var data = Filament.assets[url];
       if (!data) throw new Error('Failed to fetch model: ' + url);
@@ -463,6 +485,18 @@
       this._scene.addEntity(asset.getRoot());
       this._scene.addEntities(asset.getRenderableEntities());
       this._asset = asset;
+
+      // Cache animator for animation playback — reset any previous animation state.
+      // In Filament.js gltfio, the Animator lives on the FilamentInstance,
+      // not on the FilamentAsset itself.
+      try {
+        var inst = asset.getInstance ? asset.getInstance() : null;
+        this._animator = (inst && inst.getAnimator) ? inst.getAnimator() : null;
+      } catch (e) {
+        this._animator = null;
+      }
+      this._animationIndex = -1;
+      this._animationPauseTime = -1;
 
       // Auto-frame the model
       try {
@@ -1490,6 +1524,9 @@
         // Update billboard transforms before rendering
         self._updateBillboards();
 
+        // Drive glTF animation playback (if any)
+        self._updateAnimator();
+
         var t = self._orbitTarget;
         var r = self._orbitRadius;
         var h = self._orbitHeight;
@@ -1552,6 +1589,10 @@
         } catch (e) { /* ignore */ }
         this._asset = null;
       }
+      // Reset animator state — no model, no animation
+      this._animator = null;
+      this._animationIndex = -1;
+      this._animationPauseTime = -1;
       // Remove manually added primitive assets
       if (this._primitiveAssets) {
         var self = this;
@@ -1571,6 +1612,113 @@
         });
         this._mediaNodes.clear();
       }
+    }
+
+    // ---------------------------------------------------------------
+    // Animation playback — glTF keyframe & skinning
+    // ---------------------------------------------------------------
+
+    /**
+     * Play a glTF animation on the currently loaded model.
+     *
+     * Call this after loadModel() resolves. Uses Filament gltfio's Animator,
+     * which handles keyframes, skinning, morph targets, and bone matrices.
+     *
+     * @param {number} [index=0] - Animation index (see getAnimationCount via animator)
+     * @param {boolean} [loop=true] - Loop the animation when it reaches the end
+     * @returns {SceneViewInstance} this (for chaining)
+     */
+    playAnimation(index, loop) {
+      if (!this._animator) {
+        return this;
+      }
+      try {
+        var count = this._animator.getAnimationCount
+          ? this._animator.getAnimationCount()
+          : 0;
+        if (count === 0) {
+          return this;
+        }
+      } catch (e) { /* some impls may not expose getAnimationCount */ }
+
+      this._animationIndex = typeof index === 'number' ? index : 0;
+      this._animationLoop = loop !== false; // default true
+      this._animationStart = performance.now();
+      this._animationPauseTime = -1;
+      return this;
+    }
+
+    /**
+     * Stop animation playback and reset to the rest pose.
+     * @returns {SceneViewInstance} this (for chaining)
+     */
+    stopAnimation() {
+      this._animationIndex = -1;
+      this._animationPauseTime = -1;
+      return this;
+    }
+
+    /** @private Drive the animator from the render loop. */
+    _updateAnimator() {
+      if (!this._animator || this._animationIndex < 0) return;
+      try {
+        var elapsedMs = performance.now() - this._animationStart;
+        var t = elapsedMs / 1000;
+        var dur = 0;
+        try {
+          dur = this._animator.getAnimationDuration(this._animationIndex) || 0;
+        } catch (e) { /* ignore */ }
+        if (dur > 0) {
+          if (this._animationLoop) {
+            t = t - Math.floor(t / dur) * dur;
+          } else if (t > dur) {
+            t = dur;
+          }
+        }
+        this._animator.applyAnimation(this._animationIndex, t);
+        if (this._animator.updateBoneMatrices) {
+          this._animator.updateBoneMatrices();
+        }
+      } catch (e) { /* swallow — don't crash the render loop */ }
+    }
+
+    // ---------------------------------------------------------------
+    // Light management
+    // ---------------------------------------------------------------
+
+    /**
+     * Remove a single light from the scene by its entity handle (as returned
+     * by addLight()). Use this to clean up lights between playground previews.
+     *
+     * @param {number} entity - Entity handle returned by addLight()
+     * @returns {SceneViewInstance} this (for chaining)
+     */
+    removeLight(entity) {
+      try { this._scene.remove(entity); } catch (e) { /* ignore */ }
+      return this;
+    }
+
+    /**
+     * Remove all lights from the scene (including the base 3-point studio
+     * rig installed at engine creation). Useful when you want a truly custom
+     * lighting setup with addLight().
+     *
+     * Note: the IBL / environment is not affected — use loadEnvironment(null)
+     * or re-init the engine to clear indirect lighting.
+     *
+     * @returns {SceneViewInstance} this (for chaining)
+     */
+    clearLights() {
+      if (this._baseLights && this._baseLights.length > 0) {
+        var self = this;
+        this._baseLights.forEach(function(entity) {
+          try { self._scene.remove(entity); } catch (e) { /* ignore */ }
+        });
+        this._baseLights = [];
+      }
+      // Also drop IBL so the user-provided lights dominate
+      try { this._scene.setIndirectLight(null); } catch (e) { /* ignore */ }
+      return this;
     }
 
     /**
@@ -1934,6 +2082,8 @@
     var loader = engine.createAssetLoader();
     var instance = new SceneViewInstance(canvas, engine, scene, renderer, view, swapChain, camera, cameraEntity, loader);
     instance._fov = fov;
+    // Track base 3-point lights so clearLights() can wipe them for custom setups
+    instance._baseLights = [sun, fill, back];
 
     if (options.autoRotate === false) instance.setAutoRotate(false);
 

@@ -63,7 +63,7 @@
   <!-- Fonts -->
   <!-- SceneView engine -->
   <script src="js/filament/filament.js"></script>
-  <script src="js/sceneview.js?v=3.6.0"></script>
+  <script src="js/sceneview.js?v=3.6.4"></script>
 
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
@@ -768,6 +768,170 @@
       min-height: 0;
       overflow: hidden;
       position: relative;
+    }
+
+    /* --- AR placeholder (shown for AR samples; WebXR unsupported on desktop) --- */
+    .pg__ar-placeholder {
+      position: absolute;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      padding: 32px;
+      background: radial-gradient(ellipse at center,
+        rgba(0, 91, 193, 0.06) 0%,
+        transparent 60%),
+        var(--color-surface, #ffffff);
+      text-align: center;
+      z-index: 4;
+      pointer-events: auto;
+    }
+    [data-theme="dark"] .pg__ar-placeholder {
+      background: radial-gradient(ellipse at center,
+        rgba(121, 192, 255, 0.08) 0%,
+        transparent 60%),
+        #0b0f13;
+    }
+    .pg__ar-placeholder--visible {
+      display: flex;
+    }
+    .pg__ar-phone {
+      width: 120px;
+      height: 220px;
+      border: 3px solid var(--color-primary, #005bc1);
+      border-radius: 24px;
+      position: relative;
+      background: linear-gradient(145deg,
+        rgba(0, 91, 193, 0.08),
+        rgba(0, 91, 193, 0.02));
+      box-shadow:
+        0 20px 40px rgba(0, 91, 193, 0.18),
+        inset 0 0 30px rgba(0, 91, 193, 0.06);
+      flex-shrink: 0;
+    }
+    [data-theme="dark"] .pg__ar-phone {
+      border-color: #79c0ff;
+      box-shadow:
+        0 20px 40px rgba(0, 0, 0, 0.5),
+        inset 0 0 30px rgba(121, 192, 255, 0.08);
+    }
+    .pg__ar-phone::before {
+      /* Notch */
+      content: '';
+      position: absolute;
+      top: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 40px;
+      height: 5px;
+      border-radius: 3px;
+      background: currentColor;
+      color: var(--color-primary, #005bc1);
+      opacity: 0.4;
+    }
+    [data-theme="dark"] .pg__ar-phone::before {
+      color: #79c0ff;
+    }
+    .pg__ar-phone-screen {
+      position: absolute;
+      inset: 16px 8px 8px 8px;
+      border-radius: 12px;
+      background:
+        /* Plane grid mimicking AR tracking */
+        repeating-linear-gradient(135deg,
+          rgba(0, 91, 193, 0.12) 0 1px,
+          transparent 1px 14px),
+        repeating-linear-gradient(45deg,
+          rgba(0, 91, 193, 0.12) 0 1px,
+          transparent 1px 14px),
+        linear-gradient(180deg,
+          rgba(0, 91, 193, 0.05),
+          rgba(0, 91, 193, 0.02));
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    [data-theme="dark"] .pg__ar-phone-screen {
+      background:
+        repeating-linear-gradient(135deg,
+          rgba(121, 192, 255, 0.15) 0 1px,
+          transparent 1px 14px),
+        repeating-linear-gradient(45deg,
+          rgba(121, 192, 255, 0.15) 0 1px,
+          transparent 1px 14px),
+        linear-gradient(180deg,
+          rgba(121, 192, 255, 0.05),
+          rgba(0, 91, 193, 0.02));
+    }
+    .pg__ar-phone-icon {
+      font-size: 44px !important;
+      color: var(--color-primary, #005bc1);
+      filter: drop-shadow(0 4px 10px rgba(0, 91, 193, 0.35));
+      animation: pg-ar-float 3s ease-in-out infinite;
+    }
+    [data-theme="dark"] .pg__ar-phone-icon {
+      color: #79c0ff;
+      filter: drop-shadow(0 4px 10px rgba(121, 192, 255, 0.35));
+    }
+    @keyframes pg-ar-float {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-6px); }
+    }
+    .pg__ar-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--color-on-surface, #2e333a);
+      margin: 0;
+    }
+    [data-theme="dark"] .pg__ar-title {
+      color: #e6edf3;
+    }
+    .pg__ar-subtitle {
+      font-size: 0.85rem;
+      color: var(--color-outline, #777b84);
+      max-width: 360px;
+      line-height: 1.5;
+      margin: 0;
+    }
+    .pg__ar-cta-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 4px;
+    }
+    .pg__ar-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: var(--pg-radius-pill, 999px);
+      background: var(--color-primary, #005bc1);
+      color: #ffffff;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-decoration: none;
+      border: 1px solid var(--color-primary, #005bc1);
+      transition: transform var(--pg-transition, 150ms ease),
+                  box-shadow var(--pg-transition, 150ms ease);
+    }
+    .pg__ar-cta:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(0, 91, 193, 0.3);
+    }
+    .pg__ar-cta--secondary {
+      background: transparent;
+      color: var(--color-primary, #005bc1);
+    }
+    [data-theme="dark"] .pg__ar-cta--secondary {
+      color: #79c0ff;
+      border-color: #79c0ff;
+    }
+    .pg__ar-cta .material-symbols-outlined {
+      font-size: 16px !important;
     }
 
     .pg__preview-tab {
@@ -1495,6 +1659,7 @@
                   <option value="KindredLol">Kindred (LoL)</option>
                 </optgroup>
                 <optgroup label="Animals">
+                  <option value="Duck">Duck</option>
                   <option value="KoiFish">Koi Fish</option>
                   <option value="ToonCat">Toon Cat</option>
                   <option value="AnimatedElephant">Elephant</option>
@@ -1514,6 +1679,32 @@
             </div>
             <div class="pg__canvas-wrap">
               <canvas id="previewCanvas" aria-label="3D preview powered by SceneView / Filament.js"></canvas>
+              <div class="pg__ar-placeholder" id="arPlaceholder" aria-hidden="true">
+                <div class="pg__ar-phone" aria-hidden="true">
+                  <div class="pg__ar-phone-screen">
+                    <span class="material-symbols-outlined pg__ar-phone-icon" id="arPhoneIcon">view_in_ar</span>
+                  </div>
+                </div>
+                <h3 class="pg__ar-title" id="arTitle">AR requires a physical device</h3>
+                <p class="pg__ar-subtitle" id="arSubtitle">
+                  WebXR AR is not supported on desktop browsers. Install the SceneView demo app
+                  to try this sample with ARCore / ARKit on your phone.
+                </p>
+                <div class="pg__ar-cta-row">
+                  <a class="pg__ar-cta"
+                     href="https://play.google.com/store/apps/details?id=io.github.sceneview.demo"
+                     target="_blank" rel="noopener">
+                    <span class="material-symbols-outlined">android</span>
+                    Open on Android
+                  </a>
+                  <a class="pg__ar-cta pg__ar-cta--secondary"
+                     href="https://apps.apple.com/app/sceneview/id6449134330"
+                     target="_blank" rel="noopener">
+                    <span class="material-symbols-outlined">phone_iphone</span>
+                    Open on iOS
+                  </a>
+                </div>
+              </div>
               <div class="pg__controls">
                 <button class="pg__ctrl-btn pg__ctrl-btn--active" id="ctrlRotate" title="Auto-rotate" data-label="Rotate: ON">
                   <span class="material-symbols-outlined">360</span>
@@ -1601,6 +1792,7 @@
         level: 'beginner',
         tags: ['3D', 'Compose', 'Beginner'],
         defaultModel: 'DamagedHelmet',
+        previewType: 'model',
         description: 'A basic 3D model viewer with orbit controls and environment lighting.',
         android: {
           file: 'ModelViewerScreen.kt', lang: 'Kotlin',
@@ -1638,6 +1830,7 @@
         level: 'beginner',
         tags: ['3D', 'Lighting', 'Beginner'],
         defaultModel: 'SheenChair',
+        previewType: 'model',
         description: 'Configure HDR environment lighting with indirect light and skybox.',
         android: {
           file: 'EnvironmentScreen.kt', lang: 'Kotlin',
@@ -1659,6 +1852,7 @@
         level: 'beginner',
         tags: ['3D', 'Camera', 'Beginner'],
         defaultModel: 'AntiqueCamera',
+        previewType: 'model',
         description: 'Orbit camera with customizable distance, zoom limits, and smooth damping.',
         android: {
           file: 'CameraScreen.kt', lang: 'Kotlin',
@@ -1680,6 +1874,7 @@
         level: 'intermediate',
         tags: ['3D', 'Lighting', 'Intermediate'],
         defaultModel: 'DamagedHelmet',
+        previewType: 'lighting-custom',
         description: 'Add directional, point, and spot lights with shadows and color control.',
         android: {
           file: 'LightingScreen.kt', lang: 'Kotlin',
@@ -1701,6 +1896,7 @@
         level: 'intermediate',
         tags: ['AR', 'Compose', 'Intermediate'],
         defaultModel: 'SheenChair',
+        previewType: 'ar',
         description: 'Tap-to-place 3D models on detected surfaces using ARCore plane detection.',
         android: {
           file: 'ARPlacementScreen.kt', lang: 'Kotlin',
@@ -1722,6 +1918,7 @@
         level: 'advanced',
         tags: ['AR', 'Face', 'Advanced'],
         defaultModel: 'DamagedHelmet',
+        previewType: 'ar',
         description: 'Track face landmarks and apply augmented overlays with ARCore Augmented Faces.',
         android: {
           file: 'FaceTrackingScreen.kt', lang: 'Kotlin',
@@ -1743,6 +1940,7 @@
         level: 'advanced',
         tags: ['AR', 'Spatial', 'Advanced'],
         defaultModel: 'Lantern',
+        previewType: 'ar',
         description: 'Persist AR content across sessions with Cloud Anchors or local persistence.',
         android: {
           file: 'SpatialAnchorsScreen.kt', lang: 'Kotlin',
@@ -1764,6 +1962,7 @@
         level: 'beginner',
         tags: ['3D', 'Geometry', 'Beginner'],
         defaultModel: 'GameBoyClassic',
+        previewType: 'primitives',
         description: 'Create cubes, spheres, cylinders, and planes as composable geometry nodes.',
         android: {
           file: 'PrimitivesScreen.kt', lang: 'Kotlin',
@@ -1785,6 +1984,7 @@
         level: 'intermediate',
         tags: ['3D', 'Animation', 'Intermediate'],
         defaultModel: 'AnimatedAstronaut',
+        previewType: 'animated-model',
         description: 'Play, pause, and switch between glTF model animations with playback controls.',
         android: {
           file: 'AnimationScreen.kt', lang: 'Kotlin',
@@ -1805,7 +2005,8 @@
         icon: 'vibration',
         level: 'intermediate',
         tags: ['3D', 'Physics', 'Intermediate'],
-        defaultModel: 'SheenChair',
+        defaultModel: 'Duck',
+        previewType: 'spring-physics',
         description: 'Smooth, natural-feeling animations using spring dynamics for position, rotation, and scale.',
         android: {
           file: 'SpringPhysicsScreen.kt', lang: 'Kotlin',
@@ -1827,6 +2028,7 @@
         level: 'intermediate',
         tags: ['3D', 'Materials', 'Intermediate'],
         defaultModel: 'DamagedHelmet',
+        previewType: 'model',
         description: 'Physically-based rendering materials with metallic, roughness, and emission control.',
         android: {
           file: 'PBRScreen.kt', lang: 'Kotlin',
@@ -1847,7 +2049,8 @@
         icon: 'layers',
         level: 'advanced',
         tags: ['3D', 'Advanced', 'Compose'],
-        defaultModel: 'IridescenceLamp',
+        defaultModel: 'CoffeeCart',
+        previewType: 'model',
         description: 'Compose multiple models, lights, and cameras into a single rich 3D scene.',
         android: {
           file: 'MultiModelScreen.kt', lang: 'Kotlin',
@@ -1869,6 +2072,7 @@
         level: 'advanced',
         tags: ['3D', 'Effects', 'Advanced'],
         defaultModel: 'DamagedHelmet',
+        previewType: 'post-processing',
         description: 'Enable bloom, ambient occlusion, and anti-aliasing for cinematic-quality rendering.',
         android: {
           file: 'PostProcessingScreen.kt', lang: 'Kotlin',
@@ -2204,14 +2408,201 @@
       // Sync mobile select
       mobileExampleSelect.value = key;
 
-      // Update 3D preview model to match the example
-      if (ex.defaultModel) {
-        modelSelect.value = ex.defaultModel;
-        initSceneView(getModelUrl(ex.defaultModel));
-      }
+      // Update 3D preview to match the example — routes by previewType
+      applyPreviewForExample(ex, key);
 
       // Update AI tool links
       updateAILinks();
+    }
+
+    // ====================================================================
+    //  PREVIEW DISPATCH — routes each example to the right preview scene
+    // ====================================================================
+    // Tracks entities added by the current preview so we can clean them up
+    // when switching examples (custom lights, etc.)
+    var _previewLightEntities = [];
+
+    var arPlaceholder = $('arPlaceholder');
+    var arTitle = $('arTitle');
+    var arSubtitle = $('arSubtitle');
+    var arPhoneIcon = $('arPhoneIcon');
+
+    function showARPlaceholder(ex) {
+      // Customize copy per AR sample so each one feels distinct
+      var copy = {
+        'ar-placement': {
+          icon: 'pin_drop',
+          title: 'Tap-to-place AR',
+          subtitle: 'This sample detects horizontal planes with ARCore and places a 3D model at the tap location. WebXR plane detection is not supported on desktop — try it on a physical device.'
+        },
+        'face-tracking': {
+          icon: 'face',
+          title: 'Face tracking',
+          subtitle: 'This sample uses ARCore Augmented Faces / ARKit face mesh to overlay 3D content on face landmarks. Face tracking is not part of the WebXR spec — run it on a phone.'
+        },
+        'spatial-anchors': {
+          icon: 'anchor',
+          title: 'Persistent spatial anchors',
+          subtitle: 'This sample pins AR content to real-world locations using Cloud Anchors / ARWorldMap. Anchor persistence requires ARCore / ARKit on a physical device.'
+        }
+      };
+      var info = copy[currentExample] || {
+        icon: 'view_in_ar',
+        title: 'AR requires a physical device',
+        subtitle: 'WebXR AR is not supported on desktop browsers. Install the SceneView demo app to try this sample.'
+      };
+      arPhoneIcon.textContent = info.icon;
+      arTitle.textContent = info.title;
+      arSubtitle.textContent = info.subtitle;
+      arPlaceholder.classList.add('pg__ar-placeholder--visible');
+      arPlaceholder.setAttribute('aria-hidden', 'false');
+    }
+
+    function hideARPlaceholder() {
+      arPlaceholder.classList.remove('pg__ar-placeholder--visible');
+      arPlaceholder.setAttribute('aria-hidden', 'true');
+    }
+
+    // Remove custom lights/entities added by the previous preview
+    function cleanupPreviousPreview() {
+      if (!sceneViewInstance) return;
+      _previewLightEntities.forEach(function(e) {
+        try { sceneViewInstance.removeLight(e); } catch (err) { /* ignore */ }
+      });
+      _previewLightEntities = [];
+    }
+
+    // Scene builders — one per custom previewType
+    var PREVIEW_SCENES = {
+      // Build the Primitives sample: red cube + green sphere + blue cylinder.
+      'primitives': function(sv) {
+        sv.clearScene();
+        sv.createBox([-2.0, 0.5, 0], [1.0, 1.0, 1.0], [1.0, 0.2, 0.2, 1.0]);
+        sv.createSphere([0, 0.6, 0], 0.6, [0.2, 0.9, 0.4, 1.0]);
+        sv.createCylinder([2.0, 0.75, 0], 0.5, 1.5, [0.2, 0.5, 1.0, 1.0]);
+        // Tighter framing — the composed scene spans ~5m wide
+        try {
+          sv._orbitTarget = [0, 0.5, 0];
+          sv._orbitRadius = 7.0;
+          sv._orbitHeight = 1.5;
+        } catch (e) { /* ignore */ }
+      },
+
+      // Custom lighting: load the helmet + add 2 explicit directional lights
+      // (warm key + cool fill) so the user sees that addLight() works.
+      'lighting-custom': function(sv) {
+        sv.loadModel(getModelUrl('DamagedHelmet')).then(function() {
+          // Warm key light — strong, from upper-right
+          var key = sv.addLight({
+            type: 'directional',
+            direction: [-1.0, -1.0, -1.0],
+            color: [1.0, 0.92, 0.82],
+            intensity: 120000
+          });
+          // Cool fill — softer, from left
+          var fill = sv.addLight({
+            type: 'directional',
+            direction: [1.0, -0.3, 1.0],
+            color: [0.75, 0.85, 1.0],
+            intensity: 60000
+          });
+          _previewLightEntities.push(key, fill);
+          updatePreviewSettings();
+        }).catch(function(e) { console.warn(e); });
+      },
+
+      // Auto-play the glTF animation baked in the model.
+      'animated-model': function(sv) {
+        sv.loadModel(getModelUrl('AnimatedAstronaut')).then(function() {
+          sv.playAnimation(0, true);
+          updatePreviewSettings();
+        }).catch(function(e) { console.warn(e); });
+      },
+
+      // Spring-physics: load the Duck and play its glTF animation as a stand-in
+      // for the physics simulation. If Duck has no animation, it still shows
+      // as a static model with orbit camera.
+      'spring-physics': function(sv) {
+        sv.loadModel(getModelUrl('Duck')).then(function() {
+          sv.playAnimation(0, true);
+          updatePreviewSettings();
+        }).catch(function(e) { console.warn(e); });
+      },
+
+      // Post-processing: load helmet with bloom forced ON so the user sees the
+      // cinematic look of the sample.
+      'post-processing': function(sv) {
+        sv.loadModel(getModelUrl('DamagedHelmet')).then(function() {
+          if (sv.setBloom) {
+            sv.setBloom({ strength: 0.25, resolution: 512 });
+          }
+        }).catch(function(e) { console.warn(e); });
+      }
+    };
+
+    function applyPreviewForExample(ex, key) {
+      var type = ex.previewType || 'model';
+
+      // AR previews use the HTML placeholder — no Filament scene
+      if (type === 'ar') {
+        showARPlaceholder(ex);
+        return;
+      }
+      hideARPlaceholder();
+
+      // Custom scene builder? Ensure the viewer exists first.
+      if (PREVIEW_SCENES[type]) {
+        _ensureSceneViewReady().then(function(sv) {
+          cleanupPreviousPreview();
+          PREVIEW_SCENES[type](sv);
+          // Keep the model picker in sync for UX clarity
+          if (ex.defaultModel && modelSelect.querySelector('option[value="' + ex.defaultModel + '"]')) {
+            modelSelect.value = ex.defaultModel;
+          }
+        });
+        return;
+      }
+
+      // Default: just swap the model
+      if (ex.defaultModel) {
+        if (modelSelect.querySelector('option[value="' + ex.defaultModel + '"]')) {
+          modelSelect.value = ex.defaultModel;
+        }
+        _ensureSceneViewReady().then(function(sv) {
+          cleanupPreviousPreview();
+          sv.stopAnimation && sv.stopAnimation();
+          sv.loadModel(getModelUrl(ex.defaultModel)).then(function() {
+            updatePreviewSettings();
+          }).catch(function(err) {
+            console.warn('loadModel error:', err);
+          });
+        });
+      }
+    }
+
+    // Returns a promise that resolves to the active SceneView instance,
+    // creating it on first call. Serializes concurrent inits.
+    function _ensureSceneViewReady() {
+      if (sceneViewInstance) return Promise.resolve(sceneViewInstance);
+      if (typeof SceneView === 'undefined') {
+        return Promise.reject(new Error('SceneView not loaded'));
+      }
+      if (_initPending) {
+        return _initPending.then(function() { return sceneViewInstance; });
+      }
+      // First-time init — create an empty viewer with the neutral background,
+      // but don't load any model yet (the caller decides what to display).
+      _initPending = SceneView.create('previewCanvas', {
+        backgroundColor: getBgColor(),
+        autoRotate: autoRotate
+      }).then(function(inst) {
+        sceneViewInstance = inst;
+        updatePreviewSettings();
+        return inst;
+      }).catch(function(e) {
+        console.warn('SceneView init error:', e);
+      });
+      return _initPending;
     }
 
     // ====================================================================
