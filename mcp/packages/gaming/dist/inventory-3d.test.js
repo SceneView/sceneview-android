@@ -26,7 +26,7 @@ describe("generateInventory3D", () => {
     it("generates valid Kotlin code for grid layout", () => {
         const code = generateInventory3D({ layout: "grid" });
         expect(code).toContain("package com.example.gaming.inventory");
-        expect(code).toContain("import io.github.sceneview.Scene");
+        expect(code).toContain("import io.github.sceneview.SceneView");
         expect(code).toContain("@Composable");
         expect(code).toContain("rememberEngine()");
         expect(code).toContain("rememberModelInstance");

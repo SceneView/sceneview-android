@@ -28,7 +28,7 @@ describe("generateCharacterViewer", () => {
     it("generates valid Kotlin code for humanoid style", () => {
         const code = generateCharacterViewer({ style: "humanoid" });
         expect(code).toContain("package com.example.gaming.character");
-        expect(code).toContain("import io.github.sceneview.Scene");
+        expect(code).toContain("import io.github.sceneview.SceneView");
         expect(code).toContain("@Composable");
         expect(code).toContain("rememberEngine()");
         expect(code).toContain("rememberModelLoader");
@@ -53,7 +53,7 @@ describe("generateCharacterViewer", () => {
     });
     it("generates AR code when ar=true", () => {
         const code = generateCharacterViewer({ style: "humanoid", ar: true });
-        expect(code).toContain("import io.github.sceneview.ar.ARScene");
+        expect(code).toContain("import io.github.sceneview.ar.ARSceneView");
         expect(code).toContain("ARSceneView(");
         expect(code).toContain("android.permission.CAMERA");
         expect(code).toContain("arsceneview:3.6.0");
