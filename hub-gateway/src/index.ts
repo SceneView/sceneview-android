@@ -26,11 +26,12 @@
 
 import { Hono } from "hono";
 import type { Env } from "./env.js";
+import type { AuthVariables } from "./auth/middleware.js";
 import { landingRoutes } from "./routes/landing.js";
 import { mcpRoutes } from "./routes/mcp.js";
 import { getRegistrySummary } from "./mcp/registry.js";
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
 // ── Health check ────────────────────────────────────────────────────────────
 

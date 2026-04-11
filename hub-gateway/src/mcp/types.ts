@@ -36,14 +36,19 @@ export interface ToolDefinition {
  *
  * Handlers are pure — they read this bag but do not authenticate, rate
  * limit, or write billing events themselves.
+ *
+ * The tier type matches the shared D1 `users.tier` column
+ * (`free | pro | team`). The hub treats `pro` as "Portfolio Access"
+ * regardless of which Stripe product paid for it — see
+ * src/db/schema.ts for the rationale.
  */
 export interface DispatchContext {
   /** Authenticated user id from the D1 `users` table (shared with Gateway #1). */
   userId?: string;
   /** API key row id from the D1 `api_keys` table. */
   apiKeyId?: string;
-  /** Resolved subscription tier for the hub gateway. */
-  tier?: "free" | "portfolio" | "team";
+  /** Resolved subscription tier as stored in users.tier. */
+  tier?: "free" | "pro" | "team";
   /** Opaque extension bag (request id, headers, ...) reserved for future use. */
   extras?: Record<string, unknown>;
 }

@@ -7,22 +7,44 @@
  * the envelope shape is correct, not the upstream behavior.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import app from "../src/index.js";
-import type { Env } from "../src/env.js";
 import { JSON_RPC_ERRORS } from "../src/mcp/transport.js";
+import { hashApiKey } from "../src/auth/api-keys.js";
+import { makeEnv } from "./helpers/fake-bindings.js";
 
-const FAKE_ENV: Env = {
-  ENVIRONMENT: "test",
-  GATEWAY_BASE_URL: "https://hub-mcp.test",
-  DB: {} as unknown as D1Database,
-  RL_KV: {} as unknown as KVNamespace,
-};
+// Every /mcp request now requires an API key. We seed a valid key
+// for the whole suite and send it via the Authorization header on
+// each call.
+const VALID_KEY = "sv_live_TESTKEY000000000000000000000000";
+const VALID_HEADER = `Bearer ${VALID_KEY}`;
+
+let FAKE_ENV: ReturnType<typeof makeEnv>["env"];
+
+beforeEach(async () => {
+  const hash = await hashApiKey(VALID_KEY);
+  const ctx = makeEnv({
+    api_keys: [
+      {
+        id: "key_test0000",
+        user_id: "usr_test0000",
+        key_hash: hash,
+        key_prefix: "sv_live_TESTKE",
+        revoked_at: null,
+      },
+    ],
+    users: [{ id: "usr_test0000", email: "test@hub.local", tier: "pro" }],
+  });
+  FAKE_ENV = ctx.env;
+});
 
 function rpc(body: unknown): Request {
   return new Request("https://hub-mcp.test/mcp", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      authorization: VALID_HEADER,
+    },
     body: JSON.stringify(body),
   });
 }
@@ -169,7 +191,10 @@ describe("hub-gateway /mcp", () => {
   it("rejects non-JSON bodies with PARSE_ERROR", async () => {
     const req = new Request("https://hub-mcp.test/mcp", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        authorization: VALID_HEADER,
+      },
       body: "not json",
     });
     const res = await app.request(req, {}, FAKE_ENV);

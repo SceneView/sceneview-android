@@ -1,32 +1,46 @@
 /**
- * `/mcp` route for the hub gateway (MVP).
+ * `/mcp` route for the hub gateway.
  *
- * Thin wrapper around `handleMcpRequest`. Auth, rate-limiting, and
- * usage logging are DELIBERATELY not wired yet — they will be ported
- * from mcp-gateway/src/routes/mcp.ts in the follow-up session once
- * the scaffold is validated on `*.workers.dev`.
+ * Middleware chain:
+ *   1. authMiddleware — populates c.var.auth, returns JSON-RPC 401
+ *      on missing or invalid keys.
+ *   2. handleMcpRequest — JSON-RPC parse + tool dispatch.
  *
- * The auth bypass is fine for MVP smoke-tests because the pilot
- * dispatcher only returns a hard-coded "not yet wired" message. When
- * the real tool handlers land, the auth middleware MUST land with
- * them.
+ * Rate limiting, usage logging, and Stripe plumbing are still out of
+ * scope — they'll port from mcp-gateway/src/middleware/rate-limit.ts
+ * and mcp-gateway/src/routes/billing.ts in a follow-up session. The
+ * minimal guarantee shipped here is: no D1-backed dispatch happens
+ * unless a valid API key is present.
  */
 
 import { Hono } from "hono";
 import type { Env } from "../env.js";
+import { authMiddleware, type AuthVariables } from "../auth/middleware.js";
 import { handleMcpRequest } from "../mcp/transport.js";
 
-export function mcpRoutes(): Hono<{ Bindings: Env }> {
-  const app = new Hono<{ Bindings: Env }>();
+type McpBindings = { Bindings: Env; Variables: AuthVariables };
+
+export function mcpRoutes(): Hono<McpBindings> {
+  const app = new Hono<McpBindings>();
+
+  app.use("*", authMiddleware());
 
   app.post("/", async (c) => {
-    return handleMcpRequest(c.req.raw, {});
+    const auth = c.get("auth");
+    return handleMcpRequest(c.req.raw, {
+      dispatchContext: {
+        userId: auth.userId,
+        apiKeyId: auth.keyId,
+        tier: auth.tier,
+      },
+    });
   });
 
   app.get("/", (c) =>
     c.json(
       {
-        error: "Streamable HTTP MCP only accepts POST in the MVP (SSE not implemented)",
+        error:
+          "Streamable HTTP MCP only accepts POST in the MVP (SSE not implemented)",
       },
       405,
     ),
