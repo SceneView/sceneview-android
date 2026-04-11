@@ -4,8 +4,31 @@
 
 ## Last Session Summary
 
-**Date:** 8 avril 2026 (session 28)
-**Branch:** main
+**Date:** 11 avril 2026 (session 30 — assets hero pack)
+**Branch:** main (merged direct)
+**Latest commit:** f198fe45
+
+### Session 30 — 8 hero realistic CC-BY assets
+- Added 8 new realistic hero models from Sketchfab (CC-BY 4.0):
+  rolex_watch, sneaker_vibe, moto_helmet, dji_mavic_3, jbl_tour_one_m3,
+  canon_eos_rp, photorealistic_guitar, school_backpack
+- Optimized via gltf-transform (WebP + meshopt) — 105 MB → 41 MB total
+- Wired into:
+  - assets/catalog.json (85 models total now)
+  - samples/android-demo ExploreScreen.kt (Objects category)
+  - website-static/playground.html ("Hero (new)" optgroup)
+  - website-static/models/platforms/*.glb committed
+  - assets-v1 GH release CDN (47 → 55 assets, all HTTP 200)
+- Verified: `:samples:android-demo:compileReleaseKotlin` BUILD SUCCESSFUL
+- USDZ deferred (no local conversion tool, iOS demo doesn't load GLB/USDZ)
+- Pivoted from CGTrader request → Sketchfab CC-BY (CGTrader EULA incompatible with open-source SDK)
+
+### Open follow-ups (post session 30)
+- iOS USDZ conversion pipeline (requires usdzconvert/Reality Composer Pro CLI)
+- Convert these 8 hero GLBs to USDZ when pipeline lands
+- Add hero assets to platforms-showcase.html sv-viewer slots (currently 5, could rotate hero)
+
+## Previous session: 8 avril 2026 (session 28)
 
 ## ÉTAT ACTUEL : DEMO APPS COMPLÈTEMENT REFAITES ✅
 
