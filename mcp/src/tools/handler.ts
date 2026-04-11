@@ -393,7 +393,7 @@ export async function dispatchTool(
                 `\`\`\``,
                 `https://github.com/sceneview/sceneview`,
                 `\`\`\``,
-                `Set version rule to **"from: 3.6.0"**.`,
+                `Set version rule to **"from: 3.6.2"**.`,
                 ``,
                 `Or in Package.swift:`,
                 `\`\`\`swift`,
