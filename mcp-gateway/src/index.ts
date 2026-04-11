@@ -5,6 +5,8 @@ import type { SessionVariables } from "./auth/session-middleware.js";
 import { mcpRoutes } from "./routes/mcp.js";
 import { authRoutes } from "./routes/auth.js";
 import { dashboardRoutes } from "./routes/dashboard.js";
+import { billingRoutes } from "./routes/billing.js";
+import { webhookRoutes } from "./routes/webhooks.js";
 import { renderLoginPage } from "./dashboard/login-page.js";
 
 type AppVariables = AuthVariables & SessionVariables;
@@ -32,6 +34,14 @@ app.route("/", dashboardRoutes());
 // ── Dashboard auth routes (login, verify, logout) ───────────────────────────
 
 app.route("/", authRoutes({ renderLoginPage }));
+
+// ── Billing actions (Stripe checkout, portal) ──────────────────────────────
+
+app.route("/", billingRoutes());
+
+// ── Stripe webhook receiver ────────────────────────────────────────────────
+
+app.route("/", webhookRoutes());
 
 // ── Fallback 404 ────────────────────────────────────────────────────────────
 
