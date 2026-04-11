@@ -92,9 +92,15 @@ export async function stripeRequest<T>(
 export interface StripeCheckoutSession {
   id: string;
   url: string;
-  customer?: string;
-  client_reference_id?: string;
-  subscription?: string;
+  customer?: string | null;
+  customer_email?: string | null;
+  customer_details?: {
+    email?: string | null;
+    name?: string | null;
+  } | null;
+  client_reference_id?: string | null;
+  subscription?: string | null;
+  metadata?: Record<string, string> | null;
 }
 
 /** Minimal Stripe Customer Portal Session shape. */
@@ -128,11 +134,16 @@ export function createCheckoutSession(
   secretKey: string,
   params: {
     priceId: string;
+    /** Optional — when provided the form is prefilled with that email. */
     customerEmail?: string;
+    /** Optional — reuse an existing Stripe customer. */
     customerId?: string;
-    clientReferenceId: string;
+    /** Optional — legacy magic-link flow sets a sv user id here. */
+    clientReferenceId?: string;
     successUrl: string;
     cancelUrl: string;
+    /** Arbitrary metadata persisted on the session (visible in webhook). */
+    metadata?: Record<string, string>;
   },
 ): Promise<StripeCheckoutSession> {
   const form: Record<string, string> = {
@@ -141,19 +152,42 @@ export function createCheckoutSession(
     "line_items[0][quantity]": "1",
     success_url: params.successUrl,
     cancel_url: params.cancelUrl,
-    client_reference_id: params.clientReferenceId,
-    "metadata[sv_user_id]": params.clientReferenceId,
   };
+  if (params.clientReferenceId) {
+    form.client_reference_id = params.clientReferenceId;
+    form["metadata[sv_user_id]"] = params.clientReferenceId;
+  }
+  if (params.metadata) {
+    for (const [k, v] of Object.entries(params.metadata)) {
+      form[`metadata[${k}]`] = v;
+    }
+  }
   if (params.customerId) {
     form.customer = params.customerId;
   } else if (params.customerEmail) {
     form.customer_email = params.customerEmail;
+  } else {
+    // Ask Stripe to always create a customer record so the webhook can
+    // persist the customer id for the portal flow later.
+    form.customer_creation = "always";
   }
   return stripeRequest<StripeCheckoutSession>(
     secretKey,
     "POST",
     "/v1/checkout/sessions",
     form,
+  );
+}
+
+/** Retrieves a Checkout Session by id (expands customer info). */
+export function retrieveCheckoutSession(
+  secretKey: string,
+  sessionId: string,
+): Promise<StripeCheckoutSession> {
+  return stripeRequest<StripeCheckoutSession>(
+    secretKey,
+    "GET",
+    `/v1/checkout/sessions/${encodeURIComponent(sessionId)}`,
   );
 }
 
