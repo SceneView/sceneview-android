@@ -205,7 +205,7 @@ export function landingRoutes(): Hono<{ Bindings: Env }> {
               <li>Access to Gateway #1 (sceneview-mcp) included</li>
               <li>Email support</li>
             </ul>
-            <a class="btn" href="/billing/checkout?plan=portfolio_monthly">Subscribe</a>
+            <a class="btn" href="/billing/checkout?plan=portfolio-monthly">Subscribe</a>
           </div>
 
           <div class="price-card">
@@ -217,7 +217,7 @@ export function landingRoutes(): Hono<{ Bindings: Env }> {
               <li>Priority support</li>
               <li>Early access to new vertical MCPs</li>
             </ul>
-            <a class="btn secondary" href="/billing/checkout?plan=team_monthly">Subscribe</a>
+            <a class="btn secondary" href="/billing/checkout?plan=team-monthly">Subscribe</a>
           </div>
         </div>
 
