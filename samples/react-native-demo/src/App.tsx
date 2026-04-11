@@ -20,7 +20,7 @@ import {
   type ModelNode,
   type GeometryNode,
   type LightNode,
-} from 'react-native-sceneview';
+} from '@sceneview-sdk/react-native';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -47,7 +47,7 @@ interface PlaygroundShape {
 // Constants
 // ---------------------------------------------------------------------------
 
-const VERSION = '3.6.1';
+const VERSION = '3.6.2';
 
 const ENVIRONMENT = 'environments/studio_small.hdr';
 
