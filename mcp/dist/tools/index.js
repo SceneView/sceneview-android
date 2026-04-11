@@ -6,7 +6,7 @@
  * never reach into `definitions.ts` / `handler.ts` directly.
  */
 export { TOOL_DEFINITIONS } from "./definitions.js";
-export { dispatchTool, API_DOCS } from "./handler.js";
+export { dispatchTool, API_DOCS, __resetSponsorCounter } from "./handler.js";
 import { TOOL_DEFINITIONS } from "./definitions.js";
 /** Returns the full tool definition list (read-only copy). */
 export function getAllTools() {

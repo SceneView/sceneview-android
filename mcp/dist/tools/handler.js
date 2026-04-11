@@ -37,13 +37,33 @@ import { analyzeProject, formatAnalysisReport } from "../analyze-project.js";
 import { LLMS_TXT } from "../generated/llms-txt.js";
 // ─── Legal disclaimer (identical to index.ts 3.6.2) ──────────────────────────
 const DISCLAIMER = "\n\n---\n*Generated code suggestion. Review before use in production. See [TERMS.md](https://github.com/sceneview/sceneview/blob/main/mcp/TERMS.md).*";
+// ─── Sponsor CTA (shown every N tool calls, opt-out via env var) ────────────
+//
+// Non-intrusive monetization: append a one-line sponsor call-to-action after
+// every `SPONSOR_CTA_INTERVAL` tool calls. Disabled by setting
+// `SCENEVIEW_SPONSOR_CTA=0`. The counter is module-scoped (per MCP process
+// lifetime), not persisted.
+const SPONSOR_CTA_INTERVAL = 10;
+const SPONSOR_CTA = "\n\n💙 *Building SceneView is a one-dev labor of love. If this tool saved you time, consider [sponsoring on GitHub](https://github.com/sponsors/sceneview) — it keeps the project alive.*";
+let toolCallCount = 0;
+/** Test-only: reset the module-scoped counter between test cases. */
+export function __resetSponsorCounter() {
+    toolCallCount = 0;
+}
+function shouldShowSponsorCta() {
+    if (process.env.SCENEVIEW_SPONSOR_CTA === "0")
+        return false;
+    toolCallCount += 1;
+    return toolCallCount % SPONSOR_CTA_INTERVAL === 0;
+}
 function withDisclaimer(content) {
     if (content.length === 0)
         return content;
     const last = content[content.length - 1];
+    const suffix = DISCLAIMER + (shouldShowSponsorCta() ? SPONSOR_CTA : "");
     return [
         ...content.slice(0, -1),
-        { ...last, text: last.text + DISCLAIMER },
+        { ...last, text: last.text + suffix },
     ];
 }
 // ─── llms.txt-derived state ──────────────────────────────────────────────────
