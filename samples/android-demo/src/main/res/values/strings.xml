@@ -124,8 +124,10 @@
     <string name="about_docs">Docs</string>
     <string name="about_credits_title">Credits</string>
     <string name="about_credits_filament">Built with Google Filament, ARCore, Jetpack Compose, and Material 3 Expressive.</string>
-    <string name="about_credits_models">3D models from Sketchfab (CC-BY / CC0) and Khronos glTF Sample Models.</string>
-    <string name="about_credits_license">Open source under Apache License 2.0.</string>
+    <string name="about_credits_models">3D models sourced from Sketchfab, Khronos glTF Sample Assets and Poly Haven. Each model is distributed under its original CC-BY 4.0 or CC0 1.0 license; credit is given to every creator in the full list below.</string>
+    <string name="about_credits_models_link">View 3D asset credits</string>
+    <string name="about_credits_models_url">https://github.com/sceneview/sceneview/blob/main/assets/CREDITS.md</string>
+    <string name="about_credits_license">SceneView itself is open source under the Apache License 2.0. Model licenses are separate and attached to each individual asset.</string>
 
     <!-- Update banner -->
     <string name="update_available">Update available</string>
