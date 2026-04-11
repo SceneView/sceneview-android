@@ -1,86 +1,33 @@
 /**
- * automotive-3d-mcp pilot library.
+ * automotive-3d-mcp library — REAL handlers vendored from the
+ * sceneview monorepo (`mcp/packages/automotive/src/tools.ts`).
  *
- * Upstream: `automotive-3d-mcp`, published from the sceneview
- * monorepo under `mcp/packages/automotive/`. When vendoring lands,
- * the dispatcher here will re-export the same `TOOL_DEFINITIONS` +
- * `dispatchTool` already shipped on npm — no code duplication.
+ * First library to graduate from pilot stub to production code.
+ * Exports are a thin re-export of the upstream `TOOL_DEFINITIONS`
+ * + `dispatchTool` so a bug fix in the upstream package lands on
+ * the hub the next time `wrangler deploy` runs, with no
+ * duplication and no drift.
  *
- * Caveat: the `files[]` glob in that package was hardened in
- * f38339d8 (the base of this worktree); before re-publishing on
- * the hub, re-run `npm pack --dry-run` to verify the tarball ships
- * every dist module.
+ * Path rationale: relative `../../../mcp/packages/automotive/src`
+ * because the repo has no npm workspaces — Gateway #1 uses the
+ * same pattern in `mcp-gateway/src/mcp/registry.ts`. TypeScript's
+ * `bundler` moduleResolution rewrites the `.js` extensions at
+ * build time and Hono's bundled Worker at runtime.
+ *
+ * Tool name scheme: upstream tools are NOT prefixed
+ * (`get_car_configurator`, `list_car_models`, etc.). That's by
+ * design — the stdio version of this package uses the same names,
+ * so an MCP client configured for automotive-3d-mcp's lite proxy
+ * will see identical tool names on the hosted gateway. No
+ * migration pain.
+ *
+ * Tier mapping: `list_car_models` and `validate_automotive_code`
+ * are the free-tier catalog discovery tools (see src/mcp/access.ts
+ * FREE_TOOLS whitelist). All six `get_*` generators are Pro — they
+ * produce real Kotlin composables ready to paste into a project.
  */
 
-import type {
-  DispatchContext,
-  ToolDefinition,
-  ToolResult,
-} from "../mcp/types.js";
-
-export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
-  {
-    name: "automotive3d__list_brands",
-    description:
-      "List automotive brands with 3D models available in the catalogue (Tesla, BMW, Ford, Toyota, etc.).",
-    inputSchema: {
-      type: "object",
-      properties: {},
-      additionalProperties: false,
-    },
-  },
-  {
-    name: "automotive3d__search_vehicles",
-    description:
-      "Search the vehicle catalogue by brand, body style, fuel, year. Returns glTF/USDZ model URLs for SceneView.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        brand: { type: "string" },
-        bodyStyle: {
-          type: "string",
-          description: "sedan, suv, coupe, truck, van, convertible, hatchback.",
-        },
-        fuel: {
-          type: "string",
-          description: "gasoline, diesel, hybrid, electric.",
-        },
-        yearMin: { type: "number" },
-        yearMax: { type: "number" },
-      },
-      additionalProperties: false,
-    },
-  },
-  {
-    name: "automotive3d__configure_variant",
-    description:
-      "Return the configurable options (colour, wheels, trim, interior) for a given vehicle model so an AI agent can build a configurator UI.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        modelId: { type: "string" },
-      },
-      required: ["modelId"],
-      additionalProperties: false,
-    },
-  },
-];
-
-export async function dispatchTool(
-  toolName: string,
-  _args: Record<string, unknown> | undefined,
-  _ctx: DispatchContext = {},
-): Promise<ToolResult> {
-  return {
-    content: [
-      {
-        type: "text",
-        text:
-          `automotive-3d-mcp pilot stub: ${toolName} is registered on the ` +
-          `hub gateway. Upstream package already ships on npm from the ` +
-          `sceneview monorepo (mcp/packages/automotive/); vendor its ` +
-          `TOOL_DEFINITIONS + dispatchTool here in the next session.`,
-      },
-    ],
-  };
-}
+export {
+  TOOL_DEFINITIONS,
+  dispatchTool,
+} from "../../../mcp/packages/automotive/src/tools.js";

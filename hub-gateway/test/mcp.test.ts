@@ -92,12 +92,15 @@ describe("hub-gateway /mcp", () => {
     expect(names).toContain("education__generate_lesson_plan");
     expect(names).toContain("social_media__suggest_hashtags");
     expect(names).toContain("health_fitness__workout_plan");
-    expect(names).toContain("automotive3d__list_brands");
-    expect(names).toContain("healthcare3d__anatomy_search");
-    // Every hub tool must be package-prefixed. Single-underscore
-    // package ids (like `french_admin`) are allowed, the delimiter
-    // between package and tool is always `__`.
-    for (const n of names) expect(n).toMatch(/^[a-z0-9_]+__[a-z0-9_]+$/);
+    // Real vendored libraries — upstream tool names (no prefix).
+    expect(names).toContain("get_car_configurator");
+    expect(names).toContain("get_anatomy_viewer");
+    // Every hub tool must be a valid MCP tool name (lowercase,
+    // underscores, digits). Stubbed libraries use the
+    // `{package}__tool` prefix scheme; the real vendored libraries
+    // (automotive-3d, healthcare-3d) keep their upstream names for
+    // parity with their stdio counterparts, which are NOT prefixed.
+    for (const n of names) expect(n).toMatch(/^[a-z0-9_]+$/);
   });
 
   it("dispatches tools/call to the architecture stub library", async () => {
@@ -156,6 +159,10 @@ describe("hub-gateway /mcp", () => {
   });
 
   it("dispatches each stubbed library through its own dispatcher", async () => {
+    // Only covers the still-stubbed libraries. automotive-3d and
+    // healthcare-3d were graduated to real upstream handlers in a
+    // later commit — they have their own tests in the vendored
+    // packages.
     const targets: Array<{ tool: string; marker: string }> = [
       { tool: "realestate__search_listings", marker: "realestate-mcp pilot stub" },
       { tool: "french_admin__calculate_impots", marker: "french-admin-mcp pilot stub" },
@@ -165,8 +172,6 @@ describe("hub-gateway /mcp", () => {
       { tool: "education__generate_lesson_plan", marker: "education-mcp pilot stub" },
       { tool: "social_media__suggest_hashtags", marker: "social-media-mcp pilot stub" },
       { tool: "health_fitness__workout_plan", marker: "health-fitness-mcp pilot stub" },
-      { tool: "automotive3d__list_brands", marker: "automotive-3d-mcp pilot stub" },
-      { tool: "healthcare3d__anatomy_search", marker: "healthcare-3d-mcp pilot stub" },
     ];
     for (const { tool, marker } of targets) {
       const res = await app.request(
@@ -186,6 +191,28 @@ describe("hub-gateway /mcp", () => {
       expect(body.result.isError, `isError for ${tool}`).toBeFalsy();
       expect(body.result.content[0].text).toContain(marker);
     }
+  });
+
+  it("dispatches a real vendored tool (automotive list_car_models)", async () => {
+    const res = await app.request(
+      rpc({
+        jsonrpc: "2.0",
+        id: 11,
+        method: "tools/call",
+        params: { name: "list_car_models", arguments: {} },
+      }),
+      {},
+      FAKE_ENV,
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      result: { content: Array<{ text: string }>; isError?: boolean };
+    };
+    // The upstream handler returns a real catalogue listing, NOT
+    // a pilot stub marker. A drift test: if anyone replaces the
+    // thin re-export with a fresh stub, this assertion breaks.
+    expect(body.result.isError).toBeFalsy();
+    expect(body.result.content[0].text).not.toContain("pilot stub");
   });
 
   it("rejects non-JSON bodies with PARSE_ERROR", async () => {

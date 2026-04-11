@@ -39,18 +39,27 @@ export type ToolTier = "free" | "pro";
  * readability — the runtime uses a Set so order doesn't matter.
  */
 export const FREE_TOOLS: ReadonlySet<string> = new Set<string>([
-  // One discovery tool per library — the catalogue entry point.
+  // Stubbed libraries — one discovery tool per library (the
+  // catalogue entry point). Tool names use the `{package}__tool`
+  // scheme because the stubs were scaffolded from scratch.
   "architecture__list_building_types",
-  "automotive3d__list_brands",
   "ecommerce3d__list_categories",
   "education__build_quiz",
   "finance__compound_interest",
   "french_admin__list_democraties",
-  "healthcare3d__medical_icons",
   "health_fitness__exercise_form_cues",
   "legal_docs__list_templates",
   "realestate__estimate_value",
   "social_media__suggest_hashtags",
+
+  // REAL libraries vendored from the sceneview monorepo — tool
+  // names are the upstream names, NOT prefixed. See
+  // src/libraries/automotive-3d.ts and healthcare-3d.ts for the
+  // rationale (parity with the stdio version of each package).
+  "list_car_models",
+  "validate_automotive_code",
+  "list_medical_models",
+  "validate_medical_code",
 ]);
 
 /** Returns the tier required to call a tool (defaults to `pro`). */
