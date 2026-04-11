@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+  <title>Windsurf</title>
+  <rect width="64" height="64" rx="14" fill="#0a9b8a"/>
+  <path d="M10 38c6-6 12-6 18 0s12 6 18 0 12-6 8-2-10 10-18 10-14-6-20-6-6-2-6-2z" fill="#ffffff" fill-opacity="0.9"/>
+  <path d="M10 26c6-6 12-6 18 0s12 6 18 0 12-6 8-2-10 10-18 10-14-6-20-6-6-2-6-2z" fill="#ffffff" fill-opacity="0.5"/>
+</svg>

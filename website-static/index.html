@@ -398,6 +398,101 @@
     </div>
   </section>
 
+  <!-- ===== AI / MCP ===== -->
+  <section class="ai-section" id="ai">
+    <div class="ai-section__container">
+      <div class="ai-section__inner">
+        <div class="ai-section__content reveal">
+          <div class="ai-section__badge">AI-first SDK</div>
+          <h2 class="ai-section__title">Built for AI assistants</h2>
+          <p class="ai-section__text">SceneView is the first 3D SDK designed so AI assistants generate correct, working code on the first try. One MCP server gives your AI full access to the API reference, 3D samples, and best practices &mdash; across every major AI coding tool.</p>
+
+          <div class="ai-tools-strip">
+            <div class="ai-tool-chip">
+              <img src="assets/ai-tools/claude.svg" alt="" class="ai-tool-chip__logo" width="40" height="40">
+              <div class="ai-tool-chip__body">
+                <div class="ai-tool-chip__name">Claude</div>
+                <div class="ai-tool-chip__tagline">Claude Code &amp; Desktop</div>
+              </div>
+            </div>
+            <div class="ai-tool-chip">
+              <img src="assets/ai-tools/cursor.svg" alt="" class="ai-tool-chip__logo" width="40" height="40">
+              <div class="ai-tool-chip__body">
+                <div class="ai-tool-chip__name">Cursor</div>
+                <div class="ai-tool-chip__tagline">AI code editor</div>
+              </div>
+            </div>
+            <div class="ai-tool-chip">
+              <img src="assets/ai-tools/windsurf.svg" alt="" class="ai-tool-chip__logo" width="40" height="40">
+              <div class="ai-tool-chip__body">
+                <div class="ai-tool-chip__name">Windsurf</div>
+                <div class="ai-tool-chip__tagline">Agentic IDE</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ai-section__actions">
+            <a href="#install" class="ai-section__btn ai-section__btn--primary">
+              <span class="material-symbols-outlined">auto_awesome</span>
+              Install with Claude
+            </a>
+            <a href="https://www.npmjs.com/package/sceneview-mcp" class="ai-section__btn ai-section__btn--secondary" target="_blank" rel="noopener">
+              <span class="material-symbols-outlined">package_2</span>
+              View on npm
+            </a>
+          </div>
+        </div>
+        <div class="ai-section__graphic reveal">
+          <div class="terminal-mockup">
+            <div class="terminal-mockup__titlebar">
+              <div class="terminal-mockup__dots">
+                <span class="terminal-mockup__dot terminal-mockup__dot--red"></span>
+                <span class="terminal-mockup__dot terminal-mockup__dot--yellow"></span>
+                <span class="terminal-mockup__dot terminal-mockup__dot--green"></span>
+              </div>
+              <span class="terminal-mockup__title">Claude Code &mdash; SceneView Project</span>
+            </div>
+            <div class="terminal-mockup__body">
+              <div class="terminal-mockup__msg">
+                <span class="terminal-mockup__user">You</span>
+                <span>Build me a 3D product viewer with AR try-on for shoes</span>
+              </div>
+              <div class="terminal-mockup__msg">
+                <span class="terminal-mockup__ai">Claude</span>
+                <div>
+                  <p class="terminal-mockup__status">Using SceneView MCP to generate your app&hellip;</p>
+                  <div class="terminal-mockup__code">
+                    <p class="terminal-mockup__file">// MainActivity.kt</p>
+                    <p class="terminal-mockup__line"><span class="terminal-mockup__kw">ARScene</span>(</p>
+                    <p class="terminal-mockup__line">&nbsp;&nbsp;planeRenderer = <span class="terminal-mockup__val">true</span>,</p>
+                    <p class="terminal-mockup__line">&nbsp;&nbsp;onTapAR = { hitResult <span class="terminal-mockup__kw">-&gt;</span></p>
+                    <p class="terminal-mockup__line">&nbsp;&nbsp;&nbsp;&nbsp;<span class="terminal-mockup__fn">AnchorNode</span>(hitResult) {</p>
+                    <p class="terminal-mockup__line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="terminal-mockup__fn">ModelNode</span>(<span class="terminal-mockup__str">"shoe.glb"</span>)</p>
+                    <p class="terminal-mockup__line">&nbsp;&nbsp;&nbsp;&nbsp;}</p>
+                    <p class="terminal-mockup__line">&nbsp;&nbsp;}</p>
+                    <p class="terminal-mockup__line">)</p>
+                  </div>
+                  <p class="terminal-mockup__success">&#10003; Compiles on first try. Tap the floor to place the shoe.</p>
+                </div>
+              </div>
+              <div class="terminal-mockup__msg">
+                <span class="terminal-mockup__user">You</span>
+                <span>Add a hotspot on the laces that opens a size selector</span>
+              </div>
+              <div class="terminal-mockup__msg">
+                <span class="terminal-mockup__ai">Claude</span>
+                <div>
+                  <p class="terminal-mockup__status">Reading SceneView hotspot &amp; gesture docs via MCP&hellip;</p>
+                  <p class="terminal-mockup__success">&#10003; Hotspot added. Preview updated in Android emulator.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ===== CODE COMPARISON ===== -->
   <section class="code-section" id="code">
     <div class="code-section__container">
@@ -510,63 +605,6 @@
 
 <span class="syn-green">// Setup:</span>
 <span class="syn-purple">claude</span> mcp add sceneview -- <span class="syn-blue">npx</span> <span class="syn-green-light">sceneview-mcp</span></code></pre>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== AI / MCP ===== -->
-  <section class="ai-section" id="ai">
-    <div class="ai-section__container">
-      <div class="ai-section__inner">
-        <div class="ai-section__content reveal">
-          <div class="ai-section__badge">AI-first SDK</div>
-          <h2 class="ai-section__title">Built for AI assistants</h2>
-          <p class="ai-section__text">SceneView is the first 3D SDK designed so AI assistants generate correct, working code on the first try. MCP integration gives Claude, Cursor, and Windsurf full access to the API reference, samples, and best practices.</p>
-          <pre class="code-block"><code><span class="syn-green">// Claude Code</span>
-<span class="syn-purple">claude</span> mcp add sceneview -- <span class="syn-blue">npx</span> <span class="syn-green-light">sceneview-mcp</span></code></pre>
-          <div class="ai-section__actions">
-            <a href="https://www.npmjs.com/package/sceneview-mcp" class="ai-section__btn" target="_blank" rel="noopener">
-              <span class="material-symbols-outlined">package_2</span>
-              sceneview-mcp on npm
-            </a>
-          </div>
-        </div>
-        <div class="ai-section__graphic reveal">
-          <div class="terminal-mockup">
-            <div class="terminal-mockup__titlebar">
-              <div class="terminal-mockup__dots">
-                <span class="terminal-mockup__dot terminal-mockup__dot--red"></span>
-                <span class="terminal-mockup__dot terminal-mockup__dot--yellow"></span>
-                <span class="terminal-mockup__dot terminal-mockup__dot--green"></span>
-              </div>
-              <span class="terminal-mockup__title">Claude Code &mdash; SceneView Project</span>
-            </div>
-            <div class="terminal-mockup__body">
-              <div class="terminal-mockup__msg">
-                <span class="terminal-mockup__user">You</span>
-                <span>Build me a 3D product viewer with AR try-on for shoes</span>
-              </div>
-              <div class="terminal-mockup__msg">
-                <span class="terminal-mockup__ai">Claude</span>
-                <div>
-                  <p class="terminal-mockup__status">Using SceneView MCP to generate your app...</p>
-                  <div class="terminal-mockup__code">
-                    <p class="terminal-mockup__file">// MainActivity.kt</p>
-                    <p class="terminal-mockup__line"><span class="terminal-mockup__kw">ARScene</span>(</p>
-                    <p class="terminal-mockup__line">&nbsp;&nbsp;planeRenderer = <span class="terminal-mockup__val">true</span>,</p>
-                    <p class="terminal-mockup__line">&nbsp;&nbsp;onTapAR = { hitResult <span class="terminal-mockup__kw">-&gt;</span></p>
-                    <p class="terminal-mockup__line">&nbsp;&nbsp;&nbsp;&nbsp;<span class="terminal-mockup__fn">AnchorNode</span>(hitResult) {</p>
-                    <p class="terminal-mockup__line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="terminal-mockup__fn">ModelNode</span>(<span class="terminal-mockup__str">"shoe.glb"</span>)</p>
-                    <p class="terminal-mockup__line">&nbsp;&nbsp;&nbsp;&nbsp;}</p>
-                    <p class="terminal-mockup__line">&nbsp;&nbsp;}</p>
-                    <p class="terminal-mockup__line">)</p>
-                  </div>
-                  <p class="terminal-mockup__success">&#10003; App compiles and runs. Point camera at floor, tap to place shoe.</p>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>
