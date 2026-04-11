@@ -18,25 +18,39 @@ Connect it to Claude, Cursor, Windsurf, or any MCP client. The assistant gets 26
 
 ---
 
-## 🚀 Pro Products
+## 🚀 Hosted-first mode (v4 beta)
 
-| Product | Price | Description |
-|---------|-------|-------------|
-| [MCP Creator Kit](https://buy.polar.sh/polar_cl_tb87ROB9Xn0c5aohdn3NvkTINDF1xjW5zpkg70UwmcF) | €29 | Everything to create your own MCP server — template, CLI, docs, examples |
-| [SceneView Pro Starter Kit](https://buy.polar.sh/polar_cl_tb87ROB9Xn0c5aohdn3NvkTINDF1xjW5zpkg70UwmcF) | €49 | Complete Android 3D + AR app template — 4 screens, ready to customize |
-| [SceneView MCP Pro](https://buy.polar.sh/polar_cl_tb87ROB9Xn0c5aohdn3NvkTINDF1xjW5zpkg70UwmcF) | €9.99/mo | Premium MCP tools and priority support |
+Starting with **v4.0.0-beta.1**, `sceneview-mcp` is a **lite stdio package**: free tools run locally (no network round-trip) and Pro tools are transparently forwarded to the hosted gateway at **https://sceneview-mcp.mcp-tools-lab.workers.dev/mcp**.
 
-⭐ [Sponsor on GitHub](https://github.com/sponsors/sceneview) — Help us build the future of 3D/AR development
+| What | Where |
+|---|---|
+| 17 free tools (samples, guides, validator, search, analyze) | Local, zero network |
+| 36+ Pro tools (AR, multi-platform, scene gen, artifacts, packages) | Forwarded to the gateway — Bearer auth + Stripe-metered |
+| Auth, metering, Stripe webhooks, API-key provisioning | Gateway (Cloudflare Workers + D1 + KV) |
+
+**Pricing** (subscribe at https://sceneview-mcp.mcp-tools-lab.workers.dev/pricing):
+
+| Plan | Price | Use case |
+|---|---|---|
+| Free | 0 € | Samples, guides, validator — no signup |
+| Pro | 19 €/mo or 190 €/yr | Individual devs, full Pro tool access |
+| Team | 49 €/mo or 490 €/yr | Teams with higher rate limits |
+
+After subscribing, you'll receive a `sv_live_…` API key. Set it via the `SCENEVIEW_API_KEY` env var in your MCP client config (see snippets below) to unlock Pro tools.
+
+⭐ [Sponsor on GitHub](https://github.com/sponsors/sceneview) — help keep the free tier free.
 
 ---
 
-## Quick start
+## Quick start (free tier)
 
 **One command -- no install required:**
 
 ```bash
-npx sceneview-mcp
+npx sceneview-mcp@beta
 ```
+
+On startup you'll see a `[sceneview-mcp] v4.0.0-beta.1 — LITE (free tools only)` banner on stderr. Set `SCENEVIEW_API_KEY` to flip into `HOSTED` mode.
 
 > **Anonymous telemetry** is enabled on the free tier (MCP client name/version and tool names — no personal data, no prompt content). Opt out with `SCENEVIEW_TELEMETRY=0`. See [PRIVACY.md](./PRIVACY.md#telemetry-free-tier) for the full payload shape.
 

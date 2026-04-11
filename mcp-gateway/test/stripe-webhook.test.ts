@@ -392,6 +392,71 @@ describe("handleCheckoutCompleted", () => {
     fetchMock.mockRestore();
   });
 
+  it("re-fetches the Checkout Session from Stripe when the payload has no subscription id", async () => {
+    // Regression for the bug seen on 2026-04-11: Stripe sometimes
+    // delivers `checkout.session.completed` with `subscription: null`
+    // on the first attempt (the subscription is hydrated async). The
+    // handler must re-fetch the session to recover the subscription
+    // id instead of silently leaving the user on free.
+    //
+    // 1st fetch: retrieveCheckoutSession → now has the subscription id
+    // 2nd fetch: retrieveSubscription → resolves the tier
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            id: "cs_no_sub",
+            url: "https://checkout.stripe.com/cs_no_sub",
+            customer: "cus_nosub",
+            customer_details: { email: "nosub@example.com" },
+            subscription: "sub_recovered",
+          }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            id: "sub_recovered",
+            customer: "cus_nosub",
+            status: "active",
+            cancel_at_period_end: false,
+            current_period_end: 1_700_000_000,
+            items: { data: [{ price: { id: PRO_MONTHLY_PRICE } }] },
+          }),
+          { status: 200 },
+        ),
+      );
+
+    await handleCheckoutCompleted(env(), {
+      id: "evt_no_sub",
+      type: "checkout.session.completed",
+      data: {
+        object: {
+          id: "cs_no_sub",
+          customer: "cus_nosub",
+          customer_details: { email: "nosub@example.com" },
+          // subscription intentionally omitted
+        },
+      },
+      created: 1,
+    });
+
+    const user = await mock.db
+      .prepare("SELECT tier FROM users WHERE email = ?1")
+      .bind("nosub@example.com")
+      .first<{ tier: string }>();
+    expect(user?.tier).toBe("pro");
+
+    const kvRaw = await kv.get("checkout_key:cs_no_sub");
+    expect(kvRaw).not.toBeNull();
+
+    // Both fetches must have fired: session lookup then subscription.
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    fetchMock.mockRestore();
+  });
+
   it("ignores a session with neither email nor a way to recover it", async () => {
     await handleCheckoutCompleted(
       env({ STRIPE_SECRET_KEY: undefined }),

@@ -144,8 +144,10 @@ describe("POST /billing/checkout", () => {
     expect(body).toContain("metadata%5Bbilling_period%5D=monthly");
     // No client_reference_id (no user account exists yet).
     expect(body).not.toContain("client_reference_id");
-    // No email passed in this test => customer_creation=always is set.
-    expect(body).toContain("customer_creation=always");
+    // In subscription mode Stripe auto-creates the Customer. The
+    // explicit `customer_creation=always` form field only applies to
+    // `payment` mode and returns a 400 from Stripe if sent here.
+    expect(body).not.toContain("customer_creation");
     fetchMock.mockRestore();
   });
 

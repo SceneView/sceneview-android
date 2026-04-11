@@ -17,12 +17,33 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListResourcesRequestSchema, ListToolsRequestSchema, ReadResourceRequestSchema, } from "@modelcontextprotocol/sdk/types.js";
 import { fetchKnownIssues } from "./issues.js";
-import { checkToolAccess, filterToolsForTier, createAccessDeniedResponse } from "./auth.js";
-import { recordUsage, getConfiguredApiKey } from "./billing.js";
 import { recordClientInit, recordToolCall } from "./telemetry.js";
-import { getToolTier } from "./tiers.js";
+import { isProTool, getToolTier } from "./tiers.js";
+import { dispatchProxyToolCall, isProxyConfigured, DEFAULT_PRICING_URL, } from "./proxy.js";
 import { API_DOCS, TOOL_DEFINITIONS, dispatchTool, } from "./tools/index.js";
-const server = new Server({ name: "sceneview-mcp", version: "4.0.0" }, { capabilities: { resources: {}, tools: {} } });
+// ─── v4 lite-mode startup banner ─────────────────────────────────────────────
+//
+// MCP servers must keep stdout clean for JSON-RPC, so we log to stderr.
+// Claude Desktop surfaces this in the server's "Logs" panel. The banner
+// tells the user which mode they're in (hosted vs free) and where to
+// upgrade, without blocking the transport handshake.
+const PACKAGE_VERSION = "4.0.0";
+function logStartupBanner() {
+    if (process.env.SCENEVIEW_MCP_QUIET === "1")
+        return;
+    const proxied = isProxyConfigured();
+    const mode = proxied ? "HOSTED (Pro tools → gateway)" : "LITE (free tools only)";
+    const lines = [
+        `[sceneview-mcp] v${PACKAGE_VERSION} — ${mode}`,
+        proxied
+            ? `[sceneview-mcp] Pro tool calls will be forwarded to the hosted gateway.`
+            : `[sceneview-mcp] Set SCENEVIEW_API_KEY to unlock 36+ Pro tools — ${DEFAULT_PRICING_URL}`,
+    ];
+    for (const line of lines)
+        process.stderr.write(`${line}\n`);
+}
+logStartupBanner();
+const server = new Server({ name: "sceneview-mcp", version: PACKAGE_VERSION }, { capabilities: { resources: {}, tools: {} } });
 // ─── Telemetry (anonymous, opt-out via SCENEVIEW_TELEMETRY=0) ────────────────
 //
 // Fire once when the client finishes the handshake. See `telemetry.ts` and
@@ -65,32 +86,41 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
 });
 // ─── Tools ───────────────────────────────────────────────────────────────────
 server.setRequestHandler(ListToolsRequestSchema, async () => {
-    // filterToolsForTier has a looser parameter type (index signature) than
-    // our strict ToolDefinition. The cast is safe: ToolDefinition is a
-    // superset of { name, description, inputSchema } and filterToolsForTier
-    // only reads `name` and `description`.
-    const tools = await filterToolsForTier(TOOL_DEFINITIONS);
+    // v4 lite mode: we trust the gateway to enforce Pro access at call time,
+    // so listing is purely cosmetic here. If no API key is set we still prefix
+    // Pro tool descriptions with "[PRO]" so the AI knows an upgrade is needed
+    // and surfaces the upsell in its responses; with a key we expose the full
+    // list unmodified.
+    const unlocked = isProxyConfigured();
+    const tools = TOOL_DEFINITIONS.map((tool) => {
+        if (unlocked || !isProTool(tool.name))
+            return tool;
+        return { ...tool, description: `[PRO] ${tool.description}` };
+    });
     return { tools };
 });
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const toolName = request.params.name;
-    // ── Pro tier access check ──────────────────────────────────────────────────
-    const access = await checkToolAccess(toolName);
-    if (!access.allowed) {
-        return createAccessDeniedResponse(toolName, access.message);
-    }
+    const args = request.params.arguments;
     // Record anonymous telemetry (fire-and-forget, non-blocking, opt-out via
     // SCENEVIEW_TELEMETRY=0). See `telemetry.ts` and `PRIVACY.md`.
     recordToolCall(toolName, getToolTier(toolName));
-    // Record usage for billing (async, fire-and-forget)
-    const apiKey = getConfiguredApiKey();
-    if (apiKey) {
-        recordUsage(apiKey, toolName).catch(() => { });
+    // ── v4 lite-mode routing ─────────────────────────────────────────────────
+    //
+    // Free tools execute locally, same as 3.6.x. Pro tools are forwarded to
+    // the hosted gateway at sceneview-mcp.mcp-tools-lab.workers.dev/mcp —
+    // that's where auth, metering, and Stripe live. If no API key is set,
+    // `dispatchProxyToolCall` returns a friendly stub that points at the
+    // pricing page (handles the upsell itself, no separate denied-response
+    // step needed).
+    if (isProTool(toolName)) {
+        const result = await dispatchProxyToolCall(toolName, args);
+        return result;
     }
     // The dispatcher returns the narrower SceneView `ToolResult` shape, which
     // structurally matches the MCP SDK's `CallToolResult` but TS can't prove
     // it (the SDK's zod-derived type has additional optional members).
-    const result = await dispatchTool(toolName, request.params.arguments);
+    const result = await dispatchTool(toolName, args);
     return result;
 });
 const transport = new StdioServerTransport();

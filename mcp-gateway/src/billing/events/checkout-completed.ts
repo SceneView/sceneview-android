@@ -117,15 +117,40 @@ export async function handleCheckoutCompleted(
   }
 
   // ── 4. Resolve + upsert the subscription ───────────────────────────────
-  if (!session.subscription || !env.STRIPE_SECRET_KEY) {
+  //
+  // The webhook payload's `subscription` field is sometimes null on the
+  // first `checkout.session.completed` delivery, even for mode=subscription
+  // checkouts — Stripe's own docs note that the subscription is expanded
+  // asynchronously. When that happens we re-fetch the session from the
+  // REST API (same fallback we use for `email`) so we don't lose the
+  // mapping and leave the user stuck on the free tier.
+  if (!env.STRIPE_SECRET_KEY) {
     console.warn(
-      `[checkout-completed] session ${session.id} has no subscription id`,
+      `[checkout-completed] session ${session.id}: STRIPE_SECRET_KEY not set, skipping`,
+    );
+    return;
+  }
+  let subscriptionId: string | null = session.subscription ?? null;
+  if (!subscriptionId) {
+    try {
+      const full = await retrieveCheckoutSession(env.STRIPE_SECRET_KEY, session.id);
+      subscriptionId = full.subscription ?? null;
+    } catch (err) {
+      console.error(
+        `[checkout-completed] failed to re-fetch session ${session.id} for subscription`,
+        err,
+      );
+    }
+  }
+  if (!subscriptionId) {
+    console.warn(
+      `[checkout-completed] session ${session.id} has no subscription id (even after re-fetch)`,
     );
     return;
   }
   const sub = await retrieveSubscription(
     env.STRIPE_SECRET_KEY,
-    session.subscription,
+    subscriptionId,
   );
   const priceId = sub.items?.data?.[0]?.price?.id ?? "";
   const tier = getTierForPriceId(env, priceId);
