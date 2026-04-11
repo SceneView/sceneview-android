@@ -29,8 +29,8 @@ SceneView uses **native renderers per platform** for the best performance and to
 
 The primary platform. SceneView wraps Google Filament (PBR rendering) and ARCore (augmented reality) in Jetpack Compose composables.
 
-- **3D**: `Scene { }` composable with 26+ node types
-- **AR**: `ARScene { }` with plane detection, image tracking, face mesh, cloud anchors, geospatial
+- **3D**: `SceneView { }` composable with 26+ node types
+- **AR**: `ARSceneView { }` with plane detection, image tracking, face mesh, cloud anchors, geospatial
 - **Min SDK**: 24 (Android 7.0)
 - **Install**: `implementation("io.github.sceneview:sceneview:3.6.2")`
 
@@ -83,7 +83,7 @@ Filament from source with JNI enabled (estimated 18-29 days). See
 
 ## Android TV
 
-SceneView works on Android TV using the same Filament renderer as mobile. The `Scene { }` composable renders identically -- only the input handling differs (D-pad instead of touch).
+SceneView works on Android TV using the same Filament renderer as mobile. The `SceneView { }` composable renders identically -- only the input handling differs (D-pad instead of touch).
 
 - **Input**: D-pad controls (orbit, zoom, model cycling)
 - **UI**: Lean-back 10-foot interface
@@ -97,7 +97,7 @@ SceneView works on Android TV using the same Filament renderer as mobile. The `S
 
 A Flutter plugin that bridges to native SceneView rendering on both Android (Filament) and iOS (RealityKit) via PlatformView.
 
-- **Android**: `ComposeView` hosting `Scene { }` composable
+- **Android**: `ComposeView` hosting `SceneView { }` composable
 - **iOS**: `UIHostingController` hosting SwiftUI `SceneView { }`
 - **Install**: `sceneview_flutter: ^0.1.0` in pubspec.yaml
 
@@ -109,7 +109,7 @@ A Flutter plugin that bridges to native SceneView rendering on both Android (Fil
 
 A React Native module that bridges to native SceneView rendering on both Android (Filament) and iOS (RealityKit) via Fabric components.
 
-- **Android**: `SimpleViewManager` with `ComposeView` hosting `Scene { }`
+- **Android**: `SimpleViewManager` with `ComposeView` hosting `SceneView { }`
 - **iOS**: `RCTViewManager` with `UIHostingController` hosting `SceneView { }`
 - **Install**: `npm install react-native-sceneview`
 

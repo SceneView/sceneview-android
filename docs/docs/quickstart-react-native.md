@@ -56,7 +56,7 @@ export default function ARViewer() {
 ```
 React Native (TypeScript)
   └── Native Component
-        ├── Android → SimpleViewManager → ComposeView → Scene { }
+        ├── Android → SimpleViewManager → ComposeView → SceneView { }
         └── iOS → RCTViewManager → UIHostingController → SceneView { }
 ```
 

@@ -23,7 +23,7 @@ fun RemoteModelScreen() {
     val engine = rememberEngine()
     val modelLoader = rememberModelLoader(engine)
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader
@@ -50,7 +50,7 @@ fun MultiModelScreen() {
     val engine = rememberEngine()
     val modelLoader = rememberModelLoader(engine)
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader
@@ -91,7 +91,7 @@ fun ModelWithLoadingIndicator() {
     val instance = rememberModelInstance(modelLoader, "models/large_scene.glb")
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Scene(
+        SceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             modelLoader = modelLoader
@@ -132,7 +132,7 @@ fun ModelSwitcherScreen() {
     val instance = rememberModelInstance(modelLoader, path)
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Scene(
+        SceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             modelLoader = modelLoader
@@ -169,7 +169,7 @@ fun ModelSwitcherScreen() {
 Set `autoAnimate = true` on `ModelNode`. All glTF animations play simultaneously.
 
 ```kotlin
-Scene(...) {
+SceneView(...) {
     rememberModelInstance(modelLoader, "models/Fox.glb")?.let { instance ->
         ModelNode(
             modelInstance = instance,
@@ -188,7 +188,7 @@ defined in the glTF file.
 ```kotlin
 var currentAnimation by remember { mutableStateOf("Walk") }
 
-Scene(...) {
+SceneView(...) {
     rememberModelInstance(modelLoader, "models/Fox.glb")?.let { instance ->
         ModelNode(
             modelInstance = instance,
@@ -209,7 +209,7 @@ Scene(...) {
 Set `animationLoop = true`. Works with both `autoAnimate` and named animations.
 
 ```kotlin
-Scene(...) {
+SceneView(...) {
     rememberModelInstance(modelLoader, "models/Fox.glb")?.let { instance ->
         ModelNode(
             modelInstance = instance,
@@ -251,7 +251,7 @@ fun SpinningModelScreen() {
         )
     )
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -289,7 +289,7 @@ fun BouncingModelScreen() {
         label = "Y"
     )
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader
@@ -315,7 +315,7 @@ Use `rememberCameraManipulator` with `orbitHomePosition` and `targetPosition`.
 The user can orbit, pan, and zoom. Double-tap resets to the home position.
 
 ```kotlin
-Scene(
+SceneView(
     modifier = Modifier.fillMaxSize(),
     engine = engine,
     modelLoader = modelLoader,
@@ -338,7 +338,7 @@ val cameraNode = rememberCameraNode(engine) {
     lookAt(Position(0f, 0f, 0f))
 }
 
-Scene(
+SceneView(
     modifier = Modifier.fillMaxSize(),
     engine = engine,
     modelLoader = modelLoader,
@@ -378,7 +378,7 @@ on individual objects.
 
 ```kotlin
 // On the scene level — control orbit camera zoom speed
-Scene(
+SceneView(
     modifier = Modifier.fillMaxSize(),
     engine = engine,
     modelLoader = modelLoader,
@@ -411,7 +411,7 @@ the tapped node (or `null` if the user tapped empty space).
 ```kotlin
 var selectedNode by remember { mutableStateOf<String?>(null) }
 
-Scene(
+SceneView(
     modifier = Modifier.fillMaxSize(),
     engine = engine,
     modelLoader = modelLoader,
@@ -438,7 +438,7 @@ Set `isEditable = true` on the node. Single-finger drag moves the node in the
 scene.
 
 ```kotlin
-Scene(...) {
+SceneView(...) {
     rememberModelInstance(modelLoader, "models/damaged_helmet.glb")?.let {
         ModelNode(
             modelInstance = it,
@@ -455,7 +455,7 @@ Scene(...) {
 `editableScaleRange` to clamp the allowed range.
 
 ```kotlin
-Scene(...) {
+SceneView(...) {
     rememberModelInstance(modelLoader, "models/damaged_helmet.glb")?.let {
         ModelNode(
             modelInstance = it,
@@ -474,7 +474,7 @@ Scene(...) {
 Use the `onDoubleTap` gesture callback to reset a node's transform.
 
 ```kotlin
-Scene(
+SceneView(
     modifier = Modifier.fillMaxSize(),
     engine = engine,
     modelLoader = modelLoader,
@@ -508,7 +508,7 @@ var showMenu by remember { mutableStateOf(false) }
 var menuNode by remember { mutableStateOf<String?>(null) }
 
 Box(modifier = Modifier.fillMaxSize()) {
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -555,7 +555,7 @@ val environment = rememberEnvironment(environmentLoader) {
         ?: createEnvironment(environmentLoader)
 }
 
-Scene(
+SceneView(
     modifier = Modifier.fillMaxSize(),
     engine = engine,
     modelLoader = rememberModelLoader(engine),
@@ -573,7 +573,7 @@ Use `DynamicSkyNode` to simulate a sun that moves across the sky.
 ```kotlin
 var timeOfDay by remember { mutableFloatStateOf(14f) } // 0-24
 
-Scene(
+SceneView(
     modifier = Modifier.fillMaxSize(),
     engine = engine,
     modelLoader = modelLoader
@@ -602,7 +602,7 @@ val view = rememberView(engine)
 
 var fogEnabled by remember { mutableStateOf(true) }
 
-Scene(
+SceneView(
     modifier = Modifier.fillMaxSize(),
     engine = engine,
     modelLoader = rememberModelLoader(engine),
@@ -626,7 +626,7 @@ Combine the main directional light with additional point or spot lights using
 `LightNode`. Remember: `apply` is a **named parameter**, not a trailing lambda.
 
 ```kotlin
-Scene(
+SceneView(
     modifier = Modifier.fillMaxSize(),
     engine = engine,
     modelLoader = modelLoader,
@@ -690,7 +690,7 @@ fun TapToPlaceScreen() {
 
     val instance = rememberModelInstance(modelLoader, "models/damaged_helmet.glb")
 
-    ARScene(
+    ARSceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -742,7 +742,7 @@ fun MultiPlaceScreen() {
 
     val instance = rememberModelInstance(modelLoader, "models/damaged_helmet.glb")
 
-    ARScene(
+    ARSceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -791,7 +791,7 @@ fun ReticleScreen() {
     val materialLoader = rememberMaterialLoader(engine)
     val view = LocalView.current
 
-    ARScene(
+    ARSceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -828,7 +828,7 @@ fun ImageTrackingScreen() {
 
     val instance = rememberModelInstance(modelLoader, "models/rabbit.glb")
 
-    ARScene(
+    ARSceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -883,7 +883,7 @@ fun FaceFilterScreen() {
         )
     }
 
-    ARScene(
+    ARSceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -930,7 +930,7 @@ fun ProductListScreen(products: List<Product>) {
             ) {
                 Column {
                     val instance = rememberModelInstance(modelLoader, product.modelPath)
-                    Scene(
+                    SceneView(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(250.dp),
@@ -973,7 +973,7 @@ fun SplitScreen() {
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Top half: 3D scene
-        Scene(
+        SceneView(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
@@ -1014,7 +1014,7 @@ fun OverlayScreen() {
     val modelLoader = rememberModelLoader(engine)
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Scene(
+        SceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             modelLoader = modelLoader
@@ -1064,7 +1064,7 @@ fun ViewNodeScreen() {
     val modelLoader = rememberModelLoader(engine)
     val windowManager = rememberViewNodeManager()
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -1140,7 +1140,7 @@ fun MaterialDemoScreen() {
         materialLoader.createColorInstance(colorOf(Color.Green))
     }
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = rememberModelLoader(engine),

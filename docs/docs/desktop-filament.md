@@ -183,7 +183,7 @@ sceneview-desktop/
 ├── build.gradle.kts          # Compose Desktop + LWJGL + filament-desktop-jni
 ├── src/desktopMain/kotlin/
 │   ├── FilamentEngine.kt     # Engine lifecycle, SwapChain management
-│   ├── DesktopScene.kt       # Scene{} composable for desktop (mirrors Android API)
+│   ├── DesktopScene.kt       # SceneView{} composable for desktop (mirrors Android API)
 │   ├── DesktopModelLoader.kt # glTF/GLB loading via Filament gltfio
 │   ├── DesktopRenderer.kt    # Frame loop, Compose+Filament composition
 │   └── Main.kt               # Application entry point
@@ -267,7 +267,7 @@ in any pre-built form.
 | LWJGL + Filament SwapChain integration | 3-5 days | High (GL context sharing) |
 | Compose Desktop overlay rendering | 2-3 days | High (Skia + Filament frame sync) |
 | glTF model loading (gltfio JNI) | 2-3 days | Medium |
-| Scene{} composable API (mirror Android) | 3-5 days | Low |
+| SceneView{} composable API (mirror Android) | 3-5 days | Low |
 | Material compilation for desktop backends | 1-2 days | Low |
 | Testing and platform-specific fixes | 3-5 days | High (3 platforms) |
 | **Total** | **18-29 days** | **High** |

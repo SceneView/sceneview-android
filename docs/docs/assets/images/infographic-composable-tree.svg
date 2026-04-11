@@ -14,9 +14,9 @@
   <!-- AnchorNode to child ViewNode -->
   <path d="M531 140 L531 156 Q531 162 537 162 L582 162 Q588 162 588 168 L588 180" stroke="#CAC4D0" stroke-width="1" fill="none"/>
 
-  <!-- Root: Scene { } -->
+  <!-- Root: SceneView { } -->
   <rect x="340" y="32" width="120" height="30" rx="15" fill="#F4EFF4"/>
-  <text x="400" y="52" text-anchor="middle" font-family="'Google Sans', 'Roboto', sans-serif" font-size="13" font-weight="500" fill="#6750A4">Scene { }</text>
+  <text x="400" y="52" text-anchor="middle" font-family="'Google Sans', 'Roboto', sans-serif" font-size="13" font-weight="500" fill="#6750A4">SceneView { }</text>
 
   <!-- Level 2: ModelNode -->
   <rect x="230" y="108" width="90" height="26" rx="13" fill="#D0BCFF"/>

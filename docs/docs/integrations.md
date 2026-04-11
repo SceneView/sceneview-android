@@ -35,7 +35,7 @@ fun ProductViewerScreen(productId: String) {
     val modelLoader = rememberModelLoader(engine)
     val model = rememberModelInstance(modelLoader, "models/$productId.glb")
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -90,7 +90,7 @@ fun ProductCard(product: Product) {
     ) {
         Column {
             // 3D viewer as the card hero
-            Scene(
+            SceneView(
                 modifier = Modifier.fillMaxWidth().height(250.dp),
                 cameraManipulator = rememberCameraManipulator()
             ) {
@@ -122,7 +122,7 @@ fun ARWithBottomSheet() {
     var showSheet by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        ARScene(
+        ARSceneView(
             modifier = Modifier.fillMaxSize(),
             planeRenderer = true
         ) {
@@ -173,7 +173,7 @@ class SceneViewModel : ViewModel() {
 fun SceneScreen(viewModel: SceneViewModel = viewModel()) {
     val model = rememberModelInstance(modelLoader, "models/${viewModel.selectedModel}.glb")
 
-    Scene(modifier = Modifier.fillMaxSize()) {
+    SceneView(modifier = Modifier.fillMaxSize()) {
         model?.let {
             ModelNode(
                 modelInstance = it,
@@ -209,7 +209,7 @@ fun ProductScreen(viewModel: ProductViewModel = hiltViewModel()) {
     val product by viewModel.product.collectAsStateWithLifecycle()
 
     product?.modelUrl?.let { url ->
-        Scene(modifier = Modifier.fillMaxSize()) {
+        SceneView(modifier = Modifier.fillMaxSize()) {
             rememberModelInstance(modelLoader, url)?.let {
                 ModelNode(modelInstance = it, scaleToUnits = 1.0f)
             }
@@ -243,7 +243,7 @@ interface AnchorDao {
 }
 
 // In your AR composable
-ARScene(...) {
+ARSceneView(...) {
     CloudAnchorNode(
         anchor = localAnchor,
         onHosted = { cloudId, state ->

@@ -54,7 +54,7 @@ Use Compose state:
 ```kotlin
 var pos by remember { mutableStateOf(Position(0f, 0f, -2f)) }
 
-Scene(...) {
+SceneView(...) {
     model?.let {
         ModelNode(modelInstance = it, position = pos)
     }
@@ -77,10 +77,10 @@ ModelNode(
 
 ### Can I render multiple models?
 
-Yes — just add multiple `ModelNode` calls inside `Scene { }`:
+Yes — just add multiple `ModelNode` calls inside `SceneView { }`:
 
 ```kotlin
-Scene(...) {
+SceneView(...) {
     ModelNode(modelInstance = helmet, position = Position(x = -1f))
     ModelNode(modelInstance = sword, position = Position(x = 1f))
 }
@@ -114,7 +114,7 @@ Partially. ARCore has limited emulator support. For reliable AR development, use
 ### How do I detect when the user taps a plane?
 
 ```kotlin
-ARScene(
+ARSceneView(
     onTouchEvent = { event, hitResult ->
         if (event.action == MotionEvent.ACTION_UP && hitResult != null) {
             anchor = hitResult.createAnchor()

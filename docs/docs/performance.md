@@ -38,7 +38,7 @@ Enable Filament's built-in frame statistics to see draw calls, triangle counts, 
 GPU timing without leaving your app:
 
 ```kotlin
-Scene(
+SceneView(
     engine = engine,
     modelLoader = modelLoader,
     // ...
@@ -199,7 +199,7 @@ Recomposition during rendering can cause frame drops. Follow these rules:
 
 ```kotlin
 // BAD — creates new Position every recomposition, triggering node updates
-Scene(/* ... */) {
+SceneView(/* ... */) {
     ModelNode(
         modelInstance = model,
         position = Position(0f, 1f, 0f)  // new object every recomposition!
@@ -209,7 +209,7 @@ Scene(/* ... */) {
 // GOOD — stable reference, no unnecessary updates
 val position = remember { Position(0f, 1f, 0f) }
 
-Scene(/* ... */) {
+SceneView(/* ... */) {
     ModelNode(
         modelInstance = model,
         position = position
@@ -219,7 +219,7 @@ Scene(/* ... */) {
 
 !!! danger "No allocations in the composition body"
     Never create new `Position`, `Rotation`, `Scale`, or `Quaternion` objects
-    directly inside `Scene { }` without `remember`. Each recomposition creates
+    directly inside `SceneView { }` without `remember`. Each recomposition creates
     a new instance, causing the node to update every frame.
 
 **Key rules:**
@@ -240,7 +240,7 @@ val materialLoader = rememberMaterialLoader(engine)
 val environmentLoader = rememberEnvironmentLoader(engine)
 
 // Share across all scenes via CompositionLocal or parameter passing
-Scene(engine = engine, modelLoader = modelLoader, /* ... */) { }
+SceneView(engine = engine, modelLoader = modelLoader, /* ... */) { }
 ```
 
 !!! failure "One Engine per app — not per screen"
@@ -255,7 +255,7 @@ Load models on-demand rather than all at startup:
 // rememberModelInstance loads asynchronously and returns null while loading
 val model = rememberModelInstance(modelLoader, "models/character.glb")
 
-Scene(/* ... */) {
+SceneView(/* ... */) {
     if (model != null) {
         ModelNode(modelInstance = model)
     } else {
@@ -287,7 +287,7 @@ for rendering.
 impacts frame rate.
 
 ```kotlin
-ARScene(
+ARSceneView(
     // ...
     onSessionUpdated = { session, frame ->
         // FAST: read a cached value
@@ -316,7 +316,7 @@ The AR plane renderer draws detected surfaces with a semi-transparent overlay.
 This causes **GPU overdraw** — especially problematic when multiple planes overlap.
 
 ```kotlin
-ARScene(
+ARSceneView(
     planeRenderer = planeRenderer,
     // ...
 )
@@ -378,7 +378,7 @@ enum class DeviceTier { HIGH, MID, LOW }
 ```kotlin
 val tier = remember { getDeviceTier(context) }
 
-Scene(
+SceneView(
     engine = engine,
     modelLoader = modelLoader,
     // ...

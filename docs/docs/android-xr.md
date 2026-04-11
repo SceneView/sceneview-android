@@ -25,7 +25,7 @@ SceneView uses **Filament** as its 3D renderer on Android. Android XR uses its o
 scene graph (**SceneCore**) with entity types like `GltfModelEntity` and `PanelEntity`.
 
 The integration strategy is **not** to replace SceneView's renderer, but to embed
-SceneView's `Scene {}` composable inside Android XR's spatial layout system. This means:
+SceneView's `SceneView {}` composable inside Android XR's spatial layout system. This means:
 
 - SceneView renders 3D content via Filament inside a `SpatialPanel`
 - Android XR handles spatial positioning, passthrough, and device tracking
@@ -40,7 +40,7 @@ SceneView's `Scene {}` composable inside Android XR's spatial layout system. Thi
 │  │ SpatialPanel │  │ GltfModelEntity     │   │
 │  │ ┌──────────┐ │  │ (SceneCore native)  │   │
 │  │ │ SceneView│ │  └─────────────────────┘   │
-│  │ │ Scene {} │ │                            │
+│  │ │ SceneView {} │ │                            │
 │  │ │(Filament)│ │  ┌─────────────────────┐   │
 │  │ └──────────┘ │  │ SpatialEnvironment  │   │
 │  └──────────────┘  │ (passthrough / sky) │   │
@@ -52,7 +52,7 @@ SceneView's `Scene {}` composable inside Android XR's spatial layout system. Thi
 
 ### Approach 1: SceneView inside SpatialPanel (recommended)
 
-Embed the existing `Scene {}` composable inside a `SpatialPanel`. This gives you full
+Embed the existing `SceneView {}` composable inside a `SpatialPanel`. This gives you full
 SceneView capabilities (Filament rendering, model loading, physics, animation) positioned
 in XR space.
 
@@ -98,7 +98,7 @@ fun XRSceneViewPanel() {
             val environmentLoader = rememberEnvironmentLoader(engine)
             val modelInstance = rememberModelInstance(modelLoader, "models/helmet.glb")
 
-            Scene(
+            SceneView(
                 modifier = Modifier.fillMaxSize(),
                 engine = engine,
                 modelLoader = modelLoader,
@@ -115,7 +115,7 @@ fun XRSceneViewPanel() {
 
 ### Approach 2: SceneView AR with XR passthrough
 
-For AR experiences on XR headsets, combine SceneView's `ARScene {}` with XR passthrough:
+For AR experiences on XR headsets, combine SceneView's `ARSceneView {}` with XR passthrough:
 
 ```kotlin
 import androidx.xr.compose.spatial.Subspace
@@ -135,7 +135,7 @@ fun XRAugmentedView(xrSession: Session) {
                 .height(900.dp)
         ) {
             // SceneView AR handles camera, hit-testing, plane detection
-            ARScene(
+            ARSceneView(
                 modifier = Modifier.fillMaxSize(),
                 onSessionCreated = { arSession ->
                     // ARCore session — planes, anchors, etc.
@@ -161,7 +161,7 @@ fun MixedXRExperience(xrSession: Session) {
         SpatialRow {
             // Panel 1: SceneView-powered 3D editor
             SpatialPanel(SubspaceModifier.width(800.dp).height(600.dp)) {
-                Scene(modifier = Modifier.fillMaxSize()) {
+                SceneView(modifier = Modifier.fillMaxSize()) {
                     // Full SceneView scene with nodes, lights, physics
                 }
             }
@@ -236,7 +236,7 @@ Using SceneView inside Android XR provides advantages over SceneCore alone:
 | Interaction | `InteractableComponent` | Per-node hit testing, gesture handling |
 | Geometry | glTF only | Procedural meshes, lines, text, shapes |
 | Physics | None | Collision detection, physics simulation |
-| Compose API | `SceneCoreEntity` factory | Declarative `Scene {}` with node composables |
+| Compose API | `SceneCoreEntity` factory | Declarative `SceneView {}` with node composables |
 
 ## Required dependencies
 
@@ -282,7 +282,7 @@ dependencyResolutionManagement {
 
 ## Roadmap
 
-- [ ] **Phase 1**: Validate `Scene {}` rendering inside `SpatialPanel` on XR emulator
+- [ ] **Phase 1**: Validate `SceneView {}` rendering inside `SpatialPanel` on XR emulator
 - [ ] **Phase 2**: Bridge SceneView camera to XR head tracking for passthrough AR
 - [ ] **Phase 3**: Expose `MovableComponent` / `ResizableComponent` on SceneView nodes
 - [ ] **Phase 4**: Hand tracking integration with SceneView's gesture system

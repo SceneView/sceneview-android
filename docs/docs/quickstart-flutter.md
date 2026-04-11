@@ -51,11 +51,11 @@ ARSceneView(
 ```
 Flutter (Dart)
   └── PlatformView
-        ├── Android → ComposeView → Scene { ModelNode(...) }
+        ├── Android → ComposeView → SceneView { ModelNode(...) }
         └── iOS → UIHostingController → SceneView { ModelNode(...) }
 ```
 
-- **Android**: Uses `ComposeView` hosting the Jetpack Compose `Scene { }` composable with Filament renderer
+- **Android**: Uses `ComposeView` hosting the Jetpack Compose `SceneView { }` composable with Filament renderer
 - **iOS**: Uses `UIHostingController` hosting the SwiftUI `SceneView { }` with RealityKit renderer
 
 ## Available Methods

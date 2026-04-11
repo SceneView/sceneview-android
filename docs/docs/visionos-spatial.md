@@ -51,7 +51,7 @@ Content is clipped to the volume boundary. visionOS provides `WindowGroup` with
 // Target API -- SceneViewSwift volumetric support
 @main
 struct MyApp: App {
-    var body: some Scene {
+    var body: some SceneView {
         WindowGroup {
             VolumetricSceneView(
                 size: Size3D(width: 0.5, height: 0.5, depth: 0.5)
@@ -82,7 +82,7 @@ of the real world remains visible:
 struct MyApp: App {
     @State private var immersionStyle: ImmersionStyle = .mixed
 
-    var body: some Scene {
+    var body: some SceneView {
         // Standard window for UI controls
         WindowGroup { ControlPanel() }
 

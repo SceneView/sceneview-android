@@ -51,7 +51,7 @@ fun ProductViewer(productGlb: String) {
 
     val environmentLoader = rememberEnvironmentLoader(engine)
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxWidth().height(400.dp),
         engine = engine,
         modelLoader = modelLoader,
@@ -87,7 +87,7 @@ fun ARFurniturePlacer(furnitureGlb: String) {
     val modelLoader = rememberModelLoader(engine)
     val furniture = rememberModelInstance(modelLoader, furnitureGlb)
 
-    ARScene(
+    ARSceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -131,7 +131,7 @@ fun AnatomyViewer() {
     val model = rememberModelInstance(modelLoader, "models/heart.glb")
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Scene(
+        SceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             modelLoader = modelLoader,
@@ -173,7 +173,7 @@ Display data points on a rotating globe. Each point is a sphere positioned by la
 ```kotlin
 @Composable
 fun DataGlobe(dataPoints: List<GeoPoint>) {
-    Scene(
+    SceneView(
         modifier = Modifier.size(300.dp),
         cameraManipulator = rememberCameraManipulator(
             orbitHomePosition = Position(0f, 0f, 3f)
@@ -206,7 +206,7 @@ Apply effects to the user's face using the front camera.
 fun FaceFilter() {
     var faces by remember { mutableStateOf<List<AugmentedFace>>(emptyList()) }
 
-    ARScene(
+    ARSceneView(
         modifier = Modifier.fillMaxSize(),
         sessionFeatures = setOf(Session.Feature.FRONT_CAMERA),
         sessionConfiguration = { _, config ->
@@ -239,7 +239,7 @@ fun FloorPlanViewer() {
     var timeOfDay by remember { mutableFloatStateOf(12f) }
 
     Column {
-        Scene(
+        SceneView(
             modifier = Modifier.weight(1f).fillMaxWidth(),
             cameraManipulator = rememberCameraManipulator(
                 orbitHomePosition = Position(0f, 5f, 8f)
@@ -281,7 +281,7 @@ Interactive scene where users throw objects that bounce and collide.
 fun PhysicsPlayground() {
     val balls = remember { mutableStateListOf<BallState>() }
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         onGestureListener = rememberOnGestureListener(
             onSingleTapConfirmed = { event, _ ->

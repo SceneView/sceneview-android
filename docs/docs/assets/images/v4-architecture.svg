@@ -22,7 +22,7 @@
 
   <!-- SceneView API -->
   <rect x="50" y="120" width="700" height="52" rx="18" fill="#7B61FF" filter="url(#v4-shadow)"/>
-  <text x="400" y="152" font-family="system-ui" font-size="14" fill="white" text-anchor="middle" font-weight="700">SceneView API — Scene { } · ARScene { } · XRScene { }</text>
+  <text x="400" y="152" font-family="system-ui" font-size="14" fill="white" text-anchor="middle" font-weight="700">SceneView API — SceneView { } · ARSceneView { } · XRScene { }</text>
 
   <!-- Arrow -->
   <line x1="400" y1="172" x2="400" y2="188" stroke="#C4B5FD" stroke-width="2"/>

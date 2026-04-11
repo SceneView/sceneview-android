@@ -57,15 +57,15 @@ With Android XR launching, SceneView v4 will add:
 
 | Platform | Composable | Renderer | Status |
 |---|---|---|---|
-| Android | `Scene { }` | Filament (OpenGL ES / Vulkan) | Stable (v3.6.2) |
+| Android | `SceneView { }` | Filament (OpenGL ES / Vulkan) | Stable (v3.6.2) |
 | iOS / macOS / visionOS | `SceneView { }` (SwiftUI) | RealityKit (Metal) | Alpha (v3.6.2) |
 | Android XR | `XRScene { }` | Filament (Vulkan) | v4.0 |
-| Desktop | `Scene { }` (Compose Desktop) | Filament (OpenGL / Vulkan) | Planned |
-| Web | `Scene { }` (Compose HTML) | Filament (WebGPU) | Research |
+| Desktop | `SceneView { }` (Compose Desktop) | Filament (OpenGL / Vulkan) | Planned |
+| Web | `SceneView { }` (Compose HTML) | Filament (WebGPU) | Research |
 
 ---
 
-## Multiple `Scene {}` on one screen
+## Multiple `SceneView {}` on one screen
 
 Today, you get one `Scene` per screen. In 4.0, multiple independent scenes share a single
 Filament `Engine`, each with its own camera, environment, and node tree.
@@ -75,7 +75,7 @@ Filament `Engine`, each with its own camera, environment, and node tree.
 fun DashboardScreen() {
     Column {
         // Product hero
-        Scene(
+        SceneView(
             modifier = Modifier.fillMaxWidth().height(300.dp),
             engine = engine,
             environment = studioEnvironment
@@ -84,7 +84,7 @@ fun DashboardScreen() {
         }
 
         // Inline data globe — different camera, different lighting
-        Scene(
+        SceneView(
             modifier = Modifier.size(200.dp),
             engine = engine,
             environment = darkEnvironment
@@ -108,7 +108,7 @@ Dashboards, e-commerce feeds, social timelines — 3D elements mixed freely with
 Render a secondary scene inside a 3D frame. A window into another world.
 
 ```kotlin
-Scene(modifier = Modifier.fillMaxSize()) {
+SceneView(modifier = Modifier.fillMaxSize()) {
     ModelNode(modelInstance = room, scaleToUnits = 2.0f)
 
     // A portal on the wall
@@ -166,7 +166,7 @@ Share scene logic between Android and Apple platforms from a single Kotlin codeb
 // commonMain — shared across platforms
 @Composable
 fun ProductViewer(modelPath: String) {
-    Scene(modifier = Modifier.fillMaxSize()) {
+    SceneView(modifier = Modifier.fillMaxSize()) {
         rememberModelInstance(modelLoader, modelPath)?.let { instance ->
             ModelNode(modelInstance = instance, scaleToUnits = 1.0f)
         }
@@ -182,7 +182,7 @@ The v4 API will be backwards-compatible with v3 for Android. New platforms will 
 
 ```kotlin
 // Same code works on Android, Desktop, and Web via KMP
-Scene(modifier = Modifier.fillMaxSize()) {
+SceneView(modifier = Modifier.fillMaxSize()) {
     rememberModelInstance(modelLoader, "models/helmet.glb")?.let { instance ->
         ModelNode(modelInstance = instance, scaleToUnits = 1.0f)
     }

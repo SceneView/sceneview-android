@@ -1,6 +1,6 @@
 # Android TV Quickstart
 
-SceneView works on Android TV using the same Filament renderer as mobile. The `Scene { }` composable renders identically — only the input handling differs (D-pad instead of touch).
+SceneView works on Android TV using the same Filament renderer as mobile. The `SceneView { }` composable renders identically — only the input handling differs (D-pad instead of touch).
 
 ## Setup
 
@@ -45,7 +45,7 @@ Box(modifier = Modifier
         }
     }
 ) {
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = rememberEngine(),
         // ... same API as mobile

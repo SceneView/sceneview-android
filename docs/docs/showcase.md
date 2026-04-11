@@ -65,7 +65,7 @@ and cross-framework bridges.
 ## The pitch in 10 seconds
 
 ```kotlin
-Scene(modifier = Modifier.fillMaxSize()) {
+SceneView(modifier = Modifier.fillMaxSize()) {
     ModelNode(modelInstance = helmet, scaleToUnits = 1.0f, autoAnimate = true)
     LightNode(type = LightManager.Type.SUN, apply = { intensity(100_000.0f) })
 }
@@ -109,7 +109,7 @@ IO-to-main-thread transition automatically. You never think about it.
 Orbit camera in one line:
 
 ```kotlin
-Scene(cameraManipulator = rememberCameraManipulator()) { ... }
+SceneView(cameraManipulator = rememberCameraManipulator()) { ... }
 ```
 
 ### Multi-platform trajectory
@@ -160,7 +160,7 @@ rendering engine used inside Google Search and Google Play Store.
 ## Full ARCore integration
 
 ```kotlin
-ARScene(
+ARSceneView(
     planeRenderer = true,
     onSessionUpdated = { _, frame ->
         anchor = frame.getUpdatedPlanes()
@@ -224,10 +224,10 @@ ARScene(
 
 ### E-commerce: product viewer in 10 lines
 
-Replace a static `Image()` with a `Scene {}` on your product detail page:
+Replace a static `Image()` with a `SceneView {}` on your product detail page:
 
 ```kotlin
-Scene(
+SceneView(
     modifier = Modifier.fillMaxWidth().height(300.dp),
     cameraManipulator = rememberCameraManipulator()
 ) {

@@ -90,7 +90,7 @@
     "@id": "https://sceneview.github.io/#software",
     "name": "SceneView SDK",
     "alternateName": ["SceneView", "SceneView Android", "SceneView iOS", "sceneview", "SceneViewSwift"],
-    "description": "The #1 open-source 3D & AR SDK for Android and iOS — Jetpack Compose on Android, SwiftUI on iOS, shared core via Kotlin Multiplatform. Drop-in Scene{}/ARScene{} on Android and SceneView/ARSceneView on iOS for model viewing, AR placement, physics, and immersive experiences.",
+    "description": "The #1 open-source 3D & AR SDK for Android and iOS — Jetpack Compose on Android, SwiftUI on iOS, shared core via Kotlin Multiplatform. Drop-in SceneView{}/ARSceneView{} on Android and SceneView/ARSceneView on iOS for model viewing, AR placement, physics, and immersive experiences.",
     "url": "https://sceneview.github.io",
     "applicationCategory": "DeveloperApplication",
     "applicationSubCategory": "3D Rendering & Augmented Reality SDK",
@@ -106,7 +106,7 @@
       "url": "https://sceneview.github.io/cheatsheet/"
     },
     "featureList": [
-      "Compose-native Scene{} and ARScene{} composables",
+      "Compose-native SceneView{} and ARSceneView{} composables",
       "26+ built-in node types (ModelNode, CubeNode, SphereNode, etc.)",
       "glTF/GLB 3D model loading with animations",
       "ARCore integration (plane detection, image tracking, face mesh, cloud anchors)",
@@ -241,7 +241,7 @@
         "name": "What is SceneView?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "SceneView is the #1 open-source 3D and AR SDK for Android and iOS. On Android, it provides Compose-native declarative APIs (Scene{} and ARScene{}) powered by Google Filament and ARCore. On iOS, it provides SwiftUI views (SceneView and ARSceneView) powered by RealityKit and ARKit. A shared Kotlin Multiplatform core handles math, collision, animation, and geometry across platforms. It is the official successor to the deprecated Google Sceneform."
+          "text": "SceneView is the #1 open-source 3D and AR SDK for Android and iOS. On Android, it provides Compose-native declarative APIs (SceneView{} and ARSceneView{}) powered by Google Filament and ARCore. On iOS, it provides SwiftUI views (SceneView and ARSceneView) powered by RealityKit and ARKit. A shared Kotlin Multiplatform core handles math, collision, animation, and geometry across platforms. It is the official successor to the deprecated Google Sceneform."
         }
       },
       {
@@ -249,7 +249,7 @@
         "name": "How do I add 3D content to my Android app?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Add the SceneView dependency (io.github.sceneview:sceneview:3.6.2), then use the Scene{} composable with ModelNode to load and display glTF/GLB 3D models. It takes just 5 lines of Kotlin code to display a 3D model in your Compose UI."
+          "text": "Add the SceneView dependency (io.github.sceneview:sceneview:3.6.2), then use the SceneView{} composable with ModelNode to load and display glTF/GLB 3D models. It takes just 5 lines of Kotlin code to display a 3D model in your Compose UI."
         }
       },
       {
@@ -273,7 +273,7 @@
         "name": "Does SceneView support AR (Augmented Reality)?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Yes, SceneView provides full ARCore integration through its arsceneview module. Use the ARScene{} composable with AnchorNode, AugmentedImageNode, AugmentedFaceNode, and more to build AR experiences with plane detection, image tracking, face mesh, cloud anchors, and geospatial features."
+          "text": "Yes, SceneView provides full ARCore integration through its arsceneview module. Use the ARSceneView{} composable with AnchorNode, AugmentedImageNode, AugmentedFaceNode, and more to build AR experiences with plane detection, image tracking, face mesh, cloud anchors, and geospatial features."
         }
       },
       {
@@ -394,7 +394,7 @@
         "@type": "HowToStep",
         "position": 3,
         "name": "Create the 3D Scene composable",
-        "text": "Use Scene{} composable with rememberEngine(), rememberModelLoader(), and rememberModelInstance() to load and display the model with ModelNode.",
+        "text": "Use SceneView{} composable with rememberEngine(), rememberModelLoader(), and rememberModelInstance() to load and display the model with ModelNode.",
         "url": "https://sceneview.github.io/quickstart/#step-3"
       },
       {

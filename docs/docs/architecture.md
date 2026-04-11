@@ -33,7 +33,7 @@ keeping responsibilities clean and dependencies one-directional.
 
 | Layer | Role |
 |---|---|
-| **App** | Your composables, state, and business logic. You call `Scene { }` or `ARScene { }` and declare nodes. |
+| **App** | Your composables, state, and business logic. You call `SceneView { }` or `ARSceneView { }` and declare nodes. |
 | **SceneView composables** | `Scene`, `ARScene`, `SceneScope`, `ARSceneScope`, and every node type (`ModelNode`, `LightNode`, `CubeNode`, etc.). These are `@Composable` functions that translate Compose state into scene-graph operations. |
 | **SceneNodeManager** | An internal class that bridges the Compose snapshot world and the Filament scene graph. It adds/removes Filament entities as nodes enter and leave the Compose tree. |
 | **Google Filament** | The C++ physically-based rendering engine, accessed through JNI. Owns the `Engine`, `Scene`, `View`, `Renderer`, and all GPU resources. |
@@ -223,7 +223,7 @@ underlying `Model` (Filament asset) is tracked by `ModelLoader`, which destroys 
 registered models when the loader itself is disposed.
 
 !!! info "No manual cleanup needed"
-    If you use the composable API (`Scene { }` + node composables), you never need to call
+    If you use the composable API (`SceneView { }` + node composables), you never need to call
     `destroy()` yourself. Resource cleanup follows the Compose tree automatically.
 
 ---
@@ -307,7 +307,7 @@ Artifact: `io.github.sceneview:arsceneview`
 
 !!! note "Scope inheritance"
     `ARSceneScope` extends `SceneScope`, so all base node composables (`ModelNode`,
-    `LightNode`, `CubeNode`, etc.) are available inside `ARScene { }` blocks. AR-specific
+    `LightNode`, `CubeNode`, etc.) are available inside `ARSceneView { }` blocks. AR-specific
     nodes are only available at the `ARSceneScope` level, not inside nested `NodeScope`
     child blocks.
 

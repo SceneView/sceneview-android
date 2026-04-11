@@ -199,7 +199,7 @@ class XRDemoActivity : ComponentActivity() {
                         modelLoader, "models/damaged_helmet.glb"
                     )
 
-                    Scene(
+                    SceneView(
                         modifier = Modifier.fillMaxSize(),
                         engine = engine,
                         modelLoader = modelLoader,
@@ -242,7 +242,7 @@ fun XRShowcase() {
                     modelLoader, "models/damaged_helmet.glb"
                 )
 
-                Scene(
+                SceneView(
                     modifier = Modifier.fillMaxSize(),
                     engine = engine,
                     modelLoader = modelLoader,
@@ -297,7 +297,7 @@ Android XR Emulator
 ├── XR Runtime (spatial tracking, passthrough)
 ├── Subspace (3D spatial container)
 │   ├── SpatialPanel (2D surface in 3D space)
-│   │   └── SceneView Scene {} (Filament renderer)
+│   │   └── SceneView SceneView {} (Filament renderer)
 │   │       ├── ModelNode (glTF/GLB models)
 │   │       ├── LightNode (PBR lighting)
 │   │       └── ... (all SceneView nodes work)
@@ -341,7 +341,7 @@ fun SceneViewContent() {
     val modelLoader = rememberModelLoader(engine)
     val modelInstance = rememberModelInstance(modelLoader, "models/helmet.glb")
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
