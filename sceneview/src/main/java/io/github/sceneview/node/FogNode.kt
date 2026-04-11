@@ -24,7 +24,7 @@ import io.github.sceneview.rememberView
  * var fogEnabled by remember { mutableStateOf(true) }
  * var fogDensity by remember { mutableFloatStateOf(0.05f) }
  *
- * Scene(view = view, ...) {
+ * SceneView(view = view, ...) {
  *     FogNode(
  *         view = view,
  *         enabled = fogEnabled,

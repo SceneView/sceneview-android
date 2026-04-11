@@ -14,7 +14,7 @@ import io.github.sceneview.math.Size
  *
  * Usage inside a [io.github.sceneview.SceneScope]:
  * ```kotlin
- * Scene(onFrame = { cameraPos = cameraNode.worldPosition }) {
+ * SceneView(onFrame = { cameraPos = cameraNode.worldPosition }) {
  *     BillboardNode(
  *         materialLoader = materialLoader,
  *         bitmap = myBitmap,

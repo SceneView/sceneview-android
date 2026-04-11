@@ -32,7 +32,7 @@ Required for anything touching Filament, Compose, or ARCore. Use `createComposeR
 @Test
 fun modelNode_isVisibleAfterInstanceLoads() {
     composeRule.setContent {
-        Scene {
+        SceneView {
             val instance = rememberModelInstance(modelLoader, "models/cube.glb")
             instance?.let { ModelNode(it) }
         }
