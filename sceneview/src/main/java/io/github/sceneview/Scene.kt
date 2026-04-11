@@ -287,13 +287,31 @@ fun SceneView(
     val isResumed = remember {
         AtomicBoolean(lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED))
     }
-    DisposableEffect(lifecycle) {
+    // Reference to the owner View (SurfaceView/TextureView) that the scene is attached to.
+    // Used by viewNodeWindowManager.resume() to locate the parent window for off-screen attachment.
+    val ownerViewRef = remember { AtomicReference<android.view.View?>(null) }
+    DisposableEffect(lifecycle, viewNodeWindowManager) {
         val observer = object : DefaultLifecycleObserver {
-            override fun onResume(owner: LifecycleOwner) { isResumed.set(true) }
-            override fun onPause(owner: LifecycleOwner) { isResumed.set(false) }
+            override fun onResume(owner: LifecycleOwner) {
+                isResumed.set(true)
+                // Attach the ViewNode off-screen window on resume. Without this, ViewNode instances
+                // render only a black rectangle because their backing Layout is never attached to
+                // android.view.WindowManager, meaning onLayout is never called and the
+                // SurfaceTexture stays at 0x0. See sceneview/sceneview#801.
+                ownerViewRef.get()?.let { ownerView ->
+                    viewNodeWindowManager?.resume(ownerView)
+                }
+            }
+            override fun onPause(owner: LifecycleOwner) {
+                isResumed.set(false)
+                viewNodeWindowManager?.pause()
+            }
         }
         lifecycle.addObserver(observer)
-        onDispose { lifecycle.removeObserver(observer) }
+        onDispose {
+            lifecycle.removeObserver(observer)
+            viewNodeWindowManager?.pause()
+        }
     }
 
     // ── Gesture detection ────────────────────────────────────────────────────────────────────────
@@ -389,6 +407,10 @@ fun SceneView(
             factory = { ctx ->
                 SurfaceView(ctx).also { sv ->
                     sceneRenderer.attachToSurfaceView(sv, isOpaque, ctx, display, touchDispatcher)
+                    // Record the owner view so the ViewNode off-screen WindowManager can attach to
+                    // its parent window once the lifecycle is RESUMED.
+                    ownerViewRef.set(sv)
+                    if (isResumed.get()) viewNodeWindowManager?.resume(sv)
                 }
             },
             update = {}
@@ -399,6 +421,8 @@ fun SceneView(
             factory = { ctx ->
                 TextureView(ctx).also { tv ->
                     sceneRenderer.attachToTextureView(tv, isOpaque, ctx, display, touchDispatcher)
+                    ownerViewRef.set(tv)
+                    if (isResumed.get()) viewNodeWindowManager?.resume(tv)
                 }
             },
             update = {}
