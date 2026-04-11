@@ -4,6 +4,40 @@
 
 ## Last Session Summary
 
+**Date:** 11 avril 2026 (session 32 — website real brand logos + screenshots)
+**Branch:** main (merged direct, worktree jovial-kirch)
+**Latest commit:** fbe32c15
+
+### Session 32 — replace all website placeholder logos with official brand assets
+- **fbe32c15** feat(website): replace all placeholder logos with official brand assets
+  - **`website-static/assets/brand/` (NEW — 13 official SVGs)**: kotlin, swift, javascript (devicon colored), android, apple, flutter, react, html5 (devicon colored), claude (Wikimedia exact symbol #d97757), cursor, windsurf, githubcopilot, jetbrains (simple-icons)
+  - **`website-static/assets/demos/` (NEW — 9 real screenshots)**: android-demo-1/2.png copied from samples/android-demo/play/listings/en-US/graphics/, ios-demo-1/2.jpg from samples/ios-demo/goldens/ (compressed via sips 960px JPEG 85), playground/ar-demo/web-demo/geometry.jpg from docs/screenshots/
+  - **`website-static/assets/ai-tools/` (UPDATED)**: claude/cursor/windsurf now use brand-colored rounded-square chips with white official glyph
+  - **index.html**: hero platforms (8 logos), MCP install cards (Claude button + Cursor/Copilot/Windsurf cards), code comparison cards (Kotlin/Swift/JS/Claude), platform-card-v2 x10, try-card x5 (real screenshots replacing fake device mockups)
+  - **docs.html**: 6 quick-start cards with real logos
+  - **platforms-showcase.html**: 10 platform-card headers + 10 comparison-table rows
+  - **styles.css**: new `.platform-card-v2__icon-img`, `.hero__platform-logo`, `.code-card__lang-logo`, `.mcp-install__btn-logo`, `.mcp-tool-card__logo`, `.docs-card__icon-img`, `.platform-card__icon-img`, `.comparison-table__platform-img`, `.try-card__img` + dark-mode invert filters for monochrome Apple/JetBrains/Copilot logos + hero always-dark Apple invert
+  - **Rebase conflict resolved**: kept main's "Not yet" badge text, used worktree's jetbrains.svg img for Desktop card
+- Source: [Wikimedia Claude symbol](https://commons.wikimedia.org/wiki/File:Claude_AI_symbol.svg), [devicon](https://devicon.dev/), [simple-icons](https://simpleicons.org/)
+- Verified: 34 img references in index.html all load with naturalWidth > 0; 6 in docs.html; 18 in platforms-showcase.html
+
+### Scheduled tasks (session 32 follow-ups, one-shot)
+All created as scheduled-tasks to run in separate cheap sessions:
+1. **03:57** `website-audit-remaining-placeholders` — sweep web.html, claude-3d.html, geometry-demo.html, 404.html, go/* for anything I missed
+2. **04:12** `website-quality-gate` — verify all pages serve clean (img loading, console, network) + sceneview.js syntax
+3. **04:27** `publish-check-artifacts` — Maven Central / npm / pub.dev / SPM / GitHub Release / Play Store / App Store version sync status
+4. **04:45** `ios-demo-models-verification` — verify Ferrari/Dragon/other models + ARTab code review + xcodebuild simulator
+5. **05:03** `android-playstore-bundle-check` — `./gradlew bundleRelease`, versionName alignment, Play Store listing files, go/no-go
+6. **05:18** `appstore-review-status` — App Store Connect iOS/macOS review state check
+
+### NEXT SESSION MUST
+- Read the 6 `.claude/*-2026-04-11.md` status files left by the scheduled tasks
+- Action whatever they flag as blocked (Maven Central, Play Store, App Store)
+
+---
+
+## PREVIOUS Session Summary
+
 **Date:** 11 avril 2026 (session 31 — website nav + theme + version sync)
 **Branch:** main (merged direct)
 **Latest commit:** 2c676d25
