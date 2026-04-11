@@ -49,7 +49,7 @@ function isEnabled(): boolean {
 // Falls back to "unknown" so payloads stay well-formed even if
 // something goes wrong.
 function getMcpVersion(): string {
-  return process.env.SCENEVIEW_MCP_VERSION ?? "3.6.2";
+  return process.env.SCENEVIEW_MCP_VERSION ?? "3.6.3";
 }
 
 /** Exposed for tests. */

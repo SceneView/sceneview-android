@@ -35,7 +35,7 @@ import {
 } from "./tools/index.js";
 
 const server = new Server(
-  { name: "sceneview-mcp", version: "3.6.2" },
+  { name: "sceneview-mcp", version: "3.6.3" },
   { capabilities: { resources: {}, tools: {} } }
 );
 
