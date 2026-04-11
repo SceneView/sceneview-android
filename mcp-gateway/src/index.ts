@@ -1,7 +1,9 @@
 import { Hono } from "hono";
 import type { Env } from "./env.js";
+import type { AuthVariables } from "./auth/middleware.js";
+import { mcpRoutes } from "./routes/mcp.js";
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
 // ── Root ────────────────────────────────────────────────────────────────────
 
@@ -16,6 +18,10 @@ app.get("/health", (c) =>
     version: "0.0.1",
   }),
 );
+
+// ── MCP endpoint ────────────────────────────────────────────────────────────
+
+app.route("/mcp", mcpRoutes());
 
 // ── Fallback 404 ────────────────────────────────────────────────────────────
 

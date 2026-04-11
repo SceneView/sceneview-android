@@ -17,7 +17,7 @@ export interface Env {
   RL_KV: KVNamespace;
 
   // ── Secrets (wrangler secret put <NAME>) ─────────────────────────────────
-  /** Stripe API secret key (sk_live_... or sk_test_...). */
+  /** Stripe API secret key. */
   STRIPE_SECRET_KEY?: string;
   /** Stripe webhook signing secret (whsec_...). */
   STRIPE_WEBHOOK_SECRET?: string;
