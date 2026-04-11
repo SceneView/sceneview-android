@@ -119,5 +119,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      # Self-test first: assert the validator still detects broken refs on
+      # a synthetic fixture. If this regresses, the real run below will
+      # report a false PASS and we'll miss actual bugs.
+      - name: Self-test validate-demo-assets.sh
+        run: bash .claude/scripts/test-validate-demo-assets.sh
+
       - name: Run validate-demo-assets.sh (full, with CDN checks)
         run: bash .claude/scripts/validate-demo-assets.sh
