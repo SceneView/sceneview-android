@@ -4,6 +4,110 @@
 
 ---
 
+## 🎯 SESSION `crazy-lichterman` — 2026-04-11 22:55 — Rerun.io integration + v4.0.0-rc.1
+
+**SceneView ↔ Rerun.io integration shipped end-to-end across all platforms and cut as a release candidate, co-existing with the Gateway #1 go-live that landed earlier the same day.**
+
+### What shipped to `main`
+
+```
+be8352cb  chore(mcp): pin publishConfig.tag=next to guard @latest from accidental 4.x publish
+c6eea3b9  Merge origin/main (hub-gateway rate-limit) into rc.1 branch
+8d1d4943  chore(version): walk back 4.0.0 -> 4.0.0-rc.1 for release candidate
+0a27a6ad  Merge SceneView <-> Rerun.io integration (5 phases) + v4.0.0 stable bump
+2e13f8cf  Merge origin/main into claude/crazy-lichterman (picks up 4.0.0-beta.1 + hub-gateway)
+8d2b1178  chore(version): bump 3.6.2 → 4.0.0 for Rerun integration release
+eeec6397  feat(SceneViewSwift): iOS RerunBridge + onFrame hook + demo (Phase 5)
+c5af87da  feat(samples): AR Debug (Rerun) demo + Python sidecar (Phase 4)
+182cefb1  feat(arsceneview): RerunBridge — stream AR sessions to Rerun over TCP (Phase 3)
+fb387591  feat(playground): add "AR Debug (Rerun)" example (Phase 2)
+fd120d8b  feat(mcp): new rerun-3d-mcp package (Phase 1)
+```
+
+### Phase-by-phase summary
+
+| # | What | Tests |
+|---|---|---|
+| 1 | **`rerun-3d-mcp@1.0.0` on npm** — 5 tools: `setup_rerun_project`, `generate_ar_logger`, `generate_python_sidecar`, `embed_web_viewer`, `explain_concept` | 73 vitest ✓ |
+| 2 | **Playground "AR Debug (Rerun)" example** — iframe embed of `app.rerun.io` with lazy load button + reset-on-exit | Preview-verified |
+| 3 | **`arsceneview.ar.rerun.RerunBridge` + `rememberRerunBridge`** — non-blocking TCP, `Channel.CONFLATED` drop-on-backpressure, rate-limited (10 Hz), `setEnabled()` kill switch | 16 JVM ✓ |
+| 4 | **`samples/android-demo` "AR Debug (Rerun)" tile** + `samples/android-demo/tools/rerun-bridge.py` (Python sidecar, rerun-sdk) | APK build ✓ |
+| 5 | **`SceneViewSwift.RerunBridge` + new `ARSceneView.onFrame` hook** + iOS `RerunDebugDemo` view + `samples/ios-demo` `.xcodeproj` pbxproj wiring | 12 Swift ✓ + `xcodebuild` ✓ |
+
+### Wire format parity
+
+The Kotlin and Swift bridges emit **byte-identical** JSON-lines output for the same logical input. Enforced by 24 golden-string tests (12 per platform) with character-identical expected strings. Any drift blows up on one or both sides at test time. A single Python sidecar handles both platforms.
+
+### Release candidate state
+
+```
+npm view sceneview-mcp dist-tags
+{ latest: '3.6.4', beta: '4.0.0-beta.1', next: '4.0.0-rc.1' }
+```
+
+- **`sceneview-mcp@4.0.0-rc.1`** published to `@next` (Rerun integration + lite proxy routing from 4.0.0-beta.1)
+- **`rerun-3d-mcp@1.0.0`** published to `@latest` (new package, no prior versions)
+- **`@latest = 3.6.4`** intentionally NOT bumped — respects the gateway go-live rule in `NOTICE-2026-04-11-mcp-gateway-live.md`
+- **Git tag `v4.0.0-rc.1`** + **GitHub pre-release** created — Maven Central / SPM are NOT published from this tag (release.yml only matches strict semver `v[0-9]+.[0-9]+.[0-9]+`)
+
+### Safeguard added after reading the NOTICE
+
+Added `publishConfig: { access: "public", tag: "next" }` to `mcp/package.json` (commit `be8352cb`) so future sessions can't accidentally promote the RC to `@latest` by running a bare `npm publish`. Explicit `--tag latest` still overrides — this only changes the default.
+
+### Gateway #1 cross-check smoke test (2026-04-11 22:57)
+
+Ran from this worktree after the rerun integration merge, to confirm the go-live pipeline still works post-merge:
+
+```
+/health                              200 ok (sceneview-mcp-gateway 0.0.1)
+/pricing                             200
+/mcp (no auth)                       401
+/billing/checkout plan=pro-monthly   303 → cs_live_a1oKzdHC3QIOB80wKIp4JSrAqy3zZQMrGDhxtZfwqKEY9aqH5vnqTQUgji
+```
+
+All four endpoints green. The `customer_creation=always` fix (`88aec77b`) still holds — no 502 on anonymous checkout. The Rerun integration merge introduced zero regressions on the gateway side (expected — my session touches nothing under `mcp-gateway/`).
+
+### What I did NOT touch (verified)
+
+- `mcp-gateway/` — zero commits
+- `mcp-gateway/src/billing/stripe-client.ts` — not edited
+- `mcp-gateway/wrangler.toml` — not edited, all 4 `price_1TL6...` ids preserved
+- Cloudflare secrets (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`) — not touched
+- D1 `8aaddcda-...` / KV `9a40d334...` schemas — not touched
+- `sceneview-mcp@latest` — still 3.6.4
+
+### Cumulative version state across the empire
+
+| Artifact | Current | Previous | Source |
+|---|---|---|---|
+| `gradle.properties` VERSION_NAME | `4.0.0-rc.1` | `3.6.2` | walked back from 4.0.0 |
+| `mcp/package.json` | `4.0.0-rc.1` | `3.6.4` → `4.0.0-beta.1` → `4.0.0` | pinned to `@next` |
+| `mcp/packages/rerun/package.json` | `1.0.0` | (new) | published `@latest` |
+| `sceneview-web/package.json` | `4.0.0-rc.1` | `3.6.2` | — |
+| `flutter/sceneview_flutter/pubspec.yaml` | `4.0.0-rc.1` | `3.6.2` | — |
+| `flutter/.../ios/sceneview_flutter.podspec` | `4.0.0-rc.1` | `3.6.2` | — |
+| `SceneViewSwift` SPM | tag `v4.0.0-rc.1` | `v3.6.2` | pre-release tag |
+| Android demo `versionName` | `4.0.0-rc.1` | `3.6.2` | stores auto-deploy on main push |
+| Maven Central `io.github.sceneview:sceneview` | `3.6.2` | — | **NOT bumped** (RC doesn't trigger release.yml) |
+| SPM `SceneViewSwift` latest consumer-visible | `3.6.2` | — | idem |
+
+### To promote to stable (when ready)
+
+```bash
+# 1. gradle.properties VERSION_NAME=4.0.0 + sync-versions.sh --fix + mcp/package.json + docs manual
+# 2. Remove publishConfig.tag=next OR explicit --tag latest in step 4
+# 3. Commit + push main
+# 4. cd mcp && npm publish --tag latest
+#    cd mcp && npm dist-tag add sceneview-mcp@4.0.0 latest
+# 5. Strict-semver git tag (triggers Maven Central + Dokka + docs)
+git tag -a v4.0.0 -m "v4.0.0 — Rerun.io integration + gateway lite proxy stable"
+git push origin v4.0.0
+# 6. GitHub release (non-prerelease this time)
+gh release create v4.0.0 --generate-notes
+```
+
+---
+
 ## 🟢 MCP GATEWAY #1 IS LIVE — 2026-04-11 21:51 (worktree `bold-rhodes`, guided walkthrough)
 
 **Read `.claude/NOTICE-2026-04-11-mcp-gateway-live.md` for the full story.** TL;DR below.
