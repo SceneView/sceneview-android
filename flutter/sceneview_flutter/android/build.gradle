@@ -10,6 +10,11 @@ buildscript {
     dependencies {
         classpath 'com.android.tools.build:gradle:8.2.0'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        // Required by Kotlin 2.0+ whenever `compose true` is enabled in an
+        // Android module — this replaces the composeOptions.kotlinCompilerExtensionVersion
+        // setting used in Kotlin 1.9 and earlier.
+        // https://d.android.com/r/studio-ui/compose-compiler
+        classpath "org.jetbrains.kotlin:compose-compiler-gradle-plugin:$kotlin_version"
     }
 }
 
@@ -22,6 +27,7 @@ allprojects {
 
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
 
 android {
     namespace 'io.github.sceneview.flutter'
@@ -44,9 +50,9 @@ android {
         compose true
     }
 
-    composeOptions {
-        kotlinCompilerExtensionVersion '1.5.14'
-    }
+    // composeOptions.kotlinCompilerExtensionVersion is intentionally absent:
+    // with Kotlin 2.0+ the Compose Compiler Gradle plugin (applied above)
+    // selects and pins a compatible compiler version automatically.
 
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
