@@ -92,7 +92,7 @@ else
 fi
 
 # 6. Website JS syntax
-echo -e "\n${YELLOW}[8/8] Validating website JS...${NC}"
+echo -e "\n${YELLOW}[8/9] Validating website JS...${NC}"
 NODE_CMD=$(which node 2>/dev/null || which /opt/homebrew/bin/node 2>/dev/null || which /usr/local/bin/node 2>/dev/null || echo "")
 if [ -n "$NODE_CMD" ]; then
     if "$NODE_CMD" -c website-static/js/sceneview.js 2>/dev/null; then
@@ -103,6 +103,20 @@ if [ -n "$NODE_CMD" ]; then
     fi
 else
     echo -e "${YELLOW}  ⚠ node not found, skipping JS validation${NC}"
+fi
+
+# 7. Demo app asset references
+# Scans every samples/* for broken bundled paths or dead CDN URLs so the
+# class of bugs fixed in session 34 (TV demo pointing at non-existent
+# models/*.glb, web-demo pointing at 404 CDN URLs) cannot come back.
+echo -e "\n${YELLOW}[9/9] Validating demo app asset references...${NC}"
+# --no-cdn to keep pre-push fast; CI runs the full check with CDN hits.
+if bash .claude/scripts/validate-demo-assets.sh --no-cdn > /tmp/validate-demo-assets.log 2>&1; then
+    echo -e "${GREEN}  ✓ All demo asset refs resolve${NC}"
+else
+    echo -e "${RED}  ✗ Demo apps reference assets that don't exist:${NC}"
+    tail -30 /tmp/validate-demo-assets.log | sed 's/^/      /'
+    ERRORS=$((ERRORS + 1))
 fi
 
 # Summary

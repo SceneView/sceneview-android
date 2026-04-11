@@ -104,3 +104,20 @@ jobs:
       - name: KMP unit tests (JS)
         continue-on-error: true
         run: ./gradlew :sceneview-core:jsTest --stacktrace
+
+  # ── Demo app asset integrity ────────────────────────────────────────────
+  # Catches broken model/HDR references in any samples/* demo app, both
+  # for bundled file paths and for CDN URLs. This is the automated
+  # backstop for the class of bugs that reached main during sessions 19
+  # and 34 (TV demo models that were never bundled, web-demo 404 URLs).
+  # The script exits 1 on the first broken reference.
+  validate-demo-assets:
+    name: Validate demo app asset references
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Run validate-demo-assets.sh (full, with CDN checks)
+        run: bash .claude/scripts/validate-demo-assets.sh

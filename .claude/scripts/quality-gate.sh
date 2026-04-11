@@ -129,6 +129,28 @@ TODOS=$(echo "$TODOS" | tr -d '[:space:]' | head -c 10)
 
 echo ""
 
+# ─── 4b. Demo App Asset Integrity ──────────────────────────────────────
+# Catches the class of bugs fixed in session 34 (TV demo bundled model
+# typos, web-demo dead 404 CDN URLs). Fast enough to run in every gate.
+echo -e "${CYAN}--- Demo App Assets ---${NC}"
+if [ -x ".claude/scripts/validate-demo-assets.sh" ]; then
+    # --no-cdn in --quick mode, full HTTP check otherwise
+    EXTRA_ARGS=""
+    [ "$QUICK_MODE" = "--quick" ] && EXTRA_ARGS="--no-cdn"
+    if bash .claude/scripts/validate-demo-assets.sh $EXTRA_ARGS > /tmp/validate-demo-assets.log 2>&1; then
+        # Summary line counts how many refs were verified
+        SUMMARY=$(grep -oE '[0-9]+ bundled, [0-9]+ CDN' /tmp/validate-demo-assets.log | tail -1)
+        check "Demo app asset refs resolve" "PASS" "$SUMMARY"
+    else
+        BAD=$(grep -cE '^  (MISS|DEAD)' /tmp/validate-demo-assets.log 2>/dev/null || echo "?")
+        check "Demo app asset refs resolve" "FAIL" "$BAD broken reference(s) — see /tmp/validate-demo-assets.log"
+    fi
+else
+    check "Demo app asset refs resolve" "WARN" "validate-demo-assets.sh missing"
+fi
+
+echo ""
+
 # ─── 5. Build & Test (skip in quick mode) ────────────────────────────
 if [ "$QUICK_MODE" != "--quick" ]; then
     echo -e "${CYAN}--- Build ---${NC}"
