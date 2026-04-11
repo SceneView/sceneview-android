@@ -4,6 +4,47 @@
 
 ---
 
+## 🚀 SESSION B PROGRESS — 2026-04-11 20:15 (worktree `multi-gateway-sprint`, branch `claude/multi-gateway-sprint`)
+
+**Rebased on `origin/main` @ `dac1c080` (includes Session A's LIVE package + gateway fixes). Pushed to `origin/claude/multi-gateway-sprint`. No PR opened yet — awaiting user decision.**
+
+**5 commits shipped** (pushed, new SHAs after rebase):
+
+1. `a04fc8b8` — `feat(hub-gateway): scaffold Gateway #2 for non-sceneview MCP portfolio (MVP)` — Hono worker + wrangler.toml (reuses Gateway #1 D1 `8aaddcda` + KV `9a40d334`), `POST /mcp` JSON-RPC (initialize/tools/list/tools/call), `/health` JSON, `/` + `/pricing` + `/docs` HTML routes (Portfolio Access **29€/mo** + Team **79€/mo**), 1 pilot library (architecture-mcp stub), vitest smoke tests, `packages/architecture-mcp-lite/` 2.0.0-beta.1 proxy scaffold (not published).
+2. `63ce68a8` — `feat(hub-gateway): wire 4 additional stub libraries (5 libs / 17 tools)` — realestate (4), french-admin (4), ecommerce-3d (3), finance (3). Collision detection at import time, per-library dispatch test.
+3. `d02eec31` — `feat(hub-gateway): complete portfolio coverage — 11 libs / 35 tools` — legal-docs (3), education (3), social-media (3), health-fitness (3), automotive-3d (3), healthcare-3d (3). Every ACTIVE non-SceneView MCP in the portfolio now has a realistic schema surface. Safety contracts documented per file (no legal/medical advice, no auto-publish, read-only finance, etc.).
+4. `0dbd9d56` — `feat(hub-gateway): port auth middleware from gateway #1 (21 tests)` — `src/auth/{api-keys,middleware}.ts` + `src/db/schema.ts` subset, Hono middleware with `hub-auth:` KV prefix (distinct from Gateway #1's `auth:`), Bearer + `?key=` fallback, 5 min TTL KV cache, **D1 try/catch returns 401 instead of 500 on transient errors**, `DispatchContext.tier` aligned with `users.tier` (free/pro/team). Auth **mandatory on `/mcp`**, `/health` + landing routes stay public. 21 tests: 5 health + 7 mcp (retrofitted with Authorization header) + 9 new auth (missing/unknown/revoked/orphan/wrong-prefix/valid/query-fallback/KV-cache/no-cache-on-error).
+5. `9f31a781` — `chore(launch): add hub-gateway preview entry` — `.claude/launch.json` gets a `hub-gateway` entry so future sessions can `preview_start("hub-gateway")` directly.
+
+**Live-verified in Miniflare (preview_start hub-gateway)**:
+- `/health` → 200, `{libs: 11, tools: 35}`
+- `/mcp` without Authorization → **401** JSON-RPC `-32001` `"Missing API key"`
+- `/mcp` with bogus `sv_live_` key → **401** `"Invalid or revoked API key"` (D1 lookup miss handled cleanly — local Miniflare sandbox is empty so the try/catch fallback fires, production will query the real D1 shared with Gateway #1)
+- `/pricing` rendered correctly: Free €0 + **Portfolio Access €29/mo** (featured) + **Team €79/mo**, dark mode, 3 price cards
+- `tsc --noEmit` clean, **21/21 vitest passing**
+
+**Strategic decisions (no questions left for the user)**:
+- **Pricing**: unified **Portfolio Access 29€/mo** + **Team 79€/mo** — distinct from Gateway #1's Pro 19/Team 49 grid but honored on both gateways.
+- **Infra**: **SHARED with Gateway #1** — same D1 (`8aaddcda-e36e-4287-9222-1df924426c9f`), same KV (`9a40d334be6149f7a4ba18451a60245f`). One API key, one subscription, both gateways unlocked. Gateway #1 owns the migrations; Gateway #2 is a read-only consumer of `users` + `api_keys`.
+- **Subdomain**: `hub-mcp.mcp-tools-lab.workers.dev` (wrangler.toml name `hub-mcp`).
+- **Multiplexing**: single `/mcp` endpoint with package-prefixed tool names (`architecture__...`, `french_admin__...`, etc.), mirroring Gateway #1's multiplex pattern. Collision detection at worker startup.
+- **Excluded**: `sceneview-mcp` stays on Gateway #1 (no duplication).
+
+**Out of scope / NOT done in this sprint**:
+- Rate limit middleware (still to port from `mcp-gateway/src/middleware/rate-limit.ts`)
+- Usage logging into D1 `usage_records`
+- Tier gating (deciding which tools are free vs pro-only on the hub — `canCallTool(tier, name)` helper)
+- Stripe checkout routes (`/billing/checkout`, `/stripe/webhook`) + live price ids
+- Real tool handlers (11 stubs return a "not yet wired" marker — upstream code from each MCP package still has to be vendored)
+- `wrangler deploy` + prod smoke test (not deployed yet — would serve 401 on every Pro tool call until Stripe wired)
+- Publish the 11 lite npm packages (`*-mcp@2.0.0-beta.1` proxy mode — only architecture-mcp-lite is even scaffolded)
+
+**Next session (C, if you want to continue the hub)**: port rate-limit + usage-logging, then wire at least 2 real tool handlers from upstream packages to validate the vendoring pattern end-to-end before deploying.
+
+**Zero overlap with Session A**: A touched `mcp/**`, B touched `hub-gateway/**`. Branches merge cleanly in any order.
+
+---
+
 ## 🚀 SESSION A PROGRESS — 2026-04-11 17:00+ (worktree `mcp-monetization`, branch `claude/mcp-monetization`)
 
 **Commits shipped** (pushed on `claude/mcp-monetization`):
