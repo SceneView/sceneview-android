@@ -5,15 +5,19 @@
  * files are intentionally copy-paste siblings so a future refactor can
  * extract them into a shared workspace package. Do not diverge.
  *
- * MVP scope: the registry contains exactly ONE pilot library
- * (`architecture-mcp`). The other 15+ portfolio MCPs will be wired in
- * follow-up sessions, one package at a time:
+ * MVP scope: the registry ships FIVE pilot libraries as stubs
+ * (schemas + dispatch stubs, real handlers land in follow-up
+ * sessions). Remaining portfolio MCPs are wired one at a time:
  *
+ *   [stubbed]
+ *   - architecture-mcp      (1 134 DL/mo, sceneview-tools)
  *   - realestate-mcp        (1 276 DL/mo, sceneview-tools)
  *   - french-admin-mcp      (1 268 DL/mo, thomasgorisse)
  *   - ecommerce-3d-mcp      (1 153 DL/mo, sceneview-tools)
- *   - legal-docs-mcp          (789 DL/mo, orphan — needs repo)
  *   - finance-mcp             (585 DL/mo, mcp-tools-lab)
+ *
+ *   [pending]
+ *   - legal-docs-mcp          (789 DL/mo, orphan — needs repo)
  *   - education-mcp           (566 DL/mo, mcp-tools-lab)
  *   - social-media-mcp        (341 DL/mo, thomasgorisse)
  *   - health-fitness-mcp      (335 DL/mo, thomasgorisse — needs repo)
@@ -32,6 +36,10 @@
  */
 
 import * as ArchitectureTools from "../libraries/architecture.js";
+import * as RealestateTools from "../libraries/realestate.js";
+import * as FrenchAdminTools from "../libraries/french-admin.js";
+import * as Ecommerce3dTools from "../libraries/ecommerce-3d.js";
+import * as FinanceTools from "../libraries/finance.js";
 
 import type {
   DispatchContext,
@@ -48,6 +56,30 @@ const LIBRARIES: ToolLibrary[] = [
     label: "architecture-mcp",
     definitions: ArchitectureTools.TOOL_DEFINITIONS,
     dispatch: (name, args, ctx) => ArchitectureTools.dispatchTool(name, args, ctx),
+  },
+  {
+    id: "realestate",
+    label: "realestate-mcp",
+    definitions: RealestateTools.TOOL_DEFINITIONS,
+    dispatch: (name, args, ctx) => RealestateTools.dispatchTool(name, args, ctx),
+  },
+  {
+    id: "french_admin",
+    label: "french-admin-mcp",
+    definitions: FrenchAdminTools.TOOL_DEFINITIONS,
+    dispatch: (name, args, ctx) => FrenchAdminTools.dispatchTool(name, args, ctx),
+  },
+  {
+    id: "ecommerce3d",
+    label: "ecommerce-3d-mcp",
+    definitions: Ecommerce3dTools.TOOL_DEFINITIONS,
+    dispatch: (name, args, ctx) => Ecommerce3dTools.dispatchTool(name, args, ctx),
+  },
+  {
+    id: "finance",
+    label: "finance-mcp",
+    definitions: FinanceTools.TOOL_DEFINITIONS,
+    dispatch: (name, args, ctx) => FinanceTools.dispatchTool(name, args, ctx),
   },
 ];
 

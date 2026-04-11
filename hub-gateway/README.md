@@ -15,8 +15,9 @@ Sibling of [`mcp-gateway/`](../mcp-gateway) (Gateway #1, which serves
 - [x] `/health` JSON endpoint
 - [x] `/`, `/pricing`, `/docs` HTML routes
 - [x] `POST /mcp` JSON-RPC endpoint (`initialize`, `tools/list`, `tools/call`)
-- [x] 1 pilot library: `architecture-mcp` (stub dispatcher)
-- [x] Vitest smoke tests for every route
+- [x] 5 pilot libraries: `architecture`, `realestate`, `french_admin`,
+      `ecommerce3d`, `finance` (stub dispatchers, 14 tools registered)
+- [x] Vitest smoke tests for every route and per-library dispatch
 - [ ] Auth middleware (to port from `mcp-gateway/src/auth/middleware.ts`)
 - [ ] Rate limit middleware
 - [ ] Stripe checkout routes + webhook (`/billing/checkout`, `/stripe/webhook`)

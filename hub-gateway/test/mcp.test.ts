@@ -44,7 +44,7 @@ describe("hub-gateway /mcp", () => {
     expect(body.result.capabilities).toBeDefined();
   });
 
-  it("handles tools/list", async () => {
+  it("handles tools/list across every stubbed library", async () => {
     const res = await app.request(
       rpc({ jsonrpc: "2.0", id: 2, method: "tools/list" }),
       {},
@@ -56,12 +56,19 @@ describe("hub-gateway /mcp", () => {
       result: { tools: Array<{ name: string }> };
     };
     expect(body.id).toBe(2);
-    expect(body.result.tools.length).toBeGreaterThan(0);
+    expect(body.result.tools.length).toBeGreaterThanOrEqual(14);
     const names = body.result.tools.map((t) => t.name);
+    // One tool from each stubbed library — canary that the registry
+    // wiring is complete.
     expect(names).toContain("architecture__list_building_types");
-    expect(names).toContain("architecture__search_models");
-    // Every hub tool must be package-prefixed.
-    for (const n of names) expect(n).toMatch(/^[a-z0-9-]+__[a-z0-9_]+$/);
+    expect(names).toContain("realestate__search_listings");
+    expect(names).toContain("french_admin__calculate_impots");
+    expect(names).toContain("ecommerce3d__search_products");
+    expect(names).toContain("finance__market_quote");
+    // Every hub tool must be package-prefixed. Single-underscore
+    // package ids (like `french_admin`) are allowed, the delimiter
+    // between package and tool is always `__`.
+    for (const n of names) expect(n).toMatch(/^[a-z0-9_]+__[a-z0-9_]+$/);
   });
 
   it("dispatches tools/call to the architecture stub library", async () => {
@@ -117,6 +124,33 @@ describe("hub-gateway /mcp", () => {
     };
     expect(body.result.isError).toBe(true);
     expect(body.result.content[0].text).toContain("Unknown tool");
+  });
+
+  it("dispatches each stubbed library through its own dispatcher", async () => {
+    const targets: Array<{ tool: string; marker: string }> = [
+      { tool: "realestate__search_listings", marker: "realestate-mcp pilot stub" },
+      { tool: "french_admin__calculate_impots", marker: "french-admin-mcp pilot stub" },
+      { tool: "ecommerce3d__search_products", marker: "ecommerce-3d-mcp pilot stub" },
+      { tool: "finance__market_quote", marker: "finance-mcp pilot stub" },
+    ];
+    for (const { tool, marker } of targets) {
+      const res = await app.request(
+        rpc({
+          jsonrpc: "2.0",
+          id: 10,
+          method: "tools/call",
+          params: { name: tool, arguments: {} },
+        }),
+        {},
+        FAKE_ENV,
+      );
+      expect(res.status, `status for ${tool}`).toBe(200);
+      const body = (await res.json()) as {
+        result: { content: Array<{ text: string }>; isError?: boolean };
+      };
+      expect(body.result.isError, `isError for ${tool}`).toBeFalsy();
+      expect(body.result.content[0].text).toContain(marker);
+    }
   });
 
   it("rejects non-JSON bodies with PARSE_ERROR", async () => {
