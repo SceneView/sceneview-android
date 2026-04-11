@@ -1,0 +1,12 @@
+{
+  "extends": "@react-native/typescript-config/tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@sceneview-sdk/react-native": [
+        "../../react-native/react-native-sceneview/src/index"
+      ]
+    }
+  },
+  "include": ["src/**/*", "index.js"]
+}

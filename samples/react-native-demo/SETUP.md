@@ -1,43 +1,40 @@
 # React Native Demo — Setup Status
 
-> **Status: code-only stub.** This sample currently ships only the bridge usage
-> example (`src/App.tsx`) and the JS package metadata. It is **not** a runnable
-> React Native project on its own — the native scaffolding has not been
-> generated yet.
+> **Status: JS-level scaffold complete.** The root entry, Metro/Babel config,
+> TypeScript config and app.json are all in place. `android/` and `ios/`
+> native projects still need to be generated — see below.
 
 ## What is here
 
 | File | Purpose |
 |---|---|
 | `package.json` | JS dependencies, version (in sync with `gradle.properties`) |
+| `index.js` | Root entry that registers `App` with `AppRegistry` |
+| `app.json` | RN app name (`SceneViewRNDemo`) and display name |
+| `babel.config.js` | Babel preset (`@react-native/babel-preset`) |
+| `metro.config.js` | Metro bundler config — watches the linked bridge module and blocklists its duplicate `react*` copies |
+| `tsconfig.json` | TypeScript config extending `@react-native/typescript-config`, with a path mapping to the local bridge source |
+| `.watchmanconfig` | Empty watchman config (required by RN) |
 | `src/App.tsx` | Full feature showcase using `@sceneview-sdk/react-native` |
 | `assets/environments/studio_small.hdr` | HDR environment for the demo scene |
 | `README.md` | High-level description of the demo |
 
 ## What is missing to build
 
-To turn this into a runnable app you need a standard React Native project
-skeleton, generated for example with:
+`android/` and `ios/` native projects still need to be generated. The easiest
+path is to scaffold a throwaway app with the community CLI and copy those two
+directories back:
 
 ```bash
-npx @react-native-community/cli init SceneViewReactNativeDemo \
+cd /tmp
+npx @react-native-community/cli init SceneViewRNDemo \
   --version 0.73.0 \
   --skip-install
+cp -R SceneViewRNDemo/android SceneViewRNDemo/ios \
+  <REPO>/samples/react-native-demo/
 ```
 
-then merge the following pieces back into this directory:
-
-- `index.js` (or `index.tsx`) — registers `App` with `AppRegistry`
-- `app.json` — RN app name + display name
-- `tsconfig.json` — TypeScript config (extends `@react-native/typescript-config`)
-- `babel.config.js` — Metro/Babel preset (`@react-native/babel-preset`)
-- `metro.config.js` — Metro bundler config
-- `android/` — Gradle project (`build.gradle`, `settings.gradle`, `app/`,
-  `gradle/wrapper/`)
-- `ios/` — Xcode project (`Podfile`, `*.xcodeproj`, `*.xcworkspace`,
-  `AppDelegate.{h,mm}`, `Info.plist`)
-
-After scaffolding, wire the bridge module via the existing dependency:
+Then wire the bridge module via the existing dependency:
 
 ```json
 "@sceneview-sdk/react-native": "file:../../react-native/react-native-sceneview"
