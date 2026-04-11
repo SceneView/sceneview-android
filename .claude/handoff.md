@@ -4,6 +4,29 @@
 
 ---
 
+## 🚀 SESSION A PROGRESS — 2026-04-11 17:00+ (worktree `mcp-monetization`, branch `claude/mcp-monetization`)
+
+**Commits shipped** (pushed on `claude/mcp-monetization`):
+1. `dd024f15` `feat(mcp): v4.0.0-beta.1 lite package` — proxy.ts + proxy.test.ts (17 tests), stderr banner, Pro tools routed via `dispatchProxyToolCall` to `sceneview-mcp.mcp-tools-lab.workers.dev/mcp`, package.json bumped 3.6.4 → 4.0.0-beta.1, README hosted-first section with 19€/49€ Pro/Team pricing. **Package LIVE on npm**: `npm view sceneview-mcp@beta version` → `4.0.0-beta.1`, `latest` stays on `3.6.4`, zero impact on 3 450 DL/mo existing consumers. (A parallel agent published the identical content ~seconds before my own `npm publish`; my 403 is a race artifact, the published content is mine bit-for-bit.)
+2. `74a9a47e` `fix(mcp-gateway): re-fetch Checkout Session when webhook payload has no subscription id` — root cause for the first TEST checkout silently leaving the user on free tier. Stripe sometimes delivers `checkout.session.completed` with `subscription: null` (async hydration), the handler was early-returning. Fix: re-fetch via `retrieveCheckoutSession` (same fallback pattern we had for email). Regression test added in `test/stripe-webhook.test.ts` — 19 tests in that file, **169 gateway tests passing, 2742 mcp tests passing**. Deployed via `npm run deploy` to version `073ab6f5-c9d8-47d2-b98b-fe65940dbbdd`.
+
+**End-to-end dispatch validated in TEST mode** with seeded key `sv_live_OGPM732I2OZ5QPHXOHQHQ5YMZXZPV4OI` (handoff-documented): `npx sceneview-mcp@beta` → initialize OK, `tools/call get_ios_setup {type:"3d"}` → real `SceneViewSwift iOS 3D Setup` markdown returned (not a stub). Stderr banner shows `HOSTED (Pro tools → gateway)`. `/mcp` 401 JSON-RPC `-32001` confirmed for fake/missing keys. Chain auth → rate limit → tier gate → dispatch all green.
+
+**Stale user cleanup**: `usr_bgklgaxqvpe4` (thomas.gorisse@gmail.com, tier=free, zero subs, zero keys — victim of the pre-fix bug) deleted from D1 remote so the next checkout with the same email provisions a clean user via the fixed `handleCheckoutCompleted`.
+
+**Still in TEST mode**. Stripe dashboard products, webhook endpoint, and `STRIPE_SECRET_KEY` secret all still point at `sk_test_…` / `price_1TL0…` test ids. The technical chain is proven — switching to LIVE is now a pure config operation (4 new LIVE price ids, 1 new LIVE webhook endpoint, 2 secret replacements, patch `wrangler.toml` lines 17-20, redeploy). **No code changes left for the monetization path.**
+
+### Remaining for first paying customer (pure ops)
+1. User creates 4 products in Stripe **LIVE** mode (Stripe isolates TEST and LIVE — no product sharing): Pro Monthly 19€, Pro Yearly 190€, Team Monthly 49€, Team Yearly 490€. Copy 4 `price_live_…`.
+2. User creates a new webhook endpoint in **LIVE** mode → `https://sceneview-mcp.mcp-tools-lab.workers.dev/stripe/webhook`, events: `checkout.session.completed`, `customer.subscription.created|updated|deleted`, `invoice.payment_failed`. Copy `whsec_live_…`.
+3. User grabs `sk_live_…` from Stripe LIVE API keys.
+4. Claude patches `mcp-gateway/wrangler.toml` lines 17-20 with the 4 live price ids.
+5. `cd mcp-gateway && wrangler secret put STRIPE_SECRET_KEY` (paste `sk_live_…`) + `wrangler secret put STRIPE_WEBHOOK_SECRET` (paste `whsec_live_…`).
+6. `npm run deploy`.
+7. Real 1€ temporary product test from Thomas's real card, immediately refunded in the Stripe dashboard — closes session A.
+
+---
+
 ## 🎯 SESSION PLAN (as of 2026-04-11 session 34c — cleanup + reorg)
 
 **3 parallel sessions ready**, each with a dedicated worktree + self-contained `SESSION_PROMPT.md`. Open ONE fresh session per worktree when you want to attack it. No session needs to read this whole handoff — each SESSION_PROMPT.md is autonomous.
