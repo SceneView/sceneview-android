@@ -46,11 +46,13 @@ import io.github.sceneview.sample.SceneviewTheme
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.DurationUnit
 
-private data class ModelEntry(val label: String, val assetPath: String, val scale: Float)
+internal data class ModelEntry(val label: String, val assetPath: String, val scale: Float)
 
 // Models bundled in src/main/assets/models — names must match exactly.
 // Kept in sync with samples/android-demo bundled catalog.
-private val models = listOf(
+// `internal` so TvModelListTest (testDebugUnitTest source set) can assert
+// every assetPath resolves to a bundled file in src/main/assets/.
+internal val models = listOf(
     ModelEntry("Damaged Helmet", "models/khronos_damaged_helmet.glb", 1.0f),
     ModelEntry("Toy Car", "models/khronos_toy_car.glb", 1.0f),
     ModelEntry("Sheen Chair", "models/khronos_sheen_chair.glb", 1.0f),

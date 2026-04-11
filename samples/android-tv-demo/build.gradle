@@ -34,6 +34,11 @@ android {
     androidResources {
         noCompress 'filamat', 'ktx'
     }
+    // Allow TvModelListTest to read src/main/assets/ from its test source set
+    // via a relative path (test working dir is this module's root).
+    testOptions {
+        unitTests.returnDefaultValues = true
+    }
 }
 
 dependencies {
@@ -48,4 +53,8 @@ dependencies {
     // TV Compose (Leanback)
     implementation libs.androidx.tv.foundation
     implementation libs.androidx.tv.material
+
+    // Unit tests — verify every bundled model referenced by TvModelViewerActivity
+    // actually exists in src/main/assets/. Prevents regressing the session-34 fix.
+    testImplementation "junit:junit:4.13.2"
 }
