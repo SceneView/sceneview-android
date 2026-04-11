@@ -27,6 +27,7 @@ import io.github.sceneview.node.TextNode
 import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
@@ -311,6 +312,11 @@ class VisualVerificationTest {
     }
 
     @Test
+    @Ignore(
+        "Same double-capturePixels() crash pattern as #803: capturing twice within " +
+                "a single runOnMain block brings down the Filament JNI layer on " +
+                "SwiftShader and kills the whole test process."
+    )
     fun renderAll_consistency() {
         // Render same scene twice — must be pixel-identical
         var bmp1: Bitmap? = null

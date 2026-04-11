@@ -137,6 +137,13 @@ class GeometryRenderTest {
     // ── Different material colors produce different renders ──────────────────
 
     @Test
+    @Ignore(
+        "Same double-capturePixels() crash as cubeNode_goldenComparison_selfConsistent: " +
+                "rendering a red cube then a blue cube back-to-back within a single " +
+                "runOnMain block brings down the Filament JNI layer on SwiftShader. " +
+                "Tracked in #803 alongside every other test that captures twice without " +
+                "tearing down/recreating the harness between captures."
+    )
     fun cubeNode_differentColors_produceDifferentRenders() {
         var bitmapRed: Bitmap? = null
         var bitmapBlue: Bitmap? = null
