@@ -460,4 +460,31 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       required: [],
     },
   },
+  {
+    name: "search_models",
+    description:
+      "Searches Sketchfab for free 3D models matching a natural-language query and returns a shortlist with names, authors, licenses, thumbnails, triangle counts, and viewer/embed URLs. Use this BEFORE generating SceneView code when the user asks for a specific asset (\"a red sports car\", \"a low-poly tree\", \"a sci-fi robot\") — pick the best result, then load it with `rememberModelInstance(modelLoader, \"models/your-file.glb\")` or embed its viewer URL. Requires a free `SKETCHFAB_API_KEY` environment variable (BYOK — nothing is charged by SceneView). If the key is missing, the tool returns instructions for getting one at sketchfab.com/register.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "Free-text search query, e.g. \"red sports car\", \"low-poly pine tree\", \"sci-fi robot\".",
+        },
+        category: {
+          type: "string",
+          description: "Optional Sketchfab category slug to narrow results (e.g. \"cars-vehicles\", \"animals-pets\", \"architecture\", \"furniture-home\", \"weapons-military\").",
+        },
+        downloadable: {
+          type: "boolean",
+          description: "Restrict to downloadable models so you can actually load the asset. Default: true. Set to false to include view-only models.",
+        },
+        maxResults: {
+          type: "number",
+          description: "Maximum number of results to return. Clamped to [1, 10]. Default: 6.",
+        },
+      },
+      required: ["query"],
+    },
+  },
 ];

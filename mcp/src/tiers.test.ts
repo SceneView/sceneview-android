@@ -26,6 +26,7 @@ const EXPECTED_FREE_TOOLS = [
   "get_material_guide",
   "get_collision_guide",
   "get_platform_roadmap",
+  "search_models",
 ];
 
 // ─── isProTool ──────────────────────────────────────────────────────────────
