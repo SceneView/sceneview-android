@@ -1,6 +1,6 @@
 {
   "name": "sceneview-mcp",
-  "version": "3.6.3",
+  "version": "3.6.4",
   "mcpName": "io.github.sceneview/mcp",
   "description": "MCP server for SceneView — cross-platform 3D & AR SDK for Android and iOS. Give Claude the full SceneView SDK so it writes correct, compilable code.",
   "keywords": [
@@ -37,21 +37,9 @@
     "sceneview-mcp": "dist/index.js"
   },
   "files": [
-    "dist/index.js",
-    "dist/issues.js",
-    "dist/guides.js",
-    "dist/migration.js",
-    "dist/node-reference.js",
-    "dist/samples.js",
-    "dist/preview.js",
-    "dist/artifact.js",
-    "dist/validator.js",
-    "dist/platform-setup.js",
-    "dist/migrate-code.js",
-    "dist/debug-issue.js",
-    "dist/generate-scene.js",
-    "dist/advanced-guides.js",
-    "dist/extra-guides.js",
+    "dist/**/*.js",
+    "!dist/**/*.test.js",
+    "!dist/**/__fixtures__/**",
     "llms.txt"
   ],
   "engines": {
