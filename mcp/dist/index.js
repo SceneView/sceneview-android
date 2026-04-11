@@ -22,7 +22,7 @@ import { recordUsage, getConfiguredApiKey } from "./billing.js";
 import { recordClientInit, recordToolCall } from "./telemetry.js";
 import { getToolTier } from "./tiers.js";
 import { API_DOCS, TOOL_DEFINITIONS, dispatchTool, } from "./tools/index.js";
-const server = new Server({ name: "sceneview-mcp", version: "3.6.4" }, { capabilities: { resources: {}, tools: {} } });
+const server = new Server({ name: "sceneview-mcp", version: "4.0.0" }, { capabilities: { resources: {}, tools: {} } });
 // ─── Telemetry (anonymous, opt-out via SCENEVIEW_TELEMETRY=0) ────────────────
 //
 // Fire once when the client finishes the handshake. See `telemetry.ts` and
