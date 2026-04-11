@@ -66,6 +66,7 @@ import {
   WEB_RENDERING_GUIDE,
 } from "../extra-guides.js";
 import { searchModels, formatSearchResults } from "../search-models.js";
+import { analyzeProject, formatAnalysisReport } from "../analyze-project.js";
 import { LLMS_TXT } from "../generated/llms-txt.js";
 
 import type { DispatchContext, ToolResult, ToolTextContent } from "./types.js";
@@ -833,6 +834,27 @@ export async function dispatchTool(
         content: withDisclaimer([{ type: "text", text: searchText }]),
         isError: searchResult.ok ? undefined : true,
       };
+    }
+
+    // ── analyze_project ───────────────────────────────────────────────────────
+    case "analyze_project": {
+      const rawPath = args?.path;
+      const analyzePath = typeof rawPath === "string" && rawPath.length > 0 ? rawPath : undefined;
+      try {
+        const analysis = await analyzeProject({ path: analyzePath });
+        const report = formatAnalysisReport(analysis);
+        return { content: withDisclaimer([{ type: "text", text: report }]) };
+      } catch (err) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `analyze_project failed: ${(err as Error).message}`,
+            },
+          ],
+          isError: true,
+        };
+      }
     }
 
     default:

@@ -4,7 +4,7 @@
 
 export type Tier = "free" | "pro";
 
-// ─── Free tools (16) ─────────────────────────────────────────────────────────
+// ─── Free tools (17) ─────────────────────────────────────────────────────────
 
 const FREE_TOOLS: readonly string[] = [
   "list_samples",
@@ -23,6 +23,7 @@ const FREE_TOOLS: readonly string[] = [
   "get_collision_guide",
   "get_platform_roadmap",
   "search_models",
+  "analyze_project",
 ] as const;
 
 // ─── Pro tools ────────────────────────────────────────────────────────────────
