@@ -1,19 +1,19 @@
 /**
- * Magic-link authentication for the dashboard.
+ * Magic-link authentication primitives.
  *
- * Flow:
- *   1. User submits their email on `/login`.
- *   2. Gateway generates a random token, stores its SHA-256 hash in the
- *      `magic_links` D1 table with a short expiry (15 min), and sends
- *      an email with a link of the form `/auth/verify?token=<raw>`.
- *   3. User clicks the link. `consumeMagicLinkToken` hashes the raw
- *      token, looks up the row, marks it consumed atomically, and
- *      returns the owning email.
- *   4. The /auth/verify handler upserts a `users` row, signs a session
- *      JWT, and sets it as an httpOnly cookie.
+ * NOT USED IN THE MVP.
  *
- * The raw token is never stored — only the hash. The email message
- * never contains sensitive data beyond the link itself.
+ * The SceneView MCP gateway currently hands out API keys directly
+ * from the Stripe checkout flow (see `billing/events/checkout-completed.ts`
+ * and `routes/checkout-success.ts`) so there is no dashboard sign-in.
+ * The `/login`, `/auth/verify`, and `/auth/logout` routes in
+ * `routes/auth.ts` return HTTP 503 — the helpers below are kept on
+ * disk so a future sprint can re-enable them without re-implementing
+ * the D1 schema and the hash-compare flow.
+ *
+ * TODO: wire this back in when the dashboard returns. Until then the
+ * `sendMagicLinkEmail` helper is a pure stub that never touches the
+ * network and never imports Resend.
  */
 
 import { hashApiKey } from "./api-keys.js";
@@ -108,42 +108,23 @@ export async function consumeMagicLinkToken(
 }
 
 /**
- * Sends a magic-link email via the Resend API.
+ * Magic-link email sender — NO-OP IN THE MVP.
  *
- * Returns normally on success. If the API responds with a non-2xx status
- * the function throws with the body as detail so the caller can surface
- * a generic failure on the /login page.
- *
- * If `apiKey` is empty (local dev, no Resend configured), the function
- * resolves without making a network call so developers can read the
- * link directly from the response of the /login POST in tests.
+ * The historical implementation hit the Resend API. The MVP provisions
+ * API keys via Stripe Checkout instead, so this helper no longer makes
+ * any network call. It is preserved with the original signature so the
+ * unit tests that exercise the primitives still compile, and so a
+ * future dashboard sprint can restore the real implementation without
+ * a wider refactor.
  */
-export async function sendMagicLinkEmail(args: {
+export async function sendMagicLinkEmail(_args: {
   apiKey: string | undefined;
   from: string;
   to: string;
   url: string;
 }): Promise<void> {
-  if (!args.apiKey) return;
-  const body = {
-    from: args.from,
-    to: [args.to],
-    subject: "Your SceneView MCP sign-in link",
-    html: renderMagicLinkHtml(args.url),
-    text: renderMagicLinkText(args.url),
-  };
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${args.apiKey}`,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
-  if (!response.ok) {
-    const detail = await response.text().catch(() => "");
-    throw new Error(`resend: HTTP ${response.status} ${detail}`);
-  }
+  // Intentionally empty. See file-level TODO.
+  return;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -186,44 +167,3 @@ function base32Encode(bytes: Uint8Array): string {
   return out;
 }
 
-/** Inline HTML used in the magic-link email body. */
-function renderMagicLinkHtml(url: string): string {
-  return (
-    `<!doctype html><html><body style="font-family:system-ui,sans-serif;` +
-    `max-width:560px;margin:2rem auto;color:#0f172a;">` +
-    `<h2 style="color:#1e40af;">Sign in to SceneView MCP</h2>` +
-    `<p>Click the button below to sign in. The link is valid for ` +
-    `${MAGIC_LINK_TTL_MINUTES} minutes and can only be used once.</p>` +
-    `<p><a href="${escapeHtml(url)}" style="display:inline-block;` +
-    `padding:12px 24px;background:#1e40af;color:#fff;` +
-    `text-decoration:none;border-radius:8px;font-weight:600;">` +
-    `Sign in to your dashboard</a></p>` +
-    `<p style="color:#64748b;font-size:0.875rem;">If the button does ` +
-    `not work, copy and paste this URL:<br>` +
-    `<a href="${escapeHtml(url)}">${escapeHtml(url)}</a></p>` +
-    `<p style="color:#64748b;font-size:0.75rem;margin-top:2rem;">` +
-    `If you did not request this email, you can safely ignore it.</p>` +
-    `</body></html>`
-  );
-}
-
-/** Plain-text fallback of the magic-link email body. */
-function renderMagicLinkText(url: string): string {
-  return (
-    `Sign in to SceneView MCP\n\n` +
-    `Click the link below to sign in. The link is valid for ` +
-    `${MAGIC_LINK_TTL_MINUTES} minutes and can only be used once.\n\n` +
-    `${url}\n\n` +
-    `If you did not request this email, you can safely ignore it.`
-  );
-}
-
-/** Minimal HTML escape for the URL embedded in the email body. */
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}

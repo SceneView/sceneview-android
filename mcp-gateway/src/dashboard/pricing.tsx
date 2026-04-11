@@ -3,6 +3,7 @@
 import type { FC } from "hono/jsx";
 import { Layout } from "./layout.js";
 import { renderToHtml } from "./render.js";
+import type { PlanId } from "../billing/tiers.js";
 
 /** Single tier card shown in the pricing grid. */
 interface TierCardProps {
@@ -11,7 +12,10 @@ interface TierCardProps {
   period: string;
   description: string;
   features: readonly string[];
-  cta: { href: string; label: string };
+  /** When set, the card shows a self-serve Subscribe button. */
+  plan?: { monthly: PlanId; yearly: PlanId };
+  /** When set, shows a fallback "contact us" CTA. */
+  contact?: { href: string; label: string };
   featured?: boolean;
 }
 
@@ -30,28 +34,56 @@ const TierCard: FC<TierCardProps> = (props) => (
         <li>{f}</li>
       ))}
     </ul>
-    <a
-      href={props.cta.href}
-      class={`btn ${props.featured ? "btn-primary" : "btn-secondary"}`}
-    >
-      {props.cta.label}
-    </a>
+    {props.plan ? (
+      <form
+        method="post"
+        action="/billing/checkout"
+        style="display:flex;flex-direction:column;gap:.5rem;"
+      >
+        <input type="hidden" name="plan" value={props.plan.monthly} />
+        <button
+          type="submit"
+          class={`btn ${props.featured ? "btn-primary" : "btn-secondary"}`}
+        >
+          Subscribe monthly
+        </button>
+      </form>
+    ) : props.contact ? (
+      <a
+        href={props.contact.href}
+        class={`btn ${props.featured ? "btn-primary" : "btn-secondary"}`}
+      >
+        {props.contact.label}
+      </a>
+    ) : null}
+    {props.plan ? (
+      <form
+        method="post"
+        action="/billing/checkout"
+        style="display:flex;flex-direction:column;gap:.5rem;margin-top:.25rem;"
+      >
+        <input type="hidden" name="plan" value={props.plan.yearly} />
+        <button type="submit" class="btn btn-secondary">
+          Subscribe yearly (save 2 months)
+        </button>
+      </form>
+    ) : null}
   </div>
 );
 
 /** `/pricing` page. */
-export const Pricing: FC<{ signedIn?: boolean }> = ({ signedIn }) => (
+export const Pricing: FC = () => (
   <Layout
     title="Pricing"
-    description="Simple, transparent pricing for SceneView MCP. Free to start. Upgrade to Pro at 19 EUR/month or Team at 49 EUR/month when you need specialized packages and higher quotas."
+    description="Simple, transparent pricing for SceneView MCP. Start with the free stdio package or upgrade to Pro at 19 EUR/month or Team at 49 EUR/month."
     active="pricing"
-    signedIn={signedIn}
   >
     <section style="text-align:center;">
       <h1>Pricing</h1>
       <p class="lead" style="max-width:640px;margin:1rem auto 0;">
-        Start free. Upgrade when you need specialized packages, higher
-        throughput, or organisation billing.
+        Click Subscribe below to pay with a card. Your API key is shown
+        on the confirmation page right after checkout — save it somewhere
+        safe because it will only be displayed once.
       </p>
     </section>
 
@@ -68,7 +100,10 @@ export const Pricing: FC<{ signedIn?: boolean }> = ({ signedIn }) => (
           "Community support",
           "Self-hosted stdio npm package",
         ]}
-        cta={{ href: "/docs", label: "Read the docs" }}
+        contact={{
+          href: "mailto:hello@sceneview.dev?subject=SceneView%20MCP%20free%20tier%20access",
+          label: "Free tier coming soon — contact us",
+        }}
       />
       <TierCard
         name="Pro"
@@ -83,7 +118,7 @@ export const Pricing: FC<{ signedIn?: boolean }> = ({ signedIn }) => (
           "Hosted HTTP endpoint, 50k calls / month",
           "Email support",
         ]}
-        cta={{ href: "/dashboard", label: "Upgrade" }}
+        plan={{ monthly: "pro-monthly", yearly: "pro-yearly" }}
         featured
       />
       <TierCard
@@ -99,26 +134,31 @@ export const Pricing: FC<{ signedIn?: boolean }> = ({ signedIn }) => (
           "Priority support",
           "Custom invoicing",
         ]}
-        cta={{ href: "/dashboard", label: "Upgrade" }}
+        plan={{ monthly: "team-monthly", yearly: "team-yearly" }}
       />
     </section>
 
     <section style="margin-top:3rem;">
       <h2>Annual plans</h2>
       <p>
-        Save roughly two months on every tier by switching to annual
-        billing from the Stripe customer portal: Pro at 190 EUR / year
-        and Team at 490 EUR / year.
+        Save roughly two months on every tier by picking the yearly
+        option above: Pro at 190 EUR / year and Team at 490 EUR / year.
       </p>
     </section>
 
     <section style="margin-top:2.5rem;">
       <h2>Frequently asked</h2>
+      <h3>How do I receive my API key?</h3>
+      <p>
+        After paying you are redirected to a success page that shows
+        your <code>sv_live_</code> key one time. Paste it into your
+        Claude Desktop or Cursor config — we do not send it by email.
+      </p>
       <h3>What happens when I hit my monthly quota?</h3>
       <p>
-        Calls beyond the quota return a JSON-RPC rate_limited error
-        without breaking the connection. Upgrade in the dashboard or
-        wait until the next billing cycle; no auto-overage charges.
+        Calls beyond the quota return a JSON-RPC <code>rate_limited</code>
+        error without breaking the connection. Upgrade or wait until the
+        next billing cycle; no auto-overage charges.
       </p>
       <h3>Can I self-host?</h3>
       <p>
@@ -135,13 +175,20 @@ export const Pricing: FC<{ signedIn?: boolean }> = ({ signedIn }) => (
       <h3>What about taxes?</h3>
       <p>
         EU VAT is handled automatically by Stripe Tax based on your
-        billing address. Invoices are available in the customer portal.
+        billing address. Invoices are available in your Stripe email
+        receipts.
+      </p>
+      <h3>I lost my key. What now?</h3>
+      <p>
+        Email <a href="mailto:hello@sceneview.dev">hello@sceneview.dev</a>
+        {" "}with the address you used at checkout and we will issue a
+        replacement key.
       </p>
     </section>
   </Layout>
 );
 
 /** Top-level renderer used by the route handler. */
-export function renderPricing(signedIn: boolean): Promise<string> {
-  return renderToHtml(<Pricing signedIn={signedIn} />);
+export function renderPricing(): Promise<string> {
+  return renderToHtml(<Pricing />);
 }

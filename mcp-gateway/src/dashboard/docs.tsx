@@ -5,19 +5,37 @@ import { Layout } from "./layout.js";
 import { renderToHtml } from "./render.js";
 
 /** `/docs` page with install instructions per MCP client. */
-export const Docs: FC<{ signedIn?: boolean }> = ({ signedIn }) => (
+export const Docs: FC = () => (
   <Layout
     title="Docs"
     description="Install SceneView MCP in Claude Desktop, Cursor, Zed, or any MCP-capable agent. Hosted HTTP endpoint plus legacy stdio fallback."
     active="docs"
-    signedIn={signedIn}
   >
     <h1>Docs</h1>
     <p>
       Point any MCP-capable agent at the hosted gateway. Free tools work
-      without authentication; Pro tools require an API key issued from
-      the <a href="/dashboard">dashboard</a>.
+      without authentication; Pro tools require an API key you receive
+      on the <a href="/pricing">pricing</a> checkout success page.
     </p>
+
+    <h2>Quickstart</h2>
+    <ol style="color:var(--sv-fg-muted);line-height:1.8;">
+      <li>
+        Subscribe to Pro or Team on the <a href="/pricing">pricing page</a>.
+      </li>
+      <li>
+        Copy the <code>sv_live_</code> key from the success page (it is
+        only shown once).
+      </li>
+      <li>
+        Paste it into your <code>claude_desktop_config.json</code> (or
+        Cursor / Zed equivalent) under the <code>sceneview</code> server.
+      </li>
+      <li>
+        Restart your MCP client and prompt away — the gateway is live at
+        <code>https://sceneview-mcp.workers.dev/mcp</code>.
+      </li>
+    </ol>
 
     <h2>Claude Desktop</h2>
     <p>
@@ -113,6 +131,6 @@ export const Docs: FC<{ signedIn?: boolean }> = ({ signedIn }) => (
 );
 
 /** Top-level renderer used by the route handler. */
-export function renderDocs(signedIn: boolean): Promise<string> {
-  return renderToHtml(<Docs signedIn={signedIn} />);
+export function renderDocs(): Promise<string> {
+  return renderToHtml(<Docs />);
 }

@@ -1,7 +1,6 @@
 import { Hono } from "hono";
 import type { Env } from "./env.js";
 import type { AuthVariables } from "./auth/middleware.js";
-import type { SessionVariables } from "./auth/session-middleware.js";
 import { mcpRoutes } from "./routes/mcp.js";
 import { authRoutes } from "./routes/auth.js";
 import { dashboardRoutes } from "./routes/dashboard.js";
@@ -9,9 +8,7 @@ import { billingRoutes } from "./routes/billing.js";
 import { checkoutSuccessRoutes } from "./routes/checkout-success.js";
 import { webhookRoutes } from "./routes/webhooks.js";
 
-type AppVariables = AuthVariables & SessionVariables;
-
-const app = new Hono<{ Bindings: Env; Variables: AppVariables }>();
+const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
 // ── Health check ────────────────────────────────────────────────────────────
 

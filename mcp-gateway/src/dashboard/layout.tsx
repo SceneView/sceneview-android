@@ -26,9 +26,7 @@ export interface LayoutProps {
   /** Meta description used for SEO and OG tags. */
   description?: string;
   /** Route the user is currently on — highlights the nav link. */
-  active?: "home" | "pricing" | "docs" | "dashboard" | "billing" | "login";
-  /** Whether the user is signed in — swaps Sign in for Dashboard link. */
-  signedIn?: boolean;
+  active?: "home" | "pricing" | "docs";
 }
 
 export const Layout: FC<PropsWithChildren<LayoutProps>> = (props) => {
@@ -88,18 +86,6 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = (props) => {
             <NavLink href="/docs" active={props.active === "docs"}>
               Docs
             </NavLink>
-            {props.signedIn ? (
-              <NavLink
-                href="/dashboard"
-                active={props.active === "dashboard"}
-              >
-                Dashboard
-              </NavLink>
-            ) : (
-              <NavLink href="/login" active={props.active === "login"}>
-                Sign in
-              </NavLink>
-            )}
           </nav>
         </header>
         <main class="site-main">{props.children}</main>

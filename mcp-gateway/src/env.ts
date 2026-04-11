@@ -10,11 +10,15 @@ export interface Env {
   ENVIRONMENT: string;
   /**
    * Absolute public URL of the gateway, without trailing slash.
-   * Used to build magic-link redirect URLs and Stripe success/cancel URLs.
-   * Example: `https://sceneview-mcp.workers.dev`.
+   * Used to build Stripe success/cancel URLs (and, historically,
+   * magic-link redirects — the dashboard auth flow is not wired in
+   * the MVP). Example: `https://sceneview-mcp.workers.dev`.
    */
   DASHBOARD_BASE_URL?: string;
-  /** "from" email shown in magic-link emails. Defaults to SceneView no-reply. */
+  /**
+   * "from" email shown in magic-link emails. NOT USED IN THE MVP —
+   * kept for a future dashboard auth sprint.
+   */
   MAGIC_LINK_FROM_EMAIL?: string;
 
   // ── D1 ────────────────────────────────────────────────────────────────────
@@ -29,9 +33,15 @@ export interface Env {
   STRIPE_SECRET_KEY?: string;
   /** Stripe webhook signing secret (whsec_...). */
   STRIPE_WEBHOOK_SECRET?: string;
-  /** Resend API key for magic-link emails. */
+  /**
+   * Resend API key for magic-link emails. NOT USED IN THE MVP —
+   * kept for a future dashboard auth sprint.
+   */
   RESEND_API_KEY?: string;
-  /** HMAC secret for dashboard session JWTs. */
+  /**
+   * HMAC secret for dashboard session JWTs. NOT USED IN THE MVP —
+   * kept for a future dashboard auth sprint.
+   */
   JWT_SECRET?: string;
 
   // ── Stripe price identifiers (vars, not secrets) ─────────────────────────

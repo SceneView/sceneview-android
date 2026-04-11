@@ -5,12 +5,11 @@ import { Layout } from "./layout.js";
 import { renderToHtml } from "./render.js";
 
 /** Public landing page at `/`. */
-export const Landing: FC<{ signedIn?: boolean }> = ({ signedIn }) => (
+export const Landing: FC = () => (
   <Layout
     title="Expert 3D and AR knowledge for every AI coding agent"
     description="SceneView MCP — expert 3D and AR knowledge for Claude, Cursor, and every AI coding agent. Hosted HTTP endpoint, free tier, upgrade for Pro packages."
     active="home"
-    signedIn={signedIn}
   >
     <section class="hero">
       <h1>Expert 3D and AR knowledge for Claude, Cursor, and every AI agent</h1>
@@ -21,11 +20,11 @@ export const Landing: FC<{ signedIn?: boolean }> = ({ signedIn }) => (
         compilable code.
       </p>
       <div class="hero-cta">
-        <a href="/docs" class="btn btn-primary">
-          Get started for free
+        <a href="/pricing" class="btn btn-primary">
+          Get your API key
         </a>
-        <a href="/pricing" class="btn btn-secondary">
-          View pricing
+        <a href="/docs" class="btn btn-secondary">
+          Read the docs
         </a>
       </div>
     </section>
@@ -66,8 +65,26 @@ export const Landing: FC<{ signedIn?: boolean }> = ({ signedIn }) => (
         <li>Accurate composables for every node type, auto-validated</li>
         <li>Android + iOS + Web + Flutter + React Native in one server</li>
         <li>Hosted behind a fast Cloudflare Worker, no local setup</li>
-        <li>Usage dashboard, per-key billing, no-nonsense pricing</li>
+        <li>Get your API key in one click from the pricing page</li>
       </ul>
+    </section>
+
+    <section>
+      <h2>How it works</h2>
+      <ol style="color:var(--sv-fg-muted);line-height:1.8;">
+        <li>
+          Pick a plan on the <a href="/pricing">pricing page</a> and pay
+          with a card — Stripe handles checkout and email receipts.
+        </li>
+        <li>
+          Copy the <code>sv_live_</code> API key from the success page
+          (shown once, so save it in your password manager).
+        </li>
+        <li>
+          Paste it into your Claude Desktop, Cursor, or Zed config and
+          start prompting — the hosted gateway is already running.
+        </li>
+      </ol>
     </section>
 
     <section>
@@ -95,6 +112,6 @@ export const Landing: FC<{ signedIn?: boolean }> = ({ signedIn }) => (
 );
 
 /** Top-level renderer used by the route handler. */
-export function renderLanding(signedIn: boolean): Promise<string> {
-  return renderToHtml(<Landing signedIn={signedIn} />);
+export function renderLanding(): Promise<string> {
+  return renderToHtml(<Landing />);
 }
