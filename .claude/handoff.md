@@ -4,9 +4,40 @@
 
 ## Last Session Summary
 
-**Date:** 11 avril 2026 (session 30 — assets hero pack)
+**Date:** 11 avril 2026 (session 31 — website nav + theme + version sync)
 **Branch:** main (merged direct)
-**Latest commit:** f198fe45
+**Latest commit:** 2c676d25
+
+### Session 31 — website top bar, theme, version sync (worktree strange-joliot)
+- **7a9874da** fix(website): unify top bar and hero helmet on all pages
+  - 9 pages: docs, playground, showcase, index, privacy, 404, claude-3d, platforms-showcase, web
+  - `<div class="nav__brand">` → `<a href="/" class="nav__brand">` (clickable → home)
+  - Inline SVG logo (cube dégradé bleu) at the same size as index/showcase
+  - Removed redundant `<a href="/" class="nav__link">Home</a>` line
+  - Replaced Material symbol `code` GitHub icon with inline SVG GitHub path
+  - Moved `.nav__brand` flex styles from inline index.html to styles.css
+  - Theme init script inlined in `<head>` of all 9 pages (reads localStorage
+    then `prefers-color-scheme`), removed hardcoded `data-theme="dark"` on
+    `<html>` — fixes FOIT + browser-theme detection
+  - Hero helmet visible on mobile ≤768px (removed `display:none`, flat rotation,
+    aspect-ratio 16/9, max-width 480px)
+- **6b98d137** fix(website): sync published version to 3.6.2 everywhere
+  - `sceneview-web@3.6.0` → `3.6.2` (install snippets index.html, web.html)
+  - `sceneview.js?v=3.6.0` → `3.6.2` cache-buster (claude-3d, platforms-showcase,
+    playground, web)
+  - `softwareVersion` JSON-LD `3.6.0` → `3.6.2` (web.html)
+  - `// Version: 3.6.0` SPM comment → `3.6.2` (index.html)
+  - `sceneview.js` header `@version 3.6.0` → `3.6.2`, `Filament.js v1.70.1` → `1.70.2`
+  - 3 HTML comments `Filament.js v1.70.1` → `1.70.2` (claude-3d, index, web)
+- **2c676d25** chore(seo): bump sitemap lastmod 2026-03-31 → 2026-04-11 on all 20 URLs
+
+### Verified
+- Android libs compile: `:sceneview:compileReleaseKotlin` + `:arsceneview:compileReleaseKotlin`
+- Unit tests pass: `:sceneview:test` + `:arsceneview:testDebugUnitTest`
+- Quality gate: all website asset rules pass, version sync PASS
+- sceneview.github.io/docs.html raw: has my nav + theme changes
+- sceneview.github.io/web.html raw: shows 3.6.2 / 1.70.2 everywhere
+- Domain cache (CDN max-age 10min) will refresh automatically
 
 ### Session 30 — 8 hero realistic CC-BY assets
 - Added 8 new realistic hero models from Sketchfab (CC-BY 4.0):
