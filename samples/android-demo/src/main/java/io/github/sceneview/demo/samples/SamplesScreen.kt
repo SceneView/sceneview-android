@@ -147,6 +147,12 @@ private const val MODEL_SNEAKER = "models/nike_air_jordan.glb"
 private const val MODEL_SHEEN_CHAIR = "models/khronos_sheen_chair.glb"
 private const val MODEL_ROBOT = "models/robo_bun.glb"
 
+// Fallback HDR used when a demo's preferred HDR fails to load. Bundled in assets,
+// so this should never fail in practice — checkNotNull surfaces a clear error if it does.
+private const val FALLBACK_HDR = "environments/rooftop_night_2k.hdr"
+private const val FALLBACK_HDR_ERROR =
+    "Bundled fallback HDR environments/rooftop_night_2k.hdr is missing or unreadable"
+
 /**
  * Represents a feature demo in the Samples grid.
  */
@@ -652,7 +658,7 @@ private fun ModelViewerDemo() {
     }
     val environment = rememberEnvironment(environmentLoader) {
         environmentLoader.createHDREnvironment("environments/studio_warm_2k.hdr")
-            ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
+            ?: checkNotNull(environmentLoader.createHDREnvironment(FALLBACK_HDR)) { FALLBACK_HDR_ERROR }
     }
     val modelInstance = rememberModelInstance(modelLoader, MODEL_TOY_CAR)
 
@@ -698,7 +704,7 @@ private fun GeometryDemo() {
     }
     val environment = rememberEnvironment(environmentLoader) {
         environmentLoader.createHDREnvironment("environments/studio_2k.hdr")
-            ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
+            ?: checkNotNull(environmentLoader.createHDREnvironment(FALLBACK_HDR)) { FALLBACK_HDR_ERROR }
     }
 
     SceneView(
@@ -769,7 +775,7 @@ private fun AnimationDemo() {
     }
     val environment = rememberEnvironment(environmentLoader) {
         environmentLoader.createHDREnvironment("environments/sunset_2k.hdr")
-            ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
+            ?: checkNotNull(environmentLoader.createHDREnvironment(FALLBACK_HDR)) { FALLBACK_HDR_ERROR }
     }
     val modelInstance = rememberModelInstance(modelLoader, MODEL_ANIMATED)
 
@@ -811,7 +817,7 @@ private fun AnimationControlDemo() {
     }
     val environment = rememberEnvironment(environmentLoader) {
         environmentLoader.createHDREnvironment("environments/studio_warm_2k.hdr")
-            ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
+            ?: checkNotNull(environmentLoader.createHDREnvironment(FALLBACK_HDR)) { FALLBACK_HDR_ERROR }
     }
 
     // Fox has multiple animations typically
@@ -958,7 +964,7 @@ private fun DynamicSkyDemo() {
     }
     val environment = rememberEnvironment(environmentLoader) {
         environmentLoader.createHDREnvironment("environments/outdoor_cloudy_2k.hdr")
-            ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
+            ?: checkNotNull(environmentLoader.createHDREnvironment(FALLBACK_HDR)) { FALLBACK_HDR_ERROR }
     }
     val modelInstance = rememberModelInstance(modelLoader, MODEL_HELMET)
 
@@ -1033,7 +1039,7 @@ private fun LightingDemo() {
         lookAt(Float3(0f, 0.3f, 0f))
     }
     val environment = rememberEnvironment(environmentLoader) {
-        environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
+        checkNotNull(environmentLoader.createHDREnvironment(FALLBACK_HDR)) { FALLBACK_HDR_ERROR }
     }
     val modelInstance = rememberModelInstance(modelLoader, MODEL_CORSET)
 
@@ -1136,7 +1142,7 @@ private fun DynamicLightingDemo() {
         lookAt(Float3(0f, 0.3f, 0f))
     }
     val environment = rememberEnvironment(environmentLoader) {
-        environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
+        checkNotNull(environmentLoader.createHDREnvironment(FALLBACK_HDR)) { FALLBACK_HDR_ERROR }
     }
     val modelInstance = rememberModelInstance(modelLoader, MODEL_HELMET)
 
@@ -1288,7 +1294,7 @@ private fun CameraControlsDemo() {
     }
     val environment = rememberEnvironment(environmentLoader) {
         environmentLoader.createHDREnvironment("environments/studio_warm_2k.hdr")
-            ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
+            ?: checkNotNull(environmentLoader.createHDREnvironment(FALLBACK_HDR)) { FALLBACK_HDR_ERROR }
     }
     val cameraManipulator = rememberCameraManipulator(
         orbitHomePosition = Position(z = 4.0f, y = 1.0f),
@@ -1365,7 +1371,7 @@ private fun MultiModelDemo() {
     }
     val environment = rememberEnvironment(environmentLoader) {
         environmentLoader.createHDREnvironment("environments/comfy_cafe_2k.hdr")
-            ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
+            ?: checkNotNull(environmentLoader.createHDREnvironment(FALLBACK_HDR)) { FALLBACK_HDR_ERROR }
     }
 
     // Load multiple models simultaneously
@@ -1483,7 +1489,7 @@ private fun FogDemo() {
     }
     val environment = rememberEnvironment(environmentLoader) {
         environmentLoader.createHDREnvironment("environments/outdoor_cloudy_2k.hdr")
-            ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
+            ?: checkNotNull(environmentLoader.createHDREnvironment(FALLBACK_HDR)) { FALLBACK_HDR_ERROR }
     }
     val modelInstance = rememberModelInstance(modelLoader, MODEL_POTION)
 
@@ -1588,7 +1594,7 @@ private fun EnvironmentGalleryDemo() {
     val environment = key(selectedEnv.second) {
         rememberEnvironment(environmentLoader) {
             environmentLoader.createHDREnvironment(selectedEnv.second)
-                ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
+                ?: checkNotNull(environmentLoader.createHDREnvironment(FALLBACK_HDR)) { FALLBACK_HDR_ERROR }
         }
     }
 
@@ -1683,7 +1689,7 @@ private fun TextLabelsDemo() {
     }
     val environment = rememberEnvironment(environmentLoader) {
         environmentLoader.createHDREnvironment("environments/studio_2k.hdr")
-            ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
+            ?: checkNotNull(environmentLoader.createHDREnvironment(FALLBACK_HDR)) { FALLBACK_HDR_ERROR }
     }
 
     SceneView(
@@ -1754,7 +1760,7 @@ private fun LinePathsDemo() {
     }
     val environment = rememberEnvironment(environmentLoader) {
         environmentLoader.createHDREnvironment("environments/studio_2k.hdr")
-            ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
+            ?: checkNotNull(environmentLoader.createHDREnvironment(FALLBACK_HDR)) { FALLBACK_HDR_ERROR }
     }
 
     SceneView(
@@ -1827,7 +1833,7 @@ private fun GestureEditingDemo() {
     }
     val environment = rememberEnvironment(environmentLoader) {
         environmentLoader.createHDREnvironment("environments/studio_warm_2k.hdr")
-            ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
+            ?: checkNotNull(environmentLoader.createHDREnvironment(FALLBACK_HDR)) { FALLBACK_HDR_ERROR }
     }
     val modelInstance = rememberModelInstance(modelLoader, MODEL_SNEAKER)
 
@@ -1925,7 +1931,7 @@ private fun PhysicsDemo() {
     }
     val environment = rememberEnvironment(environmentLoader) {
         environmentLoader.createHDREnvironment("environments/studio_2k.hdr")
-            ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
+            ?: checkNotNull(environmentLoader.createHDREnvironment(FALLBACK_HDR)) { FALLBACK_HDR_ERROR }
     }
 
     // Restart counter — incrementing this triggers recomposition to reset balls
@@ -2023,7 +2029,7 @@ private fun PostProcessingDemo() {
     }
     val environment = rememberEnvironment(environmentLoader) {
         environmentLoader.createHDREnvironment("environments/studio_warm_2k.hdr")
-            ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
+            ?: checkNotNull(environmentLoader.createHDREnvironment(FALLBACK_HDR)) { FALLBACK_HDR_ERROR }
     }
     val modelInstance = rememberModelInstance(modelLoader, MODEL_SHEEN_CHAIR)
 
@@ -2301,7 +2307,7 @@ private fun ReflectionProbesDemo() {
     val environment = key(selectedEnv.second) {
         rememberEnvironment(environmentLoader) {
             environmentLoader.createHDREnvironment(selectedEnv.second)
-                ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
+                ?: checkNotNull(environmentLoader.createHDREnvironment(FALLBACK_HDR)) { FALLBACK_HDR_ERROR }
         }
     }
 
@@ -2414,7 +2420,7 @@ private fun GltfCamerasDemo() {
 
     val environment = rememberEnvironment(environmentLoader) {
         environmentLoader.createHDREnvironment("environments/studio_2k.hdr")
-            ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
+            ?: checkNotNull(environmentLoader.createHDREnvironment(FALLBACK_HDR)) { FALLBACK_HDR_ERROR }
     }
     val modelInstance = rememberModelInstance(modelLoader, MODEL_ROBOT)
 

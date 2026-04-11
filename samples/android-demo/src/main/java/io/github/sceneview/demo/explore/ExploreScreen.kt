@@ -269,7 +269,9 @@ fun ExploreScreen() {
             val environment = key(selectedEnv.assetPath) {
                 rememberEnvironment(environmentLoader) {
                     environmentLoader.createHDREnvironment(selectedEnv.assetPath)
-                        ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
+                        ?: checkNotNull(
+                            environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")
+                        ) { "Bundled fallback HDR environments/rooftop_night_2k.hdr is missing or unreadable" }
                 }
             }
 
