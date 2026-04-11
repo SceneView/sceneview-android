@@ -258,6 +258,30 @@ drop, a reference was deleted silently and should be investigated.
 
 `samples/common/` contains shared helpers (theme, icons, navigation) used across all Android samples.
 
+## Package naming convention
+
+New Android/JVM-based sample apps use the `io.github.sceneview.demo.*`
+prefix. Sub-packages match the sample dimension:
+
+| Sample | Namespace |
+|---|---|
+| `android-demo/` | `io.github.sceneview.demo` + `.about`, `.ar`, `.explore`, `.samples`, `.theme`, `.update` |
+| `react-native-demo/` (Android host) | `io.github.sceneview.demo.rn` |
+| New samples | `io.github.sceneview.demo.<short-name>` |
+
+One legacy exception: `android-tv-demo/` uses
+`io.github.sceneview.sample.tv` for both its Kotlin package and
+`applicationId`. This predates the `demo.*` convention. It is
+intentionally NOT renamed because `applicationId` is the Play Store
+identity for the published TV demo — changing it would break the
+install path for every existing user. The Kotlin package could be
+renamed independently of `applicationId`, but since no test or
+downstream consumer depends on the TV package name, the churn is not
+worth the benefit.
+
+**When adding a new sample:** pick `io.github.sceneview.demo.<short>`
+from the start, so the inconsistency ends with the TV demo.
+
 ## Running the Android demo
 
 ```bash

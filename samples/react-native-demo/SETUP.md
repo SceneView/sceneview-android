@@ -1,9 +1,19 @@
 # React Native Demo — Setup Status
 
-> **Status: scaffolded.** JS, Android, and iOS native projects are in
-> place. The app is reviewable as a contribution but still requires a
-> one-time `npm install` + native build to run on a device. See
-> *"What's still needed to run"* below.
+> **Status: scaffolded, NEVER built end-to-end.** JS, Android, and iOS
+> native projects are in place. The scaffold was generated with the RN
+> CLI and hand-rewritten with the SceneView namespace, but at the time
+> of commit it was never run through `./gradlew assembleDebug` or
+> Xcode. The first contributor to wire up `npm install` will very
+> likely hit issues and should fix them in place. See
+> *"What's still needed to run"* and *"Expected rough edges on first
+> run"* below.
+>
+> This demo is deliberately NOT included in the root
+> `settings.gradle` (comment: `samples/react-native-demo/ (JS, not
+> Gradle)`). Root `./gradlew` does not touch it, and no CI job
+> currently builds it — unlike the other six demo apps, which are all
+> covered by either `ci.yml` or `pr-check.yml`.
 
 ## What is here
 
@@ -70,3 +80,39 @@ from the new scoped name (`@sceneview-sdk/react-native`) to match
 `package.json`. The remaining stale references in the bridge module
 should be reconciled in a follow-up that touches the bridge module
 itself.
+
+## Expected rough edges on first run
+
+Because this demo was committed scaffold-only (no build verification),
+these are the likely problem areas when someone first tries to run it:
+
+1. **`npm install` fails with `bob build` error.** The linked bridge
+   module `../../react-native/react-native-sceneview` has a `prepare`
+   script that runs `react-native-builder-bob`. Fix by building the
+   bridge module first (step 1 of *"What's still needed to run"*).
+
+2. **Android Gradle settings can't find `node_modules/@react-native-*`.**
+   `samples/react-native-demo/android/settings.gradle` applies
+   `../node_modules/@react-native-community/cli-platform-android/native_modules.gradle`.
+   That file only exists after `npm install` completes.
+
+3. **Package rename seams.** MainActivity, MainApplication, and
+   AndroidManifest use the renamed `io.github.sceneview.demo.rn`
+   namespace. The iOS project still shows `SceneViewRNDemo` as the
+   display name and `.xcodeproj` folder — this is expected (the RN
+   CLI template couples them). If the iOS build fails because of a
+   stale reference to `com.sceneviewrndemo`, check:
+   - `ios/SceneViewRNDemo/Info.plist` bundle identifier
+   - `ios/SceneViewRNDemo.xcodeproj/project.pbxproj` `PRODUCT_BUNDLE_IDENTIFIER`
+
+4. **HDR assets not bundled in Android APK.** The app `build.gradle`
+   adds `sourceSets.main.assets.srcDirs += ["$rootDir/../assets"]` to
+   pull the shared HDRs into the APK's `assets/environments/`. If the
+   app starts but can't load `environments/studio_small.hdr`, confirm
+   the sourceSets hook resolved correctly.
+
+5. **iOS pods not installed.** `cd ios && bundle install && bundle
+   exec pod install` must succeed before the first Xcode build.
+
+When you do work through these, please update this section to record
+what actually worked.
