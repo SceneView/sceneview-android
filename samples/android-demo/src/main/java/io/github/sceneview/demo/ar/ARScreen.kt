@@ -168,6 +168,7 @@ fun ARScreen() {
         var frame by remember { mutableStateOf<Frame?>(null) }
         var trackingFailureReason by remember { mutableStateOf<TrackingFailureReason?>(null) }
         var showGestureHint by remember { mutableStateOf(false) }
+        var modelLoadTimedOut by remember { mutableStateOf(false) }
 
         val modelInstance = rememberModelInstance(modelLoader, selectedModel.assetFile)
 
@@ -184,6 +185,21 @@ fun ARScreen() {
                 showGestureHint = true
                 delay(4000)
                 showGestureHint = false
+            }
+        }
+
+        // Surface a load-timeout warning when a CDN model takes >20s.
+        // Bundled assets resolve instantly so the timer is harmless for them.
+        LaunchedEffect(selectedModel) {
+            modelLoadTimedOut = false
+            delay(20_000)
+            if (modelInstance == null) {
+                modelLoadTimedOut = true
+            }
+        }
+        LaunchedEffect(modelInstance) {
+            if (modelInstance != null) {
+                modelLoadTimedOut = false
             }
         }
 
@@ -306,6 +322,25 @@ fun ARScreen() {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            // Network warning when CDN model fails to load within 20s
+            AnimatedVisibility(
+                visible = modelLoadTimedOut && modelInstance == null,
+                enter = fadeIn(tween(300)),
+                exit = fadeOut(tween(200))
+            ) {
+                Surface(
+                    color = Color.Black.copy(alpha = 0.65f),
+                    shape = RoundedCornerShape(50)
+                ) {
+                    Text(
+                        text = stringResource(R.string.ar_model_load_failed),
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+                }
+            }
+
             // Remove button
             AnimatedVisibility(visible = anchor != null) {
                 OutlinedButton(

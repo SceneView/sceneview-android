@@ -26,6 +26,7 @@
     <string name="ar_pinch_to_scale">Pinch to scale</string>
     <string name="ar_twist_to_rotate">Twist to rotate</string>
     <string name="ar_remove">Remove</string>
+    <string name="ar_model_load_failed">Model could not load \u2014 check your connection</string>
 
     <!-- Samples screen -->
     <string name="samples_title">Samples</string>
