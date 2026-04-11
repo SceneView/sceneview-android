@@ -57,6 +57,7 @@ nav:
     - Quickstart (React Native): quickstart-react-native.md
     - API Cheatsheet: cheatsheet.md
     - API Cheatsheet (Apple): cheatsheet-ios.md
+    - Nodes Reference: nodes.md
     - Recipes: recipes.md
     - FAQ: faq.md
     - Troubleshooting: troubleshooting.md

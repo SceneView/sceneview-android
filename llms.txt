@@ -1955,6 +1955,19 @@ MCP server: `sceneview-mcp`. Add to `.claude/mcp.json`:
 { "mcpServers": { "sceneview": { "command": "npx", "args": ["-y", "sceneview-mcp"] } } }
 ```
 
+### Complete nodes reference
+
+For an exhaustive, AI-first reference covering every node composable — signatures, copy-paste examples, gotchas, lifecycle behaviour, nesting & coordinate spaces, and common mistakes — see **[docs/docs/nodes.md](https://sceneview.github.io/docs/nodes/)** (`NODES.md`). This file is the authoritative walkthrough for:
+
+- **Standard nodes:** ModelNode (animations, `scaleToUnits`), LightNode (intensity units by type, the `apply` trap), ViewNode (Compose UI on a plane, why `viewNodeWindowManager` is mandatory)
+- **Procedural geometry:** CubeNode / SphereNode / CylinderNode / PlaneNode / LineNode / PathNode / MeshNode — with the recomposition model for reactive geometry updates
+- **Content nodes:** TextNode, ImageNode, VideoNode, BillboardNode, ReflectionProbeNode
+- **AR-only nodes:** AnchorNode (the correct pattern for pinning state without 60 FPS recomposition), PoseNode, HitResultNode, AugmentedImageNode, AugmentedFaceNode, CloudAnchorNode, StreetscapeGeometryNode
+- **Composition & state:** nesting and parent→child coordinate spaces, reactive parameters, automatic destruction, imperative `apply = { … }` blocks, and a table of common mistakes with symptoms and fixes
+
+This reference is consumed by `sceneview-mcp` so Claude and other AI assistants can answer deep questions about any node without hallucinating parameter names.
+
+
 ### Claude Artifacts — 3D in claude.ai
 
 SceneView works inside Claude Artifacts (HTML type). Use this template:
