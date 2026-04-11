@@ -34,6 +34,12 @@ import { newUserId } from "../auth/api-keys.js";
 /** Default "from" address used when `env.MAGIC_LINK_FROM_EMAIL` is unset. */
 const DEFAULT_FROM = "SceneView MCP <no-reply@sceneview.dev>";
 
+/** Shape of a login-page renderer. */
+export type LoginPageRenderer = (
+  message: string | null,
+  next: string | null,
+) => string | Promise<string>;
+
 /**
  * Returns a Hono router mounted at `/`.
  *
@@ -42,19 +48,18 @@ const DEFAULT_FROM = "SceneView MCP <no-reply@sceneview.dev>";
  * production wiring uses the JSX dashboard layout.
  */
 export function authRoutes(options?: {
-  renderLoginPage?: (
-    message: string | null,
-    next: string | null,
-  ) => string;
+  renderLoginPage?: LoginPageRenderer;
 }): Hono<{ Bindings: Env }> {
   const app = new Hono<{ Bindings: Env }>();
-  const render = options?.renderLoginPage ?? defaultLoginPage;
+  const render: LoginPageRenderer =
+    options?.renderLoginPage ?? defaultLoginPage;
 
-  app.get("/login", (c) => {
+  app.get("/login", async (c) => {
     const url = new URL(c.req.url);
     const next = url.searchParams.get("next");
     const message = url.searchParams.get("message");
-    return c.html(render(message, next));
+    const html = await render(message, next);
+    return c.html(html);
   });
 
   app.post("/login", async (c) => {
@@ -62,10 +67,8 @@ export function authRoutes(options?: {
     const email =
       typeof form.email === "string" ? form.email.trim().toLowerCase() : "";
     if (!isValidEmail(email)) {
-      return c.html(
-        render("Please enter a valid email address.", null),
-        400,
-      );
+      const html = await render("Please enter a valid email address.", null);
+      return c.html(html, 400);
     }
     const baseUrl =
       c.env.DASHBOARD_BASE_URL?.replace(/\/+$/, "") ??
@@ -87,12 +90,11 @@ export function authRoutes(options?: {
       // always reports the same success message so we do not disclose
       // which emails exist in the user table.
     }
-    return c.html(
-      render(
-        "Check your inbox. We just sent a sign-in link valid for 15 minutes.",
-        null,
-      ),
+    const html = await render(
+      "Check your inbox. We just sent a sign-in link valid for 15 minutes.",
+      null,
     );
+    return c.html(html);
   });
 
   app.get("/auth/verify", async (c) => {

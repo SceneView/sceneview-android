@@ -1,0 +1,85 @@
+/** @jsxImportSource hono/jsx */
+
+import type { FC } from "hono/jsx";
+import { Layout } from "./layout.js";
+import { renderToHtml } from "./render.js";
+
+/** `/docs` page with install instructions per MCP client. */
+export const Docs: FC<{ signedIn?: boolean }> = ({ signedIn }) => (
+  <Layout
+    title="Docs"
+    description="Install SceneView MCP in Claude Desktop, Cursor, Zed, or any MCP-capable agent."
+    active="docs"
+    signedIn={signedIn}
+  >
+    <h1>Docs</h1>
+    <p>
+      Point any MCP-capable agent at the hosted gateway. Free tools work
+      without authentication; Pro tools require an API key issued from
+      the <a href="/dashboard">dashboard</a>.
+    </p>
+
+    <h2>Claude Desktop</h2>
+    <p>
+      Add a new server to your config file (macOS:{" "}
+      <code>~/Library/Application Support/Claude/claude_desktop_config.json</code>).
+    </p>
+    <pre><code>{`{
+  "mcpServers": {
+    "sceneview": {
+      "url": "https://sceneview-mcp.workers.dev/mcp",
+      "headers": {
+        "Authorization": "Bearer sv_live_YOUR_KEY_HERE"
+      }
+    }
+  }
+}`}</code></pre>
+
+    <h2>Cursor</h2>
+    <p>
+      Open Cursor Settings, go to <em>MCP</em>, add a new HTTP server:
+    </p>
+    <pre><code>{`{
+  "name": "sceneview",
+  "url": "https://sceneview-mcp.workers.dev/mcp",
+  "headers": {
+    "Authorization": "Bearer sv_live_YOUR_KEY_HERE"
+  }
+}`}</code></pre>
+
+    <h2>Zed</h2>
+    <p>
+      Add the server to <code>~/.config/zed/settings.json</code> under
+      the <code>context_servers</code> section.
+    </p>
+
+    <h2>Raw curl</h2>
+    <p>
+      The endpoint speaks Streamable HTTP JSON-RPC:
+    </p>
+    <pre><code>{`curl -X POST https://sceneview-mcp.workers.dev/mcp \\
+  -H "Authorization: Bearer sv_live_YOUR_KEY_HERE" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/list"
+  }'`}</code></pre>
+
+    <h2>Local stdio (free mode)</h2>
+    <p>
+      The legacy npm package still works if you want the free tools
+      without any network round-trip:
+    </p>
+    <pre><code>{`npx sceneview-mcp`}</code></pre>
+    <p>
+      Set <code>SCENEVIEW_API_KEY</code> to unlock Pro tools via the
+      hosted proxy.
+    </p>
+  </Layout>
+);
+
+/** Top-level renderer used by the route handler. */
+export function renderDocs(signedIn: boolean): Promise<string> {
+  return renderToHtml(<Docs signedIn={signedIn} />);
+}

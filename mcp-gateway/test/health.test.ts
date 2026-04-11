@@ -19,11 +19,21 @@ describe("GET /health", () => {
 });
 
 describe("GET /", () => {
-  it("returns landing text", async () => {
-    const res = await app.request("/");
+  it("returns the HTML landing page", async () => {
+    const res = await app.request(
+      "/",
+      {},
+      {
+        DB: undefined,
+        RL_KV: undefined,
+        ENVIRONMENT: "test",
+      } as unknown as Parameters<typeof app.request>[2],
+    );
     expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toMatch(/text\/html/);
     const text = await res.text();
-    expect(text).toBe("SceneView MCP Gateway");
+    expect(text).toContain("<!doctype html>");
+    expect(text).toContain("SceneView MCP");
   });
 });
 

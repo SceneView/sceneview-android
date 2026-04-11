@@ -79,3 +79,43 @@ export function countSuccessfulUsageInMonth(
     bucketMonth,
   );
 }
+
+/**
+ * Returns daily successful call counts for a user over the last N days
+ * (inclusive of today). Emits a dense series — days with no calls are
+ * returned with `count: 0` so the dashboard sparkline stays smooth.
+ */
+export async function listDailyUsage(
+  db: D1Database,
+  userId: string,
+  days: number,
+  nowMs: number = Date.now(),
+): Promise<Array<{ day: string; count: number }>> {
+  const end = nowMs;
+  const start = end - days * 24 * 60 * 60 * 1000;
+  const rows = await db
+    .prepare(
+      `SELECT strftime('%Y-%m-%d', created_at / 1000, 'unixepoch') AS day,
+              COUNT(*) AS count
+         FROM usage_records
+        WHERE user_id = ?1
+          AND status = 'ok'
+          AND created_at >= ?2
+        GROUP BY day
+        ORDER BY day ASC`,
+    )
+    .bind(userId, start)
+    .all<{ day: string; count: number }>();
+
+  const map = new Map<string, number>();
+  for (const r of rows.results ?? []) {
+    map.set(r.day, Number(r.count));
+  }
+  const series: Array<{ day: string; count: number }> = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(end - i * 24 * 60 * 60 * 1000);
+    const iso = d.toISOString().slice(0, 10);
+    series.push({ day: iso, count: map.get(iso) ?? 0 });
+  }
+  return series;
+}

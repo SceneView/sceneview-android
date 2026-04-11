@@ -4,14 +4,12 @@ import type { AuthVariables } from "./auth/middleware.js";
 import type { SessionVariables } from "./auth/session-middleware.js";
 import { mcpRoutes } from "./routes/mcp.js";
 import { authRoutes } from "./routes/auth.js";
+import { dashboardRoutes } from "./routes/dashboard.js";
+import { renderLoginPage } from "./dashboard/login-page.js";
 
 type AppVariables = AuthVariables & SessionVariables;
 
 const app = new Hono<{ Bindings: Env; Variables: AppVariables }>();
-
-// ── Root ────────────────────────────────────────────────────────────────────
-
-app.get("/", (c) => c.text("SceneView MCP Gateway"));
 
 // ── Health check ────────────────────────────────────────────────────────────
 
@@ -27,9 +25,13 @@ app.get("/health", (c) =>
 
 app.route("/mcp", mcpRoutes());
 
+// ── Dashboard HTML routes (landing, pricing, docs, dashboard, billing) ─────
+
+app.route("/", dashboardRoutes());
+
 // ── Dashboard auth routes (login, verify, logout) ───────────────────────────
 
-app.route("/", authRoutes());
+app.route("/", authRoutes({ renderLoginPage }));
 
 // ── Fallback 404 ────────────────────────────────────────────────────────────
 
