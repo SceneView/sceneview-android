@@ -4,6 +4,95 @@
 
 ## Last Session Summary
 
+**Date:** 11 avril 2026 (session 33 — MCP Gateway Sprint 2, worktree agent-ae442902)
+**Branch:** worktree-agent-ae442902 (based on main, NOT merged yet)
+**Latest commit:** 48647068
+
+### Sprint 2 — MCP Gateway auth, dashboard, Stripe, npm v4 lite
+Seven commits, 7 steps, green end-to-end:
+
+1. **d4e4c167** Sprint 1 baseline (already on main — transport, D1, auth, RL, /mcp)
+2. **Step 11** feat(mcp-gateway): magic-link auth, JWT sessions, login/verify routes
+3. **Step 12** feat(mcp-gateway): dashboard UI with Hono JSX + HTMX
+4. **Step 13** feat(mcp-gateway): Stripe checkout, portal, webhook dispatcher
+5. **488f7819** Step 14 feat(mcp-gateway): marketing copy for landing, pricing, docs
+6. **31c08302** Step 15 feat(mcp): v4.0.0-beta.1 lite package with proxy mode
+7. **48647068** Step 16 feat(mcp-gateway): deployment prep — wrangler vars, bootstrap, seeder
+
+### Tests
+- `mcp-gateway`: 177 passing (was 94 on main), +83 new tests across
+  jwt, magic-link, session-middleware, dashboard, stripe-webhook,
+  billing-routes
+- `mcp`: 2506 passing (was 2496 on main), +10 new tests in proxy.test.ts
+- Both typecheck clean (`npx tsc --noEmit`)
+
+### Gateway surface shipped
+- `/`, `/pricing`, `/docs` — public Hono JSX pages (landing, pricing, docs)
+- `/login`, `/auth/verify?token=`, `/auth/logout` — magic-link flow
+- `/dashboard`, `/billing` — session-gated
+- `/dashboard/keys` + `/dashboard/keys/:id/revoke` — HTMX fragment endpoints
+- `/billing/checkout`, `/billing/portal` — Stripe redirect flows
+- `/stripe/webhook` — signed webhook with async dispatch, 4 event handlers
+- `/mcp` — unchanged (already live from Sprint 1)
+
+### npm package v4.0.0-beta.1
+- stdio keeps free tools local (no network round-trip)
+- Pro tools proxy via `dispatchProxyToolCall` → hosted `/mcp`
+- Without `SCENEVIEW_API_KEY`, Pro tools return a signup-URL stub
+- Banner on stderr at startup announcing lite mode
+
+### BEFORE GO-LIVE — user must do these steps
+These require credentials Claude does not have:
+
+1. **Cloudflare provisioning** — run `bash mcp-gateway/scripts/bootstrap-d1.sh` (reads commands; `EXECUTE=1` to run). Steps:
+   - `wrangler d1 create sceneview-mcp` → paste the id into `wrangler.toml` line `database_id`
+   - `wrangler kv namespace create RL_KV` → paste the id into `wrangler.toml` under `[[kv_namespaces]]`
+   - `npm --prefix mcp-gateway run db:migrate`
+
+2. **Secrets (wrangler secret put)**:
+   - `JWT_SECRET` — generate with `openssl rand -hex 32`
+   - `RESEND_API_KEY` — from https://resend.com dashboard
+   - `STRIPE_SECRET_KEY` — from https://dashboard.stripe.com/apikeys (sk_live_…)
+   - `STRIPE_WEBHOOK_SECRET` — from the Stripe webhook endpoint config (whsec_…)
+
+3. **Stripe dashboard**:
+   - Create 4 products / prices: Pro monthly 19 EUR, Pro yearly 190 EUR, Team monthly 49 EUR, Team yearly 490 EUR
+   - Copy each `price_...` id into `wrangler.toml` vars (STRIPE_PRICE_PRO_MONTHLY etc.)
+   - Create a webhook endpoint pointing at `https://sceneview-mcp.workers.dev/stripe/webhook`, subscribed to:
+     - `checkout.session.completed`
+     - `customer.subscription.created`
+     - `customer.subscription.updated`
+     - `customer.subscription.deleted`
+     - `invoice.payment_failed`
+   - Copy the whsec into `STRIPE_WEBHOOK_SECRET`
+
+4. **Resend** — verify `sceneview.dev` as a sending domain in Resend so magic-link emails deliver. Update `MAGIC_LINK_FROM_EMAIL` in `wrangler.toml` if a different from address is preferred.
+
+5. **DNS / custom domain** (optional) — default is `sceneview-mcp.workers.dev`. To map to e.g. `mcp.sceneview.dev`, add the Worker route in Cloudflare dashboard and update `DASHBOARD_BASE_URL` in `wrangler.toml`.
+
+6. **Deploy** — `cd mcp-gateway && npm run deploy`
+
+7. **Publish npm beta** — `cd mcp && npm run build && npm publish --tag beta` (version 4.0.0-beta.1)
+
+8. **Smoke test end-to-end**:
+   - `curl https://sceneview-mcp.workers.dev/health` → 200
+   - Visit `/` → landing loads
+   - `/login` → enter email → receive magic link → verify → lands on `/dashboard`
+   - Create an API key on the dashboard, copy plaintext
+   - `curl -H "Authorization: Bearer sv_live_..." -X POST https://sceneview-mcp.workers.dev/mcp -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'` → 200 JSON-RPC
+   - Trigger a test checkout → Stripe → verify `/dashboard` shows tier=pro
+   - Stripe CLI `stripe trigger customer.subscription.deleted` → verify downgrade
+
+### NOT done in Sprint 2
+- Real deployment (requires creds)
+- Stripe product creation (requires Stripe dashboard access)
+- Resend domain verification (requires DNS access)
+- No README, no changelog, no blog post (per task instructions)
+
+---
+
+## PREVIOUS Session Summary
+
 **Date:** 11 avril 2026 (session 32 — website real brand logos + screenshots)
 **Branch:** main (merged direct, worktree jovial-kirch)
 **Latest commit:** fbe32c15
