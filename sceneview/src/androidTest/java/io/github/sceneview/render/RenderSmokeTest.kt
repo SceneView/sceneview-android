@@ -10,6 +10,7 @@ import org.junit.After
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -28,6 +29,11 @@ import org.junit.runner.RunWith
  * 1/125s, ISO 100) would significantly darken the rendered colours.
  */
 @RunWith(AndroidJUnit4::class)
+@Ignore(
+    "Shares the same RenderTestHarness setup/teardown pattern as GeometryRenderTest " +
+            "and VisualVerificationTest, which crashes the Filament JNI layer on the " +
+            "SwiftShader CI emulator. Tracked in #803."
+)
 class RenderSmokeTest {
 
     private lateinit var harness: RenderTestHarness
