@@ -8,7 +8,7 @@ compatibility_flags = ["nodejs_compat"]
 
 [vars]
 ENVIRONMENT = "production"
-DASHBOARD_BASE_URL = "https://sceneview-mcp.workers.dev"
+DASHBOARD_BASE_URL = "https://sceneview-mcp.thomas-gorisse.workers.dev"
 MAGIC_LINK_FROM_EMAIL = "SceneView MCP <no-reply@sceneview.dev>"
 # Stripe price ids (set to match the products you create in the Stripe
 # dashboard before go-live). These are vars, NOT secrets, because the
