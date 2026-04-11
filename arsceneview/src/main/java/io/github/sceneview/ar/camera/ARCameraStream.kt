@@ -42,7 +42,7 @@ const val kDepthTextureParameter = "depthTexture"
  * It also supports **depth occlusion** — when enabled, virtual objects are correctly hidden
  * behind real-world surfaces using the ARCore depth image.
  *
- * Typically created via [rememberARCameraStream] and passed to `ARScene(cameraStream = ...)`.
+ * Typically created via [rememberARCameraStream] and passed to `ARSceneView(cameraStream = ...)`.
  *
  * @param materialLoader             [MaterialLoader] for creating the camera background materials.
  * @param standardMaterialFile       Asset path for the flat (non-depth) camera material.

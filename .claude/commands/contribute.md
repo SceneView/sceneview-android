@@ -30,7 +30,7 @@ Or run it with no arguments after you've already made changes to get a full pre-
 
 Follow these rules:
 - **Thread safety**: Filament JNI calls on main thread only. Use `rememberModelInstance` in composables, `loadModelInstanceAsync` in imperative code.
-- **Compose-first**: Express node hierarchy declaratively inside `Scene { }` / `ARScene { }` content blocks.
+- **Compose-first**: Express node hierarchy declaratively inside `SceneView { }` / `ARSceneView { }` content blocks.
 - **Minimal diff**: Only change what's needed. Don't reformat unrelated code.
 - **Module boundaries**: Core 3D in `sceneview/`, AR in `arsceneview/`, shared sample helpers in `samples/common/`.
 

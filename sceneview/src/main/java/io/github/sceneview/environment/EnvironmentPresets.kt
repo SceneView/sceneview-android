@@ -17,7 +17,7 @@ import kotlinx.coroutines.withContext
  *     environmentLoader = environmentLoader,
  *     assetFileLocation = "environments/sky_2k.hdr"
  * )
- * Scene(environment = env ?: rememberEnvironment(environmentLoader)) { ... }
+ * SceneView(environment = env ?: rememberEnvironment(environmentLoader)) { ... }
  * ```
  *
  * If you have custom HDR files, place them in `src/main/assets/environments/` and pass the path
@@ -43,7 +43,7 @@ object EnvironmentPresets {
  *
  * ```kotlin
  * val env = rememberHDREnvironment(environmentLoader, "environments/sky_2k.hdr")
- * Scene(environment = env ?: rememberEnvironment(environmentLoader)) { ... }
+ * SceneView(environment = env ?: rememberEnvironment(environmentLoader)) { ... }
  * ```
  *
  * @param environmentLoader The [EnvironmentLoader] to use for decoding.

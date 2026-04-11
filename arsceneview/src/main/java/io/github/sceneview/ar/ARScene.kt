@@ -90,7 +90,7 @@ import java.util.concurrent.atomic.AtomicReference
 /**
  * An ARCore session declared as Compose UI.
  *
- * `ARScene` is a `@Composable` that embeds a Filament + ARCore viewport. Its trailing [content]
+ * `ARSceneView` is a `@Composable` that embeds a Filament + ARCore viewport. Its trailing [content]
  * block is an **[ARSceneScope]** DSL where AR-tracked nodes — anchors, augmented images, face
  * meshes, cloud anchors, hit-result cursors — are composable functions that follow the same
  * Compose lifecycle as any other UI element.
@@ -102,7 +102,7 @@ import java.util.concurrent.atomic.AtomicReference
  * ```kotlin
  * var anchor by remember { mutableStateOf<Anchor?>(null) }
  *
- * ARScene(
+ * ARSceneView(
  *     modifier = Modifier.fillMaxSize(),
  *     onSessionUpdated = { _, frame ->
  *         if (anchor == null) {
@@ -682,7 +682,7 @@ private fun onARFrame(
  * match ARCore's light estimation output so that virtual objects blend naturally with the
  * real world.
  *
- * Pass this to `ARScene(cameraNode = ...)` — it should not be used with a plain `Scene`.
+ * Pass this to `ARSceneView(cameraNode = ...)` — it should not be used with a plain `SceneView`.
  *
  * @param engine  The Filament [Engine] that owns the camera.
  * @param creator Factory for the AR camera node.
@@ -703,7 +703,7 @@ fun rememberARCameraNode(
  * the Filament renderable that draws that texture as the scene background. It also provides
  * depth occlusion when depth mode is enabled.
  *
- * Pass the result to `ARScene(cameraStream = ...)`. Without a camera stream the AR background
+ * Pass the result to `ARSceneView(cameraStream = ...)`. Without a camera stream the AR background
  * will be black instead of showing the live camera image.
  *
  * @param materialLoader The [MaterialLoader] used to create the camera background material.
@@ -731,7 +731,7 @@ fun rememberARCameraStream(
  * (transparent background so the camera feed shows through) and a neutral IBL that works
  * well before ARCore's light estimation has a chance to run.
  *
- * The environment's `IndirectLight` intensity is updated each frame by `ARScene` using
+ * The environment's `IndirectLight` intensity is updated each frame by `ARSceneView` using
  * ARCore's `LightEstimator` when `ENVIRONMENTAL_HDR` mode is active.
  *
  * @param engine The Filament [Engine] that owns the IBL texture.
