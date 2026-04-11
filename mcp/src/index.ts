@@ -43,7 +43,7 @@ import {
 // Claude Desktop surfaces this in the server's "Logs" panel. The banner
 // tells the user which mode they're in (hosted vs free) and where to
 // upgrade, without blocking the transport handshake.
-const PACKAGE_VERSION = "4.0.0";
+const PACKAGE_VERSION = "4.0.0-rc.1";
 
 function logStartupBanner(): void {
   if (process.env.SCENEVIEW_MCP_QUIET === "1") return;

@@ -32,7 +32,7 @@ The primary platform. SceneView wraps Google Filament (PBR rendering) and ARCore
 - **3D**: `SceneView { }` composable with 26+ node types
 - **AR**: `ARSceneView { }` with plane detection, image tracking, face mesh, cloud anchors, geospatial
 - **Min SDK**: 24 (Android 7.0)
-- **Install**: `implementation("io.github.sceneview:sceneview:4.0.0")`
+- **Install**: `implementation("io.github.sceneview:sceneview:4.0.0-rc.1")`
 
 [:octicons-arrow-right-24: Android Quickstart](quickstart.md)
 
