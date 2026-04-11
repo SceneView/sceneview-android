@@ -1,0 +1,67 @@
+{
+  "name": "rerun-3d-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for Rerun.io ↔ SceneView integration — generate AR loggers, Python sidecars, web viewer embeds, and project scaffolding to visualize ARCore/ARKit sessions in Rerun.",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "sceneview",
+    "rerun",
+    "rerun-io",
+    "visualization",
+    "ar",
+    "arcore",
+    "arkit",
+    "point-cloud",
+    "robotics",
+    "debugging",
+    "jetpack-compose",
+    "kotlin",
+    "swift",
+    "claude",
+    "ai"
+  ],
+  "license": "Apache-2.0",
+  "author": "SceneView (https://github.com/sceneview)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sceneview/sceneview.git",
+    "directory": "mcp/packages/rerun"
+  },
+  "homepage": "https://github.com/sceneview/sceneview/tree/main/mcp/packages/rerun#readme",
+  "bugs": {
+    "url": "https://github.com/sceneview/sceneview/issues"
+  },
+  "type": "module",
+  "bin": {
+    "rerun-3d-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist/**/*.js",
+    "!dist/**/*.test.js",
+    "!dist/**/__fixtures__/**",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepare": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.8.0",
+    "vitest": "^4.1.0"
+  },
+  "overrides": {
+    "picomatch": ">=4.0.4"
+  }
+}
