@@ -29,24 +29,37 @@ export interface CheckoutSuccessProps {
 export const CheckoutSuccess: FC<CheckoutSuccessProps> = (props) => {
   const tierLabel =
     props.tier === "team" ? "Team" : props.tier === "pro" ? "Pro" : "Free";
+  // Claude Desktop does NOT yet support HTTP MCP servers — only stdio.
+  // So we ship the npm lite package (`sceneview-mcp@beta`) which runs
+  // locally and forwards Pro tool calls to the gateway. Any buyer who
+  // copy-pastes this lands in a working state after restarting Claude
+  // Desktop. See .claude/NOTICE-2026-04-11-mcp-gateway-live.md §7.
   const claudeDesktopConfig = `{
   "mcpServers": {
     "sceneview": {
-      "url": "https://sceneview-mcp.workers.dev/mcp",
+      "command": "npx",
+      "args": ["-y", "sceneview-mcp@beta"],
+      "env": {
+        "SCENEVIEW_API_KEY": "${props.apiKey}"
+      }
+    }
+  }
+}`;
+  // Cursor supports HTTP MCP natively, so we can talk to the gateway
+  // directly — no npm package required. Must use the real subdomain
+  // `mcp-tools-lab.workers.dev`, NOT the pre-pivot phantom NXDOMAIN
+  // `sceneview-mcp.workers.dev` that briefly shipped in docs.
+  const cursorConfig = `{
+  "mcpServers": {
+    "sceneview": {
+      "url": "https://sceneview-mcp.mcp-tools-lab.workers.dev/mcp",
       "headers": {
         "Authorization": "Bearer ${props.apiKey}"
       }
     }
   }
 }`;
-  const cursorConfig = `{
-  "name": "sceneview",
-  "url": "https://sceneview-mcp.workers.dev/mcp",
-  "headers": {
-    "Authorization": "Bearer ${props.apiKey}"
-  }
-}`;
-  const curlExample = `curl -X POST https://sceneview-mcp.workers.dev/mcp \\
+  const curlExample = `curl -X POST https://sceneview-mcp.mcp-tools-lab.workers.dev/mcp \\
   -H "Authorization: Bearer ${props.apiKey}" \\
   -H "Content-Type: application/json" \\
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'`;
@@ -99,10 +112,11 @@ export const CheckoutSuccess: FC<CheckoutSuccessProps> = (props) => {
       </section>
 
       <section>
-        <h2>Install in Cursor</h2>
+        <h2>Install in Cursor (or any HTTP-MCP client)</h2>
         <p>
-          Open Cursor Settings, go to <em>MCP</em>, and add a new HTTP
-          server with this configuration:
+          Cursor supports HTTP MCP servers natively — you can talk to
+          the gateway directly without the npm package. Open Cursor
+          Settings → <em>MCP</em> → Add new, and paste:
         </p>
         <pre><code>{cursorConfig}</code></pre>
       </section>

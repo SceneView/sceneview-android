@@ -81,6 +81,30 @@ describe("GET /checkout/success", () => {
     expect(body).toContain("&quot;sceneview&quot;");
     expect(body).toContain("claude_desktop_config.json");
 
+    // ── Post-payment snippet guards ──────────────────────────────────────
+    //
+    // These assertions exist because two separate bugs had shipped
+    // previously and were caught only by eyeballing the deployed page:
+    //
+    // 1. The Claude Desktop snippet was written in HTTP MCP format
+    //    (`url` + `headers`). Claude Desktop only supports stdio MCP,
+    //    so a buyer copy-pasting that would have a broken config. The
+    //    correct shape is `command: npx`, `args: [-y, sceneview-mcp@beta]`,
+    //    `env: { SCENEVIEW_API_KEY: ... }`.
+    //
+    // 2. Every URL referenced the phantom NXDOMAIN subdomain
+    //    `sceneview-mcp.workers.dev` instead of the real
+    //    `sceneview-mcp.mcp-tools-lab.workers.dev`. A buyer copy-pasting
+    //    the curl example would get ECONNREFUSED.
+    //
+    // Any future refactor that re-introduces either of these two bugs
+    // has to delete a passing test first, which is a big red flag.
+    expect(body).toContain("&quot;command&quot;: &quot;npx&quot;");
+    expect(body).toContain("sceneview-mcp@beta");
+    expect(body).toContain("&quot;SCENEVIEW_API_KEY&quot;");
+    expect(body).toContain("sceneview-mcp.mcp-tools-lab.workers.dev/mcp");
+    expect(body).not.toContain("https://sceneview-mcp.workers.dev/mcp");
+
     // The KV entry has been consumed — a refresh must not reveal it again.
     const stillThere = await kv.get(`${CHECKOUT_KEY_KV_PREFIX}${sessionId}`);
     expect(stillThere).toBeNull();

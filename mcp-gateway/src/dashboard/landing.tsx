@@ -90,14 +90,17 @@ export const Landing: FC = () => (
     <section>
       <h2>Works with every MCP-capable agent</h2>
       <p>
-        Claude Desktop, Cursor, Zed, Continue, and any client that speaks
-        the Streamable HTTP transport. Point them at the hosted endpoint
-        and ship correct 3D code from the first prompt.
+        Claude Desktop, Claude Code, Cursor, Zed, Continue, and any
+        MCP-capable AI client. HTTP-native clients (Cursor, Continue,
+        raw curl) point straight at the gateway; stdio-only clients
+        (Claude Desktop, Zed) run the thin <code>sceneview-mcp@beta</code>
+        npm package which forwards Pro tool calls to the gateway for
+        you.
       </p>
       <pre><code>{`{
   "mcpServers": {
     "sceneview": {
-      "url": "https://sceneview-mcp.workers.dev/mcp",
+      "url": "https://sceneview-mcp.mcp-tools-lab.workers.dev/mcp",
       "headers": { "Authorization": "Bearer sv_live_..." }
     }
   }

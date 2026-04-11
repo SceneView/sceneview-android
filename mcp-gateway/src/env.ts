@@ -12,7 +12,7 @@ export interface Env {
    * Absolute public URL of the gateway, without trailing slash.
    * Used to build Stripe success/cancel URLs (and, historically,
    * magic-link redirects — the dashboard auth flow is not wired in
-   * the MVP). Example: `https://sceneview-mcp.workers.dev`.
+   * the MVP). Example: `https://sceneview-mcp.mcp-tools-lab.workers.dev`.
    */
   DASHBOARD_BASE_URL?: string;
   /**
