@@ -17,7 +17,7 @@ import io.github.sceneview.math.Position
  * while [cameraPosition] is within [radius] metres of [position]. Set [radius] to `0f` (or
  * any non-positive value) for a global probe that always overrides the scene IBL.
  *
- * Multiple `ReflectionProbeNode`s can be declared inside the same `Scene { }` block. The
+ * Multiple `ReflectionProbeNode`s can be declared inside the same `SceneView { }` block. The
  * **last** one whose zone contains the camera wins, following Compose's top-down composition
  * order. Use the [priority] parameter to break ties explicitly — the probe with the highest
  * priority value takes precedence when more than one zone is active simultaneously.
@@ -28,7 +28,7 @@ import io.github.sceneview.math.Position
  *     environmentLoader.createHDREnvironment("environments/office.hdr") ?: createEnvironment(environmentLoader)
  * }
  *
- * Scene(
+ * SceneView(
  *     environment = defaultEnvironment,
  *     onFrame = { cameraPosition = cameraNode.worldPosition }
  * ) {
@@ -51,7 +51,7 @@ import io.github.sceneview.math.Position
  * ```
  *
  * @param filamentScene  The Filament [Scene] whose [Scene.setIndirectLight] is overridden.
- *                       Obtain via [rememberScene] or the `scene` parameter of `Scene { }`.
+ *                       Obtain via [rememberScene] or the `scene` parameter of `SceneView { }`.
  * @param environment    The [Environment] containing the [IndirectLight] to apply.
  * @param position       Centre of the reflection zone in world space. Defaults to the origin.
  * @param radius         Sphere radius (metres) of the zone influence. `0f` or negative means

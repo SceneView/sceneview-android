@@ -13,7 +13,7 @@ import io.github.sceneview.math.Position
  * needed — just two vertices and two indices.
  *
  * ```kotlin
- * Scene {
+ * SceneView {
  *     val material = remember(materialLoader) {
  *         materialLoader.createColorInstance(Color.Red)
  *     }

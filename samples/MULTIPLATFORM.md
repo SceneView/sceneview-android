@@ -46,8 +46,8 @@ samples/
 
 | Concept | Android | iOS | Desktop | Web |
 |---|---|---|---|---|
-| Scene container | `Scene { }` composable | `SceneView { }` SwiftUI | `Scene { }` Compose Desktop | `<SceneView>` Kotlin/JS |
-| AR container | `ARScene { }` | `ARSceneView { }` | N/A | WebXR |
+| Scene container | `SceneView { }` composable | `SceneView { }` SwiftUI | `SceneView { }` Compose Desktop | `<SceneView>` Kotlin/JS |
+| AR container | `ARSceneView { }` | `ARSceneView { }` | N/A | WebXR |
 | Renderer | Google Filament | RealityKit | Software wireframe (Filament JNI planned) | Filament WASM |
 | AR framework | ARCore | ARKit | N/A | WebXR |
 | Model format | glTF/GLB | USDZ + glTF (GLTFKit2) | glTF/GLB | glTF/GLB |
@@ -67,7 +67,7 @@ Example recipe: `model-viewer`
 
 **Android:**
 ```kotlin
-Scene(cameraManipulator = rememberCameraManipulator()) {
+SceneView(cameraManipulator = rememberCameraManipulator()) {
     rememberModelInstance(modelLoader, "model.glb")?.let {
         ModelNode(modelInstance = it, scaleToUnits = 1f)
     }
@@ -88,7 +88,7 @@ SceneView { content in
 ```kotlin
 // This API does NOT work yet — Filament JNI desktop binaries must be built from source.
 // The current desktop-demo is a wireframe placeholder, not a real SceneView integration.
-Scene(cameraManipulator = rememberCameraManipulator()) {
+SceneView(cameraManipulator = rememberCameraManipulator()) {
     rememberModelInstance(modelLoader, "model.glb")?.let {
         ModelNode(modelInstance = it, scaleToUnits = 1f)
     }

@@ -105,9 +105,9 @@ class PhysicsBody(
  * - Bouncy floor collision with a configurable coefficient of restitution
  * - Sleep detection to halt integration once the body comes to rest
  *
- * Usage inside a `Scene { }` block:
+ * Usage inside a `SceneView { }` block:
  * ```kotlin
- * Scene(...) {
+ * SceneView(...) {
  *     val sphereNode = remember(engine) { SphereNode(engine, radius = 0.15f) }
  *     PhysicsNode(
  *         node = sphereNode,

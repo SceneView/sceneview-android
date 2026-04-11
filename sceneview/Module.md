@@ -17,7 +17,7 @@ fun ModelViewerScreen() {
     val modelLoader = rememberModelLoader(engine)
     val instance = rememberModelInstance(modelLoader, "models/helmet.glb")
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -30,11 +30,11 @@ fun ModelViewerScreen() {
 
 ## API overview
 
-### Scene composable
+### SceneView composable
 
 | Composable | Description |
 |---|---|
-| `Scene { }` | Root 3D scene. Accepts a `SceneScope` content block. |
+| `SceneView { }` | Root 3D scene. Accepts a `SceneScope` content block. |
 
 ### remember helpers
 
@@ -56,7 +56,7 @@ fun ModelViewerScreen() {
 | `rememberModelInstance(...)` | `ModelInstance?` | Async GLB load; `null` while loading. |
 | `rememberOnGestureListener(...)` | `OnGestureListener` | All gesture callbacks in one object. |
 
-### Node composables (inside `Scene { }`)
+### Node composables (inside `SceneView { }`)
 
 | Node | Description |
 |---|---|
@@ -78,7 +78,7 @@ fun ModelViewerScreen() {
 | `MeshNode` | Custom `RenderableManager` mesh from VertexBuffer + IndexBuffer. |
 | `Node` | Invisible transform node; use for grouping / hierarchy. |
 
-### Effect composables (inside `Scene { }`)
+### Effect composables (inside `SceneView { }`)
 
 | Composable | Description |
 |---|---|

@@ -13,7 +13,7 @@ import io.github.sceneview.math.Size
  * The box is axis-aligned and centred at [center] with the given [size] (width x height x depth).
  * Vertices include normals and UV coordinates suitable for textured materials.
  *
- * Use the composable `SceneScope.CubeNode(...)` for declarative usage inside a `Scene { }` block,
+ * Use the composable `SceneScope.CubeNode(...)` for declarative usage inside a `SceneView { }` block,
  * or instantiate this class directly for imperative code.
  *
  * @see io.github.sceneview.geometries.Cube

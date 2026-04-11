@@ -55,7 +55,7 @@ class DebugStats {
      *
      * ```kotlin
      * val stats = rememberDebugStats()
-     * Scene(onFrame = { frameNanos -> stats.onFrame(frameNanos, nodeCount = 12) }) { ... }
+     * SceneView(onFrame = { frameNanos -> stats.onFrame(frameNanos, nodeCount = 12) }) { ... }
      * ```
      */
     fun onFrame(frameTimeNanos: Long, nodeCount: Int = 0) {
@@ -82,10 +82,10 @@ class DebugStats {
 /**
  * Creates and remembers a [DebugStats] instance.
  *
- * Wire it into the `Scene` `onFrame` callback:
+ * Wire it into the `SceneView` `onFrame` callback:
  * ```kotlin
  * val stats = rememberDebugStats()
- * Scene(onFrame = { stats.onFrame(it, nodeCount = 5) }) { ... }
+ * SceneView(onFrame = { stats.onFrame(it, nodeCount = 5) }) { ... }
  * DebugOverlay(stats)
  * ```
  */
@@ -96,11 +96,11 @@ fun rememberDebugStats(): DebugStats = remember { DebugStats() }
 /**
  * A semi-transparent overlay that displays real-time performance metrics.
  *
- * Place this composable alongside (not inside) a `Scene { }` composable, typically in a `Box`:
+ * Place this composable alongside (not inside) a `SceneView { }` composable, typically in a `Box`:
  *
  * ```kotlin
  * Box {
- *     Scene(onFrame = { stats.onFrame(it) }) { ... }
+ *     SceneView(onFrame = { stats.onFrame(it) }) { ... }
  *     DebugOverlay(stats, modifier = Modifier.align(Alignment.TopStart))
  * }
  * ```

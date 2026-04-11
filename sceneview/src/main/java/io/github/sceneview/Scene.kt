@@ -67,7 +67,7 @@ import dev.romainguy.kotlin.math.Float2
 /**
  * A Filament 3D scene declared as Compose UI.
  *
- * `Scene` is a `@Composable` that embeds a Filament viewport. Its trailing [content] block is
+ * `SceneView` is a `@Composable` that embeds a Filament viewport. Its trailing [content] block is
  * a **[SceneScope]** DSL where every node — models, lights, cameras, geometry, Compose UI — is
  * itself a composable function. Nodes enter the scene on first composition and are automatically
  * destroyed when they leave, with no manual lifecycle management required.
@@ -77,7 +77,7 @@ import dev.romainguy.kotlin.math.Float2
  *
  * ### Minimal usage
  * ```kotlin
- * Scene(modifier = Modifier.fillMaxSize()) {
+ * SceneView(modifier = Modifier.fillMaxSize()) {
  *     rememberModelInstance(modelLoader, "models/damaged_helmet.glb")?.let { instance ->
  *         ModelNode(modelInstance = instance, scaleToUnits = 0.5f)
  *     }
@@ -86,7 +86,7 @@ import dev.romainguy.kotlin.math.Float2
  *
  * ### Composing nodes
  * ```kotlin
- * Scene {
+ * SceneView {
  *     // Nodes are composable functions — nest them to build a scene graph
  *     Node(position = Position(y = 0.5f)) {
  *         ModelNode(modelInstance = helmet)
@@ -454,7 +454,7 @@ fun SceneView(
  * Returns `null` while loading is in progress, then triggers recomposition once the model is
  * ready. This makes it easy to use with conditional node declarations:
  * ```kotlin
- * Scene {
+ * SceneView {
  *     rememberModelInstance(modelLoader, "models/helmet.glb")?.let { instance ->
  *         ModelNode(modelInstance = instance, scaleToUnits = 0.5f)
  *     }
@@ -535,7 +535,7 @@ fun rememberModelInstance(
  *
  * Use this with [SceneScope.VideoNode] for easy video playback in 3D:
  * ```kotlin
- * Scene {
+ * SceneView {
  *     val player = rememberMediaPlayer(context, assetFileLocation = "videos/promo.mp4")
  *     if (player != null) {
  *         VideoNode(player = player, position = Position(z = -2f))
@@ -586,7 +586,7 @@ fun rememberMediaPlayer(
  * leaves the tree.
  *
  * Only one engine per process is typically needed. Pass it explicitly to all `remember*` helpers
- * if you want to share Filament resources across multiple `Scene` composables.
+ * if you want to share Filament resources across multiple `SceneView` composables.
  *
  * @param eglContextCreator Factory for the EGL context. Override for custom EGL configurations.
  * @param engineCreator     Factory for the [Engine]. Override to customise engine flags.
@@ -612,7 +612,7 @@ fun rememberEngine(
  * Creates and remembers a [Node] of type [T] using [creator], destroying it on disposal.
  *
  * Use this overload when you need a standalone node (e.g. a camera rig pivot) that lives
- * outside the `Scene { }` content block and must be passed as a parameter to `Scene`.
+ * outside the `SceneView { }` content block and must be passed as a parameter to `SceneView`.
  *
  * ```kotlin
  * val centerNode = rememberNode(engine)
@@ -620,7 +620,7 @@ fun rememberEngine(
  *     position = Position(z = 3.0f)
  *     centerNode.addChildNode(this)
  * }
- * Scene(cameraNode = cameraNode) { ... }
+ * SceneView(cameraNode = cameraNode) { ... }
  * ```
  *
  * @param creator Factory that produces the node. Called once and memoised.
@@ -653,7 +653,7 @@ fun rememberNode(engine: Engine, creator: Node.() -> Unit = {}) =
  * A `Scene` is a flat container of Filament entities (renderables, lights). It can be shared
  * across multiple [View]s. Destroyed on disposal.
  *
- * You rarely need to call this directly — `Scene { }` creates one by default.
+ * You rarely need to call this directly — `SceneView { }` creates one by default.
  * Provide your own if you want to share the same scene graph across multiple composables.
  *
  * @param engine  The Filament [Engine] that owns this scene.
@@ -675,9 +675,9 @@ fun rememberScene(engine: Engine, creator: () -> Scene = { createScene(engine) }
  * A `View` is a heavy object that holds all rendering state for a single viewport — anti-aliasing,
  * shadows, post-processing, etc. One per window is recommended. Destroyed on disposal.
  *
- * You rarely need to call this directly — `Scene { }` creates one by default.
+ * You rarely need to call this directly — `SceneView { }` creates one by default.
  * Provide your own if you want to share the view with a [CollisionSystem] that is declared
- * outside the `Scene { }` block.
+ * outside the `SceneView { }` block.
  *
  * @param engine  The Filament [Engine] that owns this view.
  * @param creator Factory for the view. Override for custom view flags.
@@ -716,7 +716,7 @@ fun rememberARView(engine: Engine, creator: () -> View = { createARView(engine) 
  * A `Renderer` represents an operating system window and drives the frame pipeline —
  * `beginFrame`, `render`, `endFrame`. One per window is recommended. Destroyed on disposal.
  *
- * You rarely need to call this directly — `Scene { }` creates one by default.
+ * You rarely need to call this directly — `SceneView { }` creates one by default.
  *
  * @param engine  The Filament [Engine] that owns this renderer.
  * @param creator Factory for the renderer.
@@ -738,7 +738,7 @@ fun rememberRenderer(
  *
  * `ModelLoader` consumes glTF 2.0 content (JSON or binary GLB) and produces Filament textures,
  * vertex buffers, index buffers, and material instances. It also drives incremental async
- * loading via `updateLoad()`, which is called automatically every frame inside `Scene`.
+ * loading via `updateLoad()`, which is called automatically every frame inside `SceneView`.
  *
  * Use [rememberModelInstance] to load a specific model file.
  *
@@ -794,7 +794,7 @@ fun rememberMaterialLoader(
  *
  * `EnvironmentLoader` turns an equirectangular HDR file (or a pair of pre-filtered KTX1 files)
  * into a Filament `IndirectLight` (image-based lighting) and optional `Skybox`. Use it with
- * [rememberEnvironment] to wire the result into a `Scene`.
+ * [rememberEnvironment] to wire the result into a `SceneView`.
  *
  * @param engine  The Filament [Engine] that owns the produced textures.
  * @param context Android context used to open asset files. Defaults to [LocalContext].
@@ -819,14 +819,14 @@ fun rememberEnvironmentLoader(
  * Creates and remembers the main rendering [CameraNode].
  *
  * The camera node determines the viewpoint and projection of the scene. Pass it to
- * `Scene(cameraNode = ...)` to set it as the active camera.
+ * `SceneView(cameraNode = ...)` to set it as the active camera.
  *
  * ```kotlin
  * val cameraNode = rememberCameraNode(engine) {
  *     position = Position(z = 4.0f)
  *     lookAt(Position(0f, 0f, 0f))
  * }
- * Scene(cameraNode = cameraNode) { ... }
+ * SceneView(cameraNode = cameraNode) { ... }
  * ```
  *
  * @param engine The Filament [Engine] that owns the camera.
@@ -849,7 +849,7 @@ fun rememberCameraNode(
  * Combine with [rememberEnvironment] (IBL) for physically-based lighting.
  *
  * ```kotlin
- * Scene(
+ * SceneView(
  *     mainLightNode = rememberMainLightNode(engine) {
  *         intensity = 100_000.0f
  *     }
@@ -872,7 +872,7 @@ fun rememberMainLightNode(
  * Creates and remembers an [Environment] from an [EnvironmentLoader].
  *
  * An `Environment` bundles a Filament `IndirectLight` (image-based lighting) with an optional
- * `Skybox`. Pass the result to `Scene(environment = ...)`.
+ * `Skybox`. Pass the result to `SceneView(environment = ...)`.
  *
  * The [environment] factory lambda runs once and is memoised. Use it to load an HDR file:
  * ```kotlin
@@ -933,7 +933,7 @@ fun rememberEnvironment(
  *
  * The collision system maps touch events to 3D nodes using the [View]'s projection and the
  * bounding boxes of all scene nodes. It is called automatically by the touch dispatcher inside
- * `Scene`, so you only need to provide this explicitly if you declared the [View] yourself via
+ * `SceneView`, so you only need to provide this explicitly if you declared the [View] yourself via
  * [rememberView].
  *
  * @param view    The Filament [View] whose projection is used for hit testing.
@@ -959,7 +959,7 @@ fun rememberCollisionSystem(
  *
  * Provides a composable-friendly way to listen for gestures on scene nodes. Each callback
  * receives the triggering [MotionEvent] and the [Node] that was hit (or `null` for empty-space
- * gestures). Pass the result to `Scene(onGestureListener = ...)`.
+ * gestures). Pass the result to `SceneView(onGestureListener = ...)`.
  *
  * The most commonly used callbacks:
  * - [onSingleTapConfirmed] — reliable single-tap, fired after double-tap window expires
@@ -1057,9 +1057,9 @@ fun rememberOnGestureListener(
  *
  * The manipulator translates touch gestures into camera transform updates — one-finger drag to
  * orbit, two-finger drag to pan, pinch to zoom. It is updated automatically every frame inside
- * `Scene`.
+ * `SceneView`.
  *
- * Pass `null` to `Scene(cameraManipulator = null)` to disable camera interaction entirely.
+ * Pass `null` to `SceneView(cameraManipulator = null)` to disable camera interaction entirely.
  *
  * ```kotlin
  * val cameraManipulator = rememberCameraManipulator(
@@ -1090,7 +1090,7 @@ fun rememberCameraManipulator(
  * ```kotlin
  * val windowManager = rememberViewNodeManager()
  *
- * Scene {
+ * SceneView {
  *     ViewNode(windowManager = windowManager) {
  *         Card { Text("Hello from 3D!") }
  *     }

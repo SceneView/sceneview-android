@@ -56,7 +56,7 @@ import io.github.sceneview.ar.node.TrackableNode as TrackableNodeImpl
  * the AR scene updates on the next frame — no imperative add/remove calls needed.
  *
  * ```kotlin
- * ARScene(modifier = Modifier.fillMaxSize()) {
+ * ARSceneView(modifier = Modifier.fillMaxSize()) {
  *     // anchor is a mutableStateOf<Anchor?> — null until a plane is detected
  *     anchor?.let { a ->
  *         AnchorNode(anchor = a) {
@@ -70,7 +70,7 @@ import io.github.sceneview.ar.node.TrackableNode as TrackableNodeImpl
  * ```
  *
  * AR-specific composables ([AnchorNode], [PoseNode], [HitResultNode], etc.) are only available
- * at the top level of `ARScene { }`. Inside a nested [NodeScope] (the `content` block of any
+ * at the top level of `ARSceneView { }`. Inside a nested [NodeScope] (the `content` block of any
  * node), only the base [SceneScope] composables are in scope.
  *
  * **Naming convention:** Composable functions in this scope (e.g. `AnchorNode`, `TrackableNode`)
@@ -112,7 +112,7 @@ class ARSceneScope internal constructor(
      * ```kotlin
      * var anchor by remember { mutableStateOf<Anchor?>(null) }
      *
-     * ARScene(
+     * ARSceneView(
      *     onSessionUpdated = { _, frame ->
      *         if (anchor == null) {
      *             anchor = frame.hitTest(centerX, centerY)
@@ -223,7 +223,7 @@ class ARSceneScope internal constructor(
      * Useful for placement cursors or interactive positioning UIs.
      *
      * ```kotlin
-     * ARScene {
+     * ARSceneView {
      *     HitResultNode(xPx = viewWidth / 2f, yPx = viewHeight / 2f) {
      *         CubeNode(size = Float3(0.05f))
      *     }
@@ -313,7 +313,7 @@ class ARSceneScope internal constructor(
      *
      * Usage — show content over a magazine cover:
      * ```kotlin
-     * ARScene(
+     * ARSceneView(
      *     sessionConfiguration = { session, config ->
      *         config.augmentedImageDatabase = AugmentedImageDatabase(session).also { db ->
      *             db.addImage("cover", coverBitmap)
@@ -384,7 +384,7 @@ class ARSceneScope internal constructor(
      * `AugmentedFaceMode.MESH3D` and the front camera.
      *
      * ```kotlin
-     * ARScene(
+     * ARSceneView(
      *     sessionFeatures = setOf(Session.Feature.FRONT_CAMERA),
      *     sessionConfiguration = { _, config ->
      *         config.augmentedFaceMode = Config.AugmentedFaceMode.MESH3D
@@ -445,7 +445,7 @@ class ARSceneScope internal constructor(
      * ```kotlin
      * var cloudNode: CloudAnchorNode? by remember { mutableStateOf(null) }
      *
-     * ARScene {
+     * ARSceneView {
      *     cloudNode?.let { node ->
      *         // The node is already created; just add children
      *     }
@@ -548,7 +548,7 @@ class ARSceneScope internal constructor(
      * [Frame.getUpdatedTrackables].
      *
      * ```kotlin
-     * ARScene(
+     * ARSceneView(
      *     sessionConfiguration = { _, config ->
      *         config.geospatialMode = Config.GeospatialMode.ENABLED
      *         config.streetscapeGeometryMode = Config.StreetscapeGeometryMode.ENABLED

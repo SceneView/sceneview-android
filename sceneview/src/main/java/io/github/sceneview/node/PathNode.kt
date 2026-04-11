@@ -14,7 +14,7 @@ import io.github.sceneview.math.Position
  * point is also connected back to the first.
  *
  * ```kotlin
- * Scene {
+ * SceneView {
  *     val material = remember(materialLoader) {
  *         materialLoader.createColorInstance(Color.Green)
  *     }

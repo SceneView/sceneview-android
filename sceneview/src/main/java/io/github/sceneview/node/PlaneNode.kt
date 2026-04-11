@@ -15,7 +15,7 @@ import io.github.sceneview.math.Size
  * The plane has the given [size] (width x height), is centred at [center], and faces the
  * specified [normal] direction. UV coordinates are scaled by the optional [uvScale].
  *
- * Use the composable `SceneScope.PlaneNode(...)` for declarative usage inside a `Scene { }` block,
+ * Use the composable `SceneScope.PlaneNode(...)` for declarative usage inside a `SceneView { }` block,
  * or instantiate this class directly for imperative code.
  *
  * @see io.github.sceneview.geometries.Plane

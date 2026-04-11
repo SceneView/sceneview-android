@@ -12,7 +12,7 @@ import io.github.sceneview.math.Position
  * The sphere is centred at [center] with the given [radius] and tessellated with [stacks] horizontal
  * and [slices] vertical subdivisions. Vertices include normals and UV coordinates.
  *
- * Use the composable `SceneScope.SphereNode(...)` for declarative usage inside a `Scene { }` block,
+ * Use the composable `SceneScope.SphereNode(...)` for declarative usage inside a `SceneView { }` block,
  * or instantiate this class directly for imperative code.
  *
  * @see io.github.sceneview.geometries.Sphere

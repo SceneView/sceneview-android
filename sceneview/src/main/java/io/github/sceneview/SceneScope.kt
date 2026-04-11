@@ -72,7 +72,7 @@ annotation class SceneDsl
 /**
  * The composable DSL scope for building 3D scenes inside [Scene].
  *
- * `SceneScope` is the receiver of `Scene { }` content blocks. Every node type — models, lights,
+ * `SceneScope` is the receiver of `SceneView { }` content blocks. Every node type — models, lights,
  * geometry, images, Compose UI planes, custom meshes — is a `@Composable` function in this scope.
  * Nodes enter the Filament scene on first composition and are automatically destroyed when they
  * leave, with no manual lifecycle management.
@@ -81,7 +81,7 @@ annotation class SceneDsl
  * `remember` and `LaunchedEffect`. The 3D scene graph mirrors the Compose tree.
  *
  * ```kotlin
- * Scene(modifier = Modifier.fillMaxSize()) {
+ * SceneView(modifier = Modifier.fillMaxSize()) {
  *     // Async model — null while loading, node appears on recomposition when ready
  *     rememberModelInstance(modelLoader, "models/helmet.glb")?.let { instance ->
  *         ModelNode(modelInstance = instance, scaleToUnits = 0.5f)
@@ -185,7 +185,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
      *
      * Typically used in combination with [rememberModelInstance] to load a model asynchronously:
      * ```kotlin
-     * Scene {
+     * SceneView {
      *     rememberModelInstance(modelLoader, "models/helmet.glb")?.let { instance ->
      *         ModelNode(modelInstance = instance, scaleToUnits = 0.5f)
      *     }
@@ -835,7 +835,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
      * }
      * DisposableEffect(Unit) { onDispose { player.release() } }
      *
-     * Scene {
+     * SceneView {
      *     VideoNode(player = player, position = Position(z = -2f))
      * }
      * ```
@@ -881,7 +881,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
      * Internally uses [rememberMediaPlayer] for lifecycle management and [VideoNode] for rendering.
      *
      * ```kotlin
-     * Scene {
+     * SceneView {
      *     VideoNode(
      *         videoPath = "videos/promo.mp4",
      *         position = Position(z = -2f)
@@ -946,7 +946,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
      * **Requires a [ViewNodeImpl.WindowManager]** — obtain one with [rememberViewNodeManager]:
      * ```kotlin
      * val windowManager = rememberViewNodeManager()
-     * Scene {
+     * SceneView {
      *     ViewNode(windowManager = windowManager) {
      *         Text("Hello from 3D!")
      *     }
@@ -988,7 +988,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
      * A node that renders a single line segment between two 3D points.
      *
      * ```kotlin
-     * Scene {
+     * SceneView {
      *     val mat = remember(materialLoader) { materialLoader.createColorInstance(Color.Red) }
      *     LineNode(
      *         start = Position(0f, 0f, 0f),
@@ -1046,7 +1046,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
      * A node that renders a polyline through a list of 3D points.
      *
      * ```kotlin
-     * Scene {
+     * SceneView {
      *     val mat = remember(materialLoader) { materialLoader.createColorInstance(Color.Green) }
      *     PathNode(
      *         points = spiralPoints,
@@ -1150,7 +1150,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
      * }
      * var cameraPos by remember { mutableStateOf(Position()) }
      *
-     * Scene(
+     * SceneView(
      *     scene = scene,
      *     onFrame = { cameraPos = cameraNode.worldPosition }
      * ) {
@@ -1166,7 +1166,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
      * ```
      *
      * @param filamentScene  The Filament [com.google.android.filament.Scene] whose indirect light
-     *                       is overridden. Obtain via [rememberScene] and pass it to `Scene`.
+     *                       is overridden. Obtain via [rememberScene] and pass it to `SceneView`.
      * @param environment    The [Environment] whose [Environment.indirectLight] is applied.
      * @param position       Centre of the reflection zone in world space. Defaults to the origin.
      * @param radius         Sphere radius in metres. `0f` or negative means always-active (global).
@@ -1201,7 +1201,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
      * from 2D polygon paths.
      *
      * ```kotlin
-     * Scene {
+     * SceneView {
      *     val mat = remember(materialLoader) { materialLoader.createColorInstance(Color.Blue) }
      *     ShapeNode(
      *         polygonPath = listOf(
@@ -1286,7 +1286,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
      * node must already exist in the scene graph — this composable drives its position each frame.
      *
      * ```kotlin
-     * Scene {
+     * SceneView {
      *     val mat = remember(materialLoader) { materialLoader.createColorInstance(Color.Red) }
      *     SphereNode(radius = 0.15f, materialInstance = mat, position = Position(0f, 3f, -2f)) {
      *         // This sphere will fall and bounce:
@@ -1380,7 +1380,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
  * work in standard Compose UI.
  *
  * ```kotlin
- * Scene {
+ * SceneView {
  *     Node(position = Position(y = 0.5f)) {  // <- this block is a NodeScope
  *         ModelNode(modelInstance = helmet)   // child of the Node above
  *         CubeNode(size = Size(0.05f))        // sibling, also a child of Node

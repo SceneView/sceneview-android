@@ -25,7 +25,7 @@ import io.github.sceneview.safeDestroyTexture
  * Optionally supports chroma-key (green-screen) compositing via [chromaKeyColor].
  *
  * ```kotlin
- * Scene {
+ * SceneView {
  *     val player = remember {
  *         MediaPlayer().apply {
  *             setDataSource(context, videoUri)

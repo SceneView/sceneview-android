@@ -17,7 +17,7 @@
 ## What it does NOT do
 
 - Does **not** use Filament (no GPU-accelerated rendering)
-- Does **not** use the SceneView `Scene { }` composable
+- Does **not** use the SceneView `SceneView { }` composable
 - Does **not** load 3D models (`.glb`, `.gltf`)
 - Does **not** share any rendering code with the Android or Web SceneView modules
 
@@ -40,5 +40,5 @@ research document on what a real Filament Desktop integration would require (est
 ## Future: Filament JNI Desktop
 
 When Filament JNI desktop binaries become available (must be built from source -- not
-published to Maven Central), this demo would be replaced with a real `Scene { }` composable
+published to Maven Central), this demo would be replaced with a real `SceneView { }` composable
 using the same API as Android. See the research doc for details.

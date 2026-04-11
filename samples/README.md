@@ -6,8 +6,8 @@ This directory contains sample apps demonstrating SceneView capabilities across 
 
 | I want to... | Sample | Key code |
 |---|---|---|
-| Show a 3D model with orbit camera | `model-viewer` | `Scene { ModelNode(modelInstance) }` |
-| Place a model in AR on a surface | `ar-model-viewer` | `ARScene { AnchorNode { ModelNode() } }` |
+| Show a 3D model with orbit camera | `model-viewer` | `SceneView { ModelNode(modelInstance) }` |
+| Place a model in AR on a surface | `ar-model-viewer` | `ARSceneView { AnchorNode { ModelNode() } }` |
 | Control camera orbit/pan/zoom | `camera-manipulator` | `rememberCameraManipulator()` |
 | Use cameras from a glTF file | `gltf-camera` | `CameraNode(camera = gltfCamera)` |
 | Draw lines and curves | `line-path` | `LineNode(start, end)`, `PathNode(points)` |
@@ -64,7 +64,7 @@ fun ModelViewer() {
     val modelLoader = rememberModelLoader(engine)
     val model = rememberModelInstance(modelLoader, "models/helmet.glb")
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -85,7 +85,7 @@ fun ARTapToPlace() {
     val modelLoader = rememberModelLoader(engine)
     val model = rememberModelInstance(modelLoader, "models/chair.glb")
 
-    ARScene(
+    ARSceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -116,7 +116,7 @@ fun ProceduralScene() {
     val materialLoader = rememberMaterialLoader(engine)
     val material = rememberMaterialInstance(materialLoader)
 
-    Scene(modifier = Modifier.fillMaxSize(), engine = engine) {
+    SceneView(modifier = Modifier.fillMaxSize(), engine = engine) {
         CubeNode(size = Size(0.5f), materialInstance = material)
         SphereNode(radius = 0.3f, materialInstance = material,
             position = Position(x = 1f))
@@ -134,7 +134,7 @@ fun ComposeIn3D() {
     val engine = rememberEngine()
     val windowManager = rememberViewNodeManager()
 
-    Scene(modifier = Modifier.fillMaxSize(), engine = engine) {
+    SceneView(modifier = Modifier.fillMaxSize(), engine = engine) {
         ViewNode(windowManager = windowManager) {
             Card { Text("Hello from 3D!") }
         }
@@ -153,7 +153,7 @@ fun AnimatedModel() {
     var isPlaying by remember { mutableStateOf(true) }
 
     Column {
-        Scene(
+        SceneView(
             modifier = Modifier.weight(1f).fillMaxWidth(),
             engine = engine, modelLoader = modelLoader
         ) {
@@ -176,7 +176,7 @@ fun MultiModelScene() {
     val helmet = rememberModelInstance(modelLoader, "models/helmet.glb")
     val car = rememberModelInstance(modelLoader, "models/car.glb")
 
-    Scene(modifier = Modifier.fillMaxSize(), engine = engine, modelLoader = modelLoader) {
+    SceneView(modifier = Modifier.fillMaxSize(), engine = engine, modelLoader = modelLoader) {
         helmet?.let { ModelNode(modelInstance = it, scaleToUnits = 0.5f,
             position = Position(x = -0.5f)) }
         car?.let { ModelNode(modelInstance = it, scaleToUnits = 0.5f,

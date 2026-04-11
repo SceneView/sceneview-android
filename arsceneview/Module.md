@@ -18,7 +18,7 @@ fun ARScreen() {
     val modelLoader = rememberModelLoader(engine)
     val instance = rememberModelInstance(modelLoader, "models/helmet.glb")
 
-    ARScene(
+    ARSceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -43,7 +43,7 @@ fun ARScreen() {
 
 | Composable | Description |
 |---|---|
-| `ARScene { }` | Root AR scene. Manages an ARCore Session, camera stream, light estimation, and plane rendering. Accepts an `ARSceneScope` content block. |
+| `ARSceneView { }` | Root AR scene. Manages an ARCore Session, camera stream, light estimation, and plane rendering. Accepts an `ARSceneScope` content block. |
 
 ### AR remember helpers
 
@@ -55,7 +55,7 @@ fun ARScreen() {
 
 All `rememberXxx` helpers from the base `sceneview` module are also available.
 
-### AR node composables (inside `ARScene { }`)
+### AR node composables (inside `ARSceneView { }`)
 
 | Node | Description |
 |---|---|
@@ -102,7 +102,7 @@ All `rememberXxx` helpers from the base `sceneview` module are also available.
 ### Default (world-facing, plane detection)
 
 ```kotlin
-ARScene(
+ARSceneView(
     planeRenderer = true,
     sessionConfiguration = { session, config ->
         config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
@@ -114,7 +114,7 @@ ARScene(
 ### Front-facing camera (face tracking)
 
 ```kotlin
-ARScene(
+ARSceneView(
     sessionFeatures = setOf(Session.Feature.FRONT_CAMERA),
     sessionConfiguration = { _, config ->
         config.augmentedFaceMode = Config.AugmentedFaceMode.MESH3D
@@ -125,7 +125,7 @@ ARScene(
 ### Augmented image detection
 
 ```kotlin
-ARScene(
+ARSceneView(
     sessionConfiguration = { session, config ->
         config.addAugmentedImage(session, "poster", posterBitmap, widthInMeters = 0.3f)
     },
@@ -146,7 +146,7 @@ ARScene(
 ### Cloud Anchors
 
 ```kotlin
-ARScene(
+ARSceneView(
     sessionConfiguration = { _, config ->
         config.cloudAnchorMode = Config.CloudAnchorMode.ENABLED
     },
@@ -162,7 +162,7 @@ ARScene(
 ### Geospatial / Streetscape
 
 ```kotlin
-ARScene(
+ARSceneView(
     sessionConfiguration = { session, config ->
         if (session.isGeospatialModeSupported(Config.GeospatialMode.ENABLED)) {
             config.geospatialMode = Config.GeospatialMode.ENABLED
@@ -176,7 +176,7 @@ ARScene(
 
 | Package | Contents |
 |---|---|
-| `io.github.sceneview.ar` | `ARScene`, `ARSceneScope`, `ARCore`, `ARFactories`, `PlaneVisualizer` |
+| `io.github.sceneview.ar` | `ARSceneView`, `ARSceneScope`, `ARCore`, `ARFactories`, `PlaneVisualizer` |
 | `io.github.sceneview.ar.node` | `AnchorNode`, `PoseNode`, `HitResultNode`, `TrackableNode`, `CloudAnchorNode`, `TerrainAnchorNode`, `RooftopAnchorNode`, `AugmentedImageNode`, `AugmentedFaceNode`, `StreetscapeGeometryNode`, `ARCameraNode` |
 | `io.github.sceneview.ar.arcore` | `ARSession`, Frame/Pose/Camera/HitResult/Trackable extensions, session configuration helpers |
 | `io.github.sceneview.ar.camera` | `ARCameraStream` — camera feed rendering and depth occlusion |
