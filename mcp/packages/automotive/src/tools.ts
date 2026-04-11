@@ -54,6 +54,18 @@ import {
   validateAutomotiveCode,
   formatValidationReport,
 } from "./validator.js";
+import {
+  generateEvChargingStationViewer,
+  CHARGING_CONNECTORS,
+  STATION_LAYOUTS,
+  type ChargingConnector,
+  type StationLayout,
+} from "./ev-charging-station-viewer.js";
+import {
+  generateCarPaintShader,
+  PAINT_FINISHES,
+  type PaintFinish,
+} from "./car-paint-shader.js";
 
 // ─── Legal disclaimer ─────────────────────────────────────────────────────────
 
@@ -279,6 +291,71 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
         },
       },
       required: ["category"],
+    },
+  },
+  {
+    name: "get_ev_charging_station_viewer",
+    description:
+      "Returns a complete, compilable Kotlin composable that renders a 3D EV charging station model with an overlay UI showing live charge level, available bays, and estimated time to full. Supports 5 connector types (CCS, CHAdeMO, Type 2, Tesla, J1772) and 4 station layouts (single, dual, bank, canopy). The overlay is a Material 3 card bound to live state that your app can wire to a real BLE/backend charging session. Optional AR mode uses ARScene so the station can be placed in the real world.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        connector: {
+          type: "string",
+          enum: CHARGING_CONNECTORS,
+          description: `EV charging connector standard (default: "ccs"):\n${CHARGING_CONNECTORS.map((c) => `- "${c}"`).join("\n")}`,
+        },
+        layout: {
+          type: "string",
+          enum: STATION_LAYOUTS,
+          description: `Station layout (default: "single"):\n${STATION_LAYOUTS.map((l) => `- "${l}"`).join("\n")}`,
+        },
+        overlay: {
+          type: "boolean",
+          description: "Render the Material 3 status overlay card (default: true).",
+        },
+        ar: {
+          type: "boolean",
+          description: "Generate an AR version using ARScene — place the station in the real world (default: false). Requires arsceneview dependency.",
+        },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "get_car_paint_shader",
+    description:
+      "Returns a realistic Filament .mat car-paint material definition (clearcoat + optional metallic flakes) plus a Kotlin SceneView snippet showing how to compile it to .filamat and apply it to a loaded car model's material instances. Parameters are physically based: baseColor, metallic, roughness, clearcoat, clearcoatRoughness. Supports 4 finish presets (solid, metallic, pearlescent, matte) that override the PBR knobs with realistic defaults. Use this for car configurators where hand-writing a correct clearcoat material is otherwise tedious.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        baseColorHex: {
+          type: "string",
+          description: 'Hex base color, e.g. "#CC0000" for racing red. Default: "#CC0000".',
+        },
+        metallic: {
+          type: "number",
+          description: "Metallic parameter (0.0 = dielectric, 1.0 = full metal). Default: 0.9. Forced to 0 for matte finish.",
+        },
+        roughness: {
+          type: "number",
+          description: "Base coat roughness (0.0 = mirror, 1.0 = chalk). Default: 0.35.",
+        },
+        clearcoat: {
+          type: "number",
+          description: "Clearcoat lacquer intensity (0.0..1.0). Default: 1.0. Forced to 0 for matte finish.",
+        },
+        clearcoatRoughness: {
+          type: "number",
+          description: "Clearcoat smoothness — lower = glossier. Default: 0.05.",
+        },
+        finish: {
+          type: "string",
+          enum: PAINT_FINISHES,
+          description: `Finish preset that overrides PBR knobs with realistic defaults (default: "metallic"):\n${PAINT_FINISHES.map((f) => `- "${f}"`).join("\n")}`,
+        },
+      },
+      required: [],
     },
   },
   {
@@ -583,6 +660,122 @@ export async function dispatchTool(
       };
     }
 
+    // ── get_ev_charging_station_viewer ────────────────────────────────────
+    case "get_ev_charging_station_viewer": {
+      const args = rawArgs ?? {};
+      const connector = (args.connector as ChargingConnector | undefined) ?? "ccs";
+      const layout = (args.layout as StationLayout | undefined) ?? "single";
+
+      if (!CHARGING_CONNECTORS.includes(connector)) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Invalid connector "${connector}". Valid: ${CHARGING_CONNECTORS.join(", ")}`,
+            },
+          ],
+          isError: true,
+        };
+      }
+      if (!STATION_LAYOUTS.includes(layout)) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Invalid layout "${layout}". Valid: ${STATION_LAYOUTS.join(", ")}`,
+            },
+          ],
+          isError: true,
+        };
+      }
+
+      const code = generateEvChargingStationViewer({
+        connector,
+        layout,
+        overlay: args.overlay as boolean ?? true,
+        ar: args.ar as boolean ?? false,
+      });
+
+      const mode = args.ar ? "AR" : "3D";
+      return {
+        content: withDisclaimer([
+          {
+            type: "text",
+            text: [
+              `## ${mode} EV Charging Station Viewer — ${layout} ${connector.toUpperCase()}`,
+              ``,
+              `**Gradle dependency:**`,
+              "```kotlin",
+              args.ar
+                ? `implementation("io.github.sceneview:arsceneview:3.6.2")`
+                : `implementation("io.github.sceneview:sceneview:3.6.2")`,
+              "```",
+              ``,
+              `**Kotlin (Jetpack Compose):**`,
+              "```kotlin",
+              code,
+              "```",
+            ].join("\n"),
+          },
+        ]),
+      };
+    }
+
+    // ── get_car_paint_shader ──────────────────────────────────────────────
+    case "get_car_paint_shader": {
+      const args = rawArgs ?? {};
+      const finish = (args.finish as PaintFinish | undefined) ?? "metallic";
+      if (!PAINT_FINISHES.includes(finish)) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Invalid finish "${finish}". Valid: ${PAINT_FINISHES.join(", ")}`,
+            },
+          ],
+          isError: true,
+        };
+      }
+
+      const template = generateCarPaintShader({
+        baseColorHex: args.baseColorHex as string | undefined,
+        metallic: args.metallic as number | undefined,
+        roughness: args.roughness as number | undefined,
+        clearcoat: args.clearcoat as number | undefined,
+        clearcoatRoughness: args.clearcoatRoughness as number | undefined,
+        finish,
+      });
+
+      return {
+        content: withDisclaimer([
+          {
+            type: "text",
+            text: [
+              `## Car Paint Shader — ${finish}`,
+              ``,
+              template.description,
+              ``,
+              `**Dependencies:**`,
+              ...template.dependencies.map((d) => `- ${d}`),
+              ``,
+              `**Filament material definition (\`car_paint.mat\`):**`,
+              "```",
+              template.materialDefinition,
+              "```",
+              ``,
+              `Compile with: \`matc -p mobile -a opengl -o car_paint.filamat car_paint.mat\``,
+              `Place the compiled \`.filamat\` in \`src/main/assets/materials/car_paint.filamat\`.`,
+              ``,
+              `**Kotlin usage (Jetpack Compose):**`,
+              "```kotlin",
+              template.kotlinUsage,
+              "```",
+            ].join("\n"),
+          },
+        ]),
+      };
+    }
+
     // ── list_car_models ───────────────────────────────────────────────────
     case "list_car_models": {
       const args = rawArgs ?? {};
@@ -620,7 +813,7 @@ export async function dispatchTool(
         content: [
           {
             type: "text",
-            text: `Unknown tool: "${toolName}". Available: get_car_configurator, get_hud_overlay, get_dashboard_3d, get_ar_showroom, get_parts_catalog, list_car_models, validate_automotive_code`,
+            text: `Unknown tool: "${toolName}". Available: get_car_configurator, get_hud_overlay, get_dashboard_3d, get_ar_showroom, get_parts_catalog, get_ev_charging_station_viewer, get_car_paint_shader, list_car_models, validate_automotive_code`,
           },
         ],
         isError: true,
