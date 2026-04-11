@@ -1,5 +1,62 @@
 # Changelog
 
+## v4.0.0-rc.1 — SceneView ↔ Rerun.io integration (Release Candidate)
+
+**Status:** release candidate. Maven Central and Swift Package Manager artifacts are **not** published from this tag — pin to `4.0.0-rc.1` manually to test, or wait for the `v4.0.0` stable tag.
+
+**Strictly additive** to 3.6.2. Existing 3.6.x code compiles and runs unchanged.
+
+### New — AR Debug via Rerun.io
+
+Stream an ARCore (Android) or ARKit (iOS) session to the [Rerun](https://rerun.io) viewer for scrub-and-replay debugging. Same JSON-lines wire format on both platforms, single Python sidecar handles both.
+
+- **Android:** new `io.github.sceneview.ar.rerun.RerunBridge` + `rememberRerunBridge` composable helper. Non-blocking `Dispatchers.IO` scope, `Channel.CONFLATED` drop-on-backpressure, rate-limited 10 Hz by default, runtime `setEnabled()` kill switch. Zero new Gradle dependencies.
+- **iOS:** new `SceneViewSwift.RerunBridge` (`@ObservableObject` with `@Published eventCount`), `Network.framework` `NWConnection` on a dedicated utility queue. New `ARSceneView.onFrame { frame, arView in … }` modifier wired to the existing `ARSessionDelegate.session(_:didUpdate:)` — usable independently of the bridge for any per-frame custom logic.
+- **Wire format:** 5 event types (`camera_pose`, `plane`, `point_cloud`, `anchor`, `hit_result`), byte-identical output from Kotlin and Swift (enforced by 24 golden-string tests, 12 per platform).
+- **Python sidecar:** `samples/android-demo/tools/rerun-bridge.py` — reads the TCP stream and re-logs each event as the matching Rerun archetype (`Transform3D`, `LineStrips3D`, `Points3D`). Spawns the Rerun viewer automatically via `rr.init(spawn=True)`.
+- **Playground:** new "AR Debug (Rerun)" example in the `ar-spatial` category — embeds the official Rerun Web Viewer from `app.rerun.io` next to the SceneView canvas with per-platform code tabs for Android / iOS / Web / Flutter / React Native / Desktop / Claude.
+- **Sample apps:** new `RerunDebugDemo` tile in both `samples/android-demo` (Samples tab) and `samples/ios-demo` (Scenes → AR category).
+
+### New — `rerun-3d-mcp@1.0.0` on npm
+
+New dedicated MCP server — `npx rerun-3d-mcp` — that generates the Rerun integration boilerplate from natural-language prompts in any MCP client (Claude, Cursor, etc.). 5 tools:
+
+- `setup_rerun_project` — Gradle / SPM / Web / Python scaffolding with boilerplate
+- `generate_ar_logger` — Kotlin or Swift AR streaming helper, parameterized by data types and rate
+- `generate_python_sidecar` — TCP → `rerun-sdk` Python bridge
+- `embed_web_viewer` — HTML + module-script snippets for `@rerun-io/web-viewer`
+- `explain_concept` — focused docs for `rrd`, `timelines`, `entities`, `archetypes`, `transforms`
+
+Published Apache-2.0. 73 vitest tests. Tarball size 13.6 kB (9 files).
+
+### New — `sceneview-mcp@4.0.0-rc.1` on `@next` npm tag
+
+`sceneview-mcp` gains the Rerun integration docs via the regenerated `sceneview://api` resource (82.5 kB, +5.4 kB vs 3.6.4). Stays on the `@next` dist-tag — `@latest` is intentionally pinned to `3.6.4` until the gateway go-live pipeline has a first real paying customer (see `NOTICE-2026-04-11-mcp-gateway-live.md`). Install the RC with `npx sceneview-mcp@next`.
+
+Adds `publishConfig: { tag: "next" }` to `mcp/package.json` so future sessions can't accidentally promote the RC to `@latest` by running a bare `npm publish`.
+
+### Tests
+
+- 16 new JVM tests in `arsceneview` (12 golden-JSON for `RerunWireFormat`, 4 socket integration for `RerunBridge` with a mock `ServerSocket`)
+- 12 new Swift tests in `SceneViewSwiftTests` — identical golden strings, enforcing cross-platform wire-format parity at build time
+- 73 new vitest tests in `mcp/packages/rerun` — 100% tool coverage
+- Full suite validation:
+  - `./gradlew :arsceneview:compileDebugKotlin :arsceneview:testDebugUnitTest` ✓
+  - `./gradlew :samples:android-demo:assembleDebug` ✓
+  - `swift build --package-path SceneViewSwift` ✓
+  - `swift test --package-path SceneViewSwift --filter Rerun*` ✓
+  - `xcodebuild -project samples/ios-demo/SceneViewDemo.xcodeproj -scheme SceneViewDemo -destination 'generic/platform=iOS Simulator'` ✓
+
+### Version bump — 3.6.2 → 4.0.0-rc.1
+
+Propagated to 28 files via `.claude/scripts/sync-versions.sh --fix` + manual touches on docs/website/samples. The 4.0.0 major bump reflects two new capabilities (Rerun integration + the `4.0.0-beta.1` gateway lite proxy shipped earlier this day by a parallel session), not breaking API changes — 3.6.x code compiles unchanged against 4.0.0-rc.1.
+
+### Release workflow
+
+Git tag `v4.0.0-rc.1` + GitHub pre-release created. `release.yml` only matches strict semver `v[0-9]+.[0-9]+.[0-9]+`, so this RC tag does **not** trigger Maven Central / SPM publish. Promote to stable by bumping to `v4.0.0` and tagging again.
+
+---
+
 ## v3.6.2 — Cross-Platform Parity + Render Testing
 
 ### Architecture
