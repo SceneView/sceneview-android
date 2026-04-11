@@ -797,6 +797,62 @@
     .pg__ar-placeholder--visible {
       display: flex;
     }
+
+    /* --- Rerun.io viewer overlay (shown for the "AR Debug (Rerun)" sample) --- */
+    /* Embeds the official Rerun Web Viewer in an iframe (app.rerun.io) so the    */
+    /* playground stays CDN-script-free — the iframe is a full browsing context   */
+    /* boundary, not a script injection into this page.                           */
+    .pg__rerun-overlay {
+      position: absolute;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      background: #0f0f14;
+      z-index: 4;
+      pointer-events: auto;
+    }
+    .pg__rerun-overlay--visible {
+      display: flex;
+    }
+    .pg__rerun-frame {
+      flex: 1 1 auto;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: #0f0f14;
+    }
+    .pg__rerun-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      background: rgba(15, 15, 20, 0.92);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      color: #e6e6eb;
+      font-size: 13px;
+    }
+    .pg__rerun-toolbar-label {
+      flex: 1 1 auto;
+      opacity: 0.75;
+    }
+    .pg__rerun-load-btn {
+      appearance: none;
+      border: 1px solid rgba(121, 192, 255, 0.5);
+      background: rgba(0, 91, 193, 0.25);
+      color: #e6e6eb;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font: inherit;
+      cursor: pointer;
+      transition: background 120ms ease;
+    }
+    .pg__rerun-load-btn:hover {
+      background: rgba(0, 91, 193, 0.45);
+    }
+    .pg__rerun-load-btn:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
     .pg__ar-phone {
       width: 120px;
       height: 220px;
@@ -1705,6 +1761,24 @@
                   </a>
                 </div>
               </div>
+              <div class="pg__rerun-overlay" id="rerunOverlay" aria-hidden="true">
+                <iframe
+                  id="rerunFrame"
+                  class="pg__rerun-frame"
+                  src="about:blank"
+                  title="Rerun Web Viewer"
+                  loading="lazy"
+                  referrerpolicy="no-referrer"
+                  sandbox="allow-scripts allow-same-origin allow-popups"></iframe>
+                <div class="pg__rerun-toolbar">
+                  <span class="pg__rerun-toolbar-label" id="rerunStatus">
+                    Click "Load sample session" to embed the Rerun Web Viewer.
+                  </span>
+                  <button type="button" class="pg__rerun-load-btn" id="rerunLoadBtn">
+                    Load sample session
+                  </button>
+                </div>
+              </div>
               <div class="pg__controls">
                 <button class="pg__ctrl-btn pg__ctrl-btn--active" id="ctrlRotate" title="Auto-rotate" data-label="Rotate: ON">
                   <span class="material-symbols-outlined">360</span>
@@ -1953,6 +2027,46 @@
         web: {
           file: 'spatial-anchors.js', lang: 'JavaScript',
           code: '// WebXR Anchors API (experimental)\nconst scene = await SceneView.create("canvas");\n\nconst session = await navigator.xr.requestSession(\n    "immersive-ar",\n    { requiredFeatures: ["anchors"] }\n);\n\n// Create persistent anchor at hit point\nsession.addEventListener("select", async (e) => {\n    const frame = e.frame;\n    const anchor = await frame.createAnchor(\n        e.inputSource.targetRaySpace,\n        frame.getViewerPose(\n            session.referenceSpace\n        ).transform\n    );\n    \n    // Load model at anchor position\n    const model = await scene.loadModel(\n        "models/waypoint.glb"\n    );\n    // Anchor persists across frames\n});'
+        }
+      },
+      'rerun-debug': {
+        category: 'ar-spatial',
+        title: 'AR Debug (Rerun)',
+        icon: 'insights',
+        level: 'advanced',
+        tags: ['AR', 'Debug', 'Rerun', 'Advanced'],
+        defaultModel: 'DamagedHelmet',
+        previewType: 'rerun-debug',
+        description: 'Stream an ARCore / ARKit session (camera pose, planes, point cloud, anchors) to the Rerun viewer for scrub-and-inspect debugging. The preview pane embeds the official Rerun Web Viewer.',
+        android: {
+          file: 'RerunDebugScreen.kt', lang: 'Kotlin',
+          code: 'package com.example.app\n\nimport androidx.compose.foundation.layout.fillMaxSize\nimport androidx.compose.runtime.Composable\nimport androidx.compose.ui.Modifier\nimport io.github.sceneview.ar.ARScene\nimport io.github.sceneview.ar.rerun.rememberRerunBridge\n\n/**\n * Streams camera pose + detected planes + point cloud to a Rerun viewer\n * running on your dev machine.\n *\n * Setup (one-time):\n *   1. pip install rerun-sdk\n *   2. python tools/rerun-bridge.py   // generate via rerun-3d-mcp\n *   3. rerun\n *   4. adb reverse tcp:9876 tcp:9876\n */\n@Composable\nfun RerunDebugScreen() {\n    val bridge = rememberRerunBridge(\n        host = "127.0.0.1",\n        port = 9876,\n        rateHz = 10,\n        enabled = true\n    )\n\n    ARScene(\n        modifier = Modifier.fillMaxSize(),\n        onSessionUpdated = { _, frame ->\n            val nowNanos = frame.timestamp\n            bridge.logCameraPose(frame.camera.pose, nowNanos)\n            bridge.logPlanes(frame.getUpdatedPlanes(), nowNanos)\n            frame.acquirePointCloud().use { cloud ->\n                bridge.logPointCloud(cloud, nowNanos)\n            }\n        }\n    )\n}'
+        },
+        ios: {
+          file: 'RerunDebugView.swift', lang: 'Swift',
+          code: 'import SwiftUI\nimport SceneViewSwift\nimport ARKit\n\n/// Streams camera pose + plane anchors + raw feature points to a Rerun\n/// viewer running on your Mac.\n///\n/// Setup: pip install rerun-sdk, python tools/rerun-bridge.py, rerun,\n/// point the bridge at your Mac\'s LAN IP (or tether via USB + localhost).\nstruct RerunDebugView: View {\n    @StateObject private var bridge = RerunBridge(\n        host: "192.168.1.42",  // replace with your Mac\'s LAN IP\n        port: 9876,\n        rateHz: 10\n    )\n\n    var body: some View {\n        ARSceneView(\n            onFrame: { frame in\n                let t = Int64(frame.timestamp * 1_000_000_000)\n                bridge.logCameraPose(\n                    frame.camera.transform,\n                    timestamp: t\n                )\n                let planes = frame.anchors\n                    .compactMap { $0 as? ARPlaneAnchor }\n                bridge.logPlanes(planes, timestamp: t)\n                if let raw = frame.rawFeaturePoints {\n                    bridge.logPointCloud(raw, timestamp: t)\n                }\n            }\n        )\n        .ignoresSafeArea()\n        .onAppear { bridge.connect() }\n        .onDisappear { bridge.disconnect() }\n    }\n}'
+        },
+        web: {
+          file: 'rerun-embed.html', lang: 'HTML',
+          // NOTE: every </tag> inside this string is escaped as <\/tag> so the
+          // outer <script> block isn't terminated early by the HTML parser.
+          code: '<!-- Embed the Rerun Web Viewer next to a SceneView canvas -->\n<!doctype html>\n<html>\n<head>\n    <meta charset="utf-8" />\n    <title>SceneView + Rerun<\/title>\n    <style>\n        body { margin: 0; background: #0f0f14; }\n        .split {\n            display: grid;\n            grid-template-columns: 1fr 1fr;\n            height: 100vh;\n        }\n        #sceneview-canvas, #rerun-viewer {\n            width: 100%;\n            height: 100%;\n            border: 0;\n        }\n    <\/style>\n<\/head>\n<body>\n    <div class="split">\n        <canvas id="sceneview-canvas"><\/canvas>\n        <!-- Official Rerun hosted viewer in an iframe -->\n        <iframe\n            id="rerun-viewer"\n            src="https://app.rerun.io/version/0.22.0/?url=https://example.com/your-session.rrd"\n            sandbox="allow-scripts allow-same-origin"\n            title="Rerun Web Viewer">\n        <\/iframe>\n    <\/div>\n\n    <script src="js/sceneview.js"><\/script>\n    <script>\n        SceneView.create("sceneview-canvas", {\n            backgroundColor: [0.07, 0.07, 0.11, 1.0]\n        }).then(function(sv) {\n            sv.loadModel("models/helmet.glb");\n        });\n    <\/script>\n<\/body>\n<\/html>'
+        },
+        flutter: {
+          file: 'rerun_debug.md', lang: 'Markdown',
+          code: '# Rerun debug on Flutter\n\nThe SceneView Flutter plugin bridges to the native\nAndroid / iOS implementations, so the same RerunBridge\nhelper you use in the Kotlin / Swift code is available\nunder the hood.\n\nTo enable Rerun logging in a Flutter sample:\n\n1. Add the native helper call inside the platform view:\n   - Android: call `rememberRerunBridge(...)` inside the\n     composable that backs your PlatformView.\n   - iOS: instantiate `RerunBridge` in the SwiftUI view\n     wrapped by the Flutter platform view.\n\n2. Dart-side API is intentionally not exposed yet:\n   Rerun logging is a debug-only developer tool, not a\n   cross-platform Flutter API.\n\n3. On your dev machine, run the Python sidecar + the\n   Rerun viewer exactly as for a native app.'
+        },
+        reactnative: {
+          file: 'RerunDebug.md', lang: 'Markdown',
+          code: '# Rerun debug on React Native\n\nSame pattern as Flutter — the SceneView Fabric module\nembeds the native AR view (arsceneview on Android,\nSceneViewSwift on iOS), and the RerunBridge helper\nruns on the native side.\n\nTo toggle Rerun debug in your RN sample:\n\n1. Pass a `debugRerun` prop through your native\n   component spec.\n2. In the native bridge, when the prop is true, wire\n   `rememberRerunBridge(...)` / `RerunBridge(...)` into\n   the ARScene / ARSceneView lifecycle.\n3. On your dev machine, run the Python sidecar + the\n   Rerun viewer, same as any native debug session.\n\nRerun logging is a dev-time tool, so the flag should\nnever be enabled in production builds.'
+        },
+        desktop: {
+          file: 'rerun_desktop.md', lang: 'Markdown',
+          code: '# Rerun on desktop\n\nDesktop SceneView is a wireframe placeholder today —\nthere is no Filament renderer running, so there is no\nAR session to log.\n\nIf you want a desktop Rerun workflow for SceneView:\n\n- Use the standalone Python pipeline generated by the\n  `setup_rerun_project` tool of `rerun-3d-mcp`\n  (platform="python"). It gives you a Python sidecar\n  plus a requirements.txt for the Rerun SDK.\n- Drive it from your desktop tooling (post-processing,\n  CI screenshot diffing, dataset inspection).\n- Or use the Rerun Web Viewer embedded in an Electron /\n  Tauri shell if you need a packaged desktop viewer.'
+        },
+        claude: {
+          file: 'prompt.md', lang: 'Markdown',
+          code: '# MCP / Claude — AR Debug with Rerun\n\n## Prompt to Claude:\n\n> I want to debug an ARCore session in SceneView\n> by streaming camera pose, detected planes and\n> point cloud to the Rerun viewer. Generate a\n> Kotlin composable and a Python sidecar.\n\n## Claude will call rerun-3d-mcp:\n\n```\ngenerate_ar_logger({\n  language: "kotlin",\n  dataTypes: ["pose", "planes", "point_cloud"],\n  rateHz: 10\n})\n\ngenerate_python_sidecar({ port: 9876 })\n```\n\n## rerun-3d-mcp tools:\n- `setup_rerun_project` — scaffold Gradle / SPM / web / Python\n- `generate_ar_logger` — Kotlin or Swift AR streamer\n- `generate_python_sidecar` — TCP \u2192 rerun-sdk bridge\n- `embed_web_viewer` — HTML embed snippet\n- `explain_concept` — .rrd, timelines, entities, archetypes\n\nInstall:\n```\nnpx rerun-3d-mcp\n```'
         }
       },
       'primitives': {
@@ -2426,6 +2540,57 @@
     var arTitle = $('arTitle');
     var arSubtitle = $('arSubtitle');
     var arPhoneIcon = $('arPhoneIcon');
+    var rerunOverlay = $('rerunOverlay');
+    var rerunFrame = $('rerunFrame');
+    var rerunStatus = $('rerunStatus');
+    var rerunLoadBtn = $('rerunLoadBtn');
+
+    // ----------------------------------------------------------------------
+    // Rerun Web Viewer integration
+    // ----------------------------------------------------------------------
+    // The Rerun viewer lives in an iframe pointed at the official hosted app
+    // (app.rerun.io). That's a full browsing-context boundary, not a script
+    // injection, so the playground page itself stays free of third-party CDN
+    // script tags — the only coupling is the iframe src URL, the same way
+    // a <a href> would be.
+    //
+    // TODO (post v4.0): host a SceneView-generated sample AR session (.rrd)
+    // on sceneview.github.io/rerun/ and point this URL at it instead of the
+    // built-in Rerun demo below.
+    var RERUN_SAMPLE_RRD =
+      'https://app.rerun.io/version/0.22.0/examples/structure_from_motion.rrd';
+    var RERUN_VIEWER_BASE = 'https://app.rerun.io/version/0.22.0/?url=';
+
+    function showRerunOverlay() {
+      rerunOverlay.classList.add('pg__rerun-overlay--visible');
+      rerunOverlay.setAttribute('aria-hidden', 'false');
+      rerunStatus.textContent =
+        'Click "Load sample session" to embed the Rerun Web Viewer.';
+      rerunLoadBtn.disabled = false;
+    }
+
+    function hideRerunOverlay() {
+      rerunOverlay.classList.remove('pg__rerun-overlay--visible');
+      rerunOverlay.setAttribute('aria-hidden', 'true');
+      // Free the WASM bundle when the user navigates away so memory doesn't
+      // accumulate when switching examples repeatedly.
+      if (rerunFrame.src !== 'about:blank') {
+        rerunFrame.src = 'about:blank';
+      }
+    }
+
+    if (rerunLoadBtn) {
+      rerunLoadBtn.addEventListener('click', function() {
+        rerunStatus.textContent = 'Loading Rerun Web Viewer…';
+        rerunLoadBtn.disabled = true;
+        rerunFrame.src = RERUN_VIEWER_BASE + encodeURIComponent(RERUN_SAMPLE_RRD);
+        rerunFrame.addEventListener('load', function onLoaded() {
+          rerunStatus.textContent =
+            'Rerun Web Viewer (live) · scrub the timeline at the bottom of the iframe.';
+          rerunFrame.removeEventListener('load', onLoaded);
+        });
+      });
+    }
 
     function showARPlaceholder(ex) {
       // Customize copy per AR sample so each one feels distinct
@@ -2545,10 +2710,18 @@
 
       // AR previews use the HTML placeholder — no Filament scene
       if (type === 'ar') {
+        hideRerunOverlay();
         showARPlaceholder(ex);
         return;
       }
       hideARPlaceholder();
+
+      // Rerun debug preview uses the Rerun Web Viewer in an iframe — no Filament scene
+      if (type === 'rerun-debug') {
+        showRerunOverlay();
+        return;
+      }
+      hideRerunOverlay();
 
       // Custom scene builder? Ensure the viewer exists first.
       if (PREVIEW_SCENES[type]) {
