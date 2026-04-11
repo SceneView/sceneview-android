@@ -10,6 +10,10 @@
           {
             "type": "command",
             "command": "bash -c 'ROOT=$(git rev-parse --show-toplevel 2>/dev/null); [ -f \"$ROOT/gradle.properties\" ] && V=$(grep \"^VERSION_NAME=\" \"$ROOT/gradle.properties\" | cut -d= -f2); for f in sceneview/gradle.properties arsceneview/gradle.properties sceneview-core/gradle.properties; do [ -f \"$ROOT/$f\" ] && FV=$(grep \"^VERSION_NAME=\" \"$ROOT/$f\" | cut -d= -f2) && [ \"$FV\" != \"$V\" ] && echo \"VERSION MISMATCH: $f has $FV but root has $V\" && exit 1; done; exit 0'"
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'ROOT=$(git rev-parse --show-toplevel 2>/dev/null); [ -x \"$ROOT/.claude/scripts/check-deprecated-api.sh\" ] && bash \"$ROOT/.claude/scripts/check-deprecated-api.sh\" || exit 0'"
           }
         ]
       },

@@ -127,6 +127,19 @@ TODOS=$(echo "$TODOS" | tr -d '[:space:]' | head -c 10)
 [ -z "$TODOS" ] && TODOS=0
 [ "$TODOS" -eq 0 ] 2>/dev/null && check "No new TODO/FIXME in staged changes" "PASS" "" || check "New TODO/FIXME" "WARN" "$TODOS occurrences"
 
+# Check for deprecated Scene{}/ARScene{} composable references.
+# Guards against AI sessions reintroducing the pre-v3.6 names, which the
+# library still accepts as @Deprecated aliases but which every Claude/Cursor
+# session would then copy-paste into fresh code.
+if [ -x ".claude/scripts/check-deprecated-api.sh" ]; then
+    if bash .claude/scripts/check-deprecated-api.sh --all > /tmp/check-deprecated-api.log 2>&1; then
+        check "No deprecated Scene{} / ARScene{} refs" "PASS" ""
+    else
+        DEPRECATED_COUNT=$(grep -cE '^    [^ ].+:[0-9]+:' /tmp/check-deprecated-api.log 2>/dev/null || echo "?")
+        check "Deprecated Scene{} / ARScene{} refs" "FAIL" "$DEPRECATED_COUNT line(s); see /tmp/check-deprecated-api.log"
+    fi
+fi
+
 echo ""
 
 # ─── 4b. Demo App Asset Integrity ──────────────────────────────────────
