@@ -2028,16 +2028,26 @@ ferrari_f40.glb
 | visionOS | RealityKit | SwiftUI | via SceneViewSwift | Alpha |
 | Web | Filament.js + WebXR | Kotlin/JS | `samples/web-demo` | Alpha |
 
-SceneView Web (sceneview.js v3.6.2) — JavaScript API:
+SceneView Web (sceneview.js v3.6.4) — JavaScript API:
   SceneView.modelViewer(canvas, url, options?) → Promise<instance>
   SceneView.create(canvas, options?) → Promise<instance>
   instance.loadModel(url) → Promise<instance>
+  instance.clearScene() → instance  // removes all models + primitives
   instance.setAutoRotate(enabled) → instance
   instance.setCameraDistance(d) → instance
+  instance.setCameraManipulator('orbit'|'map'|'freelook') → instance
   instance.setBackgroundColor(r, g, b, a?) → instance
   instance.setQuality('low'|'medium'|'high') → instance
   instance.setBloom(true|false|{strength,resolution,threshold,levels}) → instance
+  instance.loadEnvironment(ktxUrl, intensity?) → Promise<instance>
   instance.addLight({type?,color?,intensity?,direction?,position?,falloff?}) → entity
+  instance.removeLight(entity) → instance
+  instance.clearLights() → instance  // wipes base 3-point rig + IBL
+  instance.createBox(center, [w,h,d], [r,g,b,a]) → asset
+  instance.createSphere(center, radius, [r,g,b,a]) → asset
+  instance.createCylinder(center, radius, height, [r,g,b,a]) → asset
+  instance.playAnimation(index=0, loop=true) → instance  // glTF keyframe + skinning
+  instance.stopAnimation() → instance
   instance.createText({text, fontSize?, color?, position?, billboard?}) → entity
   instance.createImage({url, position?, size?, billboard?}) → entity
   instance.createVideo({url, position?, size?, loop?, autoplay?, chromaKey?}) → entity
