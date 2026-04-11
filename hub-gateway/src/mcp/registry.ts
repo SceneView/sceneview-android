@@ -5,24 +5,28 @@
  * files are intentionally copy-paste siblings so a future refactor can
  * extract them into a shared workspace package. Do not diverge.
  *
- * MVP scope: the registry ships FIVE pilot libraries as stubs
+ * Scope: the registry ships ELEVEN pilot libraries as stubs
  * (schemas + dispatch stubs, real handlers land in follow-up
- * sessions). Remaining portfolio MCPs are wired one at a time:
+ * sessions — see each library file for its individual wiring
+ * checklist). Together they cover every ACTIVE non-SceneView
+ * package in the portfolio as of 2026-04-11:
  *
- *   [stubbed]
+ *   [stubbed — all active portfolio MCPs]
  *   - architecture-mcp      (1 134 DL/mo, sceneview-tools)
  *   - realestate-mcp        (1 276 DL/mo, sceneview-tools)
  *   - french-admin-mcp      (1 268 DL/mo, thomasgorisse)
  *   - ecommerce-3d-mcp      (1 153 DL/mo, sceneview-tools)
- *   - finance-mcp             (585 DL/mo, mcp-tools-lab)
- *
- *   [pending]
  *   - legal-docs-mcp          (789 DL/mo, orphan — needs repo)
+ *   - finance-mcp             (585 DL/mo, mcp-tools-lab)
  *   - education-mcp           (566 DL/mo, mcp-tools-lab)
  *   - social-media-mcp        (341 DL/mo, thomasgorisse)
- *   - health-fitness-mcp      (335 DL/mo, thomasgorisse — needs repo)
+ *   - health-fitness-mcp      (335 DL/mo, thomasgorisse — repo 404)
  *   - automotive-3d-mcp     (sceneview monorepo)
  *   - healthcare-3d-mcp     (sceneview monorepo)
+ *
+ *   sceneview-mcp is intentionally EXCLUDED — it has Gateway #1
+ *   and its own lite package at mcp/ (session A is rewriting the
+ *   4.0.0-beta.1 proxy on the claude/mcp-monetization branch).
  *
  * sceneview-mcp is intentionally EXCLUDED — it has its own gateway.
  *
@@ -39,7 +43,13 @@ import * as ArchitectureTools from "../libraries/architecture.js";
 import * as RealestateTools from "../libraries/realestate.js";
 import * as FrenchAdminTools from "../libraries/french-admin.js";
 import * as Ecommerce3dTools from "../libraries/ecommerce-3d.js";
+import * as LegalDocsTools from "../libraries/legal-docs.js";
 import * as FinanceTools from "../libraries/finance.js";
+import * as EducationTools from "../libraries/education.js";
+import * as SocialMediaTools from "../libraries/social-media.js";
+import * as HealthFitnessTools from "../libraries/health-fitness.js";
+import * as Automotive3dTools from "../libraries/automotive-3d.js";
+import * as Healthcare3dTools from "../libraries/healthcare-3d.js";
 
 import type {
   DispatchContext,
@@ -76,10 +86,46 @@ const LIBRARIES: ToolLibrary[] = [
     dispatch: (name, args, ctx) => Ecommerce3dTools.dispatchTool(name, args, ctx),
   },
   {
+    id: "legal_docs",
+    label: "legal-docs-mcp",
+    definitions: LegalDocsTools.TOOL_DEFINITIONS,
+    dispatch: (name, args, ctx) => LegalDocsTools.dispatchTool(name, args, ctx),
+  },
+  {
     id: "finance",
     label: "finance-mcp",
     definitions: FinanceTools.TOOL_DEFINITIONS,
     dispatch: (name, args, ctx) => FinanceTools.dispatchTool(name, args, ctx),
+  },
+  {
+    id: "education",
+    label: "education-mcp",
+    definitions: EducationTools.TOOL_DEFINITIONS,
+    dispatch: (name, args, ctx) => EducationTools.dispatchTool(name, args, ctx),
+  },
+  {
+    id: "social_media",
+    label: "social-media-mcp",
+    definitions: SocialMediaTools.TOOL_DEFINITIONS,
+    dispatch: (name, args, ctx) => SocialMediaTools.dispatchTool(name, args, ctx),
+  },
+  {
+    id: "health_fitness",
+    label: "health-fitness-mcp",
+    definitions: HealthFitnessTools.TOOL_DEFINITIONS,
+    dispatch: (name, args, ctx) => HealthFitnessTools.dispatchTool(name, args, ctx),
+  },
+  {
+    id: "automotive3d",
+    label: "automotive-3d-mcp",
+    definitions: Automotive3dTools.TOOL_DEFINITIONS,
+    dispatch: (name, args, ctx) => Automotive3dTools.dispatchTool(name, args, ctx),
+  },
+  {
+    id: "healthcare3d",
+    label: "healthcare-3d-mcp",
+    definitions: Healthcare3dTools.TOOL_DEFINITIONS,
+    dispatch: (name, args, ctx) => Healthcare3dTools.dispatchTool(name, args, ctx),
   },
 ];
 

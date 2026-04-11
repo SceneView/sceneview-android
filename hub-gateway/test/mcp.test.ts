@@ -56,15 +56,22 @@ describe("hub-gateway /mcp", () => {
       result: { tools: Array<{ name: string }> };
     };
     expect(body.id).toBe(2);
-    expect(body.result.tools.length).toBeGreaterThanOrEqual(14);
+    expect(body.result.tools.length).toBeGreaterThanOrEqual(33);
     const names = body.result.tools.map((t) => t.name);
-    // One tool from each stubbed library — canary that the registry
-    // wiring is complete.
+    // One canary from each of the 11 stubbed libraries — if the
+    // registry wiring regresses, exactly one assertion below fails
+    // so the offending package is easy to spot.
     expect(names).toContain("architecture__list_building_types");
     expect(names).toContain("realestate__search_listings");
     expect(names).toContain("french_admin__calculate_impots");
     expect(names).toContain("ecommerce3d__search_products");
+    expect(names).toContain("legal_docs__list_templates");
     expect(names).toContain("finance__market_quote");
+    expect(names).toContain("education__generate_lesson_plan");
+    expect(names).toContain("social_media__suggest_hashtags");
+    expect(names).toContain("health_fitness__workout_plan");
+    expect(names).toContain("automotive3d__list_brands");
+    expect(names).toContain("healthcare3d__anatomy_search");
     // Every hub tool must be package-prefixed. Single-underscore
     // package ids (like `french_admin`) are allowed, the delimiter
     // between package and tool is always `__`.
@@ -131,7 +138,13 @@ describe("hub-gateway /mcp", () => {
       { tool: "realestate__search_listings", marker: "realestate-mcp pilot stub" },
       { tool: "french_admin__calculate_impots", marker: "french-admin-mcp pilot stub" },
       { tool: "ecommerce3d__search_products", marker: "ecommerce-3d-mcp pilot stub" },
+      { tool: "legal_docs__list_templates", marker: "legal-docs-mcp pilot stub" },
       { tool: "finance__market_quote", marker: "finance-mcp pilot stub" },
+      { tool: "education__generate_lesson_plan", marker: "education-mcp pilot stub" },
+      { tool: "social_media__suggest_hashtags", marker: "social-media-mcp pilot stub" },
+      { tool: "health_fitness__workout_plan", marker: "health-fitness-mcp pilot stub" },
+      { tool: "automotive3d__list_brands", marker: "automotive-3d-mcp pilot stub" },
+      { tool: "healthcare3d__anatomy_search", marker: "healthcare-3d-mcp pilot stub" },
     ];
     for (const { tool, marker } of targets) {
       const res = await app.request(

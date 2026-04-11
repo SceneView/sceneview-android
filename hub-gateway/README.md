@@ -15,14 +15,18 @@ Sibling of [`mcp-gateway/`](../mcp-gateway) (Gateway #1, which serves
 - [x] `/health` JSON endpoint
 - [x] `/`, `/pricing`, `/docs` HTML routes
 - [x] `POST /mcp` JSON-RPC endpoint (`initialize`, `tools/list`, `tools/call`)
-- [x] 5 pilot libraries: `architecture`, `realestate`, `french_admin`,
-      `ecommerce3d`, `finance` (stub dispatchers, 14 tools registered)
+- [x] 11 pilot libraries covering the whole active non-SceneView
+      portfolio (stub dispatchers): `architecture`, `realestate`,
+      `french_admin`, `ecommerce3d`, `legal_docs`, `finance`,
+      `education`, `social_media`, `health_fitness`, `automotive3d`,
+      `healthcare3d`
 - [x] Vitest smoke tests for every route and per-library dispatch
 - [ ] Auth middleware (to port from `mcp-gateway/src/auth/middleware.ts`)
 - [ ] Rate limit middleware
 - [ ] Stripe checkout routes + webhook (`/billing/checkout`, `/stripe/webhook`)
 - [ ] Usage logging into the shared D1 `usage_logs` table
-- [ ] Wire remaining 14 portfolio MCPs
+- [ ] Vendor real upstream tool handlers (replaces the 11 stub dispatchers)
+- [ ] Publish 11 lite npm packages (`*-mcp@2.0.0-beta.1` proxy mode)
 
 ## Shared infrastructure with Gateway #1
 
