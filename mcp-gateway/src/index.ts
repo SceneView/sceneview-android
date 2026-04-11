@@ -6,8 +6,8 @@ import { mcpRoutes } from "./routes/mcp.js";
 import { authRoutes } from "./routes/auth.js";
 import { dashboardRoutes } from "./routes/dashboard.js";
 import { billingRoutes } from "./routes/billing.js";
+import { checkoutSuccessRoutes } from "./routes/checkout-success.js";
 import { webhookRoutes } from "./routes/webhooks.js";
-import { renderLoginPage } from "./dashboard/login-page.js";
 
 type AppVariables = AuthVariables & SessionVariables;
 
@@ -31,13 +31,22 @@ app.route("/mcp", mcpRoutes());
 
 app.route("/", dashboardRoutes());
 
-// ── Dashboard auth routes (login, verify, logout) ───────────────────────────
+// ── Dashboard auth stubs — magic-link is disabled in the MVP ──────────────
+//
+// The /login, /auth/verify and /auth/logout routes currently return
+// 503 Service Unavailable. They are kept in the router so that bots and
+// old links get a clean HTTP response instead of a 404. See
+// `routes/auth.ts` for the full MVP-disabled stub.
 
-app.route("/", authRoutes({ renderLoginPage }));
+app.route("/", authRoutes());
 
-// ── Billing actions (Stripe checkout, portal) ──────────────────────────────
+// ── Billing actions (Stripe checkout) ──────────────────────────────────────
 
 app.route("/", billingRoutes());
+
+// ── Checkout success page (reads the KV handoff) ───────────────────────────
+
+app.route("/", checkoutSuccessRoutes());
 
 // ── Stripe webhook receiver ────────────────────────────────────────────────
 
