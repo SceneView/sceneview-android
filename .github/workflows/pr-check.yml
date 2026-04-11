@@ -26,6 +26,10 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Check for deprecated SceneView API refs
+        shell: bash
+        run: bash .claude/scripts/check-deprecated-api.sh --all
+
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
