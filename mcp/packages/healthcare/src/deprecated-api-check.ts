@@ -1,0 +1,1 @@
+../../shared/src/deprecated-api-check.ts

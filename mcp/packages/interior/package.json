@@ -44,7 +44,8 @@
     "dist/lighting-design.js",
     "dist/room-tour.js",
     "dist/furniture-models.js",
-    "dist/validator.js"
+    "dist/validator.js",
+    "dist/deprecated-api-check.js"
   ],
   "engines": {
     "node": ">=18"

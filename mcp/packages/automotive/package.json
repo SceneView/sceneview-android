@@ -45,6 +45,7 @@
     "dist/parts-catalog.js",
     "dist/car-models.js",
     "dist/validator.js",
+    "dist/deprecated-api-check.js",
     "dist/ev-charging-station-viewer.js",
     "dist/car-paint-shader.js"
   ],
