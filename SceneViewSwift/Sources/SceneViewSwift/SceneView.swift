@@ -4,7 +4,7 @@ import RealityKit
 
 /// A SwiftUI view for rendering 3D content using RealityKit.
 ///
-/// Mirrors SceneView Android's `SceneView { }` composable — declare nodes declaratively
+/// Mirrors SceneView Android's `Scene { }` composable — declare nodes declaratively
 /// inside the content builder, with built-in orbit camera, environment lighting,
 /// and gesture handling.
 ///
@@ -43,7 +43,7 @@ public struct SceneView: View {
 
     /// Creates a 3D scene with declarative content using `@NodeBuilder`.
     ///
-    /// Mirrors the Android `SceneView { }` composable pattern — declare nodes inline:
+    /// Mirrors the Android `Scene { }` composable pattern — declare nodes inline:
     ///
     /// ```swift
     /// SceneView {

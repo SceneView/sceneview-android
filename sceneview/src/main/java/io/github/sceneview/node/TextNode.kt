@@ -17,7 +17,7 @@ import io.github.sceneview.math.Position
  *
  * ### Basic usage
  * ```kotlin
- * SceneView(onFrame = { cameraPos = cameraNode.worldPosition }) {
+ * Scene(onFrame = { cameraPos = cameraNode.worldPosition }) {
  *     TextNode(
  *         materialLoader = materialLoader,
  *         text = "Hello 3D!",

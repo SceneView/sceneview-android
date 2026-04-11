@@ -38,7 +38,7 @@ function isEnabled() {
 // Falls back to "unknown" so payloads stay well-formed even if
 // something goes wrong.
 function getMcpVersion() {
-    return process.env.SCENEVIEW_MCP_VERSION ?? "3.6.4";
+    return process.env.SCENEVIEW_MCP_VERSION ?? "3.6.3";
 }
 /** Exposed for tests — resets the cached client context. */
 export function __resetClientContext() {

@@ -17,7 +17,7 @@ import {
 import { TOOL_DEFINITIONS, dispatchTool } from "./tools.js";
 
 const server = new Server(
-  { name: "healthcare-3d-mcp", version: "1.1.0" },
+  { name: "healthcare-3d-mcp", version: "1.0.0" },
   { capabilities: { tools: {} } }
 );
 

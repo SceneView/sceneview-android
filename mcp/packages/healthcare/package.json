@@ -1,6 +1,6 @@
 {
   "name": "healthcare-3d-mcp",
-  "version": "1.1.0",
+  "version": "1.0.0",
   "description": "MCP server for Healthcare & Medical 3D visualization with SceneView — anatomy viewers, molecular structures, medical imaging, surgical planning, and dental scanning.",
   "keywords": [
     "mcp",
@@ -37,10 +37,14 @@
     "healthcare-3d-mcp": "dist/index.js"
   },
   "files": [
-    "dist/**/*.js",
-    "!dist/**/*.test.js",
-    "!dist/**/__fixtures__/**",
-    "README.md"
+    "dist/index.js",
+    "dist/anatomy-viewer.js",
+    "dist/molecule-viewer.js",
+    "dist/medical-imaging.js",
+    "dist/surgical-planning.js",
+    "dist/dental-viewer.js",
+    "dist/medical-models.js",
+    "dist/validator.js"
   ],
   "engines": {
     "node": ">=18"

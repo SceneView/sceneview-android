@@ -15,7 +15,7 @@ Review the staged/unstaged changes in this repository for a SceneView contributi
 - [ ] All Filament JNI calls are on the main thread
 
 ### Compose API
-- [ ] Nodes declared as composables inside `SceneView { }` / `ARSceneView { }` content blocks — not via `childNodes = rememberNodes { }`
+- [ ] Nodes declared as composables inside `Scene { }` / `ARScene { }` content blocks — not via `childNodes = rememberNodes { }`
 - [ ] `rememberModelInstance` null case is handled (`?.let { }` or null check before using the instance)
 - [ ] `LightNode`'s `apply` is a **named parameter** (`apply = { ... }`), not a trailing lambda
 - [ ] No manual `addChildNode` / `removeChildNode` calls — hierarchy expressed via nested composables
