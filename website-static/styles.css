@@ -192,11 +192,17 @@ ul { list-style: none; }
 }
 
 .nav__brand {
-  font-size: 1.25rem;
-  font-weight: 800;
-  letter-spacing: -0.05em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   color: var(--color-on-surface);
+  transition: opacity var(--duration-short);
 }
+.nav__brand:hover { opacity: 0.85; }
 
 .nav__links {
   display: flex;
@@ -2963,7 +2969,8 @@ ul { list-style: none; }
   .hero__description { margin-left: auto; margin-right: auto; }
   .hero__actions { justify-content: center; }
   .hero__platforms { justify-content: center; gap: 12px 16px; }
-  .hero__visual { display: none; }
+  .hero__model-wrapper { transform: none; max-width: 480px; margin: 0 auto; }
+  .hero__fallback-img { height: auto; aspect-ratio: 16/9; }
   .hero { min-height: auto; }
 
   .features__grid { grid-template-columns: 1fr; }

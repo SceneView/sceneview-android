@@ -1,6 +1,19 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
+  <script>
+    (function() {
+      try {
+        var t = localStorage.getItem('sceneview-theme');
+        if (t !== 'dark' && t !== 'light') {
+          t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.setAttribute('data-theme', t);
+      } catch(e) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SceneView — 3D & AR SDK for Android, iOS, Web, and more</title>
@@ -212,17 +225,6 @@
       white-space: nowrap;
     }
     .hero__drag-hint.is-hidden { opacity: 0; }
-    .nav__brand {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      text-decoration: none;
-      color: inherit;
-      font-weight: 700;
-      font-size: 1rem;
-      letter-spacing: -0.01em;
-    }
-    .nav__brand:hover { opacity: 0.85; }
     .cta__btn { display: inline-flex; align-items: center; gap: 8px; }
   </style>
           <div id="hero-badge" class="hero__badge">Rendered live by SceneView Web (Filament.js WASM)</div>
