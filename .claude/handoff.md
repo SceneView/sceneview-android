@@ -4,7 +4,102 @@
 
 ## Last Session Summary
 
-**Date:** 11 avril 2026 (session 34 — Playground preview rework + Scene→SceneView rename closure, worktree goofy-chatterjee)
+**Date:** 11 avril 2026 (session 34b — demo-apps refonte finish, worktree competent-wilbur)
+**Branch:** main (worktree claude/competent-wilbur, 5 commits + handoff merge)
+**Latest commits on main:** `13624690..68cf829c`
+
+### What shipped (5 commits on main)
+
+Full fresh audit of the 7 demo apps — the old session-19 audit was 11 days
+stale and painted most things as broken when in fact Android and iOS had
+already been recovered in earlier sessions. The real remaining gaps were
+different from what was documented.
+
+1. **4a1bb02a** feat(qa): `.claude/scripts/validate-demo-assets.sh` — scans
+   every demo app for glb/usdz/hdr references, expands `$CDN/...` to the
+   real GitHub release URL, follows redirects with `curl -L`, and verifies
+   every bundled file + CDN URL. Detects Kotlin, Swift, Dart, and TS/JS
+   patterns, including iOS `asset: "name"` and `ModelNode.load("name")`
+   where the `.usdz` suffix is implicit.
+
+   In its first run it surfaced 8 real bugs that Android+TV+Web demos
+   had at head of main:
+   - `samples/android-tv-demo/.../TvModelViewerActivity.kt`: 5 `models/*.glb`
+     references pointed at files never bundled (`space_helmet`, `toy_car`,
+     `geisha_mask`, `iridescence_lamp`, `sheen_chair`). Replaced with 12
+     real bundled models — `khronos_damaged_helmet`, `khronos_toy_car`,
+     `khronos_sheen_chair`, `khronos_glam_velvet_sofa`, `khronos_lantern`,
+     `khronos_iridescent_dish`, `animated_dragon`, `khronos_duck`,
+     `khronos_fox`, `toon_cat`, `shiba`, `nike_air_jordan`.
+   - `samples/web-demo/src/jsMain/.../Main.kt`: 3 occurrences of
+     `https://sceneview.github.io/assets/models/khronos_damaged_helmet.glb`
+     returning 404. Repointed at
+     `https://sceneview.github.io/models/platforms/DamagedHelmet.glb`.
+
+2. **9e0c7b49** feat(samples/rn-demo): JS-level scaffold — added `index.js`,
+   `app.json`, `babel.config.js`, `metro.config.js` (watches the linked
+   bridge module + blocklists duplicate `react*` node_modules), `tsconfig.json`
+   (path-mapped to the bridge source), `.watchmanconfig`.
+
+3. **f150cf52** fix(demos): unblocked web-demo and flutter-demo builds.
+   - **web-demo**: Webpack 5 stopped auto-polyfilling Node core modules, and
+     filament.js imports `path`, `fs`, `crypto` unconditionally. Added
+     `samples/web-demo/webpack.config.d/filament.js` disabling those
+     fallbacks. Result: `jsBrowserProductionWebpack` → 177 KiB minified bundle.
+   - **flutter/sceneview_flutter**: Plugin was on Kotlin 2.0.21 with
+     `compose true` but still used `composeOptions.kotlinCompilerExtensionVersion`
+     (no longer honored in K2.0). Added the Compose Compiler Gradle plugin
+     classpath and applied `org.jetbrains.kotlin.plugin.compose`. Result:
+     `flutter build apk --debug` succeeds in 110 s.
+
+4. **4430aaf8** feat(qa): enhanced the asset validator to detect iOS
+   `asset:` tuples and `ModelNode.load(...)` patterns in Swift. Coverage
+   jumped 74 → 102 bundled refs (21 previously invisible iOS references
+   now checked).
+
+5. **68cf829c** feat(samples/rn-demo): native android/ + ios/ scaffold.
+   Generated with the RN community CLI, copied into the demo, rewritten
+   with the SceneView namespace `io.github.sceneview.demo.rn`. Android
+   `sourceSets.main.assets` pulls `../assets` so SceneView can load HDR
+   files by relative path. SETUP.md documents the one-time bridge build
+   + pod install needed before first `run-android`/`run-ios`.
+
+### Builds verified locally
+- `./gradlew :samples:android-demo:compileDebugKotlin
+  :samples:android-tv-demo:compileDebugKotlin` — BUILD SUCCESSFUL
+- `./gradlew :samples:android-demo:bundleRelease` — BUILD SUCCESSFUL (2 m 1 s,
+  `app-release.aab` written to `build/outputs/bundle/release/`)
+- `./gradlew :samples:web-demo:jsBrowserProductionWebpack` — BUILD SUCCESSFUL
+  (177 KiB `web-model-viewer.js`)
+- `cd samples/flutter-demo && flutter build apk --debug` — ✓ built
+  `build/app/outputs/flutter-apk/app-debug.apk` in 110 s
+- `bash .claude/scripts/validate-demo-assets.sh` — 102 bundled + 55 CDN refs,
+  0 broken on a full cross-platform run
+
+### Still open — Phase 2 Stitch (UI regeneration)
+Blocked by auth: the user needs to run, in a terminal outside Claude Code:
+```
+~/.stitch-mcp/google-cloud-sdk/bin/gcloud auth application-default login
+npx -y @_davideast/stitch-mcp init
+```
+Then `exit` and relaunch `claude` so the MCP reloads the real tools
+(currently the Stitch server only exposes `authenticate` because user ADC
+and GCP project are not configured — see `~/.stitch-mcp` doctor output).
+After that, regenerating the Android and iOS demo UIs via the Stitch MCP
+per `feedback_stitch_mandatory.md` is the next logical chunk.
+
+### Other open follow-ups
+- RN demo first real run still needs `npm install` + pod install + emulator
+  (see `samples/react-native-demo/SETUP.md`). Native project is in place
+  and reviewable, not yet tested on device.
+- iOS ARTab device test (requires physical iPhone/iPad)
+- Android TV demo runtime test (requires emulator or TV device)
+
+---
+
+## Previous session (session 34a — Playground preview rework + rename closure)
+
+**Date:** 11 avril 2026 (worktree goofy-chatterjee)
 **Branch:** claude/goofy-chatterjee → pushed directly to `main`
 **Latest commit:** 71c10fea
 
@@ -116,7 +211,7 @@ names are flagged as `@Deprecated` with a clear upgrade path.
 
 ---
 
-**Previous session (session 33):**
+## Previous session (session 33 — MCP Gateway Sprint 2)
 
 **Date:** 11 avril 2026 (session 33 — MCP Gateway Sprint 2, worktree agent-ae442902)
 **Branch:** worktree-agent-ae442902 (based on main, NOT merged yet)
