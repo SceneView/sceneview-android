@@ -1,6 +1,6 @@
 {
   "name": "automotive-3d-mcp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "MCP server for Automotive 3D visualization with SceneView — car configurators, HUD overlays, 3D dashboards, AR showrooms, and parts catalogs.",
   "keywords": [
     "mcp",
@@ -37,13 +37,16 @@
   },
   "files": [
     "dist/index.js",
+    "dist/tools.js",
     "dist/car-configurator.js",
     "dist/hud-overlay.js",
     "dist/dashboard-3d.js",
     "dist/ar-showroom.js",
     "dist/parts-catalog.js",
     "dist/car-models.js",
-    "dist/validator.js"
+    "dist/validator.js",
+    "dist/ev-charging-station-viewer.js",
+    "dist/car-paint-shader.js"
   ],
   "engines": {
     "node": ">=18"
