@@ -7,7 +7,7 @@
  */
 
 export { TOOL_DEFINITIONS } from "./definitions.js";
-export { dispatchTool, API_DOCS } from "./handler.js";
+export { dispatchTool, API_DOCS, __resetSponsorCounter } from "./handler.js";
 export type {
   DispatchContext,
   ToolDefinition,
