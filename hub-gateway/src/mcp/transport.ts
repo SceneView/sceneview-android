@@ -15,6 +15,7 @@
  */
 
 import { dispatch, getAllTools } from "./registry.js";
+import { canCallTool, getToolTier } from "./access.js";
 import type { DispatchContext, ToolResult } from "./types.js";
 
 /** Canonical JSON-RPC error codes reused from Gateway #1. */
@@ -140,6 +141,24 @@ export async function handleMcpRequest(
           id,
           JSON_RPC_ERRORS.INVALID_PARAMS,
           "tools/call requires params.name (string)",
+        );
+      }
+
+      // Tier gate: reject Pro tools for free users with -32003.
+      // The JSON-RPC envelope stays HTTP 200 so the /mcp route's
+      // post-dispatch observer can pick up the ACCESS_DENIED code
+      // and log the usage row with status="denied".
+      if (!canCallTool(params.name, dispatchContext)) {
+        return rpcError(
+          id,
+          JSON_RPC_ERRORS.ACCESS_DENIED,
+          `Tool "${params.name}" requires a Portfolio Access subscription`,
+          {
+            tool: params.name,
+            requiredTier: getToolTier(params.name),
+            currentTier: dispatchContext.tier ?? "unknown",
+            upgradeUrl: "https://hub-mcp.mcp-tools-lab.workers.dev/pricing",
+          },
         );
       }
 

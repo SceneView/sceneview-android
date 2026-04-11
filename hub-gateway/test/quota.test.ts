@@ -92,7 +92,11 @@ describe("monthly quota + usage logging", () => {
       api_key_id: "key_pro_q",
       user_id: "usr_pro_q",
       tool_name: "architecture__list_building_types",
-      tier_required: "pro",
+      // This tool is in the free whitelist (see src/mcp/access.ts)
+      // so usage is logged with tier_required=free even when the
+      // calling user is on `pro` — dashboards can tell free vs pro
+      // volume apart regardless of the caller's own tier.
+      tier_required: "free",
       status: "ok",
       bucket_month: monthBucket(),
     });

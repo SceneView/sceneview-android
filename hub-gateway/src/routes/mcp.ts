@@ -20,6 +20,7 @@ import type { Env } from "../env.js";
 import { authMiddleware, type AuthVariables } from "../auth/middleware.js";
 import { rateLimitMiddleware } from "../middleware/rate-limit.js";
 import { handleMcpRequest, JSON_RPC_ERRORS } from "../mcp/transport.js";
+import { getToolTier } from "../mcp/access.js";
 import { insertUsageRecord, monthBucket } from "../db/usage.js";
 import { incrementQuotaCache } from "../rate-limit/quotas.js";
 
@@ -99,11 +100,9 @@ export function mcpRoutes(): Hono<McpBindings> {
           apiKeyId: auth.keyId,
           userId: auth.userId,
           toolName,
-          // Every hub tool is treated as `pro` for billing semantics
-          // until the tier table lands (next sprint). Free-tier
-          // calls still count against the free monthly cap because
-          // the middleware checks `limits.monthly` per-tier already.
-          tierRequired: "pro",
+          // Real tier requirement from the access module — dashboards
+          // can now tell free vs pro call volume apart.
+          tierRequired: getToolTier(toolName),
           status,
           bucketMonth: monthBucket(),
         });
