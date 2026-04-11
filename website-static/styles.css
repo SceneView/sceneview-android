@@ -2570,6 +2570,16 @@ ul { list-style: none; }
   background: rgba(240, 246, 252, 0.08);
 }
 
+.metric-card__icon-wrap--forks {
+  background: rgba(88, 166, 255, 0.08);
+  color: #58a6ff;
+}
+
+[data-theme="dark"] .metric-card__icon-wrap--forks {
+  background: rgba(88, 166, 255, 0.12);
+  color: #79c0ff;
+}
+
 .metric-card__icon-wrap--contributors {
   background: rgba(22, 163, 74, 0.08);
   color: var(--color-status-stable);
