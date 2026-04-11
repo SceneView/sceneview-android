@@ -1,0 +1,34 @@
+name = "sceneview-mcp"
+main = "src/index.ts"
+compatibility_date = "2026-04-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Public URL: https://sceneview-mcp.workers.dev
+# Custom domain (future): mcp.sceneview.dev
+
+[vars]
+ENVIRONMENT = "development"
+
+# D1 database — provision with:
+#   wrangler d1 create sceneview-mcp
+# then paste the database_id below.
+[[d1_databases]]
+binding = "DB"
+database_name = "sceneview-mcp"
+database_id = "REPLACE_WITH_D1_ID"
+migrations_dir = "migrations"
+
+# KV namespace for rate limiting counters and auth cache — provision with:
+#   wrangler kv namespace create RL_KV
+# then paste the id below.
+[[kv_namespaces]]
+binding = "RL_KV"
+id = "REPLACE_WITH_KV_ID"
+
+# Secrets (set with `wrangler secret put <NAME>`):
+#   STRIPE_SECRET_KEY
+#   STRIPE_WEBHOOK_SECRET
+#   RESEND_API_KEY
+#   JWT_SECRET
+#
+# For local dev, copy .dev.vars.example to .dev.vars and fill in test values.

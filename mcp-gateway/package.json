@@ -1,0 +1,24 @@
+{
+  "name": "sceneview-mcp-gateway",
+  "version": "0.0.1",
+  "private": true,
+  "description": "HTTP gateway multiplexing the SceneView MCP servers with auth, rate limiting, and billing on Cloudflare Workers.",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "hono": "^4.9.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250410.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0",
+    "wrangler": "^4.21.0"
+  }
+}
