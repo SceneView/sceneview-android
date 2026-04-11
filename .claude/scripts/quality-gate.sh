@@ -169,7 +169,69 @@ else
     echo ""
 fi
 
-# ─── 6. Cross-platform consistency ────────────────────────────────────
+# ─── 6. Website asset rules ───────────────────────────────────────────
+# Enforces the "never depend on an external CDN" rule.
+# Distinguishes real CDN loads from legitimate mentions (code examples,
+# comparison tables, comments, npm keywords).
+echo -e "${CYAN}--- Website asset rules ---${NC}"
+
+if [ -d "website-static" ]; then
+    # Google Fonts / gstatic: no references at all — neither preconnect nor
+    # stylesheet loads. The site uses self-hosted fonts under assets/fonts/.
+    GFONTS=$( { grep -rn "fonts\.googleapis\.com\|fonts\.gstatic\.com" website-static/ 2>/dev/null || true; } | wc -l | tr -d ' ')
+    if [ "$GFONTS" -eq 0 ]; then
+        check "No Google Fonts references" "PASS" ""
+    else
+        check "Google Fonts references" "FAIL" "$GFONTS hit(s) — must use website-static/assets/fonts/fonts.css"
+    fi
+
+    # Skip compiled artifacts (source maps, bundled js) and embed readme which
+    # references modelviewer.dev as a public Khronos-sample mirror.
+    GREP_EXCLUDE=(--exclude='*.map' --exclude='sceneview.js' --exclude='sceneview-web.js' --exclude='filament*.js')
+
+    # Actual three.js script loads — check for <script src> pointing at any
+    # three.js CDN or import maps referencing 'three'. Comments and comparison
+    # tables are ignored.
+    THREEJS_LOADS=$( { grep -rnE "${GREP_EXCLUDE[@]}" '<script[^>]*src="[^"]*three[^"]*\.(js|mjs)"' website-static/ 2>/dev/null || true; } | wc -l | tr -d ' ')
+    THREEJS_IMPORTS=$( { grep -rnE "${GREP_EXCLUDE[@]}" "import[^;]+from[[:space:]]*['\"]three['\"]" website-static/ 2>/dev/null || true; } | wc -l | tr -d ' ')
+    THREEJS_TOTAL=$((THREEJS_LOADS + THREEJS_IMPORTS))
+    if [ "$THREEJS_TOTAL" -eq 0 ]; then
+        check "No Three.js loads in website-static" "PASS" ""
+    else
+        check "Three.js loads in website-static" "FAIL" "$THREEJS_TOTAL hit(s)"
+    fi
+
+    # Actual <model-viewer> element instantiations. The string "model-viewer"
+    # in comments, keywords, titles, code examples, and compiled js bundles
+    # is allowed (only true HTML tag loads are flagged).
+    MV_TAGS=$( { grep -rnE "${GREP_EXCLUDE[@]}" '<model-viewer\b' website-static/ 2>/dev/null || true; } | wc -l | tr -d ' ')
+    MV_IMPORTS=$( { grep -rnE "${GREP_EXCLUDE[@]}" '@google/model-viewer|import[^;]+model-viewer' website-static/ 2>/dev/null || true; } | wc -l | tr -d ' ')
+    MV_TOTAL=$((MV_TAGS + MV_IMPORTS))
+    if [ "$MV_TOTAL" -eq 0 ]; then
+        check "No <model-viewer> loads in website-static" "PASS" ""
+    else
+        check "<model-viewer> loads in website-static" "FAIL" "$MV_TOTAL hit(s)"
+    fi
+
+    # Third-party CDN <link> / <script> loads that are not explicitly allowed.
+    # Skipped-by-design: sceneview.github.io, github.com/sceneview and store
+    # listing links (play.google.com, apps.apple.com, npmjs.com, central.sonatype).
+    CDN_RAW=$( { grep -rnE '<(script|link)[^>]*(src|href)="https?://' website-static/ --include='*.html' 2>/dev/null || true; } )
+    CDN_FILTERED=$(printf '%s\n' "$CDN_RAW" \
+        | grep -v '^$' \
+        | grep -vE 'sceneview\.github\.io|github\.com/sceneview|npmjs\.com/package|central\.sonatype\.com|play\.google\.com|apps\.apple\.com' \
+        || true)
+    CDN_HITS=$(printf '%s' "$CDN_FILTERED" | grep -c . || true)
+    if [ "${CDN_HITS:-0}" -eq 0 ]; then
+        check "No third-party CDN loads in HTML" "PASS" ""
+    else
+        check "Third-party CDN loads in HTML" "WARN" "$CDN_HITS hit(s) — review manually"
+    fi
+fi
+
+echo ""
+
+# ─── 7. Cross-platform consistency ────────────────────────────────────
 echo -e "${CYAN}--- Cross-platform Consistency ---${NC}"
 
 # Check that changed Android APIs have corresponding iOS/llms.txt updates
