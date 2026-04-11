@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.view.MotionEvent
 import android.view.View
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.getValue
@@ -29,6 +30,7 @@ import io.github.sceneview.rememberCameraNode
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberEnvironment
 import io.github.sceneview.rememberEnvironmentLoader
+import io.github.sceneview.collision.HitResult
 import io.github.sceneview.rememberModelInstance
 import io.github.sceneview.rememberModelLoader
 
@@ -143,7 +145,7 @@ class SceneViewPlatformView(
                             rotation = model.rotation,
                             apply = {
                                 val nodeName = model.path.substringAfterLast('/').substringBeforeLast('.').ifEmpty { "node_$index" }
-                                onTouch = { _, _ ->
+                                onTouch = { _: MotionEvent, _: HitResult ->
                                     Handler(Looper.getMainLooper()).post {
                                         channel.invokeMethod("onTap", nodeName)
                                     }
@@ -289,7 +291,7 @@ class ARSceneViewPlatformView(
                             rotation = model.rotation,
                             apply = {
                                 val nodeName = model.path.substringAfterLast('/').substringBeforeLast('.').ifEmpty { "node_$index" }
-                                onTouch = { _, _ ->
+                                onTouch = { _: MotionEvent, _: HitResult ->
                                     Handler(Looper.getMainLooper()).post {
                                         channel.invokeMethod("onTap", nodeName)
                                     }
