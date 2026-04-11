@@ -2,6 +2,68 @@
 
 > Read this at the START of every session. Update at the END.
 
+## CURRENT STATE — 2026-04-11 MCP Gateway LIVE (parallel session)
+
+> Cette section documente un fil de travail parallèle à la session 34b ci-dessous. Les deux sont valides. Lis les deux.
+
+**MCP Gateway est EN PRODUCTION** sur une URL neutre (pas de nom personnel) :
+
+```
+https://sceneview-mcp.mcp-tools-lab.workers.dev
+```
+
+### What works RIGHT NOW
+- `GET /` → landing SceneView
+- `GET /health` → `{"ok":true,"service":"sceneview-mcp-gateway"}`
+- `GET /pricing`, `/docs`
+- `POST /mcp` avec `Authorization: Bearer sv_live_...` → **58 tools multiplexés** (sceneview-mcp + 4 verticaux 3D)
+- 401 JSON-RPC si pas de clé
+- Rate limiting sliding window actif (free 60/h, pro 600/h, team 3000/h)
+- Usage logging async via `ctx.waitUntil`
+- Stripe webhook `sceneview-mcp-gateway` actif sur 5 events → provisionne auto une API key sur `checkout.session.completed` → stockée en KV `checkout_key:{session_id}` single-use → page `/checkout/success` l'affiche une fois
+
+### Cloudflare Resources (déjà provisionnées, ne PAS recréer)
+- **Worker** : `sceneview-mcp` (account `1f98596aa8627f97539218f5bcb3d9af`)
+- **Subdomain** : `mcp-tools-lab.workers.dev` (neutre, renommé une fois, NE PAS retoucher)
+- **D1** : `sceneview-mcp` id `8aaddcda-e36e-4287-9222-1df924426c9f` — 5 tables migrées
+- **KV** : `RL_KV` id `9a40d334be6149f7a4ba18451a60245f`
+- **Secrets** (`wrangler secret put`) : `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `JWT_SECRET`
+- **Vars** (dans `mcp-gateway/wrangler.toml` committé) : 4 `STRIPE_PRICE_*` + `DASHBOARD_BASE_URL`
+
+### Stripe (TEST mode, compte SceneView isolé)
+- Compte dédié **"SceneView"** (sur thomas.gorisse@gmail.com avec password distinct, séparé de GitHub Sponsors / Polar qui sont sur le même email)
+- Voir `profile-private/preferences/api-keys.md` pour localisation
+- 2 produits × 2 prix : Pro 19€/190€ + Team 49€/490€
+- Webhook `sceneview-mcp-gateway` → `https://sceneview-mcp.mcp-tools-lab.workers.dev/stripe/webhook` sur 5 events
+
+### Seeded test API key
+```
+sv_live_OGPM732I2OZ5QPHXOHQHQ5YMZXZPV4OI
+```
+Associée à `usr_smoke` / `smoke@sceneview.dev` / tier `pro`, seedée directement dans D1 remote.
+
+### Architecture code (key files)
+- Gateway scaffold : `mcp-gateway/` à la racine
+- Entry : `mcp-gateway/src/index.ts`
+- Routes : `src/routes/{mcp,billing,webhooks,auth,dashboard,checkout-success}.{ts,tsx}`
+- Registry multiplexé : `src/mcp/registry.ts` (importe depuis `mcp/src/tools/` + `mcp/packages/*/src/tools.ts`)
+- Config : `mcp-gateway/wrangler.toml` (D1/KV IDs + Stripe price IDs committés)
+- Tests : 168 passants, zero régression sur les 2496 tests mcp
+
+### Remaining user actions (non-bloquant, on peut tout faire plus tard)
+1. **Test de vrai paiement Stripe Checkout** : `/pricing` → Subscribe → carte test `4242 4242 4242 4242` → valider webhook → KV → `/checkout/success`
+2. **Intégration Claude Desktop / Cursor** : tester le MCP live avec la clé seedée dans son client
+3. **Portfolio broader** : les 20+ autres MCPs (`cooking-mcp`, `travel-mcp`, `finance-mcp`, `legal-docs-mcp`, `realestate-mcp`, etc. dans `/Users/thomasgorisse/Projects/`) ne sont PAS dans la gateway actuelle. Décision : garder scope SceneView pour ce MVP, traiter le portfolio dans un 2e gateway dédié plus tard (le subdomain `mcp-tools-lab.workers.dev` est prévu pour ça)
+4. **Stripe LIVE mode** : nécessite KYC + décision statut fiscal (auto-entrepreneur vs SASU) — voir `profile-private/preferences/api-keys.md`
+
+### Comment reprendre dans une autre session (prompt à coller)
+```
+Lis .claude/handoff.md section "CURRENT STATE — MCP Gateway LIVE". On continue sur :
+[choisir : 1=test paiement Stripe / 2=Claude Desktop intégration / 3=sprint 2e gateway portfolio / 4=autre]
+```
+
+---
+
 ## Last Session Summary
 
 **Date:** 11 avril 2026 (session 34b — demo-apps refonte finish, worktree competent-wilbur)
