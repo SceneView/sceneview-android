@@ -4,6 +4,120 @@
 
 ## Last Session Summary
 
+**Date:** 11 avril 2026 (session 34 — Playground preview rework + Scene→SceneView rename closure, worktree goofy-chatterjee)
+**Branch:** claude/goofy-chatterjee → pushed directly to `main`
+**Latest commit:** 71c10fea
+
+### What shipped (9 commits on main)
+
+| # | Commit | Scope |
+|---|---|---|
+| 1 | `2db2d0f6` | feat(playground): preview matches the actually selected sample |
+| 2 | `5b5179e5` | docs(llms): document new sceneview.js APIs (v3.6.4) |
+| 3 | `edce83c6` | docs(web): expand API reference to v3.6.4 surface (5→14 cards) |
+| 4 | `c54b7ee3` | fix(website): Scene→SceneView in platforms-showcase + geometry-demo |
+| 5 | `4818d0a8` | docs: finish Scene→SceneView across mkdocs and SEO data (126 / 21 files) |
+| 6 | `d3dd0d5b` | docs(kdoc): Scene→SceneView in library KDocs and samples README (18 files) |
+| 7 | `d6a31759` | fix(mcp): Scene→SceneView across all MCP packages (dist rebuilt) |
+| 8 | `025915e9` | fix(rename): runtime bridges (Flutter + RN), template strings, top-level mcp-* |
+| 9 | `71c10fea` | docs: final sweep — public READMEs, ROADMAP, nodes.md, recipes, SceneViewSwift |
+
+### Playground (commit 1)
+
+Each of the 13 playground examples now renders its own scene instead of
+falling back to a random GLB. Added `previewType` routing + custom scene
+builders in `website-static/playground.html`, plus the sceneview.js
+APIs needed to drive them:
+- `playAnimation(index, loop)` / `stopAnimation()` — hooked into the
+  render loop. `getAnimator()` lives on `FilamentInstance`, not
+  `FilamentAsset` (source of a nasty bug I fixed mid-session).
+- `clearLights()` / `removeLight(entity)` — for custom lighting samples.
+- `_showModel()` now also clears `_primitiveAssets` so primitives don't
+  linger on top when switching to a model preview.
+- AR placeholder: SVG phone mockup + per-sample copy + Play Store /
+  App Store CTAs for AR samples (WebXR AR unsupported on desktop).
+
+### Scene → SceneView rename closure (commits 4-9)
+
+The rename to `SceneView { }` / `ARSceneView { }` landed in e6a26a06
+(v3.6) but hundreds of references across the repo still used the
+deprecated `Scene { }` / `ARScene { }` names. Worse, the 5 MCP package
+validators (interior + gaming + healthcare + automotive + the top-level
+mcp-interior / mcp-gaming) classified `SceneView(...)` — the CURRENT
+recommended API — as "2.x" and told users to go back to `Scene { }`.
+
+Everything is now aligned:
+- Playground, web.html, mkdocs (21 files, 126 renames), llms.txt,
+  library KDocs (18 files), samples README, SEO structured-data.json,
+  SVG diagrams.
+- MCP: tool definitions, generate-scene, analyze-project,
+  generate-environment, fixture, all 4 sub-packages under mcp/packages/
+  and the 2 top-level standalone packages (mcp-interior, mcp-gaming).
+  All validators rewritten — the "2.x" block is gone, replaced with
+  a "deprecated since v3.6" detector that points to the new names.
+  Missing-import check rewritten to detect `SceneView { }` /
+  `ARSceneView { }` usage and suggest the correct imports. dist/
+  rebuilt for every package.
+- Runtime Kotlin bridges (PUBLISHED compiled artifacts):
+  `react-native-sceneview/SceneViewManager.kt`, `ARSceneViewManager.kt`,
+  `flutter/SceneViewPlugin.kt` — all import
+  `io.github.sceneview.SceneView` / `io.github.sceneview.ar.ARSceneView`
+  and call the non-deprecated composables.
+- Library KDoc link targets in `SceneNodeManager.kt`, `DebugOverlay.kt`,
+  `SurfaceType.kt`, `FogNode.kt`, `arsceneview/ARScene.kt`.
+- Public user-facing READMEs: react-native + flutter + SceneViewSwift.
+- Samples recipes tables, ROADMAP.md "Unify naming" task marked done.
+
+### What is intentionally NOT touched
+
+The following files still contain `Scene { }` / `ARScene { }` on
+purpose because they document the rename itself:
+- `MIGRATION.md`
+- `docs/docs/migration.md`
+- `docs/docs/migration-v4.md`
+- `docs/docs/changelog.md`
+- `docs/docs/comparison.md` (side-by-side old vs new table)
+- `CHANGELOG.md`
+- `docs/v3.6.0-roadmap.md`
+- `docs/ios-swift-package-design.md` (design doc with historical mirror)
+
+Also `docs/docs/nodes.md` line 149 still mentions "Scene" when listing
+things that touch Filament JNI — that "Scene" is the
+`com.google.android.filament.Scene` framework class, not the
+composable. Same for `sceneview/src/main/java/io/github/sceneview/Scene.kt`
+itself, which contains the `@Deprecated fun Scene(...)` alias body.
+
+### Verification
+
+- `./gradlew :sceneview:compileReleaseKotlin :arsceneview:compileReleaseKotlin`:
+  BUILD SUCCESSFUL on every checkpoint (after each KDoc rename, after
+  the runtime bridge rename, after the final sweep).
+- `cd mcp && npm test`: 114 test files, 2676 tests passing.
+- `cd mcp-interior && npm test`: 7 test files, 153 tests passing.
+- `cd mcp-gaming && npm test`: 7 test files, 157 tests passing.
+- Playground visual QA: Model Viewer, Environment Setup, Camera
+  Controls, Lighting Setup, AR Placement, Face Tracking, Spatial
+  Anchors, Primitives, Model Animation, Spring Physics, PBR Materials,
+  Multi-Model Scene, Post-Processing — all render the correct scene.
+- Platform switcher tested on Multi-Model: Android → Web → iOS →
+  Flutter → React Native — code swaps, preview stays in sync.
+
+### Impact on AI-first
+
+Before this session an agent reading SceneView docs got contradictory
+signals at every layer: the playground showed a random GLB, web.html
+listed 5 functions when the real surface has 14, every mkdocs page
+and every library KDoc still referenced `Scene { }`, the MCP server
+generated deprecated code AND its validator blocked the current API.
+
+Now every documentation source converges on the same truth:
+`SceneView { }` / `ARSceneView { }` is the v3.6+ API, and the old
+names are flagged as `@Deprecated` with a clear upgrade path.
+
+---
+
+**Previous session (session 33):**
+
 **Date:** 11 avril 2026 (session 33 — MCP Gateway Sprint 2, worktree agent-ae442902)
 **Branch:** worktree-agent-ae442902 (based on main, NOT merged yet)
 **Latest commit:** 48647068
