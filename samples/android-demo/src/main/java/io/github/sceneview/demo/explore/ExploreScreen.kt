@@ -175,6 +175,15 @@ private val exploreModels = listOf(
     ExploreModel("Water Bottle",  "$CDN/khronos_water_bottle.glb",    1.0f, 2.0f, ModelCategory.Objects),
     ExploreModel("Antique Camera","$CDN/khronos_antique_camera.glb",  0.7f, 2.5f, ModelCategory.Objects),
     ExploreModel("Corset",        "$CDN/khronos_corset.glb",          0.8f, 2.5f, ModelCategory.Objects),
+    // Hero realistic (new — product showcase)
+    ExploreModel("Moto Helmet",   "$CDN/moto_helmet.glb",             0.8f, 2.5f, ModelCategory.Objects),
+    ExploreModel("DJI Mavic 3",   "$CDN/dji_mavic_3.glb",             0.7f, 3.0f, ModelCategory.Objects),
+    ExploreModel("JBL Headphones","$CDN/jbl_tour_one_m3.glb",         0.8f, 2.5f, ModelCategory.Objects),
+    ExploreModel("Canon EOS RP",  "$CDN/canon_eos_rp.glb",            0.8f, 2.5f, ModelCategory.Objects),
+    ExploreModel("Rolex Watch",   "$CDN/rolex_watch.glb",             1.5f, 2.0f, ModelCategory.Objects),
+    ExploreModel("Sneaker",       "$CDN/sneaker_vibe.glb",            0.6f, 2.5f, ModelCategory.Objects),
+    ExploreModel("Guitar",        "$CDN/photorealistic_guitar.glb",   0.5f, 3.5f, ModelCategory.Objects),
+    ExploreModel("Backpack",      "$CDN/school_backpack.glb",         0.6f, 3.0f, ModelCategory.Objects),
     // Scenes
     ExploreModel("Ship in Clouds","$CDN/ship_in_clouds.glb",          0.5f, 4.0f, ModelCategory.Scenes),
     ExploreModel("Earthquake",    "$CDN/earthquake_california.glb",   0.4f, 5.0f, ModelCategory.Scenes),

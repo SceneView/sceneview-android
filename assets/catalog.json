@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "_comment": "SceneView shared 3D asset catalog. Source of truth for all demo assets across platforms.",
   "version": "1.0.0",
-  "lastUpdated": "2026-04-06",
+  "lastUpdated": "2026-04-11",
   "sources": {
     "sketchfab": {
       "apiBase": "https://api.sketchfab.com/v3",
@@ -11,7 +11,7 @@
     },
     "fab": {
       "url": "https://www.fab.com",
-      "note": "No API — manual download via browser or Epic Games Launcher, then export to GLB/USDZ"
+      "note": "No API \u2014 manual download via browser or Epic Games Launcher, then export to GLB/USDZ"
     },
     "polyhaven": {
       "apiBase": "https://api.polyhaven.com",
@@ -61,7 +61,7 @@
         "glb": {
           "file": null,
           "size": "41MB",
-          "note": "Too large for repo — download on demand"
+          "note": "Too large for repo \u2014 download on demand"
         },
         "usdz": {
           "file": "models/usdz/tree_scene.usdz",
@@ -325,7 +325,7 @@
       "source": "sketchfab",
       "sourceId": "53a61d58c09b4d2ab30e269aa3e22078",
       "sourceUrl": "https://sketchfab.com/3d-models/mosquito-in-amber-53a61d58c09b4d2ab30e269aa3e22078",
-      "author": "Loïc Norgeot",
+      "author": "Lo\u00efc Norgeot",
       "license": "CC-BY-4.0",
       "formats": {
         "glb": {
@@ -1632,7 +1632,7 @@
         "glb": {
           "file": null,
           "size": "145MB",
-          "note": "Too large for repo (>50MB) — download on demand"
+          "note": "Too large for repo (>50MB) \u2014 download on demand"
         },
         "usdz": {
           "file": "models/usdz/lowpoly_fruits.usdz",
@@ -2538,7 +2538,7 @@
         "glb": {
           "file": "models/glb/cozy_living_room.glb",
           "size": "96MB",
-          "note": "Large file — not synced to all platforms"
+          "note": "Large file \u2014 not synced to all platforms"
         }
       },
       "tags": [
@@ -2551,6 +2551,263 @@
       "usedIn": [],
       "defaultScale": 0.3,
       "cameraDistance": 4.0
+    },
+    {
+      "id": "moto_helmet",
+      "name": "Motorcycle Helmet",
+      "source": "sketchfab",
+      "sourceId": "6c75ac1b13a047bd86742f37ce25adac",
+      "sourceUrl": "https://sketchfab.com/3d-models/moto-helmet-6c75ac1b13a047bd86742f37ce25adac",
+      "author": "sayedgamal655",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": {
+          "file": "models/glb/moto_helmet.glb",
+          "size": "3.4MB"
+        }
+      },
+      "tags": [
+        "realistic",
+        "hero",
+        "sport",
+        "protection",
+        "product"
+      ],
+      "usedIn": [
+        "android-demo",
+        "android-tv-demo",
+        "web-demo",
+        "website",
+        "flutter-demo",
+        "react-native-demo"
+      ],
+      "defaultScale": 0.8,
+      "cameraDistance": 2.5
+    },
+    {
+      "id": "dji_mavic_3",
+      "name": "DJI Mavic 3 Cine",
+      "source": "sketchfab",
+      "sourceId": "60d4a042a6eb4a1e944b1af2d4e9368b",
+      "sourceUrl": "https://sketchfab.com/3d-models/mavic-3-cine-60d4a042a6eb4a1e944b1af2d4e9368b",
+      "author": "aurumjuda747",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": {
+          "file": "models/glb/dji_mavic_3.glb",
+          "size": "9.4MB"
+        }
+      },
+      "tags": [
+        "realistic",
+        "hero",
+        "tech",
+        "drone",
+        "product"
+      ],
+      "usedIn": [
+        "android-demo",
+        "android-tv-demo",
+        "web-demo",
+        "website",
+        "flutter-demo",
+        "react-native-demo"
+      ],
+      "defaultScale": 0.7,
+      "cameraDistance": 3.0
+    },
+    {
+      "id": "jbl_tour_one_m3",
+      "name": "JBL Tour One M3 Headphones",
+      "source": "sketchfab",
+      "sourceId": "45f0b3ccbee84492a05998d5daecff16",
+      "sourceUrl": "https://sketchfab.com/3d-models/jbl-tour-one-m3-black-45f0b3ccbee84492a05998d5daecff16",
+      "author": "cubemodelex",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": {
+          "file": "models/glb/jbl_tour_one_m3.glb",
+          "size": "5.3MB"
+        }
+      },
+      "tags": [
+        "realistic",
+        "hero",
+        "audio",
+        "electronics",
+        "product"
+      ],
+      "usedIn": [
+        "android-demo",
+        "android-tv-demo",
+        "web-demo",
+        "website",
+        "flutter-demo",
+        "react-native-demo"
+      ],
+      "defaultScale": 0.8,
+      "cameraDistance": 2.5
+    },
+    {
+      "id": "canon_eos_rp",
+      "name": "Canon EOS RP Mirrorless Camera",
+      "source": "sketchfab",
+      "sourceId": "cd470005397c48ec8b68bb8a4609ecd1",
+      "sourceUrl": "https://sketchfab.com/3d-models/canon-eos-rp-mirrorless-camera-3d-model-cd470005397c48ec8b68bb8a4609ecd1",
+      "author": "fahadratul",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": {
+          "file": "models/glb/canon_eos_rp.glb",
+          "size": "11.3MB"
+        }
+      },
+      "tags": [
+        "realistic",
+        "hero",
+        "photography",
+        "electronics",
+        "product"
+      ],
+      "usedIn": [
+        "android-demo",
+        "android-tv-demo",
+        "web-demo",
+        "website",
+        "flutter-demo",
+        "react-native-demo"
+      ],
+      "defaultScale": 0.8,
+      "cameraDistance": 2.5
+    },
+    {
+      "id": "rolex_watch",
+      "name": "Rolex Luxury Watch",
+      "source": "sketchfab",
+      "sourceId": "0fde5c5f56d841cda53ae4a01f66dfaf",
+      "sourceUrl": "https://sketchfab.com/3d-models/rolex-watch-0fde5c5f56d841cda53ae4a01f66dfaf",
+      "author": "sudo-self",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": {
+          "file": "models/glb/rolex_watch.glb",
+          "size": "2.5MB",
+          "note": "Optimized with meshopt compression (KHR_mesh_quantization + EXT_meshopt_compression)"
+        }
+      },
+      "tags": [
+        "realistic",
+        "hero",
+        "luxury",
+        "accessory",
+        "product"
+      ],
+      "usedIn": [
+        "android-demo",
+        "android-tv-demo",
+        "web-demo",
+        "website",
+        "flutter-demo",
+        "react-native-demo"
+      ],
+      "defaultScale": 1.5,
+      "cameraDistance": 2.0
+    },
+    {
+      "id": "sneaker_vibe",
+      "name": "Sneaker Vibe",
+      "source": "sketchfab",
+      "sourceId": "1e52862eb2634fa3b5c13bf9e261945b",
+      "sourceUrl": "https://sketchfab.com/3d-models/sneaker-vibe-1e52862eb2634fa3b5c13bf9e261945b",
+      "author": "vmmaniac",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": {
+          "file": "models/glb/sneaker_vibe.glb",
+          "size": "5.1MB",
+          "note": "Optimized with meshopt compression"
+        }
+      },
+      "tags": [
+        "realistic",
+        "hero",
+        "fashion",
+        "product"
+      ],
+      "usedIn": [
+        "android-demo",
+        "android-tv-demo",
+        "web-demo",
+        "website",
+        "flutter-demo",
+        "react-native-demo"
+      ],
+      "defaultScale": 0.6,
+      "cameraDistance": 2.5
+    },
+    {
+      "id": "photorealistic_guitar",
+      "name": "Photorealistic Western Guitar",
+      "source": "sketchfab",
+      "sourceId": "f8d68a2c328345418db71b36f44168b9",
+      "sourceUrl": "https://sketchfab.com/3d-models/photorealistic-western-guitar-f8d68a2c328345418db71b36f44168b9",
+      "author": "Keandir",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": {
+          "file": "models/glb/photorealistic_guitar.glb",
+          "size": "807KB"
+        }
+      },
+      "tags": [
+        "realistic",
+        "hero",
+        "music",
+        "instrument",
+        "product"
+      ],
+      "usedIn": [
+        "android-demo",
+        "android-tv-demo",
+        "web-demo",
+        "website",
+        "flutter-demo",
+        "react-native-demo"
+      ],
+      "defaultScale": 0.5,
+      "cameraDistance": 3.5
+    },
+    {
+      "id": "school_backpack",
+      "name": "School Backpack",
+      "source": "sketchfab",
+      "sourceId": "524d7fc724094ead9f203ed06bae76e1",
+      "sourceUrl": "https://sketchfab.com/3d-models/school-backpack-524d7fc724094ead9f203ed06bae76e1",
+      "author": "MadeByYeshe",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": {
+          "file": "models/glb/school_backpack.glb",
+          "size": "3.3MB"
+        }
+      },
+      "tags": [
+        "realistic",
+        "hero",
+        "fashion",
+        "outdoor",
+        "product"
+      ],
+      "usedIn": [
+        "android-demo",
+        "android-tv-demo",
+        "web-demo",
+        "website",
+        "flutter-demo",
+        "react-native-demo"
+      ],
+      "defaultScale": 0.6,
+      "cameraDistance": 3.0
     }
   ],
   "environments": [
@@ -2645,7 +2902,7 @@
       "source": "fab",
       "name": "New York Downtown",
       "status": "too-expensive",
-      "reason": "Free tier limited, paid up to €11.42"
+      "reason": "Free tier limited, paid up to \u20ac11.42"
     },
     {
       "sourceUrl": "https://www.fab.com/listings/11d20d01-b764-4936-8163-cb20d05c369e",
@@ -2659,7 +2916,7 @@
       "source": "fab",
       "name": "Survival Character James",
       "status": "paid",
-      "reason": "€93-187"
+      "reason": "\u20ac93-187"
     },
     {
       "sourceUrl": "https://www.fab.com/listings/9e04c752-1979-4723-b78f-6d24afc532bc",
@@ -2680,21 +2937,21 @@
       "source": "fab",
       "name": "Clothes",
       "status": "too-large",
-      "reason": "Free CC-BY but GLB=234MB, USDZ=87MB — too large for repo"
+      "reason": "Free CC-BY but GLB=234MB, USDZ=87MB \u2014 too large for repo"
     },
     {
       "sourceUrl": "https://www.fab.com/listings/11b48ab2-5ac6-4507-bb8a-ac0b898c90c5",
       "source": "fab",
       "name": "3D Hoodie",
       "status": "paid",
-      "reason": "€41-208"
+      "reason": "\u20ac41-208"
     },
     {
       "sourceUrl": "https://www.fab.com/listings/b98bbbbc-f231-41f8-a2fd-67164b01d8b6",
       "source": "fab",
       "name": "Tent Props Package",
       "status": "paid",
-      "reason": "€31-62, UE only"
+      "reason": "\u20ac31-62, UE only"
     },
     {
       "sourceUrl": "https://www.fab.com/listings/c7c90f53-50b8-4df2-8d29-9a45daf3be4e",
@@ -2708,7 +2965,7 @@
       "source": "fab",
       "name": "Generic Sedan Car",
       "status": "too-large",
-      "reason": "Free CC-BY but GLB=52MB, USDZ=22MB — too large for repo"
+      "reason": "Free CC-BY but GLB=52MB, USDZ=22MB \u2014 too large for repo"
     },
     {
       "sourceUrl": "https://www.fab.com/listings/c86be43c-3923-4c98-b752-40bedb121239",
@@ -2734,7 +2991,7 @@
       "source": "sketchfab",
       "status": "paid",
       "price": "$29.99",
-      "reason": "Sketchfab Store — requires purchase"
+      "reason": "Sketchfab Store \u2014 requires purchase"
     }
   ]
 }
