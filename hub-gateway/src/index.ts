@@ -29,6 +29,8 @@ import type { Env } from "./env.js";
 import type { AuthVariables } from "./auth/middleware.js";
 import { landingRoutes } from "./routes/landing.js";
 import { mcpRoutes } from "./routes/mcp.js";
+import { billingRoutes } from "./routes/billing.js";
+import { webhookRoutes } from "./routes/webhooks.js";
 import { getRegistrySummary } from "./mcp/registry.js";
 
 const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
@@ -49,6 +51,14 @@ app.get("/health", (c) => {
 // ── MCP JSON-RPC endpoint ───────────────────────────────────────────────────
 
 app.route("/mcp", mcpRoutes());
+
+// ── Billing routes (Stripe checkout) ────────────────────────────────────────
+
+app.route("/", billingRoutes());
+
+// ── Stripe webhook receiver ────────────────────────────────────────────────
+
+app.route("/", webhookRoutes());
 
 // ── HTML routes: landing, pricing, docs ────────────────────────────────────
 
