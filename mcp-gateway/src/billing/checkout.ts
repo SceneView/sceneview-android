@@ -1,13 +1,17 @@
 /**
- * Builds a Stripe Checkout Session for a given user + plan.
+ * Builds a Stripe Checkout Session for a given plan.
  *
- * The user's row id is passed as `client_reference_id` so the webhook
- * handler can identify the buyer without relying on the email (which
- * might not match their account email yet).
+ * No dashboard auth in the MVP — the buyer arrives at `/pricing`,
+ * picks a plan, and is redirected straight into Stripe. The webhook
+ * handler creates the user row once the payment succeeds (see
+ * `billing/events/checkout-completed.ts`).
+ *
+ * The `success_url` always carries `session_id={CHECKOUT_SESSION_ID}`
+ * which Stripe substitutes server-side; the `/checkout/success`
+ * handler uses it to look up the plaintext API key stashed in KV.
  */
 
 import type { Env } from "../env.js";
-import type { UserRow } from "../db/schema.js";
 import {
   createCheckoutSession as stripeCreateCheckoutSession,
   type StripeCheckoutSession,
@@ -17,9 +21,10 @@ import { getPriceIdForPlan, type PlanId } from "./tiers.js";
 /** Arguments to {@link startCheckout}. */
 export interface StartCheckoutArgs {
   env: Env;
-  user: UserRow;
   plan: PlanId;
   baseUrl: string;
+  /** Optional email to prefill the Stripe form with. */
+  email?: string;
 }
 
 /** Result returned to the route handler. */
@@ -46,16 +51,22 @@ export async function startCheckout(
   }
 
   const cleanBase = args.baseUrl.replace(/\/+$/, "");
-  const successUrl = `${cleanBase}/billing?success=1`;
+  const successUrl = `${cleanBase}/checkout/success?session_id={CHECKOUT_SESSION_ID}`;
   const cancelUrl = `${cleanBase}/pricing?canceled=1`;
+
+  const tier = args.plan.startsWith("team") ? "team" : "pro";
+  const billingPeriod = args.plan.endsWith("yearly") ? "yearly" : "monthly";
 
   const session = await stripeCreateCheckoutSession(args.env.STRIPE_SECRET_KEY, {
     priceId,
-    clientReferenceId: args.user.id,
-    customerEmail: args.user.email,
-    customerId: args.user.stripe_customer_id ?? undefined,
+    customerEmail: args.email,
     successUrl,
     cancelUrl,
+    metadata: {
+      plan: args.plan,
+      tier,
+      billing_period: billingPeriod,
+    },
   });
   return { session };
 }
