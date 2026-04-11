@@ -856,6 +856,30 @@ ul { list-style: none; }
   font-size: 2.25rem;
 }
 
+.platform-card__icon-img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+
+[data-theme="dark"] .platform-card__icon-img[src$="apple.svg"],
+[data-theme="dark"] .platform-card__icon-img[src$="jetbrains.svg"] {
+  filter: invert(1) brightness(1.4);
+}
+
+.comparison-table__platform-img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  vertical-align: middle;
+  margin-right: 8px;
+}
+
+[data-theme="dark"] .comparison-table__platform-img[src$="apple.svg"],
+[data-theme="dark"] .comparison-table__platform-img[src$="jetbrains.svg"] {
+  filter: invert(1) brightness(1.4);
+}
+
 .platform-card__icon--green { color: #22c55e; }
 .platform-card__icon--blue { color: #3b82f6; }
 .platform-card__icon--purple { color: #8b5cf6; }
@@ -2443,6 +2467,67 @@ ul { list-style: none; }
   margin-bottom: 10px;
 }
 
+.platform-card-v2__icon-img {
+  width: 32px;
+  height: 32px;
+  margin-bottom: 10px;
+  object-fit: contain;
+}
+
+[data-theme="dark"] .platform-card-v2__icon-img[src$="apple.svg"],
+[data-theme="dark"] .platform-card-v2__icon-img[src$="jetbrains.svg"],
+[data-theme="dark"] .platform-card-v2__icon-img[src$="githubcopilot.svg"] {
+  filter: invert(1) brightness(1.4);
+}
+
+.platform-card-v2__icon-img--muted {
+  opacity: 0.5;
+}
+
+/* Hero platform logos */
+.hero__platform-logo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  flex-shrink: 0;
+  opacity: 0.95;
+}
+
+/* Hero background is always dark — invert black-only logos (Apple) to white */
+.hero__platform-logo[src$="apple.svg"] {
+  filter: invert(1) brightness(1.4);
+}
+
+/* Code card language logos */
+.code-card__lang-logo {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+/* MCP install button logo */
+.mcp-install__btn-logo {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+/* MCP tool card logo */
+.mcp-tool-card__logo {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .mcp-tool-card__logo[src$="cursor.svg"],
+[data-theme="dark"] .mcp-tool-card__logo[src$="windsurf.svg"],
+[data-theme="dark"] .mcp-tool-card__logo[src$="githubcopilot.svg"] {
+  filter: invert(1) brightness(1.4);
+}
+
 .platform-card-v2__icon--green { color: #22c55e; }
 .platform-card-v2__icon--blue { color: #3b82f6; }
 .platform-card-v2__icon--purple { color: #8b5cf6; }
@@ -2719,10 +2804,17 @@ ul { list-style: none; }
   overflow: hidden;
 }
 
-.try-card__visual svg {
+.try-card__visual svg,
+.try-card__visual .try-card__img {
   width: 100%;
   height: auto;
   display: block;
+}
+
+.try-card__img {
+  aspect-ratio: 2 / 1;
+  object-fit: cover;
+  background: var(--color-surface-container);
 }
 
 .try-card__body {
@@ -2854,6 +2946,16 @@ ul { list-style: none; }
   align-items: center;
   justify-content: center;
   margin-bottom: 16px;
+}
+
+.docs-card__icon-img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+[data-theme="dark"] .docs-card__icon-img[src$="apple.svg"] {
+  filter: invert(1) brightness(1.4);
 }
 
 .docs-card__title {
