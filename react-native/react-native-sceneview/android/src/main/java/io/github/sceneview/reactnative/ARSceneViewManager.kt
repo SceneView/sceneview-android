@@ -34,7 +34,7 @@ class ARSceneViewState {
 
 /**
  * ViewManager that bridges React Native's `<RNARSceneView>` to the Jetpack Compose
- * `ARScene { }` composable from `io.github.sceneview.ar`.
+ * `ARSceneView { }` composable from `io.github.sceneview.ar`.
  *
  * State is stored per-instance via [FrameLayout.getTag] to support multiple
  * `<RNARSceneView>` components on the same screen.
@@ -58,7 +58,7 @@ class ARSceneViewManager : SimpleViewManager<FrameLayout>() {
                 val modelLoader = rememberModelLoader(engine)
                 val materialLoader = rememberMaterialLoader(engine)
 
-                io.github.sceneview.ar.ARScene(
+                io.github.sceneview.ar.ARSceneView(
                     modifier = Modifier.fillMaxSize(),
                     surfaceType = SurfaceType.TextureSurface,
                     engine = engine,

@@ -107,7 +107,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           },
           ar: {
             type: "boolean",
-            description: "Generate AR version using ARScene (default: false). Requires arsceneview dependency.",
+            description: "Generate AR version using ARSceneView (default: false). Requires arsceneview dependency.",
           },
         },
         required: ["style"],

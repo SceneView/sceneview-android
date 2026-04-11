@@ -1,7 +1,7 @@
 package io.github.sceneview
 
 /**
- * Selects the backing surface type for [Scene] and [io.github.sceneview.ar.ARScene].
+ * Selects the backing surface type for [SceneView] and [io.github.sceneview.ar.ARSceneView].
  */
 enum class SurfaceType {
     /**

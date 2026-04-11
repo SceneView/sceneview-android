@@ -70,14 +70,24 @@ describe("validateInteriorCode", () => {
     expect(lightIssues).toHaveLength(0);
   });
 
-  // ── Deprecated 2.x APIs ────────────────────────────────────────────────
-  it("detects SceneView() 2.x usage", () => {
-    const result = validateInteriorCode(`SceneView(modifier = Modifier)`);
+  // ── Deprecated APIs ────────────────────────────────────────────────────
+  // `Scene { }` and `ARScene { }` were renamed to `SceneView { }` / `ARSceneView { }`
+  // in v3.6. The old names still exist as deprecated aliases and should be flagged.
+  it("detects deprecated Scene() composable usage", () => {
+    const result = validateInteriorCode(`Scene(modifier = Modifier)`);
     expect(result.valid).toBe(false);
-    expect(result.issues[0].message).toContain("2.x");
+    expect(result.issues[0].message).toContain("deprecated since v3.6");
+    expect(result.issues[0].message).toContain("SceneView");
   });
 
-  it("detects ArSceneView() 2.x usage", () => {
+  it("detects deprecated ARScene() composable usage", () => {
+    const result = validateInteriorCode(`ARScene(modifier = Modifier)`);
+    expect(result.valid).toBe(false);
+    expect(result.issues[0].message).toContain("deprecated since v3.6");
+    expect(result.issues[0].message).toContain("ARSceneView");
+  });
+
+  it("detects Sceneform 1.x ArSceneView() usage", () => {
     const result = validateInteriorCode(`ArSceneView(modifier = Modifier)`);
     expect(result.valid).toBe(false);
   });
@@ -140,7 +150,7 @@ describe("validateInteriorCode", () => {
     const result = validateInteriorCode(`
       @Composable
       fun RoomViewer() {
-        Scene {
+        SceneView {
           ModelNode(modelInstance = model)
         }
       }
@@ -152,18 +162,18 @@ describe("validateInteriorCode", () => {
     const result = validateInteriorCode(`
       @Composable
       fun RoomViewer() {
-        ARScene {
+        ARSceneView {
           ModelNode(modelInstance = model)
         }
       }
     `);
-    expect(result.issues.some((i) => i.message.includes("Missing ARScene import"))).toBe(true);
+    expect(result.issues.some((i) => i.message.includes("Missing ARSceneView import"))).toBe(true);
   });
 
   // ── Valid code ─────────────────────────────────────────────────────────
   it("passes valid interior SceneView code", () => {
     const result = validateInteriorCode(`
-      import io.github.sceneview.Scene
+      import io.github.sceneview.SceneView
       import io.github.sceneview.rememberEngine
       import io.github.sceneview.rememberModelLoader
       import io.github.sceneview.rememberModelInstance
@@ -174,7 +184,7 @@ describe("validateInteriorCode", () => {
         val modelLoader = rememberModelLoader(engine)
         val model = rememberModelInstance(modelLoader, "room.glb")
 
-        Scene(engine = engine) {
+        SceneView(engine = engine) {
           model?.let {
             ModelNode(modelInstance = it)
           }

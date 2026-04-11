@@ -13,7 +13,7 @@ import com.facebook.react.uimanager.SimpleViewManager
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.annotations.ReactProp
 import com.google.android.filament.LightManager
-import io.github.sceneview.Scene
+import io.github.sceneview.SceneView
 import io.github.sceneview.SurfaceType
 import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position
@@ -42,7 +42,7 @@ class SceneViewState {
 
 /**
  * ViewManager that bridges React Native's `<RNSceneView>` to the Jetpack Compose
- * `Scene { }` composable from `io.github.sceneview`.
+ * `SceneView { }` composable from `io.github.sceneview`.
  *
  * State is stored per-instance via [FrameLayout.getTag] to support multiple
  * `<RNSceneView>` components on the same screen.
@@ -78,7 +78,7 @@ class SceneViewManager : SimpleViewManager<FrameLayout>() {
                     }
                 }
 
-                Scene(
+                SceneView(
                     modifier = Modifier.fillMaxSize(),
                     surfaceType = SurfaceType.TextureSurface,
                     engine = engine,

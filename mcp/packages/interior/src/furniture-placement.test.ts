@@ -37,13 +37,13 @@ describe("generateFurniturePlacement", () => {
   it("generates AR code by default", () => {
     const code = generateFurniturePlacement({ category: "sofa" });
     expect(code).toContain("ARSceneView(");
-    expect(code).toContain("import io.github.sceneview.ar.ARScene");
+    expect(code).toContain("import io.github.sceneview.ar.ARSceneView");
     expect(code).toContain("android.permission.CAMERA");
   });
 
   it("generates 3D preview when ar=false", () => {
     const code = generateFurniturePlacement({ category: "sofa", ar: false });
-    expect(code).toContain("import io.github.sceneview.Scene");
+    expect(code).toContain("import io.github.sceneview.SceneView");
     expect(code).toContain("SceneView(");
     expect(code).not.toContain("ARScene");
   });

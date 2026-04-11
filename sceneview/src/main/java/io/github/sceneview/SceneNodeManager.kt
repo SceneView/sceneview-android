@@ -5,11 +5,11 @@ import io.github.sceneview.collision.CollisionSystem
 import io.github.sceneview.node.Node
 
 /**
- * Manages the Filament scene graph for a fully-composable [io.github.sceneview.Scene] (or
- * [io.github.sceneview.ar.ARScene]) without requiring a [SceneView] instance.
+ * Manages the Filament scene graph for a fully-composable [io.github.sceneview.SceneView] (or
+ * [io.github.sceneview.ar.ARSceneView]) without requiring a [SceneView] instance.
  *
  * Replicates the `addNode` / `removeNode` logic from [SceneView] so that the composable surface
- * variants can manage nodes directly against the Filament [Scene].
+ * variants can manage nodes directly against the Filament [SceneView].
  */
 class SceneNodeManager(
     val scene: Scene,

@@ -47,7 +47,7 @@ describe("generateCarConfigurator", () => {
   it("generates valid Kotlin code for sedan", () => {
     const code = generateCarConfigurator({ bodyStyle: "sedan" });
     expect(code).toContain("package com.example.automotive.configurator");
-    expect(code).toContain("import io.github.sceneview.Scene");
+    expect(code).toContain("import io.github.sceneview.SceneView");
     expect(code).toContain("@Composable");
     expect(code).toContain("rememberEngine()");
     expect(code).toContain("rememberModelLoader");
@@ -62,7 +62,7 @@ describe("generateCarConfigurator", () => {
 
   it("generates AR code when ar=true", () => {
     const code = generateCarConfigurator({ bodyStyle: "sedan", ar: true });
-    expect(code).toContain("import io.github.sceneview.ar.ARScene");
+    expect(code).toContain("import io.github.sceneview.ar.ARSceneView");
     expect(code).toContain("ARSceneView(");
     expect(code).toContain("arsceneview:3.6.0");
     expect(code).toContain("android.permission.CAMERA");

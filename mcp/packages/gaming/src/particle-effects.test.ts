@@ -75,7 +75,7 @@ describe("generateParticleEffects", () => {
   it("generates valid Kotlin code for fire effect", () => {
     const code = generateParticleEffects({ effect: "fire" });
     expect(code).toContain("package com.example.gaming.particles");
-    expect(code).toContain("import io.github.sceneview.Scene");
+    expect(code).toContain("import io.github.sceneview.SceneView");
     expect(code).toContain("@Composable");
     expect(code).toContain("rememberEngine()");
     expect(code).toContain("SphereNode");

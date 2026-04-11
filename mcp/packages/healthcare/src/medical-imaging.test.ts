@@ -32,7 +32,7 @@ describe("generateMedicalImaging", () => {
   it("generates valid Kotlin code for CT", () => {
     const code = generateMedicalImaging({ modality: "ct" });
     expect(code).toContain("package com.example.medical.imaging");
-    expect(code).toContain("import io.github.sceneview.Scene");
+    expect(code).toContain("import io.github.sceneview.SceneView");
     expect(code).toContain("@Composable");
     expect(code).toContain("rememberEngine()");
     expect(code).toContain("rememberModelInstance");
@@ -77,7 +77,7 @@ describe("generateMedicalImaging", () => {
 
   it("generates AR code when ar=true", () => {
     const code = generateMedicalImaging({ modality: "mri", ar: true });
-    expect(code).toContain("import io.github.sceneview.ar.ARScene");
+    expect(code).toContain("import io.github.sceneview.ar.ARSceneView");
     expect(code).toContain("ARSceneView(");
     expect(code).toContain("android.permission.CAMERA");
   });

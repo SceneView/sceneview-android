@@ -68,7 +68,7 @@ describe("generateLevelEditor", () => {
   it("generates valid Kotlin code for dungeon theme", () => {
     const code = generateLevelEditor({ theme: "dungeon" });
     expect(code).toContain("package com.example.gaming.level");
-    expect(code).toContain("import io.github.sceneview.Scene");
+    expect(code).toContain("import io.github.sceneview.SceneView");
     expect(code).toContain("@Composable");
     expect(code).toContain("rememberEngine()");
     expect(code).toContain("CubeNode");

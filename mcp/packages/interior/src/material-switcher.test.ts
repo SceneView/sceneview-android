@@ -34,7 +34,7 @@ describe("generateMaterialSwitcher", () => {
   it("generates valid Kotlin code for wall-paint", () => {
     const code = generateMaterialSwitcher({ surface: "wall-paint" });
     expect(code).toContain("package com.example.interior.materials");
-    expect(code).toContain("import io.github.sceneview.Scene");
+    expect(code).toContain("import io.github.sceneview.SceneView");
     expect(code).toContain("@Composable");
     expect(code).toContain("rememberEngine()");
   });
@@ -77,7 +77,7 @@ describe("generateMaterialSwitcher", () => {
   it("generates AR code when ar=true", () => {
     const code = generateMaterialSwitcher({ surface: "wall-paint", ar: true });
     expect(code).toContain("ARSceneView(");
-    expect(code).toContain("import io.github.sceneview.ar.ARScene");
+    expect(code).toContain("import io.github.sceneview.ar.ARSceneView");
     expect(code).toContain("android.permission.CAMERA");
   });
 

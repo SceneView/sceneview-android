@@ -15,8 +15,8 @@ import io.github.sceneview.rememberView
  * recomposition syncs the fog parameters to the [View] passed from [SceneScope].
  *
  * Because [SceneScope] does not expose the [View] directly, callers must pass in the same [view]
- * instance that was provided to [io.github.sceneview.Scene]. Obtain it with
- * `rememberView(engine)` and pass it both to [io.github.sceneview.Scene] and here.
+ * instance that was provided to [io.github.sceneview.SceneView]. Obtain it with
+ * `rememberView(engine)` and pass it both to [io.github.sceneview.SceneView] and here.
  *
  * ### Usage
  * ```kotlin
@@ -35,7 +35,7 @@ import io.github.sceneview.rememberView
  * ```
  *
  * @param view       The Filament [View] to apply fog options to. Must be the same instance
- *                   passed to [io.github.sceneview.Scene].
+ *                   passed to [io.github.sceneview.SceneView].
  * @param density    Volumetric fog density [0.0, 1.0]. Higher values produce thicker fog.
  *                   Default 0.05.
  * @param height     Height falloff in world-space meters. Fog is denser below this height.

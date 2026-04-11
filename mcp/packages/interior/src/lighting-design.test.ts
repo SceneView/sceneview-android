@@ -36,7 +36,7 @@ describe("generateLightingDesign", () => {
   it("generates valid Kotlin code for ambient + spot", () => {
     const code = generateLightingDesign({ lights: ["ambient", "spot"] });
     expect(code).toContain("package com.example.interior.lighting");
-    expect(code).toContain("import io.github.sceneview.Scene");
+    expect(code).toContain("import io.github.sceneview.SceneView");
     expect(code).toContain("@Composable");
     expect(code).toContain("rememberEngine()");
   });
@@ -105,7 +105,7 @@ describe("generateLightingDesign", () => {
       ar: true,
     });
     expect(code).toContain("ARSceneView(");
-    expect(code).toContain("import io.github.sceneview.ar.ARScene");
+    expect(code).toContain("import io.github.sceneview.ar.ARSceneView");
     expect(code).toContain("android.permission.CAMERA");
   });
 

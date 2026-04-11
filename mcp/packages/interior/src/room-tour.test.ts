@@ -35,7 +35,7 @@ describe("generateRoomTour", () => {
   it("generates valid Kotlin code for orbit tour", () => {
     const code = generateRoomTour({ tourStyle: "orbit" });
     expect(code).toContain("package com.example.interior.tour");
-    expect(code).toContain("import io.github.sceneview.Scene");
+    expect(code).toContain("import io.github.sceneview.SceneView");
     expect(code).toContain("@Composable");
     expect(code).toContain("rememberEngine()");
   });
@@ -83,7 +83,7 @@ describe("generateRoomTour", () => {
   it("generates AR code when ar=true", () => {
     const code = generateRoomTour({ tourStyle: "orbit", ar: true });
     expect(code).toContain("ARSceneView(");
-    expect(code).toContain("import io.github.sceneview.ar.ARScene");
+    expect(code).toContain("import io.github.sceneview.ar.ARSceneView");
     expect(code).toContain("android.permission.CAMERA");
   });
 

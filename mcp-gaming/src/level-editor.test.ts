@@ -68,7 +68,7 @@ describe("generateLevelEditor", () => {
   it("generates valid Kotlin code for dungeon theme", () => {
     const code = generateLevelEditor({ theme: "dungeon" });
     expect(code).toContain("package com.example.gaming.level");
-    expect(code).toContain("import io.github.sceneview.Scene");
+    expect(code).toContain("import io.github.sceneview.SceneView");
     expect(code).toContain("@Composable");
     expect(code).toContain("rememberEngine()");
     expect(code).toContain("CubeNode");
@@ -109,7 +109,7 @@ describe("generateLevelEditor", () => {
 
   it("generates AR code when ar=true", () => {
     const code = generateLevelEditor({ theme: "dungeon", ar: true });
-    expect(code).toContain("ARScene(");
+    expect(code).toContain("ARSceneView(");
     expect(code).toContain("android.permission.CAMERA");
     expect(code).toContain("arsceneview:3.6.2");
   });
@@ -130,7 +130,7 @@ describe("generateLevelEditor", () => {
     for (const theme of LEVEL_THEMES) {
       const code = generateLevelEditor({ theme });
       expect(code).toContain("@Composable");
-      expect(code).toContain("Scene(");
+      expect(code).toContain("SceneView(");
     }
   });
 

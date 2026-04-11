@@ -36,7 +36,7 @@ describe("generatePartsCatalog", () => {
   it("generates valid Kotlin code for engine parts", () => {
     const code = generatePartsCatalog({ category: "engine" });
     expect(code).toContain("package com.example.automotive.parts");
-    expect(code).toContain("import io.github.sceneview.Scene");
+    expect(code).toContain("import io.github.sceneview.SceneView");
     expect(code).toContain("@Composable");
     expect(code).toContain("rememberEngine()");
     expect(code).toContain("rememberModelInstance");

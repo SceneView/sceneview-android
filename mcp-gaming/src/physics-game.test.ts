@@ -58,7 +58,7 @@ describe("generatePhysicsGame", () => {
   it("generates valid Kotlin code for bouncing-balls", () => {
     const code = generatePhysicsGame({ preset: "bouncing-balls" });
     expect(code).toContain("package com.example.gaming.physics");
-    expect(code).toContain("import io.github.sceneview.Scene");
+    expect(code).toContain("import io.github.sceneview.SceneView");
     expect(code).toContain("@Composable");
     expect(code).toContain("rememberEngine()");
     expect(code).toContain("SphereNode");
@@ -110,7 +110,7 @@ describe("generatePhysicsGame", () => {
 
   it("generates AR code when ar=true", () => {
     const code = generatePhysicsGame({ preset: "bouncing-balls", ar: true });
-    expect(code).toContain("ARScene(");
+    expect(code).toContain("ARSceneView(");
     expect(code).toContain("android.permission.CAMERA");
     expect(code).toContain("arsceneview:3.6.2");
   });
@@ -132,7 +132,7 @@ describe("generatePhysicsGame", () => {
     for (const preset of PHYSICS_PRESETS) {
       const code = generatePhysicsGame({ preset });
       expect(code).toContain("@Composable");
-      expect(code).toContain("Scene(");
+      expect(code).toContain("SceneView(");
     }
   });
 

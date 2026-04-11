@@ -22,7 +22,7 @@ import io.github.sceneview.ExperimentalSceneViewApi
 import kotlinx.coroutines.delay
 
 /**
- * Real-time performance statistics for a running [io.github.sceneview.Scene].
+ * Real-time performance statistics for a running [io.github.sceneview.SceneView].
  *
  * Create with [rememberDebugStats] and update from the `onFrame` callback. The properties
  * are observable Compose state values that automatically trigger recomposition of any

@@ -76,7 +76,7 @@ import androidx.xr.compose.spatial.SpatialPanel
 import androidx.xr.compose.subspace.SubspaceModifier
 import androidx.xr.compose.subspace.height
 import androidx.xr.compose.subspace.width
-import io.github.sceneview.Scene
+import io.github.sceneview.SceneView
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberModelLoader
 import io.github.sceneview.rememberEnvironmentLoader
@@ -121,7 +121,7 @@ For AR experiences on XR headsets, combine SceneView's `ARSceneView {}` with XR 
 import androidx.xr.compose.spatial.Subspace
 import androidx.xr.compose.spatial.SpatialPanel
 import androidx.xr.scenecore.SpatialEnvironment
-import io.github.sceneview.ar.ARScene
+import io.github.sceneview.ar.ARSceneView
 
 @Composable
 fun XRAugmentedView(xrSession: Session) {

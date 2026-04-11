@@ -46,7 +46,7 @@ describe("generateRoomPlanner", () => {
   it("generates valid Kotlin code for living room", () => {
     const code = generateRoomPlanner({ roomType: "living-room" });
     expect(code).toContain("package com.example.interior.planner");
-    expect(code).toContain("import io.github.sceneview.Scene");
+    expect(code).toContain("import io.github.sceneview.SceneView");
     expect(code).toContain("@Composable");
     expect(code).toContain("rememberEngine()");
     expect(code).toContain("rememberModelLoader");
@@ -75,7 +75,7 @@ describe("generateRoomPlanner", () => {
 
   it("generates AR code when ar=true", () => {
     const code = generateRoomPlanner({ roomType: "living-room", ar: true });
-    expect(code).toContain("import io.github.sceneview.ar.ARScene");
+    expect(code).toContain("import io.github.sceneview.ar.ARSceneView");
     expect(code).toContain("ARSceneView(");
     expect(code).toContain("arsceneview:3.6.0");
     expect(code).toContain("android.permission.CAMERA");

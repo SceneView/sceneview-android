@@ -1,5 +1,5 @@
 // TODO(module-unification): ARScene should eventually live in the `sceneview` module as
-//  `io.github.sceneview.ar.ARScene`. The `arsceneview` module would be removed and its contents
+//  `io.github.sceneview.ar.ARSceneView`. The `arsceneview` module would be removed and its contents
 //  merged into `sceneview` under an `ar/` sub-package. ARCore would be declared as a `compileOnly`
 //  dependency so that apps using only 3D (no AR) don't pull ARCore into their APK.
 //
@@ -143,7 +143,7 @@ import java.util.concurrent.atomic.AtomicReference
  *                                 background from being over-processed by Filamic tone mapping.
  * @param isOpaque                 Whether the render target is opaque. Default `true`.
  * @param renderer                 Filament [Renderer]. Use [rememberRenderer].
- * @param scene                    Filament [Scene] graph. Use [rememberScene].
+ * @param scene                    Filament [SceneView] graph. Use [rememberScene].
  * @param environment              IBL + skybox environment. Use [rememberAREnvironment].
  * @param mainLightNode            Primary directional light. Use [rememberMainLightNode].
  * @param cameraNode               AR camera node. Use [rememberARCameraNode].
@@ -215,7 +215,7 @@ fun ARSceneView(
      */
     cameraStream: ARCameraStream? = rememberARCameraStream(materialLoader),
     /**
-     * Encompasses all the state needed for rendering a [Scene].
+     * Encompasses all the state needed for rendering a [SceneView].
      */
     view: View = rememberARView(engine),
     /**
