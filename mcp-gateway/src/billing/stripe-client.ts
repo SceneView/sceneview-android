@@ -166,11 +166,12 @@ export function createCheckoutSession(
     form.customer = params.customerId;
   } else if (params.customerEmail) {
     form.customer_email = params.customerEmail;
-  } else {
-    // Ask Stripe to always create a customer record so the webhook can
-    // persist the customer id for the portal flow later.
-    form.customer_creation = "always";
   }
+  // In subscription mode Stripe always auto-creates a Customer for the
+  // subscription, so no explicit customer_creation flag is needed here.
+  // (Setting customer_creation = "always" here used to return
+  // "customer_creation can only be used in payment mode" and 502 the
+  // checkout route.)
   return stripeRequest<StripeCheckoutSession>(
     secretKey,
     "POST",
