@@ -148,7 +148,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import io.github.sceneview.Scene
+import io.github.sceneview.SceneView
 import io.github.sceneview.node.SphereNode
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberModelLoader
@@ -371,7 +371,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import io.github.sceneview.ar.ARScene
+import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.node.SphereNode
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberModelLoader

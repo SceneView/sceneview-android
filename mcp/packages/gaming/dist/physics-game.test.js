@@ -43,7 +43,7 @@ describe("generatePhysicsGame", () => {
     it("generates valid Kotlin code for bouncing-balls", () => {
         const code = generatePhysicsGame({ preset: "bouncing-balls" });
         expect(code).toContain("package com.example.gaming.physics");
-        expect(code).toContain("import io.github.sceneview.Scene");
+        expect(code).toContain("import io.github.sceneview.SceneView");
         expect(code).toContain("@Composable");
         expect(code).toContain("rememberEngine()");
         expect(code).toContain("SphereNode");
