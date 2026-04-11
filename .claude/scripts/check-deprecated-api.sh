@@ -80,7 +80,8 @@ is_whitelisted() {
     mcp/demo/record-terminal.sh) return 0 ;;
   esac
 
-  # MCP validators intentionally match the deprecated pattern to flag it
+  # MCP validators + migrator + analyzer intentionally match the deprecated
+  # patterns — the whole point of those files is to detect or rewrite them.
   case "$1" in
     mcp/src/validator.ts | mcp/src/validator.test.ts) return 0 ;;
     mcp/packages/interior/src/validator.ts | mcp/packages/interior/src/validator.test.ts) return 0 ;;
@@ -89,6 +90,40 @@ is_whitelisted() {
     mcp/packages/automotive/src/validator.ts | mcp/packages/automotive/src/validator.test.ts) return 0 ;;
     mcp-interior/src/validator.ts | mcp-interior/src/validator.test.ts) return 0 ;;
     mcp-gaming/src/validator.ts | mcp-gaming/src/validator.test.ts) return 0 ;;
+    # Shared deprecated-api module + per-package copies from session 34a
+    # validator-dedup refactor (commit df9e62c7).
+    mcp/packages/shared/src/deprecated-api-check.ts) return 0 ;;
+    mcp/packages/shared/src/deprecated-api-check.test.ts) return 0 ;;
+    mcp/packages/shared/README.md) return 0 ;;
+    mcp/packages/automotive/src/deprecated-api-check.ts) return 0 ;;
+    mcp/packages/gaming/src/deprecated-api-check.ts) return 0 ;;
+    mcp/packages/healthcare/src/deprecated-api-check.ts) return 0 ;;
+    mcp/packages/interior/src/deprecated-api-check.ts) return 0 ;;
+    # CI workflow that documents what this detector catches
+    .github/workflows/quality-gate.yml) return 0 ;;
+    # MCP tools that document or migrate away from deprecated APIs by
+    # construction.
+    mcp/src/analyze-project.ts) return 0 ;;
+    mcp/src/migration.ts | mcp/src/migration.test.ts) return 0 ;;
+    mcp/src/migrate-code.ts | mcp/src/migrate-code.test.ts) return 0 ;;
+    mcp/src/debug-issue.ts) return 0 ;;
+    mcp/src/explain-api.ts) return 0 ;;
+    mcp/src/issues.ts) return 0 ;;
+    mcp/src/artifact.ts) return 0 ;;
+    mcp/src/tools/definitions.ts) return 0 ;;
+    mcp/src/__fixtures__/*) return 0 ;;
+    mcp/README.md) return 0 ;;
+    # GPT knowledge base — migration guide for the GPT assistant
+    gpt/knowledge-practices.md) return 0 ;;
+    # Slash commands that teach users what NOT to do
+    .claude/commands/review.md) return 0 ;;
+  esac
+
+  # Library public imperative APIs that legitimately wrap Filament low-level
+  # calls — these are the canonical homes of Engine.create / loadModelAsync.
+  case "$1" in
+    sceneview/src/main/java/io/github/sceneview/SceneFactories.kt) return 0 ;;
+    sceneview/src/main/java/io/github/sceneview/loaders/ModelLoader.kt) return 0 ;;
   esac
 
   # Generated / vendored
@@ -150,18 +185,53 @@ for file in $FILES; do
   is_scannable "$file" || continue
   is_whitelisted "$file" && continue
 
-  # Pipe through awk to get line numbers for Scene{/Scene(/ARScene{/ARScene(
-  # with word-boundary + not-preceded-by-word-char semantics.
+  # Each awk pattern below is the "not preceded by a word char or dot" form
+  # of a deprecated identifier, followed by the right-hand context that
+  # disambiguates it from longer (valid) names like SceneView, ARSceneView,
+  # SceneScope, XRScene, rememberScene, SwiftUI.Scene, Filament.Scene.
   matches=$(awk '
     {
       line = $0
-      # Remove string contents that contain legitimate escaped Scene refs?
-      # For now, match anything. False positives are rare — most legitimate
-      # refs are in the whitelist above.
+
+      # 1. Scene{} / Scene() composable (renamed to SceneView in v3.6)
       if (match(line, /(^|[^a-zA-Z0-9_.])Scene[[:space:]]*[{(]/)) {
-        print FILENAME ":" NR ":" line
-      } else if (match(line, /(^|[^a-zA-Z0-9_.])ARScene[[:space:]]*[{(]/)) {
-        print FILENAME ":" NR ":" line
+        print FILENAME ":" NR ": [Scene{}]    " line
+      }
+      # 2. ARScene{} / ARScene() composable (renamed to ARSceneView in v3.6)
+      if (match(line, /(^|[^a-zA-Z0-9_.])ARScene[[:space:]]*[{(]/)) {
+        print FILENAME ":" NR ": [ARScene{}]  " line
+      }
+      # 3. Sceneform framework imports — never valid in SceneView 3.x
+      if (match(line, /import[[:space:]]+com\.google\.ar\.sceneform/)) {
+        print FILENAME ":" NR ": [sceneform-import]  " line
+      }
+      # 4. ArFragment — Sceneform class, replaced by ARSceneView composable
+      if (match(line, /(^|[^a-zA-Z0-9_.])ArFragment([^a-zA-Z0-9_]|$)/)) {
+        print FILENAME ":" NR ": [ArFragment]  " line
+      }
+      # 5. ViewRenderable — replaced by ViewNode
+      if (match(line, /(^|[^a-zA-Z0-9_.])ViewRenderable([^a-zA-Z0-9_]|$)/)) {
+        print FILENAME ":" NR ": [ViewRenderable]  " line
+      }
+      # 6. ModelRenderable — replaced by ModelNode + ModelInstance
+      if (match(line, /(^|[^a-zA-Z0-9_.])ModelRenderable([^a-zA-Z0-9_]|$)/)) {
+        print FILENAME ":" NR ": [ModelRenderable]  " line
+      }
+      # 7. PlacementNode — removed in 3.0, use AnchorNode + HitResultNode
+      if (match(line, /(^|[^a-zA-Z0-9_.])PlacementNode([^a-zA-Z0-9_]|$)/)) {
+        print FILENAME ":" NR ": [PlacementNode]  " line
+      }
+      # 8. childNodes = rememberNodes { — pre-3.0 node declaration pattern
+      if (match(line, /childNodes[[:space:]]*=[[:space:]]*rememberNodes/)) {
+        print FILENAME ":" NR ": [childNodes=rememberNodes]  " line
+      }
+      # 9. Import of the deprecated composable alias (anchored end-of-line
+      #    so .SceneView / .ARSceneView / .SceneScope imports do not match).
+      if (match(line, /^[[:space:]]*import[[:space:]]+io\.github\.sceneview\.Scene[[:space:]]*$/)) {
+        print FILENAME ":" NR ": [deprecated-scene-import]  " line
+      }
+      if (match(line, /^[[:space:]]*import[[:space:]]+io\.github\.sceneview\.ar\.ARScene[[:space:]]*$/)) {
+        print FILENAME ":" NR ": [deprecated-arscene-import]  " line
       }
     }
   ' FILENAME="$file" "$file" 2>/dev/null)
