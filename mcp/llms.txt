@@ -3,8 +3,8 @@
 SceneView is a declarative 3D and AR SDK for Android (Jetpack Compose, Filament, ARCore) and Apple platforms — iOS, macOS, visionOS (SwiftUI, RealityKit, ARKit) — with shared core logic via Kotlin Multiplatform. Each platform uses its native renderer: Filament on Android, RealityKit on Apple.
 
 **Android — Maven artifacts (version 3.6.2):**
-- 3D only: `io.github.sceneview:sceneview:3.6.2`
-- AR + 3D: `io.github.sceneview:arsceneview:3.6.2`
+- 3D only: `io.github.sceneview:sceneview:4.0.0-rc.1`
+- AR + 3D: `io.github.sceneview:arsceneview:4.0.0-rc.1`
 
 **Apple (iOS 17+ / macOS 14+ / visionOS 1+) — Swift Package:**
 - `https://github.com/sceneview/sceneview-swift.git` (from: "3.6.0")
@@ -18,8 +18,8 @@ SceneView is a declarative 3D and AR SDK for Android (Jetpack Compose, Filament,
 ### build.gradle (app module)
 ```kotlin
 dependencies {
-    implementation("io.github.sceneview:sceneview:3.6.2")   // 3D only
-    implementation("io.github.sceneview:arsceneview:3.6.2") // AR (includes sceneview)
+    implementation("io.github.sceneview:sceneview:4.0.0-rc.1")   // 3D only
+    implementation("io.github.sceneview:arsceneview:4.0.0-rc.1") // AR (includes sceneview)
 }
 ```
 
@@ -1080,6 +1080,129 @@ SceneView(surfaceType = SurfaceType.TextureSurface, isOpaque = false)  // Textur
 | Oversaturated AR camera | Wrong tone mapper | Use `rememberARView(engine)` (Linear tone mapper) |
 | Crash on empty bounding box | Filament 1.70+ enforcement | SceneView auto-sanitizes; update to latest version |
 | Material crash on dispose | Entity still in scene | SceneView handles cleanup order automatically |
+
+---
+
+## AR Debug — Rerun.io integration
+
+Stream an ARCore or ARKit session to the [Rerun](https://rerun.io) viewer for scrub-and-replay debugging. Camera pose, detected planes, point cloud, anchors, and hit results appear on a 3D timeline you can scrub frame-by-frame.
+
+**When to use:** debugging flaky plane detection, tracking drift, anchor instability, or comparing two AR sessions side by side. **Dev-time only** — gate with `BuildConfig.DEBUG` in release builds.
+
+### Architecture
+
+```
+┌──────────────┐   TCP JSON-lines  ┌──────────────────┐  rerun-sdk   ┌────────────┐
+│  RerunBridge │ ─────────────────▶│ Python sidecar   │ ───────────▶ │ Rerun      │
+│ (Kt or Swift)│   one obj/line \n │ (rerun-bridge.py)│              │ viewer     │
+└──────────────┘                   └──────────────────┘              └────────────┘
+```
+
+Same wire format on Android and iOS. A single sidecar handles both platforms.
+
+### Android — `rememberRerunBridge`
+
+```kotlin
+import io.github.sceneview.ar.rerun.rememberRerunBridge
+
+@Composable
+fun ARDebugScreen() {
+    val bridge = rememberRerunBridge(
+        host = "127.0.0.1",          // paired with `adb reverse tcp:9876 tcp:9876`
+        port = 9876,
+        rateHz = 10,                  // throttle; 0 = unlimited
+        enabled = BuildConfig.DEBUG   // no-op in release builds
+    )
+
+    ARSceneView(
+        modifier = Modifier.fillMaxSize(),
+        onSessionUpdated = { session, frame ->
+            bridge.logFrame(session, frame)
+        }
+    )
+}
+```
+
+`logFrame` logs camera pose + planes + point cloud in one call, honours `rateHz`. Finer-grained methods are available if you want to emit events selectively: `logCameraPose(Pose, Long)`, `logPlanes(Collection<Plane>, Long)`, `logPointCloud(PointCloud, Long)`, `logAnchors(Collection<Anchor>, Long)`, `logHitResult(HitResult, Long)`.
+
+**Threading:** the bridge owns a private `Dispatchers.IO` + `SupervisorJob` scope and a `Channel.CONFLATED` outbox. Every `log*` call is non-blocking — the newest event overwrites any pending one (drop-on-backpressure). Filament's render thread is never blocked.
+
+### iOS — `RerunBridge` + new `ARSceneView.onFrame`
+
+```swift
+import SceneViewSwift
+import ARKit
+
+struct ARDebugView: View {
+    @StateObject private var bridge = RerunBridge(
+        host: "192.168.1.42",  // your Mac's LAN IP
+        port: RerunBridge.defaultPort,
+        rateHz: 10
+    )
+
+    var body: some View {
+        ARSceneView()
+            .onFrame { frame, _ in
+                bridge.logFrame(frame)
+            }
+            .onAppear { bridge.connect() }
+            .onDisappear { bridge.disconnect() }
+    }
+}
+```
+
+`RerunBridge` is an `ObservableObject` with `@Published eventCount` you can bind to a SwiftUI status overlay. Uses `Network.framework` `NWConnection` on a dedicated utility queue — no blocking on the ARKit delegate.
+
+### Python sidecar (dev machine)
+
+```bash
+pip install rerun-sdk numpy
+python samples/android-demo/tools/rerun-bridge.py
+# Rerun viewer window opens automatically via rr.init(spawn=True)
+
+# On the device:
+adb reverse tcp:9876 tcp:9876                       # Android, USB-tethered
+# or connect iPhone and Mac to the same LAN and point bridge at Mac's IP
+```
+
+The sidecar maps each JSON event to the matching Rerun archetype:
+- `camera_pose` → `rr.Transform3D`
+- `plane` → `rr.LineStrips3D` (closed world-space polygon)
+- `point_cloud` → `rr.Points3D`
+- `anchor` → `rr.Transform3D`
+- `hit_result` → `rr.Points3D` (single highlighted point)
+
+### Wire format (JSON-lines over TCP)
+
+```json
+{"t":123456789,"type":"camera_pose","entity":"world/camera","translation":[x,y,z],"quaternion":[x,y,z,w]}
+{"t":123456789,"type":"plane","entity":"world/planes/<id>","kind":"horizontal_upward","polygon":[[x,y,z],...]}
+{"t":123456789,"type":"point_cloud","entity":"world/points","positions":[[x,y,z],...],"confidences":[f,...]}
+{"t":123456789,"type":"anchor","entity":"world/anchors/<id>","translation":[x,y,z],"quaternion":[x,y,z,w]}
+{"t":123456789,"type":"hit_result","entity":"world/hits/<id>","translation":[x,y,z],"distance":f}
+```
+
+Non-finite floats (NaN/Infinity) are clamped to `0` so every line stays parseable. Byte-identical output from Kotlin and Swift — enforced by 24 golden-string tests (12 per platform).
+
+### Generating the boilerplate with AI
+
+The [`rerun-3d-mcp`](https://www.npmjs.com/package/rerun-3d-mcp) MCP server generates the integration code for you. Install once:
+
+```bash
+npx rerun-3d-mcp
+```
+
+Then ask Claude / Cursor / any MCP client:
+
+> Generate an Android AR scene that logs camera pose, planes, and point cloud to Rerun at 10 Hz, and give me the matching Python sidecar.
+
+The MCP exposes 5 tools: `setup_rerun_project`, `generate_ar_logger`, `generate_python_sidecar`, `embed_web_viewer`, `explain_concept`.
+
+### Limits
+
+- **Dev-time only.** Gate with `BuildConfig.DEBUG` / `#if DEBUG`. The bridge is safe to leave wired in release (`setEnabled(false)` short-circuits the hot path), but the socket attempt alone wastes battery.
+- **No Rerun on visionOS yet.** `RerunBridge` is iOS-only because it reads from `ARFrame`, which isn't part of the visionOS API surface.
+- **10 Hz default.** Higher rates are possible but the sidecar becomes a bottleneck beyond ~30 Hz on a typical laptop.
 
 ---
 

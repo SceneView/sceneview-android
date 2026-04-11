@@ -1,9 +1,101 @@
 ---
 title: Migration Guide
-description: "Migration guides for SceneView: 3.5.x to 3.6.0 API simplification, and 2.x to 3.x full rewrite."
+description: "Migration guides for SceneView: 3.6.x to 4.0.0 Rerun integration, 3.5.x to 3.6.0 API simplification, and 2.x to 3.x full rewrite."
 ---
 
 # Migration Guide
+
+---
+
+## SceneView 3.6.x to 4.0.0 (Release Candidate)
+
+**Status:** `v4.0.0-rc.1` is live as a release candidate. Maven Central and Swift Package Manager artifacts are **not** built from the RC tag — pin to the tag manually to test, or wait for the `v4.0.0` stable tag.
+
+4.0.0 is a **strictly additive** release for the SDK side. Existing 3.6.x code compiles and runs unchanged. The version bump reflects two new capabilities, not breaking changes.
+
+### 1. New: AR Debug — Rerun.io integration
+
+SceneView can now stream an ARCore / ARKit session to the [Rerun](https://rerun.io) viewer for scrub-and-replay debugging. See the full guide in the [llms.txt reference](https://github.com/sceneview/sceneview/blob/main/llms.txt) or the [AR Debug (Rerun)](https://sceneview.github.io/playground.html) example in the playground.
+
+Quick wire-up on Android:
+
+```kotlin
+import io.github.sceneview.ar.rerun.rememberRerunBridge
+
+@Composable
+fun MyARScreen() {
+    val bridge = rememberRerunBridge(enabled = BuildConfig.DEBUG)
+    ARSceneView(
+        modifier = Modifier.fillMaxSize(),
+        onSessionUpdated = { session, frame ->
+            bridge.logFrame(session, frame)
+        }
+    )
+}
+```
+
+And on iOS:
+
+```swift
+import SceneViewSwift
+
+struct MyARView: View {
+    @StateObject private var bridge = RerunBridge(host: "192.168.1.42")
+
+    var body: some View {
+        ARSceneView()
+            .onFrame { frame, _ in bridge.logFrame(frame) }
+            .onAppear { bridge.connect() }
+            .onDisappear { bridge.disconnect() }
+    }
+}
+```
+
+No breaking changes — this is a new `io.github.sceneview.ar.rerun` package on Android and a new `SceneViewSwift.RerunBridge` type on iOS. Nothing existing was touched.
+
+### 2. New: `ARSceneView.onFrame` hook on iOS
+
+`SceneViewSwift.ARSceneView` gained a new `onFrame(_ handler:)` modifier mirroring Android's `onSessionUpdated` callback. Fires from the existing `ARSessionDelegate.session(_:didUpdate:)` without adding a second delegate. Used by the Rerun bridge, but useful for any per-frame custom logic (pose streaming, custom tracking analytics, etc.).
+
+```swift
+ARSceneView()
+    .onFrame { frame, arView in
+        // runs on the ARKit delegate queue — do NOT block
+    }
+```
+
+### 3. Version bump — just the number
+
+Update your Gradle / SPM / pubspec / package.json references:
+
+```kotlin
+// Before
+implementation("io.github.sceneview:sceneview:3.6.2")
+implementation("io.github.sceneview:arsceneview:3.6.2")
+
+// After (4.0.0-rc.1)
+implementation("io.github.sceneview:sceneview:4.0.0-rc.1")
+implementation("io.github.sceneview:arsceneview:4.0.0-rc.1")
+```
+
+**Release candidate caveat:** Maven Central does **not** currently ship `4.0.0-rc.1`. Either build from source (`./gradlew :sceneview:publishToMavenLocal`) or wait for `v4.0.0` stable.
+
+### 4. `sceneview-mcp` gained a `@next` dist-tag
+
+If you use the [`sceneview-mcp`](https://www.npmjs.com/package/sceneview-mcp) npm package in Claude Desktop / Cursor / etc., the `@latest` tag is still on `3.6.4` (unchanged, intentionally). The `@next` tag is on `4.0.0-rc.1`, which includes the Rerun integration docs and v4 lite-proxy routing to the hosted gateway. Opt in with:
+
+```json
+"sceneview": {
+  "command": "npx",
+  "args": ["-y", "sceneview-mcp@next"]
+}
+```
+
+There is also a **new** [`rerun-3d-mcp`](https://www.npmjs.com/package/rerun-3d-mcp) package (`@latest = 1.0.0`) that generates the Rerun integration boilerplate on demand:
+
+```bash
+npx rerun-3d-mcp
+```
 
 ---
 
