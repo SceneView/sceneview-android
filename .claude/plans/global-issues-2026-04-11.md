@@ -52,6 +52,27 @@ curl -sL "https://repo1.maven.org/maven2/io/github/sceneview/sceneview/maven-met
 
 **Blocked on:** `[DELEGATED-samples-v4]`.
 
+### P0.3 — SPM URL in install docs points to a 404 repo (2026-04-11)
+
+**Status:** `README.md`, `llms.txt`, `docs/docs/cheatsheet-ios.md`, and likely other docs all tell iOS/macOS/visionOS users to install via:
+```swift
+.package(url: "https://github.com/sceneview/sceneview-swift.git", from: "3.6.0")
+```
+But `gh api repos/sceneview/sceneview-swift` returns **404 — Repository not found**. The repo does not exist on GitHub. Any user following the install instructions gets a clone failure before they can try the SDK.
+
+**Verified 2026-04-11, 01:35 UTC:**
+- `gh api repos/sceneview/sceneview-swift` → 404
+- `git ls-remote https://github.com/sceneview/sceneview-swift.git` → "Repository not found"
+- Local `SceneViewSwift/Package.swift` exists as a subdirectory of the main repo, but no root-level `Package.swift` to make `https://github.com/sceneview/sceneview.git` directly consumable via SPM either.
+
+**Two ways to fix:**
+1. **Publish the `sceneview/sceneview-swift` mirror repo** — script that pushes `SceneViewSwift/` subtree to a dedicated repo, with git tags `vX.Y.Z` mirroring the main repo's releases. Add to the release workflow.
+2. **Add a root `Package.swift`** at the repo root that references `SceneViewSwift/Sources/...` so users can install via `https://github.com/sceneview/sceneview.git` directly. Simpler, but mixes Gradle and SPM workspaces at the same path which some tools (Xcode, Gradle) dislike.
+
+**Recommended:** option 1 — cleanest separation and matches the existing docs language. Needs a GitHub Actions job to sync the subtree on every release tag.
+
+**Why this is P0:** iOS is one of the four advertised primary platforms. Every iOS developer following the docs hits a 404.
+
 ---
 
 ## P1 — High-value, not blocking, do next
