@@ -15,7 +15,6 @@ import { handleCheckoutCompleted } from "../src/billing/events/checkout-complete
 import { handleSubscriptionUpdated } from "../src/billing/events/subscription-updated.js";
 import { handleSubscriptionDeleted } from "../src/billing/events/subscription-deleted.js";
 import { insertUser, getUserById } from "../src/db/users.js";
-import { createApiKey } from "../src/auth/api-keys.js";
 import {
   getSubscriptionByStripeId,
   insertSubscription,
@@ -214,17 +213,9 @@ describe("POST /stripe/webhook", () => {
 // ── Event handlers ───────────────────────────────────────────────────────────
 
 describe("handleCheckoutCompleted", () => {
-  it("upserts customer id, creates a subscription row, and updates the tier", async () => {
-    await insertUser(mock.db, {
-      id: "usr_checkout",
-      email: "checkout@example.com",
-    });
-    await createApiKey(mock.db, "usr_checkout", "pre");
-
-    // Prime the KV auth cache for that key so we can watch it vanish.
-    const kvEntries = [...kv.store.keys()];
-    expect(kvEntries.length).toBe(0);
-
+  it("creates the user by email, upserts sub/customer id, bumps tier, and stashes the API key in KV", async () => {
+    // Mock the Stripe subscription retrieve call — no user exists yet,
+    // the webhook is the source of truth.
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(
@@ -246,45 +237,183 @@ describe("handleCheckoutCompleted", () => {
       type: "checkout.session.completed",
       data: {
         object: {
-          id: "cs_1",
+          id: "cs_test_1",
           customer: "cus_123",
-          client_reference_id: "usr_checkout",
+          customer_details: { email: "new-buyer@example.com" },
           subscription: "sub_123",
         },
       },
       created: 1,
     });
 
-    const user = await getUserById(mock.db, "usr_checkout");
-    expect(user?.tier).toBe("pro");
-    expect(user?.stripe_customer_id).toBe("cus_123");
+    // User was created from the email carried in the session payload.
+    const created = await mock.db
+      .prepare(
+        "SELECT id, email, tier, stripe_customer_id FROM users WHERE email = ?1",
+      )
+      .bind("new-buyer@example.com")
+      .first<{
+        id: string;
+        email: string;
+        tier: string;
+        stripe_customer_id: string | null;
+      }>();
+    expect(created).not.toBeNull();
+    expect(created!.tier).toBe("pro");
+    expect(created!.stripe_customer_id).toBe("cus_123");
 
+    // Subscription row was upserted.
     const sub = await getSubscriptionByStripeId(mock.db, "sub_123");
     expect(sub).not.toBeNull();
     expect(sub!.tier).toBe("pro");
     expect(sub!.status).toBe("active");
+
+    // The plaintext API key is stashed under checkout_key:{session_id}
+    // for the success page to read once.
+    const kvRaw = await kv.get("checkout_key:cs_test_1");
+    expect(kvRaw).not.toBeNull();
+    const stashed = JSON.parse(kvRaw!) as {
+      plaintext: string;
+      prefix: string;
+      tier: string;
+      email: string;
+    };
+    expect(stashed.plaintext).toMatch(/^sv_live_[A-Z2-7]+$/);
+    expect(stashed.prefix.startsWith("sv_live_")).toBe(true);
+    expect(stashed.tier).toBe("pro");
+    expect(stashed.email).toBe("new-buyer@example.com");
+
     fetchMock.mockRestore();
   });
 
-  it("ignores unknown users", async () => {
+  it("reuses an existing user when the same email checks out again", async () => {
+    await insertUser(mock.db, {
+      id: "usr_repeat",
+      email: "repeat@example.com",
+      tier: "free",
+    });
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            id: "sub_456",
+            customer: "cus_456",
+            status: "active",
+            cancel_at_period_end: false,
+            current_period_end: 1_700_000_000,
+            items: { data: [{ price: { id: TEAM_MONTHLY_PRICE } }] },
+          }),
+          { status: 200 },
+        ),
+      );
+
     await handleCheckoutCompleted(env(), {
-      id: "evt_x",
+      id: "evt_2",
       type: "checkout.session.completed",
       data: {
         object: {
-          id: "cs_x",
-          customer: "cus_x",
-          client_reference_id: "usr_does_not_exist",
-          subscription: "sub_x",
+          id: "cs_test_2",
+          customer: "cus_456",
+          customer_email: "repeat@example.com",
+          subscription: "sub_456",
         },
       },
       created: 1,
     });
-    // No throw, no side effects.
-    const all = await mock.db.prepare("SELECT COUNT(*) as n FROM users").first<{
-      n: number;
-    }>();
+
+    const user = await getUserById(mock.db, "usr_repeat");
+    expect(user?.tier).toBe("team");
+    expect(user?.stripe_customer_id).toBe("cus_456");
+
+    const kvRaw = await kv.get("checkout_key:cs_test_2");
+    expect(kvRaw).not.toBeNull();
+
+    // User table still has a single row — no duplicate insert.
+    const count = await mock.db
+      .prepare("SELECT COUNT(*) as n FROM users")
+      .first<{ n: number }>();
+    expect(count?.n).toBe(1);
+    fetchMock.mockRestore();
+  });
+
+  it("retrieves the Checkout Session from Stripe when the payload has no email", async () => {
+    // 1st fetch: retrieveCheckoutSession (to find the email).
+    // 2nd fetch: retrieveSubscription (to find the price + status).
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            id: "cs_fallback",
+            url: "https://checkout.stripe.com/cs_fallback",
+            customer: "cus_fallback",
+            customer_details: { email: "fallback@example.com" },
+            subscription: "sub_fallback",
+          }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            id: "sub_fallback",
+            customer: "cus_fallback",
+            status: "active",
+            cancel_at_period_end: false,
+            current_period_end: 1_700_000_000,
+            items: { data: [{ price: { id: PRO_MONTHLY_PRICE } }] },
+          }),
+          { status: 200 },
+        ),
+      );
+
+    await handleCheckoutCompleted(env(), {
+      id: "evt_fallback",
+      type: "checkout.session.completed",
+      data: {
+        object: {
+          id: "cs_fallback",
+          customer: "cus_fallback",
+          subscription: "sub_fallback",
+        },
+      },
+      created: 1,
+    });
+
+    const user = await mock.db
+      .prepare("SELECT tier FROM users WHERE email = ?1")
+      .bind("fallback@example.com")
+      .first<{ tier: string }>();
+    expect(user?.tier).toBe("pro");
+
+    const kvRaw = await kv.get("checkout_key:cs_fallback");
+    expect(kvRaw).not.toBeNull();
+    fetchMock.mockRestore();
+  });
+
+  it("ignores a session with neither email nor a way to recover it", async () => {
+    await handleCheckoutCompleted(
+      env({ STRIPE_SECRET_KEY: undefined }),
+      {
+        id: "evt_x",
+        type: "checkout.session.completed",
+        data: {
+          object: {
+            id: "cs_no_email",
+            customer: "cus_x",
+            subscription: "sub_x",
+          },
+        },
+        created: 1,
+      },
+    );
+    const all = await mock.db
+      .prepare("SELECT COUNT(*) as n FROM users")
+      .first<{ n: number }>();
     expect(all?.n).toBe(0);
+    const kvRaw = await kv.get("checkout_key:cs_no_email");
+    expect(kvRaw).toBeNull();
   });
 });
 
