@@ -24,6 +24,22 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--prefix", "mcp"],
       "port": 3000
+    },
+    {
+      "name": "hub-gateway",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "wrangler",
+        "dev",
+        "--config",
+        "hub-gateway/wrangler.toml",
+        "--port",
+        "8787",
+        "--local",
+        "--ip",
+        "127.0.0.1"
+      ],
+      "port": 8787
     }
   ]
 }
