@@ -43,7 +43,7 @@ const TierCard: FC<TierCardProps> = (props) => (
 export const Pricing: FC<{ signedIn?: boolean }> = ({ signedIn }) => (
   <Layout
     title="Pricing"
-    description="Simple pricing for SceneView MCP. Free tier for learning, Pro for production, Team for organisations."
+    description="Simple, transparent pricing for SceneView MCP. Free to start. Upgrade to Pro at 19 EUR/month or Team at 49 EUR/month when you need specialized packages and higher quotas."
     active="pricing"
     signedIn={signedIn}
   >
@@ -109,6 +109,33 @@ export const Pricing: FC<{ signedIn?: boolean }> = ({ signedIn }) => (
         Save roughly two months on every tier by switching to annual
         billing from the Stripe customer portal: Pro at 190 EUR / year
         and Team at 490 EUR / year.
+      </p>
+    </section>
+
+    <section style="margin-top:2.5rem;">
+      <h2>Frequently asked</h2>
+      <h3>What happens when I hit my monthly quota?</h3>
+      <p>
+        Calls beyond the quota return a JSON-RPC rate_limited error
+        without breaking the connection. Upgrade in the dashboard or
+        wait until the next billing cycle; no auto-overage charges.
+      </p>
+      <h3>Can I self-host?</h3>
+      <p>
+        Yes. The npm package keeps working as a stdio server. Set
+        <code>SCENEVIEW_API_KEY</code> to unlock Pro tools via the
+        hosted proxy, or run fully local on the Free tier.
+      </p>
+      <h3>Do you store my prompts?</h3>
+      <p>
+        No. The gateway logs per-call metadata (tool name, status,
+        timestamp) for billing and rate limiting. Request bodies and
+        responses are never persisted.
+      </p>
+      <h3>What about taxes?</h3>
+      <p>
+        EU VAT is handled automatically by Stripe Tax based on your
+        billing address. Invoices are available in the customer portal.
       </p>
     </section>
   </Layout>

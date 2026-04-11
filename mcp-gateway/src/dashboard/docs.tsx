@@ -8,7 +8,7 @@ import { renderToHtml } from "./render.js";
 export const Docs: FC<{ signedIn?: boolean }> = ({ signedIn }) => (
   <Layout
     title="Docs"
-    description="Install SceneView MCP in Claude Desktop, Cursor, Zed, or any MCP-capable agent."
+    description="Install SceneView MCP in Claude Desktop, Cursor, Zed, or any MCP-capable agent. Hosted HTTP endpoint plus legacy stdio fallback."
     active="docs"
     signedIn={signedIn}
   >
@@ -75,6 +75,39 @@ export const Docs: FC<{ signedIn?: boolean }> = ({ signedIn }) => (
     <p>
       Set <code>SCENEVIEW_API_KEY</code> to unlock Pro tools via the
       hosted proxy.
+    </p>
+
+    <h2>Usage and rate limits</h2>
+    <ul style="color:var(--sv-fg-muted);line-height:1.8;">
+      <li>Free: 60 calls/hour, 1 000 calls/month, 1 API key</li>
+      <li>Pro: 600 calls/hour, 10 000 calls/month, 3 API keys</li>
+      <li>Team: 3 000 calls/hour, 50 000 calls/month, 10 API keys</li>
+    </ul>
+    <p>
+      Every <code>/mcp</code> response carries standard{" "}
+      <code>X-RateLimit-Limit</code>,{" "}
+      <code>X-RateLimit-Remaining</code>, and{" "}
+      <code>X-RateLimit-Reset</code> headers so clients can pre-empt
+      throttling.
+    </p>
+
+    <h2>Errors</h2>
+    <p>
+      All errors are valid JSON-RPC 2.0 responses. Common codes:
+    </p>
+    <ul style="color:var(--sv-fg-muted);line-height:1.8;">
+      <li><code>-32001</code> Unauthorized — bad or missing API key</li>
+      <li><code>-32002</code> Access denied — Pro tool on the free tier</li>
+      <li><code>-32029</code> Rate limited — hourly or monthly quota exceeded</li>
+    </ul>
+
+    <h2>Need help?</h2>
+    <p>
+      Open an issue on{" "}
+      <a href="https://github.com/sceneview/sceneview/issues">
+        github.com/sceneview/sceneview
+      </a>{" "}
+      or email <a href="mailto:hello@sceneview.dev">hello@sceneview.dev</a>.
     </p>
   </Layout>
 );

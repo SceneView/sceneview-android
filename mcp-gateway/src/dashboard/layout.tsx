@@ -46,7 +46,17 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = (props) => {
         <meta property="og:title" content={title} />
         <meta property="og:description" content={description} />
         <meta property="og:type" content="website" />
+        <meta
+          property="og:image"
+          content="https://sceneview.github.io/assets/og-image.png"
+        />
+        <meta
+          property="og:site_name"
+          content="SceneView MCP"
+        />
         <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={title} />
+        <meta name="twitter:description" content={description} />
         <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231e40af'/%3E%3Ctext x='50%25' y='52%25' text-anchor='middle' fill='white' font-family='system-ui' font-size='28' font-weight='700'%3ESV%3C/text%3E%3C/svg%3E" />
         <script
           src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js"

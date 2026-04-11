@@ -7,21 +7,22 @@ import { renderToHtml } from "./render.js";
 /** Public landing page at `/`. */
 export const Landing: FC<{ signedIn?: boolean }> = ({ signedIn }) => (
   <Layout
-    title="Expert 3D and AR knowledge for every AI agent"
-    description="SceneView MCP — expert 3D and AR knowledge for Claude, Cursor, and every AI coding agent. Hosted gateway with usage-based billing."
+    title="Expert 3D and AR knowledge for every AI coding agent"
+    description="SceneView MCP — expert 3D and AR knowledge for Claude, Cursor, and every AI coding agent. Hosted HTTP endpoint, free tier, upgrade for Pro packages."
     active="home"
     signedIn={signedIn}
   >
     <section class="hero">
-      <h1>Expert 3D and AR knowledge for AI agents</h1>
+      <h1>Expert 3D and AR knowledge for Claude, Cursor, and every AI agent</h1>
       <p class="lead">
-        SceneView MCP ships the full SceneView 3D and AR SDK to Claude,
-        Cursor, and every AI coding agent. Free to start, upgrade for
-        specialized packages and hosted reliability.
+        SceneView MCP gives your AI coding agent the full SceneView 3D
+        and AR SDK — composables, threading rules, platform setup, and
+        a vetted library of samples. First prompts ship correct,
+        compilable code.
       </p>
       <div class="hero-cta">
         <a href="/docs" class="btn btn-primary">
-          Get started
+          Get started for free
         </a>
         <a href="/pricing" class="btn btn-secondary">
           View pricing
@@ -34,7 +35,7 @@ export const Landing: FC<{ signedIn?: boolean }> = ({ signedIn }) => (
         <div class="label">Free tools</div>
         <div class="value">15</div>
         <p style="margin:.5rem 0 0;font-size:.875rem;">
-          Samples, guides, validation — no key required.
+          Samples, guides, validation. No key required.
         </p>
       </div>
       <div class="stat-card">
@@ -54,6 +55,22 @@ export const Landing: FC<{ signedIn?: boolean }> = ({ signedIn }) => (
     </section>
 
     <section>
+      <h2>Why SceneView MCP</h2>
+      <p>
+        Every other 3D SDK leaves AI agents guessing. SceneView MCP
+        exposes the whole API surface as structured context — node
+        types, threading rules, Filament and RealityKit backends, AR
+        setup, platform caveats — so the model never has to invent.
+      </p>
+      <ul style="color:var(--sv-fg-muted);line-height:1.8;">
+        <li>Accurate composables for every node type, auto-validated</li>
+        <li>Android + iOS + Web + Flutter + React Native in one server</li>
+        <li>Hosted behind a fast Cloudflare Worker, no local setup</li>
+        <li>Usage dashboard, per-key billing, no-nonsense pricing</li>
+      </ul>
+    </section>
+
+    <section>
       <h2>Works with every MCP-capable agent</h2>
       <p>
         Claude Desktop, Cursor, Zed, Continue, and any client that speaks
@@ -68,6 +85,11 @@ export const Landing: FC<{ signedIn?: boolean }> = ({ signedIn }) => (
     }
   }
 }`}</code></pre>
+      <p style="margin-top:1.5rem;">
+        <a href="/docs" class="btn btn-primary">
+          Read the install guide
+        </a>
+      </p>
     </section>
   </Layout>
 );
