@@ -162,24 +162,31 @@ Every Claude Code session MUST read this section first to stay in sync.
 **NOTE FOR OTHER SESSIONS:** Always run `/sync-check` at the start and end of every session.
 Never say "everything is good" without verifying published packages.
 
-### Current state (last updated: 2026-04-11, session 33)
+### Current state (last updated: 2026-04-11 14:30, session 34 rollup)
 
 - **Active branch**: `main`
 - **Latest release**: v3.6.2 — fully published on **GitHub Release + npm + Maven Central** (2026-04-08, #780 closed). iOS TestFlight build 3.6.2 (358) uploaded 2026-04-11 after fixing `MARKETING_VERSION 1.0 → 3.6.2` in project.pbxproj + app-store.yml.
+- ⚠️ **Release partial v3.6.3 en cours**: `mcp/package.json` bumpé `3.6.2 → 3.6.3` sur main (commit 13624690, #809) — mais **tag `v3.6.3` PAS créé** donc `release.yml` (trigger = push tag v*) jamais déclenché → `npm view sceneview-mcp version` retourne encore **3.6.2**. Les 4 modules Android gardent `VERSION_NAME=3.6.2` (cycle de version MCP indépendant). ACTION : pour publier 3.6.3, il faut soit `git tag v3.6.3 && git push origin v3.6.3`, soit `cd mcp && npm publish --access public` manuel — ne PAS tagger tant que la question du bump Android libs n'est pas tranchée.
 - **Android rewrite**: SceneRenderer, NodeGestureDelegate/AnimationDelegate/State, ARPermissionHandler
 - **Demo app**: Material 3 Expressive, 4 tabs, 40 models, 19 sample demos
-- **MCP servers**: sceneview-mcp 3.6.2 on npm — **3 450 DL/mo**; 12 personal MCPs total (7 deprecated 2026-04-11 after audit: ai-invoice, cooking-mcp, travel-mcp, devops-mcp, @thomasgorisse/seo-mcp, gaming-3d-mcp, interior-design-3d-mcp); 3 active verticals cartonnent on npm: realestate-mcp 1 268, french-admin-mcp 1 255, ecommerce-3d-mcp 1 148, architecture-mcp 1 130 DL/mo
-- **sceneview-web**: v3.6.2 on npm (1 208 DL/mo, Kotlin/JS + Filament.js)
+- **MCP servers**: sceneview-mcp 3.6.2 on npm — **3 450 DL/mo**; 10 MCPs perso actifs (7 deprecated 2026-04-11 après audit: ai-invoice, cooking-mcp, travel-mcp, devops-mcp, @thomasgorisse/seo-mcp, gaming-3d-mcp, interior-design-3d-mcp); 3 active verticals cartonnent sur npm : realestate-mcp 1 276, french-admin-mcp 1 268, ecommerce-3d-mcp 1 153, architecture-mcp 1 134, legal-docs-mcp 789, education-mcp 566 DL/mo. **Total MCPs actifs : 11 018 DL/mois.**
+- **sceneview-web**: v3.6.2 on npm (1 221 DL/mo, Kotlin/JS + Filament.js)
 - **GitHub orgs**: `sceneview`, `sceneview-tools`, `mcp-tools-lab`
 - **Website**: redesigned — 8 sections on index, showcase rewritten, playground enhanced (7 platforms, camera manipulator, Open in Claude), docs 404 fixed
 - **Playground**: 13 examples, 7 platforms, 23 models, camera manipulator, Open in Claude + AI dropdown
 - **Branding**: 22 PNG exports generated, organized in branding/exports/
 - **Open Collective**: logo + cover + tiers (Backer $10, Sponsor $50, Gold $200) + 10 tags — balance $2 338.71, 18 backers
 - **Claude Artifacts**: documented in llms.txt with CDN templates + 26 model URLs
-- **Filament**: 1.70.2 (bumped from 1.70.1, #779 closed)
-- **Render Tests CI**: 4 harness-based classes `@Ignore`'d at class level to unblock CI — GeometryRenderTest, VisualVerificationTest, LightingRenderTest, RenderSmokeTest. Root cause: rapid RenderTestHarness setup/teardown crashes SwiftShader JNI layer. Tracked in #803. Coverage unaffected — the 3 screenshot jobs (Android demo, iOS simulator, Web Playwright) still run green.
-- **Nodes reference**: docs/docs/nodes.md (980 lines, AI-first) added 2026-04-11, wired into `llms.txt` for sceneview-mcp consumption — closes #802
+- **Filament**: 1.70.2 (1.71.0 bump parked — "New Material Version" impose recompile `.filamat`, session dédiée requise, suivi dans #800)
+- **Render Tests CI**: 4 harness-based classes `@Ignore`'d at class level to unblock CI — GeometryRenderTest, VisualVerificationTest, LightingRenderTest, RenderSmokeTest. Root cause: rapid RenderTestHarness setup/teardown crashes SwiftShader JNI layer. Tracked in #803. Coverage unaffected — les 3 screenshot jobs (Android demo, iOS simulator, Web Playwright) restent verts.
+- **Nodes reference**: docs/docs/nodes.md (980 lines, AI-first) added 2026-04-11, wired into `llms.txt` for sceneview-mcp consumption — closes #802. Intro/TOC/headings ensuite bumpés en `SceneView{}/ARSceneView{}` par 71c10fea (rename finalization).
 - **ViewNode fix**: viewNodeWindowManager now wired to Scene.kt lifecycle (resume/pause/ownerViewRef) — fixes the "black rectangle" regression, closes #801
+- **MCP Gateway (Cloudflare Workers)**: Sprint 1 + Sprint 2 **mergés sur main** (d4e4c167 → 3b14d9b1). Auth magic-link (Resend) + JWT sessions, dashboard Hono JSX + HTMX, Stripe checkout/portal/webhook avec 4 event handlers signés, landing/pricing/docs pages. Tests : 177 passing côté gateway, 2506 côté mcp lib. **Pas déployé** — bloqué sur credentials : D1 create, KV create, secrets (JWT_SECRET, RESEND_API_KEY, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET), Stripe products (Pro 19€/mo, Pro 190€/yr, Team 49€/mo, Team 490€/yr), Resend domain verification, Cloudflare Worker deploy, et publish `sceneview-mcp@4.0.0-beta.1` avec `--tag beta`.
+- **sceneview-mcp v4.0.0-beta.1 (lite mode)** : package sur branche orpheline / worktree — stdio keeps free tools local, Pro tools proxy via `dispatchProxyToolCall` → hosted `/mcp`, banner stderr annonçant lite mode. Sans `SCENEVIEW_API_KEY` les Pro tools retournent un signup-URL stub. **Pas encore publié sur npm** — attend go-live mcp-gateway.
+- **#808 sponsor CTA every 10 tool calls**: mergé sur main, affiche un prompt de sponsoring (Open Collective + GitHub Sponsors) à chaque 10e appel d'outil MCP.
+- **Scene → SceneView rename**: finalisé sur TOUTES les surfaces publiques (library KDocs 4818d0a8/d3dd0d5b, mkdocs nav, SEO data, MCP packages d6a31759, runtime bridges/templates/top-level MCP 025915e9, nodes.md intro/TOC/headings 71c10fea, READMEs react-native + flutter, SceneViewSwift mapping tables, ROADMAP).
+- **Demo apps (session 34)**: audit frais de toutes les 7 demos apps (l'ancien audit session 19 était périmé). `.claude/scripts/validate-demo-assets.sh` créé (4a1bb02a) — scan tous les refs GLB/USDZ/HDR, expand `$CDN/...`, follow redirects, supporte patterns iOS `asset:` et `ModelNode.load()`. Premier run a trouvé 8 refs cassées (android-tv-demo + web-demo) — toutes corrigées. web-demo unblocked (webpack 5 + filament.js polyfills). flutter/sceneview_flutter unblocked (Kotlin 2.0 + compose compiler plugin). RN demo scaffolded android/ + ios/ natifs (68cf829c).
+- **Règles mémoire absolues** : `feedback_pro_perso_separation` (Octopus = Pro, jamais dans contexte perso), `feedback_no_former_employers` (Digitalmate/Decam jamais dans empire perso). Liste blanche perso stricte : sceneview, sceneview-tools, mcp-tools-lab, ThomasGorisse.
 
 For full session history, see memory file `project_session_history.md`.
 For current priorities and next steps, see `.claude/handoff.md`.
