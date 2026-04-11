@@ -187,15 +187,72 @@ fun MultiModelScene() {
 
 ## Sample apps by platform
 
-| Directory | Platform | Run |
-|---|---|---|
-| `android-demo/` | Android (Jetpack Compose) | `./gradlew :samples:android-demo:assembleDebug` |
-| `android-tv-demo/` | Android TV | `./gradlew :samples:android-tv-demo:assembleDebug` |
-| `ios-demo/` | iOS (SwiftUI) | Open `SceneViewSwift/` in Xcode |
-| `web-demo/` | Web (Kotlin/JS) | `./gradlew :samples:web-demo:jsBrowserRun` |
-| `desktop-demo/` | Desktop (Compose) | `./gradlew :samples:desktop-demo:run` |
-| `flutter-demo/` | Flutter | `cd samples/flutter-demo && flutter run` |
-| `react-native-demo/` | React Native | See `samples/react-native-demo/README.md` |
+| Directory | Platform | Build command | Verified |
+|---|---|---|---|
+| `android-demo/` | Android (Jetpack Compose) | `./gradlew :samples:android-demo:bundleRelease` | ✓ |
+| `android-tv-demo/` | Android TV | `./gradlew :samples:android-tv-demo:assembleDebug` | ✓ |
+| `ios-demo/` | iOS (SwiftUI) | `open samples/ios-demo/SceneViewDemo/SceneViewDemo.xcodeproj` | ✓ |
+| `web-demo/` | Web (Kotlin/JS + Filament.js) | `./gradlew :samples:web-demo:jsBrowserProductionWebpack` | ✓ |
+| `desktop-demo/` | Desktop (Compose) — wireframe placeholder, not SceneView | `./gradlew :samples:desktop-demo:run` | ✓ |
+| `flutter-demo/` | Flutter | `cd samples/flutter-demo && flutter build apk --debug` | ✓ |
+| `react-native-demo/` | React Native | See [`react-native-demo/SETUP.md`](react-native-demo/SETUP.md) — one-time bridge build + pod install required before first `run-android`/`run-ios` | scaffold only |
+
+"Verified" means the command above produces a successful build on a
+clean checkout of `main` (validated in session 34, 2026-04-11).
+
+### Platform-specific notes
+
+- **Android / Android TV**: copy the root `local.properties` into the
+  worktree or export `ANDROID_HOME=~/Library/Android/sdk` before running
+  `./gradlew`.
+- **Web**: depends on `samples/web-demo/webpack.config.d/filament.js`
+  which disables Node polyfills for `path`, `fs`, `crypto`. Do not
+  remove — filament.js imports those unconditionally and webpack 5
+  fails the build otherwise.
+- **Flutter**: the plugin uses Kotlin 2.0 + Compose Compiler Gradle
+  plugin (`org.jetbrains.kotlin.plugin.compose`). No action needed in
+  the demo itself; the plugin is wired in
+  `flutter/sceneview_flutter/android/build.gradle`.
+- **React Native**: native scaffolding is present under `android/` and
+  `ios/` with the SceneView namespace `io.github.sceneview.demo.rn`.
+  Before first run, build the linked bridge module and install pods —
+  see `react-native-demo/SETUP.md` for the exact command sequence.
+
+## Asset integrity
+
+All demo apps are continuously verified by
+`.claude/scripts/validate-demo-assets.sh`, which:
+
+- Scans every Kotlin, Swift, Dart, and TypeScript source file under
+  `samples/` for glb, gltf, usdz, and hdr string literals, plus the
+  Swift-only patterns `asset: "name"` and `ModelNode.load("name")`
+  where the `.usdz` suffix is implicit.
+- Expands `$CDN/` prefixes to the real GitHub release URL and follows
+  redirects when verifying CDN availability (`curl -L`).
+- Checks every bundled reference against `src/main/assets/`,
+  `Models/`, `src/jsMain/resources/`, and similar platform-specific
+  asset directories.
+
+The script runs in three enforcement gates:
+
+1. **Local pre-push**: `bash .claude/scripts/pre-push-check.sh` runs it
+   with `--no-cdn` (fast) after all other checks.
+2. **Quality gate**: `bash .claude/scripts/quality-gate.sh` runs it with
+   full CDN checks unless `--quick` is passed.
+3. **CI on every PR**: `.github/workflows/pr-check.yml` runs both
+   `test-validate-demo-assets.sh` (self-test on a synthetic fixture)
+   and the full validator with live CDN checks.
+
+To run it manually:
+
+```bash
+bash .claude/scripts/validate-demo-assets.sh            # full
+bash .claude/scripts/validate-demo-assets.sh --android  # one platform
+bash .claude/scripts/validate-demo-assets.sh --no-cdn   # skip CDN HEAD
+```
+
+A passing run reports `102 bundled, 55 CDN checked` — if those numbers
+drop, a reference was deleted silently and should be investigated.
 
 ## Shared module
 
