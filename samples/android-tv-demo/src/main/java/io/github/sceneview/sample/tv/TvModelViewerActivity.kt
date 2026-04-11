@@ -48,12 +48,21 @@ import kotlin.time.DurationUnit
 
 private data class ModelEntry(val label: String, val assetPath: String, val scale: Float)
 
+// Models bundled in src/main/assets/models — names must match exactly.
+// Kept in sync with samples/android-demo bundled catalog.
 private val models = listOf(
-    ModelEntry("Space Helmet", "models/space_helmet.glb", 1.0f),
-    ModelEntry("Toy Car", "models/toy_car.glb", 1.0f),
-    ModelEntry("Geisha Mask", "models/geisha_mask.glb", 1.0f),
-    ModelEntry("Iridescence Lamp", "models/iridescence_lamp.glb", 1.0f),
-    ModelEntry("Sheen Chair", "models/sheen_chair.glb", 1.0f),
+    ModelEntry("Damaged Helmet", "models/khronos_damaged_helmet.glb", 1.0f),
+    ModelEntry("Toy Car", "models/khronos_toy_car.glb", 1.0f),
+    ModelEntry("Sheen Chair", "models/khronos_sheen_chair.glb", 1.0f),
+    ModelEntry("Velvet Sofa", "models/khronos_glam_velvet_sofa.glb", 1.0f),
+    ModelEntry("Lantern", "models/khronos_lantern.glb", 1.0f),
+    ModelEntry("Iridescent Dish", "models/khronos_iridescent_dish.glb", 1.0f),
+    ModelEntry("Animated Dragon", "models/animated_dragon.glb", 1.0f),
+    ModelEntry("Duck", "models/khronos_duck.glb", 1.0f),
+    ModelEntry("Fox", "models/khronos_fox.glb", 1.0f),
+    ModelEntry("Toon Cat", "models/toon_cat.glb", 1.0f),
+    ModelEntry("Shiba", "models/shiba.glb", 1.0f),
+    ModelEntry("Nike Air Jordan", "models/nike_air_jordan.glb", 1.0f),
 )
 
 /**

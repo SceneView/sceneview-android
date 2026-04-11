@@ -50,7 +50,7 @@ fun main() {
     canvas.height = canvas.clientHeight
 
     // Initialize the 3D scene with a default model
-    initSceneView(canvas, "https://sceneview.github.io/assets/models/khronos_damaged_helmet.glb")
+    initSceneView(canvas, "https://sceneview.github.io/models/platforms/DamagedHelmet.glb")
 
     // Wire up tabs
     setupTabs()
@@ -558,7 +558,7 @@ private fun enterAR(canvas: HTMLCanvasElement) {
 
             arSession.onSelect = { inputSource ->
                 arSession.loadModel(
-                    "https://sceneview.github.io/assets/models/khronos_damaged_helmet.glb"
+                    "https://sceneview.github.io/models/platforms/DamagedHelmet.glb"
                 ) { asset ->
                     console.log("Model placed in AR")
                 }
@@ -584,7 +584,7 @@ private fun enterVR(canvas: HTMLCanvasElement) {
             console.log("VR session started")
 
             vrSession.loadModel(
-                "https://sceneview.github.io/assets/models/khronos_damaged_helmet.glb"
+                "https://sceneview.github.io/models/platforms/DamagedHelmet.glb"
             )
 
             vrSession.onInputSelect = { source, pose ->
