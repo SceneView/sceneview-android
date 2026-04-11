@@ -811,13 +811,13 @@
         <p class="platform-card__description">Full 3D and AR support via Jetpack Compose. Declarative scene graph with composable nodes. ARCore integration for augmented reality.</p>
         <div class="platform-card__code">
           <pre><span class="code-comment">// 3D Scene</span>
-<span class="code-function">Scene</span> {
+<span class="code-function">SceneView</span> {
     <span class="code-keyword">val</span> model = <span class="code-function">rememberModelInstance</span>(modelLoader, <span class="code-string">"models/robot.glb"</span>)
     model?.<span class="code-function">let</span> { <span class="code-function">ModelNode</span>(it) }
 }
 
 <span class="code-comment">// AR Scene</span>
-<span class="code-function">ARScene</span> {
+<span class="code-function">ARSceneView</span> {
     <span class="code-function">AnchorNode</span>(anchor) { <span class="code-function">ModelNode</span>(model) }
 }</pre>
         </div>
@@ -946,8 +946,8 @@
         </div>
         <p class="platform-card__description">D-pad navigation, model cycling, auto-rotation. Big-screen 3D experiences optimized for living rooms.</p>
         <div class="platform-card__code">
-          <pre><span class="code-comment">// Same Scene composable</span>
-<span class="code-function">Scene</span>(
+          <pre><span class="code-comment">// Same SceneView composable</span>
+<span class="code-function">SceneView</span>(
     modifier = Modifier
         .<span class="code-function">focusable</span>()
         .<span class="code-function">onKeyEvent</span> { <span class="code-comment">/* D-pad */</span> }
@@ -1058,7 +1058,7 @@
           <div class="architecture-diagram__layer">
             <div class="architecture-diagram__layer-label">UI Layer</div>
             <div class="architecture-diagram__layer-title">Compose UI</div>
-            <div class="architecture-diagram__layer-desc">Scene { }, ARScene { }</div>
+            <div class="architecture-diagram__layer-desc">SceneView { }, ARSceneView { }</div>
           </div>
           <div class="architecture-diagram__layer">
             <div class="architecture-diagram__layer-label">UI Layer</div>
