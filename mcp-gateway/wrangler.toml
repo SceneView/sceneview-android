@@ -14,10 +14,10 @@ DASHBOARD_BASE_URL = "https://sceneview-mcp.mcp-tools-lab.workers.dev"
 # Stripe price ids (set to match the products you create in the Stripe
 # dashboard before go-live). These are vars, NOT secrets, because the
 # price ids are not sensitive.
-STRIPE_PRICE_PRO_MONTHLY = "price_1TL04hEr7tnnFQbdZuwed6FR"
-STRIPE_PRICE_PRO_YEARLY = "price_1TL04hEr7tnnFQbdy7JgehgP"
-STRIPE_PRICE_TEAM_MONTHLY = "price_1TL08SEr7tnnFQbdScSMu31p"
-STRIPE_PRICE_TEAM_YEARLY = "price_1TL08SEr7tnnFQbdSX9InHx8"
+STRIPE_PRICE_PRO_MONTHLY = "price_1TL6FLEr7tnnFQbdmgSwz5Ow"
+STRIPE_PRICE_PRO_YEARLY = "price_1TL6KREr7tnnFQbdifEbYYcG"
+STRIPE_PRICE_TEAM_MONTHLY = "price_1TL6L9Er7tnnFQbdC9CDxQNY"
+STRIPE_PRICE_TEAM_YEARLY = "price_1TL6NVEr7tnnFQbdVNLFF9lN"
 
 # D1 database — provision with:
 #   wrangler d1 create sceneview-mcp
