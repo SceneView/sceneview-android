@@ -110,6 +110,31 @@ Same JSON config as above. The server communicates via **stdio** using the stand
 | `get_animation_guide` | Guide for model animations, Spring physics, Compose property animations, SmoothTransform |
 | `get_gesture_guide` | Guide for gestures: isEditable, onTouchEvent, tap-to-place, drag-to-rotate, pinch-to-scale |
 | `get_performance_tips` | Performance optimization: LOD, texture compression, instancing, profiling with Systrace/AGI |
+| `search_models` | Searches Sketchfab for free 3D models matching a query (BYOK — set `SKETCHFAB_API_KEY`) |
+
+#### `search_models` — find real 3D assets from the AI
+
+Generated SceneView code is only useful if it points at an asset that actually exists. `search_models` queries Sketchfab's public search API and returns a shortlist with names, authors, licenses, thumbnails, triangle counts, and viewer/embed URLs that the assistant can drop straight into `rememberModelInstance(modelLoader, ...)` or embed as a live preview.
+
+**Bring your own key (BYOK).** SceneView never proxies the request — you keep the rate limit and the cost stays at zero. To set it up:
+
+1. Create a free account at [sketchfab.com/register](https://sketchfab.com/register)
+2. Copy your API token from [sketchfab.com/settings/password](https://sketchfab.com/settings/password)
+3. Set `SKETCHFAB_API_KEY` in your MCP client config:
+
+```json
+{
+  "mcpServers": {
+    "sceneview": {
+      "command": "npx",
+      "args": ["-y", "sceneview-mcp"],
+      "env": { "SKETCHFAB_API_KEY": "YOUR_TOKEN_HERE" }
+    }
+  }
+}
+```
+
+Call it like `search_models({ query: "red sports car", category: "cars-vehicles", maxResults: 6 })`. If the key is missing, the tool returns a clear message explaining how to get one instead of failing silently.
 
 ### 2 resources
 

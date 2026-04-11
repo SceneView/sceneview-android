@@ -65,6 +65,7 @@ import {
   MODEL_OPTIMIZATION_GUIDE,
   WEB_RENDERING_GUIDE,
 } from "../extra-guides.js";
+import { searchModels, formatSearchResults } from "../search-models.js";
 import { LLMS_TXT } from "../generated/llms-txt.js";
 
 import type { DispatchContext, ToolResult, ToolTextContent } from "./types.js";
@@ -810,6 +811,28 @@ export async function dispatchTool(
     // ── get_web_rendering_guide ──────────────────────────────────────────────
     case "get_web_rendering_guide": {
       return { content: withDisclaimer([{ type: "text", text: WEB_RENDERING_GUIDE }]) };
+    }
+
+    // ── search_models ────────────────────────────────────────────────────────
+    case "search_models": {
+      const query = args?.query as string | undefined;
+      if (!query || typeof query !== "string" || query.trim().length === 0) {
+        return {
+          content: [{ type: "text", text: "Missing required parameter: `query` must be a non-empty string." }],
+          isError: true,
+        };
+      }
+      const searchResult = await searchModels({
+        query,
+        category: args?.category as string | undefined,
+        downloadable: args?.downloadable as boolean | undefined,
+        maxResults: args?.maxResults as number | undefined,
+      });
+      const searchText = formatSearchResults(searchResult);
+      return {
+        content: withDisclaimer([{ type: "text", text: searchText }]),
+        isError: searchResult.ok ? undefined : true,
+      };
     }
 
     default:
