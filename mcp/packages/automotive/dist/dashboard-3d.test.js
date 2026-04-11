@@ -26,7 +26,7 @@ describe("generateDashboard3d", () => {
     it("generates valid Kotlin code with speedometer", () => {
         const code = generateDashboard3d({ gauges: ["speedometer"] });
         expect(code).toContain("package com.example.automotive.dashboard");
-        expect(code).toContain("import io.github.sceneview.Scene");
+        expect(code).toContain("import io.github.sceneview.SceneView");
         expect(code).toContain("@Composable");
         expect(code).toContain("rememberEngine()");
         expect(code).toContain("rememberModelInstance");

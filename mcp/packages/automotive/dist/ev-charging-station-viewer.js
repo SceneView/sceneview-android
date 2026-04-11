@@ -20,9 +20,9 @@ export function generateEvChargingStationViewer(options = {}) {
     const composableName = `${capitalize(layout)}${capitalize(connector)}ChargingStationViewer`;
     const modelPath = `models/ev/${layout}_${connector}_station.glb`;
     const sceneImports = ar
-        ? `import io.github.sceneview.ar.ARScene
+        ? `import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.node.AnchorNode`
-        : `import io.github.sceneview.Scene`;
+        : `import io.github.sceneview.SceneView`;
     const sceneOpen = ar
         ? `ARSceneView(
                 modifier = Modifier.fillMaxSize(),

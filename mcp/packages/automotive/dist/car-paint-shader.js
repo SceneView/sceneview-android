@@ -65,7 +65,7 @@ ${hasFlakes ? `
 
 import androidx.compose.runtime.*
 import com.google.android.filament.MaterialInstance
-import io.github.sceneview.Scene
+import io.github.sceneview.SceneView
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.rememberCollisionSystem

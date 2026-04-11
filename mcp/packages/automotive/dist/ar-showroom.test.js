@@ -26,7 +26,7 @@ describe("generateArShowroom", () => {
     it("generates valid Kotlin AR code", () => {
         const code = generateArShowroom({ location: "driveway" });
         expect(code).toContain("package com.example.automotive.showroom");
-        expect(code).toContain("import io.github.sceneview.ar.ARScene");
+        expect(code).toContain("import io.github.sceneview.ar.ARSceneView");
         expect(code).toContain("@Composable");
         expect(code).toContain("rememberEngine()");
         expect(code).toContain("ARSceneView(");
