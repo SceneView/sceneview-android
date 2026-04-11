@@ -151,7 +151,10 @@ describe("authMiddleware", () => {
       ctx.env,
     );
     expect(res1.status).toBe(200);
-    expect(ctx.kv.size).toBe(1);
+    // Expected KV entries after one valid request:
+    //   1. hub-auth:{hash}       — auth cache entry
+    //   2. hub-rl:{hash}:h:...   — hourly rate-limit counter
+    expect(ctx.kv.size).toBe(2);
 
     // Revoke the key directly in D1. If the middleware is hitting the
     // cache, the next request still succeeds — that's the 5 min TTL
@@ -180,6 +183,8 @@ describe("authMiddleware", () => {
       ctx.env,
     );
     expect(res.status).toBe(401);
+    // Auth failed at step 1 — neither the auth cache nor the
+    // rate-limit counter should have been written.
     expect(ctx.kv.size).toBe(0);
   });
 });

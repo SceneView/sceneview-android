@@ -16,6 +16,7 @@
 import { Hono } from "hono";
 import type { Env } from "../env.js";
 import { authMiddleware, type AuthVariables } from "../auth/middleware.js";
+import { rateLimitMiddleware } from "../middleware/rate-limit.js";
 import { handleMcpRequest } from "../mcp/transport.js";
 
 type McpBindings = { Bindings: Env; Variables: AuthVariables };
@@ -23,7 +24,9 @@ type McpBindings = { Bindings: Env; Variables: AuthVariables };
 export function mcpRoutes(): Hono<McpBindings> {
   const app = new Hono<McpBindings>();
 
-  app.use("*", authMiddleware());
+  // Chain: auth (401 on missing/invalid) → rate-limit (429 on overuse)
+  // → JSON-RPC dispatch.
+  app.use("*", authMiddleware(), rateLimitMiddleware());
 
   app.post("/", async (c) => {
     const auth = c.get("auth");
