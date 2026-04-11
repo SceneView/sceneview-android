@@ -26,6 +26,8 @@ import {
 import { fetchKnownIssues } from "./issues.js";
 import { checkToolAccess, filterToolsForTier, createAccessDeniedResponse } from "./auth.js";
 import { recordUsage, getConfiguredApiKey } from "./billing.js";
+import { recordClientInit, recordToolCall } from "./telemetry.js";
+import { getToolTier } from "./tiers.js";
 import {
   API_DOCS,
   TOOL_DEFINITIONS,
@@ -36,6 +38,14 @@ const server = new Server(
   { name: "sceneview-mcp", version: "3.6.2" },
   { capabilities: { resources: {}, tools: {} } }
 );
+
+// ─── Telemetry (anonymous, opt-out via SCENEVIEW_TELEMETRY=0) ────────────────
+//
+// Fire once when the client finishes the handshake. See `telemetry.ts` and
+// `PRIVACY.md` for what's collected and how to opt out.
+server.oninitialized = () => {
+  recordClientInit(server.getClientVersion());
+};
 
 // ─── Resources ───────────────────────────────────────────────────────────────
 
@@ -98,6 +108,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   if (!access.allowed) {
     return createAccessDeniedResponse(toolName, access.message!);
   }
+
+  // Record anonymous telemetry (fire-and-forget, non-blocking, opt-out via
+  // SCENEVIEW_TELEMETRY=0). See `telemetry.ts` and `PRIVACY.md`.
+  recordToolCall(toolName, getToolTier(toolName));
 
   // Record usage for billing (async, fire-and-forget)
   const apiKey = getConfiguredApiKey();

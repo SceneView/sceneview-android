@@ -38,6 +38,8 @@ Connect it to Claude, Cursor, Windsurf, or any MCP client. The assistant gets 26
 npx sceneview-mcp
 ```
 
+> **Anonymous telemetry** is enabled on the free tier (MCP client name/version and tool names — no personal data, no prompt content). Opt out with `SCENEVIEW_TELEMETRY=0`. See [PRIVACY.md](./PRIVACY.md#telemetry-free-tier) for the full payload shape.
+
 ### Claude Desktop
 
 Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
