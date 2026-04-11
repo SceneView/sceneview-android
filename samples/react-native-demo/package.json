@@ -1,16 +1,17 @@
 {
   "name": "sceneview-react-native-demo",
-  "version": "3.6.1",
+  "version": "3.6.2",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
     "ios": "react-native run-ios",
-    "start": "react-native start"
+    "start": "react-native start",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "react": "^18.2.0",
     "react-native": "^0.73.0",
-    "react-native-sceneview": "file:../../react-native/react-native-sceneview"
+    "@sceneview-sdk/react-native": "file:../../react-native/react-native-sceneview"
   },
   "devDependencies": {
     "@types/react": "^18.2.0",
