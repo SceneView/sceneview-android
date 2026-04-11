@@ -146,7 +146,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
         },
         ar: {
           type: "boolean",
-          description: "Generate AR version using ARScene — place car in real world (default: false). Requires arsceneview dependency.",
+          description: "Generate AR version using ARSceneView — place car in real world (default: false). Requires arsceneview dependency.",
         },
       },
       required: ["bodyStyle"],
@@ -316,7 +316,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
         },
         ar: {
           type: "boolean",
-          description: "Generate an AR version using ARScene — place the station in the real world (default: false). Requires arsceneview dependency.",
+          description: "Generate an AR version using ARSceneView — place the station in the real world (default: false). Requires arsceneview dependency.",
         },
       },
       required: [],

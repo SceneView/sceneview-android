@@ -40,17 +40,17 @@ describe("generateEvChargingStationViewer", () => {
     expect(code).toContain("ModelNode");
   });
 
-  it("uses Scene (non-AR) by default", () => {
+  it("uses SceneView (non-AR) by default", () => {
     const code = generateEvChargingStationViewer();
     expect(code).toContain("import io.github.sceneview.Scene");
-    expect(code).toContain("Scene(");
-    expect(code).not.toContain("ARScene(");
+    expect(code).toContain("SceneView(");
+    expect(code).not.toContain("ARSceneView(");
   });
 
   it("switches to ARScene when ar=true", () => {
     const code = generateEvChargingStationViewer({ ar: true });
     expect(code).toContain("import io.github.sceneview.ar.ARScene");
-    expect(code).toContain("ARScene(");
+    expect(code).toContain("ARSceneView(");
     expect(code).toContain("onTapAR");
   });
 

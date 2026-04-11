@@ -110,7 +110,7 @@ fun PaintedCarScene(modelAsset: String = "models/cars/sports_car.glb") {
         }
     }
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,

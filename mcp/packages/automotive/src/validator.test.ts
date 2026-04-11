@@ -70,14 +70,24 @@ describe("validateAutomotiveCode", () => {
     expect(lightIssues).toHaveLength(0);
   });
 
-  // ── Deprecated 2.x APIs ────────────────────────────────────────────────
-  it("detects SceneView() 2.x usage", () => {
-    const result = validateAutomotiveCode(`SceneView(modifier = Modifier)`);
+  // ── Deprecated APIs ────────────────────────────────────────────────────
+  // `Scene { }` and `ARScene { }` were renamed to `SceneView { }` / `ARSceneView { }`
+  // in v3.6. The old names still exist as deprecated aliases and should be flagged.
+  it("detects deprecated Scene() composable usage", () => {
+    const result = validateAutomotiveCode(`Scene(modifier = Modifier)`);
     expect(result.valid).toBe(false);
-    expect(result.issues[0].message).toContain("2.x");
+    expect(result.issues[0].message).toContain("deprecated since v3.6");
+    expect(result.issues[0].message).toContain("SceneView");
   });
 
-  it("detects ArSceneView() 2.x usage", () => {
+  it("detects deprecated ARScene() composable usage", () => {
+    const result = validateAutomotiveCode(`ARScene(modifier = Modifier)`);
+    expect(result.valid).toBe(false);
+    expect(result.issues[0].message).toContain("deprecated since v3.6");
+    expect(result.issues[0].message).toContain("ARSceneView");
+  });
+
+  it("detects Sceneform 1.x ArSceneView() usage", () => {
     const result = validateAutomotiveCode(`ArSceneView(modifier = Modifier)`);
     expect(result.valid).toBe(false);
   });
@@ -153,7 +163,7 @@ describe("validateAutomotiveCode", () => {
     const result = validateAutomotiveCode(`
       @Composable
       fun CarViewer() {
-        Scene {
+        SceneView {
           ModelNode(modelInstance = model)
         }
       }
@@ -165,18 +175,18 @@ describe("validateAutomotiveCode", () => {
     const result = validateAutomotiveCode(`
       @Composable
       fun CarViewer() {
-        ARScene {
+        ARSceneView {
           ModelNode(modelInstance = model)
         }
       }
     `);
-    expect(result.issues.some((i) => i.message.includes("Missing ARScene import"))).toBe(true);
+    expect(result.issues.some((i) => i.message.includes("Missing ARSceneView import"))).toBe(true);
   });
 
   // ── Valid code ─────────────────────────────────────────────────────────
   it("passes valid automotive SceneView code", () => {
     const result = validateAutomotiveCode(`
-      import io.github.sceneview.Scene
+      import io.github.sceneview.SceneView
       import io.github.sceneview.rememberEngine
       import io.github.sceneview.rememberModelLoader
       import io.github.sceneview.rememberModelInstance
@@ -187,7 +197,7 @@ describe("validateAutomotiveCode", () => {
         val modelLoader = rememberModelLoader(engine)
         val model = rememberModelInstance(modelLoader, "car.glb")
 
-        Scene(engine = engine) {
+        SceneView(engine = engine) {
           model?.let {
             ModelNode(modelInstance = it)
           }

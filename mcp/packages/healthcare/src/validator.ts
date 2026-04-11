@@ -57,12 +57,17 @@ export function validateMedicalCode(code: string): ValidationResult {
     }
   }
 
-  // ── Deprecated 2.x APIs ──────────────────────────────────────────────────
+  // ── Deprecated APIs ──────────────────────────────────────────────────────
+  // The `Scene { }` / `ARScene { }` composables were renamed to `SceneView { }` /
+  // `ARSceneView { }` in v3.6 for cross-platform consistency with SceneViewSwift.
+  // The old names are kept as @Deprecated aliases in Scene.kt but should not
+  // appear in new code.
   const deprecated: [RegExp, string][] = [
-    [/SceneView\s*\(/, "SceneView() is 2.x. Use Scene { } in 3.x."],
-    [/ArSceneView\s*\(/, "ArSceneView() is 2.x. Use ARScene { } in 3.x."],
-    [/loadModelAsync/, "loadModelAsync is 2.x. Use rememberModelInstance in 3.x composables."],
-    [/Engine\.create/, "Engine.create is 2.x. Use rememberEngine() in 3.x composables."],
+    [/(?<![\w.])Scene\s*\(/, "`Scene { }` is deprecated since v3.6. Use `SceneView { }`."],
+    [/(?<![\w.])ARScene\s*\(/, "`ARScene { }` is deprecated since v3.6. Use `ARSceneView { }`."],
+    [/ArSceneView\s*\(/, "`ArSceneView()` is Sceneform 1.x. Use `ARSceneView { }` from io.github.sceneview."],
+    [/loadModelAsync/, "`loadModelAsync` is Sceneform. Use `rememberModelInstance` in composables."],
+    [/Engine\.create/, "`Engine.create` is imperative. Use `rememberEngine()` in composables."],
     [/import\s+.*sceneform/, "Sceneform imports are obsolete. SceneView 3.x does not use Sceneform."],
   ];
 
@@ -106,17 +111,23 @@ export function validateMedicalCode(code: string): ValidationResult {
   }
 
   // ── Missing imports check ────────────────────────────────────────────────
-  if (/Scene\s*\{/.test(code) && !/import.*sceneview/.test(code) && !/import.*Scene/.test(code)) {
+  if (
+    /(?<![\w.])SceneView\s*[\(\{]/.test(code) &&
+    !/import\s+io\.github\.sceneview\.SceneView\b/.test(code)
+  ) {
     issues.push({
       severity: "warning",
-      message: "Missing SceneView import. Add: import io.github.sceneview.Scene",
+      message: "Missing SceneView import. Add: import io.github.sceneview.SceneView",
     });
   }
 
-  if (/ARScene\s*\{/.test(code) && !/import.*arsceneview/.test(code) && !/import.*ARScene/.test(code)) {
+  if (
+    /(?<![\w.])ARSceneView\s*[\(\{]/.test(code) &&
+    !/import\s+io\.github\.sceneview\.ar\.ARSceneView\b/.test(code)
+  ) {
     issues.push({
       severity: "warning",
-      message: "Missing ARScene import. Add: import io.github.sceneview.ar.ARScene",
+      message: "Missing ARSceneView import. Add: import io.github.sceneview.ar.ARSceneView",
     });
   }
 

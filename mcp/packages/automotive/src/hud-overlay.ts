@@ -108,7 +108,7 @@ ${elements.includes("alerts") ? `    var alerts by remember { mutableStateOf(lis
     val bgColor = ${nightMode ? `Color(0xFF0A0A0A)` : `Color(0x80000000)`}
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Scene(
+        SceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             modelLoader = modelLoader,
@@ -314,7 +314,7 @@ fun ${composableName}AR() {
     val hudColor = ${nightMode ? `Color(0xFF00FF41)` : `Color(0xFF00BFFF)`}
 
     Box(modifier = Modifier.fillMaxSize()) {
-        ARScene(
+        ARSceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             modelLoader = modelLoader,

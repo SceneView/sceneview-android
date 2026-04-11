@@ -100,7 +100,7 @@ describe("generateHudOverlay", () => {
 
   it("generates AR code when ar=true", () => {
     const code = generateHudOverlay({ elements: ["speedometer"], ar: true });
-    expect(code).toContain("ARScene(");
+    expect(code).toContain("ARSceneView(");
     expect(code).toContain("android.permission.CAMERA");
   });
 

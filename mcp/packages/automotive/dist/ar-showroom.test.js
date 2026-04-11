@@ -29,7 +29,7 @@ describe("generateArShowroom", () => {
         expect(code).toContain("import io.github.sceneview.ar.ARScene");
         expect(code).toContain("@Composable");
         expect(code).toContain("rememberEngine()");
-        expect(code).toContain("ARScene(");
+        expect(code).toContain("ARSceneView(");
     });
     it("includes camera permission requirements", () => {
         const code = generateArShowroom({ location: "driveway" });
@@ -107,7 +107,7 @@ describe("generateArShowroom", () => {
         for (const location of SHOWROOM_LOCATIONS) {
             const code = generateArShowroom({ location });
             expect(code).toContain("@Composable");
-            expect(code).toContain("ARScene(");
+            expect(code).toContain("ARSceneView(");
         }
     });
     it("uses showroom car model path", () => {

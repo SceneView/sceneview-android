@@ -88,7 +88,7 @@ describe("generateLevelEditor", () => {
     });
     it("generates AR code when ar=true", () => {
         const code = generateLevelEditor({ theme: "dungeon", ar: true });
-        expect(code).toContain("ARScene(");
+        expect(code).toContain("ARSceneView(");
         expect(code).toContain("android.permission.CAMERA");
         expect(code).toContain("arsceneview:3.6.0");
     });
@@ -106,7 +106,7 @@ describe("generateLevelEditor", () => {
         for (const theme of LEVEL_THEMES) {
             const code = generateLevelEditor({ theme });
             expect(code).toContain("@Composable");
-            expect(code).toContain("Scene(");
+            expect(code).toContain("SceneView(");
         }
     });
     it("includes materialLoader for geometry nodes", () => {

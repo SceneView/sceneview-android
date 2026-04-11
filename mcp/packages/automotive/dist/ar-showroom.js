@@ -73,7 +73,7 @@ ${features.includes("open-doors") ? `    var doorsOpen by remember { mutableStat
 ${features.includes("night-lighting") ? `    var nightMode by remember { mutableStateOf(false) }` : ""}
 
     Box(modifier = Modifier.fillMaxSize()) {
-        ARScene(
+        ARSceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             modelLoader = modelLoader,

@@ -63,7 +63,7 @@ describe("generateCarConfigurator", () => {
   it("generates AR code when ar=true", () => {
     const code = generateCarConfigurator({ bodyStyle: "sedan", ar: true });
     expect(code).toContain("import io.github.sceneview.ar.ARScene");
-    expect(code).toContain("ARScene(");
+    expect(code).toContain("ARSceneView(");
     expect(code).toContain("arsceneview:3.6.0");
     expect(code).toContain("android.permission.CAMERA");
   });
@@ -131,7 +131,7 @@ describe("generateCarConfigurator", () => {
     for (const style of CAR_BODY_STYLES) {
       const code = generateCarConfigurator({ bodyStyle: style });
       expect(code).toContain("@Composable");
-      expect(code).toContain("Scene(");
+      expect(code).toContain("SceneView(");
     }
   });
 

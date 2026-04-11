@@ -113,7 +113,7 @@ fun DynamicSkyScreen() {
     }
 }`,
         notes: [
-            "DynamicSkyNode is a SceneScope composable — must be inside Scene { }.",
+            "DynamicSkyNode is a SceneScope composable — must be inside SceneView { }.",
             "sunAngle: 0° = sunrise, 90° = noon, 180° = sunset.",
             "turbidity: 2 = crystal clear, 4 = average, 10 = overcast/hazy.",
             "Sync the LightNode direction with the sun angle for consistent shadows.",

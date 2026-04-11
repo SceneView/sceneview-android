@@ -54,7 +54,7 @@ import io.github.sceneview.math.Rotation
  *   <uses-feature android:name="android.hardware.camera.ar" android:required="true" />
  *   <meta-data android:name="com.google.ar.core" android:value="required" />
  *
- * Gradle: implementation("io.github.sceneview:arsceneview:3.5.0")
+ * Gradle: implementation("io.github.sceneview:arsceneview:3.6.0")
  */
 @Composable
 fun ${composableName}() {
@@ -74,7 +74,7 @@ ${scalable ? `    var scaleFactor by remember { mutableFloatStateOf(${scale}f) }
                 .weight(1f)
                 .fillMaxWidth()
         ) {
-            ARScene(
+            ARSceneView(
                 modifier = Modifier.fillMaxSize(),
                 engine = engine,
                 modelLoader = modelLoader,
@@ -185,7 +185,7 @@ import io.github.sceneview.node.LightNode
  * Preview a ${options.category} in 3D with orbit controls before placing in AR.
  * Model: src/main/assets/${model}
  *
- * Gradle: implementation("io.github.sceneview:sceneview:3.5.0")
+ * Gradle: implementation("io.github.sceneview:sceneview:3.6.0")
  */
 @Composable
 fun ${composableName}Preview() {
@@ -197,7 +197,7 @@ fun ${composableName}Preview() {
     val modelInstance = rememberModelInstance(modelLoader, "${model}")
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Scene(
+        SceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             modelLoader = modelLoader,

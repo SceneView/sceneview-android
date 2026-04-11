@@ -125,7 +125,7 @@ ${beforeAfter ? `    var splitPosition by remember { mutableFloatStateOf(0.5f) }
                 .weight(1f)
                 .fillMaxWidth()
         ) {
-            Scene(
+            SceneView(
                 modifier = Modifier.fillMaxSize(),
                 engine = engine,
                 modelLoader = modelLoader,
@@ -291,7 +291,7 @@ fun ${composableName}AR() {
                 .weight(1f)
                 .fillMaxWidth()
         ) {
-            ARScene(
+            ARSceneView(
                 modifier = Modifier.fillMaxSize(),
                 engine = engine,
                 modelLoader = modelLoader,

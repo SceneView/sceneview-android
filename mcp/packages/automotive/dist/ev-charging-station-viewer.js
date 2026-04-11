@@ -24,7 +24,7 @@ export function generateEvChargingStationViewer(options = {}) {
 import io.github.sceneview.ar.node.AnchorNode`
         : `import io.github.sceneview.Scene`;
     const sceneOpen = ar
-        ? `ARScene(
+        ? `ARSceneView(
                 modifier = Modifier.fillMaxSize(),
                 engine = engine,
                 modelLoader = modelLoader,
@@ -37,7 +37,7 @@ import io.github.sceneview.ar.node.AnchorNode`
                     }
                 }
             ) {`
-        : `Scene(
+        : `SceneView(
                 modifier = Modifier.fillMaxSize(),
                 engine = engine,
                 modelLoader = modelLoader,

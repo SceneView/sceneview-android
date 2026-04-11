@@ -145,7 +145,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
         },
         ar: {
           type: "boolean",
-          description: "Generate AR version using ARScene (default: false). Places a 1:10 miniature room on a real surface.",
+          description: "Generate AR version using ARSceneView (default: false). Places a 1:10 miniature room on a real surface.",
         },
       },
       required: ["roomType"],

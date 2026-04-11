@@ -1,7 +1,7 @@
 // ─── Tool tier system ─────────────────────────────────────────────────────────
 //
 // Defines free vs pro tool access for SceneView MCP.
-// ─── Free tools (15) ─────────────────────────────────────────────────────────
+// ─── Free tools (17) ─────────────────────────────────────────────────────────
 const FREE_TOOLS = [
     "list_samples",
     "get_sample",
@@ -18,6 +18,8 @@ const FREE_TOOLS = [
     "get_material_guide",
     "get_collision_guide",
     "get_platform_roadmap",
+    "search_models",
+    "analyze_project",
 ];
 // ─── Pro tools ────────────────────────────────────────────────────────────────
 const PRO_TOOLS = [

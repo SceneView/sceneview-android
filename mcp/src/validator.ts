@@ -321,7 +321,7 @@ const RULES: Rule[] = [
     check(code, lines) {
       const issues: ValidationIssue[] = [];
       if (!code.includes("DynamicSkyNode")) return issues;
-      // If DynamicSkyNode appears but Scene { } doesn't, it's likely wrong
+      // If DynamicSkyNode appears but SceneView { } doesn't, it's likely wrong
       if (!code.includes("SceneView(") && !code.includes("SceneView {")) {
         findLines(lines, /DynamicSkyNode\s*\(/).forEach((line) =>
           issues.push({

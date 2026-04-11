@@ -83,7 +83,7 @@ describe("generateParticleEffects", () => {
     });
     it("generates AR code when ar=true", () => {
         const code = generateParticleEffects({ effect: "fire", ar: true });
-        expect(code).toContain("ARScene(");
+        expect(code).toContain("ARSceneView(");
         expect(code).toContain("android.permission.CAMERA");
         expect(code).toContain("arsceneview:3.6.0");
     });
@@ -102,7 +102,7 @@ describe("generateParticleEffects", () => {
         for (const effect of PARTICLE_EFFECTS) {
             const code = generateParticleEffects({ effect });
             expect(code).toContain("@Composable");
-            expect(code).toContain("Scene(");
+            expect(code).toContain("SceneView(");
         }
     });
     it("includes lifetime and size interpolation", () => {

@@ -54,7 +54,7 @@ describe("generateCharacterViewer", () => {
     it("generates AR code when ar=true", () => {
         const code = generateCharacterViewer({ style: "humanoid", ar: true });
         expect(code).toContain("import io.github.sceneview.ar.ARScene");
-        expect(code).toContain("ARScene(");
+        expect(code).toContain("ARSceneView(");
         expect(code).toContain("android.permission.CAMERA");
         expect(code).toContain("arsceneview:3.6.0");
     });
@@ -100,7 +100,7 @@ describe("generateCharacterViewer", () => {
         for (const style of CHARACTER_STYLES) {
             const code = generateCharacterViewer({ style });
             expect(code).toContain("@Composable");
-            expect(code).toContain("Scene(");
+            expect(code).toContain("SceneView(");
         }
     });
     it("AR version includes placement instructions", () => {

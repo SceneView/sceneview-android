@@ -136,7 +136,7 @@ fun ${composableName}() {
                 .weight(1f)
                 .fillMaxWidth()
         ) {
-            Scene(
+            SceneView(
                 modifier = Modifier.fillMaxSize(),
                 engine = engine,
                 modelLoader = modelLoader,
@@ -325,7 +325,7 @@ fun ${composableName}AR() {
     var selectedGeometry by remember { mutableStateOf("cube") }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        ARScene(
+        ARSceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             modelLoader = modelLoader,

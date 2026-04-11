@@ -115,7 +115,7 @@ ${scalable ? `    var scaleFactor by remember { mutableFloatStateOf(${scale}f) }
                 .weight(1f)
                 .fillMaxWidth()
         ) {
-            ARScene(
+            ARSceneView(
                 modifier = Modifier.fillMaxSize(),
                 engine = engine,
                 modelLoader = modelLoader,
@@ -244,7 +244,7 @@ fun ${composableName}Preview() {
     val modelInstance = rememberModelInstance(modelLoader, "${model}")
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Scene(
+        SceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             modelLoader = modelLoader,

@@ -103,7 +103,7 @@ describe("generatePartsCatalog", () => {
 
   it("generates AR code when ar=true", () => {
     const code = generatePartsCatalog({ category: "engine", ar: true });
-    expect(code).toContain("ARScene(");
+    expect(code).toContain("ARSceneView(");
     expect(code).toContain("android.permission.CAMERA");
   });
 

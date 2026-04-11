@@ -62,7 +62,7 @@ import io.github.sceneview.node.LightNode
  *
  * Model: src/main/assets/${modelPath}
  *
- * Gradle: implementation("io.github.sceneview:sceneview:3.5.0")
+ * Gradle: implementation("io.github.sceneview:sceneview:3.6.0")
  */
 @Composable
 fun ${composableName}() {
@@ -85,7 +85,7 @@ ${beforeAfter ? `    var splitPosition by remember { mutableFloatStateOf(0.5f) }
                 .weight(1f)
                 .fillMaxWidth()
         ) {
-            Scene(
+            SceneView(
                 modifier = Modifier.fillMaxSize(),
                 engine = engine,
                 modelLoader = modelLoader,
@@ -226,7 +226,7 @@ import io.github.sceneview.rememberCollisionSystem
  *   <uses-feature android:name="android.hardware.camera.ar" android:required="true" />
  *   <meta-data android:name="com.google.ar.core" android:value="required" />
  *
- * Gradle: implementation("io.github.sceneview:arsceneview:3.5.0")
+ * Gradle: implementation("io.github.sceneview:arsceneview:3.6.0")
  */
 @Composable
 fun ${composableName}AR() {
@@ -245,7 +245,7 @@ fun ${composableName}AR() {
                 .weight(1f)
                 .fillMaxWidth()
         ) {
-            ARScene(
+            ARSceneView(
                 modifier = Modifier.fillMaxSize(),
                 engine = engine,
                 modelLoader = modelLoader,

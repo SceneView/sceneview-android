@@ -1,7 +1,7 @@
 package com.example.ok
 
 import androidx.compose.runtime.Composable
-import io.github.sceneview.Scene
+import io.github.sceneview.SceneView
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberModelLoader
 import io.github.sceneview.node.ModelNode
@@ -12,7 +12,7 @@ fun ModelScreen() {
     val engine = rememberEngine()
     val modelLoader = rememberModelLoader(engine)
     val modelInstance = rememberModelInstance(modelLoader, "models/chair.glb")
-    Scene(engine = engine) {
+    SceneView(engine = engine) {
         modelInstance?.let {
             ModelNode(modelInstance = it)
         }

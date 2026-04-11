@@ -135,7 +135,7 @@ ${autoRotate ? `    var rotationY by remember { mutableFloatStateOf(0f) }` : ""}
                 .weight(1f)
                 .fillMaxWidth()
         ) {
-            Scene(
+            SceneView(
                 modifier = Modifier.fillMaxSize(),
                 engine = engine,
                 modelLoader = modelLoader,
@@ -271,7 +271,7 @@ fun ${composableName}AR() {
     var currentAnimation by remember { mutableStateOf("${animations[0]}") }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        ARScene(
+        ARSceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             modelLoader = modelLoader,

@@ -2,9 +2,9 @@
 
 SceneView is a declarative 3D and AR SDK for Android (Jetpack Compose, Filament, ARCore) and Apple platforms — iOS, macOS, visionOS (SwiftUI, RealityKit, ARKit) — with shared core logic via Kotlin Multiplatform. Each platform uses its native renderer: Filament on Android, RealityKit on Apple.
 
-**Android — Maven artifacts (version 3.6.1):**
-- 3D only: `io.github.sceneview:sceneview:3.6.1`
-- AR + 3D: `io.github.sceneview:arsceneview:3.6.1`
+**Android — Maven artifacts (version 3.6.2):**
+- 3D only: `io.github.sceneview:sceneview:3.6.2`
+- AR + 3D: `io.github.sceneview:arsceneview:3.6.2`
 
 **Apple (iOS 17+ / macOS 14+ / visionOS 1+) — Swift Package:**
 - `https://github.com/sceneview/sceneview-swift.git` (from: "3.6.0")
@@ -18,8 +18,8 @@ SceneView is a declarative 3D and AR SDK for Android (Jetpack Compose, Filament,
 ### build.gradle (app module)
 ```kotlin
 dependencies {
-    implementation("io.github.sceneview:sceneview:3.6.1")   // 3D only
-    implementation("io.github.sceneview:arsceneview:3.6.1") // AR (includes sceneview)
+    implementation("io.github.sceneview:sceneview:3.6.2")   // 3D only
+    implementation("io.github.sceneview:arsceneview:3.6.2") // AR (includes sceneview)
 }
 ```
 
@@ -2028,16 +2028,26 @@ ferrari_f40.glb
 | visionOS | RealityKit | SwiftUI | via SceneViewSwift | Alpha |
 | Web | Filament.js + WebXR | Kotlin/JS | `samples/web-demo` | Alpha |
 
-SceneView Web (sceneview.js v3.6.0) — JavaScript API:
+SceneView Web (sceneview.js v3.6.2) — JavaScript API:
   SceneView.modelViewer(canvas, url, options?) → Promise<instance>
   SceneView.create(canvas, options?) → Promise<instance>
   instance.loadModel(url) → Promise<instance>
+  instance.clearScene() → instance  // removes all models + primitives
   instance.setAutoRotate(enabled) → instance
   instance.setCameraDistance(d) → instance
+  instance.setCameraManipulator('orbit'|'map'|'freelook') → instance
   instance.setBackgroundColor(r, g, b, a?) → instance
   instance.setQuality('low'|'medium'|'high') → instance
   instance.setBloom(true|false|{strength,resolution,threshold,levels}) → instance
+  instance.loadEnvironment(ktxUrl, intensity?) → Promise<instance>
   instance.addLight({type?,color?,intensity?,direction?,position?,falloff?}) → entity
+  instance.removeLight(entity) → instance
+  instance.clearLights() → instance  // wipes base 3-point rig + IBL
+  instance.createBox(center, [w,h,d], [r,g,b,a]) → asset
+  instance.createSphere(center, radius, [r,g,b,a]) → asset
+  instance.createCylinder(center, radius, height, [r,g,b,a]) → asset
+  instance.playAnimation(index=0, loop=true) → instance  // glTF keyframe + skinning
+  instance.stopAnimation() → instance
   instance.createText({text, fontSize?, color?, position?, billboard?}) → entity
   instance.createImage({url, position?, size?, billboard?}) → entity
   instance.createVideo({url, position?, size?, loop?, autoplay?, chromaKey?}) → entity

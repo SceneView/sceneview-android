@@ -1,7 +1,7 @@
 /**
  * generate-scene.ts
  *
- * Generates a complete Scene{} or ARScene{} composable from a text description.
+ * Generates a complete SceneView{} or ARSceneView{} composable from a text description.
  * Maps common objects/concepts to SceneView node types and builds compilable code.
  *
  * All generated code targets SceneView v3.6.0 API and is verified against llms.txt.
@@ -296,7 +296,7 @@ export function generateScene(description) {
         lines.push("    }");
         lines.push("");
     }
-    // Scene or ARScene
+    // SceneView or ARSceneView
     if (isAR) {
         lines.push("    var anchor by remember { mutableStateOf<Anchor?>(null) }");
         lines.push("");

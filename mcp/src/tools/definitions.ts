@@ -368,7 +368,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "generate_scene",
     description:
-      'Generates a complete, compilable Scene{} or ARScene{} Kotlin composable from a natural language description. Parses 40+ object types (furniture, vehicles, animals, food, buildings, nature), quantities ("two chairs", "3 spheres"), environment (indoor/outdoor/dark), and mode (3D or AR). Returns working Kotlin code with proper engine setup, model loading, lighting, and ground plane. Use this when a user says "build me a scene with..." or describes a 3D scene they want to create.',
+      'Generates a complete, compilable SceneView{} or ARSceneView{} Kotlin composable from a natural language description. Parses 40+ object types (furniture, vehicles, animals, food, buildings, nature), quantities ("two chairs", "3 spheres"), environment (indoor/outdoor/dark), and mode (3D or AR). Returns working Kotlin code with proper engine setup, model loading, lighting, and ground plane. Use this when a user says "build me a scene with..." or describes a 3D scene they want to create.',
     inputSchema: {
       type: "object",
       properties: {

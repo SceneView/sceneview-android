@@ -94,7 +94,7 @@ ${materialVariants ? `
                 .weight(1f)
                 .fillMaxWidth()
         ) {
-            Scene(
+            SceneView(
                 modifier = Modifier.fillMaxSize(),
                 engine = engine,
                 modelLoader = modelLoader,
@@ -310,7 +310,7 @@ fun ${composableName}AR() {
     var placed by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        ARScene(
+        ARSceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             modelLoader = modelLoader,

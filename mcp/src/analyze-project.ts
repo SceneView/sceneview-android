@@ -187,7 +187,7 @@ const ANTI_PATTERNS: AntiPatternDetector[] = [
     pattern: /\bPlacementNode\b/,
     message:
       "`PlacementNode` was removed in SceneView 3.0. Use `AnchorNode` + `HitResultNode` " +
-      "inside an `ARScene` instead.",
+      "inside an `ARSceneView` instead.",
   },
   {
     id: "migration/view-renderable-removed",
@@ -219,7 +219,7 @@ const ANTI_PATTERNS: AntiPatternDetector[] = [
     languages: new Set(["kotlin"]),
     pattern: /\bimport\s+com\.google\.ar\.sceneform\.ux\.ArFragment\b/,
     message:
-      "`ArFragment` (Sceneform) removed. Replace with `ARScene { … }` composable from " +
+      "`ArFragment` (Sceneform) removed. Replace with `ARSceneView { … }` composable from " +
       "`io.github.sceneview.ar`.",
   },
 ];

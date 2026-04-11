@@ -133,7 +133,7 @@ ${hasCrossSection ? `    var crossSectionPosition by remember { mutableFloatStat
                 .weight(1f)
                 .fillMaxWidth()
         ) {
-            Scene(
+            SceneView(
                 modifier = Modifier.fillMaxSize(),
                 engine = engine,
                 modelLoader = modelLoader,
@@ -366,7 +366,7 @@ ${options.implantModel ? `    val implantModelInstance = rememberModelInstance(
     var placed by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        ARScene(
+        ARSceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             modelLoader = modelLoader,

@@ -82,7 +82,7 @@ describe("generateRoomTour", () => {
 
   it("generates AR code when ar=true", () => {
     const code = generateRoomTour({ tourStyle: "orbit", ar: true });
-    expect(code).toContain("ARScene(");
+    expect(code).toContain("ARSceneView(");
     expect(code).toContain("import io.github.sceneview.ar.ARScene");
     expect(code).toContain("android.permission.CAMERA");
   });
@@ -118,7 +118,7 @@ describe("generateRoomTour", () => {
     for (const style of TOUR_STYLES) {
       const code = generateRoomTour({ tourStyle: style });
       expect(code).toContain("@Composable");
-      expect(code).toContain("Scene(");
+      expect(code).toContain("SceneView(");
     }
   });
 

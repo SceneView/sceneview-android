@@ -42,7 +42,7 @@ describe("generateMoleculeViewer", () => {
     it("generates AR code when ar=true", () => {
         const code = generateMoleculeViewer({ moleculeType: "dna", ar: true });
         expect(code).toContain("import io.github.sceneview.ar.ARScene");
-        expect(code).toContain("ARScene(");
+        expect(code).toContain("ARSceneView(");
         expect(code).toContain("android.permission.CAMERA");
     });
     it("includes auto-rotate when animate=true", () => {

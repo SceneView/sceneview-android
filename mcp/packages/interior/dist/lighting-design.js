@@ -53,7 +53,7 @@ import io.github.sceneview.math.Position
  *
  * Model: src/main/assets/${roomModel}
  *
- * Gradle: implementation("io.github.sceneview:sceneview:3.5.0")
+ * Gradle: implementation("io.github.sceneview:sceneview:3.6.0")
  */
 @Composable
 fun ${composableName}() {
@@ -72,7 +72,7 @@ ${dimmable ? lights.map((_, i) => `    var light${i}Intensity by remember { muta
                 .weight(1f)
                 .fillMaxWidth()
         ) {
-            Scene(
+            SceneView(
                 modifier = Modifier.fillMaxSize(),
                 engine = engine,
                 modelLoader = modelLoader,
@@ -187,7 +187,7 @@ import io.github.sceneview.node.LightNode
  *   <uses-feature android:name="android.hardware.camera.ar" android:required="true" />
  *   <meta-data android:name="com.google.ar.core" android:value="required" />
  *
- * Gradle: implementation("io.github.sceneview:arsceneview:3.5.0")
+ * Gradle: implementation("io.github.sceneview:arsceneview:3.6.0")
  */
 @Composable
 fun ${composableName}AR() {
@@ -198,7 +198,7 @@ fun ${composableName}AR() {
     var placed by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        ARScene(
+        ARSceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             modelLoader = modelLoader,

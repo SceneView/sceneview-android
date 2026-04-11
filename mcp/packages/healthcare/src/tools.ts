@@ -130,7 +130,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
         },
         ar: {
           type: "boolean",
-          description: "Generate AR version using ARScene instead of Scene (default: false). Requires arsceneview dependency.",
+          description: "Generate AR version using ARSceneView instead of SceneView (default: false). Requires arsceneview dependency.",
         },
       },
       required: ["system"],

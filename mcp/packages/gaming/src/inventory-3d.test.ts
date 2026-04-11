@@ -94,7 +94,7 @@ describe("generateInventory3D", () => {
 
   it("generates AR code when ar=true", () => {
     const code = generateInventory3D({ layout: "grid", ar: true });
-    expect(code).toContain("ARScene(");
+    expect(code).toContain("ARSceneView(");
     expect(code).toContain("android.permission.CAMERA");
     expect(code).toContain("arsceneview:3.6.0");
   });

@@ -60,8 +60,8 @@ describe("generateRoomPlanner", () => {
     it("generates AR code when ar=true", () => {
         const code = generateRoomPlanner({ roomType: "living-room", ar: true });
         expect(code).toContain("import io.github.sceneview.ar.ARScene");
-        expect(code).toContain("ARScene(");
-        expect(code).toContain("arsceneview:3.5.0");
+        expect(code).toContain("ARSceneView(");
+        expect(code).toContain("arsceneview:3.6.0");
         expect(code).toContain("android.permission.CAMERA");
     });
     it("AR version uses 1:10 scale", () => {
@@ -73,7 +73,7 @@ describe("generateRoomPlanner", () => {
         for (const roomType of ROOM_TYPES) {
             const code = generateRoomPlanner({ roomType });
             expect(code).toContain("@Composable");
-            expect(code).toContain("Scene(");
+            expect(code).toContain("SceneView(");
         }
     });
     it("respects custom dimensions", () => {
