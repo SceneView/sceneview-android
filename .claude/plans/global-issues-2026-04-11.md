@@ -12,26 +12,29 @@ Current repo state: branch `claude/intelligent-lumiere` rebased on `origin/main`
 
 ## P0 — Bleeding, ship-blocker, or public-facing lie
 
-### P0.1 — Maven Central is six releases behind
+### ~~P0.1 — Maven Central is six releases behind~~ ✅ FALSE ALARM (2026-04-11)
 
-**Status:** v2.3.0 is the latest on Maven Central (confirmed via `search.maven.org` on 2026-04-11). `gradle.properties` is at `VERSION_NAME=3.6.2`. npm, pub.dev, GitHub Releases, SPM tags all have v3.6.2. README, `llms.txt`, and the website install snippets all tell users to depend on `io.github.sceneview:sceneview:3.6.2` — a coordinate that does not exist on Maven Central.
+**Initial claim (wrong):** v2.3.0 was the latest on Maven Central.
 
-Anyone copy-pasting the install line right now gets `Could not resolve io.github.sceneview:sceneview:3.6.2`. This is the single most visible regression in the project.
+**Why the claim was wrong:** the `search.maven.org/solrsearch/select` endpoint returns stale / broken data for this artifact (returns `2.3.0`, a version that never shipped in the 3.x line). That API is a *search index*, not the source of truth.
 
-**Root cause chain (from handoff):**
-- v3.6.1 upload failed silently (#780)
-- maven-publish plugin was bumped 0.33 → 0.35 to pick up Central Portal validation
-- Nobody has re-run `publishAndReleaseToMavenCentral` since
+**Actual state (verified 2026-04-11, 00:20 UTC):**
+- `https://repo1.maven.org/maven2/io/github/sceneview/sceneview/maven-metadata.xml` → `<latest>3.6.2</latest><release>3.6.2</release>` ✅
+- `sceneview:3.6.2` AAR → HTTP 200, 2494785 bytes ✅
+- `arsceneview:3.6.2` POM → HTTP 200 ✅
+- `sceneview-core:3.6.2` POM (KMP) → HTTP 200 ✅
+- `sceneview-core-android:3.6.2` POM → HTTP 200 ✅
 
-**Action path:**
-1. Trigger the release workflow manually for `v3.6.2` and watch it through to the Central Portal staging repository closing.
-2. If it still fails, drop to a local `./gradlew publishAndReleaseToMavenCentralNoAutoRelease` with the production credentials and manually close the stage.
-3. Once 3.6.2 lands, close #780 and update `.claude/handoff.md` so future sessions stop reading "Maven Central: ✅".
-4. Add a `/publish-check` assertion that queries `search.maven.org` and fails if the latest version there is older than `VERSION_NAME`. The existing skill is documented but clearly does not run — the lie survived multiple sessions.
+**Lesson:** never rely on `search.maven.org/solrsearch` to gate release checks. Always fetch `maven-metadata.xml` directly from `repo1.maven.org` — that is the file Gradle and Maven actually read at resolve time, and therefore the only ground truth for "has it shipped?". Update `/publish-check` accordingly.
 
-**Definition of done:** `curl -s "https://search.maven.org/solrsearch/select?q=g:io.github.sceneview+AND+a:sceneview&core=gav&rows=1&wt=json"` returns 3.6.2, and the same for `arsceneview` and `sceneview-core`.
+**Correct snippet for future scripts:**
+```bash
+curl -sL "https://repo1.maven.org/maven2/io/github/sceneview/sceneview/maven-metadata.xml" \
+  | grep -oE '<release>[^<]+</release>' \
+  | sed -E 's#</?release>##g'
+```
 
-### P0.2 — Play Store listing contains mock screenshots
+### P0.1 — Play Store listing contains mock screenshots
 
 **Status:** `samples/android-demo/play/listings/en-US/graphics/phone-screenshot-{1..4}.png` are fastlane mocks (black frames, text placeholders, fake "Test #1..#5" cards). Google's Play Store policies forbid screenshots that misrepresent the app.
 
@@ -41,7 +44,7 @@ Anyone copy-pasting the install line right now gets `Could not resolve io.github
 
 **Blocked on:** `[DELEGATED-samples-v4]` completing the Android app's visual polish.
 
-### P0.3 — iOS App Store screenshots are SF Symbol mocks
+### P0.2 — iOS App Store screenshots are SF Symbol mocks
 
 **Status:** `samples/ios-demo/goldens/explore_current.png` and `explore_vehicles.png` show an Explore grid with `car.fill` / `airplane.fill` icons instead of real 3D previews. If these are used as App Store captures (or as golden baselines for pixel diffing) they are misleading in both contexts.
 
@@ -217,7 +220,7 @@ Option 1 is less work and matches the "100% working only" rule.
 
 Last verified state of the world used to write this plan:
 - Branch: `claude/intelligent-lumiere`, rebased on `e1bfdb4a`
-- Maven Central latest: **v2.3.0** (6 releases behind `gradle.properties`)
+- Maven Central latest (from `maven-metadata.xml`): **v3.6.2** ✅ (all four artefacts confirmed via HTTP 200 on `repo1.maven.org` at 2026-04-11 00:20 UTC)
 - npm `sceneview-mcp` latest: v3.6.2
 - npm `sceneview-web` latest: v3.6.2
 - Git tag latest: `v3.6.2`
