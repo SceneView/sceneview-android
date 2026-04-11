@@ -8,6 +8,14 @@
 export interface Env {
   // ── Vars ──────────────────────────────────────────────────────────────────
   ENVIRONMENT: string;
+  /**
+   * Absolute public URL of the gateway, without trailing slash.
+   * Used to build magic-link redirect URLs and Stripe success/cancel URLs.
+   * Example: `https://sceneview-mcp.workers.dev`.
+   */
+  DASHBOARD_BASE_URL?: string;
+  /** "from" email shown in magic-link emails. Defaults to SceneView no-reply. */
+  MAGIC_LINK_FROM_EMAIL?: string;
 
   // ── D1 ────────────────────────────────────────────────────────────────────
   DB: D1Database;
@@ -25,4 +33,14 @@ export interface Env {
   RESEND_API_KEY?: string;
   /** HMAC secret for dashboard session JWTs. */
   JWT_SECRET?: string;
+
+  // ── Stripe price identifiers (vars, not secrets) ─────────────────────────
+  /** Stripe price id for Pro monthly (19 EUR/mo). */
+  STRIPE_PRICE_PRO_MONTHLY?: string;
+  /** Stripe price id for Pro yearly (190 EUR/yr). */
+  STRIPE_PRICE_PRO_YEARLY?: string;
+  /** Stripe price id for Team monthly (49 EUR/mo). */
+  STRIPE_PRICE_TEAM_MONTHLY?: string;
+  /** Stripe price id for Team yearly (490 EUR/yr). */
+  STRIPE_PRICE_TEAM_YEARLY?: string;
 }
