@@ -26,7 +26,7 @@ Add the dependency to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  sceneview_flutter: ^3.6.0
+  sceneview_flutter: ^3.6.2
 ```
 
 Then run:
@@ -57,7 +57,7 @@ platform :ios, '17.0'
 
 The host app must also add `SceneViewSwift` via Swift Package Manager in Xcode:
 - URL: `https://github.com/sceneview/SceneViewSwift`
-- Version: `3.6.0`
+- Version: `3.6.2`
 
 ## Usage
 
@@ -119,11 +119,11 @@ ARSceneView(
 ```
 Flutter (Dart)
   |
-  +-- PlatformView -----> Android: ComposeView + Scene { }
-  |                        (Filament renderer, SceneView SDK 3.6.0)
+  +-- PlatformView -----> Android: ComposeView + SceneView { }
+  |                        (Filament renderer, SceneView SDK 3.6.2)
   |
   +-- PlatformView -----> iOS: UIHostingController + SceneViewSwift
-                           (RealityKit renderer, SceneViewSwift 3.6.0)
+                           (RealityKit renderer, SceneViewSwift 3.6.2)
 ```
 
 Method channels bridge Dart commands (`loadModel`, `clearScene`, `setEnvironment`) to native implementations.

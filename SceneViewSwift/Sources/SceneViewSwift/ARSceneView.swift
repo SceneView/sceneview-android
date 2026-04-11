@@ -5,7 +5,7 @@ import ARKit
 
 /// A SwiftUI view for augmented reality using ARKit + RealityKit.
 ///
-/// Mirrors SceneView Android's `ARScene { }` composable — place content
+/// Mirrors SceneView Android's `ARSceneView { }` composable — place content
 /// relative to real-world surfaces, images, and anchors.
 ///
 /// Uses `ARView` (UIKit) wrapped in `UIViewRepresentable` for full ARKit

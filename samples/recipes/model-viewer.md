@@ -56,7 +56,7 @@ struct ModelViewer: View {
 
 | Concept | Android | iOS |
 |---|---|---|
-| Scene container | `Scene { }` | `SceneView { }` |
+| Scene container | `SceneView { }` | `SceneView { }` |
 | Model loading | `rememberModelInstance(loader, path)` | `ModelNode.load(path)` |
 | Camera orbit | `rememberCameraManipulator()` | `.cameraControls(.orbit)` |
 | Environment | `rememberEnvironment(loader, path)` | `.environment(.studio)` |

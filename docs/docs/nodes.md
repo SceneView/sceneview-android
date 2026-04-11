@@ -7,7 +7,7 @@ A scannable, AI-first reference for every node type exposed by `SceneView` and `
 3. **Copy-paste example** — a complete, runnable snippet
 4. **Gotchas** — lifecycle, recomposition, threading traps
 
-All examples assume you are inside a `Scene { … }` or `ARScene { … }` block (for AR nodes). Import the `io.github.sceneview.*` / `io.github.sceneview.ar.*` packages as needed.
+All examples assume you are inside a `SceneView { … }` or `ARSceneView { … }` block (for AR nodes). Import the `io.github.sceneview.*` / `io.github.sceneview.ar.*` packages as needed.
 
 Artifact versions: `io.github.sceneview:sceneview:3.6.2` and `io.github.sceneview:arsceneview:3.6.2`.
 
@@ -17,8 +17,8 @@ Artifact versions: `io.github.sceneview:sceneview:3.6.2` and `io.github.scenevie
 
 **Scene composables**
 
-- [Scene](#scene) / [SceneView](#sceneview) — the entry-point composable
-- [ARScene](#arscene) / [ARSceneView](#arsceneview) — the AR entry point
+- [SceneView](#sceneview) — the entry-point composable
+- [ARSceneView](#arsceneview) — the AR entry point
 
 **Common lifecycle / helpers**
 
@@ -72,9 +72,9 @@ Artifact versions: `io.github.sceneview:sceneview:3.6.2` and `io.github.scenevie
 
 ---
 
-## Scene
+## SceneView
 
-`Scene` (and its underlying `SceneView`) is the Composable that hosts a Filament scene. All other node composables are declared inside its trailing content block.
+`SceneView` is the Composable that hosts a Filament scene. All other node composables are declared inside its trailing content block. (`Scene { }` is the pre-v3.6 name and still works as a `@Deprecated` alias.)
 
 ```kotlin
 val engine = rememberEngine()
@@ -111,9 +111,9 @@ SceneView(
 
 ---
 
-## ARScene
+## ARSceneView
 
-Same idea as `Scene`, but backed by ARCore. Adds camera feed, trackables, session lifecycle, and the AR-only node composables.
+Same idea as `SceneView`, but backed by ARCore. Adds camera feed, trackables, session lifecycle, and the AR-only node composables. (`ARScene { }` is the pre-v3.6 name and still works as a `@Deprecated` alias.)
 
 ```kotlin
 ARSceneView(

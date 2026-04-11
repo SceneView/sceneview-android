@@ -25,7 +25,7 @@
 
 ### API simplification
 - [ ] Merge sceneview + arsceneview into single dependency (one `implementation` line)
-- [ ] Unify naming: `SceneView {}` on all platforms (currently `Scene {}` on Android)
+- [x] Unify naming: `SceneView {}` / `ARSceneView {}` on Android (v3.6) — `Scene {}` / `ARScene {}` kept as `@Deprecated` aliases
 
 ### Platform maturity
 - [ ] Filament JNI for Desktop (hardware 3D, replace software renderer)

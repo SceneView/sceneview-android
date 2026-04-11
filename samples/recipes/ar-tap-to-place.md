@@ -65,7 +65,7 @@ struct ARTapToPlace: View {
 
 | Concept | Android | iOS |
 |---|---|---|
-| AR container | `ARScene { }` | `ARSceneView { }` |
+| AR container | `ARSceneView { }` | `ARSceneView { }` |
 | Plane detection | `planeRenderer = true` | `planeDetection: .horizontal` |
 | Anchor | `AnchorNode(anchor = a) { }` | `AnchorNode.plane()` |
 | Hit testing | `onSessionUpdated` + frame planes | `onTapGesture` callback |

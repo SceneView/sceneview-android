@@ -31,7 +31,7 @@ cd ios && pod install
 
 Requires iOS 17+ and Xcode 15+. The host app must also add `SceneViewSwift` via Swift Package Manager:
 - URL: `https://github.com/sceneview/SceneViewSwift`
-- Version: `3.6.0`
+- Version: `3.6.2`
 
 ### Android
 
@@ -114,11 +114,11 @@ React Native JS
     v
 requireNativeComponent('RNSceneView' / 'RNARSceneView')
     |
-    +---> Android: ViewManager -> ComposeView -> Scene { } / ARScene { }
-    |                              (Filament, SceneView SDK 3.6.0)
+    +---> Android: ViewManager -> ComposeView -> SceneView { } / ARSceneView { }
+    |                              (Filament, SceneView SDK 3.6.2)
     |
     +---> iOS: RCTViewManager -> UIHostingController -> SceneView / ARSceneView
-                                  (RealityKit, SceneViewSwift 3.6.0)
+                                  (RealityKit, SceneViewSwift 3.6.2)
 ```
 
 Props are mapped from the React Native bridge to native view parameters on each platform.

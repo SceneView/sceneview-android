@@ -161,8 +161,8 @@ let title = TextNode(text: "SceneView", fontSize: 0.08, depth: 0.02)
 
 | Android (Compose) | iOS (SwiftUI) |
 |---|---|
-| `Scene { }` | `SceneView { root in }` |
-| `ARScene { }` | `ARSceneView()` |
+| `SceneView { }` | `SceneView { root in }` |
+| `ARSceneView { }` | `ARSceneView()` |
 | `rememberModelInstance` | `ModelNode.load()` |
 | `CubeNode` | `GeometryNode.cube()` |
 | `SphereNode` | `GeometryNode.sphere()` |
