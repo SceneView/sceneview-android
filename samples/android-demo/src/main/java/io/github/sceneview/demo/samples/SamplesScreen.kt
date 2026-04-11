@@ -112,6 +112,8 @@ import dev.romainguy.kotlin.math.Float3
 import io.github.sceneview.SceneView
 import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.rememberARCameraNode
+import io.github.sceneview.ar.rerun.RerunBridge
+import io.github.sceneview.ar.rerun.rememberRerunBridge
 import io.github.sceneview.demo.R
 import io.github.sceneview.math.Position
 import io.github.sceneview.node.DynamicSkyNode
@@ -324,6 +326,14 @@ private fun rememberSampleDemos(): List<SampleDemo> = remember {
             category = "3D",
             accentColor = Color(0xFF009688),
             content = { GltfCamerasDemo() }
+        ),
+        SampleDemo(
+            title = "AR Debug (Rerun)",
+            subtitle = "Stream camera pose, planes, and point cloud to the Rerun viewer",
+            icon = Icons.Default.Science,
+            category = "AR",
+            accentColor = Color(0xFF5E35B1),
+            content = { RerunDebugDemo() }
         ),
     )
 }
@@ -2484,6 +2494,150 @@ private fun GltfCamerasDemo() {
                         )
                     )
                 }
+            }
+        }
+    }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// AR Debug (Rerun) demo
+//
+// Streams ARCore frame data — camera pose, detected planes, point cloud —
+// to a Rerun viewer running on the developer's machine over TCP.
+//
+// Setup (one-time on the dev machine):
+//   1. pip install rerun-sdk numpy
+//   2. python samples/android-demo/tools/rerun-bridge.py
+//   3. rerun                              (the viewer spawns automatically)
+//   4. adb reverse tcp:9876 tcp:9876      (so the device's 127.0.0.1 reaches localhost)
+//
+// The overlay shows live connection status + "events this session" counter so
+// you can tell whether the bridge is actually streaming. This is a dev-only
+// tool — production builds should gate it with BuildConfig.DEBUG.
+// ────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun RerunDebugDemo() {
+    val context = LocalContext.current
+    val arAvailability = remember {
+        try {
+            com.google.ar.core.ArCoreApk.getInstance().checkAvailability(context)
+        } catch (e: Exception) {
+            com.google.ar.core.ArCoreApk.Availability.UNSUPPORTED_DEVICE_NOT_CAPABLE
+        }
+    }
+
+    if (!arAvailability.isSupported) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(32.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                "ARCore is not available on this device. The Rerun debug demo " +
+                    "needs a physical Android device with ARCore support.",
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodyLarge
+            )
+        }
+        return
+    }
+
+    val engine = rememberEngine()
+    val modelLoader = rememberModelLoader(engine)
+    val materialLoader = rememberMaterialLoader(engine)
+    val cameraNode = rememberARCameraNode(engine)
+    val view = rememberView(engine)
+    val collisionSystem = rememberCollisionSystem(view)
+
+    // Open the TCP socket to the Python sidecar on scope entry, close on exit.
+    // enabled = true because this demo is debug-only — flip to BuildConfig.DEBUG
+    // if you copy this into a production app.
+    val rerun = rememberRerunBridge(
+        host = RerunBridge.DEFAULT_HOST,
+        port = RerunBridge.DEFAULT_PORT,
+        rateHz = 10,
+        enabled = true
+    )
+
+    var eventCount by remember { mutableIntStateOf(0) }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        ARSceneView(
+            modifier = Modifier.fillMaxSize(),
+            engine = engine,
+            view = view,
+            modelLoader = modelLoader,
+            materialLoader = materialLoader,
+            collisionSystem = collisionSystem,
+            cameraNode = cameraNode,
+            planeRenderer = true,
+            sessionConfiguration = { _, config ->
+                config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
+            },
+            onSessionUpdated = { session, frame ->
+                rerun.logFrame(session, frame)
+                eventCount++
+            }
+        )
+
+        // Top overlay — connection status
+        Surface(
+            modifier = Modifier
+                .statusBarsPadding()
+                .align(Alignment.TopCenter)
+                .padding(top = 16.dp),
+            color = Color.Black.copy(alpha = 0.65f),
+            shape = RoundedCornerShape(50)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Science,
+                    contentDescription = null,
+                    tint = Color(0xFF9575CD),
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    text = "Rerun → 127.0.0.1:9876 · $eventCount frames",
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+
+        // Bottom info panel — setup instructions
+        Surface(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 32.dp, start = 16.dp, end = 16.dp)
+                .navigationBarsPadding(),
+            color = Color.Black.copy(alpha = 0.72f),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    "AR Debug — streaming to Rerun viewer",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleSmall
+                )
+                Text(
+                    "On your dev machine: pip install rerun-sdk, then run " +
+                        "python samples/android-demo/tools/rerun-bridge.py and " +
+                        "adb reverse tcp:9876 tcp:9876",
+                    color = Color.White.copy(alpha = 0.78f),
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
         }
     }

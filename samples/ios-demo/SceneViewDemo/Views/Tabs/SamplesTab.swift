@@ -34,7 +34,7 @@ struct SamplesTab: View {
     // MARK: - Scene catalog
 
     private static func allScenes() -> [DemoItem] {
-        [
+        var items: [DemoItem] = [
             // Geometry
             DemoItem(title: "All Shapes", icon: "cube.fill", subtitle: "Cube, sphere, cylinder, cone, plane", category: .geometry) {
                 AllShapesDemo()
@@ -87,6 +87,22 @@ struct SamplesTab: View {
                 SceneGalleryDemo()
             },
         ]
+
+        // Augmented Reality — iOS only (ARKit not available on macOS/visionOS)
+        #if os(iOS)
+        items.append(
+            DemoItem(
+                title: "AR Debug (Rerun)",
+                icon: "antenna.radiowaves.left.and.right",
+                subtitle: "Stream camera pose & planes to the Rerun viewer",
+                category: .ar
+            ) {
+                RerunDebugDemo()
+            }
+        )
+        #endif
+
+        return items
     }
 }
 

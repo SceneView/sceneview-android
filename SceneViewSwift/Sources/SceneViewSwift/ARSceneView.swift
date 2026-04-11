@@ -32,6 +32,7 @@ public struct ARSceneView: UIViewRepresentable {
     private var onSessionStarted: ((ARView) -> Void)?
     private var imageTrackingDatabase: Set<ARReferenceImage>?
     private var onImageDetected: ((String, AnchorNode, ARView) -> Void)?
+    private var onFrame: ((ARFrame, ARView) -> Void)?
 
     /// Plane detection modes matching Android's ARCore config.
     public enum PlaneDetectionMode: Sendable {
@@ -69,7 +70,8 @@ public struct ARSceneView: UIViewRepresentable {
         showCoachingOverlay: Bool = true,
         imageTrackingDatabase: Set<ARReferenceImage>? = nil,
         onTapOnPlane: ((SIMD3<Float>, ARView) -> Void)? = nil,
-        onImageDetected: ((String, AnchorNode, ARView) -> Void)? = nil
+        onImageDetected: ((String, AnchorNode, ARView) -> Void)? = nil,
+        onFrame: ((ARFrame, ARView) -> Void)? = nil
     ) {
         self.planeDetection = planeDetection
         self.showPlaneOverlay = showPlaneOverlay
@@ -77,6 +79,7 @@ public struct ARSceneView: UIViewRepresentable {
         self.imageTrackingDatabase = imageTrackingDatabase
         self.onTapOnPlane = onTapOnPlane
         self.onImageDetected = onImageDetected
+        self.onFrame = onFrame
     }
 
     /// Called once when the AR session starts. Use to add initial content.
@@ -85,6 +88,20 @@ public struct ARSceneView: UIViewRepresentable {
     ) -> ARSceneView {
         var copy = self
         copy.onSessionStarted = handler
+        return copy
+    }
+
+    /// Called on every updated AR frame. Use for debug logging (e.g.
+    /// streaming to the Rerun viewer via ``RerunBridge``) or custom
+    /// per-frame analysis. Mirrors Android's `onSessionUpdated` callback.
+    ///
+    /// Runs on the ARKit delegate queue — do NOT block here. For I/O,
+    /// hand the frame off to a background queue.
+    public func onFrame(
+        _ handler: @escaping (ARFrame, ARView) -> Void
+    ) -> ARSceneView {
+        var copy = self
+        copy.onFrame = handler
         return copy
     }
 
@@ -146,13 +163,15 @@ public struct ARSceneView: UIViewRepresentable {
     public func updateUIView(_ arView: ARView, context: Context) {
         context.coordinator.onTapOnPlane = onTapOnPlane
         context.coordinator.onImageDetected = onImageDetected
+        context.coordinator.onFrame = onFrame
     }
 
     public func makeCoordinator() -> Coordinator {
         Coordinator(
             onTapOnPlane: onTapOnPlane,
             planeDetection: planeDetection,
-            onImageDetected: onImageDetected
+            onImageDetected: onImageDetected,
+            onFrame: onFrame
         )
     }
 
@@ -169,6 +188,7 @@ public struct ARSceneView: UIViewRepresentable {
     public class Coordinator: NSObject, ARSessionDelegate {
         var onTapOnPlane: ((SIMD3<Float>, ARView) -> Void)?
         var onImageDetected: ((String, AnchorNode, ARView) -> Void)?
+        var onFrame: ((ARFrame, ARView) -> Void)?
         var planeDetection: PlaneDetectionMode
         weak var arView: ARView?
         private var detectedImageNames: Set<String> = []
@@ -176,11 +196,13 @@ public struct ARSceneView: UIViewRepresentable {
         init(
             onTapOnPlane: ((SIMD3<Float>, ARView) -> Void)?,
             planeDetection: PlaneDetectionMode,
-            onImageDetected: ((String, AnchorNode, ARView) -> Void)? = nil
+            onImageDetected: ((String, AnchorNode, ARView) -> Void)? = nil,
+            onFrame: ((ARFrame, ARView) -> Void)? = nil
         ) {
             self.onTapOnPlane = onTapOnPlane
             self.planeDetection = planeDetection
             self.onImageDetected = onImageDetected
+            self.onFrame = onFrame
         }
 
         @objc func handleTap(_ recognizer: UITapGestureRecognizer) {
@@ -201,6 +223,11 @@ public struct ARSceneView: UIViewRepresentable {
         }
 
         // MARK: - ARSessionDelegate
+
+        public func session(_ session: ARSession, didUpdate frame: ARFrame) {
+            guard let arView = arView, let onFrame = onFrame else { return }
+            onFrame(frame, arView)
+        }
 
         public func session(_ session: ARSession, didAdd anchors: [ARAnchor]) {
             guard let arView = arView, let onImageDetected = onImageDetected else { return }
