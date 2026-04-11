@@ -32,17 +32,36 @@ interface UserRow {
   tier: "free" | "pro" | "team";
 }
 
+interface UsageRecordRow {
+  api_key_id: string;
+  user_id: string;
+  tool_name: string;
+  tier_required: string;
+  status: string;
+  bucket_month: string;
+  created_at: number;
+}
+
 export interface FakeSeed {
   api_keys: ApiKeyRow[];
   users: UserRow[];
+  /** Optional: pre-seeded usage records (mostly starts empty). */
+  usage_records?: UsageRecordRow[];
 }
 
-/** Fake D1Database that supports just the two SELECTs used by auth. */
+/** Fake D1Database covering the SELECTs + the usage_records INSERT / COUNT. */
 export class FakeD1 {
-  constructor(private seed: FakeSeed) {}
+  constructor(private seed: FakeSeed) {
+    if (!this.seed.usage_records) this.seed.usage_records = [];
+  }
 
   prepare(sql: string) {
     return new FakeStatement(sql, this.seed);
+  }
+
+  /** Direct read accessor for tests. */
+  getUsageRecords(): UsageRecordRow[] {
+    return this.seed.usage_records ?? [];
   }
 
   /** For tests that need to mutate after construction. */
@@ -75,7 +94,42 @@ class FakeStatement {
       const row = this.seed.users.find((u) => u.id === id);
       return (row as unknown as T) ?? null;
     }
+    if (s.includes("count(*) as count") && s.includes("from usage_records")) {
+      // countSuccessfulUsageInMonth: WHERE api_key_id = ?1 AND
+      // bucket_month = ?2 AND status = 'ok'.
+      const apiKeyId = this.params[0] as string;
+      const bucket = this.params[1] as string;
+      const rows = this.seed.usage_records ?? [];
+      const n = rows.filter(
+        (r) =>
+          r.api_key_id === apiKeyId &&
+          r.bucket_month === bucket &&
+          r.status === "ok",
+      ).length;
+      return { count: n } as unknown as T;
+    }
     throw new Error(`FakeD1: unsupported SQL in first(): ${this.sql}`);
+  }
+
+  async run(): Promise<{ success: boolean }> {
+    const s = this.sql.toLowerCase();
+    if (s.includes("insert into usage_records")) {
+      const [apiKeyId, userId, toolName, tierRequired, status, bucketMonth, createdAt] =
+        this.params as [string, string, string, string, string, string, number];
+      // FakeD1 constructor guarantees usage_records is initialised,
+      // so the cast is safe here.
+      (this.seed.usage_records as UsageRecordRow[]).push({
+        api_key_id: apiKeyId,
+        user_id: userId,
+        tool_name: toolName,
+        tier_required: tierRequired,
+        status,
+        bucket_month: bucketMonth,
+        created_at: createdAt,
+      });
+      return { success: true };
+    }
+    throw new Error(`FakeD1: unsupported SQL in run(): ${this.sql}`);
   }
 }
 
