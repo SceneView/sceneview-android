@@ -4,6 +4,36 @@
 
 ---
 
+## 🧹 SESSION `crazy-goodall` — 2026-04-11 ~20:00-22:30 — Employer email cleanup (18 perso repos)
+
+**Full details:** `/tmp/sceneview-growth/session-34c-octopus-cleanup-summary.md`
+
+**What happened in one sentence:** pivot d'une campagne LinkedIn french-admin-mcp → découverte que `thomas.gorisse@octopuscommunity.com` était dans ~130 commits publics sur 18 repos perso → full `git filter-repo` + force-push de tous les repos concernés.
+
+**Scope (no overlap with go-live):** zéro touch au monorepo `sceneview/sceneview`, zéro touch à `mcp-gateway/`, `mcp/`, `wrangler.toml`, Stripe, D1, KV, `sceneview-mcp` npm. Session strictement sur des repos externes.
+
+**Cleaned 18 repos:** french-admin-mcp (+ v2.1.5 published npm with 3 new tools — aides logement / indemnités congés / chômage démission), legal-docs-mcp, architecture-mcp, ecommerce-3d-mcp, realestate-mcp, education-mcp, finance-mcp, prompt-store, ai-invoice (unarchived + re-archived), telegram-ai-bot, 3d-viewer-extension, ar-model-viewer-android, n8n-templates, profile-private, mcp-creator-kit, social-media-mcp, thomasgorisse.github.io, sceneview.github.io.
+
+**sceneview.github.io post-check:** 2 pages-build-deployment successful after the force-push (runs 24288850154 + 24288932937). GitHub Pages still serving fine.
+
+**Global git config fixed:** `git config --global user.email` was `octopuscommunity.com` → now `gmail.com`. **Any session on this machine from now on commits with gmail by default** (aligned with `feedback_git_email` memory rule that was already there).
+
+**4 new memory rules (persist across sessions):**
+- ⛔ `feedback_linkedin_validation_required` — never click Publier LinkedIn without explicit validation
+- ⛔ `feedback_cdi_employer_visibility` — filter employer visibility on LinkedIn posts (Thomas CDI)
+- ⛔ `feedback_mcp_name_exposure` — never propose publishing an MCP whose repo URL contains "thomasgorisse"
+- ⛔⛔⛔ `feedback_never_expose_employer_email` — TRIPLE rule, mandatory email audit before public ops, force-push AUTHORIZED to clean history
+
+**NOT done / reported to a dedicated session:**
+- **`sceneview/sceneview` monorepo** contains 236 commits with `AjaxMusic@gmail.com` (old personal email from a past project, not Octopus). Reported because: 211 forks, 1 156 stars, 9 external contributors from real companies (IKEA, Target, etc.), 9 active worktrees (including live go-live worktree bold-rhodes). Requires full coordination + announcement + all worktrees stashed before force-push. **DO NOT clean sceneview monorepo casually — session must be entirely dedicated and pre-announced.**
+- Phase 3 npm rescope (`@thomasgorisse/finance-mcp`, `@thomasgorisse/react-native-sceneview` still expose name in package name) — breaking change, separate session.
+- `thomasgorisse.github.io` owner still contains the name in URL (just the history is cleaned).
+- LinkedIn / Reddit / HN publication of french-admin-mcp — deliverables prepared in `/tmp/sceneview-growth/french-admin-mcp-cdi-safe.md` + `french-admin-mcp-reddit-ready.md`. Publication campaign abandoned this session due to employer visibility risk + name exposure in repo URL. Revisit only after full structural cleanup (monorepo + rescope).
+
+**Backups:** `~/Projects/_octopus_cleanup_backup_20260411-202325/` (2.9 GB). Contains full copies of the 13 rewritten repos + `sceneview.github.io.bundle`. **Keep for 30 days minimum.** Safe to delete after a month if no complaints from contributors.
+
+---
+
 ## 🎯 SESSION `crazy-lichterman` — 2026-04-11 22:55 — Rerun.io integration + v4.0.0-rc.1
 
 **SceneView ↔ Rerun.io integration shipped end-to-end across all platforms and cut as a release candidate, co-existing with the Gateway #1 go-live that landed earlier the same day.**

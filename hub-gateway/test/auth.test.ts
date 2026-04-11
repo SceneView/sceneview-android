@@ -151,10 +151,14 @@ describe("authMiddleware", () => {
       ctx.env,
     );
     expect(res1.status).toBe(200);
-    // Expected KV entries after one valid request:
-    //   1. hub-auth:{hash}       — auth cache entry
-    //   2. hub-rl:{hash}:h:...   — hourly rate-limit counter
-    expect(ctx.kv.size).toBe(2);
+    // Expected KV entries after one valid tools/list request:
+    //   1. hub-auth:{hash}         — auth cache entry
+    //   2. hub-quota:{hash}:{mon}  — monthly quota cache (warm from D1)
+    //   3. hub-rl:{hash}:h:...     — hourly rate-limit counter
+    // tools/list itself is NOT a tool call and doesn't trigger
+    // usage_records insertion or quota increment; only the 3
+    // middleware-side writes land here.
+    expect(ctx.kv.size).toBe(3);
 
     // Revoke the key directly in D1. If the middleware is hitting the
     // cache, the next request still succeeds — that's the 5 min TTL

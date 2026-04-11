@@ -13,9 +13,10 @@ export const Docs: FC = () => (
   >
     <h1>Docs</h1>
     <p>
-      Point any MCP-capable agent at the hosted gateway. Free tools work
-      without authentication; Pro tools require an API key you receive
-      on the <a href="/pricing">pricing</a> checkout success page.
+      Point any MCP-capable agent at the hosted gateway. The 17 free
+      tools work without authentication; the 36+ Pro tools require an
+      API key you receive on the <a href="/pricing">pricing</a>{" "}
+      checkout success page.
     </p>
 
     <h2>Quickstart</h2>
@@ -25,27 +26,55 @@ export const Docs: FC = () => (
       </li>
       <li>
         Copy the <code>sv_live_</code> key from the success page (it is
-        only shown once).
+        only shown once — store it in a password manager immediately).
       </li>
       <li>
         Paste it into your <code>claude_desktop_config.json</code> (or
         Cursor / Zed equivalent) under the <code>sceneview</code> server.
       </li>
       <li>
-        Restart your MCP client and prompt away — the gateway is live at
-        <code>https://sceneview-mcp.workers.dev/mcp</code>.
+        Restart your MCP client and prompt away — Pro tool calls are
+        transparently forwarded to the gateway at{" "}
+        <code>https://sceneview-mcp.mcp-tools-lab.workers.dev/mcp</code>.
       </li>
     </ol>
 
-    <h2>Claude Desktop</h2>
+    <h2 id="claude-desktop">Claude Desktop</h2>
     <p>
-      Add a new server to your config file (macOS:{" "}
-      <code>~/Library/Application Support/Claude/claude_desktop_config.json</code>).
+      Claude Desktop only supports <strong>stdio</strong> MCP servers
+      (HTTP transport not yet available), so we ship a lite npm package
+      that runs locally and forwards Pro calls to the gateway. Add a
+      new server to your config file (macOS:{" "}
+      <code>~/Library/Application Support/Claude/claude_desktop_config.json</code>,
+      Windows:{" "}
+      <code>%APPDATA%\Claude\claude_desktop_config.json</code>):
     </p>
     <pre><code>{`{
   "mcpServers": {
     "sceneview": {
-      "url": "https://sceneview-mcp.workers.dev/mcp",
+      "command": "npx",
+      "args": ["-y", "sceneview-mcp@beta"],
+      "env": {
+        "SCENEVIEW_API_KEY": "sv_live_YOUR_KEY_HERE"
+      }
+    }
+  }
+}`}</code></pre>
+    <p>
+      Leave <code>env</code> empty (<code>{`{}`}</code>) if you only
+      want the 17 free tools — no signup needed. Restart Claude Desktop
+      after editing.
+    </p>
+
+    <h2>Cursor</h2>
+    <p>
+      Cursor supports HTTP MCP servers natively, so you can talk to
+      the gateway directly. Open Cursor Settings → MCP → Add new:
+    </p>
+    <pre><code>{`{
+  "mcpServers": {
+    "sceneview": {
+      "url": "https://sceneview-mcp.mcp-tools-lab.workers.dev/mcp",
       "headers": {
         "Authorization": "Bearer sv_live_YOUR_KEY_HERE"
       }
@@ -53,29 +82,21 @@ export const Docs: FC = () => (
   }
 }`}</code></pre>
 
-    <h2>Cursor</h2>
-    <p>
-      Open Cursor Settings, go to <em>MCP</em>, add a new HTTP server:
-    </p>
-    <pre><code>{`{
-  "name": "sceneview",
-  "url": "https://sceneview-mcp.workers.dev/mcp",
-  "headers": {
-    "Authorization": "Bearer sv_live_YOUR_KEY_HERE"
-  }
-}`}</code></pre>
-
     <h2>Zed</h2>
     <p>
-      Add the server to <code>~/.config/zed/settings.json</code> under
-      the <code>context_servers</code> section.
+      Zed's context servers support stdio too; use the same{" "}
+      <code>sceneview-mcp@beta</code> command as Claude Desktop above.
+      Add it to <code>~/.config/zed/settings.json</code> under the{" "}
+      <code>context_servers</code> section with the{" "}
+      <code>SCENEVIEW_API_KEY</code> env var set.
     </p>
 
     <h2>Raw curl</h2>
     <p>
-      The endpoint speaks Streamable HTTP JSON-RPC:
+      The endpoint speaks Streamable HTTP JSON-RPC. Handy for testing
+      a new key right after checkout:
     </p>
-    <pre><code>{`curl -X POST https://sceneview-mcp.workers.dev/mcp \\
+    <pre><code>{`curl -X POST https://sceneview-mcp.mcp-tools-lab.workers.dev/mcp \\
   -H "Authorization: Bearer sv_live_YOUR_KEY_HERE" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -84,15 +105,17 @@ export const Docs: FC = () => (
     "method": "tools/list"
   }'`}</code></pre>
 
-    <h2>Local stdio (free mode)</h2>
+    <h2>Local stdio (free mode, zero signup)</h2>
     <p>
-      The legacy npm package still works if you want the free tools
-      without any network round-trip:
+      If you only want the 17 free tools and no network round-trip at
+      all, install the latest stable package (3.6.x):
     </p>
-    <pre><code>{`npx sceneview-mcp`}</code></pre>
+    <pre><code>{`npx -y sceneview-mcp`}</code></pre>
     <p>
-      Set <code>SCENEVIEW_API_KEY</code> to unlock Pro tools via the
-      hosted proxy.
+      This runs every tool locally. To unlock the 36+ Pro tools later
+      after subscribing, switch to <code>sceneview-mcp@beta</code> and
+      set <code>SCENEVIEW_API_KEY</code> — see the Claude Desktop
+      snippet above.
     </p>
 
     <h2>Usage and rate limits</h2>

@@ -94,15 +94,15 @@ export const Pricing: FC = () => (
         period="forever"
         description="Everything you need to learn SceneView."
         features={[
-          "15 free tools",
+          "17 free tools",
           "SceneView API reference",
           "Known issues resource",
           "Community support",
           "Self-hosted stdio npm package",
         ]}
         contact={{
-          href: "mailto:hello@sceneview.dev?subject=SceneView%20MCP%20free%20tier%20access",
-          label: "Free tier coming soon — contact us",
+          href: "/docs#claude-desktop",
+          label: "Install free — see docs",
         }}
       />
       <TierCard
@@ -162,9 +162,13 @@ export const Pricing: FC = () => (
       </p>
       <h3>Can I self-host?</h3>
       <p>
-        Yes. The npm package keeps working as a stdio server. Set
-        <code>SCENEVIEW_API_KEY</code> to unlock Pro tools via the
-        hosted proxy, or run fully local on the Free tier.
+        Yes. The free tier runs fully local with{" "}
+        <code>npx -y sceneview-mcp</code> (17 tools, no signup, no
+        network round-trip). To unlock the 36+ Pro tools after paying,
+        switch to the hosted-proxy build with{" "}
+        <code>npx -y sceneview-mcp@beta</code> and set{" "}
+        <code>SCENEVIEW_API_KEY</code> in your MCP client config —
+        Pro calls then route transparently through the gateway.
       </p>
       <h3>Do you store my prompts?</h3>
       <p>
@@ -174,9 +178,13 @@ export const Pricing: FC = () => (
       </p>
       <h3>What about taxes?</h3>
       <p>
-        EU VAT is handled automatically by Stripe Tax based on your
-        billing address. Invoices are available in your Stripe email
-        receipts.
+        SceneView MCP is operated by a French auto-entrepreneur under
+        the <em>franchise en base de TVA</em> regime (CGI art. 293 B),
+        so prices on this page are final — no VAT is collected or
+        added at checkout regardless of your billing country. Stripe
+        emails you a receipt automatically; if your accounting needs a
+        formal invoice, email{" "}
+        <a href="mailto:hello@sceneview.dev">hello@sceneview.dev</a>.
       </p>
       <h3>I lost my key. What now?</h3>
       <p>

@@ -80,8 +80,37 @@ describe("GET public pages", () => {
     expect(body).toContain('name="plan" value="pro-yearly"');
     expect(body).toContain('name="plan" value="team-monthly"');
     expect(body).toContain('name="plan" value="team-yearly"');
-    // Free tier is a mailto, not a self-serve checkout.
+    // Free tier CTA points at the docs install guide, not mailto —
+    // the npm package is already the free tier, no signup needed.
+    expect(body).toContain('href="/docs#claude-desktop"');
+    expect(body).not.toContain("Free tier coming soon");
+    // hello@ is still linked elsewhere (lost key, invoice request).
     expect(body).toMatch(/mailto:hello@sceneview\.dev/);
+  });
+
+  it("GET /pricing matches the real free tool count and the real VAT regime", async () => {
+    const app = makeFullApp();
+    const res = await app.request("/pricing", {}, env());
+    const body = await res.text();
+    // Free tool count must match mcp/src/tiers.ts::FREE_TOOLS (17).
+    expect(body).toContain("17 free tools");
+    expect(body).not.toContain("15 free tools");
+    // VAT FAQ must reflect the real fiscal state: we are under
+    // France's franchise en base de TVA, Stripe Tax is DISABLED,
+    // no VAT is collected. The opposite claim is legally risky.
+    expect(body).not.toMatch(/Stripe Tax/);
+    expect(body).toMatch(/franchise en base de TVA/);
+    expect(body).toMatch(/no VAT is collected/);
+  });
+
+  it("GET /pricing self-host FAQ mentions the @beta tag for Pro access", async () => {
+    const app = makeFullApp();
+    const res = await app.request("/pricing", {}, env());
+    const body = await res.text();
+    // Without @beta, users install 3.6.4 @latest which has no proxy
+    // path to the gateway, so their paid key would do nothing. The
+    // FAQ must make that explicit.
+    expect(body).toContain("sceneview-mcp@beta");
   });
 
   it("GET /docs shows install instructions", async () => {
@@ -91,7 +120,10 @@ describe("GET public pages", () => {
     const body = await res.text();
     expect(body).toMatch(/Claude Desktop/);
     expect(body).toMatch(/Cursor/);
-    expect(body).toContain("sceneview-mcp.workers.dev/mcp");
+    expect(body).toContain("sceneview-mcp.mcp-tools-lab.workers.dev/mcp");
+    // Should NEVER reference the phantom NXDOMAIN subdomain that was
+    // briefly in the docs before the post-Stripe-first cleanup.
+    expect(body).not.toContain("https://sceneview-mcp.workers.dev/");
     expect(body).toContain("sv_live_");
     // Never leak an sk_live_ prefix — that is Stripe's.
     expect(body).not.toContain("sk_live_");
