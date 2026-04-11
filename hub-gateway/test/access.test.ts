@@ -71,8 +71,12 @@ function callTool(key: string, name: string): Request {
 }
 
 describe("access module — pure functions", () => {
-  it("FREE_TOOLS contains one tool per library (11 total)", () => {
-    expect(FREE_TOOLS.size).toBe(11);
+  it("FREE_TOOLS covers every library (13 total = 9 stubbed + 4 real)", () => {
+    // 9 stubbed libraries get 1 discovery tool each; the 2 real
+    // vendored libraries (automotive + healthcare) get 2 each
+    // (list + validate). See src/mcp/access.ts FREE_TOOLS header
+    // for the rationale.
+    expect(FREE_TOOLS.size).toBe(13);
   });
 
   it("getToolTier returns `free` for whitelisted tools", () => {
