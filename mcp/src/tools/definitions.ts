@@ -487,4 +487,20 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       required: ["query"],
     },
   },
+  {
+    name: "analyze_project",
+    description:
+      "Scans a local SceneView project on the user's machine and returns a structured analysis: detected project type (Android, iOS, Web), extracted SceneView dependency version, whether it is outdated vs the latest known release, and any known anti-patterns found by reading source files (threading violations, LightNode trailing-lambda bug, deprecated 2.x APIs, Sceneform imports). Safe: scans at most 30 source files and 500 KB total, never writes to disk. Use this when a user asks 'is my project up to date?', 'what's wrong with my SceneView code?', or when you want a fast sanity check of a project before generating code for it.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        path: {
+          type: "string",
+          description:
+            "Absolute or relative path to the project root to scan. Defaults to the current working directory of the MCP server.",
+        },
+      },
+      required: [],
+    },
+  },
 ];

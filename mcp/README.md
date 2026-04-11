@@ -113,6 +113,7 @@ Same JSON config as above. The server communicates via **stdio** using the stand
 | `get_gesture_guide` | Guide for gestures: isEditable, onTouchEvent, tap-to-place, drag-to-rotate, pinch-to-scale |
 | `get_performance_tips` | Performance optimization: LOD, texture compression, instancing, profiling with Systrace/AGI |
 | `search_models` | Searches Sketchfab for free 3D models matching a query (BYOK — set `SKETCHFAB_API_KEY`) |
+| `analyze_project` | Scans a local SceneView project on disk — detects platform, extracts version, flags outdated deps and known anti-patterns (threading, LightNode bug, 2.x APIs) |
 
 #### `search_models` — find real 3D assets from the AI
 
@@ -137,6 +138,17 @@ Generated SceneView code is only useful if it points at an asset that actually e
 ```
 
 Call it like `search_models({ query: "red sports car", category: "cars-vehicles", maxResults: 6 })`. If the key is missing, the tool returns a clear message explaining how to get one instead of failing silently.
+
+#### `analyze_project` — local project scan
+
+Because the MCP server runs on the user's machine, `analyze_project` can read their project files directly. Given a `path` (default: `process.cwd()`), it:
+
+- Detects the project type by looking for `build.gradle(.kts)` with `io.github.sceneview:sceneview` (Android), `Package.swift` with `SceneViewSwift` (iOS), or `package.json` with `sceneview-web` (Web).
+- Extracts the SceneView dependency version and compares it against the latest release known to this MCP build, flagging outdated projects.
+- Walks up to **30** source files (`.kt`, `.kts`, `.swift`, `.js`, `.ts`) and up to **500 KB** total, scanning for well-known anti-patterns: Filament/ModelLoader calls inside background coroutines, the `LightNode(...) { ... }` trailing-lambda bug, deprecated 2.x APIs (`ArSceneView`, `TransformableNode`, `PlacementNode`, `ViewRenderable`, `loadModelAsync`), and `com.google.ar.sceneform.*` imports.
+- Returns a structured `{ projectType, sceneViewVersion, latestVersion, isOutdated, warnings, suggestions }` report, plus a Markdown summary.
+
+The tool is read-only, never writes to disk, and gracefully handles missing directories. Use it when the user asks "is my project up to date?" or as a quick sanity check before generating new code for an existing codebase.
 
 ### 2 resources
 
