@@ -13,10 +13,10 @@ MAGIC_LINK_FROM_EMAIL = "SceneView MCP <no-reply@sceneview.dev>"
 # Stripe price ids (set to match the products you create in the Stripe
 # dashboard before go-live). These are vars, NOT secrets, because the
 # price ids are not sensitive.
-STRIPE_PRICE_PRO_MONTHLY = ""
-STRIPE_PRICE_PRO_YEARLY = ""
-STRIPE_PRICE_TEAM_MONTHLY = ""
-STRIPE_PRICE_TEAM_YEARLY = ""
+STRIPE_PRICE_PRO_MONTHLY = "price_1TL04hEr7tnnFQbdZuwed6FR"
+STRIPE_PRICE_PRO_YEARLY = "price_1TL04hEr7tnnFQbdy7JgehgP"
+STRIPE_PRICE_TEAM_MONTHLY = "price_1TL08SEr7tnnFQbdScSMu31p"
+STRIPE_PRICE_TEAM_YEARLY = "price_1TL08SEr7tnnFQbdSX9InHx8"
 
 # D1 database — provision with:
 #   wrangler d1 create sceneview-mcp
@@ -24,7 +24,7 @@ STRIPE_PRICE_TEAM_YEARLY = ""
 [[d1_databases]]
 binding = "DB"
 database_name = "sceneview-mcp"
-database_id = "REPLACE_WITH_D1_ID"
+database_id = "8aaddcda-e36e-4287-9222-1df924426c9f"
 migrations_dir = "migrations"
 
 # KV namespace for rate limiting counters and auth cache — provision with:
@@ -32,7 +32,7 @@ migrations_dir = "migrations"
 # then paste the id below.
 [[kv_namespaces]]
 binding = "RL_KV"
-id = "REPLACE_WITH_KV_ID"
+id = "9a40d334be6149f7a4ba18451a60245f"
 
 # Secrets (set with `wrangler secret put <NAME>`):
 #   JWT_SECRET            — 32+ random bytes, used to sign dashboard JWTs
