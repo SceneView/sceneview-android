@@ -67,6 +67,12 @@ is_whitelisted() {
     .claude/reports/*.md) return 0 ;;
     .claude/plans/*.md) return 0 ;;
 
+    # The detector script documents the patterns it matches; the
+    # quality-gate workflow file has an explanatory header comment
+    # that necessarily contains "Scene{}/ARScene{}" as prose.
+    .claude/scripts/check-deprecated-api.sh) return 0 ;;
+    .github/workflows/quality-gate.yml) return 0 ;;
+
     # Demo recordings — historical marketing artifacts
     mcp/demo/sceneview-3.0-linkedin-video.html) return 0 ;;
     mcp/demo/sceneview-mcp-linkedin-video.html) return 0 ;;
