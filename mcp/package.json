@@ -36,6 +36,10 @@
   "bin": {
     "sceneview-mcp": "dist/index.js"
   },
+  "publishConfig": {
+    "access": "public",
+    "tag": "next"
+  },
   "files": [
     "dist/**/*.js",
     "!dist/**/*.test.js",
