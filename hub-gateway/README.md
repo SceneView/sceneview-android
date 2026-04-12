@@ -33,8 +33,8 @@ Sibling of [`mcp-gateway/`](../mcp-gateway) (Gateway #1, which serves
 By design, the hub gateway reuses Gateway #1's bindings so one
 subscription covers both:
 
-- D1: `sceneview-mcp` database (`8aaddcda-e36e-4287-9222-1df924426c9f`)
-- KV: `RL_KV` namespace (`9a40d334be6149f7a4ba18451a60245f`)
+- D1: `sceneview-mcp` database (`REDACTED-D1-DATABASE-ID`)
+- KV: `RL_KV` namespace (`REDACTED-KV-NAMESPACE-ID`)
 
 An API key minted on Gateway #1 will authenticate on the hub as soon
 as the auth middleware is ported. The schema does not need changes —

@@ -4,6 +4,40 @@
 
 ---
 
+## 🔍 SESSION stupefied-meitner — 2026-04-12 — Gateway audit + hub-mcp fixes
+
+**Worktree:** `stupefied-meitner`
+**Branch:** `claude/stupefied-meitner`
+
+### What shipped
+
+**Full production audit of both gateways** — 8/8 checkout plans verified (`cs_live_...`), all health/pricing/auth-gate endpoints confirmed.
+
+**3 hub-gateway fixes:**
+
+| Fix | File | Impact |
+|---|---|---|
+| KV handoff prefix `checkout_key:` → `hub-checkout:` + API key prefix `sv_live_` → `hub_live_` | `hub-gateway/src/billing/key-provisioning.ts` | **BLOCKER FIX** — paying hub-mcp customers would never see their API key |
+| Added Claude Desktop stdio + Cursor HTTP docs sections | `hub-gateway/src/routes/landing.ts` | Docs completeness |
+| Free tool count 15 → 17 on landing page | `mcp-gateway/src/dashboard/landing.tsx` | Consistency with /docs and /pricing |
+
+**Tests:** 58/58 hub-gateway, 171/171 mcp-gateway — all passing.
+
+### Audit results
+
+- **Gateway #1** (sceneview-mcp): READY for real card test. All pages clean, stdio snippets correct, no phantom URLs, no false VAT claims.
+- **Gateway #2** (hub-mcp): Was NOT ready (checkout-success broken). Now fixed — KV handoff wired, docs updated.
+- **Shared:** `customer_creation` bug guard confirmed in both gateways.
+
+### What's NOT done
+
+- **Deploy both gateways** — code changes are local only, need `wrangler deploy` for each
+- **First real paying customer test** — checklist documented in this session (see conversation)
+- **npm `hub-mcp@beta` package** — not published, Claude Desktop snippet shows "coming soon"
+- **`@latest` bump** — stays on 3.6.5
+
+---
+
 ## 🧹 SESSION hungry-ptolemy — 2026-04-12 — PR merge + branch/worktree cleanup
 
 **Worktree:** `hungry-ptolemy`
@@ -179,20 +213,20 @@ Complete Gateway #2 for the non-SceneView MCP portfolio:
 
 | Resource | Value |
 |---|---|
-| Portfolio Monthly | `price_1TLLkMEr7tnnFQbdxthTkpqZ` (29 EUR/mo) |
-| Portfolio Yearly | `price_1TLLl5Er7tnnFQbdAoRCEQHp` (290 EUR/yr) |
-| Team Monthly | `price_1TLLldEr7tnnFQbdG1n8uwOb` (79 EUR/mo) |
-| Team Yearly | `price_1TLLmFEr7tnnFQbdLvONEJu7` (790 EUR/yr) |
-| Webhook endpoint | `we_1TLM5LEr7tnnFQbdXMoVW3Ev` (`hub-mcp-gateway`, checkout.session.completed) |
+| Portfolio Monthly | `price_REDACTED_PORT_MO_GW2` (29 EUR/mo) |
+| Portfolio Yearly | `price_REDACTED_PORT_YR_GW2` (290 EUR/yr) |
+| Team Monthly | `price_REDACTED_TEAM_MO_GW2` (79 EUR/mo) |
+| Team Yearly | `price_REDACTED_TEAM_YR_GW2` (790 EUR/yr) |
+| Webhook endpoint | `we_REDACTED_GW2` (`hub-mcp-gateway`, checkout.session.completed) |
 | STRIPE_SECRET_KEY | `sk_live_...` (same as Gateway #1 — new key created 2026-04-12, named `hub-mcp-gateway`) |
-| STRIPE_WEBHOOK_SECRET | `whsec_Wyzqe3GKSb2WJvzvulLvaJHtOEYXUJfa` |
+| STRIPE_WEBHOOK_SECRET | `whsec_REDACTED_ROTATE_IN_STRIPE` |
 
 **CRITICAL**: the `sk_live_...ycSn` key was REPLACED by the new `hub-mcp-gateway` key on 2026-04-12. Both gateways now use the new key. Gateway #1 was verified still functional (POST /billing/checkout → 303).
 
 ### Shared infrastructure (Gateway #1 + #2)
 
-- D1: `8aaddcda-e36e-4287-9222-1df924426c9f` (sceneview-mcp)
-- KV: `9a40d334be6149f7a4ba18451a60245f`
+- D1: `REDACTED-D1-DATABASE-ID` (sceneview-mcp)
+- KV: `REDACTED-KV-NAMESPACE-ID`
 - KV prefixes: Gateway #1 uses `auth:`, `rl:`, `quota:` — Gateway #2 uses `hub-auth:`, `hub-rl:`, `hub-quota:`
 - 1 API key works on both gateways (same D1 users + api_keys tables)
 
@@ -360,11 +394,11 @@ gh release create v4.0.0 --generate-notes
 - **KYC validated instantly** (entity shared with Thomas Gorisse / GitHub Sponsors / Polar Stripe entity)
 - **Fiscal structure:** auto-entrepreneur existant (no SASU), franchise en base de TVA → Stripe Tax disabled on purpose
 - **4 products in LIVE catalogue**, mapped in `mcp-gateway/wrangler.toml`:
-  - Pro Monthly `price_1TL6FLEr7tnnFQbdmgSwz5Ow` (19 EUR/mo)
-  - Pro Yearly `price_1TL6KREr7tnnFQbdifEbYYcG` (190 EUR/yr)
-  - Team Monthly `price_1TL6L9Er7tnnFQbdC9CDxQNY` (49 EUR/mo)
-  - Team Yearly `price_1TL6NVEr7tnnFQbdVNLFF9lN` (490 EUR/yr)
-- **Webhook `we_1TL7HfEr7tnnFQbdFDu7bmUr`** listening on 5 events: `checkout.session.completed`, `customer.subscription.{created,updated,deleted}`, `invoice.payment_failed`
+  - Pro Monthly `price_REDACTED_PRO_MO_GW1` (19 EUR/mo)
+  - Pro Yearly `price_REDACTED_PRO_YR_GW1` (190 EUR/yr)
+  - Team Monthly `price_REDACTED_TEAM_MO_GW1` (49 EUR/mo)
+  - Team Yearly `price_REDACTED_TEAM_YR_GW1` (490 EUR/yr)
+- **Webhook `we_REDACTED_GW1`** listening on 5 events: `checkout.session.completed`, `customer.subscription.{created,updated,deleted}`, `invoice.payment_failed`
 - **Cloudflare Secrets rotated TEST → LIVE:** `STRIPE_SECRET_KEY` (sk_live_...), `STRIPE_WEBHOOK_SECRET` (whsec_...)
 - **Worker deployed:** version id `5947f365-b55b-425c-ab28-f3392caba1c4`
 
@@ -438,7 +472,7 @@ Plus `sceneview-mcp@4.0.0-beta.1` published on npm with `@beta` tag, Claude Desk
 
 **Strategic decisions (no questions left for the user)**:
 - **Pricing**: unified **Portfolio Access 29€/mo** + **Team 79€/mo** — distinct from Gateway #1's Pro 19/Team 49 grid but honored on both gateways.
-- **Infra**: **SHARED with Gateway #1** — same D1 (`8aaddcda-e36e-4287-9222-1df924426c9f`), same KV (`9a40d334be6149f7a4ba18451a60245f`). One API key, one subscription, both gateways unlocked. Gateway #1 owns the migrations; Gateway #2 is a read-only consumer of `users` + `api_keys`.
+- **Infra**: **SHARED with Gateway #1** — same D1 (`REDACTED-D1-DATABASE-ID`), same KV (`REDACTED-KV-NAMESPACE-ID`). One API key, one subscription, both gateways unlocked. Gateway #1 owns the migrations; Gateway #2 is a read-only consumer of `users` + `api_keys`.
 - **Subdomain**: `hub-mcp.mcp-tools-lab.workers.dev` (wrangler.toml name `hub-mcp`).
 - **Multiplexing**: single `/mcp` endpoint with package-prefixed tool names (`architecture__...`, `french_admin__...`, etc.), mirroring Gateway #1's multiplex pattern. Collision detection at worker startup.
 - **Excluded**: `sceneview-mcp` stays on Gateway #1 (no duplication).
@@ -464,7 +498,7 @@ Plus `sceneview-mcp@4.0.0-beta.1` published on npm with `@beta` tag, Claude Desk
 1. `dd024f15` `feat(mcp): v4.0.0-beta.1 lite package` — proxy.ts + proxy.test.ts (17 tests), stderr banner, Pro tools routed via `dispatchProxyToolCall` to `sceneview-mcp.mcp-tools-lab.workers.dev/mcp`, package.json bumped 3.6.4 → 4.0.0-beta.1, README hosted-first section with 19€/49€ Pro/Team pricing. **Package LIVE on npm**: `npm view sceneview-mcp@beta version` → `4.0.0-beta.1`, `latest` stays on `3.6.4`, zero impact on 3 450 DL/mo existing consumers. (A parallel agent published the identical content ~seconds before my own `npm publish`; my 403 is a race artifact, the published content is mine bit-for-bit.)
 2. `74a9a47e` `fix(mcp-gateway): re-fetch Checkout Session when webhook payload has no subscription id` — root cause for the first TEST checkout silently leaving the user on free tier. Stripe sometimes delivers `checkout.session.completed` with `subscription: null` (async hydration), the handler was early-returning. Fix: re-fetch via `retrieveCheckoutSession` (same fallback pattern we had for email). Regression test added in `test/stripe-webhook.test.ts` — 19 tests in that file, **169 gateway tests passing, 2742 mcp tests passing**. Deployed via `npm run deploy` to version `073ab6f5-c9d8-47d2-b98b-fe65940dbbdd`.
 
-**End-to-end dispatch validated in TEST mode** with seeded key `sv_live_OGPM732I2OZ5QPHXOHQHQ5YMZXZPV4OI` (handoff-documented): `npx sceneview-mcp@beta` → initialize OK, `tools/call get_ios_setup {type:"3d"}` → real `SceneViewSwift iOS 3D Setup` markdown returned (not a stub). Stderr banner shows `HOSTED (Pro tools → gateway)`. `/mcp` 401 JSON-RPC `-32001` confirmed for fake/missing keys. Chain auth → rate limit → tier gate → dispatch all green.
+**End-to-end dispatch validated in TEST mode** with seeded key `sv_live_REDACTED_TEST_KEY` (handoff-documented): `npx sceneview-mcp@beta` → initialize OK, `tools/call get_ios_setup {type:"3d"}` → real `SceneViewSwift iOS 3D Setup` markdown returned (not a stub). Stderr banner shows `HOSTED (Pro tools → gateway)`. `/mcp` 401 JSON-RPC `-32001` confirmed for fake/missing keys. Chain auth → rate limit → tier gate → dispatch all green.
 
 **Stale user cleanup**: `usr_bgklgaxqvpe4` (thomas.gorisse@gmail.com, tier=free, zero subs, zero keys — victim of the pre-fix bug) deleted from D1 remote so the next checkout with the same email provisions a clean user via the fixed `handleCheckoutCompleted`.
 
@@ -578,8 +612,8 @@ https://sceneview-mcp.mcp-tools-lab.workers.dev
 ### Cloudflare Resources (déjà provisionnées, ne PAS recréer)
 - **Worker** : `sceneview-mcp` (account `1f98596aa8627f97539218f5bcb3d9af`)
 - **Subdomain** : `mcp-tools-lab.workers.dev` (neutre, renommé une fois, NE PAS retoucher)
-- **D1** : `sceneview-mcp` id `8aaddcda-e36e-4287-9222-1df924426c9f` — 5 tables migrées
-- **KV** : `RL_KV` id `9a40d334be6149f7a4ba18451a60245f`
+- **D1** : `sceneview-mcp` id `REDACTED-D1-DATABASE-ID` — 5 tables migrées
+- **KV** : `RL_KV` id `REDACTED-KV-NAMESPACE-ID`
 - **Secrets** (`wrangler secret put`) : `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `JWT_SECRET`
 - **Vars** (dans `mcp-gateway/wrangler.toml` committé) : 4 `STRIPE_PRICE_*` + `DASHBOARD_BASE_URL`
 
@@ -591,7 +625,7 @@ https://sceneview-mcp.mcp-tools-lab.workers.dev
 
 ### Seeded test API key
 ```
-sv_live_OGPM732I2OZ5QPHXOHQHQ5YMZXZPV4OI
+sv_live_REDACTED_TEST_KEY
 ```
 Associée à `usr_smoke` / `smoke@sceneview.dev` / tier `pro`, seedée directement dans D1 remote.
 

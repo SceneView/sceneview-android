@@ -19,16 +19,16 @@ The full "first paying customer" pipeline went LIVE. The gateway is no longer in
 
 | Plan | Product ID | Price ID (LIVE) | Amount |
 |---|---|---|---|
-| Pro Monthly | `prod_UJji2OHd9mMLkM` | `price_1TL6FLEr7tnnFQbdmgSwz5Ow` | 19 EUR / month |
-| Pro Yearly | `prod_UJjoWo4eB4eNq9` | `price_1TL6KREr7tnnFQbdifEbYYcG` | 190 EUR / year |
-| Team Monthly | `prod_UJjod2rU8MRwpz` | `price_1TL6L9Er7tnnFQbdC9CDxQNY` | 49 EUR / month |
-| Team Yearly | `prod_UJjrjhJweUxoCf` | `price_1TL6NVEr7tnnFQbdVNLFF9lN` | 490 EUR / year |
+| Pro Monthly | `prod_REDACTED_PRO_MO` | `price_REDACTED_PRO_MO_GW1` | 19 EUR / month |
+| Pro Yearly | `prod_REDACTED_PRO_YR` | `price_REDACTED_PRO_YR_GW1` | 190 EUR / year |
+| Team Monthly | `prod_REDACTED_TEAM_MO` | `price_REDACTED_TEAM_MO_GW1` | 49 EUR / month |
+| Team Yearly | `prod_REDACTED_TEAM_YR` | `price_REDACTED_TEAM_YR_GW1` | 490 EUR / year |
 
 These are the **only** plan→price mappings currently wired in `mcp-gateway/wrangler.toml` vars. Yearly prices are intentionally `monthly × 10` ("save 2 months yearly"), not `× 12`.
 
 ### 3. Webhook endpoint wired
 
-- **ID:** `we_1TL7HfEr7tnnFQbdFDu7bmUr`
+- **ID:** `we_REDACTED_GW1`
 - **URL:** `https://sceneview-mcp.mcp-tools-lab.workers.dev/stripe/webhook`
 - **Events (5, do not add more):** `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`
 - **Signing secret** (`whsec_...`): stored as Cloudflare Secret `STRIPE_WEBHOOK_SECRET`, never committed.
@@ -120,7 +120,7 @@ The `createCheckoutSession` function no longer sets `customer_creation` at all. 
 
 ### Do not regenerate the Stripe API key or rotate secrets without coordination
 
-`STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are already set in Cloudflare Secrets. Running `wrangler secret put` again will prompt for a new value and overwrite them — if you don't have the right values at hand, you'll black-hole revenue. The sk_live_ is revealable again via dashboard.stripe.com/apikeys + 2FA. The whsec_ is revealable via dashboard.stripe.com/workbench/webhooks/we_1TL7HfEr7tnnFQbdFDu7bmUr + 👁 icon.
+`STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are already set in Cloudflare Secrets. Running `wrangler secret put` again will prompt for a new value and overwrite them — if you don't have the right values at hand, you'll black-hole revenue. The sk_live_ is revealable again via dashboard.stripe.com/apikeys + 2FA. The whsec_ is revealable via dashboard.stripe.com/workbench/webhooks/we_REDACTED_GW1 + 👁 icon.
 
 ### Session B (`multi-gateway-sprint`) specifically — do not duplicate the customer_creation bug
 

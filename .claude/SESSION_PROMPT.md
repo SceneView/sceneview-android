@@ -82,8 +82,8 @@ pet-care-mcp, event-planning-mcp, mcp-creator-kit
    - `hub-mcp.mcp-tools-lab.workers.dev` ?
 
 5. **D1 + KV partagés** ou nouveaux ?
-   - Si auth partagée → réutiliser D1 `8aaddcda-e36e-4287-9222-1df924426c9f`
-     et KV `9a40d334be6149f7a4ba18451a60245f` du gateway #1.
+   - Si auth partagée → réutiliser D1 `REDACTED-D1-DATABASE-ID`
+     et KV `REDACTED-KV-NAMESPACE-ID` du gateway #1.
 
 **→ Utiliser AskUserQuestion au début de la session pour trancher.**
 

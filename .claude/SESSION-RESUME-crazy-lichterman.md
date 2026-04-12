@@ -45,7 +45,7 @@ rerun-3d-mcp:  { latest: '1.0.0' }
 
 ### Gateway state
 
-MCP Gateway #1 is LIVE with real Stripe (4 `price_1TL6...` products, webhook `we_1TL7Hf...`). Hub-gateway #2 also scaffolded by Session B. All 4 checkout plans return `cs_live_*`. See NOTICE file for the 5 non-negotiables.
+MCP Gateway #1 is LIVE with real Stripe (4 `price_1TL6...` products, webhook `we_REDACTED...`). Hub-gateway #2 also scaffolded by Session B. All 4 checkout plans return `cs_live_*`. See NOTICE file for the 5 non-negotiables.
 
 ### Worktree cleanup needed
 
