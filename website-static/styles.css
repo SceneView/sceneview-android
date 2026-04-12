@@ -2581,6 +2581,23 @@ ul { list-style: none; }
   padding: 0 var(--container-padding);
 }
 
+/* ── Developer Tools ───────────────────────────────────────────────────────── */
+.devtools { padding: 96px 0; }
+.devtools__container { max-width: var(--container-width); margin: 0 auto; padding: 0 var(--container-padding); }
+.devtools__title { font-size: clamp(2rem, 4vw, 3rem); font-weight: 800; letter-spacing: -0.04em; margin-bottom: 16px; }
+.devtools__subtitle { font-size: 1.125rem; color: var(--text-secondary); margin-bottom: 48px; }
+.devtools__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
+.devtools__card { background: var(--surface-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 32px; transition: transform 0.2s, box-shadow 0.2s; }
+.devtools__card:hover { transform: translateY(-4px); box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+.devtools__card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.devtools__card-icon { font-size: 28px; color: var(--accent); }
+.devtools__card-badge { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; background: var(--accent); color: #fff; padding: 2px 10px; border-radius: 999px; }
+.devtools__card-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 12px; }
+.devtools__card-text { font-size: 0.95rem; color: var(--text-secondary); line-height: 1.6; }
+.devtools__card-text a { color: var(--accent); text-decoration: underline; }
+.devtools__card-platforms { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+.devtools__card-platform { font-size: 0.75rem; font-weight: 600; background: rgba(var(--accent-rgb, 59,130,246), 0.15); color: var(--accent); padding: 4px 12px; border-radius: 999px; }
+
 .metrics__title {
   font-size: clamp(2rem, 4vw, 3rem);
   font-weight: 800;
@@ -3120,7 +3137,7 @@ ul { list-style: none; }
   .stats { padding: 24px 0; }
   .features__title, .code-section__title, .platforms__title, .showcase__title,
   .install__title, .ai-section__title, .use-cases__title, .comparison__title,
-  .metrics__title, .try-sv__title, .get-involved__title {
+  .devtools__title, .metrics__title, .try-sv__title, .get-involved__title {
     font-size: 1.5rem;
   }
   .feature-card { padding: 24px; }
