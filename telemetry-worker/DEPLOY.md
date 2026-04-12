@@ -116,3 +116,22 @@ If `STATS_TOKEN` is not configured, the endpoint remains open — useful for loc
 ## After deployment
 
 Update `TELEMETRY_ENDPOINT` in `mcp/src/telemetry.ts` if the URL differs from `https://telemetry.sceneview.io/v1/events`.
+
+## Dashboard
+
+A standalone HTML dashboard (`dashboard.html`) provides a visual stats overview.
+
+**To use:**
+1. Open `dashboard.html` in your browser (file:// protocol works locally)
+2. On first load, the dashboard prompts for:
+   - **API base URL** (e.g., `https://telemetry.sceneview.io`)
+   - **Bearer token** (your `STATS_TOKEN` value, if set)
+3. Credentials are stored in the browser's localStorage and persisted between sessions
+4. The dashboard auto-refreshes every 60 seconds and works offline once loaded
+
+**Features:**
+- 24-hour event totals (inits vs tool calls vs unique clients)
+- Top 20 tools by call count
+- MCP versions in use
+- Light/dark mode toggle
+- Local-first design (no analytics on the dashboard itself)

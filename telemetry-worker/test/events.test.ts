@@ -322,3 +322,120 @@ describe("404 catch-all", () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe("GET /v1/timeseries", () => {
+  function getTimeseries(
+    params: Record<string, string>,
+    env: ReturnType<typeof makeEnv> & { STATS_TOKEN?: string },
+    headers: Record<string, string> = {},
+  ) {
+    const qs = new URLSearchParams(params).toString();
+    const url = qs ? `/v1/timeseries?${qs}` : "/v1/timeseries";
+    return app.request(url, { method: "GET", headers }, env);
+  }
+
+  it("returns 200 with default params (days=30, metric=events)", async () => {
+    const env = makeEnv();
+    const db = env.DB as unknown as ReturnType<typeof createMockD1>;
+    db._rows = [{ time: "2026-03-13", value: 5 }];
+
+    const res = await getTimeseries({}, env);
+    expect(res.status).toBe(200);
+
+    const json = await res.json() as { metric: string; days: number; data: unknown[] };
+    expect(json.metric).toBe("events");
+    expect(json.days).toBe(30);
+    expect(Array.isArray(json.data)).toBe(true);
+  });
+
+  it("returns data for metric=tools", async () => {
+    const env = makeEnv();
+    const db = env.DB as unknown as ReturnType<typeof createMockD1>;
+    db._rows = [{ time: "2026-03-13", label: "get_node_info", value: 10 }];
+
+    const res = await getTimeseries({ metric: "tools" }, env);
+    expect(res.status).toBe(200);
+
+    const json = await res.json() as { metric: string; days: number; data: unknown[] };
+    expect(json.metric).toBe("tools");
+    expect(json.days).toBe(30);
+    expect(Array.isArray(json.data)).toBe(true);
+  });
+
+  it("returns data for metric=versions", async () => {
+    const env = makeEnv();
+    const db = env.DB as unknown as ReturnType<typeof createMockD1>;
+    db._rows = [{ time: "2026-03-13", label: "4.0.0-rc.1", value: 8 }];
+
+    const res = await getTimeseries({ metric: "versions" }, env);
+    expect(res.status).toBe(200);
+
+    const json = await res.json() as { metric: string; days: number; data: unknown[] };
+    expect(json.metric).toBe("versions");
+    expect(Array.isArray(json.data)).toBe(true);
+  });
+
+  it("returns data for metric=clients", async () => {
+    const env = makeEnv();
+    const db = env.DB as unknown as ReturnType<typeof createMockD1>;
+    db._rows = [{ time: "2026-03-13", label: "claude-desktop", value: 3 }];
+
+    const res = await getTimeseries({ metric: "clients" }, env);
+    expect(res.status).toBe(200);
+
+    const json = await res.json() as { metric: string; days: number; data: unknown[] };
+    expect(json.metric).toBe("clients");
+    expect(Array.isArray(json.data)).toBe(true);
+  });
+
+  it("rejects invalid metric value → 400", async () => {
+    const env = makeEnv();
+    const res = await getTimeseries({ metric: "invalid_metric" }, env);
+    expect(res.status).toBe(400);
+
+    const json = await res.json() as { error: string; valid: string[] };
+    expect(json.error).toBe("invalid_metric");
+    expect(Array.isArray(json.valid)).toBe(true);
+    expect(json.valid).toContain("events");
+  });
+
+  it("clamps days to max 90", async () => {
+    const env = makeEnv();
+    const db = env.DB as unknown as ReturnType<typeof createMockD1>;
+    db._rows = [];
+
+    const res = await getTimeseries({ days: "999" }, env);
+    expect(res.status).toBe(200);
+
+    const json = await res.json() as { metric: string; days: number; data: unknown[] };
+    expect(json.days).toBe(90);
+  });
+
+  it("returns 401 when STATS_TOKEN is set but wrong bearer provided", async () => {
+    const env = { ...makeEnv(), STATS_TOKEN: "secret-timeseries" };
+    const res = await getTimeseries(
+      {},
+      env,
+      { Authorization: "Bearer wrong-token" },
+    );
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: "unauthorized" });
+  });
+
+  it("returns 200 when STATS_TOKEN is set and correct bearer provided", async () => {
+    const env = { ...makeEnv(), STATS_TOKEN: "secret-timeseries" };
+    const db = env.DB as unknown as ReturnType<typeof createMockD1>;
+    db._rows = [];
+
+    const res = await getTimeseries(
+      {},
+      env,
+      { Authorization: "Bearer secret-timeseries" },
+    );
+    expect(res.status).toBe(200);
+
+    const json = await res.json() as { metric: string; days: number; data: unknown[] };
+    expect(json.metric).toBe("events");
+    expect(json.days).toBe(30);
+  });
+});
