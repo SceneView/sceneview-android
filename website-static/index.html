@@ -46,6 +46,41 @@
   <meta name="twitter:image" content="https://sceneview.github.io/og-image.png">
   <meta name="twitter:image:alt" content="SceneView — 3D and AR SDK for every platform">
 
+  <!-- Google Analytics 4 -->
+  <!-- TODO: Replace G-XXXXXXXXXX with your real GA4 Measurement ID -->
+  <!-- Create one at https://analytics.google.com → Admin → Create Property -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-XXXXXXXXXX', {
+      page_title: document.title,
+      content_group: 'website'
+    });
+    // Track key events
+    document.addEventListener('DOMContentLoaded', function() {
+      // Track playground usage
+      document.querySelectorAll('[data-tab]').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+          gtag('event', 'tab_click', { tab_name: this.dataset.tab });
+        });
+      });
+      // Track CTA clicks
+      document.querySelectorAll('a[href*="github.com/sceneview"]').forEach(function(link) {
+        link.addEventListener('click', function() {
+          gtag('event', 'cta_click', { link_url: this.href, link_text: this.textContent.trim() });
+        });
+      });
+      // Track npm copy events
+      document.querySelectorAll('.code-block').forEach(function(block) {
+        block.addEventListener('click', function() {
+          gtag('event', 'code_copy', { code_snippet: this.textContent.substring(0, 100) });
+        });
+      });
+    });
+  </script>
+
   <!-- Preconnect hints -->
   <!-- Preload critical resources -->
   <link rel="preload" href="styles.css" as="style">

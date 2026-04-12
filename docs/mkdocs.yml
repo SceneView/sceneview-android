@@ -96,6 +96,24 @@ nav:
   - Migration (v3 → v4): migration-v4.md
   - Migration (v2 → v3): migration.md
 
+extra:
+  analytics:
+    provider: google
+    # TODO: Replace G-XXXXXXXXXX with your real GA4 Measurement ID
+    # Create one at https://analytics.google.com → Admin → Create Property
+    property: G-XXXXXXXXXX
+    feedback:
+      title: Was this page helpful?
+      ratings:
+        - icon: material/emoticon-happy-outline
+          name: This page was helpful
+          data: 1
+          note: Thanks for your feedback!
+        - icon: material/emoticon-sad-outline
+          name: This page could be improved
+          data: 0
+          note: Thanks, we'll work on improving this page.
+
 plugins:
   - search
   - social
