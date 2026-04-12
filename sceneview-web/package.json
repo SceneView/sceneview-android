@@ -25,6 +25,9 @@
     "directory": "sceneview-web"
   },
   "license": "Apache-2.0",
+  "publishConfig": {
+    "tag": "next"
+  },
   "peerDependencies": {
     "filament": ">=1.52.0"
   }
