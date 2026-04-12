@@ -150,7 +150,7 @@ describe("telemetry payload shape", () => {
     const call = mock.mock.calls[callIndex];
     expect(call, `expected fetch call #${callIndex}`).toBeDefined();
     const [url, init] = call as [string, RequestInit];
-    expect(url).toBe("https://telemetry.sceneview.io/v1/events");
+    expect(url).toBe("https://sceneview-telemetry.mcp-tools-lab.workers.dev/v1/events");
     expect(init.method).toBe("POST");
     const headers = (init.headers ?? {}) as Record<string, string>;
     expect(headers["content-type"]).toBe("application/json");
@@ -194,7 +194,7 @@ describe("telemetry payload shape", () => {
     // Two events → batch endpoint.
     expect(mock).toHaveBeenCalledTimes(1);
     const [url, init] = mock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("https://telemetry.sceneview.io/v1/batch");
+    expect(url).toBe("https://sceneview-telemetry.mcp-tools-lab.workers.dev/v1/batch");
     expect(init.method).toBe("POST");
     const headers = (init.headers ?? {}) as Record<string, string>;
     expect(headers["content-type"]).toBe("application/json");
@@ -391,7 +391,7 @@ describe("telemetry batching", () => {
 
     expect(mock).toHaveBeenCalledTimes(1);
     const [url, init] = mock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("https://telemetry.sceneview.io/v1/batch");
+    expect(url).toBe("https://sceneview-telemetry.mcp-tools-lab.workers.dev/v1/batch");
     const body = JSON.parse(init.body as string) as { events: TelemetryPayload[] };
     expect(body.events).toHaveLength(3);
   });
@@ -410,7 +410,7 @@ describe("telemetry batching", () => {
     // At 10 events the buffer auto-flushes synchronously.
     expect(mock).toHaveBeenCalledTimes(1);
     const [url, init] = mock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("https://telemetry.sceneview.io/v1/batch");
+    expect(url).toBe("https://sceneview-telemetry.mcp-tools-lab.workers.dev/v1/batch");
     const body = JSON.parse(init.body as string) as { events: TelemetryPayload[] };
     expect(body.events).toHaveLength(10);
   });
@@ -438,7 +438,7 @@ describe("telemetry batching", () => {
 
     expect(mock).toHaveBeenCalledTimes(1);
     const [url] = mock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("https://telemetry.sceneview.io/v1/events");
+    expect(url).toBe("https://sceneview-telemetry.mcp-tools-lab.workers.dev/v1/events");
   });
 
   it("__resetClientContext also clears the buffer", async () => {

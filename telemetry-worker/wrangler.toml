@@ -29,13 +29,13 @@ local_protocol = "http"
 [[d1_databases]]
 binding = "DB"
 database_name = "sceneview-telemetry"
-database_id = "TODO_REPLACE_AFTER_D1_CREATE"
+database_id = "b07a4b58-e626-4bed-af53-014ca6b19271"
 migrations_dir = "migrations"
 
 # ── KV namespace (rate-limit counters) ───────────────────────────────────────
 [[kv_namespaces]]
 binding = "RL_KV"
-id = "TODO_REPLACE_AFTER_KV_CREATE"
+id = "9a40d334be6149f7a4ba18451a60245f"
 
 # ── Environment variables ────────────────────────────────────────────────────
 [vars]

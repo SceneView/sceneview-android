@@ -494,6 +494,151 @@ app.get("/v1/export", async (c) => {
   }
 });
 
+// ── Landing page ─────────────────────────────────────────────────────────────
+app.get("/", (c) => {
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SceneView Telemetry</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .card {
+      max-width: 520px;
+      width: 100%;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 2.5rem 2rem;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: #4285f4;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .logo-icon svg { display: block; }
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: #e6edf3;
+      line-height: 1.2;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: #1a2f1a;
+      border: 1px solid #2ea04326;
+      color: #3fb950;
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 0.25rem 0.6rem;
+      border-radius: 20px;
+      margin-bottom: 1.25rem;
+    }
+    .badge-dot {
+      width: 7px;
+      height: 7px;
+      background: #3fb950;
+      border-radius: 50%;
+    }
+    p {
+      color: #8b949e;
+      font-size: 0.9rem;
+      line-height: 1.65;
+      margin-bottom: 1.75rem;
+    }
+    .links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    a {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 500;
+      padding: 0.45rem 1rem;
+      border-radius: 6px;
+      transition: background 0.15s, color 0.15s;
+    }
+    a.primary {
+      background: #4285f4;
+      color: #fff;
+    }
+    a.primary:hover { background: #5a95f5; }
+    a.secondary {
+      background: #21262d;
+      color: #c9d1d9;
+      border: 1px solid #30363d;
+    }
+    a.secondary:hover { background: #30363d; color: #e6edf3; }
+    .divider {
+      border: none;
+      border-top: 1px solid #21262d;
+      margin: 1.75rem 0;
+    }
+    .meta {
+      font-size: 0.75rem;
+      color: #484f58;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <h1>SceneView Telemetry</h1>
+    </div>
+    <div class="badge">
+      <span class="badge-dot"></span>
+      Operational
+    </div>
+    <p>
+      Anonymous usage analytics for SceneView MCP tools. This service collects
+      aggregate, privacy-preserving data (no IP addresses stored) to help improve
+      the SceneView developer experience.
+    </p>
+    <div class="links">
+      <a class="primary" href="https://sceneview.github.io">SceneView</a>
+      <a class="secondary" href="/health">Health check</a>
+    </div>
+    <hr class="divider" />
+    <span class="meta">sceneview-telemetry v1.0.0 &mdash; Cloudflare Workers</span>
+  </div>
+</body>
+</html>`;
+  return c.html(html);
+});
+
 // ── Catch-all ────────────────────────────────────────────────────────────────
 app.all("*", (c) => c.json({ error: "not_found" }, 404));
 

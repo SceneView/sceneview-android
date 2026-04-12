@@ -20,9 +20,8 @@
 // Opt out with `SCENEVIEW_TELEMETRY=0` or by running in CI (`CI=true`).
 // Worker implementation: telemetry-worker/ (Hono + D1 + KV rate limiting).
 // Deploy with: cd telemetry-worker && see DEPLOY.md
-// Until deployed, requests to this endpoint fail silently (by design).
-const TELEMETRY_ENDPOINT = "https://telemetry.sceneview.io/v1/events";
-const TELEMETRY_BATCH_ENDPOINT = "https://telemetry.sceneview.io/v1/batch";
+const TELEMETRY_ENDPOINT = "https://sceneview-telemetry.mcp-tools-lab.workers.dev/v1/events";
+const TELEMETRY_BATCH_ENDPOINT = "https://sceneview-telemetry.mcp-tools-lab.workers.dev/v1/batch";
 // Hard cap so we never hang the process on a slow endpoint.
 const TELEMETRY_TIMEOUT_MS = 2000;
 // Client-side batching: flush when buffer reaches this size or after this delay.
