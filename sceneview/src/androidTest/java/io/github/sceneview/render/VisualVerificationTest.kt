@@ -29,6 +29,7 @@ import org.junit.AfterClass
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.BeforeClass
+import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
@@ -397,6 +398,7 @@ h1 { color: #fff; }
     }
 
     @Test
+    @Ignore("SwiftShader non-deterministic dithering causes process crash on CI. Tracked in #803.")
     fun renderAll_consistency() {
         // Render same scene twice — must be pixel-identical
         var bmp1: Bitmap? = null

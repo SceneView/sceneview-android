@@ -33,7 +33,7 @@ To understand which MCP clients our users run on and which tools are actually us
 | `event` | `"init"` or `"tool"` | Distinguish handshake from tool calls |
 | `client` | `"claude-desktop"` | Which MCP client is being used |
 | `clientVersion` | `"0.11.0"` | Client version as reported during the MCP handshake |
-| `mcpVersion` | `"3.6.2"` | Version of this MCP server |
+| `mcpVersion` | `"4.0.0-rc.1"` | Version of this MCP server |
 | `tier` | `"free"` or `"pro"` | Tier the tool resolved to (not the user's subscription) |
 | `tool` | `"get_node_reference"` | Tool name — only for `event: "tool"` |
 
