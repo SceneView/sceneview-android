@@ -1,5 +1,100 @@
 # Changelog
 
+## v4.0.0 — Declarative Compose DSL, Rerun.io AR Debug, MCP Gateway & Cross-Platform Bridges
+
+**Status:** stable. Maven Central and Swift Package Manager artifacts are published from this tag.
+
+**Backward compatible** with 3.6.x. Existing code compiles and runs unchanged against 4.0.0.
+
+### New — Declarative Compose DSL (breaking rename, additive)
+
+Renamed the top-level composables from `Scene`/`ARScene` to `SceneView { }` / `ARSceneView { }` across all public surfaces (KDocs, MCP packages, sample apps, docs, llms.txt, README, website). The old names are still accepted via deprecated aliases — no callers break.
+
+- Nodes are now declared as composables inside the trailing content lambda; imperative node management is no longer the primary API.
+- `LightNode`'s `apply` is a named parameter (`apply = { intensity(…) }`), not a trailing lambda — matches the Compose convention for layout-affecting side effects.
+- `rememberModelInstance(modelLoader, "models/file.glb")` returns `null` while loading; all samples handle the null case explicitly.
+
+### New — AR Debug via Rerun.io
+
+Stream an ARCore (Android) or ARKit (iOS) session to the [Rerun](https://rerun.io) viewer for scrub-and-replay debugging. Same JSON-lines wire format on both platforms, single Python sidecar handles both.
+
+- **Android:** new `io.github.sceneview.ar.rerun.RerunBridge` + `rememberRerunBridge` composable helper. Non-blocking `Dispatchers.IO` scope, `Channel.CONFLATED` drop-on-backpressure, rate-limited 10 Hz by default, runtime `setEnabled()` kill switch. Zero new Gradle dependencies.
+- **iOS:** new `SceneViewSwift.RerunBridge` (`@ObservableObject` with `@Published eventCount`), `Network.framework` `NWConnection` on a dedicated utility queue. New `ARSceneView.onFrame { frame, arView in … }` modifier — usable independently of the bridge for any per-frame custom logic.
+- **Wire format:** 5 event types (`camera_pose`, `plane`, `point_cloud`, `anchor`, `hit_result`), byte-identical output from Kotlin and Swift, enforced by 24 golden-string tests (12 per platform).
+- **Python sidecar:** `tools/rerun-bridge.py` — reads the TCP stream and re-logs each event as the matching Rerun archetype (`Transform3D`, `LineStrips3D`, `Points3D`). Spawns the Rerun viewer automatically via `rr.init(spawn=True)`.
+- **Playground:** new "AR Debug (Rerun)" example in the `ar-spatial` category with per-platform code tabs.
+- **Sample apps:** new `RerunDebugDemo` tile in `samples/android-demo` (Samples tab) and `samples/ios-demo` (Scenes → AR category).
+
+### New — `rerun-3d-mcp@1.0.0` on npm
+
+New dedicated MCP server (`npx rerun-3d-mcp`) generating Rerun integration boilerplate from natural-language prompts. 5 tools, 73 vitest tests, Apache-2.0. Tarball 13.6 kB.
+
+### New — MCP Gateway (Cloudflare Workers + Stripe)
+
+Production-grade monetization layer for `sceneview-mcp`:
+
+- Cloudflare Worker (`gateway/`) with Hono router, D1 database, KV namespace.
+- Stripe-first anonymous checkout: no login wall — user clicks CTA, pays, receives API key by email via Stripe webhook + KV single-use handoff.
+- 4 plans: Free / Pro (€19) / Team (€49) / Enterprise — with tier gating and per-plan rate limiting.
+- `POST /mcp` proxy with `X-Api-Key` auth, lite mode detection, and upstream routing.
+- Dashboard-less by design: billing managed entirely through the Stripe Customer Portal.
+- 168 tests passing across gateway + hub packages.
+- Live in production at `https://sceneview-mcp.mcp-tools-lab.workers.dev`.
+
+### New — hub-mcp: 52 tools across 11 libraries (0.2.0)
+
+`mcp/packages/hub-mcp` is a unified MCP server dispatching to 11 SceneView-ecosystem libraries (automotive, gaming, healthcare, interior, realestate, architecture, ecommerce-3d, education, finance, legal-docs, french-admin). Anonymous telemetry on every tool call. Stripe billing layer + quota enforcement shared with the gateway.
+
+### New — Anonymous telemetry worker
+
+`sceneview-mcp` now sends lightweight anonymous usage telemetry (tool name, tier, timestamp — no personal data) to a Cloudflare Worker via batched HTTP. Sponsor CTA fires every 10 tool calls.
+
+### New — `sceneview-mcp` on `@latest` npm tag (4.0.0)
+
+`sceneview-mcp@4.0.0` is promoted to the `@latest` dist-tag. Previous `@latest` was `3.6.5`; `@next` pointed to `4.0.0-rc.5`. The `publishConfig: { tag: "next" }` guard in `package.json` has been removed now that the gateway go-live pipeline has verified a real paying customer.
+
+### New — Cross-platform bridges
+
+- **Flutter:** `flutter/sceneview_flutter` — PlatformView bridge to SceneView on Android + SceneViewSwift on iOS; Kotlin 2.0 + Compose Compiler plugin compatibility fixed.
+- **React Native:** `react-native/react-native-sceneview` — Fabric/Turbo bridge with native `android/` and `ios/` modules scaffolded.
+- **Web:** `sceneview-web` Kotlin/JS package (`npm view sceneview-web`) — Filament.js (WASM) + WebXR, webpack 5 polyfills unblocked.
+
+### New — Empire Analytics dashboard
+
+`website-static/` now includes a GA4-backed analytics dashboard (`/analytics`) for tracking playground interactions, MCP install events, and Stripe checkout funnels.
+
+### Fixes
+
+- **NodeAnimator (#388):** `NodeAnimator` now writes animated values back to the target `Node`'s transform fields on every frame, fixing silent no-op animations that computed but discarded results.
+- **Render tests (#803):** Fixed intermittent SwiftShader JVM crashes in CI by sharing a single `Engine` instance per test class. The class-level `@Ignore` workarounds have been removed.
+- **AR camera exposure (#792):** Added `cameraExposure` parameter to `ARSceneView` composable.
+- **customer_creation bug:** `stripe-client.ts` now guards `form.customer_creation = "always"` with `if (mode === "payment")`, preventing a Stripe 400 error on subscription checkouts.
+
+### Tests
+
+- 16 new JVM tests in `arsceneview` (Rerun wire format + socket integration).
+- 12 new Swift tests in `SceneViewSwiftTests` (cross-platform wire-format parity).
+- 73 new vitest tests in `mcp/packages/rerun`.
+- 90+ new unit tests across `sceneview` and `arsceneview` (#814).
+- 168 gateway/hub tests.
+
+### Dependencies
+
+- AGP bumped `8.11.1 → 8.13.2`, `maven-publish 0.35.0 → 0.36.0`.
+- `activesupport` bumped `>= 7.2.3.1` (CVE-2026-33176/33170/33169).
+
+### Demo apps
+
+- `samples/android-demo`: Sprint 1 refactor — 4-tab nav replaced with categorized list, 20 demos (including RerunDebugDemo).
+- `samples/android-tv-demo` + `samples/web-demo`: broken asset refs fixed; all 8 previously-404 GLB/USDZ/HDR paths resolved.
+- `samples/ios-demo`: AR Debug demo added in Scenes → AR category.
+
+### Version sweep
+
+`gradle.properties` `VERSION_NAME`, all `gradle.properties` submodule files, npm packages, Flutter `pubspec.yaml` + podspec, `llms.txt`, docs, website, samples — synced to `4.0.0` via `.claude/scripts/sync-versions.sh --fix`.
+
+---
+
 ## v4.0.0-rc.1 — SceneView ↔ Rerun.io integration (Release Candidate)
 
 **Status:** release candidate. Maven Central and Swift Package Manager artifacts are **not** published from this tag — pin to `4.0.0-rc.1` manually to test, or wait for the `v4.0.0` stable tag.
