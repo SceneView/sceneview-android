@@ -42,7 +42,7 @@
 
 ---
 
-## SESSION intelligent-perlman — 2026-04-12 — Gateway deploys, hub-mcp npm, cleanup
+## SESSION intelligent-perlman — 2026-04-12 — Gateway deploys, hub-mcp npm, telemetry, cleanup
 
 **Worktree:** `intelligent-perlman`
 **Branch:** `claude/intelligent-perlman`
@@ -53,17 +53,25 @@
 - Gateway #1 `sceneview-mcp.mcp-tools-lab.workers.dev` — Version `373f7c33`, Stripe LIVE checkout verified
 - Gateway #2 `hub-mcp.mcp-tools-lab.workers.dev` — Version `62b9e1f6`, 11 libs / 52 tools, Stripe LIVE checkout verified
 
+**Telemetry worker LIVE** at `sceneview-telemetry.mcp-tools-lab.workers.dev` — MCP client wired to it.
+
 **hub-mcp@0.1.0 published on npm** (`npx hub-mcp`):
 - 52 tools across 11 libraries (14 free, 38 pro)
 - Lite mode: free tools return stubs, pro tools return upsell
 - Hosted mode (`HUB_MCP_API_KEY`): proxies all calls to gateway via JSON-RPC
-- dist-tags: `latest=0.1.0`, `beta=0.1.0`
+- dist-tags: `latest=0.1.0`
+
+**PR #817 merged, issue #388 closed** — NodeAnimator regression fixed.
 
 **Hub-gateway fixes:**
 - Comment cleanup: MVP/stub → real handlers (6 files)
 - New dispatch-vendored.test.ts: 24 tests for 8 vendored libraries
 - Fixed test assertions: tool count 100→45, correct tool names
 - 82/82 hub-gateway tests passing
+
+**Complete version sweep** 3.6.2 → 4.0.0-rc.1 across all 28+ locations verified.
+
+**Repo state: 0 open PRs, 0 open issues.**
 
 **Worktree cleanup:**
 - Removed eager-sinoussi (0 ahead, stale)
@@ -83,13 +91,17 @@
 ### Production state
 - **Gateway #1**: LIVE, Stripe LIVE, 4 plans, 0 real paying customers
 - **Gateway #2**: LIVE, Stripe LIVE, 4 plans (Portfolio/Team), 0 real paying customers
-- **npm**: sceneview-mcp `latest=3.6.5` / `beta=4.0.0-beta.1` / `next=4.0.0-rc.1`; hub-mcp `latest=0.1.0`
-- **Worktrees**: only `intelligent-perlman` remains (this session)
+- **Telemetry worker**: LIVE at `sceneview-telemetry.mcp-tools-lab.workers.dev`
+- **npm**: sceneview-mcp `latest=3.6.5` / `beta=4.0.0-beta.1` / `next=4.0.0-rc.3`; hub-mcp `latest=0.1.0`
+- **Tests**: 2902/2902 MCP tests pass, 82/82 hub-gateway tests pass
+- **Worktrees**: only `intelligent-perlman` remains
 
 ### What's NOT done
 - First real paying customer test (both gateways ready, needs human card)
-- Dependabot: 3 moderate vulnerabilities (audit in progress)
+- DNS CNAME: `telemetry.sceneview.io` → telemetry worker (needs Thomas)
+- Screenshot Rerun playground for announcements (6 posts near-ready, awaiting visual assets)
 - `@latest` bump to 4.x (blocked on first customer)
+- Maven Central / SPM publish for v4.0.0-rc.1 (release.yml only matches strict semver)
 
 ---
 
