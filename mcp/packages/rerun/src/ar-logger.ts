@@ -99,7 +99,7 @@ function generateKotlinLogger(
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import io.github.sceneview.ar.ARScene
+import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.rerun.rememberRerunBridge
 
 /**
@@ -117,7 +117,7 @@ fun ARWithRerunLogger() {
         enabled = true,
     )
 
-    ARScene(
+    ARSceneView(
         modifier = Modifier.fillMaxSize(),
         onSessionUpdated = { session, frame ->
             val nowNanos = frame.timestamp

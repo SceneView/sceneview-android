@@ -100,14 +100,14 @@ fi
 # Flutter Android build.gradle
 FLUTTER_ANDROID_GRADLE="$REPO_ROOT/flutter/sceneview_flutter/android/build.gradle"
 if [ -f "$FLUTTER_ANDROID_GRADLE" ]; then
-    V=$(grep "^version " "$FLUTTER_ANDROID_GRADLE" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "NOT FOUND")
+    V=$(grep "^version " "$FLUTTER_ANDROID_GRADLE" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' | head -1 || echo "NOT FOUND")
     add_check "flutter/.../android/build.gradle" "$V"
 fi
 
 # Flutter iOS podspec
 PODSPEC="$REPO_ROOT/flutter/sceneview_flutter/ios/sceneview_flutter.podspec"
 if [ -f "$PODSPEC" ]; then
-    V=$(grep "s\.version" "$PODSPEC" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "NOT FOUND")
+    V=$(grep "s\.version" "$PODSPEC" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' | head -1 || echo "NOT FOUND")
     add_check "flutter/.../ios/sceneview_flutter.podspec" "$V"
 fi
 
@@ -121,7 +121,7 @@ fi
 # Flutter CHANGELOG
 FLUTTER_CL="$REPO_ROOT/flutter/sceneview_flutter/CHANGELOG.md"
 if [ -f "$FLUTTER_CL" ]; then
-    V=$(grep -m1 '^## ' "$FLUTTER_CL" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "NOT FOUND")
+    V=$(grep -m1 '^## ' "$FLUTTER_CL" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' | head -1 || echo "NOT FOUND")
     add_check "flutter/.../CHANGELOG.md" "$V" "false"
 fi
 
@@ -131,28 +131,28 @@ echo -e "${CYAN}--- Documentation ---${NC}"
 # llms.txt (root)
 LLMS="$REPO_ROOT/llms.txt"
 if [ -f "$LLMS" ]; then
-    V=$(grep -m1 'io\.github\.sceneview:sceneview:' "$LLMS" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "MISSING")
+    V=$(grep -m1 'io\.github\.sceneview:sceneview:' "$LLMS" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' | head -1 || echo "MISSING")
     add_check "llms.txt" "$V"
 fi
 
 # CLAUDE.md (code examples section)
 CLAUDE_MD="$REPO_ROOT/CLAUDE.md"
 if [ -f "$CLAUDE_MD" ]; then
-    V=$(grep -m1 'io\.github\.sceneview:sceneview:' "$CLAUDE_MD" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "MISSING")
+    V=$(grep -m1 'io\.github\.sceneview:sceneview:' "$CLAUDE_MD" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' | head -1 || echo "MISSING")
     add_check "CLAUDE.md (code examples)" "$V"
 fi
 
 # README.md
 README="$REPO_ROOT/README.md"
 if [ -f "$README" ]; then
-    V=$(grep -m1 'io\.github\.sceneview:sceneview:' "$README" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "NOT FOUND")
+    V=$(grep -m1 'io\.github\.sceneview:sceneview:' "$README" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' | head -1 || echo "NOT FOUND")
     add_check "README.md (install)" "$V"
 fi
 
 # CHANGELOG.md (top entry version)
 CHANGELOG="$REPO_ROOT/CHANGELOG.md"
 if [ -f "$CHANGELOG" ]; then
-    V=$(grep -m1 '^## ' "$CHANGELOG" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "MISSING")
+    V=$(grep -m1 '^## ' "$CHANGELOG" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' | head -1 || echo "MISSING")
     add_check "CHANGELOG.md (latest entry)" "$V" "false"
 fi
 
@@ -160,7 +160,7 @@ fi
 for modmd in sceneview/Module.md arsceneview/Module.md; do
     F="$REPO_ROOT/$modmd"
     if [ -f "$F" ]; then
-        V=$(grep -oE '[0-9]+\.[0-9]+\.[0-9]+' "$F" | head -1 || echo "NOT FOUND")
+        V=$(grep -oE '[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' "$F" | head -1 || echo "NOT FOUND")
         add_check "$modmd" "$V" "false"
     fi
 done
@@ -170,7 +170,7 @@ echo -e "${CYAN}--- Docs Site ---${NC}"
 for docfile in docs/docs/index.md docs/docs/quickstart.md docs/docs/llms-full.txt docs/docs/cheatsheet.md docs/docs/platforms.md docs/docs/migration.md docs/docs/android-xr.md; do
     F="$REPO_ROOT/$docfile"
     if [ -f "$F" ]; then
-        V=$(grep -m1 'io\.github\.sceneview:sceneview:' "$F" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "NOT FOUND")
+        V=$(grep -m1 'io\.github\.sceneview:sceneview:' "$F" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' | head -1 || echo "NOT FOUND")
         if [ "$V" != "NOT FOUND" ]; then
             add_check "$docfile" "$V"
         fi
@@ -180,7 +180,7 @@ done
 # docs/docs/llms.txt (separate from root llms.txt)
 DOCS_LLMS="$REPO_ROOT/docs/docs/llms.txt"
 if [ -f "$DOCS_LLMS" ]; then
-    V=$(grep -m1 'io\.github\.sceneview:sceneview:' "$DOCS_LLMS" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "NOT FOUND")
+    V=$(grep -m1 'io\.github\.sceneview:sceneview:' "$DOCS_LLMS" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' | head -1 || echo "NOT FOUND")
     if [ "$V" != "NOT FOUND" ]; then
         add_check "docs/docs/llms.txt" "$V"
     fi
@@ -190,7 +190,7 @@ fi
 echo -e "${CYAN}--- Sample Apps ---${NC}"
 DEMO_GRADLE="$REPO_ROOT/samples/android-demo/build.gradle"
 if [ -f "$DEMO_GRADLE" ]; then
-    V=$(grep "versionName" "$DEMO_GRADLE" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "NOT FOUND")
+    V=$(grep "versionName" "$DEMO_GRADLE" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' | head -1 || echo "NOT FOUND")
     add_check "samples/android-demo versionName" "$V" "false"
 fi
 
@@ -198,19 +198,19 @@ fi
 echo -e "${CYAN}--- MCP Source/Dist ---${NC}"
 MCP_INDEX="$REPO_ROOT/mcp/src/index.ts"
 if [ -f "$MCP_INDEX" ]; then
-    V=$(grep -m1 'version:' "$MCP_INDEX" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "NOT FOUND")
+    V=$(grep -m1 'version:' "$MCP_INDEX" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' | head -1 || echo "NOT FOUND")
     add_check "mcp/src/index.ts" "$V" "false"
 fi
 MCP_DIST="$REPO_ROOT/mcp/dist/index.js"
 if [ -f "$MCP_DIST" ]; then
-    V=$(grep -m1 'version:' "$MCP_DIST" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "NOT FOUND")
+    V=$(grep -m1 'version:' "$MCP_DIST" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' | head -1 || echo "NOT FOUND")
     add_check "mcp/dist/index.js" "$V" "false"
 fi
 
 # ─── 8. iOS demo ────────────────────────────────────────────────────────
 IOS_ABOUT="$REPO_ROOT/SceneViewSwift/Examples/SceneViewDemo/SceneViewDemo/Views/AboutView.swift"
 if [ -f "$IOS_ABOUT" ]; then
-    V=$(grep -oE '[0-9]+\.[0-9]+\.[0-9]+' "$IOS_ABOUT" | head -1 || echo "NOT FOUND")
+    V=$(grep -oE '[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' "$IOS_ABOUT" | head -1 || echo "NOT FOUND")
     if [ "$V" != "NOT FOUND" ]; then
         add_check "SceneViewSwift/.../AboutView.swift" "$V" "false"
     fi
@@ -220,7 +220,7 @@ fi
 echo -e "${CYAN}--- Website Static ---${NC}"
 WEBSITE_INDEX="$REPO_ROOT/website-static/index.html"
 if [ -f "$WEBSITE_INDEX" ]; then
-    V=$(grep 'softwareVersion' "$WEBSITE_INDEX" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "NOT FOUND")
+    V=$(grep 'softwareVersion' "$WEBSITE_INDEX" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' | head -1 || echo "NOT FOUND")
     add_check "website-static/index.html (softwareVersion)" "$V"
 fi
 
@@ -229,7 +229,7 @@ WEBSITE_DIR="$REPO_ROOT/../sceneview.github.io"
 if [ -d "$WEBSITE_DIR" ]; then
     WEBSITE_DEPLOYED="$WEBSITE_DIR/index.html"
     if [ -f "$WEBSITE_DEPLOYED" ]; then
-        V=$(grep 'softwareVersion' "$WEBSITE_DEPLOYED" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "NOT FOUND")
+        V=$(grep 'softwareVersion' "$WEBSITE_DEPLOYED" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' | head -1 || echo "NOT FOUND")
         if [ "$V" != "NOT FOUND" ]; then
             add_check "sceneview.github.io/index.html" "$V"
         fi
@@ -239,7 +239,7 @@ fi
 # ─── 11. Bug report template ────────────────────────────────────────────
 BUG_TEMPLATE="$REPO_ROOT/.github/ISSUE_TEMPLATE/bug_report.yml"
 if [ -f "$BUG_TEMPLATE" ]; then
-    V=$(grep -oE '[0-9]+\.[0-9]+\.[0-9]+' "$BUG_TEMPLATE" | head -1 || echo "NOT FOUND")
+    V=$(grep -oE '[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' "$BUG_TEMPLATE" | head -1 || echo "NOT FOUND")
     if [ "$V" != "NOT FOUND" ]; then
         add_check ".github/ISSUE_TEMPLATE/bug_report.yml" "$V" "false"
     fi
@@ -315,7 +315,7 @@ with open('$PKG_JSON', 'w') as f:
 
     # Fix Flutter Android build.gradle
     if [ -f "$FLUTTER_ANDROID_GRADLE" ]; then
-        CURRENT=$(grep "^version " "$FLUTTER_ANDROID_GRADLE" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+        CURRENT=$(grep "^version " "$FLUTTER_ANDROID_GRADLE" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' | head -1)
         if [ -n "$CURRENT" ] && [ "$CURRENT" != "$SOURCE_VERSION" ]; then
             sed -i '' "s/^version '$CURRENT'/version '$SOURCE_VERSION'/" "$FLUTTER_ANDROID_GRADLE"
             echo -e "  Fixed: flutter/.../android/build.gradle ($CURRENT -> $SOURCE_VERSION)"
@@ -324,7 +324,7 @@ with open('$PKG_JSON', 'w') as f:
 
     # Fix Flutter iOS podspec
     if [ -f "$PODSPEC" ]; then
-        CURRENT=$(grep "s\.version" "$PODSPEC" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+        CURRENT=$(grep "s\.version" "$PODSPEC" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' | head -1)
         if [ -n "$CURRENT" ] && [ "$CURRENT" != "$SOURCE_VERSION" ]; then
             sed -i '' "s/s\.version *= *'$CURRENT'/s.version          = '$SOURCE_VERSION'/" "$PODSPEC"
             echo -e "  Fixed: flutter/.../ios/sceneview_flutter.podspec ($CURRENT -> $SOURCE_VERSION)"

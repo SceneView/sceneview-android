@@ -71,10 +71,10 @@ for module in sceneview arsceneview sceneview-core; do
     fi
 done
 
-LLMS_V=$(grep -m1 'io\.github\.sceneview:sceneview:' llms.txt | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "MISSING")
+LLMS_V=$(grep -m1 'io\.github\.sceneview:sceneview:' llms.txt | grep -oE '[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' | head -1 || echo "MISSING")
 [ "$LLMS_V" = "$SOURCE_VERSION" ] && check "llms.txt version" "PASS" "$LLMS_V" || check "llms.txt version" "FAIL" "Expected $SOURCE_VERSION, got $LLMS_V"
 
-README_V=$(grep -m1 'io\.github\.sceneview:sceneview:' README.md | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "MISSING")
+README_V=$(grep -m1 'io\.github\.sceneview:sceneview:' README.md | grep -oE '[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' | head -1 || echo "MISSING")
 [ "$README_V" = "$SOURCE_VERSION" ] && check "README.md version" "PASS" "$README_V" || check "README.md version" "FAIL" "Expected $SOURCE_VERSION, got $README_V"
 
 echo ""
@@ -170,10 +170,14 @@ if [ "$QUICK_MODE" != "--quick" ]; then
 
     if [ -f "gradlew" ]; then
         echo -e "  Building Android debug..."
-        if ./gradlew assembleDebug --quiet 2>/dev/null; then
+        ASSEMBLE_LOG=/tmp/qg-assemble-debug.log
+        if ./gradlew assembleDebug --console=plain > "$ASSEMBLE_LOG" 2>&1; then
             check "Android assembleDebug" "PASS" ""
         else
-            check "Android assembleDebug" "FAIL" "Build failed"
+            check "Android assembleDebug" "FAIL" "Build failed — see $ASSEMBLE_LOG"
+            echo -e "${RED}--- assembleDebug tail ---${NC}"
+            tail -60 "$ASSEMBLE_LOG"
+            echo -e "${RED}--- end ---${NC}"
         fi
     fi
 
@@ -182,10 +186,14 @@ if [ "$QUICK_MODE" != "--quick" ]; then
 
     if [ -f "gradlew" ]; then
         echo -e "  Running unit tests..."
-        if ./gradlew :sceneview:testDebugUnitTest :arsceneview:testDebugUnitTest --quiet 2>/dev/null; then
+        UT_LOG=/tmp/qg-unit-tests.log
+        if ./gradlew :sceneview:testDebugUnitTest :arsceneview:testDebugUnitTest --console=plain > "$UT_LOG" 2>&1; then
             check "Android unit tests" "PASS" ""
         else
-            check "Android unit tests" "FAIL" ""
+            check "Android unit tests" "FAIL" "Tests failed — see $UT_LOG"
+            echo -e "${RED}--- unit tests tail ---${NC}"
+            tail -60 "$UT_LOG"
+            echo -e "${RED}--- end ---${NC}"
         fi
     fi
 
