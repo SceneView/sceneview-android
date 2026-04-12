@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { Env } from "./env.js";
 import { isRateLimited } from "./rate-limit.js";
+import { rollupYesterday } from "./rollup.js";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -172,6 +173,15 @@ app.post("/v1/batch", async (c) => {
 
 // ── Stats endpoint (simple read-only dashboard data) ─────────────────────────
 app.get("/v1/stats", async (c) => {
+  // Bearer token guard — only enforced when STATS_TOKEN is configured
+  const token = c.env.STATS_TOKEN;
+  if (token) {
+    const auth = c.req.header("Authorization") ?? "";
+    if (auth !== `Bearer ${token}`) {
+      return c.json({ error: "unauthorized" }, 401);
+    }
+  }
+
   try {
     const [totals, topTools, versions] = await Promise.all([
       c.env.DB.prepare(
@@ -214,4 +224,11 @@ app.get("/v1/stats", async (c) => {
 // ── Catch-all ────────────────────────────────────────────────────────────────
 app.all("*", (c) => c.json({ error: "not_found" }, 404));
 
-export default app;
+export { app };
+
+export default {
+  fetch: app.fetch,
+  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(rollupYesterday(env.DB));
+  },
+};

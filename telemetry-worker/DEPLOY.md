@@ -62,10 +62,24 @@ curl -X POST https://telemetry.sceneview.io/v1/events \
 curl https://telemetry.sceneview.io/v1/stats
 ```
 
-## No secrets required
+## Optional secret — STATS_TOKEN
 
-This worker has no secrets — no API keys, no Stripe, no JWT. Everything is anonymous.
-The only bindings are D1 (storage) and KV (rate limiting).
+To protect `GET /v1/stats` with a bearer token:
+
+```bash
+wrangler secret put STATS_TOKEN
+```
+
+When set, all requests to `/v1/stats` must include the header:
+
+```
+Authorization: Bearer <your-token>
+```
+
+Requests without a valid token receive `401 {"error":"unauthorized"}`.
+
+If `STATS_TOKEN` is not configured, the endpoint remains open — useful for local dev
+(`wrangler dev`) without any extra setup.
 
 ## Endpoints
 

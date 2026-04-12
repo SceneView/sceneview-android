@@ -34,6 +34,14 @@ id = "TODO_REPLACE_AFTER_KV_CREATE"
 [vars]
 ENVIRONMENT = "production"
 
+# Optional: protect /v1/stats with a bearer token
+# wrangler secret put STATS_TOKEN
+
+# ── Cron trigger (daily rollup) ──────────────────────────────────────────────
+# Uncomment after first deploy to enable daily rollup at 02:00 UTC:
+# [triggers]
+# crons = ["0 2 * * *"]
+
 # ── Custom domain ────────────────────────────────────────────────────────────
 # Uncomment after DNS CNAME is set up:
 # [routes]

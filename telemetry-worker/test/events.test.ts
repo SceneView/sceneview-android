@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import app from "../src/index.js";
+import { app } from "../src/index.js";
 import { createMockD1 } from "./helpers/mock-d1.js";
 import { createMockKV } from "./helpers/mock-kv.js";
 
