@@ -86,7 +86,7 @@ const DISCLAIMER =
 const SPONSOR_CTA_INTERVAL = 10;
 
 const SPONSOR_CTA =
-  "\n\n💙 *Building SceneView is a one-dev labor of love. If this tool saved you time, consider [sponsoring on GitHub](https://github.com/sponsors/sceneview) — it keeps the project alive.*";
+  "\n\n💙 *Building SceneView is a one-dev labor of love. If this tool saved you time, consider [sponsoring on GitHub](https://github.com/sponsors/sceneview) or [upgrading to Pro](https://sceneview-mcp.mcp-tools-lab.workers.dev/pricing) for unlimited access.*";
 
 let toolCallCount = 0;
 
