@@ -1,0 +1,48 @@
+name: Telemetry Worker CI
+
+# CI validation for the telemetry-worker Cloudflare Worker.
+# Runs typecheck + unit tests on every push/PR that touches telemetry-worker/.
+
+on:
+  push:
+    paths:
+      - 'telemetry-worker/**'
+  pull_request:
+    paths:
+      - 'telemetry-worker/**'
+  workflow_dispatch:
+
+# One run per ref; cancel older in-progress runs to save resources.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: Typecheck & test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: telemetry-worker/package-lock.json
+
+      - name: Install dependencies
+        working-directory: telemetry-worker
+        run: npm ci
+
+      - name: Typecheck
+        working-directory: telemetry-worker
+        run: npx tsc --noEmit
+
+      - name: Test
+        working-directory: telemetry-worker
+        run: npx vitest run

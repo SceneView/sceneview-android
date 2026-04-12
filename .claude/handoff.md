@@ -4,11 +4,12 @@
 
 ---
 
-## 📊 SESSION flamboyant-neumann — 2026-04-12 — Telemetry Worker
+## 📊 SESSION flamboyant-neumann — 2026-04-12 — Telemetry + Client-side Batching
 
 **Worktree:** `flamboyant-neumann`
 **Branch:** `claude/flamboyant-neumann`
-**Commit:** `42f99d23`
+**PR:** sceneview/sceneview#815 (OPEN)
+**Commit:** `7e5ff95a` (6 commits total)
 
 ### What shipped
 
@@ -17,13 +18,18 @@
 | Component | Details |
 |---|---|
 | `POST /v1/events` | Single event ingestion (matches `TelemetryPayload` format exactly) |
-| `POST /v1/batch` | Up to 50 events per call (future client-side batching) |
+| `POST /v1/batch` | Up to 50 events per call |
 | `GET /v1/stats` | 24h aggregation: top tools, version adoption, unique clients |
 | D1 `events` table | timestamp, event type, client, versions, tier, tool — zero PII |
 | KV rate limiting | 30 req/min per hashed IP (FNV-1a, never stores raw IP) |
-| Tests | 18 vitest passing (same stack as mcp-gateway/) |
+| Client-side batching | Buffer 10 events / 30s flush in `mcp/src/telemetry.ts` |
+| CI workflow | `.github/workflows/telemetry-ci.yml` added |
+| Tests | 38 vitest passing |
 
-Also updated `mcp/src/telemetry.ts` TODO comment to point at the worker.
+### Quality
+
+- ✅ Opus code review: all 3 blockers fixed
+- ✅ PR #815 open and passing checks
 
 ### NOT deployed — Thomas action needed
 

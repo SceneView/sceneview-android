@@ -235,6 +235,135 @@ app.get("/v1/stats", async (c) => {
   }
 });
 
+// ── Timeseries endpoint (Grafana JSON datasource / charting) ─────────────────
+app.get("/v1/timeseries", async (c) => {
+  // Bearer token guard — same as /v1/stats
+  const token = c.env.STATS_TOKEN;
+  if (token) {
+    const auth = c.req.header("Authorization") ?? "";
+    if (auth !== `Bearer ${token}`) {
+      return c.json({ error: "unauthorized" }, 401);
+    }
+  }
+
+  // Query param validation
+  const rawDays = c.req.query("days") ?? "30";
+  const metric = c.req.query("metric") ?? "events";
+  const days = Math.min(Math.max(parseInt(rawDays, 10) || 30, 1), 90);
+
+  const VALID_METRICS = new Set(["events", "tools", "versions", "clients"]);
+  if (!VALID_METRICS.has(metric)) {
+    return c.json({ error: "invalid_metric", valid: [...VALID_METRICS] }, 400);
+  }
+
+  // today's date string (UTC) — rollups exist for dates strictly before today
+  const todayStr = new Date().toISOString().slice(0, 10);
+
+  type TimeseriesRow = { time: string; value: number; label?: string };
+
+  try {
+    let rows: TimeseriesRow[] = [];
+
+    if (metric === "events") {
+      // Daily total event counts — rollups for older days, live events for today
+      const [rollupRes, liveRes] = await Promise.all([
+        c.env.DB.prepare(
+          `SELECT day as time, SUM(event_count) as value
+           FROM daily_rollups
+           WHERE day >= date('now', '-' || ? || ' days') AND day < ?
+           GROUP BY day
+           ORDER BY day ASC`,
+        )
+          .bind(days, todayStr)
+          .all<{ time: string; value: number }>(),
+        c.env.DB.prepare(
+          `SELECT ? as time, COUNT(*) as value
+           FROM events
+           WHERE date(ingested) = ?`,
+        )
+          .bind(todayStr, todayStr)
+          .first<{ time: string; value: number }>(),
+      ]);
+      rows = rollupRes.results;
+      if (liveRes && liveRes.value > 0) rows.push(liveRes);
+    } else if (metric === "tools") {
+      // Daily counts per tool
+      const [rollupRes, liveRes] = await Promise.all([
+        c.env.DB.prepare(
+          `SELECT day as time, tool as label, SUM(tool_count) as value
+           FROM daily_rollups
+           WHERE day >= date('now', '-' || ? || ' days') AND day < ?
+             AND tool IS NOT NULL
+           GROUP BY day, tool
+           ORDER BY day ASC, value DESC`,
+        )
+          .bind(days, todayStr)
+          .all<{ time: string; label: string; value: number }>(),
+        c.env.DB.prepare(
+          `SELECT ? as time, tool as label, COUNT(*) as value
+           FROM events
+           WHERE date(ingested) = ? AND event = 'tool' AND tool IS NOT NULL
+           GROUP BY tool
+           ORDER BY value DESC`,
+        )
+          .bind(todayStr, todayStr)
+          .all<{ time: string; label: string; value: number }>(),
+      ]);
+      rows = [...rollupRes.results, ...liveRes.results];
+    } else if (metric === "versions") {
+      // Daily counts per mcp_ver
+      const [rollupRes, liveRes] = await Promise.all([
+        c.env.DB.prepare(
+          `SELECT day as time, mcp_ver as label, SUM(event_count) as value
+           FROM daily_rollups
+           WHERE day >= date('now', '-' || ? || ' days') AND day < ?
+           GROUP BY day, mcp_ver
+           ORDER BY day ASC, value DESC`,
+        )
+          .bind(days, todayStr)
+          .all<{ time: string; label: string; value: number }>(),
+        c.env.DB.prepare(
+          `SELECT ? as time, mcp_ver as label, COUNT(*) as value
+           FROM events
+           WHERE date(ingested) = ?
+           GROUP BY mcp_ver
+           ORDER BY value DESC`,
+        )
+          .bind(todayStr, todayStr)
+          .all<{ time: string; label: string; value: number }>(),
+      ]);
+      rows = [...rollupRes.results, ...liveRes.results];
+    } else {
+      // metric === "clients" — daily counts per client
+      const [rollupRes, liveRes] = await Promise.all([
+        c.env.DB.prepare(
+          `SELECT day as time, client as label, SUM(event_count) as value
+           FROM daily_rollups
+           WHERE day >= date('now', '-' || ? || ' days') AND day < ?
+           GROUP BY day, client
+           ORDER BY day ASC, value DESC`,
+        )
+          .bind(days, todayStr)
+          .all<{ time: string; label: string; value: number }>(),
+        c.env.DB.prepare(
+          `SELECT ? as time, client as label, COUNT(*) as value
+           FROM events
+           WHERE date(ingested) = ?
+           GROUP BY client
+           ORDER BY value DESC`,
+        )
+          .bind(todayStr, todayStr)
+          .all<{ time: string; label: string; value: number }>(),
+      ]);
+      rows = [...rollupRes.results, ...liveRes.results];
+    }
+
+    return c.json({ metric, days, data: rows });
+  } catch {
+    return c.json({ error: "query_failed" }, 500);
+  }
+});
+
 // ── Catch-all ────────────────────────────────────────────────────────────────
 app.all("*", (c) => c.json({ error: "not_found" }, 404));
 
