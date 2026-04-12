@@ -267,6 +267,39 @@ describe("GET /v1/stats — auth", () => {
   });
 });
 
+describe("Payload size limits", () => {
+  let env: ReturnType<typeof makeEnv>;
+
+  beforeEach(() => {
+    env = makeEnv();
+  });
+
+  it("rejects POST /v1/events with content-length > 65536 (413)", async () => {
+    const res = await post("/v1/events", validPayload(), env, {
+      "content-length": "65537",
+    });
+    expect(res.status).toBe(413);
+    expect(await res.json()).toEqual({ error: "payload_too_large" });
+  });
+
+  it("rejects POST /v1/batch with content-length > 1048576 (413)", async () => {
+    const res = await post("/v1/batch", [validPayload()], env, {
+      "content-length": "1048577",
+    });
+    expect(res.status).toBe(413);
+    expect(await res.json()).toEqual({ error: "payload_too_large" });
+  });
+
+  it("accepts POST /v1/events with normal-sized payload (202)", async () => {
+    const body = JSON.stringify(validPayload());
+    const res = await post("/v1/events", validPayload(), env, {
+      "content-length": String(body.length),
+    });
+    expect(res.status).toBe(202);
+    expect(await res.json()).toEqual({ ok: true });
+  });
+});
+
 describe("CORS", () => {
   it("responds to OPTIONS preflight", async () => {
     const env = makeEnv();
