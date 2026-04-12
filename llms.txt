@@ -2153,6 +2153,309 @@ ferrari_f40.glb
 
 ---
 
+## SceneView Web (Kotlin/JS + Filament.js)
+
+Package: `sceneview-web` v4.0.0-rc.1 — npm `sceneview-web`
+Renderer: **Filament.js (WebGL2/WASM)** — same Filament engine as SceneView Android, compiled to WebAssembly.
+Requires: Chrome 79+, Edge 79+, Firefox 78+ (WebGL2). Safari 15+ (WebGL2).
+
+npm install:
+```
+npm install sceneview-web filament
+```
+
+Script-tag usage (no bundler):
+```html
+<script src="https://sceneview.github.io/js/filament/filament.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sceneview-web/build/dist/js/productionExecutable/sceneview-web.js"></script>
+```
+
+After loading, the library registers itself on `window.sceneview`.
+
+---
+
+### SceneView (Kotlin/JS class — 3D scene)
+
+```kotlin
+// Primary entry point — Kotlin DSL
+SceneView.create(
+    canvas: HTMLCanvasElement,
+    assets: Array<String> = emptyArray(),  // URLs to preload (KTX)
+    configure: SceneViewBuilder.() -> Unit = {},
+    onReady: (SceneView) -> Unit
+)
+
+// Constants
+SceneView.DEFAULT_IBL_URL   // neutral studio IBL (KTX)
+SceneView.DEFAULT_SKYBOX_URL
+```
+
+Instance methods:
+```kotlin
+sceneView.loadModel(url: String, onLoaded: ((FilamentAsset) -> Unit)? = null)
+sceneView.loadEnvironment(iblUrl: String, skyboxUrl: String? = null)
+sceneView.loadDefaultEnvironment()           // neutral IBL, no skybox
+sceneView.addLight(config: LightConfig)
+sceneView.addGeometry(config: GeometryConfig)
+sceneView.enableCameraControls(
+    distance: Double = 5.0,
+    targetX: Double = 0.0, targetY: Double = 0.0, targetZ: Double = 0.0,
+    autoRotate: Boolean = false
+): OrbitCameraController
+sceneView.fitToModels()                      // auto-fit camera to bounding box
+sceneView.resize(width: Int, height: Int)
+sceneView.startRendering()
+sceneView.stopRendering()
+sceneView.destroy()                          // release all GPU resources
+
+// Properties
+sceneView.canvas: HTMLCanvasElement
+sceneView.engine: Engine                     // Filament Engine
+sceneView.renderer: Renderer
+sceneView.scene: Scene
+sceneView.view: View
+sceneView.camera: Camera
+sceneView.cameraController: OrbitCameraController?
+sceneView.autoResize: Boolean = true
+```
+
+---
+
+### SceneViewBuilder (DSL — configure block inside SceneView.create)
+
+```kotlin
+SceneView.create(canvas, configure = {
+    camera {
+        eye(0.0, 1.5, 5.0)        // camera position
+        target(0.0, 0.0, 0.0)     // look-at point
+        up(0.0, 1.0, 0.0)
+        fov(45.0)                  // degrees
+        near(0.1); far(1000.0)
+        exposure(1.1)              // direct exposure value (model-viewer style)
+        // or: exposure(aperture = 16.0, shutterSpeed = 1/125.0, sensitivity = 100.0)
+    }
+    light {
+        directional()              // or: point() / spot()
+        intensity(100_000.0)
+        color(1.0f, 1.0f, 1.0f)
+        direction(0.6f, -1.0f, -0.8f)
+        // for point/spot: position(x, y, z)
+    }
+    model("models/damaged_helmet.glb") {
+        autoAnimate(true)          // play first glTF animation if present
+        scale(1.0f)
+        onLoaded { asset -> /* FilamentAsset */ }
+    }
+    geometry {
+        cube()                     // or: sphere() / cylinder() / plane()
+        size(1.0, 1.0, 1.0)       // cube: w/h/d; sphere/cylinder: use radius()/height()
+        color(1.0, 0.0, 0.0, 1.0) // RGBA 0-1
+        position(0.0, 0.5, -2.0)
+        rotation(0.0, 45.0, 0.0)  // Euler degrees
+        scale(1.0)
+    }
+    environment("https://…/ibl.ktx", skyboxUrl = "https://…/sky.ktx") // custom IBL
+    noEnvironment()                // skip IBL loading entirely
+    cameraControls(true)           // orbit controls (default: true)
+    autoRotate(true)               // auto-spin camera
+}) { sceneView -> /* onReady */ }
+```
+
+---
+
+### OrbitCameraController
+
+Attached automatically when `cameraControls(true)` (the default).
+Mouse: left-drag = orbit, right-drag = pan, scroll = zoom. Touch: drag = orbit, pinch = zoom.
+
+```kotlin
+controller.theta            // horizontal angle (radians)
+controller.phi              // vertical angle (radians)
+controller.distance         // distance from target
+controller.minDistance      // default 0.5
+controller.maxDistance      // default 50.0
+controller.autoRotate       // Boolean
+controller.autoRotateSpeed  // radians/frame (default 30°/s at 60fps)
+controller.enableDamping    // inertia (default true)
+controller.dampingFactor    // default 0.95
+controller.rotateSensitivity // default 0.005
+controller.zoomSensitivity   // default 0.1
+controller.panSensitivity    // default 0.003
+controller.target(x, y, z) // set look-at point
+controller.update()         // call each frame (automatic inside SceneView render loop)
+controller.dispose()
+```
+
+---
+
+### JavaScript API (window.sceneview — from script-tag usage)
+
+```js
+// Simple model viewer (creates viewer + loads model)
+sceneview.modelViewer(canvasId, modelUrl)
+  .then(sv => { /* SceneViewer instance */ })
+
+// Model viewer with autoRotate toggle
+sceneview.modelViewerAutoRotate(canvasId, modelUrl, autoRotate)
+  .then(sv => { /* SceneViewer instance */ })
+
+// Full viewer (camera + light customization)
+sceneview.createViewer(canvasId)          // autoRotate=true, cameraControls=true
+sceneview.createViewerAutoRotate(canvasId, autoRotate)
+sceneview.createViewerFull(
+  canvasId, autoRotate, cameraControls,
+  cameraX, cameraY, cameraZ, fov, lightIntensity
+).then(sv => { /* SceneViewer */ })
+```
+
+SceneViewer instance methods (all return the viewer for chaining unless noted):
+```js
+sv.loadModel(url)           // → Promise<url>
+sv.setEnvironment(iblUrl)
+sv.setEnvironmentWithSkybox(iblUrl, skyboxUrl)
+sv.setCameraOrbit(theta, phi, distance)  // radians
+sv.setCameraTarget(x, y, z)
+sv.setAutoRotate(enabled)   // Boolean
+sv.setAutoRotateSpeed(radiansPerFrame)
+sv.setZoomLimits(min, max)
+sv.setBackgroundColor(r, g, b, a)  // 0-1 range
+sv.fitToModels()
+sv.startRendering()
+sv.stopRendering()
+sv.resize(width, height)
+sv.dispose()
+```
+
+---
+
+### WebXR — ARSceneView (browser AR)
+
+Requires WebXR Device API. Supported: Chrome Android 79+, Meta Quest Browser, Safari iOS 18+.
+Must be called from a user gesture (button click).
+
+```kotlin
+// Check AR support first
+ARSceneView.checkSupport { supported ->
+    if (supported) {
+        // Must be in a click handler
+        ARSceneView.create(
+            canvas = canvas,
+            features = WebXRSession.Features(
+                required = arrayOf(XRFeature.HIT_TEST),
+                optional = arrayOf(XRFeature.DOM_OVERLAY, XRFeature.LIGHT_ESTIMATION)
+            ),
+            onError = { msg -> console.error(msg) },
+            onReady = { arView ->
+                arView.onHitTest = { pose: XRPose ->
+                    // Surface detected — place content at pose
+                    arView.loadModel("models/chair.glb")
+                }
+                arView.onSelect = { source: XRInputSource ->
+                    // User tapped
+                }
+                arView.onSessionEnd = { /* AR session ended */ }
+                arView.start()
+            }
+        )
+    }
+}
+
+arView.stop()               // ends the XR session
+arView.sceneView            // underlying SceneView for direct Filament access
+```
+
+XRFeature constants: `XRFeature.HIT_TEST`, `XRFeature.DOM_OVERLAY`, `XRFeature.LIGHT_ESTIMATION`, `XRFeature.HAND_TRACKING`
+
+---
+
+### WebXR — VRSceneView (browser VR)
+
+Requires WebXR immersive-vr. Supported: Meta Quest Browser, Chrome with headset, Firefox Reality.
+
+```kotlin
+VRSceneView.checkSupport { supported ->
+    if (supported) {
+        VRSceneView.create(
+            canvas = canvas,
+            features = WebXRSession.Features(optional = arrayOf(XRFeature.HAND_TRACKING)),
+            referenceSpaceType = XRReferenceSpaceType.LOCAL_FLOOR,
+            onError = { msg -> },
+            onReady = { vrView ->
+                vrView.sceneView.loadModel("models/room.glb")
+                vrView.onFrame = { frame: XRFrame, pose: XRViewerPose? -> /* per-frame */ }
+                vrView.onInputSelect = { source: XRInputSource, pose: XRPose? -> /* trigger */ }
+                vrView.onInputSqueeze = { source, pose -> /* grip */ }
+                vrView.onSessionEnd = { }
+                vrView.start()
+            }
+        )
+    }
+}
+```
+
+---
+
+### WebXRSession (low-level — AR + VR unified)
+
+```kotlin
+WebXRSession.checkSupport(mode = XRSessionMode.IMMERSIVE_AR) { supported -> }
+
+WebXRSession.create(
+    canvas = canvas,
+    mode = XRSessionMode.IMMERSIVE_AR,  // or IMMERSIVE_VR
+    features = WebXRSession.Features(
+        required = arrayOf(XRFeature.HIT_TEST),
+        optional = arrayOf(XRFeature.DOM_OVERLAY, XRFeature.LIGHT_ESTIMATION, XRFeature.HAND_TRACKING)
+    ),
+    referenceSpaceType = XRReferenceSpaceType.LOCAL_FLOOR,
+    onError = { msg -> },
+    onReady = { session ->
+        session.onFrame = { frame, pose -> }
+        session.onHitTest = { pose -> }      // AR only
+        session.onInputSelect = { source, pose -> }
+        session.onInputSqueeze = { source, pose -> }
+        session.onInputSourcesChange = { added, removed -> }
+        session.onSessionEnd = { }
+        session.loadModel(url)
+        session.setEntityTransform(entity, xrTransform)
+        session.start()
+        session.stop()
+        session.isAR  // Boolean
+        session.isVR  // Boolean
+    }
+)
+```
+
+XRSessionMode: `XRSessionMode.IMMERSIVE_AR`, `XRSessionMode.IMMERSIVE_VR`
+XRReferenceSpaceType: `LOCAL_FLOOR`, `LOCAL`, `VIEWER`, `BOUNDED_FLOOR`, `UNBOUNDED`
+
+---
+
+### Threading rules (Web)
+
+- All Filament API calls happen on the **JS main thread** (there is no concept of background threads in browser JS).
+- `SceneView.create` and `loadModel` are async (Promise-based) — await them before calling instance methods.
+- `loadModel` internally calls `asset.loadResources()` which fetches external textures asynchronously; the `onLoaded` callback fires when textures are ready.
+- Never call `destroy()` inside an animation frame callback — defer to next microtask.
+
+---
+
+### Web Geometry DSL (Kotlin/JS)
+
+```kotlin
+SceneView.create(canvas, configure = {
+    geometry { cube(); size(1.0, 1.0, 1.0); color(1.0, 0.0, 0.0, 1.0); position(0.0, 0.5, -2.0) }
+    geometry { sphere(); radius(0.5); color(0.0, 0.5, 1.0, 1.0) }
+    geometry { cylinder(); radius(0.3); height(1.5); color(0.0, 1.0, 0.5, 1.0) }
+    geometry { plane(); size(5.0, 5.0, 0.0); color(0.3, 0.3, 0.3, 1.0); position(0.0, 0.0, 0.0) }
+}) { sceneView -> sceneView.startRendering() }
+```
+
+Geometry types: `cube` (w/h/d via `size(x,y,z)`), `sphere` (`radius(r)`), `cylinder` (`radius(r)` + `height(h)`), `plane` (`size(w,h,0)`)
+All geometry shares the PBR material pipeline — supports `color` (base color factor), `position`, `rotation` (Euler degrees), `scale`.
+
+---
+
 ## SceneViewSwift (iOS / macOS / visionOS)
 
 Renderer: **RealityKit**. Requires iOS 17+ / macOS 14+ / visionOS 1+.
@@ -2655,68 +2958,97 @@ Backpressure is absorbed by `rateHz`. Wire format: JSON-lines consumed by
 | visionOS | RealityKit | SwiftUI | via SceneViewSwift | Alpha |
 | Web | Filament.js + WebXR | Kotlin/JS | `samples/web-demo` | Alpha |
 
-SceneView Web (sceneview.js v3.6.2) — JavaScript API:
-  SceneView.modelViewer(canvas, url, options?) → Promise<instance>
-  SceneView.create(canvas, options?) → Promise<instance>
-  instance.loadModel(url) → Promise<instance>
-  instance.clearScene() → instance  // removes all models + primitives
-  instance.setAutoRotate(enabled) → instance
-  instance.setCameraDistance(d) → instance
-  instance.setCameraManipulator('orbit'|'map'|'freelook') → instance
-  instance.setBackgroundColor(r, g, b, a?) → instance
-  instance.setQuality('low'|'medium'|'high') → instance
-  instance.setBloom(true|false|{strength,resolution,threshold,levels}) → instance
-  instance.loadEnvironment(ktxUrl, intensity?) → Promise<instance>
-  instance.addLight({type?,color?,intensity?,direction?,position?,falloff?}) → entity
-  instance.removeLight(entity) → instance
-  instance.clearLights() → instance  // wipes base 3-point rig + IBL
-  instance.createBox(center, [w,h,d], [r,g,b,a]) → asset
-  instance.createSphere(center, radius, [r,g,b,a]) → asset
-  instance.createCylinder(center, radius, height, [r,g,b,a]) → asset
-  instance.playAnimation(index=0, loop=true) → instance  // glTF keyframe + skinning
-  instance.stopAnimation() → instance
-  instance.createText({text, fontSize?, color?, position?, billboard?}) → entity
-  instance.createImage({url, position?, size?, billboard?}) → entity
-  instance.createVideo({url, position?, size?, loop?, autoplay?, chromaKey?}) → entity
-  instance.removeNode(entity) → void
-  instance.dispose() → void
+SceneView Web (sceneview-web v4.0.0-rc.1) — see "## SceneView Web (Kotlin/JS + Filament.js)" section above for the full API reference.
 | Desktop | Software renderer | Compose Desktop | `samples/desktop-demo` | Alpha |
 | Flutter | Filament/RealityKit | PlatformView | `samples/flutter-demo` | Alpha |
 | React Native | Filament/RealityKit | Fabric | `samples/react-native-demo` | Alpha |
 
 ### Flutter Bridge API
-```dart
-// 3D Scene
-SceneView(onTap: (nodeName) => print(nodeName))
-// AR Scene
-ARSceneView(onTap: (nodeName) => ..., onPlaneDetected: (planeType) => ...)
-// Model with rotation
-ModelNode(url: "model.glb", position: [0, 0, -2], scale: 1.0,
-          rotationX: 45.0, rotationY: 0.0, rotationZ: 0.0)
+Package: `sceneview_flutter` (pub.dev) — Alpha, Android + iOS only.
+
+Install:
+```yaml
+# pubspec.yaml
+dependencies:
+  sceneview_flutter: ^4.0.0-rc.1
 ```
+
+Widgets: `SceneView` (3D), `ARSceneView` (AR).
+Controller: `SceneViewController` — attach via `onViewCreated`, then call imperative methods.
+
+```dart
+import 'package:sceneview_flutter/sceneview_flutter.dart';
+
+// 3D scene — declarative initial models
+SceneView(
+  initialModels: [
+    ModelNode(modelPath: 'models/helmet.glb', x: 0, y: 0, z: -2, scale: 0.5),
+  ],
+  onTap: (nodeName) => print('tapped: $nodeName'),
+)
+
+// 3D scene — imperative controller
+final controller = SceneViewController();
+SceneView(
+  controller: controller,
+  onViewCreated: () {
+    controller.loadModel(ModelNode(modelPath: 'models/helmet.glb'));
+    controller.setEnvironment('environments/studio.hdr');
+  },
+)
+
+// AR scene
+ARSceneView(
+  planeDetection: true,
+  onPlaneDetected: (planeType) => print('plane: $planeType'),
+  onTap: (nodeName) => print('tapped: $nodeName'),
+)
+```
+
+`ModelNode` fields: `modelPath` (required), `x/y/z` (world position), `scale`, `rotationX/Y/Z` (degrees).
+Controller methods: `loadModel(ModelNode)`, `addGeometry(GeometryNode)`, `addLight(LightNode)`,
+`clearScene()`, `setEnvironment(hdrPath)`.
+Note: `GeometryNode` and `LightNode` are acknowledged by the bridge but not yet rendered natively.
 
 ### React Native Bridge API
-```tsx
-// 3D Scene with geometry + lights
-<SceneView
-  modelNodes={[{ url: "model.glb", position: [0, 0, -2] }]}
-  geometryNodes={[{ type: "cube", size: [1,1,1], color: "#FF0000", position: [0, 0.5, -2] }]}
-  lightNodes={[{ type: "directional", intensity: 100000 }]}
-/>
-// AR Scene
-<ARSceneView
-  planeDetection={true}
-  onTap={(e) => console.log(e.nativeEvent)}
-  onPlaneDetected={(e) => console.log(e.nativeEvent)}
-/>
-// Geometry types: "cube", "sphere", "cylinder", "plane"
-// Light types: "directional", "point", "spot"
+Package: `@sceneview-sdk/react-native` (npm) — Alpha, Android + iOS only.
+
+Install:
+```sh
+npm install @sceneview-sdk/react-native
+# iOS: cd ios && pod install
 ```
 
-### Web Geometry DSL (Kotlin/JS)
-```kotlin
-SceneView.create(canvas) {
-    geometry { cube(); size(1.0, 1.0, 1.0); color(1.0, 0.0, 0.0, 1.0); position(0.0, 0.5, -2.0) }
-    geometry { sphere(); radius(0.5); color(0.0, 0.5, 1.0, 1.0) }
-}
+Components: `SceneView` (3D), `ARSceneView` (AR). Backed by Filament (Android) / RealityKit (iOS).
+
+```tsx
+import { SceneView, ARSceneView, ModelNode } from '@sceneview-sdk/react-native';
+
+// 3D scene
+<SceneView
+  style={{ flex: 1 }}
+  environment="environments/studio.hdr"
+  modelNodes={[{ src: 'models/robot.glb', position: [0, 0, -2], scale: 0.5 }]}
+  geometryNodes={[{ type: 'box', size: [1, 1, 1], color: '#FF5500', position: [0, 0.5, -2] }]}
+  lightNodes={[{ type: 'directional', intensity: 100000 }]}
+  onTap={(e) => console.log(e.nativeEvent.nodeName)}
+/>
+
+// AR scene
+<ARSceneView
+  style={{ flex: 1 }}
+  planeDetection={true}
+  depthOcclusion={false}
+  instantPlacement={false}
+  modelNodes={[{ src: 'models/chair.glb', position: [0, 0, -1] }]}
+  onTap={(e) => console.log(e.nativeEvent)}
+  onPlaneDetected={(e) => console.log(e.nativeEvent.type)}
+/>
 ```
+
+`ModelNode` fields: `src` (required), `position?: [x,y,z]`, `rotation?: [x,y,z]` (degrees),
+`scale?: number | [x,y,z]`, `animation?: string` (auto-play animation name).
+Geometry types: `'box' | 'cube' | 'sphere' | 'cylinder' | 'plane'`.
+Light types: `'directional' | 'point' | 'spot'`.
+
+See "## SceneView Web (Kotlin/JS + Filament.js)" for the full Web Geometry DSL reference.
