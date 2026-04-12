@@ -11,8 +11,7 @@
 #   wrangler kv namespace create RL_KV
 # Then update the IDs below.
 #
-# DNS: add CNAME telemetry.sceneview.io -> <worker-subdomain>.workers.dev
-# in Cloudflare DNS dashboard.
+# Production URL: https://sceneview-telemetry.mcp-tools-lab.workers.dev
 
 name = "sceneview-telemetry"
 main = "src/index.ts"
@@ -49,8 +48,8 @@ ENVIRONMENT = "production"
 # [triggers]
 # crons = ["0 2 * * *"]
 
-# ── Custom domain ────────────────────────────────────────────────────────────
-# Uncomment after DNS CNAME is set up:
+# ── Custom domain (optional) ──────────────────────────────────────────────────
+# If a custom domain is configured in the future, uncomment:
 # [routes]
-# pattern = "telemetry.sceneview.io/*"
+# pattern = "telemetry.example.com/*"
 # custom_domain = true

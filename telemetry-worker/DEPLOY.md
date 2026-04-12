@@ -92,27 +92,19 @@ wrangler deploy
 
 This enables the daily rollup at 02:00 UTC that aggregates events into `daily_rollups` and purges raw events older than 90 days. Without this, raw events accumulate indefinitely.
 
-## Step 5 — DNS (custom domain)
-
-In the Cloudflare DNS dashboard for `sceneview.io`:
-
-1. Add a CNAME record: `telemetry` -> `sceneview-telemetry.<account>.workers.dev`
-2. Uncomment the `[routes]` section in `wrangler.toml`
-3. Redeploy: `wrangler deploy`
-
-## Step 6 — Verify
+## Step 5 — Verify
 
 ```bash
 # Health check
-curl https://telemetry.sceneview.io/health
+curl https://sceneview-telemetry.mcp-tools-lab.workers.dev/health
 
 # Send a test event
-curl -X POST https://telemetry.sceneview.io/v1/events \
+curl -X POST https://sceneview-telemetry.mcp-tools-lab.workers.dev/v1/events \
   -H "Content-Type: application/json" \
   -d '{"timestamp":"2026-04-12T10:00:00Z","event":"init","client":"test","clientVersion":"1.0","mcpVersion":"4.0.0-rc.1","tier":"free"}'
 
 # Check stats
-curl https://telemetry.sceneview.io/v1/stats
+curl https://sceneview-telemetry.mcp-tools-lab.workers.dev/v1/stats
 ```
 
 ## Optional secret — STATS_TOKEN
@@ -151,7 +143,7 @@ If `STATS_TOKEN` is not configured, the endpoint remains open — useful for loc
 
 ## After deployment
 
-Update `TELEMETRY_ENDPOINT` in `mcp/src/telemetry.ts` if the URL differs from `https://telemetry.sceneview.io/v1/events`.
+The `TELEMETRY_ENDPOINT` in `mcp/src/telemetry.ts` is already set to `https://sceneview-telemetry.mcp-tools-lab.workers.dev/v1/events`.
 
 ## Dashboard
 
@@ -160,7 +152,7 @@ A standalone HTML dashboard (`dashboard.html`) provides a visual stats overview.
 **To use:**
 1. Open `dashboard.html` in your browser (file:// protocol works locally)
 2. On first load, the dashboard prompts for:
-   - **API base URL** (e.g., `https://telemetry.sceneview.io`)
+   - **API base URL** (e.g., `https://sceneview-telemetry.mcp-tools-lab.workers.dev`)
    - **Bearer token** (your `STATS_TOKEN` value, if set)
 3. Credentials are stored in the browser's localStorage and persisted between sessions
 4. The dashboard auto-refreshes every 60 seconds and works offline once loaded

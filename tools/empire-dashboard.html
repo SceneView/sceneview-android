@@ -981,11 +981,9 @@ body {
           <div style="font-size:3rem;margin-bottom:16px">📡</div>
           <h3 style="margin-bottom:8px">Telemetry Worker pas encore connecté</h3>
           <p style="font-size:0.9rem;color:var(--on-surface-dim);max-width:500px;margin:0 auto 24px">
-            Le worker est codé (79 tests) mais pas déployé. Pour activer :<br><br>
-            <strong>1.</strong> Crée la D1 database + KV namespace sur Cloudflare<br>
-            <strong>2.</strong> <code>cd telemetry-worker && wrangler deploy</code><br>
-            <strong>3.</strong> Configure le CNAME <code>telemetry.sceneview.io</code><br>
-            <strong>4.</strong> Entre l'URL ci-dessus et clique "Charger"
+            Le worker est déployé. Pour charger les données :<br><br>
+            <strong>1.</strong> Entre l'URL <code>https://sceneview-telemetry.mcp-tools-lab.workers.dev</code> ci-dessus<br>
+            <strong>2.</strong> Clique "Charger"
           </p>
           <p style="font-size:0.8rem;color:var(--on-surface-dim)">
             Endpoints disponibles : <code>/stats</code> <code>/timeseries</code> <code>/events</code> <code>/health</code>
