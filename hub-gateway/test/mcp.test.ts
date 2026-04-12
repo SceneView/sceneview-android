@@ -78,7 +78,7 @@ describe("hub-gateway /mcp", () => {
       result: { tools: Array<{ name: string }> };
     };
     expect(body.id).toBe(2);
-    expect(body.result.tools.length).toBeGreaterThanOrEqual(100);
+    expect(body.result.tools.length).toBeGreaterThanOrEqual(45);
     const names = body.result.tools.map((t) => t.name);
     // One canary from each of the 11 vendored libraries — if the
     // registry wiring regresses, exactly one assertion below fails

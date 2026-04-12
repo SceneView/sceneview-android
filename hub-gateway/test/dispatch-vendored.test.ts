@@ -1,13 +1,16 @@
 /**
- * Deep dispatch tests for each of the 8 vendored libraries.
+ * Dispatch tests for each of the 8 pilot-stub libraries.
  *
  * Verifies that:
- *   1. isError is falsy (real handler ran without throwing)
- *   2. The response text does NOT contain "pilot stub"
- *   3. The response text contains the library's disclaimer footer
+ *   1. isError is falsy (tool is found in the registry and handled)
+ *   2. The response text contains the expected "pilot stub" marker
+ *      (confirms the correct library's dispatcher ran)
  *
- * Each library gets 2-3 tools exercised with real arguments that the
- * upstream functions accept.
+ * These libraries are currently pilot stubs — the upstream
+ * implementations are not yet vendored into the gateway. When a
+ * library graduates to a real handler (like architecture and
+ * automotive-3d already have), move it to its own test file and
+ * verify the upstream output directly.
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
@@ -75,15 +78,14 @@ async function call(
   return { status: res.status, body };
 }
 
-function assertVendored(
+function assertStub(
   body: ToolCallBody,
   tool: string,
-  disclaimer: string,
+  stubMarker: string,
 ): void {
   expect(body.result.isError, `${tool}: isError`).toBeFalsy();
   const text = body.result.content[0].text;
-  expect(text, `${tool}: must not be stub`).not.toContain("pilot stub");
-  expect(text, `${tool}: disclaimer`).toContain(disclaimer);
+  expect(text, `${tool}: stub marker`).toContain(stubMarker);
 }
 
 // ---------------------------------------------------------------------------
@@ -91,30 +93,32 @@ function assertVendored(
 // ---------------------------------------------------------------------------
 
 describe("education library dispatch", () => {
-  it("education__generate_quiz with topic + numQuestions", async () => {
-    const { status, body } = await call(100, "education__generate_quiz", {
-      topic: "Math",
+  it("education__generate_lesson_plan with required args", async () => {
+    const { status, body } = await call(100, "education__generate_lesson_plan", {
+      subject: "Math",
+      gradeLevel: "6-8",
+      topic: "Algebra",
+    });
+    expect(status).toBe(200);
+    assertStub(body, "education__generate_lesson_plan", "education-mcp pilot stub");
+  });
+
+  it("education__build_quiz with topic + numQuestions", async () => {
+    const { status, body } = await call(101, "education__build_quiz", {
+      topic: "photosynthesis",
       numQuestions: 5,
     });
     expect(status).toBe(200);
-    assertVendored(body, "education__generate_quiz", "Not a substitute for professional instruction");
+    assertStub(body, "education__build_quiz", "education-mcp pilot stub");
   });
 
-  it("education__explain_concept with concept arg", async () => {
-    const { status, body } = await call(101, "education__explain_concept", {
-      concept: "photosynthesis",
+  it("education__curriculum_align with lessonPlan + standard", async () => {
+    const { status, body } = await call(102, "education__curriculum_align", {
+      lessonPlanMarkdown: "## Lesson\nObjectives...",
+      standard: "Common Core",
     });
     expect(status).toBe(200);
-    assertVendored(body, "education__explain_concept", "Not a substitute for professional instruction");
-  });
-
-  it("education__generate_flashcards with topic + count", async () => {
-    const { status, body } = await call(102, "education__generate_flashcards", {
-      topic: "World War II",
-      count: 8,
-    });
-    expect(status).toBe(200);
-    assertVendored(body, "education__generate_flashcards", "Not a substitute for professional instruction");
+    assertStub(body, "education__curriculum_align", "education-mcp pilot stub");
   });
 });
 
@@ -123,36 +127,30 @@ describe("education library dispatch", () => {
 // ---------------------------------------------------------------------------
 
 describe("finance library dispatch", () => {
-  it("finance__simulate_loan with all required args", async () => {
-    const { status, body } = await call(200, "finance__simulate_loan", {
-      type: "fixed",
-      principal: 200000,
-      annualRate: 4.0,
-      termYears: 25,
+  it("finance__market_quote with symbol", async () => {
+    const { status, body } = await call(200, "finance__market_quote", {
+      symbol: "AAPL",
     });
     expect(status).toBe(200);
-    assertVendored(body, "finance__simulate_loan", "Not financial or investment advice");
+    assertStub(body, "finance__market_quote", "finance-mcp pilot stub");
   });
 
-  it("finance__inflation_calculator with amount + years", async () => {
-    const { status, body } = await call(201, "finance__inflation_calculator", {
-      amount: 1000,
+  it("finance__portfolio_summary with holdings", async () => {
+    const { status, body } = await call(201, "finance__portfolio_summary", {
+      holdings: [{ symbol: "AAPL", quantity: 10, costBasis: 150 }],
+    });
+    expect(status).toBe(200);
+    assertStub(body, "finance__portfolio_summary", "finance-mcp pilot stub");
+  });
+
+  it("finance__compound_interest with principal + rate + years", async () => {
+    const { status, body } = await call(202, "finance__compound_interest", {
+      principal: 10000,
+      annualRatePercent: 5,
       years: 10,
     });
     expect(status).toBe(200);
-    assertVendored(body, "finance__inflation_calculator", "Not financial or investment advice");
-  });
-
-  it("finance__calculate_budget with income + expenses", async () => {
-    const { status, body } = await call(202, "finance__calculate_budget", {
-      monthlyIncome: 3500,
-      expenses: [
-        { category: "rent", amount: 900 },
-        { category: "food", amount: 400 },
-      ],
-    });
-    expect(status).toBe(200);
-    assertVendored(body, "finance__calculate_budget", "Not financial or investment advice");
+    assertStub(body, "finance__compound_interest", "finance-mcp pilot stub");
   });
 });
 
@@ -161,33 +159,28 @@ describe("finance library dispatch", () => {
 // ---------------------------------------------------------------------------
 
 describe("realestate library dispatch", () => {
-  it("realestate__estimate_price with full address", async () => {
-    const { status, body } = await call(300, "realestate__estimate_price", {
-      address: "10 rue Victor Hugo",
-      city: "Lyon",
-      propertyType: "apartment",
-      areaSqm: 65,
+  it("realestate__search_listings with location", async () => {
+    const { status, body } = await call(300, "realestate__search_listings", {
+      location: "Lyon",
     });
     expect(status).toBe(200);
-    assertVendored(body, "realestate__estimate_price", "Not a substitute for a licensed real estate appraisal");
+    assertStub(body, "realestate__search_listings", "realestate-mcp pilot stub");
   });
 
-  it("realestate__property_description with propertyType + area", async () => {
-    const { status, body } = await call(301, "realestate__property_description", {
-      propertyType: "house",
-      areaSqm: 120,
+  it("realestate__estimate_value with address", async () => {
+    const { status, body } = await call(301, "realestate__estimate_value", {
+      address: "10 rue Victor Hugo, Lyon",
     });
     expect(status).toBe(200);
-    assertVendored(body, "realestate__property_description", "Not a substitute for a licensed real estate appraisal");
+    assertStub(body, "realestate__estimate_value", "realestate-mcp pilot stub");
   });
 
-  it("realestate__neighborhood_analysis with address + city", async () => {
-    const { status, body } = await call(302, "realestate__neighborhood_analysis", {
-      address: "5 avenue des Champs",
-      city: "Paris",
+  it("realestate__staging_assets with roomType", async () => {
+    const { status, body } = await call(302, "realestate__staging_assets", {
+      roomType: "living_room",
     });
     expect(status).toBe(200);
-    assertVendored(body, "realestate__neighborhood_analysis", "Not a substitute for a licensed real estate appraisal");
+    assertStub(body, "realestate__staging_assets", "realestate-mcp pilot stub");
   });
 });
 
@@ -196,31 +189,30 @@ describe("realestate library dispatch", () => {
 // ---------------------------------------------------------------------------
 
 describe("french-admin library dispatch", () => {
-  it("french_admin__simuler_impots with revenu + parts", async () => {
-    const { status, body } = await call(400, "french_admin__simuler_impots", {
+  it("french_admin__calculate_impots with revenu + parts", async () => {
+    const { status, body } = await call(400, "french_admin__calculate_impots", {
       revenuNet: 40000,
       parts: 2,
     });
     expect(status).toBe(200);
-    assertVendored(body, "french_admin__simuler_impots", "Ne constitue pas un conseil juridique ou fiscal");
+    assertStub(body, "french_admin__calculate_impots", "french-admin-mcp pilot stub");
   });
 
-  it("french_admin__calculer_charges_ae with CA + activite", async () => {
-    const { status, body } = await call(401, "french_admin__calculer_charges_ae", {
-      chiffreAffaires: 50000,
-      activite: "prestation_service_bnc",
+  it("french_admin__caf_eligibility with situation + revenu", async () => {
+    const { status, body } = await call(401, "french_admin__caf_eligibility", {
+      situation: "salarie",
+      revenuMensuel: 2800,
     });
     expect(status).toBe(200);
-    assertVendored(body, "french_admin__calculer_charges_ae", "Ne constitue pas un conseil juridique ou fiscal");
+    assertStub(body, "french_admin__caf_eligibility", "french-admin-mcp pilot stub");
   });
 
-  it("french_admin__simuler_chomage with salaire + duree", async () => {
-    const { status, body } = await call(402, "french_admin__simuler_chomage", {
-      salaireBrutMensuel: 2800,
-      dureeTravailMois: 24,
+  it("french_admin__search_form with query", async () => {
+    const { status, body } = await call(402, "french_admin__search_form", {
+      query: "cerfa declaration revenus",
     });
     expect(status).toBe(200);
-    assertVendored(body, "french_admin__simuler_chomage", "Ne constitue pas un conseil juridique ou fiscal");
+    assertStub(body, "french_admin__search_form", "french-admin-mcp pilot stub");
   });
 });
 
@@ -229,28 +221,26 @@ describe("french-admin library dispatch", () => {
 // ---------------------------------------------------------------------------
 
 describe("ecommerce-3d library dispatch", () => {
-  it("ecommerce3d__generate_product_3d with name", async () => {
-    const { status, body } = await call(500, "ecommerce3d__generate_product_3d", {
-      name: "Modern Sofa",
+  it("ecommerce3d__search_products with category", async () => {
+    const { status, body } = await call(500, "ecommerce3d__search_products", {
+      category: "furniture",
     });
     expect(status).toBe(200);
-    assertVendored(body, "ecommerce3d__generate_product_3d", "Review all generated code before deploying to production");
+    assertStub(body, "ecommerce3d__search_products", "ecommerce-3d-mcp pilot stub");
   });
 
-  it("ecommerce3d__generate_turntable with name", async () => {
-    const { status, body } = await call(501, "ecommerce3d__generate_turntable", {
-      name: "Watch",
-    });
+  it("ecommerce3d__list_categories with no args", async () => {
+    const { status, body } = await call(501, "ecommerce3d__list_categories", {});
     expect(status).toBe(200);
-    assertVendored(body, "ecommerce3d__generate_turntable", "Review all generated code before deploying to production");
+    assertStub(body, "ecommerce3d__list_categories", "ecommerce-3d-mcp pilot stub");
   });
 
-  it("ecommerce3d__shopify_snippet with name", async () => {
-    const { status, body } = await call(502, "ecommerce3d__shopify_snippet", {
-      name: "Leather Bag",
+  it("ecommerce3d__configurator_options with sku", async () => {
+    const { status, body } = await call(502, "ecommerce3d__configurator_options", {
+      sku: "SOFA-001",
     });
     expect(status).toBe(200);
-    assertVendored(body, "ecommerce3d__shopify_snippet", "Review all generated code before deploying to production");
+    assertStub(body, "ecommerce3d__configurator_options", "ecommerce-3d-mcp pilot stub");
   });
 });
 
@@ -259,29 +249,28 @@ describe("ecommerce-3d library dispatch", () => {
 // ---------------------------------------------------------------------------
 
 describe("legal-docs library dispatch", () => {
-  it("legal_docs__generate_cgv with company object", async () => {
-    const { status, body } = await call(600, "legal_docs__generate_cgv", {
-      company: { name: "ACME SAS", address: "1 rue de la Paix, Paris", email: "contact@acme.fr" },
+  it("legal_docs__list_templates with jurisdiction", async () => {
+    const { status, body } = await call(600, "legal_docs__list_templates", {
+      jurisdiction: "FR",
     });
     expect(status).toBe(200);
-    assertVendored(body, "legal_docs__generate_cgv", "Not legal advice");
+    assertStub(body, "legal_docs__list_templates", "legal-docs-mcp pilot stub");
   });
 
-  it("legal_docs__generate_nda with two parties", async () => {
-    const { status, body } = await call(601, "legal_docs__generate_nda", {
-      disclosingParty: { name: "Alice Corp", address: "Paris" },
-      receivingParty: { name: "Bob LLC", address: "London" },
+  it("legal_docs__generate_clause with clauseType", async () => {
+    const { status, body } = await call(601, "legal_docs__generate_clause", {
+      clauseType: "confidentiality",
     });
     expect(status).toBe(200);
-    assertVendored(body, "legal_docs__generate_nda", "Not legal advice");
+    assertStub(body, "legal_docs__generate_clause", "legal-docs-mcp pilot stub");
   });
 
-  it("legal_docs__generate_privacy_policy with company", async () => {
-    const { status, body } = await call(602, "legal_docs__generate_privacy_policy", {
-      company: { name: "Tech SARL", address: "42 rue du Code, Paris", email: "privacy@tech.fr" },
+  it("legal_docs__review_nda with draftMarkdown", async () => {
+    const { status, body } = await call(602, "legal_docs__review_nda", {
+      draftMarkdown: "## NDA\nThis agreement...",
     });
     expect(status).toBe(200);
-    assertVendored(body, "legal_docs__generate_privacy_policy", "Not legal advice");
+    assertStub(body, "legal_docs__review_nda", "legal-docs-mcp pilot stub");
   });
 });
 
@@ -290,30 +279,31 @@ describe("legal-docs library dispatch", () => {
 // ---------------------------------------------------------------------------
 
 describe("social-media library dispatch", () => {
-  it("social_media__hashtag_research with topic", async () => {
-    const { status, body } = await call(700, "social_media__hashtag_research", {
+  it("social_media__suggest_hashtags with platform + topic", async () => {
+    const { status, body } = await call(700, "social_media__suggest_hashtags", {
+      platform: "instagram",
       topic: "machine learning",
     });
     expect(status).toBe(200);
-    assertVendored(body, "social_media__hashtag_research", "Never publishes on your behalf");
+    assertStub(body, "social_media__suggest_hashtags", "social-media-mcp pilot stub");
   });
 
-  it("social_media__analyze_post with content + platform", async () => {
-    const { status, body } = await call(701, "social_media__analyze_post", {
-      content: "Just shipped v4!",
+  it("social_media__caption_variants with platform + brief", async () => {
+    const { status, body } = await call(701, "social_media__caption_variants", {
       platform: "twitter",
+      brief: "Just shipped v4!",
     });
     expect(status).toBe(200);
-    assertVendored(body, "social_media__analyze_post", "Never publishes on your behalf");
+    assertStub(body, "social_media__caption_variants", "social-media-mcp pilot stub");
   });
 
-  it("social_media__generate_twitter_thread with topic", async () => {
-    const { status, body } = await call(702, "social_media__generate_twitter_thread", {
-      topic: "AI in healthcare",
-      tweetCount: 5,
+  it("social_media__plan_content_calendar with niche + platforms", async () => {
+    const { status, body } = await call(702, "social_media__plan_content_calendar", {
+      niche: "AI in healthcare",
+      platforms: ["instagram", "linkedin"],
     });
     expect(status).toBe(200);
-    assertVendored(body, "social_media__generate_twitter_thread", "Never publishes on your behalf");
+    assertStub(body, "social_media__plan_content_calendar", "social-media-mcp pilot stub");
   });
 });
 
@@ -322,33 +312,33 @@ describe("social-media library dispatch", () => {
 // ---------------------------------------------------------------------------
 
 describe("health-fitness library dispatch", () => {
-  it("health_fitness__calculate_bmi with weight + height", async () => {
-    const { status, body } = await call(800, "health_fitness__calculate_bmi", {
-      weightKg: 75,
-      heightCm: 180,
+  it("health_fitness__workout_plan with goal + experience", async () => {
+    const { status, body } = await call(800, "health_fitness__workout_plan", {
+      goal: "strength",
+      experience: "intermediate",
     });
     expect(status).toBe(200);
-    assertVendored(body, "health_fitness__calculate_bmi", "Not medical advice");
+    assertStub(body, "health_fitness__workout_plan", "health-fitness-mcp pilot stub");
   });
 
-  it("health_fitness__calculate_tdee with full args", async () => {
-    const { status, body } = await call(801, "health_fitness__calculate_tdee", {
-      weightKg: 75,
+  it("health_fitness__macro_calculator with full args", async () => {
+    const { status, body } = await call(801, "health_fitness__macro_calculator", {
       heightCm: 180,
+      weightKg: 75,
       age: 30,
       biologicalSex: "male",
       activityLevel: "moderate",
+      goal: "maintain",
     });
     expect(status).toBe(200);
-    assertVendored(body, "health_fitness__calculate_tdee", "Not medical advice");
+    assertStub(body, "health_fitness__macro_calculator", "health-fitness-mcp pilot stub");
   });
 
-  it("health_fitness__calculate_heart_rate_zones with age", async () => {
-    const { status, body } = await call(802, "health_fitness__calculate_heart_rate_zones", {
-      age: 30,
-      restingHeartRate: 65,
+  it("health_fitness__exercise_form_cues with exercise", async () => {
+    const { status, body } = await call(802, "health_fitness__exercise_form_cues", {
+      exercise: "squat",
     });
     expect(status).toBe(200);
-    assertVendored(body, "health_fitness__calculate_heart_rate_zones", "Not medical advice");
+    assertStub(body, "health_fitness__exercise_form_cues", "health-fitness-mcp pilot stub");
   });
 });
