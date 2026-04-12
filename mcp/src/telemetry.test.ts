@@ -199,11 +199,11 @@ describe("telemetry payload shape", () => {
     const headers = (init.headers ?? {}) as Record<string, string>;
     expect(headers["content-type"]).toBe("application/json");
 
-    const body = JSON.parse(init.body as string) as { events: TelemetryPayload[] };
-    expect(Array.isArray(body.events)).toBe(true);
-    expect(body.events).toHaveLength(2);
+    const body = JSON.parse(init.body as string) as TelemetryPayload[];
+    expect(Array.isArray(body)).toBe(true);
+    expect(body).toHaveLength(2);
 
-    const [initPayload, toolPayload] = body.events;
+    const [initPayload, toolPayload] = body;
     expect(initPayload!.event).toBe("init");
     expect(toolPayload!.event).toBe("tool");
     expect(toolPayload!.tool).toBe("get_node_reference");
@@ -212,7 +212,7 @@ describe("telemetry payload shape", () => {
     expect(toolPayload!.clientVersion).toBe("0.50.0");
 
     // Both payloads must only contain allowed fields.
-    for (const payload of body.events) {
+    for (const payload of body) {
       for (const key of Object.keys(payload)) {
         expect(ALLOWED_FIELDS.has(key), `unexpected field: ${key}`).toBe(true);
       }
@@ -254,10 +254,10 @@ describe("telemetry payload shape", () => {
     for (const call of mock.mock.calls) {
       const [url, init] = call as [string, RequestInit];
       const raw = JSON.parse(init.body as string) as Record<string, unknown>;
-      // Both /v1/events (single body) and /v1/batch ({ events: [] }) shapes.
+      // Both /v1/events (single body) and /v1/batch (bare array) shapes.
       const payloads: TelemetryPayload[] =
         url.endsWith("/batch")
-          ? ((raw as { events: TelemetryPayload[] }).events ?? [])
+          ? (raw as unknown as TelemetryPayload[])
           : [raw as unknown as TelemetryPayload];
       for (const body of payloads) {
         for (const forbidden of ["ip", "hostname", "user", "args", "result", "prompt", "apiKey"]) {
@@ -392,8 +392,8 @@ describe("telemetry batching", () => {
     expect(mock).toHaveBeenCalledTimes(1);
     const [url, init] = mock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("https://sceneview-telemetry.mcp-tools-lab.workers.dev/v1/batch");
-    const body = JSON.parse(init.body as string) as { events: TelemetryPayload[] };
-    expect(body.events).toHaveLength(3);
+    const body = JSON.parse(init.body as string) as TelemetryPayload[];
+    expect(body).toHaveLength(3);
   });
 
   it("auto-flushes when buffer reaches BATCH_MAX_SIZE (10)", async () => {
@@ -411,8 +411,8 @@ describe("telemetry batching", () => {
     expect(mock).toHaveBeenCalledTimes(1);
     const [url, init] = mock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("https://sceneview-telemetry.mcp-tools-lab.workers.dev/v1/batch");
-    const body = JSON.parse(init.body as string) as { events: TelemetryPayload[] };
-    expect(body.events).toHaveLength(10);
+    const body = JSON.parse(init.body as string) as TelemetryPayload[];
+    expect(body).toHaveLength(10);
   });
 
   it("flushTelemetry clears the buffer so a second flush sends nothing", async () => {

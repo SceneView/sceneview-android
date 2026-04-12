@@ -43,7 +43,7 @@ function isEnabled() {
 // Falls back to "unknown" so payloads stay well-formed even if
 // something goes wrong.
 function getMcpVersion() {
-    return process.env.SCENEVIEW_MCP_VERSION ?? "4.0.0-rc.1";
+    return process.env.SCENEVIEW_MCP_VERSION ?? "4.0.0-rc.3";
 }
 // Fire-and-forget POST of a single payload to the individual event endpoint.
 // Used as fallback when batch delivery fails.
@@ -85,7 +85,7 @@ function sendBatch(events) {
         fetch(TELEMETRY_BATCH_ENDPOINT, {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ events }),
+            body: JSON.stringify(events),
             signal: controller.signal,
         })
             .catch(() => {
