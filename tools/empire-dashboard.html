@@ -1,0 +1,1709 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SceneView Empire — Analytics Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<style>
+/* ============================================================
+   SceneView Empire Dashboard — Design System (from DESIGN.md)
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* Colors — Light */
+  --primary: #005bc1;
+  --primary-hover: #0050aa;
+  --primary-light: rgba(0,91,193,0.08);
+  --tertiary: #6446cd;
+  --surface: #f9f9ff;
+  --surface-dim: #f1f3f5;
+  --surface-container: #e9edff;
+  --on-surface: #1a1a2e;
+  --on-surface-dim: #3d4654;
+  --outline: rgba(0,0,0,0.08);
+  --success: #16a34a;
+  --success-light: rgba(22,163,74,0.1);
+  --warning: #f59e0b;
+  --warning-light: rgba(245,158,11,0.1);
+  --danger: #ea4335;
+  --danger-light: rgba(234,67,53,0.1);
+  --claude-orange: #d97757;
+  --gradient-hero: linear-gradient(135deg, #005bc1 0%, #6446cd 100%);
+  --gradient-hero-text: linear-gradient(135deg, #005bc1, #6446cd);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06);
+  --shadow-lg: 0 12px 40px rgba(0,0,0,0.12), 0 4px 12px rgba(0,0,0,0.06);
+  --glass-bg: rgba(255,255,255,0.72);
+  --glass-border: rgba(255,255,255,0.08);
+  --chart-grid: rgba(0,0,0,0.06);
+  --chart-text: #3d4654;
+}
+
+[data-theme="dark"] {
+  --primary: #a4c1ff;
+  --primary-hover: #b8d0ff;
+  --primary-light: rgba(164,193,255,0.10);
+  --tertiary: #d2a8ff;
+  --surface: #0d1117;
+  --surface-dim: #161b22;
+  --surface-container: #21262d;
+  --on-surface: #f0f6fc;
+  --on-surface-dim: #8b949e;
+  --outline: rgba(255,255,255,0.08);
+  --success: #56d364;
+  --success-light: rgba(86,211,100,0.12);
+  --warning: #e3b341;
+  --warning-light: rgba(227,179,65,0.12);
+  --danger: #f85149;
+  --danger-light: rgba(248,81,73,0.12);
+  --gradient-hero: linear-gradient(135deg, #0d419d 0%, #5a32a3 100%);
+  --gradient-hero-text: linear-gradient(135deg, #a4c1ff, #d2a8ff);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+  --shadow-lg: 0 12px 40px rgba(0,0,0,0.5);
+  --glass-bg: rgba(255,255,255,0.03);
+  --glass-border: rgba(255,255,255,0.06);
+  --chart-grid: rgba(255,255,255,0.06);
+  --chart-text: #8b949e;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: var(--surface);
+  color: var(--on-surface);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ---- Nav ---- */
+.nav {
+  position: sticky; top: 0; z-index: 100;
+  height: 64px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 32px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--outline);
+}
+.nav__brand {
+  display: flex; align-items: center; gap: 12px;
+  font-weight: 700; font-size: 1.125rem;
+}
+.nav__brand svg { width: 28px; height: 28px; }
+.nav__actions { display: flex; align-items: center; gap: 12px; }
+.nav__badge {
+  font-size: 0.75rem; font-weight: 600;
+  padding: 4px 10px; border-radius: 9999px;
+  background: var(--primary-light); color: var(--primary);
+}
+.btn-icon {
+  width: 36px; height: 36px; border-radius: 8px;
+  border: 1px solid var(--outline); background: transparent;
+  color: var(--on-surface-dim); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 200ms;
+}
+.btn-icon:hover { background: var(--surface-container); color: var(--on-surface); }
+
+/* ---- Layout ---- */
+.container { max-width: 1400px; margin: 0 auto; padding: 24px 32px 64px; }
+
+/* ---- Hero KPI Row ---- */
+.hero-section {
+  background: var(--gradient-hero);
+  border-radius: 24px;
+  padding: 32px;
+  margin-bottom: 32px;
+  color: white;
+}
+.hero-section h1 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+.hero-section .subtitle {
+  opacity: 0.8; font-size: 0.95rem; margin-bottom: 24px;
+}
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+.kpi-card {
+  background: rgba(255,255,255,0.12);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 16px;
+  padding: 20px;
+  text-align: center;
+}
+.kpi-card .kpi-value {
+  font-size: 2rem; font-weight: 800;
+  line-height: 1.2;
+}
+.kpi-card .kpi-label {
+  font-size: 0.85rem; opacity: 0.8;
+  margin-top: 4px;
+}
+.kpi-card .kpi-trend {
+  font-size: 0.8rem; margin-top: 8px;
+  padding: 3px 10px; border-radius: 9999px;
+  display: inline-block;
+}
+.kpi-trend.up { background: rgba(86,211,100,0.2); color: #56d364; }
+.kpi-trend.down { background: rgba(248,81,73,0.2); color: #f85149; }
+.kpi-trend.neutral { background: rgba(255,255,255,0.15); }
+
+/* ---- Section Cards ---- */
+.section { margin-bottom: 32px; }
+.section-title {
+  font-size: 1.25rem; font-weight: 700;
+  margin-bottom: 16px;
+  display: flex; align-items: center; gap: 10px;
+}
+.section-title .icon {
+  width: 32px; height: 32px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem;
+}
+.card {
+  background: var(--surface-dim);
+  border: 1px solid var(--outline);
+  border-radius: 16px;
+  padding: 24px;
+}
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+/* ---- Package Table ---- */
+.pkg-table { width: 100%; border-collapse: collapse; }
+.pkg-table th {
+  text-align: left; padding: 12px 16px;
+  font-size: 0.8rem; font-weight: 600;
+  color: var(--on-surface-dim);
+  text-transform: uppercase; letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--outline);
+}
+.pkg-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--outline);
+  font-size: 0.9rem;
+  vertical-align: middle;
+}
+.pkg-table tr:last-child td { border-bottom: none; }
+.pkg-table tr:hover td { background: var(--primary-light); }
+.pkg-name {
+  font-weight: 600; color: var(--primary);
+  display: flex; align-items: center; gap: 8px;
+}
+.pkg-name a { color: inherit; text-decoration: none; }
+.pkg-name a:hover { text-decoration: underline; }
+.pkg-org {
+  font-size: 0.7rem; font-weight: 500;
+  padding: 2px 6px; border-radius: 4px;
+  background: var(--surface-container);
+  color: var(--on-surface-dim);
+}
+.pkg-dl { font-weight: 700; font-variant-numeric: tabular-nums; }
+.pkg-sparkline { width: 120px; height: 32px; }
+.pkg-trend { font-size: 0.8rem; font-weight: 600; }
+.pkg-trend.positive { color: var(--success); }
+.pkg-trend.negative { color: var(--danger); }
+
+/* ---- Funnel ---- */
+.funnel { display: flex; flex-direction: column; gap: 2px; }
+.funnel-step {
+  display: flex; align-items: center; gap: 16px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  background: var(--surface-container);
+  position: relative;
+}
+.funnel-step::after {
+  content: '';
+  position: absolute; bottom: -2px; left: 50%;
+  transform: translateX(-50%);
+  width: 0; height: 0;
+  border-left: 12px solid transparent;
+  border-right: 12px solid transparent;
+  border-top: 8px solid var(--surface-container);
+}
+.funnel-step:last-child::after { display: none; }
+.funnel-bar {
+  height: 8px; border-radius: 4px;
+  background: var(--gradient-hero);
+  transition: width 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.funnel-label { flex: 0 0 180px; font-weight: 600; font-size: 0.9rem; }
+.funnel-bar-wrap { flex: 1; background: var(--outline); border-radius: 4px; overflow: hidden; }
+.funnel-value { flex: 0 0 100px; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.funnel-pct { font-size: 0.8rem; color: var(--on-surface-dim); margin-left: 4px; }
+
+/* ---- Channel Cards ---- */
+.channel-card {
+  background: var(--surface-container);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.channel-header {
+  display: flex; align-items: center; gap: 12px;
+}
+.channel-icon {
+  width: 40px; height: 40px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem;
+}
+.channel-icon.npm { background: #cb3837; color: white; }
+.channel-icon.github { background: #24292e; color: white; }
+.channel-icon.web { background: var(--primary); color: white; }
+.channel-icon.claude { background: var(--claude-orange); color: white; }
+.channel-icon.word { background: var(--success); color: white; }
+.channel-name { font-weight: 700; }
+.channel-desc { font-size: 0.85rem; color: var(--on-surface-dim); }
+.channel-metric {
+  font-size: 1.5rem; font-weight: 800;
+  color: var(--primary);
+}
+.channel-metric small { font-size: 0.75rem; color: var(--on-surface-dim); font-weight: 500; }
+
+/* ---- Status Badges ---- */
+.status-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 0.75rem; font-weight: 600;
+  padding: 4px 10px; border-radius: 9999px;
+}
+.status-badge.live { background: var(--success-light); color: var(--success); }
+.status-badge.pending { background: var(--warning-light); color: var(--warning); }
+.status-badge.none { background: var(--danger-light); color: var(--danger); }
+.status-badge::before {
+  content: ''; width: 6px; height: 6px;
+  border-radius: 50%; background: currentColor;
+}
+
+/* ---- Revenue Section ---- */
+.revenue-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+.revenue-card {
+  background: var(--surface-container);
+  border-radius: 16px;
+  padding: 24px;
+  border-left: 4px solid var(--primary);
+}
+.revenue-card.free { border-left-color: var(--on-surface-dim); }
+.revenue-card.pro { border-left-color: var(--primary); }
+.revenue-card.team { border-left-color: var(--tertiary); }
+.revenue-tier { font-size: 0.8rem; font-weight: 600; color: var(--on-surface-dim); text-transform: uppercase; letter-spacing: 0.05em; }
+.revenue-price { font-size: 2rem; font-weight: 800; margin: 8px 0; }
+.revenue-price small { font-size: 0.85rem; font-weight: 500; color: var(--on-surface-dim); }
+.revenue-features { list-style: none; font-size: 0.85rem; }
+.revenue-features li { padding: 4px 0; display: flex; align-items: center; gap: 8px; }
+.revenue-features li::before { content: '✓'; color: var(--success); font-weight: 700; }
+.revenue-stat { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--outline); }
+.revenue-stat-label { font-size: 0.8rem; color: var(--on-surface-dim); }
+.revenue-stat-value { font-size: 1.5rem; font-weight: 800; }
+
+/* ---- Recommendations ---- */
+.rec-list { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+.rec-item {
+  display: flex; align-items: flex-start; gap: 16px;
+  padding: 16px 20px;
+  background: var(--surface-container);
+  border-radius: 12px;
+}
+.rec-priority {
+  flex: 0 0 auto;
+  font-size: 0.7rem; font-weight: 700;
+  padding: 4px 8px; border-radius: 6px;
+  text-transform: uppercase;
+}
+.rec-priority.high { background: var(--danger-light); color: var(--danger); }
+.rec-priority.medium { background: var(--warning-light); color: var(--warning); }
+.rec-priority.low { background: var(--success-light); color: var(--success); }
+.rec-text { flex: 1; }
+.rec-text strong { display: block; margin-bottom: 4px; }
+.rec-text p { font-size: 0.85rem; color: var(--on-surface-dim); margin: 0; }
+
+/* ---- Chart containers ---- */
+.chart-container { position: relative; width: 100%; height: 300px; }
+.chart-container.small { height: 200px; }
+
+/* ---- Loading ---- */
+.loading {
+  display: flex; align-items: center; justify-content: center;
+  padding: 40px; color: var(--on-surface-dim);
+  font-size: 0.9rem;
+}
+.loading::before {
+  content: '';
+  width: 20px; height: 20px; margin-right: 12px;
+  border: 2px solid var(--outline);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---- Skeleton ---- */
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-container) 25%, var(--surface-dim) 50%, var(--surface-container) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* ---- Timestamp ---- */
+.last-updated {
+  text-align: center; font-size: 0.8rem;
+  color: var(--on-surface-dim);
+  padding: 16px 0;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 768px) {
+  .container { padding: 16px; }
+  .hero-section { padding: 24px 16px; }
+  .nav { padding: 0 16px; }
+  .kpi-row { grid-template-columns: repeat(2, 1fr); }
+  .card-grid { grid-template-columns: 1fr; }
+  .pkg-table { font-size: 0.8rem; }
+  .pkg-table .hide-mobile { display: none; }
+  .funnel-label { flex: 0 0 120px; font-size: 0.8rem; }
+}
+
+/* ---- Tabs ---- */
+.tabs {
+  display: flex; gap: 4px;
+  background: var(--surface-container);
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 16px;
+  overflow-x: auto;
+}
+.tab {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none; background: transparent;
+  color: var(--on-surface-dim);
+  font-family: inherit; font-size: 0.85rem; font-weight: 500;
+  cursor: pointer; white-space: nowrap;
+  transition: all 200ms;
+}
+.tab.active {
+  background: var(--surface);
+  color: var(--primary);
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+}
+.tab:hover:not(.active) { color: var(--on-surface); }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ---- Tooltip ---- */
+.info-tip {
+  position: relative;
+  display: inline-flex;
+  cursor: help;
+  color: var(--on-surface-dim);
+}
+.info-tip::after {
+  content: attr(data-tip);
+  position: absolute; bottom: calc(100% + 8px); left: 50%;
+  transform: translateX(-50%);
+  background: var(--on-surface);
+  color: var(--surface);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 200ms;
+}
+.info-tip:hover::after { opacity: 1; }
+</style>
+</head>
+<body>
+
+<!-- ========== Nav ========== -->
+<nav class="nav">
+  <div class="nav__brand">
+    <svg viewBox="0 0 24 24" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5z" fill="currentColor" opacity="0.3"/><path d="M2 17l10 5 10-5" stroke="currentColor" stroke-width="2" fill="none"/><path d="M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+    SceneView Empire
+  </div>
+  <div class="nav__actions">
+    <span class="nav__badge" id="lastRefresh">Loading...</span>
+    <button class="btn-icon" onclick="refreshAll()" title="Refresh data">↻</button>
+    <button class="btn-icon" onclick="toggleTheme()" title="Toggle theme">◐</button>
+  </div>
+</nav>
+
+<div class="container">
+
+  <!-- ========== Hero KPIs ========== -->
+  <div class="hero-section">
+    <h1>Empire Analytics</h1>
+    <p class="subtitle">Vue temps réel — npm downloads, GitHub, acquisition, monetisation</p>
+    <div class="kpi-row">
+      <div class="kpi-card">
+        <div class="kpi-value" id="totalDlMonth">—</div>
+        <div class="kpi-label">Downloads / mois</div>
+        <div class="kpi-trend neutral" id="totalDlTrend">—</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value" id="totalDlWeek">—</div>
+        <div class="kpi-label">Downloads / semaine</div>
+        <div class="kpi-trend neutral" id="weekTrend">—</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value" id="totalPackages">—</div>
+        <div class="kpi-label">Packages actifs</div>
+        <div class="kpi-trend neutral">npm</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value" id="ghStars">—</div>
+        <div class="kpi-label">GitHub Stars</div>
+        <div class="kpi-trend neutral" id="ghForks">—</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value" id="mrrEstimate">€0</div>
+        <div class="kpi-label">MRR estimé</div>
+        <div class="kpi-trend neutral" id="mrrStatus">Gateway live</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== Tabs ========== -->
+  <div class="tabs">
+    <button class="tab active" data-tab="portfolio">Portfolio</button>
+    <button class="tab" data-tab="trends">Tendances</button>
+    <button class="tab" data-tab="acquisition">Acquisition</button>
+    <button class="tab" data-tab="funnel">Funnel</button>
+    <button class="tab" data-tab="revenue">Monetisation</button>
+    <button class="tab" data-tab="usage">Usage (Telemetry)</button>
+    <button class="tab" data-tab="actions">Actions</button>
+  </div>
+
+  <!-- ==================== TAB: Portfolio ==================== -->
+  <div class="tab-panel active" id="tab-portfolio">
+    <div class="section">
+      <div class="section-title">
+        <span class="icon" style="background:var(--primary-light);color:var(--primary)">📦</span>
+        Performance par package
+      </div>
+      <div class="card" style="overflow-x:auto">
+        <table class="pkg-table">
+          <thead>
+            <tr>
+              <th>Package</th>
+              <th>Org</th>
+              <th>DL/mois</th>
+              <th>DL/semaine</th>
+              <th class="hide-mobile">30 jours</th>
+              <th>Trend</th>
+              <th>Monétisé</th>
+            </tr>
+          </thead>
+          <tbody id="pkgTableBody">
+            <tr><td colspan="7" class="loading">Chargement des données npm...</td></tr>
+          </tbody>
+          <tfoot>
+            <tr style="font-weight:700;border-top:2px solid var(--outline)">
+              <td colspan="2">TOTAL</td>
+              <td id="totalMonthFooter">—</td>
+              <td id="totalWeekFooter">—</td>
+              <td class="hide-mobile"></td>
+              <td></td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TAB: Trends ==================== -->
+  <div class="tab-panel" id="tab-trends">
+    <div class="section">
+      <div class="section-title">
+        <span class="icon" style="background:var(--success-light);color:var(--success)">📈</span>
+        Courbes de téléchargements (30 jours)
+      </div>
+      <div class="card">
+        <div class="chart-container">
+          <canvas id="trendChart"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title">
+        <span class="icon" style="background:var(--warning-light);color:var(--warning)">🏆</span>
+        Top 5 — Répartition
+      </div>
+      <div class="card-grid">
+        <div class="card">
+          <div class="chart-container small">
+            <canvas id="pieChart"></canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="chart-container small">
+            <canvas id="categoryChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TAB: Acquisition ==================== -->
+  <div class="tab-panel" id="tab-acquisition">
+    <div class="section">
+      <div class="section-title">
+        <span class="icon" style="background:var(--primary-light);color:var(--primary)">🔍</span>
+        Comment les utilisateurs nous trouvent
+      </div>
+      <p style="font-size:0.9rem;color:var(--on-surface-dim);margin-bottom:16px">
+        Estimation basée sur les données npm et GitHub.
+        <strong style="color:var(--warning)">⚠ Pas de Google Analytics</strong> — voir l'onglet Actions pour configurer le tracking.
+      </p>
+      <div class="card-grid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">
+        <div class="channel-card">
+          <div class="channel-header">
+            <div class="channel-icon npm">npm</div>
+            <div>
+              <div class="channel-name">npm search / npx</div>
+              <div class="channel-desc">Recherche directe "sceneview mcp", "3d mcp", etc.</div>
+            </div>
+          </div>
+          <div class="channel-metric" id="channelNpm">—<small> /mois estimé</small></div>
+          <div style="font-size:0.8rem;color:var(--on-surface-dim)">~60% du trafic total (standard npm)</div>
+        </div>
+        <div class="channel-card">
+          <div class="channel-header">
+            <div class="channel-icon github">GH</div>
+            <div>
+              <div class="channel-name">GitHub Discovery</div>
+              <div class="channel-desc">Stars, README links, "Used by" badge</div>
+            </div>
+          </div>
+          <div class="channel-metric" id="channelGithub">—<small> stars</small></div>
+          <div style="font-size:0.8rem;color:var(--on-surface-dim)">~20% du trafic (referrals README → npm)</div>
+        </div>
+        <div class="channel-card">
+          <div class="channel-header">
+            <div class="channel-icon claude">AI</div>
+            <div>
+              <div class="channel-name">Claude / AI Assistants</div>
+              <div class="channel-desc">"npx sceneview-mcp" recommandé par Claude/ChatGPT</div>
+            </div>
+          </div>
+          <div class="channel-metric" id="channelClaude">—<small> /mois estimé</small></div>
+          <div style="font-size:0.8rem;color:var(--on-surface-dim)">~15% et en forte croissance (AI-first)</div>
+        </div>
+        <div class="channel-card">
+          <div class="channel-header">
+            <div class="channel-icon web">Web</div>
+            <div>
+              <div class="channel-name">Website sceneview.github.io</div>
+              <div class="channel-desc">SEO, playground, docs</div>
+            </div>
+          </div>
+          <div class="channel-metric">?<small> visites/mois</small></div>
+          <div style="font-size:0.8rem;color:var(--danger)">⚠ Pas de tracking — ajouter GA4</div>
+        </div>
+        <div class="channel-card">
+          <div class="channel-header">
+            <div class="channel-icon word">WoM</div>
+            <div>
+              <div class="channel-name">Bouche-à-oreille</div>
+              <div class="channel-desc">Reddit, Discord, Stack Overflow, confs</div>
+            </div>
+          </div>
+          <div class="channel-metric">~5%<small> estimé</small></div>
+          <div style="font-size:0.8rem;color:var(--on-surface-dim)">95 discussions GitHub répondues</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">
+        <span class="icon" style="background:var(--tertiary);color:white">🌍</span>
+        Écosystème — Portée multi-domaines
+      </div>
+      <div class="card">
+        <table class="pkg-table">
+          <thead>
+            <tr>
+              <th>Domaine</th>
+              <th>Plateforme</th>
+              <th>Audience</th>
+              <th>DL/mois</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>3D/AR SDK</strong></td>
+              <td>Maven Central, SPM</td>
+              <td>Devs Android/iOS</td>
+              <td>Maven (non trackable)</td>
+              <td><span class="status-badge live">Stable</span></td>
+            </tr>
+            <tr>
+              <td><strong>MCP — SceneView</strong></td>
+              <td>npm</td>
+              <td>AI devs, Claude users</td>
+              <td id="domainMcp">—</td>
+              <td><span class="status-badge live">Live</span></td>
+            </tr>
+            <tr>
+              <td><strong>MCP — Immobilier</strong></td>
+              <td>npm</td>
+              <td>Agents immo, devs proptech</td>
+              <td id="domainRealestate">—</td>
+              <td><span class="status-badge live">Live</span></td>
+            </tr>
+            <tr>
+              <td><strong>MCP — Admin FR</strong></td>
+              <td>npm</td>
+              <td>Citoyens FR, devs govtech</td>
+              <td id="domainFrAdmin">—</td>
+              <td><span class="status-badge live">Live</span></td>
+            </tr>
+            <tr>
+              <td><strong>MCP — E-commerce 3D</strong></td>
+              <td>npm</td>
+              <td>E-commerçants, devs shopify</td>
+              <td id="domainEcommerce">—</td>
+              <td><span class="status-badge live">Live</span></td>
+            </tr>
+            <tr>
+              <td><strong>MCP — Architecture</strong></td>
+              <td>npm</td>
+              <td>Architectes, BIM devs</td>
+              <td id="domainArchi">—</td>
+              <td><span class="status-badge live">Live</span></td>
+            </tr>
+            <tr>
+              <td><strong>Web 3D</strong></td>
+              <td>npm</td>
+              <td>Web devs, Filament.js</td>
+              <td id="domainWeb">—</td>
+              <td><span class="status-badge live">Live</span></td>
+            </tr>
+            <tr>
+              <td><strong>Website</strong></td>
+              <td>GitHub Pages</td>
+              <td>Tous</td>
+              <td>? (no GA)</td>
+              <td><span class="status-badge pending">No tracking</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TAB: Funnel ==================== -->
+  <div class="tab-panel" id="tab-funnel">
+    <div class="section">
+      <div class="section-title">
+        <span class="icon" style="background:var(--success-light);color:var(--success)">🎯</span>
+        User Journey — De la découverte au paiement
+      </div>
+      <p style="font-size:0.9rem;color:var(--on-surface-dim);margin-bottom:20px">
+        Funnel basé sur les données npm + gateway. Le point de conversion est le passage Free → Pro quand l'utilisateur
+        dépasse les limites du tier gratuit (rate limiting, tools restreints).
+      </p>
+      <div class="card">
+        <div class="funnel" id="funnelContainer">
+          <!-- Filled by JS -->
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">
+        <span class="icon" style="background:var(--warning-light);color:var(--warning)">⏱</span>
+        Moment de conversion — Quand l'utilisateur doit payer
+      </div>
+      <div class="card-grid">
+        <div class="card">
+          <h3 style="font-size:1rem;margin-bottom:12px">Triggers de conversion</h3>
+          <ul style="list-style:none;font-size:0.9rem">
+            <li style="padding:8px 0;border-bottom:1px solid var(--outline);display:flex;justify-content:space-between">
+              <span>Rate limit atteint (10 req/min free)</span>
+              <span class="status-badge live">Implémenté</span>
+            </li>
+            <li style="padding:8px 0;border-bottom:1px solid var(--outline);display:flex;justify-content:space-between">
+              <span>Outils Pro bloqués (analyze_project)</span>
+              <span class="status-badge live">Implémenté</span>
+            </li>
+            <li style="padding:8px 0;border-bottom:1px solid var(--outline);display:flex;justify-content:space-between">
+              <span>CTA sponsor (chaque 10e appel)</span>
+              <span class="status-badge live">Implémenté</span>
+            </li>
+            <li style="padding:8px 0;border-bottom:1px solid var(--outline);display:flex;justify-content:space-between">
+              <span>Quota mensuel épuisé</span>
+              <span class="status-badge pending">Gateway v2</span>
+            </li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3 style="font-size:1rem;margin-bottom:12px">Parcours type</h3>
+          <div style="font-size:0.85rem;line-height:1.8">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="color:var(--primary);font-weight:700">1.</span>
+              Dev cherche "android 3d" → trouve SceneView
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="color:var(--primary);font-weight:700">2.</span>
+              Installe le MCP : <code style="background:var(--surface-container);padding:2px 6px;border-radius:4px;font-size:0.8rem">npx sceneview-mcp</code>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="color:var(--primary);font-weight:700">3.</span>
+              Utilise les tools free (create_scene, etc.)
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="color:var(--warning);font-weight:700">4.</span>
+              Atteint le rate limit ou veut analyze_project
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="color:var(--success);font-weight:700">5.</span>
+              Voit le CTA → checkout Stripe → API key
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="color:var(--success);font-weight:700">6.</span>
+              Passe en mode hosted (Pro €19/mo)
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TAB: Revenue ==================== -->
+  <div class="tab-panel" id="tab-revenue">
+    <div class="section">
+      <div class="section-title">
+        <span class="icon" style="background:var(--success-light);color:var(--success)">💰</span>
+        Pipeline de monétisation
+      </div>
+      <div class="revenue-grid">
+        <div class="revenue-card free">
+          <div class="revenue-tier">Free</div>
+          <div class="revenue-price">€0</div>
+          <ul class="revenue-features">
+            <li>npx sceneview-mcp (local)</li>
+            <li>Tous les tools de base</li>
+            <li>Rate limit: 10 req/min</li>
+            <li>Pas d'API key requise</li>
+          </ul>
+          <div class="revenue-stat">
+            <div class="revenue-stat-label">Utilisateurs estimés</div>
+            <div class="revenue-stat-value" id="freeUsers">—</div>
+          </div>
+        </div>
+        <div class="revenue-card pro">
+          <div class="revenue-tier">Pro</div>
+          <div class="revenue-price">€19<small>/mois</small></div>
+          <ul class="revenue-features">
+            <li>Mode hosted (API key)</li>
+            <li>analyze_project unlock</li>
+            <li>Rate limit: 100 req/min</li>
+            <li>Support prioritaire</li>
+          </ul>
+          <div class="revenue-stat">
+            <div class="revenue-stat-label">Clients actuels</div>
+            <div class="revenue-stat-value" id="proClients">0</div>
+          </div>
+        </div>
+        <div class="revenue-card team">
+          <div class="revenue-tier">Team</div>
+          <div class="revenue-price">€49<small>/mois</small></div>
+          <ul class="revenue-features">
+            <li>Tout Pro +</li>
+            <li>Multi-utilisateurs</li>
+            <li>Rate limit: 500 req/min</li>
+            <li>Dashboard analytics</li>
+          </ul>
+          <div class="revenue-stat">
+            <div class="revenue-stat-label">Clients actuels</div>
+            <div class="revenue-stat-value" id="teamClients">0</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">
+        <span class="icon" style="background:var(--primary-light);color:var(--primary)">📊</span>
+        Projections MRR
+      </div>
+      <div class="card">
+        <div class="chart-container small">
+          <canvas id="mrrChart"></canvas>
+        </div>
+        <p style="font-size:0.8rem;color:var(--on-surface-dim);text-align:center;margin-top:12px">
+          Projection basée sur un taux de conversion de 1-3% des utilisateurs free → pro (benchmark SaaS dev tools)
+        </p>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">
+        <span class="icon" style="background:var(--claude-orange);color:white">🔗</span>
+        Sources de revenus actives
+      </div>
+      <div class="card">
+        <table class="pkg-table">
+          <thead>
+            <tr><th>Source</th><th>Status</th><th>Revenu actuel</th><th>Potentiel</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>MCP Gateway (Stripe)</strong></td>
+              <td><span class="status-badge live">Live — mode prod</span></td>
+              <td>€0</td>
+              <td>€500-5000/mo (1-3% conversion)</td>
+            </tr>
+            <tr>
+              <td><strong>GitHub Sponsors</strong></td>
+              <td><span class="status-badge live">Active</span></td>
+              <td>—</td>
+              <td>€100-500/mo</td>
+            </tr>
+            <tr>
+              <td><strong>Open Collective</strong></td>
+              <td><span class="status-badge live">Active</span></td>
+              <td>$2,338 balance</td>
+              <td>Donations</td>
+            </tr>
+            <tr>
+              <td><strong>MCPs verticaux (hub-gateway)</strong></td>
+              <td><span class="status-badge pending">Scaffolded</span></td>
+              <td>€0</td>
+              <td>€2000-10000/mo (11 MCPs)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TAB: Usage (Telemetry) ==================== -->
+  <div class="tab-panel" id="tab-usage">
+    <div class="section">
+      <div class="section-title">
+        <span class="icon" style="background:var(--primary-light);color:var(--primary)">📡</span>
+        MCP Tool Usage — Telemetry Worker
+      </div>
+
+      <!-- Config bar -->
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <label style="font-size:0.85rem;font-weight:600">Worker URL:</label>
+          <input type="text" id="telemetryUrl" placeholder="https://telemetry.sceneview.io" value=""
+            style="flex:1;min-width:200px;padding:8px 12px;border-radius:8px;border:1px solid var(--outline);background:var(--surface);color:var(--on-surface);font-family:inherit;font-size:0.85rem">
+          <label style="font-size:0.85rem;font-weight:600">Token:</label>
+          <input type="password" id="telemetryToken" placeholder="Bearer token (optional)"
+            style="width:180px;padding:8px 12px;border-radius:8px;border:1px solid var(--outline);background:var(--surface);color:var(--on-surface);font-family:inherit;font-size:0.85rem">
+          <button onclick="fetchTelemetry()" style="padding:8px 16px;border-radius:8px;border:none;background:var(--primary);color:white;font-weight:600;cursor:pointer;font-family:inherit">
+            Charger
+          </button>
+          <span id="telemetryStatus" style="font-size:0.8rem;color:var(--on-surface-dim)"></span>
+        </div>
+        <p style="font-size:0.8rem;color:var(--on-surface-dim);margin-top:8px">
+          Le Telemetry Worker n'est pas encore déployé. Quand il sera live sur <code>telemetry.sceneview.io</code>,
+          entre l'URL ci-dessus pour voir les données d'usage en temps réel.
+        </p>
+      </div>
+
+      <!-- KPI row for telemetry -->
+      <div class="card-grid" id="telemetryKpis" style="display:none">
+        <div class="card" style="text-align:center">
+          <div style="font-size:2rem;font-weight:800;color:var(--primary)" id="telTotalEvents">—</div>
+          <div style="font-size:0.85rem;color:var(--on-surface-dim)">Events total</div>
+        </div>
+        <div class="card" style="text-align:center">
+          <div style="font-size:2rem;font-weight:800;color:var(--success)" id="telUniqueUsers">—</div>
+          <div style="font-size:0.85rem;color:var(--on-surface-dim)">Utilisateurs uniques</div>
+        </div>
+        <div class="card" style="text-align:center">
+          <div style="font-size:2rem;font-weight:800;color:var(--warning)" id="telTopTool">—</div>
+          <div style="font-size:0.85rem;color:var(--on-surface-dim)">Tool le plus utilisé</div>
+        </div>
+        <div class="card" style="text-align:center">
+          <div style="font-size:2rem;font-weight:800;color:var(--danger)" id="telErrorRate">—</div>
+          <div style="font-size:0.85rem;color:var(--on-surface-dim)">Taux d'erreur</div>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div id="telemetryCharts" style="display:none;margin-top:16px">
+        <div class="card-grid">
+          <div class="card">
+            <h3 style="font-size:1rem;margin-bottom:12px">Top Tools (appels)</h3>
+            <div class="chart-container small">
+              <canvas id="toolUsageChart"></canvas>
+            </div>
+          </div>
+          <div class="card">
+            <h3 style="font-size:1rem;margin-bottom:12px">Events / jour (30j)</h3>
+            <div class="chart-container small">
+              <canvas id="telTimeseriesChart"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:16px">
+          <h3 style="font-size:1rem;margin-bottom:12px">Versions MCP actives</h3>
+          <div class="chart-container small">
+            <canvas id="versionChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Placeholder when no data -->
+      <div id="telemetryPlaceholder">
+        <div class="card" style="text-align:center;padding:48px 24px">
+          <div style="font-size:3rem;margin-bottom:16px">📡</div>
+          <h3 style="margin-bottom:8px">Telemetry Worker pas encore connecté</h3>
+          <p style="font-size:0.9rem;color:var(--on-surface-dim);max-width:500px;margin:0 auto 24px">
+            Le worker est codé (79 tests) mais pas déployé. Pour activer :<br><br>
+            <strong>1.</strong> Crée la D1 database + KV namespace sur Cloudflare<br>
+            <strong>2.</strong> <code>cd telemetry-worker && wrangler deploy</code><br>
+            <strong>3.</strong> Configure le CNAME <code>telemetry.sceneview.io</code><br>
+            <strong>4.</strong> Entre l'URL ci-dessus et clique "Charger"
+          </p>
+          <p style="font-size:0.8rem;color:var(--on-surface-dim)">
+            Endpoints disponibles : <code>/stats</code> <code>/timeseries</code> <code>/events</code> <code>/health</code>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">
+        <span class="icon" style="background:var(--success-light);color:var(--success)">🔍</span>
+        Ce que la telemetry révèlera
+      </div>
+      <div class="card-grid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">
+        <div class="card">
+          <h3 style="font-size:1rem;margin-bottom:8px">Quels tools sont utilisés ?</h3>
+          <p style="font-size:0.85rem;color:var(--on-surface-dim)">
+            create_scene, load_model, analyze_project... Savoir quels tools sont populaires aide à prioriser le développement
+            et à comprendre les use cases réels.
+          </p>
+        </div>
+        <div class="card">
+          <h3 style="font-size:1rem;margin-bottom:8px">Qui dépasse les limites ?</h3>
+          <p style="font-size:0.85rem;color:var(--on-surface-dim)">
+            Les users qui atteignent le rate limit sont tes meilleurs prospects Pro. La telemetry te montrera combien
+            et à quelle fréquence — ta source #1 de conversion.
+          </p>
+        </div>
+        <div class="card">
+          <h3 style="font-size:1rem;margin-bottom:8px">Quelles versions sont actives ?</h3>
+          <p style="font-size:0.85rem;color:var(--on-surface-dim)">
+            Savoir si les users sont sur 3.6.x, 4.0.0-beta, ou rc.1 te dit quand tu peux deprecier
+            les anciennes versions sans casser personne.
+          </p>
+        </div>
+        <div class="card">
+          <h3 style="font-size:1rem;margin-bottom:8px">Quel est le taux d'erreur ?</h3>
+          <p style="font-size:0.85rem;color:var(--on-surface-dim)">
+            Les erreurs fréquentes indiquent des problèmes d'API ou de documentation. Chaque erreur est un user
+            potentiellement perdu.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TAB: Actions ==================== -->
+  <div class="tab-panel" id="tab-actions">
+    <div class="section">
+      <div class="section-title">
+        <span class="icon" style="background:var(--danger-light);color:var(--danger)">🚨</span>
+        Actions prioritaires pour améliorer le tracking
+      </div>
+      <ul class="rec-list">
+        <li class="rec-item">
+          <span class="rec-priority high">URGENT</span>
+          <div class="rec-text">
+            <strong>Ajouter Google Analytics 4 au site web</strong>
+            <p>Aucun tracking sur sceneview.github.io. Tu perds toute visibilité sur le trafic web, les sources d'acquisition, et le parcours utilisateur. Ajoute le snippet GA4 dans index.html — 5 min de travail, impact énorme.</p>
+          </div>
+        </li>
+        <li class="rec-item">
+          <span class="rec-priority high">URGENT</span>
+          <div class="rec-text">
+            <strong>Déployer le Telemetry Worker</strong>
+            <p>Le worker Cloudflare est codé (79 tests) mais pas déployé. Sans lui, tu ne sais pas quels tools MCP sont utilisés, combien de fois, ni les erreurs. C'est la donnée la plus précieuse pour comprendre l'usage.</p>
+          </div>
+        </li>
+        <li class="rec-item">
+          <span class="rec-priority high">URGENT</span>
+          <div class="rec-text">
+            <strong>Premier client payant sur le gateway</strong>
+            <p>Le gateway Stripe est live en prod mais 0 client. Le funnel Free→Pro ne peut pas être validé tant qu'il n'y a pas un vrai checkout. Focalise les efforts marketing ici.</p>
+          </div>
+        </li>
+        <li class="rec-item">
+          <span class="rec-priority medium">MOYEN</span>
+          <div class="rec-text">
+            <strong>Ajouter utm_source aux liens sortants</strong>
+            <p>Tous les liens vers npm depuis le README, le site, les discussions GitHub devraient avoir des UTM params. Ça te permettra de savoir d'où viennent les installations.</p>
+          </div>
+        </li>
+        <li class="rec-item">
+          <span class="rec-priority medium">MOYEN</span>
+          <div class="rec-text">
+            <strong>npm provenance + download tracking</strong>
+            <p>Active npm provenance pour tous les packages. Ça donne un badge vérifié et des métadonnées sur les installations.</p>
+          </div>
+        </li>
+        <li class="rec-item">
+          <span class="rec-priority low">BONUS</span>
+          <div class="rec-text">
+            <strong>Connecter ce dashboard au Telemetry Worker</strong>
+            <p>Quand le worker sera déployé, ajouter un onglet "Usage" ici avec les données live (tools utilisés, erreurs, versions). Le code est déjà dans telemetry-worker/dashboard.html.</p>
+          </div>
+        </li>
+        <li class="rec-item">
+          <span class="rec-priority low">BONUS</span>
+          <div class="rec-text">
+            <strong>Stripe Webhook → ce dashboard</strong>
+            <p>Quand des clients payeront, ajouter un endpoint webhook qui pousse les événements vers ce dashboard pour le MRR en temps réel.</p>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<div class="last-updated" id="footer">
+  SceneView Empire Dashboard — Données live via npm Registry API & GitHub API
+</div>
+
+<!-- ========== JavaScript ========== -->
+<script>
+// ============================================================
+// Config — all npm packages to track
+// ============================================================
+const PACKAGES = [
+  { name: 'sceneview-mcp',       org: 'sceneview',      category: '3D/AR SDK',    monetized: 'gateway' },
+  { name: 'sceneview-web',       org: 'sceneview',      category: '3D/AR SDK',    monetized: 'free' },
+  { name: 'realestate-mcp',      org: 'sceneview-tools', category: 'Immobilier',  monetized: 'planned' },
+  { name: 'french-admin-mcp',    org: 'mcp-tools-lab',  category: 'Admin FR',     monetized: 'planned' },
+  { name: 'ecommerce-3d-mcp',    org: 'sceneview-tools', category: 'E-commerce',  monetized: 'planned' },
+  { name: 'architecture-mcp',    org: 'sceneview-tools', category: 'Architecture', monetized: 'planned' },
+  { name: 'legal-docs-mcp',      org: 'orphan',         category: 'Legal',        monetized: 'planned' },
+  { name: 'education-mcp',       org: 'mcp-tools-lab',  category: 'Education',    monetized: 'planned' },
+  { name: 'rerun-3d-mcp',        org: 'sceneview',      category: '3D/AR SDK',    monetized: 'free' },
+  { name: 'automotive-3d-mcp',   org: 'sceneview',      category: 'Automotive',   monetized: 'planned' },
+  { name: 'healthcare-3d-mcp',   org: 'sceneview',      category: 'Healthcare',   monetized: 'planned' },
+  { name: 'react-native-sceneview', org: 'sceneview',   category: 'Cross-platform', monetized: 'free' },
+  { name: 'health-fitness-mcp',  org: 'thomasgorisse',  category: 'Lifestyle',    monetized: 'none' },
+  { name: 'gardening-mcp',       org: 'ThomasGorisse',  category: 'Lifestyle',    monetized: 'none' },
+  { name: 'pet-care-mcp',        org: 'ThomasGorisse',  category: 'Lifestyle',    monetized: 'none' },
+  { name: 'event-planning-mcp',  org: 'ThomasGorisse',  category: 'Lifestyle',    monetized: 'none' },
+  { name: 'social-media-mcp',    org: 'ThomasGorisse',  category: 'Social',       monetized: 'none' },
+  { name: 'freelance-tools-mcp', org: 'ThomasGorisse',  category: 'Business',     monetized: 'none' },
+  { name: 'diy-home-mcp',        org: 'thomasgorisse',  category: 'Lifestyle',    monetized: 'none' },
+  { name: 'productivity-mcp',    org: 'thomasgorisse',  category: 'Productivity', monetized: 'none' },
+  { name: 'seo-mcp',             org: 'thomasgorisse',  category: 'SEO',          monetized: 'none' },
+];
+
+const GITHUB_REPO = 'SceneView/sceneview-android';
+
+// ============================================================
+// State
+// ============================================================
+let pkgData = {};
+let chartInstances = {};
+
+// ============================================================
+// Theme
+// ============================================================
+function initTheme() {
+  const saved = localStorage.getItem('empire-theme');
+  if (saved) document.documentElement.dataset.theme = saved;
+  else if (window.matchMedia('(prefers-color-scheme: light)').matches)
+    document.documentElement.dataset.theme = 'light';
+}
+function toggleTheme() {
+  const t = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = t;
+  localStorage.setItem('empire-theme', t);
+  renderCharts();
+}
+initTheme();
+
+// ============================================================
+// Tabs
+// ============================================================
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+// ============================================================
+// API Helpers
+// ============================================================
+async function fetchJSON(url) {
+  try {
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    return await r.json();
+  } catch { return null; }
+}
+
+function fmt(n) {
+  if (n == null) return '—';
+  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+  if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
+  return n.toLocaleString();
+}
+
+// ============================================================
+// Fetch All Data
+// ============================================================
+async function fetchAllData() {
+  const now = new Date();
+  const monthAgo = new Date(now); monthAgo.setDate(now.getDate() - 30);
+  const weekAgo = new Date(now); weekAgo.setDate(now.getDate() - 7);
+  const prevWeekStart = new Date(now); prevWeekStart.setDate(now.getDate() - 14);
+  const prevWeekEnd = new Date(now); prevWeekEnd.setDate(now.getDate() - 7);
+
+  const fmtDate = d => d.toISOString().split('T')[0];
+
+  // Batch all requests
+  const monthlyPromises = PACKAGES.map(p =>
+    fetchJSON(`https://api.npmjs.org/downloads/range/${fmtDate(monthAgo)}:${fmtDate(now)}/${p.name}`)
+  );
+  const weeklyPromises = PACKAGES.map(p =>
+    fetchJSON(`https://api.npmjs.org/downloads/point/${fmtDate(weekAgo)}:${fmtDate(now)}/${p.name}`)
+  );
+  const prevWeekPromises = PACKAGES.map(p =>
+    fetchJSON(`https://api.npmjs.org/downloads/point/${fmtDate(prevWeekStart)}:${fmtDate(prevWeekEnd)}/${p.name}`)
+  );
+
+  const [monthlyResults, weeklyResults, prevWeekResults, ghData] = await Promise.all([
+    Promise.all(monthlyPromises),
+    Promise.all(weeklyPromises),
+    Promise.all(prevWeekPromises),
+    fetchJSON(`https://api.github.com/repos/${GITHUB_REPO}`)
+  ]);
+
+  // Process results
+  PACKAGES.forEach((pkg, i) => {
+    const monthly = monthlyResults[i];
+    const weekly = weeklyResults[i];
+    const prevWeek = prevWeekResults[i];
+
+    const downloads = monthly?.downloads || [];
+    const totalMonth = downloads.reduce((s, d) => s + d.downloads, 0);
+    const totalWeek = weekly?.downloads || 0;
+    const prevWeekDl = prevWeek?.downloads || 0;
+    const weekTrend = prevWeekDl > 0 ? ((totalWeek - prevWeekDl) / prevWeekDl * 100) : 0;
+
+    pkgData[pkg.name] = {
+      ...pkg,
+      dailyDownloads: downloads,
+      totalMonth,
+      totalWeek,
+      weekTrend,
+    };
+  });
+
+  return { ghData };
+}
+
+// ============================================================
+// Render KPI Cards
+// ============================================================
+function renderKPIs(ghData) {
+  const totalMonth = Object.values(pkgData).reduce((s, p) => s + (p.totalMonth || 0), 0);
+  const totalWeek = Object.values(pkgData).reduce((s, p) => s + (p.totalWeek || 0), 0);
+  const activePackages = Object.values(pkgData).filter(p => p.totalMonth > 0).length;
+
+  document.getElementById('totalDlMonth').textContent = fmt(totalMonth);
+  document.getElementById('totalDlWeek').textContent = fmt(totalWeek);
+  document.getElementById('totalPackages').textContent = activePackages;
+  document.getElementById('totalDlTrend').textContent = `~${fmt(totalMonth * 12)}/an`;
+
+  if (ghData) {
+    document.getElementById('ghStars').textContent = fmt(ghData.stargazers_count);
+    document.getElementById('ghForks').textContent = `${fmt(ghData.forks_count)} forks`;
+  }
+
+  // Estimate MRR based on conversion
+  const estPro = Math.round(totalMonth * 0.01); // 1% conversion
+  document.getElementById('mrrEstimate').textContent = `€${estPro * 19}`;
+  document.getElementById('mrrStatus').textContent = `Si 1% conv. (${estPro} users)`;
+  document.getElementById('freeUsers').textContent = fmt(totalMonth);
+
+  // Channel estimates
+  document.getElementById('channelNpm').innerHTML = `${fmt(Math.round(totalMonth * 0.6))}<small> /mois estimé</small>`;
+  document.getElementById('channelGithub').innerHTML = `${ghData ? fmt(ghData.stargazers_count) : '—'}<small> stars</small>`;
+  document.getElementById('channelClaude').innerHTML = `${fmt(Math.round(totalMonth * 0.15))}<small> /mois estimé</small>`;
+
+  // Domain table
+  const domainMap = {
+    domainMcp: 'sceneview-mcp',
+    domainRealestate: 'realestate-mcp',
+    domainFrAdmin: 'french-admin-mcp',
+    domainEcommerce: 'ecommerce-3d-mcp',
+    domainArchi: 'architecture-mcp',
+    domainWeb: 'sceneview-web',
+  };
+  Object.entries(domainMap).forEach(([id, pkg]) => {
+    const el = document.getElementById(id);
+    if (el && pkgData[pkg]) el.textContent = fmt(pkgData[pkg].totalMonth);
+  });
+}
+
+// ============================================================
+// Render Package Table
+// ============================================================
+function renderTable() {
+  const sorted = Object.values(pkgData).sort((a, b) => (b.totalMonth || 0) - (a.totalMonth || 0));
+  const tbody = document.getElementById('pkgTableBody');
+
+  const monetizedBadge = m => {
+    switch(m) {
+      case 'gateway': return '<span class="status-badge live">Gateway</span>';
+      case 'planned': return '<span class="status-badge pending">Planned</span>';
+      case 'free': return '<span class="status-badge none">Free</span>';
+      default: return '<span class="status-badge none">—</span>';
+    }
+  };
+
+  tbody.innerHTML = sorted.map(p => `
+    <tr>
+      <td class="pkg-name">
+        <a href="https://www.npmjs.com/package/${p.name}" target="_blank">${p.name}</a>
+      </td>
+      <td><span class="pkg-org">${p.org}</span></td>
+      <td class="pkg-dl">${fmt(p.totalMonth)}</td>
+      <td class="pkg-dl">${fmt(p.totalWeek)}</td>
+      <td class="hide-mobile"><canvas class="pkg-sparkline" id="spark-${p.name.replace(/[^a-z0-9]/g, '_')}"></canvas></td>
+      <td>
+        <span class="pkg-trend ${p.weekTrend >= 0 ? 'positive' : 'negative'}">
+          ${p.weekTrend >= 0 ? '↑' : '↓'} ${Math.abs(p.weekTrend).toFixed(0)}%
+        </span>
+      </td>
+      <td>${monetizedBadge(p.monetized)}</td>
+    </tr>
+  `).join('');
+
+  const totalMonth = sorted.reduce((s, p) => s + (p.totalMonth || 0), 0);
+  const totalWeek = sorted.reduce((s, p) => s + (p.totalWeek || 0), 0);
+  document.getElementById('totalMonthFooter').textContent = fmt(totalMonth);
+  document.getElementById('totalWeekFooter').textContent = fmt(totalWeek);
+
+  // Sparklines
+  sorted.forEach(p => {
+    const id = 'spark-' + p.name.replace(/[^a-z0-9]/g, '_');
+    const canvas = document.getElementById(id);
+    if (!canvas || !p.dailyDownloads?.length) return;
+    const ctx = canvas.getContext('2d');
+    const data = p.dailyDownloads.map(d => d.downloads);
+    const max = Math.max(...data, 1);
+    const w = canvas.width = 120;
+    const h = canvas.height = 32;
+    ctx.clearRect(0, 0, w, h);
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    data.forEach((v, i) => {
+      const x = (i / (data.length - 1)) * w;
+      const y = h - (v / max) * h * 0.8 - 2;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  });
+}
+
+// ============================================================
+// Render Charts
+// ============================================================
+function renderCharts() {
+  const isDark = document.documentElement.dataset.theme === 'dark';
+  const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const textColor = isDark ? '#8b949e' : '#3d4654';
+
+  Chart.defaults.color = textColor;
+  Chart.defaults.borderColor = gridColor;
+
+  // Destroy existing
+  Object.values(chartInstances).forEach(c => c.destroy());
+  chartInstances = {};
+
+  const sorted = Object.values(pkgData)
+    .filter(p => p.totalMonth > 50)
+    .sort((a, b) => b.totalMonth - a.totalMonth);
+
+  const top5 = sorted.slice(0, 5);
+  const colors = ['#005bc1', '#6446cd', '#16a34a', '#f59e0b', '#d97757', '#ea4335', '#5865f2', '#00897b'];
+
+  // --- Trend Chart ---
+  const trendCtx = document.getElementById('trendChart')?.getContext('2d');
+  if (trendCtx && top5.length) {
+    const labels = top5[0].dailyDownloads?.map(d => {
+      const date = new Date(d.day);
+      return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+    }) || [];
+
+    chartInstances.trend = new Chart(trendCtx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: top5.map((p, i) => ({
+          label: p.name,
+          data: p.dailyDownloads?.map(d => d.downloads) || [],
+          borderColor: colors[i],
+          backgroundColor: colors[i] + '20',
+          fill: true,
+          tension: 0.4,
+          pointRadius: 0,
+          borderWidth: 2,
+        }))
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { intersect: false, mode: 'index' },
+        plugins: { legend: { position: 'top', labels: { usePointStyle: true, padding: 16 } } },
+        scales: {
+          y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } },
+          x: { grid: { display: false }, ticks: { color: textColor, maxTicksLimit: 10 } }
+        }
+      }
+    });
+  }
+
+  // --- Pie Chart ---
+  const pieCtx = document.getElementById('pieChart')?.getContext('2d');
+  if (pieCtx && top5.length) {
+    chartInstances.pie = new Chart(pieCtx, {
+      type: 'doughnut',
+      data: {
+        labels: top5.map(p => p.name),
+        datasets: [{
+          data: top5.map(p => p.totalMonth),
+          backgroundColor: colors.slice(0, 5),
+          borderWidth: 0,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        cutout: '60%',
+        plugins: {
+          legend: { position: 'right', labels: { usePointStyle: true, padding: 12, font: { size: 11 } } }
+        }
+      }
+    });
+  }
+
+  // --- Category Chart ---
+  const catCtx = document.getElementById('categoryChart')?.getContext('2d');
+  if (catCtx) {
+    const categories = {};
+    Object.values(pkgData).forEach(p => {
+      categories[p.category] = (categories[p.category] || 0) + (p.totalMonth || 0);
+    });
+    const catSorted = Object.entries(categories).sort((a, b) => b[1] - a[1]).slice(0, 6);
+
+    chartInstances.category = new Chart(catCtx, {
+      type: 'bar',
+      data: {
+        labels: catSorted.map(c => c[0]),
+        datasets: [{
+          label: 'DL/mois par catégorie',
+          data: catSorted.map(c => c[1]),
+          backgroundColor: colors.slice(0, catSorted.length).map(c => c + '80'),
+          borderColor: colors.slice(0, catSorted.length),
+          borderWidth: 1,
+          borderRadius: 6,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        indexAxis: 'y',
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } },
+          y: { grid: { display: false }, ticks: { color: textColor } }
+        }
+      }
+    });
+  }
+
+  // --- MRR Projection Chart ---
+  const mrrCtx = document.getElementById('mrrChart')?.getContext('2d');
+  if (mrrCtx) {
+    const totalMonth = Object.values(pkgData).reduce((s, p) => s + (p.totalMonth || 0), 0);
+    const months = ['Mois 1', 'Mois 2', 'Mois 3', 'Mois 6', 'Mois 12'];
+    const growthFactors = [1, 1.1, 1.2, 1.5, 2.0];
+
+    chartInstances.mrr = new Chart(mrrCtx, {
+      type: 'line',
+      data: {
+        labels: months,
+        datasets: [
+          {
+            label: 'MRR @ 1% conversion',
+            data: growthFactors.map(f => Math.round(totalMonth * f * 0.01 * 19)),
+            borderColor: '#005bc1', backgroundColor: '#005bc120',
+            fill: true, tension: 0.4, borderWidth: 2,
+          },
+          {
+            label: 'MRR @ 2% conversion',
+            data: growthFactors.map(f => Math.round(totalMonth * f * 0.02 * 19)),
+            borderColor: '#6446cd', backgroundColor: '#6446cd20',
+            fill: true, tension: 0.4, borderWidth: 2,
+          },
+          {
+            label: 'MRR @ 3% conversion',
+            data: growthFactors.map(f => Math.round(totalMonth * f * 0.03 * 19)),
+            borderColor: '#16a34a', backgroundColor: '#16a34a20',
+            fill: true, tension: 0.4, borderWidth: 2,
+          }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'top', labels: { usePointStyle: true, padding: 16 } },
+          tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: €${ctx.parsed.y}` } }
+        },
+        scales: {
+          y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor, callback: v => `€${v}` } },
+          x: { grid: { display: false }, ticks: { color: textColor } }
+        }
+      }
+    });
+  }
+}
+
+// ============================================================
+// Render Funnel
+// ============================================================
+function renderFunnel() {
+  const totalMonth = Object.values(pkgData).reduce((s, p) => s + (p.totalMonth || 0), 0);
+
+  const steps = [
+    { label: 'Découvrent (npm/GH/web)', value: totalMonth * 3, pct: '100%' },
+    { label: 'Installent (npm install)', value: totalMonth, pct: '~33%' },
+    { label: 'Utilisent régulièrement', value: Math.round(totalMonth * 0.3), pct: '~10%' },
+    { label: 'Atteignent les limites', value: Math.round(totalMonth * 0.05), pct: '~1.5%' },
+    { label: 'Visitent la page pricing', value: Math.round(totalMonth * 0.02), pct: '~0.7%' },
+    { label: 'Checkout Stripe', value: Math.round(totalMonth * 0.01), pct: '~0.3%' },
+    { label: 'Clients payants', value: 0, pct: '0 actuellement' },
+  ];
+
+  const maxVal = steps[0].value;
+  const container = document.getElementById('funnelContainer');
+  container.innerHTML = steps.map((s, i) => {
+    const width = Math.max(5, (s.value / maxVal) * 100);
+    return `
+      <div class="funnel-step">
+        <div class="funnel-label">${s.label}</div>
+        <div class="funnel-bar-wrap">
+          <div class="funnel-bar" style="width:${width}%"></div>
+        </div>
+        <div class="funnel-value">${fmt(s.value)} <span class="funnel-pct">${s.pct}</span></div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ============================================================
+// Refresh All
+// ============================================================
+async function refreshAll() {
+  document.getElementById('lastRefresh').textContent = 'Chargement...';
+
+  try {
+    const { ghData } = await fetchAllData();
+    renderKPIs(ghData);
+    renderTable();
+    renderCharts();
+    renderFunnel();
+
+    const now = new Date();
+    document.getElementById('lastRefresh').textContent =
+      `Mis à jour: ${now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+  } catch (err) {
+    console.error('Refresh error:', err);
+    document.getElementById('lastRefresh').textContent = 'Erreur — réessayer';
+  }
+}
+
+// ============================================================
+// ============================================================
+// Telemetry Worker Integration
+// ============================================================
+function initTelemetryConfig() {
+  const saved = localStorage.getItem('empire-telemetry-url');
+  const savedToken = localStorage.getItem('empire-telemetry-token');
+  if (saved) document.getElementById('telemetryUrl').value = saved;
+  if (savedToken) document.getElementById('telemetryToken').value = savedToken;
+}
+
+async function fetchTelemetry() {
+  const url = document.getElementById('telemetryUrl').value.replace(/\/+$/, '');
+  const token = document.getElementById('telemetryToken').value;
+  const status = document.getElementById('telemetryStatus');
+
+  if (!url) { status.textContent = 'Entre une URL'; return; }
+
+  localStorage.setItem('empire-telemetry-url', url);
+  if (token) localStorage.setItem('empire-telemetry-token', token);
+
+  status.textContent = 'Chargement...';
+  const headers = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  try {
+    // Health check
+    const health = await fetchJSON(url + '/health');
+    if (!health || !health.ok) { status.textContent = 'Worker non joignable'; return; }
+
+    // Fetch stats + timeseries
+    const [stats, timeseries] = await Promise.all([
+      fetchJSON(url + '/stats'),
+      fetchJSON(url + '/timeseries?days=30')
+    ]);
+
+    if (!stats) { status.textContent = 'Erreur /stats'; return; }
+
+    // Show data
+    document.getElementById('telemetryPlaceholder').style.display = 'none';
+    document.getElementById('telemetryKpis').style.display = 'grid';
+    document.getElementById('telemetryCharts').style.display = 'block';
+
+    // KPIs
+    document.getElementById('telTotalEvents').textContent = fmt(stats.totalEvents || 0);
+    document.getElementById('telUniqueUsers').textContent = fmt(stats.uniqueUsers || 0);
+    document.getElementById('telTopTool').textContent = stats.topTools?.[0]?.name || '—';
+    const errRate = stats.totalEvents > 0
+      ? ((stats.errorCount || 0) / stats.totalEvents * 100).toFixed(1) + '%'
+      : '—';
+    document.getElementById('telErrorRate').textContent = errRate;
+
+    // Tool usage chart
+    if (stats.topTools?.length) {
+      const toolCtx = document.getElementById('toolUsageChart')?.getContext('2d');
+      if (toolCtx) {
+        if (chartInstances.toolUsage) chartInstances.toolUsage.destroy();
+        const isDark = document.documentElement.dataset.theme === 'dark';
+        const colors = ['#005bc1', '#6446cd', '#16a34a', '#f59e0b', '#d97757', '#ea4335', '#5865f2', '#00897b'];
+        chartInstances.toolUsage = new Chart(toolCtx, {
+          type: 'bar',
+          data: {
+            labels: stats.topTools.map(t => t.name),
+            datasets: [{
+              label: 'Appels',
+              data: stats.topTools.map(t => t.count),
+              backgroundColor: colors.slice(0, stats.topTools.length).map(c => c + '80'),
+              borderColor: colors.slice(0, stats.topTools.length),
+              borderWidth: 1, borderRadius: 6,
+            }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            indexAxis: 'y',
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { beginAtZero: true },
+              y: { grid: { display: false } }
+            }
+          }
+        });
+      }
+    }
+
+    // Timeseries chart
+    if (timeseries?.data?.length) {
+      const tsCtx = document.getElementById('telTimeseriesChart')?.getContext('2d');
+      if (tsCtx) {
+        if (chartInstances.telTimeseries) chartInstances.telTimeseries.destroy();
+        chartInstances.telTimeseries = new Chart(tsCtx, {
+          type: 'line',
+          data: {
+            labels: timeseries.data.map(d => new Date(d.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })),
+            datasets: [{
+              label: 'Events / jour',
+              data: timeseries.data.map(d => d.count),
+              borderColor: '#005bc1', backgroundColor: '#005bc120',
+              fill: true, tension: 0.4, pointRadius: 2, borderWidth: 2,
+            }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true }, x: { grid: { display: false } } }
+          }
+        });
+      }
+    }
+
+    // Versions chart
+    if (stats.versions?.length) {
+      const verCtx = document.getElementById('versionChart')?.getContext('2d');
+      if (verCtx) {
+        if (chartInstances.versions) chartInstances.versions.destroy();
+        chartInstances.versions = new Chart(verCtx, {
+          type: 'doughnut',
+          data: {
+            labels: stats.versions.map(v => v.version),
+            datasets: [{
+              data: stats.versions.map(v => v.count),
+              backgroundColor: ['#005bc1', '#6446cd', '#16a34a', '#f59e0b', '#d97757'],
+              borderWidth: 0,
+            }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false, cutout: '60%',
+            plugins: { legend: { position: 'right', labels: { usePointStyle: true, padding: 12, font: { size: 11 } } } }
+          }
+        });
+      }
+    }
+
+    status.textContent = 'OK — données chargées';
+    status.style.color = 'var(--success)';
+  } catch (err) {
+    console.error('Telemetry fetch error:', err);
+    status.textContent = 'Erreur: ' + err.message;
+    status.style.color = 'var(--danger)';
+  }
+}
+
+// Init
+// ============================================================
+initTelemetryConfig();
+refreshAll();
+</script>
+
+</body>
+</html>
