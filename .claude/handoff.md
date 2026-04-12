@@ -4,6 +4,61 @@
 
 ---
 
+## 🧹 SESSION intelligent-rhodes — 2026-04-11/12 — First-customer readiness sweep
+
+**Worktree:** `intelligent-rhodes` (session closed, worktree can be removed)
+**Commits on main:** `db0b9ab4`, `674b2087`, `14a08d25` (3 direct pushes, all verified on origin/main)
+
+### What shipped
+
+This session started as Session A (mcp-monetization) for the first paying customer pipeline, then shifted to a post-go-live content audit after `bold-rhodes` completed the Stripe LIVE activation independently.
+
+**Phase 1 — v4 beta + webhook bug fix (before go-live, worktree `mcp-monetization` since cleaned up):**
+- `sceneview-mcp@4.0.0-beta.1` published on npm (`beta` tag, `latest` stays 3.6.4 → now 3.6.5)
+- `proxy.ts` + `proxy.test.ts` (17 tests): forwards Pro tool calls via JSON-RPC to hosted gateway
+- `index.ts` rewritten: free tools dispatch locally, Pro tools go through proxy, stderr banner LITE/HOSTED
+- Webhook `checkout-completed.ts` bug fix (`db0b9ab4`): Stripe sometimes delivers `checkout.session.completed` with `subscription: null` — handler now re-fetches the session from the REST API. Was silently leaving paying customers on free tier.
+
+**Phase 2 — First-customer content audit (9 bugs found and fixed across 4 dashboard templates):**
+
+| Commit | File | Bug | Risk |
+|---|---|---|---|
+| `674b2087` | `pricing.tsx` | "Free tier coming soon" CTA → mailto dead-end | Blocked free adoption |
+| `674b2087` | `pricing.tsx` | "15 free tools" → real count is 17 | Inaccurate |
+| `674b2087` | `pricing.tsx` | "EU VAT handled by Stripe Tax" → Stripe Tax is DISABLED | **Legal risk** (false VAT claim) |
+| `674b2087` | `pricing.tsx` | Self-host FAQ missing `@beta` mention | Paying customer gets local-only 3.6.x, key does nothing |
+| `674b2087` | `docs.tsx` | URL `sceneview-mcp.workers.dev/mcp` ×4 (NXDOMAIN phantom) | **All docs snippets pointed at nothing** |
+| `674b2087` | `docs.tsx` | Claude Desktop snippet in HTTP MCP format (not supported) | Buyer copy-pastes, gets zero tools |
+| `14a08d25` | `checkout-success.tsx` | URL phantom ×3 + Claude Desktop HTTP format | **Post-payment page broken** — one-shot page, no retry |
+| `14a08d25` | `landing.tsx` | URL phantom + misleading "Streamable HTTP" claim | Home page misleading |
+| `14a08d25` | `env.ts` | JSDoc example with phantom URL | Cosmetic |
+
+**Tests added:** 3 new assertion blocks in `dashboard.test.ts` (VAT regime guard, free tool count guard, `@beta` mention guard) + 5 new assertions in `checkout-success.test.ts` (stdio format, real subdomain, phantom URL rejection). Total: 171 gateway tests.
+
+**Gateway deployed twice:** version `e02cd1df` (pricing/docs fixes) then `ed1456df` (checkout-success/landing fixes). Both post-deploy smoke-tested against `/health`, `/billing/checkout`, landing grep.
+
+### Production state at session close
+
+- **Gateway #1** `sceneview-mcp.mcp-tools-lab.workers.dev` — LIVE, Stripe LIVE, 4 plans, webhook active
+- **npm** `sceneview-mcp`: `latest=3.6.5`, `beta=4.0.0-beta.1`, `next=4.0.0-rc.1`
+- **D1** 1 user (seed `smoke@sceneview.dev` pro) — **0 real paying customer** yet (go-live was silent)
+- **All 4 user-facing pages** (`/`, `/pricing`, `/docs`, `/checkout/success`) now have correct URLs, correct snippets, correct legal claims, and test guards preventing regression
+
+### Cleanup done
+
+- Worktree `mcp-monetization` removed (branch deleted local + remote, 0 commits ahead of main)
+- Temp branch `fix/pricing-docs-first-customer-friction` deleted after merge
+- Temp branch `fix/checkout-success-landing-phantom-url` deleted after merge
+
+### What's NOT done (out of scope, for next sessions)
+
+- **First real paying customer** — needs marketing/promotion (LinkedIn posts in `/tmp/sceneview-growth/`)
+- **`sceneview-mcp@latest` bump to 4.x** — blocked until first real checkout validates end-to-end
+- **Custom domain `mcp.sceneview.dev`** — nice-to-have, not blocking revenue
+- **17 stale remote branches** on origin (prefixed `claude/`) — cleanup candidate for a maintenance session
+
+---
+
 ## 🚀 SESSION B FINAL — 2026-04-12 13:35 — Hub Gateway #2 LIVE + Stripe LIVE
 
 **Worker:** `hub-mcp.mcp-tools-lab.workers.dev` — **LIVE, accepting real payments.**
