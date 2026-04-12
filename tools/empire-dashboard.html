@@ -1636,7 +1636,8 @@ async function fetchTelemetry() {
       }
     }
 
-    // Timeseries chart
+    // Timeseries chart — fetch separately (endpoint may not exist)
+    const timeseries = await fetch(url + '/v1/timeseries?days=30', { headers }).then(r => r.ok ? r.json() : null).catch(() => null);
     if (timeseries?.data?.length) {
       const tsCtx = document.getElementById('telTimeseriesChart')?.getContext('2d');
       if (tsCtx) {
