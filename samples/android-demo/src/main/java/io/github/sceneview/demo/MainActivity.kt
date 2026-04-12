@@ -28,6 +28,21 @@ import io.github.sceneview.demo.demos.VideoDemo
 import io.github.sceneview.demo.demos.ViewNodeDemo
 import io.github.sceneview.demo.demos.GestureEditingDemo
 import io.github.sceneview.demo.demos.CollisionDemo
+import io.github.sceneview.demo.demos.DynamicSkyDemo
+import io.github.sceneview.demo.demos.MultiModelDemo
+import io.github.sceneview.demo.demos.PhysicsDemo
+import io.github.sceneview.demo.demos.PostProcessingDemo
+import io.github.sceneview.demo.demos.CustomMeshDemo
+import io.github.sceneview.demo.demos.ShapeDemo
+import io.github.sceneview.demo.demos.ReflectionProbesDemo
+import io.github.sceneview.demo.demos.SecondaryCameraDemo
+import io.github.sceneview.demo.demos.DebugOverlayDemo
+import io.github.sceneview.demo.demos.ARImageDemo
+import io.github.sceneview.demo.demos.ARFaceDemo
+import io.github.sceneview.demo.demos.ARCloudAnchorDemo
+import io.github.sceneview.demo.demos.ARStreetscapeDemo
+import io.github.sceneview.demo.demos.ARPoseDemo
+import io.github.sceneview.demo.demos.ARRerunDemo
 import io.github.sceneview.demo.theme.SceneViewDemoTheme
 import io.github.sceneview.demo.update.InAppUpdateManager
 import androidx.compose.foundation.layout.Box
@@ -113,9 +128,25 @@ fun DemoRouter(id: String, onBack: () -> Unit) {
         "gesture-editing" -> GestureEditingDemo(onBack)
         "collision" -> CollisionDemo(onBack)
         "view-node" -> ViewNodeDemo(onBack)
+        // Advanced
+        "dynamic-sky" -> DynamicSkyDemo(onBack)
+        "multi-model" -> MultiModelDemo(onBack)
+        "physics" -> PhysicsDemo(onBack)
+        "post-processing" -> PostProcessingDemo(onBack)
+        "custom-mesh" -> CustomMeshDemo(onBack)
+        "shape" -> ShapeDemo(onBack)
+        "reflection-probes" -> ReflectionProbesDemo(onBack)
+        "secondary-camera" -> SecondaryCameraDemo(onBack)
+        "debug-overlay" -> DebugOverlayDemo(onBack)
         // Augmented Reality
         "ar-placement" -> ARPlacementDemo(onBack)
-        // Not yet implemented
+        "ar-image" -> ARImageDemo(onBack)
+        "ar-face" -> ARFaceDemo(onBack)
+        "ar-cloud-anchor" -> ARCloudAnchorDemo(onBack)
+        "ar-streetscape" -> ARStreetscapeDemo(onBack)
+        "ar-pose" -> ARPoseDemo(onBack)
+        "ar-rerun" -> ARRerunDemo(onBack)
+        // Fallback
         else -> PlaceholderDemo(id = id, onBack = onBack)
     }
 }
