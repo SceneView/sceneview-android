@@ -275,6 +275,27 @@ export function landingRoutes(): Hono<{ Bindings: Env }> {
     }
   }'</code></pre>
 
+        <h2 id="claude-desktop">Claude Desktop</h2>
+        <p class="muted">
+          Claude Desktop only supports <strong>stdio</strong> MCP servers.
+          A lite npm package (<code>hub-mcp</code>) is being prepared — once published,
+          add this to your <code>claude_desktop_config.json</code>:
+        </p>
+        <pre><code>{
+  "hub-mcp": {
+    "command": "npx",
+    "args": ["-y", "hub-mcp@latest"],
+    "env": {
+      "HUB_API_KEY": "YOUR_API_KEY"
+    }
+  }
+}</code></pre>
+        <p class="muted" style="margin-top:1rem;">
+          <strong>Coming soon</strong> — the npm package is not published yet.
+          In the meantime, use the curl/HTTP approach above with any
+          MCP client that supports HTTP transport (Cursor, Zed, custom agents).
+        </p>
+
         <h2>Current registry</h2>
         <p class="muted">
           The hub exposes <strong>${summary.totalTools} tools</strong>

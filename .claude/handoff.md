@@ -88,6 +88,34 @@ Quality-gate on main still FAILS — **pre-existing bug** in `tiers.test.ts` (li
 
 ---
 
+## 🔍 SESSION stupefied-meitner — 2026-04-12 — Gateway audit + hub-mcp fixes
+
+**Worktree:** `stupefied-meitner`
+**Branch:** `claude/stupefied-meitner`
+**PR:** sceneview/sceneview#816
+
+### What shipped
+
+**Full production audit of both gateways** — 8/8 checkout plans verified (`cs_live_...`), all health/pricing/auth-gate endpoints confirmed.
+
+**3 hub-gateway fixes:**
+
+| Fix | File | Impact |
+|---|---|---|
+| KV handoff prefix `checkout_key:` → `hub-checkout:` + API key prefix `sv_live_` → `hub_live_` | `hub-gateway/src/billing/key-provisioning.ts` | **BLOCKER FIX** — paying hub-mcp customers would never see their API key |
+| Added Claude Desktop stdio + Cursor HTTP docs sections | `hub-gateway/src/routes/landing.ts` | Docs completeness |
+| Free tool count 15 → 17 on landing page | `mcp-gateway/src/dashboard/landing.tsx` | Consistency with /docs and /pricing |
+
+**Tests:** 58/58 hub-gateway, 171/171 mcp-gateway — all passing.
+
+### What's NOT done
+
+- **Deploy both gateways** after merge — `wrangler deploy` from each directory
+- **First real paying customer test** — checklist documented in conversation
+- **npm `hub-mcp@beta`** — not published, Claude Desktop snippet shows "coming soon"
+
+---
+
 ## 🔧 SESSION agitated-merkle — 2026-04-12 — Quality gate fix + state audit
 
 **Worktree:** `agitated-merkle`
