@@ -68,21 +68,25 @@ fun PhysicsDemo(onBack: () -> Unit) {
                 materialLoader = materialLoader,
                 cameraManipulator = rememberCameraManipulator()
             ) {
+                val groundMaterial = remember(materialLoader) { materialLoader.createColorInstance(Color.DarkGray) }
+                val sphereMaterials = remember(materialLoader) {
+                    listOf(
+                        materialLoader.createColorInstance(Color.Red),
+                        materialLoader.createColorInstance(Color.Blue),
+                        materialLoader.createColorInstance(Color.Green),
+                        materialLoader.createColorInstance(Color.Yellow)
+                    )
+                }
+
                 // Ground plane for visual reference
                 PlaneNode(
-                    materialInstance = materialLoader.createColorInstance(Color.DarkGray),
+                    materialInstance = groundMaterial,
                     position = Position(y = 0f)
                 )
 
                 for (i in 0 until sphereCount) {
                     val xOffset = (i % 5 - 2) * 0.4f
                     val startY = 3f + i * 0.5f
-                    val color = when (i % 4) {
-                        0 -> Color.Red
-                        1 -> Color.Blue
-                        2 -> Color.Green
-                        else -> Color.Yellow
-                    }
 
                     // Capture the Node reference via apply so PhysicsNode can drive it.
                     var nodeRef by remember(i) { mutableStateOf<NodeImpl?>(null) }
@@ -93,7 +97,7 @@ fun PhysicsDemo(onBack: () -> Unit) {
                     ) {
                         SphereNode(
                             radius = 0.15f,
-                            materialInstance = materialLoader.createColorInstance(color)
+                            materialInstance = sphereMaterials[i % 4]
                         )
                     }
 

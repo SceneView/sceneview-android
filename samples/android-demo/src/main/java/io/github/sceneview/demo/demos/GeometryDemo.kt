@@ -37,6 +37,11 @@ fun GeometryDemo(onBack: () -> Unit) {
     val engine = rememberEngine()
     val materialLoader = rememberMaterialLoader(engine)
 
+    val redMaterial = remember(materialLoader) { materialLoader.createColorInstance(Color.Red) }
+    val blueMaterial = remember(materialLoader) { materialLoader.createColorInstance(Color.Blue) }
+    val greenMaterial = remember(materialLoader) { materialLoader.createColorInstance(Color.Green) }
+    val yellowMaterial = remember(materialLoader) { materialLoader.createColorInstance(Color.Yellow) }
+
     DemoScaffold(
         title = "Geometry Primitives",
         onBack = onBack,
@@ -61,21 +66,21 @@ fun GeometryDemo(onBack: () -> Unit) {
         ) {
             if (showCube) {
                 CubeNode(
-                    materialInstance = materialLoader.createColorInstance(Color.Red),
+                    materialInstance = redMaterial,
                     size = Float3(0.4f, 0.4f, 0.4f),
                     position = Position(x = -1.2f, y = 0f)
                 )
             }
             if (showSphere) {
                 SphereNode(
-                    materialInstance = materialLoader.createColorInstance(Color.Blue),
+                    materialInstance = blueMaterial,
                     radius = 0.25f,
                     position = Position(x = -0.4f, y = 0f)
                 )
             }
             if (showCylinder) {
                 CylinderNode(
-                    materialInstance = materialLoader.createColorInstance(Color.Green),
+                    materialInstance = greenMaterial,
                     radius = 0.2f,
                     height = 0.5f,
                     position = Position(x = 0.4f, y = 0f)
@@ -83,7 +88,7 @@ fun GeometryDemo(onBack: () -> Unit) {
             }
             if (showPlane) {
                 PlaneNode(
-                    materialInstance = materialLoader.createColorInstance(Color.Yellow),
+                    materialInstance = yellowMaterial,
                     size = Float3(0.5f, 0.5f, 1f),
                     position = Position(x = 1.2f, y = 0f)
                 )

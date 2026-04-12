@@ -77,6 +77,9 @@ fun ShapeDemo(onBack: () -> Unit) {
         "Hexagon" -> Color.Magenta
         else -> Color.Cyan
     }
+    val shapeMaterial = remember(materialLoader, currentColor) {
+        materialLoader.createColorInstance(currentColor)
+    }
 
     DemoScaffold(
         title = "Shape Node",
@@ -105,7 +108,7 @@ fun ShapeDemo(onBack: () -> Unit) {
         ) {
             ShapeNode(
                 polygonPath = currentPath,
-                materialInstance = materialLoader.createColorInstance(currentColor),
+                materialInstance = shapeMaterial,
                 position = Position(y = 0f, z = -1f)
             )
         }
