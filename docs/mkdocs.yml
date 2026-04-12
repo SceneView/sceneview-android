@@ -99,8 +99,7 @@ nav:
 extra:
   analytics:
     provider: google
-    # TODO: Replace G-HX1JWGSMTH with your real GA4 Measurement ID
-    # Create one at https://analytics.google.com → Admin → Create Property
+    # GA4 Property: SceneView Website | Stream ID: 14357002837
     property: G-HX1JWGSMTH
     feedback:
       title: Was this page helpful?
