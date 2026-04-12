@@ -439,3 +439,72 @@ describe("GET /v1/timeseries", () => {
     expect(json.days).toBe(30);
   });
 });
+
+// ── GET /v1/export ───────────────────────────────────────────────────────────
+
+function getExport(
+  params: Record<string, string>,
+  env: ReturnType<typeof makeEnv>,
+  headers: Record<string, string> = {},
+) {
+  const qs = new URLSearchParams(params).toString();
+  const url = `/v1/export${qs ? `?${qs}` : ""}`;
+  return app.request(url, { method: "GET", headers }, env);
+}
+
+describe("GET /v1/export", () => {
+  let env: ReturnType<typeof makeEnv>;
+
+  beforeEach(() => {
+    env = makeEnv();
+  });
+
+  it("returns CSV with correct content-type", async () => {
+    const res = await getExport({}, env);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/csv");
+  });
+
+  it("returns Content-Disposition attachment header", async () => {
+    const res = await getExport({}, env);
+    const disposition = res.headers.get("content-disposition") ?? "";
+    expect(disposition).toContain("attachment");
+    expect(disposition).toContain(".csv");
+  });
+
+  it("returns CSV header row", async () => {
+    const res = await getExport({}, env);
+    const text = await res.text();
+    expect(text).toContain("timestamp,event,client,client_ver,mcp_ver,tier,tool");
+  });
+
+  it("rejects invalid event_type", async () => {
+    const res = await getExport({ event_type: "crash" }, env);
+    expect(res.status).toBe(400);
+  });
+
+  it("accepts valid event_type=tool", async () => {
+    const res = await getExport({ event_type: "tool" }, env);
+    expect(res.status).toBe(200);
+  });
+
+  it("clamps days to max 30", async () => {
+    const res = await getExport({ days: "999" }, env);
+    expect(res.status).toBe(200);
+    // Verify via filename in Content-Disposition
+    const disposition = res.headers.get("content-disposition") ?? "";
+    expect(disposition).toContain("30d");
+  });
+
+  it("returns 401 with wrong STATS_TOKEN", async () => {
+    const authEnv = { ...makeEnv(), STATS_TOKEN: "secret" } as ReturnType<typeof makeEnv>;
+    const res = await getExport({}, authEnv, { Authorization: "Bearer wrong" });
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 200 with correct STATS_TOKEN", async () => {
+    const authEnv = { ...makeEnv(), STATS_TOKEN: "secret" } as ReturnType<typeof makeEnv>;
+    const res = await getExport({}, authEnv, { Authorization: "Bearer secret" });
+    expect(res.status).toBe(200);
+  });
+});

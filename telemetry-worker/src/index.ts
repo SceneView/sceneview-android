@@ -364,6 +364,99 @@ app.get("/v1/timeseries", async (c) => {
   }
 });
 
+// ── Export endpoint (CSV download for analytics) ─────────────────────────────
+app.get("/v1/export", async (c) => {
+  // Bearer token guard — same as /v1/stats
+  const token = c.env.STATS_TOKEN;
+  if (token) {
+    const auth = c.req.header("Authorization") ?? "";
+    if (auth !== `Bearer ${token}`) {
+      return c.json({ error: "unauthorized" }, 401);
+    }
+  }
+
+  // Query param validation
+  const rawDays = c.req.query("days") ?? "7";
+  const eventType = c.req.query("event_type");
+
+  const days = Math.min(Math.max(parseInt(rawDays, 10) || 7, 1), 30);
+
+  if (eventType !== undefined && eventType !== "init" && eventType !== "tool") {
+    return c.json({ error: "invalid_event_type", valid: ["init", "tool"] }, 400);
+  }
+
+  try {
+    let query: string;
+    let bindings: (string | number)[];
+
+    if (eventType) {
+      query = `SELECT timestamp, event, client, client_ver, mcp_ver, tier, tool
+               FROM events
+               WHERE ingested >= datetime('now', '-' || ? || ' days')
+                 AND event = ?
+               ORDER BY ingested DESC
+               LIMIT 10000`;
+      bindings = [days, eventType];
+    } else {
+      query = `SELECT timestamp, event, client, client_ver, mcp_ver, tier, tool
+               FROM events
+               WHERE ingested >= datetime('now', '-' || ? || ' days')
+               ORDER BY ingested DESC
+               LIMIT 10000`;
+      bindings = [days];
+    }
+
+    type EventRow = {
+      timestamp: string;
+      event: string;
+      client: string;
+      client_ver: string;
+      mcp_ver: string;
+      tier: string;
+      tool: string | null;
+    };
+
+    const result = await c.env.DB.prepare(query)
+      .bind(...bindings)
+      .all<EventRow>();
+
+    // Build CSV — header + rows
+    const lines: string[] = [
+      "timestamp,event,client,client_ver,mcp_ver,tier,tool",
+    ];
+
+    for (const row of result.results) {
+      const fields = [
+        row.timestamp,
+        row.event,
+        row.client,
+        row.client_ver,
+        row.mcp_ver,
+        row.tier,
+        row.tool ?? "",
+      ].map((v) => {
+        // Escape fields that contain commas, quotes, or newlines
+        if (v.includes(",") || v.includes('"') || v.includes("\n")) {
+          return `"${v.replace(/"/g, '""')}"`;
+        }
+        return v;
+      });
+      lines.push(fields.join(","));
+    }
+
+    const csv = lines.join("\n");
+
+    return new Response(csv, {
+      headers: {
+        "content-type": "text/csv; charset=utf-8",
+        "content-disposition": `attachment; filename="events-${days}d.csv"`,
+      },
+    });
+  } catch {
+    return c.json({ error: "query_failed" }, 500);
+  }
+});
+
 // ── Catch-all ────────────────────────────────────────────────────────────────
 app.all("*", (c) => c.json({ error: "not_found" }, 404));
 
