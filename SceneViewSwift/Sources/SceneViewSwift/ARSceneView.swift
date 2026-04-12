@@ -2,6 +2,7 @@
 import SwiftUI
 import RealityKit
 import ARKit
+import CoreImage
 
 /// A SwiftUI view for augmented reality using ARKit + RealityKit.
 ///
@@ -28,6 +29,7 @@ public struct ARSceneView: UIViewRepresentable {
     private var planeDetection: PlaneDetectionMode
     private var showPlaneOverlay: Bool
     private var showCoachingOverlay: Bool
+    private var cameraExposure: Float?
     private var onTapOnPlane: ((SIMD3<Float>, ARView) -> Void)?
     private var onSessionStarted: ((ARView) -> Void)?
     private var imageTrackingDatabase: Set<ARReferenceImage>?
@@ -60,6 +62,18 @@ public struct ARSceneView: UIViewRepresentable {
     ///   - imageTrackingDatabase: Set of reference images to detect. Use
     ///     `AugmentedImageNode.createImageDatabase()` or
     ///     `AugmentedImageNode.referenceImages(inGroupNamed:)` to create.
+    ///   - cameraExposure: Optional exposure compensation for the camera feed, in EV
+    ///     (exposure value) stops. When non-nil, a post-processing brightness adjustment
+    ///     is applied to the rendered frame via `ARView.renderCallbacks.postProcess`.
+    ///     Positive values brighten the scene; negative values darken it. A value of `0.0`
+    ///     leaves the camera feed unchanged. Pass `nil` (the default) to skip any
+    ///     exposure override and rely on ARKit's built-in auto-exposure.
+    ///
+    ///     Mirrors Android's `ARSceneView(cameraExposure: Float?)` parameter, which
+    ///     overrides Filament's camera aperture/shutter/ISO when ARCore's auto-exposure
+    ///     does not match the Camera2 output on a given device.
+    ///
+    ///     Requires iOS 15.0+. On earlier OS versions the value is stored but has no effect.
     ///   - onTapOnPlane: Called with (worldPosition, arView) when user taps on a plane.
     ///   - onImageDetected: Called with (imageName, anchorNode, arView) when a reference
     ///     image is detected. Add content to the anchor and call
@@ -68,6 +82,7 @@ public struct ARSceneView: UIViewRepresentable {
         planeDetection: PlaneDetectionMode = .horizontal,
         showPlaneOverlay: Bool = true,
         showCoachingOverlay: Bool = true,
+        cameraExposure: Float? = nil,
         imageTrackingDatabase: Set<ARReferenceImage>? = nil,
         onTapOnPlane: ((SIMD3<Float>, ARView) -> Void)? = nil,
         onImageDetected: ((String, AnchorNode, ARView) -> Void)? = nil,
@@ -76,6 +91,7 @@ public struct ARSceneView: UIViewRepresentable {
         self.planeDetection = planeDetection
         self.showPlaneOverlay = showPlaneOverlay
         self.showCoachingOverlay = showCoachingOverlay
+        self.cameraExposure = cameraExposure
         self.imageTrackingDatabase = imageTrackingDatabase
         self.onTapOnPlane = onTapOnPlane
         self.onImageDetected = onImageDetected
@@ -88,6 +104,28 @@ public struct ARSceneView: UIViewRepresentable {
     ) -> ARSceneView {
         var copy = self
         copy.onSessionStarted = handler
+        return copy
+    }
+
+    /// Sets an exposure compensation override for the AR camera feed.
+    ///
+    /// Positive values brighten the rendered scene; negative values darken it. One stop
+    /// equals a doubling or halving of brightness. Pass `nil` to remove any override and
+    /// rely on ARKit's built-in auto-exposure.
+    ///
+    /// Mirrors Android's `cameraExposure` parameter on `ARSceneView`, which overrides
+    /// Filament's camera aperture/shutter/ISO when ARCore's auto-exposure does not match
+    /// the Camera2 output on a given device.
+    ///
+    /// Implemented via `ARView.renderCallbacks.postProcess` (iOS 15.0+) using a
+    /// `CIColorControls` brightness filter. On earlier OS versions, the call is a no-op.
+    ///
+    /// - Parameter ev: Exposure compensation in EV stops. `0.0` = no change, positive
+    ///   values brighten, negative values darken.
+    /// - Returns: A copy of this view with the exposure override applied.
+    public func cameraExposure(_ ev: Float?) -> ARSceneView {
+        var copy = self
+        copy.cameraExposure = ev
         return copy
     }
 
@@ -164,6 +202,60 @@ public struct ARSceneView: UIViewRepresentable {
         context.coordinator.onTapOnPlane = onTapOnPlane
         context.coordinator.onImageDetected = onImageDetected
         context.coordinator.onFrame = onFrame
+
+        // Apply camera exposure override via post-processing (iOS 15.0+).
+        // Converts the EV value to a CIColorControls brightness offset and installs
+        // (or removes) a post-process render callback on the ARView.
+        applyExposure(cameraExposure, to: arView)
+    }
+
+    // MARK: - Exposure helpers
+
+    /// Applies (or removes) a brightness post-process callback on `arView` to simulate
+    /// the `cameraExposure` EV override from Android's ARSceneView.
+    ///
+    /// An EV of `+1` doubles perceived brightness (maps to +0.5 CIColorControls
+    /// brightness), an EV of `-1` halves it (maps to -0.5). The mapping is linear and
+    /// intentionally simple — Filament on Android uses physical aperture/shutter/ISO,
+    /// but RealityKit does not expose those parameters, so a CIFilter post-process is
+    /// the closest available approximation.
+    @available(iOS 15.0, *)
+    private func applyExposurePostProcess(_ ev: Float, to arView: ARView) {
+        arView.renderCallbacks.postProcess = { [ev] context in
+            guard
+                let filter = CIFilter(name: "CIColorControls"),
+                // CIImage(mtlTexture:) is failable — texture format must be supported.
+                let ciImage = CIImage(mtlTexture: context.sourceColorTexture, options: nil)
+            else { return }
+            // Map EV stops to CIColorControls brightness range [-1, 1]:
+            // each EV stop equals 0.5 brightness units so that ±2 EV covers the full range.
+            let brightness = NSNumber(value: Double(ev) * 0.5)
+            filter.setValue(ciImage, forKey: kCIInputImageKey)
+            filter.setValue(brightness, forKey: kCIInputBrightnessKey)
+            guard let outputImage = filter.outputImage else { return }
+            let ciContext = CIContext(mtlDevice: context.device)
+            ciContext.render(
+                outputImage,
+                to: context.targetColorTexture,
+                commandBuffer: context.commandBuffer,
+                bounds: outputImage.extent,
+                colorSpace: CGColorSpaceCreateDeviceRGB()
+            )
+        }
+    }
+
+    private func applyExposure(_ ev: Float?, to arView: ARView) {
+        guard let ev = ev else {
+            // Remove any previously installed post-process callback.
+            if #available(iOS 15.0, *) {
+                arView.renderCallbacks.postProcess = nil
+            }
+            return
+        }
+        if #available(iOS 15.0, *) {
+            applyExposurePostProcess(ev, to: arView)
+        }
+        // On iOS < 15 the value is stored (via the modifier / init) but silently ignored.
     }
 
     public func makeCoordinator() -> Coordinator {
