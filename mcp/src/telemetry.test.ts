@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   recordClientInit,
   recordToolCall,
+  flushTelemetry,
   __resetClientContext,
   type TelemetryPayload,
 } from "./telemetry.js";
@@ -12,12 +13,15 @@ import {
 // stubs `globalThis.fetch` with a spy and then inspects call counts and
 // payloads. We also use fake timers in one test to assert the abort timeout
 // does not leave a dangling handle.
+//
+// With client-side batching, events are buffered and only sent on flush.
+// Tests call `flushTelemetry()` to drain the buffer before asserting on fetch.
 
 type FetchMock = ReturnType<typeof vi.fn>;
 
 function installFetchMock(impl?: (...args: unknown[]) => Promise<Response>): FetchMock {
   const mock = vi.fn<(...args: unknown[]) => Promise<Response>>(
-    impl ?? (async () => new Response("", { status: 204 })),
+    impl ?? (async () => new Response("ok", { status: 200 })),
   );
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (globalThis as unknown as { fetch: typeof fetch }).fetch = mock as unknown as typeof fetch;
@@ -40,6 +44,8 @@ afterEach(() => {
   process.env = { ...ORIGINAL_ENV };
   globalThis.fetch = ORIGINAL_FETCH;
   vi.restoreAllMocks();
+  // Drain any remaining buffer so timers don't leak between tests.
+  flushTelemetry();
 });
 
 // Wait a microtask tick so fire-and-forget `fetch(...)` calls have a chance
@@ -57,6 +63,7 @@ describe("telemetry opt-out", () => {
     const mock = installFetchMock();
 
     recordClientInit({ name: "claude-desktop", version: "0.11.0" });
+    flushTelemetry();
     await flushMicrotasks();
 
     expect(mock).not.toHaveBeenCalled();
@@ -68,6 +75,7 @@ describe("telemetry opt-out", () => {
 
     recordClientInit({ name: "claude-desktop", version: "0.11.0" });
     recordToolCall("list_samples", "free");
+    flushTelemetry();
     await flushMicrotasks();
 
     expect(mock).not.toHaveBeenCalled();
@@ -78,6 +86,7 @@ describe("telemetry opt-out", () => {
     const mock = installFetchMock();
 
     recordClientInit({ name: "claude-desktop", version: "0.11.0" });
+    flushTelemetry();
     await flushMicrotasks();
 
     expect(mock).toHaveBeenCalledTimes(1);
@@ -92,6 +101,7 @@ describe("telemetry CI detection", () => {
     const mock = installFetchMock();
 
     recordClientInit({ name: "claude-desktop", version: "0.11.0" });
+    flushTelemetry();
     await flushMicrotasks();
 
     expect(mock).not.toHaveBeenCalled();
@@ -102,6 +112,7 @@ describe("telemetry CI detection", () => {
     const mock = installFetchMock();
 
     recordToolCall("list_samples", "free");
+    flushTelemetry();
     await flushMicrotasks();
 
     expect(mock).not.toHaveBeenCalled();
@@ -114,6 +125,7 @@ describe("telemetry CI detection", () => {
     const mock = installFetchMock();
 
     recordClientInit({ name: "claude-desktop", version: "0.11.0" });
+    flushTelemetry();
     await flushMicrotasks();
 
     expect(mock).toHaveBeenCalledTimes(1);
@@ -133,7 +145,8 @@ describe("telemetry payload shape", () => {
     "tool",
   ]);
 
-  function parsePayload(mock: FetchMock, callIndex = 0): TelemetryPayload {
+  // Parse the payload from a single-event fetch call (goes to /v1/events).
+  function parseSinglePayload(mock: FetchMock, callIndex = 0): TelemetryPayload {
     const call = mock.mock.calls[callIndex];
     expect(call, `expected fetch call #${callIndex}`).toBeDefined();
     const [url, init] = call as [string, RequestInit];
@@ -148,10 +161,11 @@ describe("telemetry payload shape", () => {
     const mock = installFetchMock();
 
     recordClientInit({ name: "claude-desktop", version: "0.11.0" });
+    flushTelemetry();
     await flushMicrotasks();
 
     expect(mock).toHaveBeenCalledTimes(1);
-    const payload = parsePayload(mock);
+    const payload = parseSinglePayload(mock);
 
     expect(payload.event).toBe("init");
     expect(payload.client).toBe("claude-desktop");
@@ -169,25 +183,39 @@ describe("telemetry payload shape", () => {
     }
   });
 
-  it("tool event contains only allowed fields and includes tool name", async () => {
+  it("two-event batch sends to /v1/batch with correct envelope", async () => {
     const mock = installFetchMock();
 
     recordClientInit({ name: "cursor", version: "0.50.0" });
     recordToolCall("get_node_reference", "pro");
+    flushTelemetry();
     await flushMicrotasks();
 
-    // Two fetches: init + tool.
-    expect(mock).toHaveBeenCalledTimes(2);
-    const payload = parsePayload(mock, 1);
+    // Two events → batch endpoint.
+    expect(mock).toHaveBeenCalledTimes(1);
+    const [url, init] = mock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://telemetry.sceneview.io/v1/batch");
+    expect(init.method).toBe("POST");
+    const headers = (init.headers ?? {}) as Record<string, string>;
+    expect(headers["content-type"]).toBe("application/json");
 
-    expect(payload.event).toBe("tool");
-    expect(payload.tool).toBe("get_node_reference");
-    expect(payload.tier).toBe("pro");
-    expect(payload.client).toBe("cursor");
-    expect(payload.clientVersion).toBe("0.50.0");
+    const body = JSON.parse(init.body as string) as { events: TelemetryPayload[] };
+    expect(Array.isArray(body.events)).toBe(true);
+    expect(body.events).toHaveLength(2);
 
-    for (const key of Object.keys(payload)) {
-      expect(ALLOWED_FIELDS.has(key), `unexpected field: ${key}`).toBe(true);
+    const [initPayload, toolPayload] = body.events;
+    expect(initPayload!.event).toBe("init");
+    expect(toolPayload!.event).toBe("tool");
+    expect(toolPayload!.tool).toBe("get_node_reference");
+    expect(toolPayload!.tier).toBe("pro");
+    expect(toolPayload!.client).toBe("cursor");
+    expect(toolPayload!.clientVersion).toBe("0.50.0");
+
+    // Both payloads must only contain allowed fields.
+    for (const payload of body.events) {
+      for (const key of Object.keys(payload)) {
+        expect(ALLOWED_FIELDS.has(key), `unexpected field: ${key}`).toBe(true);
+      }
     }
   });
 
@@ -196,6 +224,7 @@ describe("telemetry payload shape", () => {
 
     // No recordClientInit before recordToolCall.
     recordToolCall("list_samples", "free");
+    flushTelemetry();
     await flushMicrotasks();
 
     expect(mock).toHaveBeenCalledTimes(1);
@@ -208,6 +237,7 @@ describe("telemetry payload shape", () => {
     const mock = installFetchMock();
 
     recordClientInit(undefined);
+    flushTelemetry();
     await flushMicrotasks();
 
     expect(mock).not.toHaveBeenCalled();
@@ -218,12 +248,21 @@ describe("telemetry payload shape", () => {
 
     recordClientInit({ name: "claude-desktop", version: "0.11.0" });
     recordToolCall("debug_issue", "free");
+    flushTelemetry();
     await flushMicrotasks();
 
     for (const call of mock.mock.calls) {
-      const body = JSON.parse((call[1] as RequestInit).body as string);
-      for (const forbidden of ["ip", "hostname", "user", "args", "result", "prompt", "apiKey"]) {
-        expect(body[forbidden]).toBeUndefined();
+      const [url, init] = call as [string, RequestInit];
+      const raw = JSON.parse(init.body as string) as Record<string, unknown>;
+      // Both /v1/events (single body) and /v1/batch ({ events: [] }) shapes.
+      const payloads: TelemetryPayload[] =
+        url.endsWith("/batch")
+          ? ((raw as { events: TelemetryPayload[] }).events ?? [])
+          : [raw as unknown as TelemetryPayload];
+      for (const body of payloads) {
+        for (const forbidden of ["ip", "hostname", "user", "args", "result", "prompt", "apiKey"]) {
+          expect((body as unknown as Record<string, unknown>)[forbidden]).toBeUndefined();
+        }
       }
     }
   });
@@ -240,7 +279,8 @@ describe("telemetry non-blocking behavior", () => {
     recordClientInit({ name: "claude-desktop", version: "0.11.0" });
     const elapsed = Date.now() - start;
 
-    // Must be effectively instant (< 50ms) — fetch is fire-and-forget.
+    // Must be effectively instant (< 50ms) — buffering is synchronous,
+    // flush is fire-and-forget.
     expect(elapsed).toBeLessThan(50);
   });
 
@@ -261,30 +301,43 @@ describe("telemetry non-blocking behavior", () => {
     const result = recordClientInit({ name: "claude-desktop", version: "0.11.0" });
     expect(result).toBeUndefined();
   });
+
+  it("flushTelemetry does not return a thenable", () => {
+    installFetchMock();
+    recordClientInit({ name: "claude-desktop", version: "0.11.0" });
+    const result = flushTelemetry();
+    expect(result).toBeUndefined();
+  });
 });
 
 // ─── Fetch failure is swallowed ──────────────────────────────────────────────
 
 describe("telemetry failure handling", () => {
-  it("swallows fetch rejections (network error)", async () => {
+  it("swallows fetch rejections (network error) on flush", async () => {
     const mock = installFetchMock(() => Promise.reject(new Error("ENETUNREACH")));
 
-    expect(() => recordClientInit({ name: "claude-desktop", version: "0.11.0" })).not.toThrow();
+    expect(() => {
+      recordClientInit({ name: "claude-desktop", version: "0.11.0" });
+      flushTelemetry();
+    }).not.toThrow();
     await flushMicrotasks();
     await flushMicrotasks();
 
     expect(mock).toHaveBeenCalledTimes(1);
   });
 
-  it("swallows fetch rejections on tool calls", async () => {
+  it("swallows fetch rejections on tool calls after flush", async () => {
     const mock = installFetchMock(() => Promise.reject(new Error("DNS failure")));
 
     recordClientInit({ name: "claude-desktop", version: "0.11.0" });
     expect(() => recordToolCall("list_samples", "free")).not.toThrow();
+    expect(() => flushTelemetry()).not.toThrow();
     await flushMicrotasks();
     await flushMicrotasks();
+    await flushMicrotasks(); // extra tick for fallback individual sends
 
-    expect(mock).toHaveBeenCalledTimes(2);
+    // Batch attempt fails → 2 individual fallback sends.
+    expect(mock).toHaveBeenCalledTimes(3); // 1 batch attempt + 2 individual fallbacks
   });
 
   it("swallows non-2xx responses without throwing (e.g., Cloudflare 502)", async () => {
@@ -293,19 +346,110 @@ describe("telemetry failure handling", () => {
     expect(() => {
       recordClientInit({ name: "claude-desktop", version: "0.11.0" });
       recordToolCall("list_samples", "free");
+      flushTelemetry();
     }).not.toThrow();
 
     await flushMicrotasks();
     await flushMicrotasks();
 
-    expect(mock).toHaveBeenCalledTimes(2);
+    // Two events → one batch POST (non-2xx is NOT a rejection, so no fallback).
+    expect(mock).toHaveBeenCalledTimes(1);
   });
 
-  it("swallows synchronous fetch throws", async () => {
+  it("swallows synchronous fetch throws on flush", async () => {
     installFetchMock(() => {
       throw new Error("sync boom");
     });
 
-    expect(() => recordClientInit({ name: "claude-desktop", version: "0.11.0" })).not.toThrow();
+    recordClientInit({ name: "claude-desktop", version: "0.11.0" });
+    expect(() => flushTelemetry()).not.toThrow();
+  });
+});
+
+// ─── Batching behavior ────────────────────────────────────────────────────────
+
+describe("telemetry batching", () => {
+  it("buffers events and does not fetch before flush", async () => {
+    const mock = installFetchMock();
+
+    recordClientInit({ name: "claude-desktop", version: "0.11.0" });
+    recordToolCall("list_samples", "free");
+    await flushMicrotasks();
+
+    // No fetch yet — buffer holds both events.
+    expect(mock).not.toHaveBeenCalled();
+  });
+
+  it("flushTelemetry sends all buffered events in one batch POST", async () => {
+    const mock = installFetchMock();
+
+    recordClientInit({ name: "cursor", version: "1.0.0" });
+    recordToolCall("get_node_reference", "free");
+    recordToolCall("list_samples", "free");
+    flushTelemetry();
+    await flushMicrotasks();
+
+    expect(mock).toHaveBeenCalledTimes(1);
+    const [url, init] = mock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://telemetry.sceneview.io/v1/batch");
+    const body = JSON.parse(init.body as string) as { events: TelemetryPayload[] };
+    expect(body.events).toHaveLength(3);
+  });
+
+  it("auto-flushes when buffer reaches BATCH_MAX_SIZE (10)", async () => {
+    const mock = installFetchMock();
+
+    // Pump exactly 10 tool events.
+    recordClientInit({ name: "claude-desktop", version: "0.11.0" });
+    // The init event is event #1 in the buffer. Add 9 more tool calls to hit 10.
+    for (let i = 0; i < 9; i++) {
+      recordToolCall("list_samples", "free");
+    }
+    await flushMicrotasks();
+
+    // At 10 events the buffer auto-flushes synchronously.
+    expect(mock).toHaveBeenCalledTimes(1);
+    const [url, init] = mock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://telemetry.sceneview.io/v1/batch");
+    const body = JSON.parse(init.body as string) as { events: TelemetryPayload[] };
+    expect(body.events).toHaveLength(10);
+  });
+
+  it("flushTelemetry clears the buffer so a second flush sends nothing", async () => {
+    const mock = installFetchMock();
+
+    recordClientInit({ name: "claude-desktop", version: "0.11.0" });
+    flushTelemetry();
+    await flushMicrotasks();
+    expect(mock).toHaveBeenCalledTimes(1);
+
+    // Second flush: buffer is empty, fetch must NOT be called again.
+    flushTelemetry();
+    await flushMicrotasks();
+    expect(mock).toHaveBeenCalledTimes(1);
+  });
+
+  it("single-event flush uses /v1/events endpoint (not batch)", async () => {
+    const mock = installFetchMock();
+
+    recordClientInit({ name: "claude-desktop", version: "0.11.0" });
+    flushTelemetry();
+    await flushMicrotasks();
+
+    expect(mock).toHaveBeenCalledTimes(1);
+    const [url] = mock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://telemetry.sceneview.io/v1/events");
+  });
+
+  it("__resetClientContext also clears the buffer", async () => {
+    const mock = installFetchMock();
+
+    recordClientInit({ name: "claude-desktop", version: "0.11.0" });
+    recordToolCall("list_samples", "free");
+    __resetClientContext();
+    flushTelemetry(); // buffer is already empty
+    await flushMicrotasks();
+
+    expect(mock).not.toHaveBeenCalled();
   });
 });

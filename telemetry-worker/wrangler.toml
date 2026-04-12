@@ -1,0 +1,56 @@
+# ─── SceneView Telemetry Worker ───────────────────────────────────────────────
+#
+# Ingests anonymous usage events from sceneview-mcp (npm package).
+# No PII — only tool names, client info, versions, timestamps.
+#
+# Deploy: wrangler deploy
+# Dev:    wrangler dev
+#
+# Before first deploy, create the D1 database and KV namespace:
+#   wrangler d1 create sceneview-telemetry
+#   wrangler kv namespace create RL_KV
+# Then update the IDs below.
+#
+# DNS: add CNAME telemetry.sceneview.io -> <worker-subdomain>.workers.dev
+# in Cloudflare DNS dashboard.
+
+name = "sceneview-telemetry"
+main = "src/index.ts"
+compatibility_date = "2025-04-01"
+
+# ── Local development ─────────────────────────────────────────────────────────
+# `wrangler dev` uses local SQLite for D1 and in-memory KV automatically.
+# The TODO placeholder IDs below are ignored in local mode.
+[dev]
+port = 8787
+local_protocol = "http"
+
+# ── D1 database ──────────────────────────────────────────────────────────────
+[[d1_databases]]
+binding = "DB"
+database_name = "sceneview-telemetry"
+database_id = "TODO_REPLACE_AFTER_D1_CREATE"
+migrations_dir = "migrations"
+
+# ── KV namespace (rate-limit counters) ───────────────────────────────────────
+[[kv_namespaces]]
+binding = "RL_KV"
+id = "TODO_REPLACE_AFTER_KV_CREATE"
+
+# ── Environment variables ────────────────────────────────────────────────────
+[vars]
+ENVIRONMENT = "production"
+
+# Optional: protect /v1/stats with a bearer token
+# wrangler secret put STATS_TOKEN
+
+# ── Cron trigger (daily rollup) ──────────────────────────────────────────────
+# Uncomment after first deploy to enable daily rollup at 02:00 UTC:
+# [triggers]
+# crons = ["0 2 * * *"]
+
+# ── Custom domain ────────────────────────────────────────────────────────────
+# Uncomment after DNS CNAME is set up:
+# [routes]
+# pattern = "telemetry.sceneview.io/*"
+# custom_domain = true

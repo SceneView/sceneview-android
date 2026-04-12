@@ -1,0 +1,507 @@
+import { Hono } from "hono";
+import { cors } from "hono/cors";
+import type { Env } from "./env.js";
+import { isRateLimited } from "./rate-limit.js";
+import { rollupYesterday } from "./rollup.js";
+
+const app = new Hono<{ Bindings: Env }>();
+
+// ── CORS — allow calls from any origin (npx, browser, etc.) ─────────────────
+app.use(
+  "/v1/*",
+  cors({
+    origin: "*",
+    allowMethods: ["POST", "OPTIONS"],
+    allowHeaders: ["content-type"],
+    maxAge: 86400,
+  }),
+);
+
+// ── Health check ─────────────────────────────────────────────────────────────
+app.get("/health", (c) =>
+  c.json({ ok: true, service: "sceneview-telemetry", version: "1.0.0" }),
+);
+
+// ── Payload validation ───────────────────────────────────────────────────────
+const VALID_EVENTS = new Set(["init", "tool"]);
+const VALID_TIERS = new Set(["free", "pro"]);
+const MAX_STRING_LEN = 128;
+
+interface EventPayload {
+  timestamp: string;
+  event: "init" | "tool";
+  client: string;
+  clientVersion: string;
+  mcpVersion: string;
+  tier: "free" | "pro";
+  tool?: string;
+}
+
+function validatePayload(body: unknown): EventPayload | null {
+  if (!body || typeof body !== "object") return null;
+
+  const b = body as Record<string, unknown>;
+
+  if (typeof b.timestamp !== "string" || b.timestamp.length > MAX_STRING_LEN)
+    return null;
+  if (typeof b.event !== "string" || !VALID_EVENTS.has(b.event)) return null;
+  if (typeof b.client !== "string" || b.client.length > MAX_STRING_LEN)
+    return null;
+  if (
+    typeof b.clientVersion !== "string" ||
+    b.clientVersion.length > MAX_STRING_LEN
+  )
+    return null;
+  if (typeof b.mcpVersion !== "string" || b.mcpVersion.length > MAX_STRING_LEN)
+    return null;
+  if (typeof b.tier !== "string" || !VALID_TIERS.has(b.tier)) return null;
+
+  // tool is optional but must be a bounded string if present
+  if (b.tool !== undefined) {
+    if (typeof b.tool !== "string" || b.tool.length > MAX_STRING_LEN)
+      return null;
+  }
+
+  return {
+    timestamp: b.timestamp,
+    event: b.event as "init" | "tool",
+    client: b.client,
+    clientVersion: b.clientVersion,
+    mcpVersion: b.mcpVersion,
+    tier: b.tier as "free" | "pro",
+    tool: typeof b.tool === "string" ? b.tool : undefined,
+  };
+}
+
+// ── POST /v1/events ──────────────────────────────────────────────────────────
+app.post("/v1/events", async (c) => {
+  // Body size guard — reject oversized payloads before parsing JSON
+  const maxSize = 65536; // 64 KB
+  const cl = parseInt(c.req.header("content-length") ?? "0", 10);
+  if (cl > maxSize) return c.json({ error: "payload_too_large" }, 413);
+
+  // Rate limit by IP (hashed — never stored raw)
+  const ip = c.req.header("cf-connecting-ip") ?? "unknown";
+  const rl = await isRateLimited(ip, c.env.RL_KV);
+  if (rl.limited) {
+    return c.json({ error: "rate_limited" }, 429, {
+      "X-RateLimit-Limit": String(rl.limit),
+      "X-RateLimit-Remaining": String(rl.remaining),
+      "Retry-After": "60",
+    });
+  }
+
+  // Parse & validate
+  let body: unknown;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "invalid_json" }, 400, {
+      "X-RateLimit-Limit": String(rl.limit),
+      "X-RateLimit-Remaining": String(rl.remaining),
+    });
+  }
+
+  const payload = validatePayload(body);
+  if (!payload) {
+    return c.json({ error: "invalid_payload" }, 400, {
+      "X-RateLimit-Limit": String(rl.limit),
+      "X-RateLimit-Remaining": String(rl.remaining),
+    });
+  }
+
+  // Insert into D1 — fire-and-forget style but we await for correctness
+  try {
+    await c.env.DB.prepare(
+      `INSERT INTO events (timestamp, event, client, client_ver, mcp_ver, tier, tool)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    )
+      .bind(
+        payload.timestamp,
+        payload.event,
+        payload.client,
+        payload.clientVersion,
+        payload.mcpVersion,
+        payload.tier,
+        payload.tool ?? null,
+      )
+      .run();
+  } catch (e) {
+    // D1 write failed — log but don't fail the client.
+    // In production, this would go to Workers Logpush.
+    console.error("D1 insert failed", e);
+    return c.json({ ok: true, stored: false }, 202, {
+      "X-RateLimit-Limit": String(rl.limit),
+      "X-RateLimit-Remaining": String(rl.remaining),
+    });
+  }
+
+  return c.json({ ok: true }, 202, {
+    "X-RateLimit-Limit": String(rl.limit),
+    "X-RateLimit-Remaining": String(rl.remaining),
+  });
+});
+
+// ── Batch endpoint (future-proof for client-side batching) ───────────────────
+app.post("/v1/batch", async (c) => {
+  // Body size guard — 1 MB ceiling for batch payloads
+  const maxBatchSize = 1_048_576; // 1 MB
+  const cl = parseInt(c.req.header("content-length") ?? "0", 10);
+  if (cl > maxBatchSize) return c.json({ error: "payload_too_large" }, 413);
+
+  const ip = c.req.header("cf-connecting-ip") ?? "unknown";
+  const rl = await isRateLimited(ip, c.env.RL_KV);
+  if (rl.limited) {
+    return c.json({ error: "rate_limited" }, 429, {
+      "X-RateLimit-Limit": String(rl.limit),
+      "X-RateLimit-Remaining": String(rl.remaining),
+      "Retry-After": "60",
+    });
+  }
+
+  let body: unknown;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "invalid_json" }, 400, {
+      "X-RateLimit-Limit": String(rl.limit),
+      "X-RateLimit-Remaining": String(rl.remaining),
+    });
+  }
+
+  // Batch size is capped at 50 events per request (enforced below).
+  // Rate limiting counts the whole batch as a single hit — acceptable because
+  // the 50-event cap bounds the per-minute write amplification to 50×30 = 1500
+  // rows, well within D1 limits. Tighten if abuse is observed.
+  if (!Array.isArray(body) || body.length === 0 || body.length > 50) {
+    return c.json({ error: "invalid_batch", max: 50 }, 400, {
+      "X-RateLimit-Limit": String(rl.limit),
+      "X-RateLimit-Remaining": String(rl.remaining),
+    });
+  }
+
+  const validated = body.map(validatePayload).filter(Boolean) as EventPayload[];
+  if (validated.length === 0) {
+    return c.json({ error: "no_valid_events" }, 400, {
+      "X-RateLimit-Limit": String(rl.limit),
+      "X-RateLimit-Remaining": String(rl.remaining),
+    });
+  }
+
+  // Batch insert with D1 batch API
+  try {
+    const stmt = c.env.DB.prepare(
+      `INSERT INTO events (timestamp, event, client, client_ver, mcp_ver, tier, tool)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    );
+
+    await c.env.DB.batch(
+      validated.map((p) =>
+        stmt.bind(
+          p.timestamp,
+          p.event,
+          p.client,
+          p.clientVersion,
+          p.mcpVersion,
+          p.tier,
+          p.tool ?? null,
+        ),
+      ),
+    );
+  } catch (e) {
+    console.error("D1 batch insert failed", e);
+    return c.json({ ok: true, accepted: validated.length, stored: false }, 202, {
+      "X-RateLimit-Limit": String(rl.limit),
+      "X-RateLimit-Remaining": String(rl.remaining),
+    });
+  }
+
+  return c.json({ ok: true, accepted: validated.length }, 202, {
+    "X-RateLimit-Limit": String(rl.limit),
+    "X-RateLimit-Remaining": String(rl.remaining),
+  });
+});
+
+// ── Stats endpoint (simple read-only dashboard data) ─────────────────────────
+app.get("/v1/stats", async (c) => {
+  // Bearer token guard — only enforced when STATS_TOKEN is configured
+  const token = c.env.STATS_TOKEN;
+  if (token) {
+    const auth = c.req.header("Authorization") ?? "";
+    if (auth !== `Bearer ${token}`) {
+      return c.json({ error: "unauthorized" }, 401);
+    }
+  }
+
+  try {
+    const [totals, topTools, versions] = await Promise.all([
+      c.env.DB.prepare(
+        `SELECT
+           COUNT(*) as total,
+           COUNT(CASE WHEN event = 'init' THEN 1 END) as inits,
+           COUNT(CASE WHEN event = 'tool' THEN 1 END) as tools,
+           COUNT(DISTINCT client) as unique_clients
+         FROM events
+         WHERE ingested > datetime('now', '-24 hours')`,
+      ).first(),
+      c.env.DB.prepare(
+        `SELECT tool, COUNT(*) as count
+         FROM events
+         WHERE event = 'tool' AND ingested > datetime('now', '-24 hours')
+         GROUP BY tool
+         ORDER BY count DESC
+         LIMIT 20`,
+      ).all(),
+      c.env.DB.prepare(
+        `SELECT mcp_ver, COUNT(*) as count
+         FROM events
+         WHERE ingested > datetime('now', '-24 hours')
+         GROUP BY mcp_ver
+         ORDER BY count DESC`,
+      ).all(),
+    ]);
+
+    return c.json({
+      period: "24h",
+      totals,
+      topTools: topTools.results,
+      versions: versions.results,
+    });
+  } catch {
+    return c.json({ error: "query_failed" }, 500);
+  }
+});
+
+// ── Timeseries endpoint (Grafana JSON datasource / charting) ─────────────────
+app.get("/v1/timeseries", async (c) => {
+  // Bearer token guard — same as /v1/stats
+  const token = c.env.STATS_TOKEN;
+  if (token) {
+    const auth = c.req.header("Authorization") ?? "";
+    if (auth !== `Bearer ${token}`) {
+      return c.json({ error: "unauthorized" }, 401);
+    }
+  }
+
+  // Query param validation
+  const rawDays = c.req.query("days") ?? "30";
+  const metric = c.req.query("metric") ?? "events";
+  const days = Math.min(Math.max(parseInt(rawDays, 10) || 30, 1), 90);
+
+  const VALID_METRICS = new Set(["events", "tools", "versions", "clients"]);
+  if (!VALID_METRICS.has(metric)) {
+    return c.json({ error: "invalid_metric", valid: [...VALID_METRICS] }, 400);
+  }
+
+  // today's date string (UTC) — rollups exist for dates strictly before today
+  const todayStr = new Date().toISOString().slice(0, 10);
+
+  type TimeseriesRow = { time: string; value: number; label?: string };
+
+  try {
+    let rows: TimeseriesRow[] = [];
+
+    if (metric === "events") {
+      // Daily total event counts — rollups for older days, live events for today
+      const [rollupRes, liveRes] = await Promise.all([
+        c.env.DB.prepare(
+          `SELECT day as time, SUM(event_count) as value
+           FROM daily_rollups
+           WHERE day >= date('now', '-' || ? || ' days') AND day < ?
+           GROUP BY day
+           ORDER BY day ASC`,
+        )
+          .bind(days, todayStr)
+          .all<{ time: string; value: number }>(),
+        c.env.DB.prepare(
+          `SELECT ? as time, COUNT(*) as value
+           FROM events
+           WHERE date(ingested) = ?`,
+        )
+          .bind(todayStr, todayStr)
+          .first<{ time: string; value: number }>(),
+      ]);
+      rows = rollupRes.results;
+      if (liveRes && liveRes.value > 0) rows.push(liveRes);
+    } else if (metric === "tools") {
+      // Daily counts per tool
+      const [rollupRes, liveRes] = await Promise.all([
+        c.env.DB.prepare(
+          `SELECT day as time, tool as label, SUM(tool_count) as value
+           FROM daily_rollups
+           WHERE day >= date('now', '-' || ? || ' days') AND day < ?
+             AND tool IS NOT NULL
+           GROUP BY day, tool
+           ORDER BY day ASC, value DESC`,
+        )
+          .bind(days, todayStr)
+          .all<{ time: string; label: string; value: number }>(),
+        c.env.DB.prepare(
+          `SELECT ? as time, tool as label, COUNT(*) as value
+           FROM events
+           WHERE date(ingested) = ? AND event = 'tool' AND tool IS NOT NULL
+           GROUP BY tool
+           ORDER BY value DESC`,
+        )
+          .bind(todayStr, todayStr)
+          .all<{ time: string; label: string; value: number }>(),
+      ]);
+      rows = [...rollupRes.results, ...liveRes.results];
+    } else if (metric === "versions") {
+      // Daily counts per mcp_ver
+      const [rollupRes, liveRes] = await Promise.all([
+        c.env.DB.prepare(
+          `SELECT day as time, mcp_ver as label, SUM(event_count) as value
+           FROM daily_rollups
+           WHERE day >= date('now', '-' || ? || ' days') AND day < ?
+           GROUP BY day, mcp_ver
+           ORDER BY day ASC, value DESC`,
+        )
+          .bind(days, todayStr)
+          .all<{ time: string; label: string; value: number }>(),
+        c.env.DB.prepare(
+          `SELECT ? as time, mcp_ver as label, COUNT(*) as value
+           FROM events
+           WHERE date(ingested) = ?
+           GROUP BY mcp_ver
+           ORDER BY value DESC`,
+        )
+          .bind(todayStr, todayStr)
+          .all<{ time: string; label: string; value: number }>(),
+      ]);
+      rows = [...rollupRes.results, ...liveRes.results];
+    } else {
+      // metric === "clients" — daily counts per client
+      const [rollupRes, liveRes] = await Promise.all([
+        c.env.DB.prepare(
+          `SELECT day as time, client as label, SUM(event_count) as value
+           FROM daily_rollups
+           WHERE day >= date('now', '-' || ? || ' days') AND day < ?
+           GROUP BY day, client
+           ORDER BY day ASC, value DESC`,
+        )
+          .bind(days, todayStr)
+          .all<{ time: string; label: string; value: number }>(),
+        c.env.DB.prepare(
+          `SELECT ? as time, client as label, COUNT(*) as value
+           FROM events
+           WHERE date(ingested) = ?
+           GROUP BY client
+           ORDER BY value DESC`,
+        )
+          .bind(todayStr, todayStr)
+          .all<{ time: string; label: string; value: number }>(),
+      ]);
+      rows = [...rollupRes.results, ...liveRes.results];
+    }
+
+    return c.json({ metric, days, data: rows });
+  } catch {
+    return c.json({ error: "query_failed" }, 500);
+  }
+});
+
+// ── Export endpoint (CSV download for analytics) ─────────────────────────────
+app.get("/v1/export", async (c) => {
+  // Bearer token guard — same as /v1/stats
+  const token = c.env.STATS_TOKEN;
+  if (token) {
+    const auth = c.req.header("Authorization") ?? "";
+    if (auth !== `Bearer ${token}`) {
+      return c.json({ error: "unauthorized" }, 401);
+    }
+  }
+
+  // Query param validation
+  const rawDays = c.req.query("days") ?? "7";
+  const eventType = c.req.query("event_type");
+
+  const days = Math.min(Math.max(parseInt(rawDays, 10) || 7, 1), 30);
+
+  if (eventType !== undefined && eventType !== "init" && eventType !== "tool") {
+    return c.json({ error: "invalid_event_type", valid: ["init", "tool"] }, 400);
+  }
+
+  try {
+    let query: string;
+    let bindings: (string | number)[];
+
+    if (eventType) {
+      query = `SELECT timestamp, event, client, client_ver, mcp_ver, tier, tool
+               FROM events
+               WHERE ingested >= datetime('now', '-' || ? || ' days')
+                 AND event = ?
+               ORDER BY ingested DESC
+               LIMIT 10000`;
+      bindings = [days, eventType];
+    } else {
+      query = `SELECT timestamp, event, client, client_ver, mcp_ver, tier, tool
+               FROM events
+               WHERE ingested >= datetime('now', '-' || ? || ' days')
+               ORDER BY ingested DESC
+               LIMIT 10000`;
+      bindings = [days];
+    }
+
+    type EventRow = {
+      timestamp: string;
+      event: string;
+      client: string;
+      client_ver: string;
+      mcp_ver: string;
+      tier: string;
+      tool: string | null;
+    };
+
+    const result = await c.env.DB.prepare(query)
+      .bind(...bindings)
+      .all<EventRow>();
+
+    // Build CSV — header + rows
+    const lines: string[] = [
+      "timestamp,event,client,client_ver,mcp_ver,tier,tool",
+    ];
+
+    for (const row of result.results) {
+      const fields = [
+        row.timestamp,
+        row.event,
+        row.client,
+        row.client_ver,
+        row.mcp_ver,
+        row.tier,
+        row.tool ?? "",
+      ].map((v) => {
+        // Escape fields that contain commas, quotes, or newlines
+        if (v.includes(",") || v.includes('"') || v.includes("\n")) {
+          return `"${v.replace(/"/g, '""')}"`;
+        }
+        return v;
+      });
+      lines.push(fields.join(","));
+    }
+
+    const csv = lines.join("\n");
+
+    return new Response(csv, {
+      headers: {
+        "content-type": "text/csv; charset=utf-8",
+        "content-disposition": `attachment; filename="events-${days}d.csv"`,
+      },
+    });
+  } catch {
+    return c.json({ error: "query_failed" }, 500);
+  }
+});
+
+// ── Catch-all ────────────────────────────────────────────────────────────────
+app.all("*", (c) => c.json({ error: "not_found" }, 404));
+
+export { app };
+
+export default {
+  fetch: app.fetch,
+  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(rollupYesterday(env.DB));
+  },
+};
