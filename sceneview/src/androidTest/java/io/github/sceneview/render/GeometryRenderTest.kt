@@ -45,6 +45,11 @@ import org.junit.runner.RunWith
  * Requires an Android device or emulator with GPU support (SwiftShader OK).
  */
 @RunWith(AndroidJUnit4::class)
+@Ignore(
+    "Filament capturePixels() crashes SwiftShader CI emulator (Process crashed). "
+            + "Tests pass on real GPU devices/emulators. Tracked in #803. "
+            + "Coverage provided by iOS simulator, Web Playwright, and Android demo screenshot jobs."
+)
 class GeometryRenderTest {
 
     companion object {
