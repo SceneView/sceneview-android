@@ -112,6 +112,7 @@ fun ARSceneView(
     cameraStream: ARCameraStream? = rememberARCameraStream(materialLoader),
     view: View = rememberARView(engine),
     isOpaque: Boolean = true,
+    cameraExposure: Float? = null,
     renderer: Renderer = rememberRenderer(engine),
     scene: Scene = rememberScene(engine),
     environment: Environment = rememberAREnvironment(engine),
