@@ -4,6 +4,98 @@
 
 ---
 
+## 🧹 SESSION hungry-ptolemy — 2026-04-12 — PR merge + branch/worktree cleanup
+
+**Worktree:** `hungry-ptolemy`
+**Branch:** `claude/hungry-ptolemy`
+
+### What shipped
+
+**PR #813 merged** (squash merge, commit `93863dcc` on main):
+- Quality-gate regex now supports pre-release versions (`-rc.N`, `-beta.N`)
+- Build/test failures logged to `/tmp/` instead of silent `2>/dev/null`
+- 5 residual `ARScene` → `ARSceneView` refs fixed
+
+**Worktree cleanup — 4 removed:**
+- `agent-ae442902` (worktree-agent-ae442902) — 0 ahead, removed
+- `crazy-goodall` (claude/crazy-goodall) — 0 ahead, removed
+- `filament-bump` (claude/filament-bump) — 0 ahead, removed
+- `keen-yalow` (claude/keen-yalow) — 0 ahead, removed
+- `agitated-merkle` and `cool-cannon` — already absent (cleaned up by prior sessions)
+
+**Remaining worktrees:** confident-rhodes, flamboyant-neumann, hungry-ptolemy (this session), multi-gateway-sprint (kept per user request), reverent-kalam, stupefied-meitner
+
+**Remote branch cleanup — 17 deleted:**
+- `claude/agitated-merkle` (PR #813, merged — auto-deleted by gh)
+- `claude/crazy-lichterman` (0 ahead, merged work)
+- `claude/filament-bump` (0 ahead)
+- `claude/competent-wilbur` (0 ahead)
+- `claude/stupefied-noyce` (PR #812, closed)
+- `claude/healthcare-files-fix` (PR #811, merged)
+- `claude/mcp-files-fix` (PR #810, merged)
+- `claude/mcp-3.6.3-bump` (PR #809, merged)
+- `claude/nifty-boyd` (PR #808, merged)
+- `claude/mcp-analyze-project` (PR #807, merged)
+- `claude/mcp-automotive-v1.1` (PR #806, merged)
+- `claude/mcp-search-models` (PR #805, merged)
+- `claude/mcp-telemetry` (PR #804, merged)
+- `claude/optimistic-khayyam` (no PR, abandoned)
+- `claude/review-revenue-features-9Waf8` (PR #798, merged)
+- `claude/check-project-status-QKtNL` (no PR, abandoned)
+- `claude/peaceful-hawking` (no PR, abandoned)
+
+**Remaining remote branches:** only `origin/claude/multi-gateway-sprint`
+
+### CI status post-merge
+
+Quality-gate on main still FAILS — **pre-existing bug** in `tiers.test.ts` (lines 150 + 193): tests expect `https://polar.sh/sceneview` but code now points to `https://sceneview-mcp.mcp-tools-lab.workers.dev/pricing` (Stripe pivot). All other CI checks (Build, Lint, Compile KMP, Flutter, Web, APKs) pass green.
+
+**Fix needed:** update `mcp/src/tiers.test.ts` and `mcp/dist/tiers.test.js` to expect the gateway URL instead of the dead Polar URL.
+
+---
+
+## 🔧 SESSION agitated-merkle — 2026-04-12 — Quality gate fix + state audit
+
+**Worktree:** `agitated-merkle`
+**Branch:** `claude/agitated-merkle`
+**PR:** sceneview/sceneview#813 (OPEN, MERGEABLE)
+**Commit:** `1d68052c` (pushed to origin)
+
+### What shipped
+
+Full state audit + 5 quality-gate blockers fixed in one commit:
+
+| Fix | Files |
+|---|---|
+| Version regex now supports pre-release suffixes (`-rc.N`, `-beta.N`) | `quality-gate.sh`, `sync-versions.sh` (20+ occurrences) |
+| Build/test failures now log to `/tmp/` instead of `--quiet 2>/dev/null` | `quality-gate.sh` |
+| 5 residual `ARScene` → `ARSceneView` refs from Rerun merge | `ar-logger.ts`, `setup-project.ts`, `playground.html` |
+
+**Root cause of CI red:** quality-gate.sh regex `[0-9]+\.[0-9]+\.[0-9]+` stripped `-rc.1` suffix, causing version mismatch even though files were correct. `assembleDebug` failed in CI because GitHub Actions has no `local.properties` (SDK not found) — was always hidden by `2>/dev/null`.
+
+### Full state audit results (2026-04-12)
+
+**Gateway #1** (`sceneview-mcp.mcp-tools-lab.workers.dev`):
+- `/health` 200, `/pricing` 200, `/mcp` 401 (auth gate) — ALL GREEN
+- Stripe LIVE mode active, 4 plans, webhook active
+- **0 real paying customers** (needs marketing push)
+
+**Gateway #2** (`hub-mcp.mcp-tools-lab.workers.dev`):
+- LIVE, Stripe LIVE, 11 libs / 45 tools
+- **0 real paying customers**
+
+**npm dist-tags:** `latest=3.6.4`, `beta=4.0.0-beta.1`, `next=4.0.0-rc.1`
+**CI:** quality-gate was RED on main (5 failures) → will be GREEN after PR #813 merge
+**GitHub Issues:** #803 (render tests SwiftShader), #792 (camera preview) — both pre-existing
+
+### What's NOT done
+
+- **PR #813 needs to be merged** to fix CI on main
+- All "not done" items from prior sessions still apply (first paying customer, `@latest` bump to 4.x, custom domain, stale branch cleanup, etc.)
+- **9 active worktrees** in `.claude/worktrees/` — cleanup candidate for maintenance session
+
+---
+
 ## 🧹 SESSION intelligent-rhodes — 2026-04-11/12 — First-customer readiness sweep
 
 **Worktree:** `intelligent-rhodes` (session closed, worktree can be removed)

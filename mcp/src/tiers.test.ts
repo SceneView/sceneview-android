@@ -190,7 +190,7 @@ describe("tier list integrity", () => {
 
 describe("PRO_UPGRADE_MESSAGE", () => {
   it("contains the upgrade URL", () => {
-    expect(PRO_UPGRADE_MESSAGE).toContain("https://polar.sh/sceneview");
+    expect(PRO_UPGRADE_MESSAGE).toContain("https://sceneview-mcp.mcp-tools-lab.workers.dev/pricing");
   });
 
   it("mentions Pro", () => {
