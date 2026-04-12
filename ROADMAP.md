@@ -2,56 +2,59 @@
 
 > Ship fast, ship often. Every feature = a release.
 
-## Current: v3.6.0 (March 2026)
+## Current: v4.0.0-rc (April 2026)
 
-**Multi-platform expansion** — 9 platforms, MCP Registry, store-ready.
+**AI-first SDK** — 9 platforms, MCP monetization live, Rerun.io debug integration.
 
 | What | Status |
 |---|---|
 | Android SDK (Filament + Compose) | Stable |
 | iOS / macOS / visionOS (RealityKit + SwiftUI) | Alpha |
 | Web (Filament.js + WebXR) | Alpha |
-| Desktop (Compose Desktop) | Alpha |
+| Desktop (Compose Desktop) | Placeholder |
 | Android TV | Alpha |
 | Flutter bridge | Alpha |
 | React Native bridge | Alpha |
-| MCP on official registry | Live |
-| Play Store demo app | Deploying |
-| App Store demo app | Secrets ready |
+| MCP on official registry | Live (4.0.0-rc.3 @latest) |
+| MCP Gateway (Stripe billing) | Live (first paying customer) |
+| Hub MCP (11 libs, 52 tools) | Live (hub-mcp@0.1.0) |
+| Telemetry Worker | Live |
+| Rerun.io debug integration | Shipped (Android + iOS + Python) |
+| Play Store demo app | Deployed |
+| App Store demo app | TestFlight |
 
 ---
 
-## Next: v3.7.0
+## Next: v4.0.0 (stable)
 
-### API simplification
+### Module unification
 - [ ] Merge sceneview + arsceneview into single dependency (one `implementation` line)
-- [x] Unify naming: `SceneView {}` / `ARSceneView {}` on Android (v3.6) — `Scene {}` / `ARScene {}` kept as `@Deprecated` aliases
+- [x] Unify naming: `SceneView {}` / `ARSceneView {}` (v3.6)
 
 ### Platform maturity
-- [ ] Filament JNI for Desktop (hardware 3D, replace software renderer)
+- [ ] Filament JNI for Desktop (hardware 3D, replace placeholder)
 - [ ] Android XR module (Jetpack XR SceneCore)
 - [ ] visionOS spatial features (immersive spaces, hand tracking)
 - [ ] sceneview-core WASM target (when kotlin-math supports wasmJs)
 
-### Store releases
-- [ ] Play Store: SceneView Demo published
-- [ ] App Store: SceneView Demo on TestFlight
-
-### AI & monetization
-- [x] MCP Pro with API key + Stripe Billing (free/pro tiers, 15 free + 36 pro tools)
-- [x] Claude playground on website (describe in natural language → opens Claude/ChatGPT with rich prompt)
-- [x] OpenAI GPT Store entry (system prompt, 4 knowledge files, OpenAPI schema)
-
 ### Quality
+- [x] Render tests CI (SwiftShader, 4 test classes)
+- [x] NodeAnimator bug fix (#388)
 - [ ] Visual regression testing across platforms
 - [ ] Performance benchmarks (FPS, memory, load time)
-- [ ] Accessibility audit
+
+### AI & monetization
+- [x] MCP Pro with Stripe Billing (free/pro/team tiers, gateway live)
+- [x] Hub MCP (11 vertical libraries bundled)
+- [x] Anonymous telemetry (Cloudflare Worker + D1)
+- [x] Claude playground on website
+- [ ] First external paying customer (Thomas = dogfooding)
 
 ---
 
 ## Future
 
-### v4.0 (breaking changes)
+### v4.1+
 - Compose Multiplatform renderer (shared Compose UI across Android + Desktop + Web)
 - Filament 2.x migration (when available)
 - Scene graph serialization (save/load scenes as files)
