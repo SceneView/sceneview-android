@@ -24,7 +24,7 @@
 import { Hono } from "hono";
 import type { Env } from "../env.js";
 import { verifyWebhookSignature } from "../billing/stripe-client.js";
-import { getTierForPriceId } from "../billing/tiers.js";
+import { provisionApiKey } from "../billing/key-provisioning.js";
 import type { UserTier } from "../db/schema.js";
 
 /** Minimal subset of Stripe event shapes the hub actually reads. */
@@ -101,48 +101,34 @@ export function webhookRoutes(): Hono<{ Bindings: Env }> {
       });
     }
 
-    try {
-      // Upsert: create or update the user row. The shared D1 schema
-      // is owned by Gateway #1 (`users` table with `id, email, tier,
-      // stripe_customer_id, created_at, updated_at`). The hub does
-      // NOT touch Gateway #1 users unless they already exist — we
-      // only upgrade their tier. A brand new hub user gets a fresh
-      // row with a hub-specific id prefix.
-      const now = Date.now();
-      const existing = await c.env.DB.prepare(
-        "SELECT id, tier FROM users WHERE email = ?1 LIMIT 1",
-      )
-        .bind(email.toLowerCase())
-        .first<{ id: string; tier: string }>();
+    // Provision the user + API key. provisionApiKey handles:
+    //   1. Upsert user row in D1
+    //   2. Generate sv_live_ API key + store hash in D1 api_keys
+    //   3. Stash plaintext in KV under checkout_key:{session.id}
+    //      for /checkout/success to display once
+    //   4. Invalidate auth cache
+    // Returns null on failure (logged internally, never throws).
+    const result = await provisionApiKey(
+      c.env,
+      email,
+      tier,
+      session.id,
+      session.customer,
+    );
 
-      if (existing) {
-        await c.env.DB.prepare(
-          "UPDATE users SET tier = ?1, updated_at = ?2 WHERE id = ?3",
-        )
-          .bind(tier, now, existing.id)
-          .run();
-      } else {
-        const userId = `usr_hub_${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`;
-        await c.env.DB.prepare(
-          `INSERT INTO users (id, email, stripe_customer_id, tier, created_at, updated_at)
-           VALUES (?1, ?2, ?3, ?4, ?5, ?6)`,
-        )
-          .bind(userId, email.toLowerCase(), session.customer ?? null, tier, now, now)
-          .run();
-      }
-
-      return c.json({ received: true, handled: true, tier });
-    } catch (err) {
-      // 500 so Stripe retries. Real errors (missing table, D1 outage)
-      // are better handled via an exponential backoff from Stripe
-      // than silently dropped.
-      const message = err instanceof Error ? err.message : "DB error";
-      return c.text(`Webhook processing failed: ${message}`, 500);
+    if (!result) {
+      // 500 so Stripe retries on the next backoff cycle.
+      return c.text("Webhook processing failed — will retry", 500);
     }
+
+    return c.json({
+      received: true,
+      handled: true,
+      tier,
+      keyPrefix: result.prefix,
+    });
   });
 
   return app;
 }
 
-/** Silence the unused-import TS warning on getTierForPriceId export. */
-void getTierForPriceId;

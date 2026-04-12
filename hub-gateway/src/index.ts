@@ -30,6 +30,7 @@ import type { AuthVariables } from "./auth/middleware.js";
 import { landingRoutes } from "./routes/landing.js";
 import { mcpRoutes } from "./routes/mcp.js";
 import { billingRoutes } from "./routes/billing.js";
+import { checkoutSuccessRoutes } from "./routes/checkout-success.js";
 import { webhookRoutes } from "./routes/webhooks.js";
 import { getRegistrySummary } from "./mcp/registry.js";
 
@@ -55,6 +56,10 @@ app.route("/mcp", mcpRoutes());
 // ── Billing routes (Stripe checkout) ────────────────────────────────────────
 
 app.route("/", billingRoutes());
+
+// ── Checkout success page (single-use KV handoff) ──────────────────────────
+
+app.route("/", checkoutSuccessRoutes());
 
 // ── Stripe webhook receiver ────────────────────────────────────────────────
 
