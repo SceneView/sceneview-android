@@ -21,10 +21,9 @@
 
 import type { Tier } from "./tiers.js";
 
-// TODO: Provision a Cloudflare Worker at this address that ingests events
-// into a lightweight store (Workers Analytics Engine or R2 + daily rollup).
-// Until the Worker is deployed, requests to this endpoint will fail silently,
-// which is fine — fetch errors are swallowed by design.
+// Worker implementation: telemetry-worker/ (Hono + D1 + KV rate limiting).
+// Deploy with: cd telemetry-worker && see DEPLOY.md
+// Until deployed, requests to this endpoint fail silently (by design).
 const TELEMETRY_ENDPOINT = "https://telemetry.sceneview.io/v1/events";
 
 // Hard cap so we never hang the process on a slow endpoint.
