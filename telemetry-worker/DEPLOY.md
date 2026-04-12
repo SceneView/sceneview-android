@@ -2,7 +2,43 @@
 
 Cloudflare Worker that ingests anonymous telemetry events from `sceneview-mcp`.
 
-## Prerequisites
+## Local development
+
+No Cloudflare account or real IDs needed. `wrangler dev` automatically uses local
+SQLite for D1 and an in-memory store for KV — the `TODO_REPLACE_*` placeholders in
+`wrangler.toml` are ignored in local mode.
+
+### Quick start
+
+```bash
+# One-shot: apply migrations + start worker + send test event
+bash scripts/dev-setup.sh
+```
+
+### Manual steps (if you prefer)
+
+```bash
+# 1. Apply migrations to local SQLite
+npx wrangler d1 migrations apply sceneview-telemetry --local
+
+# 2. Start the dev server (port 8787)
+npx wrangler dev
+
+# 3. Send a test event
+curl -X POST http://localhost:8787/v1/events \
+  -H "Content-Type: application/json" \
+  -d '{"timestamp":"2026-04-12T10:00:00Z","event":"init","client":"test","clientVersion":"1.0","mcpVersion":"4.0.0-rc.1","tier":"free"}'
+
+# 4. Check stats
+curl http://localhost:8787/v1/stats
+```
+
+The `[dev]` section in `wrangler.toml` pins the local server to port 8787 over HTTP.
+No `STATS_TOKEN` is needed locally unless you explicitly set one via `wrangler secret put`.
+
+---
+
+## Prerequisites (production)
 
 - Cloudflare account (same as mcp-gateway)
 - `wrangler` CLI authenticated (`wrangler login`)

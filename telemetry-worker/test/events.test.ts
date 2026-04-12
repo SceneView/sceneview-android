@@ -177,6 +177,43 @@ describe("POST /v1/batch", () => {
   });
 });
 
+describe("Rate limit headers", () => {
+  it("POST /v1/events response includes X-RateLimit-Limit: 30 header", async () => {
+    const env = makeEnv();
+    const res = await post("/v1/events", validPayload(), env);
+    expect(res.status).toBe(202);
+    expect(res.headers.get("x-ratelimit-limit")).toBe("30");
+  });
+
+  it("POST /v1/events response includes X-RateLimit-Remaining header (number >= 0)", async () => {
+    const env = makeEnv();
+    const res = await post("/v1/events", validPayload(), env);
+    expect(res.status).toBe(202);
+    const remaining = res.headers.get("x-ratelimit-remaining");
+    expect(remaining).not.toBeNull();
+    expect(Number(remaining)).toBeGreaterThanOrEqual(0);
+  });
+
+  it("429 response includes Retry-After: 60 header", async () => {
+    const env = makeEnv();
+    // Exhaust the 30-request window
+    for (let i = 0; i < 30; i++) {
+      await post("/v1/events", validPayload(), env);
+    }
+    const res = await post("/v1/events", validPayload(), env);
+    expect(res.status).toBe(429);
+    expect(res.headers.get("retry-after")).toBe("60");
+  });
+
+  it("POST /v1/batch response also includes X-RateLimit-Limit header", async () => {
+    const env = makeEnv();
+    const batch = [validPayload(), validPayload()];
+    const res = await post("/v1/batch", batch, env);
+    expect(res.status).toBe(202);
+    expect(res.headers.get("x-ratelimit-limit")).toBe("30");
+  });
+});
+
 describe("Rate limiting", () => {
   it("returns 429 after exceeding limit", async () => {
     const env = makeEnv();

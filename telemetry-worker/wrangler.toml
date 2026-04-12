@@ -18,6 +18,13 @@ name = "sceneview-telemetry"
 main = "src/index.ts"
 compatibility_date = "2025-04-01"
 
+# ── Local development ─────────────────────────────────────────────────────────
+# `wrangler dev` uses local SQLite for D1 and in-memory KV automatically.
+# The TODO placeholder IDs below are ignored in local mode.
+[dev]
+port = 8787
+local_protocol = "http"
+
 # ── D1 database ──────────────────────────────────────────────────────────────
 [[d1_databases]]
 binding = "DB"
