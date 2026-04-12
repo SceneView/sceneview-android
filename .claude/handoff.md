@@ -46,7 +46,7 @@
 - **Worktrees**: 2 (elegant-burnell, intelligent-perlman)
 
 ### What's NOT done
-- CNAME `telemetry.sceneview.io` (domain not on Cloudflare — worker URL works fine)
+- ~~CNAME `telemetry.sceneview.io`~~ — RESOLVED: domain doesn't exist, all refs updated to `sceneview-telemetry.mcp-tools-lab.workers.dev` (commit `c00b9f53`)
 - Rename Stripe account "Nouvelle entreprise" → "SceneView"
 - Cancel Thomas's test subscription before next billing cycle (if desired)
 - Hub-MCP gateway: 0 paying customers yet
@@ -137,20 +137,29 @@
 - `e9d04f4a` fix(hub-gateway): fix test assertions to match actual registry state
 - `b5e47902` feat(hub-mcp): scaffold npm lite proxy package (0.1.0)
 
-### Production state
-- **Gateway #1**: LIVE, Stripe LIVE, 4 plans, 0 real paying customers
-- **Gateway #2**: LIVE, Stripe LIVE, 4 plans (Portfolio/Team), 0 real paying customers
+### Production state (updated: intelligent-perlman + v4.0.0 stable)
+- **Gateway #1**: LIVE, Stripe LIVE, 1 paying customer (Thomas — Pro 19€/month)
+- **Gateway #2**: LIVE, Stripe LIVE, 4 plans (Portfolio/Team), 0 customers
 - **Telemetry worker**: LIVE at `sceneview-telemetry.mcp-tools-lab.workers.dev`
-- **npm**: sceneview-mcp `latest=3.6.5` / `beta=4.0.0-beta.1` / `next=4.0.0-rc.3`; hub-mcp `latest=0.1.0`
+- **npm**: sceneview-mcp `latest=4.0.0` / `beta=4.0.0-beta.1` / `next=4.0.0-rc.3`; hub-mcp `latest=0.2.0`; sceneview-web `latest=4.0.0`
+- **Maven Central**: sceneview 4.0.0, arsceneview 4.0.0 — LIVE
+- **GitHub Release**: v4.0.0 created with APK attached
+- **SPM**: tag `v4.0.0` pushed — available via Swift Package Index
 - **Tests**: 2902/2902 MCP tests pass, 82/82 hub-gateway tests pass
+- **Open issues**: 0 | **Open PRs**: 0
 - **Worktrees**: only `intelligent-perlman` remains
 
+### What shipped (v4.0.0 stable additions)
+- v4.0.0 stable released: Maven Central, npm @latest, GitHub Release, SPM all live
+- First paying customer confirmed: API key `sv_live_S76JMX...` validated end-to-end
+- `@latest` promoted to 4.0.0 on npm (was 3.6.5)
+- hub-mcp bumped to 0.2.0 on npm
+
 ### What's NOT done
-- First real paying customer test (both gateways ready, needs human card)
 - DNS CNAME: `telemetry.sceneview.io` → telemetry worker (needs Thomas)
 - Screenshot Rerun playground for announcements (6 posts near-ready, awaiting visual assets)
-- `@latest` bump to 4.x (blocked on first customer)
-- Maven Central / SPM publish for v4.0.0-rc.1 (release.yml only matches strict semver)
+- Cancel Thomas's test subscription before next billing cycle (if desired)
+- Rename Stripe account "Nouvelle entreprise" → "SceneView"
 
 ---
 
