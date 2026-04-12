@@ -4,6 +4,61 @@
 
 ---
 
+## 🚀 SESSION B FINAL — 2026-04-12 13:35 — Hub Gateway #2 LIVE + Stripe LIVE
+
+**Worker:** `hub-mcp.mcp-tools-lab.workers.dev` — **LIVE, accepting real payments.**
+**Branch:** `claude/multi-gateway-sprint` (all merged to main)
+
+### What shipped (13 commits on main)
+
+Complete Gateway #2 for the non-SceneView MCP portfolio:
+
+- **11 libraries / 45 tools** (9 stubs + 2 real vendored: automotive-3d 9 tools, healthcare-3d 7 tools)
+- **Auth middleware** (Bearer + ?key= fallback, D1 lookup + KV cache `hub-auth:` prefix, 5 min TTL)
+- **Rate limiting** (hourly sliding window `hub-rl:` prefix + monthly quota `hub-quota:` prefix, fail-open on KV outage)
+- **Usage logging** (D1 `usage_records` INSERT per tools/call, fire-and-forget)
+- **Tier gating** (13 free tools, 32 pro-only, JSON-RPC -32003 ACCESS_DENIED with upgradeUrl)
+- **Stripe billing** (fetch-based client, no SDK, `customer_creation` bug avoided):
+  - `/billing/checkout?plan=portfolio-monthly` → 303 → `cs_live_...` ✅
+  - `/billing/checkout?plan=portfolio-yearly` → 303 → `cs_live_...` ✅
+  - `/billing/checkout?plan=team-monthly` → 303 → `cs_live_...` ✅
+  - `/billing/checkout?plan=team-yearly` → 303 → `cs_live_...` ✅
+  - `/stripe/webhook` (checkout.session.completed → D1 user upsert)
+- **Landing pages**: `/`, `/pricing` (Free €0 / Portfolio €29 / Team €79), `/docs`
+- **58 tests** across 7 test files, typecheck clean
+- `packages/architecture-mcp-lite/` — 2.0.0-beta.1 proxy scaffold (NOT published)
+
+### Stripe LIVE configuration
+
+| Resource | Value |
+|---|---|
+| Portfolio Monthly | `price_1TLLkMEr7tnnFQbdxthTkpqZ` (29 EUR/mo) |
+| Portfolio Yearly | `price_1TLLl5Er7tnnFQbdAoRCEQHp` (290 EUR/yr) |
+| Team Monthly | `price_1TLLldEr7tnnFQbdG1n8uwOb` (79 EUR/mo) |
+| Team Yearly | `price_1TLLmFEr7tnnFQbdLvONEJu7` (790 EUR/yr) |
+| Webhook endpoint | `we_1TLM5LEr7tnnFQbdXMoVW3Ev` (`hub-mcp-gateway`, checkout.session.completed) |
+| STRIPE_SECRET_KEY | `sk_live_...` (same as Gateway #1 — new key created 2026-04-12, named `hub-mcp-gateway`) |
+| STRIPE_WEBHOOK_SECRET | `whsec_Wyzqe3GKSb2WJvzvulLvaJHtOEYXUJfa` |
+
+**CRITICAL**: the `sk_live_...ycSn` key was REPLACED by the new `hub-mcp-gateway` key on 2026-04-12. Both gateways now use the new key. Gateway #1 was verified still functional (POST /billing/checkout → 303).
+
+### Shared infrastructure (Gateway #1 + #2)
+
+- D1: `8aaddcda-e36e-4287-9222-1df924426c9f` (sceneview-mcp)
+- KV: `9a40d334be6149f7a4ba18451a60245f`
+- KV prefixes: Gateway #1 uses `auth:`, `rl:`, `quota:` — Gateway #2 uses `hub-auth:`, `hub-rl:`, `hub-quota:`
+- 1 API key works on both gateways (same D1 users + api_keys tables)
+
+### What's NOT done (follow-up sessions)
+
+1. **Vendor remaining 9 stub libraries** — need upstream packages to export TOOL_DEFINITIONS + dispatchTool (or monorepo-ify them under mcp/packages/)
+2. **/checkout/success page** — currently no page shows the API key after payment (webhook upserts tier, but no KV handoff to display the key). Port from mcp-gateway/src/routes/checkout-success.ts.
+3. **Publish 11 lite npm packages** — only architecture-mcp-lite is scaffolded, none published
+4. **First paying customer test** — same as Gateway #1, needs a human with a real card
+5. **Marketing / promotion** — hub is live but invisible, no announcement
+
+---
+
 ## 🧹 SESSION `crazy-goodall` — 2026-04-11 ~20:00-22:30 — Employer email cleanup (18 perso repos)
 
 **Full details:** `/tmp/sceneview-growth/session-34c-octopus-cleanup-summary.md`
