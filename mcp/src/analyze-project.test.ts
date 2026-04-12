@@ -34,7 +34,7 @@ describe("analyzeProject — project type detection", () => {
   it("detects an Android project via build.gradle.kts", async () => {
     const result = await analyzeProject({ path: ANDROID_OK });
     expect(result.projectType).toBe("android");
-    expect(result.sceneViewVersion).toBe("3.6.2");
+    expect(result.sceneViewVersion).toBe("4.0.0-rc.1");
     expect(result.isOutdated).toBe(false);
     expect(result.latestVersion).toBe(LATEST_SCENEVIEW_VERSION);
   });
@@ -69,7 +69,7 @@ describe("analyzeProject — project type detection", () => {
 describe("analyzeProject — version extraction", () => {
   it("extracts the patch version from a Gradle dependency string", async () => {
     const result = await analyzeProject({ path: ANDROID_OK });
-    expect(result.sceneViewVersion).toBe("3.6.2");
+    expect(result.sceneViewVersion).toBe("4.0.0-rc.1");
   });
 
   it("extracts the version from a Package.swift `from:` clause", async () => {
@@ -202,7 +202,7 @@ describe("analyzeProject — scan limits", () => {
       // Minimal Gradle build so it's detected as Android.
       await fs.writeFile(
         path.join(tmp, "build.gradle.kts"),
-        'dependencies {\n  implementation("io.github.sceneview:sceneview:3.6.2")\n}\n',
+        'dependencies {\n  implementation("io.github.sceneview:sceneview:4.0.0-rc.1")\n}\n',
       );
       const srcDir = path.join(tmp, "src");
       await fs.mkdir(srcDir, { recursive: true });

@@ -17,5 +17,5 @@ android {
 }
 
 dependencies {
-    implementation("io.github.sceneview:sceneview:3.6.2")
+    implementation("io.github.sceneview:sceneview:4.0.0-rc.1")
 }

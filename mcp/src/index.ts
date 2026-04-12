@@ -10,7 +10,7 @@
  * two MCP resources (`sceneview://api`, `sceneview://known-issues`) and
  * the pro-tier access / billing checks.
  *
- * IMPORTANT: the runtime behaviour must stay identical to v3.6.2 for
+ * IMPORTANT: the runtime behaviour must stay identical to v4.0.0-rc.1 for
  * existing npm consumers. Do not reorder checks, do not change content
  * strings, do not touch disclaimers.
  */
@@ -81,7 +81,7 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => ({
       uri: "sceneview://api",
       name: "SceneView API Reference",
       description:
-        "Complete SceneView 3.6.2 API — SceneView, ARSceneView, SceneScope DSL, ARSceneScope DSL, node types, resource loading, camera, gestures, math types, threading rules, and common patterns. Read this before writing any SceneView code.",
+        "Complete SceneView 4.0.0-rc.1 API — SceneView, ARSceneView, SceneScope DSL, ARSceneScope DSL, node types, resource loading, camera, gestures, math types, threading rules, and common patterns. Read this before writing any SceneView code.",
       mimeType: "text/markdown",
     },
     {

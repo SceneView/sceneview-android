@@ -26,7 +26,7 @@ import path from "node:path";
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 /** The latest SceneView release known to this build of the MCP. */
-export const LATEST_SCENEVIEW_VERSION = "3.6.2";
+export const LATEST_SCENEVIEW_VERSION = "4.0.0-rc.1";
 
 /** Hard cap on the number of source files inspected per call. */
 export const MAX_FILES_SCANNED = 30;
@@ -310,7 +310,7 @@ function extractGradleVersion(contents: string): string | null {
 
 /** Extract `X.Y.Z` from a `Package.swift` `SceneViewSwift` dependency. */
 function extractSwiftVersion(contents: string): string | null {
-  // Matches `.package(url: ".../sceneview"..., from: "3.6.2")` or `.upToNextMajor(from: "3.6.0")`.
+  // Matches `.package(url: ".../sceneview"..., from: "4.0.0-rc.1")` or `.upToNextMajor(from: "3.6.0")`.
   const fromMatch = contents.match(/sceneview[^"]*"[^)]*from:\s*"(\d+\.\d+\.\d+(?:-[\w.]+)?)"/i);
   if (fromMatch) return fromMatch[1];
   const exactMatch = contents.match(/sceneview[^"]*"[^)]*exact:\s*"(\d+\.\d+\.\d+(?:-[\w.]+)?)"/i);
