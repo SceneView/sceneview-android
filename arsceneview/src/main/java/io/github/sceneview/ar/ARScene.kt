@@ -147,6 +147,13 @@ import java.util.concurrent.atomic.AtomicReference
  * @param environment              IBL + skybox environment. Use [rememberAREnvironment].
  * @param mainLightNode            Primary directional light. Use [rememberMainLightNode].
  * @param cameraNode               AR camera node. Use [rememberARCameraNode].
+ * @param cameraExposure           Optional exposure override for the AR camera, in EV (exposure
+ *                                 value). When non-null, overrides the default ARCore-tuned exposure
+ *                                 set by [ARDefaultCameraNode]. Useful to correct a washed-out or
+ *                                 too-dark camera preview when ARCore's auto-exposure does not match
+ *                                 Camera2's output on a given device. A value of `0f` corresponds to
+ *                                 the standard middle-grey exposure; negative values darken the
+ *                                 preview, positive values brighten it.
  * @param collisionSystem          Hit-testing and collision system. Use [rememberCollisionSystem].
  * @param viewNodeWindowManager    Off-screen window manager required for [SceneScope.ViewNode].
  * @param onSessionCreated         Called once when the ARCore [Session] is ready.
@@ -239,6 +246,17 @@ fun ARSceneView(
      */
     mainLightNode: LightNode? = rememberMainLightNode(engine),
     cameraNode: ARCameraNode = rememberARCameraNode(engine),
+    /**
+     * Optional exposure override applied to the AR camera, in EV (exposure value).
+     *
+     * When non-null, this value is passed to [ARCameraNode.setExposure] each recomposition,
+     * overriding the default exposure set by [ARDefaultCameraNode] (aperture 16, shutter 1/125s,
+     * ISO 100). Set this when the camera preview looks washed out or too dark because ARCore's
+     * auto-exposure differs from Camera2 on the target device.
+     *
+     * Leave `null` (the default) to keep the ARCore-tuned default exposure.
+     */
+    cameraExposure: Float? = null,
     /**
      * Physics system to handle collision between nodes, hit testing on nodes, etc.
      */
@@ -390,6 +408,7 @@ fun ARSceneView(
         view.camera = cameraNode.camera
         cameraNode.collisionSystem = collisionSystem
         cameraNode.setView(view)
+        cameraExposure?.let { cameraNode.setExposure(it) }
     }
 
     // ── Main light node ───────────────────────────────────────────────────────────────────────────
@@ -764,7 +783,7 @@ private fun ARScenePreview(modifier: Modifier) {
  * @deprecated Use [ARSceneView] instead. This function is a direct alias provided for backward
  * compatibility with code written against earlier SceneView versions.
  */
-@Deprecated("Use ARSceneView instead", ReplaceWith("ARSceneView(modifier, surfaceType, engine, modelLoader, materialLoader, environmentLoader, sessionFeatures, sessionCameraConfig, sessionConfiguration, planeRenderer, cameraStream, view, isOpaque, renderer, scene, environment, mainLightNode, cameraNode, collisionSystem, viewNodeWindowManager, onSessionCreated, onSessionResumed, onSessionPaused, onSessionFailed, onSessionUpdated, onTrackingFailureChanged, onGestureListener, onTouchEvent, permissionHandler, lifecycle, content)"))
+@Deprecated("Use ARSceneView instead", ReplaceWith("ARSceneView(modifier, surfaceType, engine, modelLoader, materialLoader, environmentLoader, sessionFeatures, sessionCameraConfig, sessionConfiguration, planeRenderer, cameraStream, view, isOpaque, renderer, scene, environment, mainLightNode, cameraNode, cameraExposure, collisionSystem, viewNodeWindowManager, onSessionCreated, onSessionResumed, onSessionPaused, onSessionFailed, onSessionUpdated, onTrackingFailureChanged, onGestureListener, onTouchEvent, permissionHandler, lifecycle, content)"))
 @Composable
 fun ARScene(
     modifier: Modifier = Modifier,
@@ -785,6 +804,7 @@ fun ARScene(
     environment: Environment = rememberAREnvironment(engine),
     mainLightNode: LightNode? = rememberMainLightNode(engine),
     cameraNode: ARCameraNode = rememberARCameraNode(engine),
+    cameraExposure: Float? = null,
     collisionSystem: CollisionSystem = rememberCollisionSystem(view),
     viewNodeWindowManager: ViewNode.WindowManager? = null,
     onSessionCreated: ((session: Session) -> Unit)? = null,
@@ -819,6 +839,7 @@ fun ARScene(
     environment = environment,
     mainLightNode = mainLightNode,
     cameraNode = cameraNode,
+    cameraExposure = cameraExposure,
     collisionSystem = collisionSystem,
     viewNodeWindowManager = viewNodeWindowManager,
     onSessionCreated = onSessionCreated,
