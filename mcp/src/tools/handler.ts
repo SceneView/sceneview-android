@@ -9,7 +9,7 @@
  *   1. The stdio MCP server in `../index.ts` (legacy npm package path).
  *   2. The HTTP gateway in `mcp-gateway/src/mcp/registry.ts` (hosted path).
  *
- * Zero runtime behaviour change from 3.6.2: every tool returns exactly the
+ * Zero runtime behaviour change from 4.0.0-rc.1: every tool returns exactly the
  * same content it did when the logic lived inside the stdio server's
  * `CallToolRequestSchema` handler.
  *
@@ -71,7 +71,7 @@ import { LLMS_TXT } from "../generated/llms-txt.js";
 
 import type { DispatchContext, ToolResult, ToolTextContent } from "./types.js";
 
-// ─── Legal disclaimer (identical to index.ts 3.6.2) ──────────────────────────
+// ─── Legal disclaimer (identical to index.ts 4.0.0-rc.1) ─────────────────────
 
 const DISCLAIMER =
   "\n\n---\n*Generated code suggestion. Review before use in production. See [TERMS.md](https://github.com/sceneview/sceneview/blob/main/mcp/TERMS.md).*";

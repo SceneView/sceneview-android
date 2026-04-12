@@ -18,6 +18,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { CallToolRequestSchema, ListToolsRequestSchema, } from "@modelcontextprotocol/sdk/types.js";
 import { TOOL_DEFINITIONS, isFreeTool, isProTool, } from "./tools.js";
 import { dispatchProxyToolCall, isProxyConfigured, DEFAULT_PRICING_URL, } from "./proxy.js";
+import { recordInit, recordToolCall, flushTelemetry } from "./telemetry.js";
 // ─── Constants ──────────────────────────────────────────────────────────────
 const PACKAGE_VERSION = "0.1.0";
 const FREE_TOOL_COUNT = TOOL_DEFINITIONS.filter((t) => isFreeTool(t.name)).length;
@@ -58,15 +59,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const args = request.params.arguments;
     // ── Hosted mode: forward everything to the gateway ──────────────────────
     if (isProxyConfigured()) {
+        recordToolCall(toolName, "pro");
         const result = await dispatchProxyToolCall(toolName, args);
         return result;
     }
     // ── Lite mode: Pro tools get an upsell stub ─────────────────────────────
     if (isProTool(toolName)) {
+        recordToolCall(toolName, "pro");
         const result = await dispatchProxyToolCall(toolName, args);
         return result;
     }
     // ── Lite mode: free tools execute locally (stub) ────────────────────────
+    recordToolCall(toolName, "free");
     return dispatchFreeToolStub(toolName, args);
 });
 // ─── Free tool stub dispatcher ──────────────────────────────────────────────
@@ -134,3 +138,7 @@ function getLibraryLabel(toolName) {
 // ─── Connect transport ─────────────────────────────────────────────────────
 const transport = new StdioServerTransport();
 await server.connect(transport);
+recordInit();
+process.on("exit", () => flushTelemetry());
+process.on("SIGINT", () => { flushTelemetry(); process.exit(0); });
+process.on("SIGTERM", () => { flushTelemetry(); process.exit(0); });

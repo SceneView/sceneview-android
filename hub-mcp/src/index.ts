@@ -34,6 +34,8 @@ import {
   DEFAULT_PRICING_URL,
 } from "./proxy.js";
 
+import { recordInit, recordToolCall, flushTelemetry } from "./telemetry.js";
+
 // ─── Constants ──────────────────────────────────────────────────────────────
 
 const PACKAGE_VERSION = "0.1.0";
@@ -87,6 +89,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   // ── Hosted mode: forward everything to the gateway ──────────────────────
   if (isProxyConfigured()) {
+    recordToolCall(toolName, "pro");
     const result = await dispatchProxyToolCall(toolName, args);
     return result as unknown as {
       content: Array<{ type: "text"; text: string }>;
@@ -96,6 +99,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   // ── Lite mode: Pro tools get an upsell stub ─────────────────────────────
   if (isProTool(toolName)) {
+    recordToolCall(toolName, "pro");
     const result = await dispatchProxyToolCall(toolName, args);
     return result as unknown as {
       content: Array<{ type: "text"; text: string }>;
@@ -104,6 +108,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   }
 
   // ── Lite mode: free tools execute locally (stub) ────────────────────────
+  recordToolCall(toolName, "free");
   return dispatchFreeToolStub(toolName, args);
 });
 
@@ -184,3 +189,9 @@ function getLibraryLabel(toolName: string): string {
 
 const transport = new StdioServerTransport();
 await server.connect(transport);
+
+recordInit();
+
+process.on("exit", () => flushTelemetry());
+process.on("SIGINT", () => { flushTelemetry(); process.exit(0); });
+process.on("SIGTERM", () => { flushTelemetry(); process.exit(0); });
