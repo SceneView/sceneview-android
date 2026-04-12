@@ -43,14 +43,14 @@ function minuteBucket(): string {
 export async function isRateLimited(
   ip: string,
   kv: KVNamespace,
-): Promise<boolean> {
+): Promise<{ limited: boolean; remaining: number; limit: number }> {
   const key = `rl:${hashIp(ip)}:${minuteBucket()}`;
 
   const current = await kv.get(key);
   const count = current ? parseInt(current, 10) : 0;
 
   if (count >= MAX_REQUESTS_PER_MINUTE) {
-    return true;
+    return { limited: true, remaining: 0, limit: MAX_REQUESTS_PER_MINUTE };
   }
 
   // Increment — fire-and-forget (waitUntil would be ideal but KV put is fast)
@@ -58,5 +58,9 @@ export async function isRateLimited(
     expirationTtl: BUCKET_TTL_SECONDS,
   });
 
-  return false;
+  return {
+    limited: false,
+    remaining: MAX_REQUESTS_PER_MINUTE - (count + 1),
+    limit: MAX_REQUESTS_PER_MINUTE,
+  };
 }

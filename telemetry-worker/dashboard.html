@@ -226,6 +226,7 @@ tr:first-child td { border-top: none; }
       <div class="dot" id="status-dot"></div>
       <span id="status-text">Connecting…</span>
     </div>
+    <button class="btn" id="export-btn" onclick="exportCsv()">Export CSV</button>
     <button class="btn" onclick="refresh()">Refresh</button>
     <button class="btn btn-danger" onclick="logout()">Disconnect</button>
   </div>
@@ -451,6 +452,38 @@ tr:first-child td { border-top: none; }
         document.getElementById('spark-body').innerHTML = '<div class="empty">Unauthorized — check token</div>';
       }
     });
+  };
+
+  // ── Export CSV ───────────────────────────────────────────────────────────
+  window.exportCsv = function () {
+    if (!BASE_URL) return;
+    var btn = document.getElementById('export-btn');
+    btn.textContent = 'Exporting…';
+    btn.disabled = true;
+    var headers = { 'Accept': 'text/csv' };
+    if (TOKEN) headers['Authorization'] = 'Bearer ' + TOKEN;
+    fetch(BASE_URL + '/v1/export?days=7', { headers: headers })
+      .then(function (r) {
+        if (!r.ok) throw new Error(r.status + ' ' + r.statusText);
+        return r.blob();
+      })
+      .then(function (blob) {
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'sceneview-telemetry-7d.csv';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      })
+      .catch(function (err) {
+        setStatus(false, 'Export error: ' + err.message);
+      })
+      .finally(function () {
+        btn.textContent = 'Export CSV';
+        btn.disabled = false;
+      });
   };
 
   // ── Auto-refresh ─────────────────────────────────────────────────────────

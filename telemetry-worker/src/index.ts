@@ -82,8 +82,13 @@ app.post("/v1/events", async (c) => {
 
   // Rate limit by IP (hashed — never stored raw)
   const ip = c.req.header("cf-connecting-ip") ?? "unknown";
-  if (await isRateLimited(ip, c.env.RL_KV)) {
-    return c.json({ error: "rate_limited" }, 429);
+  const rl = await isRateLimited(ip, c.env.RL_KV);
+  if (rl.limited) {
+    return c.json({ error: "rate_limited" }, 429, {
+      "X-RateLimit-Limit": String(rl.limit),
+      "X-RateLimit-Remaining": String(rl.remaining),
+      "Retry-After": "60",
+    });
   }
 
   // Parse & validate
@@ -91,12 +96,18 @@ app.post("/v1/events", async (c) => {
   try {
     body = await c.req.json();
   } catch {
-    return c.json({ error: "invalid_json" }, 400);
+    return c.json({ error: "invalid_json" }, 400, {
+      "X-RateLimit-Limit": String(rl.limit),
+      "X-RateLimit-Remaining": String(rl.remaining),
+    });
   }
 
   const payload = validatePayload(body);
   if (!payload) {
-    return c.json({ error: "invalid_payload" }, 400);
+    return c.json({ error: "invalid_payload" }, 400, {
+      "X-RateLimit-Limit": String(rl.limit),
+      "X-RateLimit-Remaining": String(rl.remaining),
+    });
   }
 
   // Insert into D1 — fire-and-forget style but we await for correctness
@@ -119,10 +130,16 @@ app.post("/v1/events", async (c) => {
     // D1 write failed — log but don't fail the client.
     // In production, this would go to Workers Logpush.
     console.error("D1 insert failed", e);
-    return c.json({ ok: true, stored: false }, 202);
+    return c.json({ ok: true, stored: false }, 202, {
+      "X-RateLimit-Limit": String(rl.limit),
+      "X-RateLimit-Remaining": String(rl.remaining),
+    });
   }
 
-  return c.json({ ok: true }, 202);
+  return c.json({ ok: true }, 202, {
+    "X-RateLimit-Limit": String(rl.limit),
+    "X-RateLimit-Remaining": String(rl.remaining),
+  });
 });
 
 // ── Batch endpoint (future-proof for client-side batching) ───────────────────
@@ -133,15 +150,23 @@ app.post("/v1/batch", async (c) => {
   if (cl > maxBatchSize) return c.json({ error: "payload_too_large" }, 413);
 
   const ip = c.req.header("cf-connecting-ip") ?? "unknown";
-  if (await isRateLimited(ip, c.env.RL_KV)) {
-    return c.json({ error: "rate_limited" }, 429);
+  const rl = await isRateLimited(ip, c.env.RL_KV);
+  if (rl.limited) {
+    return c.json({ error: "rate_limited" }, 429, {
+      "X-RateLimit-Limit": String(rl.limit),
+      "X-RateLimit-Remaining": String(rl.remaining),
+      "Retry-After": "60",
+    });
   }
 
   let body: unknown;
   try {
     body = await c.req.json();
   } catch {
-    return c.json({ error: "invalid_json" }, 400);
+    return c.json({ error: "invalid_json" }, 400, {
+      "X-RateLimit-Limit": String(rl.limit),
+      "X-RateLimit-Remaining": String(rl.remaining),
+    });
   }
 
   // Batch size is capped at 50 events per request (enforced below).
@@ -149,12 +174,18 @@ app.post("/v1/batch", async (c) => {
   // the 50-event cap bounds the per-minute write amplification to 50×30 = 1500
   // rows, well within D1 limits. Tighten if abuse is observed.
   if (!Array.isArray(body) || body.length === 0 || body.length > 50) {
-    return c.json({ error: "invalid_batch", max: 50 }, 400);
+    return c.json({ error: "invalid_batch", max: 50 }, 400, {
+      "X-RateLimit-Limit": String(rl.limit),
+      "X-RateLimit-Remaining": String(rl.remaining),
+    });
   }
 
   const validated = body.map(validatePayload).filter(Boolean) as EventPayload[];
   if (validated.length === 0) {
-    return c.json({ error: "no_valid_events" }, 400);
+    return c.json({ error: "no_valid_events" }, 400, {
+      "X-RateLimit-Limit": String(rl.limit),
+      "X-RateLimit-Remaining": String(rl.remaining),
+    });
   }
 
   // Batch insert with D1 batch API
@@ -179,10 +210,16 @@ app.post("/v1/batch", async (c) => {
     );
   } catch (e) {
     console.error("D1 batch insert failed", e);
-    return c.json({ ok: true, accepted: validated.length, stored: false }, 202);
+    return c.json({ ok: true, accepted: validated.length, stored: false }, 202, {
+      "X-RateLimit-Limit": String(rl.limit),
+      "X-RateLimit-Remaining": String(rl.remaining),
+    });
   }
 
-  return c.json({ ok: true, accepted: validated.length }, 202);
+  return c.json({ ok: true, accepted: validated.length }, 202, {
+    "X-RateLimit-Limit": String(rl.limit),
+    "X-RateLimit-Remaining": String(rl.remaining),
+  });
 });
 
 // ── Stats endpoint (simple read-only dashboard data) ─────────────────────────

@@ -9,7 +9,7 @@
 **Worktree:** `flamboyant-neumann`
 **Branch:** `claude/flamboyant-neumann`
 **PR:** sceneview/sceneview#815 (OPEN)
-**Commit:** `7e5ff95a` (6 commits total)
+**Commits:** 9+ on branch
 
 ### What shipped
 
@@ -18,17 +18,21 @@
 | Component | Details |
 |---|---|
 | `POST /v1/events` | Single event ingestion (matches `TelemetryPayload` format exactly) |
-| `POST /v1/batch` | Up to 50 events per call |
+| `POST /v1/batch` | Up to 50 events per call — bulk ingest |
 | `GET /v1/stats` | 24h aggregation: top tools, version adoption, unique clients |
+| `GET /v1/timeseries` | Hourly bucketed event counts |
+| `GET /v1/export` | CSV export of raw events |
+| `GET /health` | Health check |
 | D1 `events` table | timestamp, event type, client, versions, tier, tool — zero PII |
-| KV rate limiting | 30 req/min per hashed IP (FNV-1a, never stores raw IP) |
+| KV rate limiting | 30 req/min per hashed IP (FNV-1a, never stores raw IP) — `X-RateLimit-*` headers |
 | Client-side batching | Buffer 10 events / 30s flush in `mcp/src/telemetry.ts` |
+| `dashboard.html` | Admin dashboard with CSV export button |
 | CI workflow | `.github/workflows/telemetry-ci.yml` added |
-| Tests | 38 vitest passing |
+| Tests | **79 total** — 54 worker vitest + 25 mcp vitest |
 
 ### Quality
 
-- ✅ Opus code review: all 3 blockers fixed
+- ✅ Opus code review passed — all blockers fixed
 - ✅ PR #815 open and passing checks
 
 ### NOT deployed — Thomas action needed
