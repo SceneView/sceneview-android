@@ -1,0 +1,41 @@
+# ─── SceneView Telemetry Worker ───────────────────────────────────────────────
+#
+# Ingests anonymous usage events from sceneview-mcp (npm package).
+# No PII — only tool names, client info, versions, timestamps.
+#
+# Deploy: wrangler deploy
+# Dev:    wrangler dev
+#
+# Before first deploy, create the D1 database and KV namespace:
+#   wrangler d1 create sceneview-telemetry
+#   wrangler kv namespace create RL_KV
+# Then update the IDs below.
+#
+# DNS: add CNAME telemetry.sceneview.io -> <worker-subdomain>.workers.dev
+# in Cloudflare DNS dashboard.
+
+name = "sceneview-telemetry"
+main = "src/index.ts"
+compatibility_date = "2025-04-01"
+
+# ── D1 database ──────────────────────────────────────────────────────────────
+[[d1_databases]]
+binding = "DB"
+database_name = "sceneview-telemetry"
+database_id = "TODO_REPLACE_AFTER_D1_CREATE"
+migrations_dir = "migrations"
+
+# ── KV namespace (rate-limit counters) ───────────────────────────────────────
+[[kv_namespaces]]
+binding = "RL_KV"
+id = "TODO_REPLACE_AFTER_KV_CREATE"
+
+# ── Environment variables ────────────────────────────────────────────────────
+[vars]
+ENVIRONMENT = "production"
+
+# ── Custom domain ────────────────────────────────────────────────────────────
+# Uncomment after DNS CNAME is set up:
+# [routes]
+# pattern = "telemetry.sceneview.io/*"
+# custom_domain = true
