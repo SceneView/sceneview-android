@@ -30,6 +30,7 @@ kotlin-js-store/
 
 # ── Node.js ───────────────────────────────────────────────
 **/node_modules/
+hub-mcp/package-lock.json
 
 # ── MCP ───────────────────────────────────────────────────
 mcp/.DS_Store
