@@ -7,7 +7,7 @@
 ## SESSION confident-rhodes — 2026-04-12 — Bug fixes, tests, API parity, docs
 
 **Branch:** `claude/confident-rhodes`
-**PR:** sceneview/sceneview#814 (OPEN — needs merge to main)
+**PR:** sceneview/sceneview#814 (MERGED via hungry-ptolemy session)
 
 ### What shipped (final)
 
@@ -52,13 +52,16 @@
 - **`claude/flamboyant-neumann`** (PR #815, telemetry worker) — needs a decision: merge, close, or hand off to a dedicated session
 - **Instrumented test coverage** — Node lifecycle, model loader, and AR session tests still unit-only; no on-device instrumented coverage added this session
 
-## 🧹 SESSION hungry-ptolemy — 2026-04-12 — Full repo cleanup + CI green
+## 🧹 SESSION hungry-ptolemy — 2026-04-12 — Full repo cleanup + all PRs merged + CI green
 
-**Branch:** `claude/hungry-ptolemy` (detached, can be removed)
+**Branch:** `claude/hungry-ptolemy` (can be removed — all work merged)
 
-### What shipped
+### What shipped (FINAL)
 
-**PR #813 merged** (squash, `93863dcc`): quality-gate regex pre-release support + ARScene refs.
+**3 PRs merged to main — 0 open PRs remaining:**
+- **PR #813** (squash, `93863dcc`): quality-gate regex pre-release support + ARScene refs
+- **PR #814** (squash, `dcdb98df`): render-tests Engine-sharing fix (closes #803) + AR camera exposure API (closes #792)
+- **PR #815** (squash): telemetry worker — Cloudflare Worker (Hono + D1 + KV), 79 tests, dashboard.html
 
 **CI fixes (3 commits on main):**
 1. `tiers.test.ts` polar.sh → gateway Stripe URL (82/82 MCP tests pass)
@@ -68,11 +71,14 @@
 **Result: quality-gate GREEN on main** (run 24309254779).
 
 **Cleanup totals:**
-- 7 worktrees removed (agent-ae442902, crazy-goodall, filament-bump, keen-yalow, cool-satoshi, dazzling-bose, stupefied-meitner)
-- 18 remote branches deleted, 18 orphan local branches deleted
-- Remaining: confident-rhodes (PR #814), flamboyant-neumann (PR #815), multi-gateway-sprint (kept), intelligent-perlman (new session)
+- 10 worktrees removed total
+- 35+ local branches cleaned, 19 remote branches deleted
+- 6 stashes dropped (1 kept: multi-gateway-sprint npm wrappers)
+- Remaining worktrees: eager-sinoussi, festive-hawking, intelligent-perlman (3 only)
 
 **Polar.sh migration complete:** all 10 files with dead `polar.sh` URLs updated to GitHub Sponsors or gateway pricing.
+
+**0 open PRs. 0 stale branches. Repo is fully clean.**
 
 ---
 
