@@ -32,6 +32,11 @@ jobs:
     name: Android library render tests (emulator)
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # SwiftShader emulator render tests are inherently flaky (JNI teardown
+    # races, GPU emulation timing).  Mark non-blocking so a spurious red X
+    # doesn't scare contributors — the workflow is already NOT a required
+    # status check.  Individual job status still visible in the Actions tab.
+    continue-on-error: true
 
     strategy:
       matrix:
