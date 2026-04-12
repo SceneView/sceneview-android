@@ -258,10 +258,10 @@ describe("telemetry payload shape", () => {
       const payloads: TelemetryPayload[] =
         url.endsWith("/batch")
           ? ((raw as { events: TelemetryPayload[] }).events ?? [])
-          : [raw as TelemetryPayload];
+          : [raw as unknown as TelemetryPayload];
       for (const body of payloads) {
         for (const forbidden of ["ip", "hostname", "user", "args", "result", "prompt", "apiKey"]) {
-          expect((body as Record<string, unknown>)[forbidden]).toBeUndefined();
+          expect((body as unknown as Record<string, unknown>)[forbidden]).toBeUndefined();
         }
       }
     }
