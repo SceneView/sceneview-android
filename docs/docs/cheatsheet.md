@@ -85,12 +85,33 @@ ARSceneView(
         config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
     },
     sessionFeatures = setOf(),  // e.g., Session.Feature.FRONT_CAMERA
+    cameraExposure = null,      // null = ARCore default; Float (EV) to override
     onSessionUpdated = { session, frame -> },
     onTouchEvent = { event, hitResult -> true }
 ) {
     // ARSceneScope — declare AR nodes here
 }
 ```
+
+### Camera exposure override
+
+Pass `cameraExposure` (in EV — exposure value) to correct a washed-out or too-dark camera
+preview on devices where ARCore's auto-exposure does not match Camera2's output:
+
+```kotlin
+// Fix washed-out camera preview
+ARSceneView(
+    cameraExposure = 1.0f  // lower = darker, higher = brighter, null = ARCore default
+) { }
+
+// Fix too-dark preview (e.g. on some front-camera setups)
+ARSceneView(
+    cameraExposure = -1.0f
+) { }
+```
+
+`0f` corresponds to the standard middle-grey reference exposure. Start with `1.0f` or `-1.0f`
+and adjust by 0.5 EV steps until the preview matches the device's native camera app.
 
 ---
 
