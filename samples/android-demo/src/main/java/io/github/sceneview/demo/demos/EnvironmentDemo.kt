@@ -1,0 +1,108 @@
+package io.github.sceneview.demo.demos
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import io.github.sceneview.SceneView
+import io.github.sceneview.createEnvironment
+import io.github.sceneview.demo.DemoScaffold
+import io.github.sceneview.environment.Environment
+import io.github.sceneview.rememberEngine
+import io.github.sceneview.rememberEnvironmentLoader
+import io.github.sceneview.rememberModelInstance
+import io.github.sceneview.rememberModelLoader
+
+/**
+ * Demonstrates HDR environment switching.
+ *
+ * A reflective model (damaged helmet) is loaded so the user can clearly see how each HDR
+ * environment affects reflections and overall scene lighting. Selecting a different chip
+ * recreates the [Environment] from the corresponding HDR asset file.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun EnvironmentDemo(onBack: () -> Unit) {
+    data class EnvOption(val label: String, val file: String)
+
+    val environments = remember {
+        listOf(
+            EnvOption("Studio", "environments/studio_2k.hdr"),
+            EnvOption("Studio Warm", "environments/studio_warm_2k.hdr"),
+            EnvOption("Outdoor Cloudy", "environments/outdoor_cloudy_2k.hdr"),
+            EnvOption("Chinese Garden", "environments/chinese_garden_2k.hdr"),
+            EnvOption("Sunset", "environments/sunset_2k.hdr"),
+            EnvOption("Rooftop Night", "environments/rooftop_night_2k.hdr")
+        )
+    }
+    var selectedEnv by remember { mutableStateOf(environments[0]) }
+
+    val engine = rememberEngine()
+    val modelLoader = rememberModelLoader(engine)
+    val environmentLoader = rememberEnvironmentLoader(engine)
+
+    // Recreate the environment each time the user selects a different HDR.
+    val environment: Environment = remember(environmentLoader, selectedEnv) {
+        environmentLoader.createHDREnvironment(assetFileLocation = selectedEnv.file)
+            ?: createEnvironment(environmentLoader)
+    }
+    DisposableEffect(environment) {
+        onDispose { environmentLoader.destroyEnvironment(environment) }
+    }
+
+    val modelInstance = rememberModelInstance(modelLoader, "models/khronos_damaged_helmet.glb")
+
+    DemoScaffold(
+        title = "Environment Gallery",
+        onBack = onBack,
+        controls = {
+            Text(
+                text = "HDR Environment",
+                style = MaterialTheme.typography.labelLarge
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                environments.forEach { env ->
+                    FilterChip(
+                        selected = selectedEnv == env,
+                        onClick = { selectedEnv = env },
+                        label = { Text(env.label) }
+                    )
+                }
+            }
+        }
+    ) {
+        SceneView(
+            modifier = Modifier.fillMaxSize(),
+            engine = engine,
+            modelLoader = modelLoader,
+            environmentLoader = environmentLoader,
+            environment = environment
+        ) {
+            modelInstance?.let { instance ->
+                ModelNode(
+                    modelInstance = instance,
+                    scaleToUnits = 2.0f
+                )
+            }
+        }
+    }
+}

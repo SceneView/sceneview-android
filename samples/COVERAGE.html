@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SceneView Samples — Feature Coverage</title>
+<style>
+  :root {
+    --primary: #005BC1;
+    --on-primary: #fff;
+    --surface: #F9F9FF;
+    --surface-dim: #D9D9E0;
+    --on-surface: #1A1C20;
+    --on-surface-variant: #43474E;
+    --outline: #C3C6CF;
+    --done: #16A34A;
+    --wip: #F59E0B;
+    --todo: #DC2626;
+    --na: #9CA3AF;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --primary: #A4C1FF;
+      --on-primary: #002F64;
+      --surface: #111318;
+      --surface-dim: #1E2025;
+      --on-surface: #E2E2E9;
+      --on-surface-variant: #C3C6CF;
+      --outline: #43474E;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--surface);
+    color: var(--on-surface);
+    padding: 24px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .subtitle {
+    color: var(--on-surface-variant);
+    margin-bottom: 24px;
+    font-size: 14px;
+  }
+  .stats {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+  }
+  .stat {
+    background: var(--surface-dim);
+    border-radius: 12px;
+    padding: 16px 24px;
+    min-width: 140px;
+  }
+  .stat-value { font-size: 32px; font-weight: 700; }
+  .stat-label { font-size: 12px; color: var(--on-surface-variant); text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-done .stat-value { color: var(--done); }
+  .stat-wip .stat-value { color: var(--wip); }
+  .stat-todo .stat-value { color: var(--todo); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    margin-bottom: 48px;
+  }
+  thead th {
+    text-align: left;
+    padding: 12px 8px;
+    border-bottom: 2px solid var(--outline);
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--on-surface-variant);
+  }
+  tbody td {
+    padding: 10px 8px;
+    border-bottom: 1px solid var(--outline);
+    vertical-align: middle;
+  }
+  .category-row td {
+    padding-top: 24px;
+    font-weight: 700;
+    color: var(--primary);
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--primary);
+  }
+  .badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .badge-done { background: var(--done); color: #fff; }
+  .badge-wip { background: var(--wip); color: #000; }
+  .badge-todo { background: var(--todo); color: #fff; }
+  .badge-na { background: var(--na); color: #fff; }
+  .api-code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; color: var(--on-surface-variant); }
+
+  .legend { display: flex; gap: 16px; margin-bottom: 16px; font-size: 13px; align-items: center; }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+
+  footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--outline); font-size: 12px; color: var(--on-surface-variant); }
+</style>
+</head>
+<body>
+
+<h1>SceneView Samples Coverage</h1>
+<p class="subtitle">Feature coverage matrix — updated after each sprint. Every SceneView API feature must have a working demo on each supported platform.</p>
+
+<div class="stats">
+  <div class="stat stat-done"><div class="stat-value">8</div><div class="stat-label">Done (Android)</div></div>
+  <div class="stat stat-wip"><div class="stat-value">0</div><div class="stat-label">In Progress</div></div>
+  <div class="stat stat-todo"><div class="stat-value">23</div><div class="stat-label">To Do (Android)</div></div>
+</div>
+
+<div class="legend">
+  <span class="legend-item"><span class="badge badge-done">Done</span> Compiles &amp; tested</span>
+  <span class="legend-item"><span class="badge badge-wip">WIP</span> Code written, not verified</span>
+  <span class="legend-item"><span class="badge badge-todo">Todo</span> Not started</span>
+  <span class="legend-item"><span class="badge badge-na">N/A</span> Not applicable</span>
+</div>
+
+<table>
+<thead>
+  <tr>
+    <th style="width:22%">Feature</th>
+    <th style="width:18%">API</th>
+    <th>Android</th>
+    <th>iOS</th>
+    <th>Web</th>
+    <th>Flutter</th>
+    <th>React Native</th>
+    <th>TV</th>
+  </tr>
+</thead>
+<tbody>
+
+<!-- 3D BASICS -->
+<tr class="category-row"><td colspan="8">3D Basics</td></tr>
+<tr><td>Model Viewer</td><td class="api-code">ModelNode</td>
+  <td><span class="badge badge-done">Done</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+</tr>
+<tr><td>Geometry Primitives</td><td class="api-code">CubeNode, SphereNode, ...</td>
+  <td><span class="badge badge-done">Done</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+</tr>
+<tr><td>Animation</td><td class="api-code">ModelNode autoAnimate</td>
+  <td><span class="badge badge-done">Done</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+</tr>
+<tr><td>Multi Model</td><td class="api-code">Multiple ModelNode</td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+</tr>
+
+<!-- LIGHTING & ENVIRONMENT -->
+<tr class="category-row"><td colspan="8">Lighting &amp; Environment</td></tr>
+<tr><td>Lighting</td><td class="api-code">LightNode</td>
+  <td><span class="badge badge-done">Done</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+</tr>
+<tr><td>Dynamic Sky</td><td class="api-code">DynamicSkyNode</td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+</tr>
+<tr><td>Fog</td><td class="api-code">FogNode</td>
+  <td><span class="badge badge-done">Done</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+</tr>
+<tr><td>Environment Gallery</td><td class="api-code">rememberEnvironment</td>
+  <td><span class="badge badge-done">Done</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+</tr>
+
+<!-- CONTENT -->
+<tr class="category-row"><td colspan="8">Content</td></tr>
+<tr><td>Text Labels</td><td class="api-code">TextNode</td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+</tr>
+<tr><td>Lines &amp; Paths</td><td class="api-code">LineNode, PathNode</td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+</tr>
+<tr><td>Image</td><td class="api-code">ImageNode</td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+</tr>
+<tr><td>Billboard</td><td class="api-code">BillboardNode</td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+</tr>
+<tr><td>Video</td><td class="api-code">VideoNode</td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+</tr>
+
+<!-- INTERACTION -->
+<tr class="category-row"><td colspan="8">Interaction</td></tr>
+<tr><td>Camera Controls</td><td class="api-code">CameraManipulator</td>
+  <td><span class="badge badge-done">Done</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+</tr>
+<tr><td>Gesture Editing</td><td class="api-code">isEditable, gestures</td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+</tr>
+<tr><td>Collision</td><td class="api-code">CollisionSystem</td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+</tr>
+<tr><td>ViewNode</td><td class="api-code">ViewNode</td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+</tr>
+
+<!-- ADVANCED -->
+<tr class="category-row"><td colspan="8">Advanced</td></tr>
+<tr><td>Physics</td><td class="api-code">PhysicsNode</td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+</tr>
+<tr><td>Post Processing</td><td class="api-code">Filament View API</td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+</tr>
+<tr><td>Custom Mesh</td><td class="api-code">MeshNode</td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+</tr>
+<tr><td>Shape</td><td class="api-code">ShapeNode</td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+</tr>
+<tr><td>Reflection Probes</td><td class="api-code">ReflectionProbeNode</td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+</tr>
+<tr><td>Secondary Camera</td><td class="api-code">SecondaryCamera</td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+</tr>
+<tr><td>Debug Overlay</td><td class="api-code">DebugOverlay</td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+</tr>
+
+<!-- AUGMENTED REALITY -->
+<tr class="category-row"><td colspan="8">Augmented Reality</td></tr>
+<tr><td>Tap to Place</td><td class="api-code">AnchorNode, HitResult</td>
+  <td><span class="badge badge-done">Done</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+</tr>
+<tr><td>Image Detection</td><td class="api-code">AugmentedImageNode</td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+</tr>
+<tr><td>Face Tracking</td><td class="api-code">AugmentedFaceNode</td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+</tr>
+<tr><td>Cloud Anchors</td><td class="api-code">CloudAnchorNode</td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+</tr>
+<tr><td>Streetscape</td><td class="api-code">StreetscapeGeometryNode</td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+</tr>
+<tr><td>Pose Tracking</td><td class="api-code">PoseNode</td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+</tr>
+<tr><td>Rerun Debug</td><td class="api-code">RerunBridge</td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-todo">Todo</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+  <td><span class="badge badge-na">N/A</span></td>
+</tr>
+
+</tbody>
+</table>
+
+<footer>
+  SceneView v4.0.0-rc.1 &mdash; Last updated: Sprint 1 (8/31 Android demos done) &mdash; <a href="https://github.com/sceneview/sceneview" style="color: var(--primary);">github.com/sceneview/sceneview</a>
+</footer>
+
+</body>
+</html>
