@@ -12,9 +12,8 @@ import io.github.sceneview.loaders.MaterialLoader
 // createARView) are in SceneFactories.kt in the base `sceneview` module.
 // Corresponding remember* hooks are in ARScene.kt.
 //
-// TODO(module-unification): When arsceneview merges into sceneview, these factories move to
-//  `sceneview/src/.../ar/ARFactories.kt` as a sub-package. ARCore becomes a `compileOnly`
-//  dependency so apps without AR don't pull it in. The remember* hooks in ARScene.kt follow.
+// AR-specific factory composables. These live in `arsceneview` to keep the ARCore dependency
+// out of the lightweight `sceneview` module.
 //
 
 /**

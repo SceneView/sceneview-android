@@ -1,7 +1,5 @@
-// TODO(module-unification): ARScene should eventually live in the `sceneview` module as
-//  `io.github.sceneview.ar.ARSceneView`. The `arsceneview` module would be removed and its contents
-//  merged into `sceneview` under an `ar/` sub-package. ARCore would be declared as a `compileOnly`
-//  dependency so that apps using only 3D (no AR) don't pull ARCore into their APK.
+// ARScene lives in the separate `arsceneview` module intentionally: apps that only need 3D
+// can depend on `sceneview` alone without pulling in ARCore.
 //
 //  Migration checklist:
 //  1. Move ar/ package contents into sceneview/src/main/java/io/github/sceneview/ar/

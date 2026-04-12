@@ -27,9 +27,9 @@
 
 ## Next: v4.0.0 (stable)
 
-### Module unification
-- [ ] Merge sceneview + arsceneview into single dependency (one `implementation` line)
+### API
 - [x] Unify naming: `SceneView {}` / `ARSceneView {}` (v3.6)
+- [x] Separate modules kept intentionally: `sceneview` (3D-only, no ARCore) + `arsceneview` (opt-in AR)
 
 ### Platform maturity
 - [ ] Filament JNI for Desktop (hardware 3D, replace placeholder)

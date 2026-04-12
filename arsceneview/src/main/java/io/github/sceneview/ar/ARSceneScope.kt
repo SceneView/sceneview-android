@@ -1,8 +1,5 @@
-// TODO(module-unification): ARSceneScope should eventually move into the `sceneview` module as
-//  `io.github.sceneview.ar.ARSceneScope`. ARCore would become a `compileOnly` dependency of
-//  `sceneview`, and this class would only be instantiated when ARCore is on the runtime classpath.
-//  Merge points:
-//  - ARSceneScope extends SceneScope — no code duplication, only AR-specific composables here
+// ARSceneScope extends SceneScope with AR-specific composables (plane detection, anchors, etc.).
+// Kept in the separate `arsceneview` module so that `sceneview` stays ARCore-free.
 //  - NodeLifecycle is already reused from SceneScope (no override needed)
 //  - AR node imports (AnchorNodeImpl, etc.) would move to a `sceneview/ar/node/` sub-package
 

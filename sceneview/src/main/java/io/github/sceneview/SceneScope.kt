@@ -1,7 +1,7 @@
-// TODO(module-unification): SceneScope is the base class for both 3D and AR scopes.
-//  When arsceneview merges into sceneview, ARSceneScope will live alongside this file in the
-//  `ar/` sub-package. The class hierarchy (SceneScope -> ARSceneScope -> NodeScope) is already
-//  designed for this: no code duplication, NodeLifecycle is the shared extension point.
+// SceneScope is the base class for both 3D and AR scopes.
+// The class hierarchy (SceneScope -> ARSceneScope -> NodeScope) is designed so that arsceneview
+// extends sceneview without code duplication. Modules are kept separate intentionally:
+// sceneview = lightweight 3D-only (no ARCore dependency), arsceneview = opt-in AR.
 
 package io.github.sceneview
 
