@@ -35,11 +35,21 @@ Published Apache-2.0. 73 vitest tests. Tarball size 13.6 kB (9 files).
 
 Adds `publishConfig: { tag: "next" }` to `mcp/package.json` so future sessions can't accidentally promote the RC to `@latest` by running a bare `npm publish`.
 
+### New — AR camera exposure control (#792)
+
+- Added `cameraExposure` parameter to `ARSceneView` composable, allowing developers to programmatically control the camera exposure applied to the AR scene.
+
+### Fixes
+
+- **Render tests** (#803): Fixed intermittent SwiftShader JVM crashes in CI by sharing a single `Engine` instance per test class instead of creating and tearing down one per test method. Affected classes (`GeometryRenderTest`, `VisualVerificationTest`, `LightingRenderTest`, `RenderSmokeTest`) are now stable; the class-level `@Ignore` guards added as a temporary workaround have been removed.
+- **MCP tiers test**: Removed stale Polar URL from `tiers.test.ts` that was causing a test failure after the Polar → Stripe migration.
+
 ### Tests
 
 - 16 new JVM tests in `arsceneview` (12 golden-JSON for `RerunWireFormat`, 4 socket integration for `RerunBridge` with a mock `ServerSocket`)
 - 12 new Swift tests in `SceneViewSwiftTests` — identical golden strings, enforcing cross-platform wire-format parity at build time
 - 73 new vitest tests in `mcp/packages/rerun` — 100% tool coverage
+- 90+ new unit tests across `sceneview` and `arsceneview` modules (#814)
 - Full suite validation:
   - `./gradlew :arsceneview:compileDebugKotlin :arsceneview:testDebugUnitTest` ✓
   - `./gradlew :samples:android-demo:assembleDebug` ✓
