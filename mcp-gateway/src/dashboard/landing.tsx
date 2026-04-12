@@ -32,7 +32,7 @@ export const Landing: FC = () => (
     <section class="dash-grid">
       <div class="stat-card">
         <div class="label">Free tools</div>
-        <div class="value">15</div>
+        <div class="value">17</div>
         <p style="margin:.5rem 0 0;font-size:.875rem;">
           Samples, guides, validation. No key required.
         </p>

@@ -5,24 +5,31 @@
  * calls `provisionApiKey(env, email, tier, sessionId)` which:
  *
  *   1. Upserts the user in D1 (existing → update tier, new → insert)
- *   2. Generates a fresh `sv_live_` API key (same format as Gateway #1)
+ *   2. Generates a fresh `hub_live_` API key
  *   3. Stores the key hash in D1 `api_keys` table
- *   4. Stores the plaintext + metadata under `checkout_key:{session_id}`
+ *   4. Stores the plaintext + metadata under `hub-checkout:{session_id}`
  *      in KV with a 24h TTL so `/checkout/success` can display it once
  *
  * The plaintext NEVER appears in logs, never lands in D1, and can only
  * be retrieved once: the /checkout/success handler deletes the KV entry
  * on first read.
  *
- * Key format: `sv_live_` + 32 chars of base32 (160 bits of entropy),
- * matching Gateway #1 exactly so a single key works on both gateways.
+ * Key format: `hub_live_` + 32 chars of base32 (160 bits of entropy).
+ * Uses a distinct prefix from Gateway #1's `sv_live_` so keys are
+ * visually distinguishable, while still working on both gateways
+ * (auth is hash-based, not prefix-based).
  */
 
 import type { Env } from "../env.js";
 import type { UserTier } from "../db/schema.js";
 
-/** KV key prefix for the single-use API key handoff. */
-export const CHECKOUT_KEY_KV_PREFIX = "checkout_key:";
+/**
+ * KV key prefix for the single-use API key handoff.
+ *
+ * Uses `hub-checkout:` (NOT `checkout_key:`) to avoid collision with
+ * Gateway #1 which shares the same KV namespace.
+ */
+export const CHECKOUT_KEY_KV_PREFIX = "hub-checkout:";
 
 /** TTL for the checkout key in KV (24 hours). */
 export const CHECKOUT_KEY_TTL_SECONDS = 86_400;
@@ -61,7 +68,7 @@ function toHex(bytes: Uint8Array): string {
     .join("");
 }
 
-/** Generates a fresh `sv_live_` API key with 160 bits of entropy. */
+/** Generates a fresh `hub_live_` API key with 160 bits of entropy. */
 async function generateApiKey(): Promise<{
   plaintext: string;
   prefix: string;
@@ -70,8 +77,8 @@ async function generateApiKey(): Promise<{
   const bytes = new Uint8Array(20);
   crypto.getRandomValues(bytes);
   const body = base32Encode(bytes).slice(0, 32);
-  const plaintext = `sv_live_${body}`;
-  const prefix = plaintext.slice(0, 14);
+  const plaintext = `hub_live_${body}`;
+  const prefix = plaintext.slice(0, 15);
   const digest = await crypto.subtle.digest(
     "SHA-256",
     new TextEncoder().encode(plaintext),
