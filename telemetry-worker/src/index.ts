@@ -11,16 +11,17 @@ app.use(
   "/v1/*",
   cors({
     origin: "*",
-    allowMethods: ["POST", "OPTIONS"],
-    allowHeaders: ["content-type"],
+    allowMethods: ["GET", "POST", "OPTIONS"],
+    allowHeaders: ["content-type", "authorization"],
     maxAge: 86400,
   }),
 );
 
 // ── Health check ─────────────────────────────────────────────────────────────
-app.get("/health", (c) =>
-  c.json({ ok: true, service: "sceneview-telemetry", version: "1.0.0" }),
-);
+app.get("/health", (c) => {
+  c.header("Access-Control-Allow-Origin", "*");
+  return c.json({ ok: true, service: "sceneview-telemetry", version: "1.0.0" });
+});
 
 // ── Payload validation ───────────────────────────────────────────────────────
 const VALID_EVENTS = new Set(["init", "tool"]);
