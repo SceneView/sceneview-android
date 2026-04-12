@@ -20,10 +20,11 @@ import io.github.sceneview.node.PlaneNode
 import io.github.sceneview.node.SphereNode
 import io.github.sceneview.render.RenderTestHarness.Companion.colorsMatch
 import org.junit.After
+import org.junit.AfterClass
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
-import org.junit.Ignore
+import org.junit.BeforeClass
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -36,34 +37,43 @@ import org.junit.runner.RunWith
  *
  * Camera exposure is set to 1.0 (unit-less) to avoid tone-mapping distortion.
  *
+ * **Threading:** A single [RenderTestHarness] is shared across all tests (created once
+ * in [setupClass], destroyed in [teardownClass]) to avoid the rapid Engine create/destroy
+ * cycles that crash SwiftShader on CI (#803). The scene is reset between tests.
+ *
  * Requires an Android device or emulator with GPU support (SwiftShader OK).
  */
 @RunWith(AndroidJUnit4::class)
-@Ignore(
-    "GeometryRenderTest is unstable on the SwiftShader CI emulator. Tracked in #803. " +
-            "Initially only two double-capturePixels() tests crashed the process, but after " +
-            "ignoring them the SINGLE-capture sphereNode_rendersNonBlackPixels also crashed, " +
-            "suggesting the real root cause is either (a) rapid harness setup/teardown cycles " +
-            "exhausting a native resource, or (b) the first harness-using test leaking state " +
-            "into the next. Disabling the whole class unblocks the render-tests CI signal " +
-            "while we investigate properly. The other render tests (android-demo screenshots, " +
-            "iOS screenshots, Web Playwright) already passed on the same run, so coverage is " +
-            "not zero — we only lose the low-level Filament readback assertions."
-)
 class GeometryRenderTest {
 
-    private lateinit var harness: RenderTestHarness
-    private lateinit var materialLoader: MaterialLoader
+    companion object {
+        private lateinit var harness: RenderTestHarness
+        private lateinit var materialLoader: MaterialLoader
+
+        @JvmStatic
+        @BeforeClass
+        fun setupClass() {
+            harness = RenderTestHarness(width = 128, height = 128)
+            harness.runOnMain {
+                val context = InstrumentationRegistry.getInstrumentation().targetContext
+                materialLoader = MaterialLoader(harness.engine, context)
+            }
+        }
+
+        @JvmStatic
+        @AfterClass
+        fun teardownClass() {
+            harness.runOnMain { materialLoader.destroy() }
+            harness.destroy()
+        }
+    }
+
     private var light: LightNode? = null
 
     @Before
     fun setup() {
-        harness = RenderTestHarness(width = 128, height = 128)
+        harness.resetScene()
         harness.runOnMain {
-            val context = InstrumentationRegistry.getInstrumentation().targetContext
-            materialLoader = MaterialLoader(harness.engine, context)
-
-            // Directional light — required for PBR materials to be visible
             val l = LightNode(
                 engine = harness.engine,
                 type = LightManager.Type.DIRECTIONAL
@@ -83,14 +93,9 @@ class GeometryRenderTest {
                 harness.scene.removeEntity(it.entity)
                 it.destroy()
             }
-            materialLoader.destroy()
         }
-        harness.destroy()
     }
 
-    /**
-     * Creates a camera with unit exposure looking at the origin from z=5.
-     */
     private fun createTestCamera(): com.google.android.filament.Camera {
         val camera = harness.engine.createCamera(harness.engine.entityManager.create())
         camera.setProjection(45.0, 1.0, 0.1, 100.0, Camera.Fov.VERTICAL)
@@ -322,19 +327,20 @@ class GeometryRenderTest {
             )
             harness.scene.addEntity(cubeNode.entity)
 
-            // First render
-            harness.renderFrames(5)
+            // First render — extra frames to let TAA/dithering converge on SwiftShader
+            harness.renderFrames(10)
             bitmap1 = harness.capturePixels()
 
             // Second render of exact same scene
-            harness.renderFrames(5)
+            harness.renderFrames(10)
             bitmap2 = harness.capturePixels()
 
             harness.scene.removeEntity(cubeNode.entity)
             cubeNode.destroy()
         }
 
-        val comparator = GoldenImageComparator(maxChannelDiff = 3, maxDiffPixelsPercent = 0.5f)
+        // Relaxed tolerance for SwiftShader's non-deterministic dithering
+        val comparator = GoldenImageComparator(maxChannelDiff = 5, maxDiffPixelsPercent = 1.0f)
         val result = comparator.compare(bitmap1!!, bitmap2!!)
         assertTrue(
             "Same scene rendered twice should produce identical output: ${result.message}",

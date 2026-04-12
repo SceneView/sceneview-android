@@ -25,9 +25,10 @@ import io.github.sceneview.node.PlaneNode
 import io.github.sceneview.node.SphereNode
 import io.github.sceneview.node.TextNode
 import org.junit.After
+import org.junit.AfterClass
 import org.junit.Assert.assertTrue
 import org.junit.Before
-import org.junit.Ignore
+import org.junit.BeforeClass
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
@@ -45,20 +46,101 @@ import java.io.FileWriter
  *
  * The HTML report (`visual-report.html`) shows all rendered images side-by-side
  * with expected descriptions, enabling quick visual regression detection.
+ *
+ * **Threading:** A single [RenderTestHarness] is shared across all tests (created once
+ * in [setupClass], destroyed in [teardownClass]) to avoid the rapid Engine create/destroy
+ * cycles that crash SwiftShader on CI (#803). The scene is reset between tests.
  */
 @RunWith(AndroidJUnit4::class)
-@Ignore(
-    "VisualVerificationTest shares the same RenderTestHarness setup/teardown pattern " +
-            "as GeometryRenderTest and is affected by the same SwiftShader CI instability " +
-            "(#803). Disabled at class level alongside GeometryRenderTest to unblock CI."
-)
 class VisualVerificationTest {
 
-    private lateinit var harness: RenderTestHarness
-    private lateinit var materialLoader: MaterialLoader
-    private lateinit var light: LightNode
-    private val comparator = GoldenImageComparator(maxChannelDiff = 5, maxDiffPixelsPercent = 1.0f)
-    private val screenshots = mutableListOf<ScreenshotEntry>()
+    companion object {
+        private lateinit var harness: RenderTestHarness
+        private lateinit var materialLoader: MaterialLoader
+        private val comparator = GoldenImageComparator(maxChannelDiff = 5, maxDiffPixelsPercent = 1.0f)
+        private val screenshots = mutableListOf<ScreenshotEntry>()
+
+        @JvmStatic
+        @BeforeClass
+        fun setupClass() {
+            harness = RenderTestHarness(width = 256, height = 256)
+            harness.runOnMain {
+                val context = InstrumentationRegistry.getInstrumentation().targetContext
+                materialLoader = MaterialLoader(harness.engine, context)
+            }
+        }
+
+        @JvmStatic
+        @AfterClass
+        fun teardownClass() {
+            generateHtmlReport()
+            harness.runOnMain { materialLoader.destroy() }
+            harness.destroy()
+        }
+
+        private fun generateHtmlReport() {
+            val dir = InstrumentationRegistry.getInstrumentation()
+                .targetContext.getExternalFilesDir("render-test-output") ?: return
+            val reportFile = File(dir, "visual-report.html")
+
+            val passed = screenshots.count { it.passed }
+            val total = screenshots.size
+            val allPassed = passed == total
+
+            FileWriter(reportFile).use { w ->
+                w.write("""
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SceneView Render Test Report</title>
+<style>
+body { font-family: system-ui; margin: 20px; background: #1a1a2e; color: #e0e0e0; }
+h1 { color: #fff; }
+.summary { font-size: 1.2em; margin: 10px 0 20px; padding: 12px; border-radius: 8px;
+  background: ${if (allPassed) "#1b5e20" else "#b71c1c"}; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+.card { background: #16213e; border-radius: 12px; overflow: hidden; border: 2px solid
+  ${if (allPassed) "#4caf50" else "#333"}; }
+.card.fail { border-color: #f44336; }
+.card img { width: 100%; height: 256px; object-fit: contain; background: #0d0d1a; }
+.card-body { padding: 12px; }
+.card-title { font-weight: bold; font-size: 1.1em; margin-bottom: 4px; }
+.card-desc { color: #aaa; font-size: 0.9em; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.8em;
+  font-weight: bold; margin-top: 6px; }
+.badge.pass { background: #4caf50; color: #fff; }
+.badge.fail { background: #f44336; color: #fff; }
+</style>
+</head>
+<body>
+<h1>SceneView Render Test Report</h1>
+<div class="summary">$passed / $total tests passed</div>
+<div class="grid">
+""")
+                for (entry in screenshots) {
+                    w.write("""
+<div class="card ${if (entry.passed) "" else "fail"}">
+  <img src="${entry.file.name}" alt="${entry.name}">
+  <div class="card-body">
+    <div class="card-title">${entry.name}</div>
+    <div class="card-desc">${entry.description}</div>
+    <div class="card-desc">${entry.details}</div>
+    <span class="badge ${if (entry.passed) "pass" else "fail"}">${if (entry.passed) "PASS" else "FAIL"}</span>
+  </div>
+</div>
+""")
+                }
+                w.write("""
+</div>
+</body>
+</html>
+""")
+            }
+            Log.i("VisualVerification", "Report saved to: ${reportFile.absolutePath}")
+        }
+    }
 
     data class ScreenshotEntry(
         val name: String,
@@ -68,35 +150,32 @@ class VisualVerificationTest {
         val details: String
     )
 
+    private var light: LightNode? = null
+
     @Before
     fun setup() {
-        harness = RenderTestHarness(width = 256, height = 256)
+        harness.resetScene()
         harness.runOnMain {
-            val context = InstrumentationRegistry.getInstrumentation().targetContext
-            materialLoader = MaterialLoader(harness.engine, context)
-
-            light = LightNode(
+            val l = LightNode(
                 engine = harness.engine,
                 type = LightManager.Type.DIRECTIONAL
             ) {
                 direction(0f, -1f, -1f)
                 intensity(100_000f)
             }
-            harness.scene.addEntity(light.entity)
+            light = l
+            harness.scene.addEntity(l.entity)
         }
     }
 
     @After
     fun teardown() {
-        // Generate HTML report from all screenshots collected
-        generateHtmlReport()
-
         harness.runOnMain {
-            harness.scene.removeEntity(light.entity)
-            light.destroy()
-            materialLoader.destroy()
+            light?.let {
+                harness.scene.removeEntity(it.entity)
+                it.destroy()
+            }
         }
-        harness.destroy()
     }
 
     private fun createTestCamera(): com.google.android.filament.Camera {
@@ -176,7 +255,7 @@ class VisualVerificationTest {
                 val node = CubeNode(harness.engine, Cube.DEFAULT_SIZE, Position(0f), listOf(mat))
                 harness.scene.addEntity(node.entity)
             },
-            cleanupScene = {} // cleanup handled by harness destroy
+            cleanupScene = {}
         )
     }
 
@@ -333,9 +412,9 @@ class VisualVerificationTest {
                 materialInstances = listOf(mat))
             harness.scene.addEntity(cube.entity)
 
-            harness.renderFrames(5)
+            harness.renderFrames(10)
             bmp1 = harness.capturePixels()
-            harness.renderFrames(5)
+            harness.renderFrames(10)
             bmp2 = harness.capturePixels()
         }
 
@@ -365,7 +444,6 @@ class VisualVerificationTest {
             name = "08_image_checkerboard",
             description = "ImageNode showing a procedurally generated checkerboard bitmap",
             setupScene = {
-                // Create a simple 64x64 checkerboard bitmap
                 val bmpWidth = 64
                 val bmpHeight = 64
                 val checkerboard = Bitmap.createBitmap(bmpWidth, bmpHeight, Bitmap.Config.ARGB_8888)
@@ -418,7 +496,6 @@ class VisualVerificationTest {
             name = "10_billboard_gradient",
             description = "BillboardNode showing a gradient bitmap quad facing camera",
             setupScene = {
-                // Create a gradient bitmap
                 val bmpWidth = 128
                 val bmpHeight = 64
                 val gradientBmp = Bitmap.createBitmap(bmpWidth, bmpHeight, Bitmap.Config.ARGB_8888)
@@ -441,70 +518,5 @@ class VisualVerificationTest {
             },
             cleanupScene = {}
         )
-    }
-
-    // ── HTML Report ─────────────────────────────────────────────────────────
-
-    private fun generateHtmlReport() {
-        val dir = InstrumentationRegistry.getInstrumentation()
-            .targetContext.getExternalFilesDir("render-test-output") ?: return
-        val reportFile = File(dir, "visual-report.html")
-
-        val passed = screenshots.count { it.passed }
-        val total = screenshots.size
-        val allPassed = passed == total
-
-        FileWriter(reportFile).use { w ->
-            w.write("""
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SceneView Render Test Report</title>
-<style>
-body { font-family: system-ui; margin: 20px; background: #1a1a2e; color: #e0e0e0; }
-h1 { color: #fff; }
-.summary { font-size: 1.2em; margin: 10px 0 20px; padding: 12px; border-radius: 8px;
-  background: ${if (allPassed) "#1b5e20" else "#b71c1c"}; }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
-.card { background: #16213e; border-radius: 12px; overflow: hidden; border: 2px solid
-  ${if (allPassed) "#4caf50" else "#333"}; }
-.card.fail { border-color: #f44336; }
-.card img { width: 100%; height: 256px; object-fit: contain; background: #0d0d1a; }
-.card-body { padding: 12px; }
-.card-title { font-weight: bold; font-size: 1.1em; margin-bottom: 4px; }
-.card-desc { color: #aaa; font-size: 0.9em; }
-.badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.8em;
-  font-weight: bold; margin-top: 6px; }
-.badge.pass { background: #4caf50; color: #fff; }
-.badge.fail { background: #f44336; color: #fff; }
-</style>
-</head>
-<body>
-<h1>SceneView Render Test Report</h1>
-<div class="summary">$passed / $total tests passed</div>
-<div class="grid">
-""")
-            for (entry in screenshots) {
-                w.write("""
-<div class="card ${if (entry.passed) "" else "fail"}">
-  <img src="${entry.file.name}" alt="${entry.name}">
-  <div class="card-body">
-    <div class="card-title">${entry.name}</div>
-    <div class="card-desc">${entry.description}</div>
-    <div class="card-desc">${entry.details}</div>
-    <span class="badge ${if (entry.passed) "pass" else "fail"}">${if (entry.passed) "PASS" else "FAIL"}</span>
-  </div>
-</div>
-""")
-            }
-            w.write("""
-</div>
-</body>
-</html>
-""")
-        }
-        Log.i("VisualVerification", "Report saved to: ${reportFile.absolutePath}")
     }
 }
