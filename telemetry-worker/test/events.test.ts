@@ -225,6 +225,48 @@ describe("GET /v1/stats", () => {
   });
 });
 
+describe("GET /v1/stats — auth", () => {
+  it("returns 200 when no STATS_TOKEN is configured (open access in dev)", async () => {
+    const env = makeEnv(); // no STATS_TOKEN
+    const res = await app.request("/v1/stats", { method: "GET" }, env);
+    expect(res.status).toBe(200);
+  });
+
+  it("returns 200 with correct bearer token", async () => {
+    const env = { ...makeEnv(), STATS_TOKEN: "secret-token" };
+    const res = await app.request(
+      "/v1/stats",
+      {
+        method: "GET",
+        headers: { Authorization: "Bearer secret-token" },
+      },
+      env,
+    );
+    expect(res.status).toBe(200);
+  });
+
+  it("returns 401 with wrong bearer token", async () => {
+    const env = { ...makeEnv(), STATS_TOKEN: "secret-token" };
+    const res = await app.request(
+      "/v1/stats",
+      {
+        method: "GET",
+        headers: { Authorization: "Bearer wrong-token" },
+      },
+      env,
+    );
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: "unauthorized" });
+  });
+
+  it("returns 401 with missing Authorization header when STATS_TOKEN is set", async () => {
+    const env = { ...makeEnv(), STATS_TOKEN: "secret-token" };
+    const res = await app.request("/v1/stats", { method: "GET" }, env);
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: "unauthorized" });
+  });
+});
+
 describe("CORS", () => {
   it("responds to OPTIONS preflight", async () => {
     const env = makeEnv();

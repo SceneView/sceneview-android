@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS daily_rollups (
   client   TEXT    NOT NULL,
   mcp_ver  TEXT    NOT NULL,
   tier     TEXT    NOT NULL CHECK (tier IN ('free', 'pro')),
-  tool     TEXT,              -- NULL for "init" events
+  tool     TEXT NOT NULL DEFAULT '',  -- '' for "init" events
   count    INTEGER NOT NULL DEFAULT 0,
   UNIQUE (date, event, client, mcp_ver, tier, tool)
 );

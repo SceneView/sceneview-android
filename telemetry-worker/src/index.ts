@@ -75,6 +75,11 @@ function validatePayload(body: unknown): EventPayload | null {
 
 // ── POST /v1/events ──────────────────────────────────────────────────────────
 app.post("/v1/events", async (c) => {
+  // Body size guard — reject oversized payloads before parsing JSON
+  const maxSize = 65536; // 64 KB
+  const cl = parseInt(c.req.header("content-length") ?? "0", 10);
+  if (cl > maxSize) return c.json({ error: "payload_too_large" }, 413);
+
   // Rate limit by IP (hashed — never stored raw)
   const ip = c.req.header("cf-connecting-ip") ?? "unknown";
   if (await isRateLimited(ip, c.env.RL_KV)) {
@@ -110,10 +115,10 @@ app.post("/v1/events", async (c) => {
         payload.tool ?? null,
       )
       .run();
-  } catch {
+  } catch (e) {
     // D1 write failed — log but don't fail the client.
     // In production, this would go to Workers Logpush.
-    console.error("D1 insert failed");
+    console.error("D1 insert failed", e);
     return c.json({ ok: true, stored: false }, 202);
   }
 
@@ -122,6 +127,11 @@ app.post("/v1/events", async (c) => {
 
 // ── Batch endpoint (future-proof for client-side batching) ───────────────────
 app.post("/v1/batch", async (c) => {
+  // Body size guard — 1 MB ceiling for batch payloads
+  const maxBatchSize = 1_048_576; // 1 MB
+  const cl = parseInt(c.req.header("content-length") ?? "0", 10);
+  if (cl > maxBatchSize) return c.json({ error: "payload_too_large" }, 413);
+
   const ip = c.req.header("cf-connecting-ip") ?? "unknown";
   if (await isRateLimited(ip, c.env.RL_KV)) {
     return c.json({ error: "rate_limited" }, 429);
@@ -134,6 +144,10 @@ app.post("/v1/batch", async (c) => {
     return c.json({ error: "invalid_json" }, 400);
   }
 
+  // Batch size is capped at 50 events per request (enforced below).
+  // Rate limiting counts the whole batch as a single hit — acceptable because
+  // the 50-event cap bounds the per-minute write amplification to 50×30 = 1500
+  // rows, well within D1 limits. Tighten if abuse is observed.
   if (!Array.isArray(body) || body.length === 0 || body.length > 50) {
     return c.json({ error: "invalid_batch", max: 50 }, 400);
   }
@@ -163,8 +177,8 @@ app.post("/v1/batch", async (c) => {
         ),
       ),
     );
-  } catch {
-    console.error("D1 batch insert failed");
+  } catch (e) {
+    console.error("D1 batch insert failed", e);
     return c.json({ ok: true, accepted: validated.length, stored: false }, 202);
   }
 

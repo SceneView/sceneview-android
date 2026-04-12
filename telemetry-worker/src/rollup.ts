@@ -42,11 +42,11 @@ export async function rollupYesterday(db: D1Database): Promise<void> {
          client,
          mcp_ver,
          tier,
-         tool,
-         COUNT(*)        AS count
+         COALESCE(tool, '') AS tool,
+         COUNT(*)           AS count
        FROM events
        WHERE date(ingested) = ?
-       GROUP BY date(ingested), event, client, mcp_ver, tier, tool`,
+       GROUP BY date(ingested), event, client, mcp_ver, tier, COALESCE(tool, '')`,
     )
     .bind(date)
     .all<{
@@ -55,7 +55,7 @@ export async function rollupYesterday(db: D1Database): Promise<void> {
       client: string;
       mcp_ver: string;
       tier: string;
-      tool: string | null;
+      tool: string;
       count: number;
     }>();
 
@@ -69,7 +69,7 @@ export async function rollupYesterday(db: D1Database): Promise<void> {
 
     await db.batch(
       rows.results.map((r) =>
-        upsert.bind(r.date, r.event, r.client, r.mcp_ver, r.tier, r.tool ?? null, r.count),
+        upsert.bind(r.date, r.event, r.client, r.mcp_ver, r.tier, r.tool, r.count),
       ),
     );
   }

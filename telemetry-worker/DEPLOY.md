@@ -39,6 +39,23 @@ wrangler deploy
 
 The worker will be live at `sceneview-telemetry.<account>.workers.dev`.
 
+## Step 4b — Enable cron trigger
+
+Edit `wrangler.toml` to uncomment the `[triggers]` section:
+
+```toml
+[triggers]
+crons = ["0 2 * * *"]
+```
+
+Then redeploy:
+
+```bash
+wrangler deploy
+```
+
+This enables the daily rollup at 02:00 UTC that aggregates events into `daily_rollups` and purges raw events older than 90 days. Without this, raw events accumulate indefinitely.
+
 ## Step 5 — DNS (custom domain)
 
 In the Cloudflare DNS dashboard for `sceneview.io`:
@@ -80,6 +97,8 @@ Requests without a valid token receive `401 {"error":"unauthorized"}`.
 
 If `STATS_TOKEN` is not configured, the endpoint remains open — useful for local dev
 (`wrangler dev`) without any extra setup.
+
+**In production, always set STATS_TOKEN** to prevent public access to usage statistics.
 
 ## Endpoints
 
