@@ -44,9 +44,8 @@ ENVIRONMENT = "production"
 # wrangler secret put STATS_TOKEN
 
 # ── Cron trigger (daily rollup) ──────────────────────────────────────────────
-# Uncomment after first deploy to enable daily rollup at 02:00 UTC:
-# [triggers]
-# crons = ["0 2 * * *"]
+[triggers]
+crons = ["0 2 * * *"]
 
 # ── Custom domain (optional) ──────────────────────────────────────────────────
 # If a custom domain is configured in the future, uncomment:
