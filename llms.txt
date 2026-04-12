@@ -112,6 +112,7 @@ fun ARSceneView(
     cameraStream: ARCameraStream? = rememberARCameraStream(materialLoader),
     view: View = rememberARView(engine),
     isOpaque: Boolean = true,
+    cameraExposure: Float? = null,
     renderer: Renderer = rememberRenderer(engine),
     scene: Scene = rememberScene(engine),
     environment: Environment = rememberAREnvironment(engine),
@@ -2152,6 +2153,799 @@ ferrari_f40.glb
 
 ---
 
+## SceneView Web (Kotlin/JS + Filament.js)
+
+Package: `sceneview-web` v4.0.0-rc.1 — npm `sceneview-web`
+Renderer: **Filament.js (WebGL2/WASM)** — same Filament engine as SceneView Android, compiled to WebAssembly.
+Requires: Chrome 79+, Edge 79+, Firefox 78+ (WebGL2). Safari 15+ (WebGL2).
+
+npm install:
+```
+npm install sceneview-web filament
+```
+
+Script-tag usage (no bundler):
+```html
+<script src="https://sceneview.github.io/js/filament/filament.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sceneview-web/build/dist/js/productionExecutable/sceneview-web.js"></script>
+```
+
+After loading, the library registers itself on `window.sceneview`.
+
+---
+
+### SceneView (Kotlin/JS class — 3D scene)
+
+```kotlin
+// Primary entry point — Kotlin DSL
+SceneView.create(
+    canvas: HTMLCanvasElement,
+    assets: Array<String> = emptyArray(),  // URLs to preload (KTX)
+    configure: SceneViewBuilder.() -> Unit = {},
+    onReady: (SceneView) -> Unit
+)
+
+// Constants
+SceneView.DEFAULT_IBL_URL   // neutral studio IBL (KTX)
+SceneView.DEFAULT_SKYBOX_URL
+```
+
+Instance methods:
+```kotlin
+sceneView.loadModel(url: String, onLoaded: ((FilamentAsset) -> Unit)? = null)
+sceneView.loadEnvironment(iblUrl: String, skyboxUrl: String? = null)
+sceneView.loadDefaultEnvironment()           // neutral IBL, no skybox
+sceneView.addLight(config: LightConfig)
+sceneView.addGeometry(config: GeometryConfig)
+sceneView.enableCameraControls(
+    distance: Double = 5.0,
+    targetX: Double = 0.0, targetY: Double = 0.0, targetZ: Double = 0.0,
+    autoRotate: Boolean = false
+): OrbitCameraController
+sceneView.fitToModels()                      // auto-fit camera to bounding box
+sceneView.resize(width: Int, height: Int)
+sceneView.startRendering()
+sceneView.stopRendering()
+sceneView.destroy()                          // release all GPU resources
+
+// Properties
+sceneView.canvas: HTMLCanvasElement
+sceneView.engine: Engine                     // Filament Engine
+sceneView.renderer: Renderer
+sceneView.scene: Scene
+sceneView.view: View
+sceneView.camera: Camera
+sceneView.cameraController: OrbitCameraController?
+sceneView.autoResize: Boolean = true
+```
+
+---
+
+### SceneViewBuilder (DSL — configure block inside SceneView.create)
+
+```kotlin
+SceneView.create(canvas, configure = {
+    camera {
+        eye(0.0, 1.5, 5.0)        // camera position
+        target(0.0, 0.0, 0.0)     // look-at point
+        up(0.0, 1.0, 0.0)
+        fov(45.0)                  // degrees
+        near(0.1); far(1000.0)
+        exposure(1.1)              // direct exposure value (model-viewer style)
+        // or: exposure(aperture = 16.0, shutterSpeed = 1/125.0, sensitivity = 100.0)
+    }
+    light {
+        directional()              // or: point() / spot()
+        intensity(100_000.0)
+        color(1.0f, 1.0f, 1.0f)
+        direction(0.6f, -1.0f, -0.8f)
+        // for point/spot: position(x, y, z)
+    }
+    model("models/damaged_helmet.glb") {
+        autoAnimate(true)          // play first glTF animation if present
+        scale(1.0f)
+        onLoaded { asset -> /* FilamentAsset */ }
+    }
+    geometry {
+        cube()                     // or: sphere() / cylinder() / plane()
+        size(1.0, 1.0, 1.0)       // cube: w/h/d; sphere/cylinder: use radius()/height()
+        color(1.0, 0.0, 0.0, 1.0) // RGBA 0-1
+        position(0.0, 0.5, -2.0)
+        rotation(0.0, 45.0, 0.0)  // Euler degrees
+        scale(1.0)
+    }
+    environment("https://…/ibl.ktx", skyboxUrl = "https://…/sky.ktx") // custom IBL
+    noEnvironment()                // skip IBL loading entirely
+    cameraControls(true)           // orbit controls (default: true)
+    autoRotate(true)               // auto-spin camera
+}) { sceneView -> /* onReady */ }
+```
+
+---
+
+### OrbitCameraController
+
+Attached automatically when `cameraControls(true)` (the default).
+Mouse: left-drag = orbit, right-drag = pan, scroll = zoom. Touch: drag = orbit, pinch = zoom.
+
+```kotlin
+controller.theta            // horizontal angle (radians)
+controller.phi              // vertical angle (radians)
+controller.distance         // distance from target
+controller.minDistance      // default 0.5
+controller.maxDistance      // default 50.0
+controller.autoRotate       // Boolean
+controller.autoRotateSpeed  // radians/frame (default 30°/s at 60fps)
+controller.enableDamping    // inertia (default true)
+controller.dampingFactor    // default 0.95
+controller.rotateSensitivity // default 0.005
+controller.zoomSensitivity   // default 0.1
+controller.panSensitivity    // default 0.003
+controller.target(x, y, z) // set look-at point
+controller.update()         // call each frame (automatic inside SceneView render loop)
+controller.dispose()
+```
+
+---
+
+### JavaScript API (window.sceneview — from script-tag usage)
+
+```js
+// Simple model viewer (creates viewer + loads model)
+sceneview.modelViewer(canvasId, modelUrl)
+  .then(sv => { /* SceneViewer instance */ })
+
+// Model viewer with autoRotate toggle
+sceneview.modelViewerAutoRotate(canvasId, modelUrl, autoRotate)
+  .then(sv => { /* SceneViewer instance */ })
+
+// Full viewer (camera + light customization)
+sceneview.createViewer(canvasId)          // autoRotate=true, cameraControls=true
+sceneview.createViewerAutoRotate(canvasId, autoRotate)
+sceneview.createViewerFull(
+  canvasId, autoRotate, cameraControls,
+  cameraX, cameraY, cameraZ, fov, lightIntensity
+).then(sv => { /* SceneViewer */ })
+```
+
+SceneViewer instance methods (all return the viewer for chaining unless noted):
+```js
+sv.loadModel(url)           // → Promise<url>
+sv.setEnvironment(iblUrl)
+sv.setEnvironmentWithSkybox(iblUrl, skyboxUrl)
+sv.setCameraOrbit(theta, phi, distance)  // radians
+sv.setCameraTarget(x, y, z)
+sv.setAutoRotate(enabled)   // Boolean
+sv.setAutoRotateSpeed(radiansPerFrame)
+sv.setZoomLimits(min, max)
+sv.setBackgroundColor(r, g, b, a)  // 0-1 range
+sv.fitToModels()
+sv.startRendering()
+sv.stopRendering()
+sv.resize(width, height)
+sv.dispose()
+```
+
+---
+
+### WebXR — ARSceneView (browser AR)
+
+Requires WebXR Device API. Supported: Chrome Android 79+, Meta Quest Browser, Safari iOS 18+.
+Must be called from a user gesture (button click).
+
+```kotlin
+// Check AR support first
+ARSceneView.checkSupport { supported ->
+    if (supported) {
+        // Must be in a click handler
+        ARSceneView.create(
+            canvas = canvas,
+            features = WebXRSession.Features(
+                required = arrayOf(XRFeature.HIT_TEST),
+                optional = arrayOf(XRFeature.DOM_OVERLAY, XRFeature.LIGHT_ESTIMATION)
+            ),
+            onError = { msg -> console.error(msg) },
+            onReady = { arView ->
+                arView.onHitTest = { pose: XRPose ->
+                    // Surface detected — place content at pose
+                    arView.loadModel("models/chair.glb")
+                }
+                arView.onSelect = { source: XRInputSource ->
+                    // User tapped
+                }
+                arView.onSessionEnd = { /* AR session ended */ }
+                arView.start()
+            }
+        )
+    }
+}
+
+arView.stop()               // ends the XR session
+arView.sceneView            // underlying SceneView for direct Filament access
+```
+
+XRFeature constants: `XRFeature.HIT_TEST`, `XRFeature.DOM_OVERLAY`, `XRFeature.LIGHT_ESTIMATION`, `XRFeature.HAND_TRACKING`
+
+---
+
+### WebXR — VRSceneView (browser VR)
+
+Requires WebXR immersive-vr. Supported: Meta Quest Browser, Chrome with headset, Firefox Reality.
+
+```kotlin
+VRSceneView.checkSupport { supported ->
+    if (supported) {
+        VRSceneView.create(
+            canvas = canvas,
+            features = WebXRSession.Features(optional = arrayOf(XRFeature.HAND_TRACKING)),
+            referenceSpaceType = XRReferenceSpaceType.LOCAL_FLOOR,
+            onError = { msg -> },
+            onReady = { vrView ->
+                vrView.sceneView.loadModel("models/room.glb")
+                vrView.onFrame = { frame: XRFrame, pose: XRViewerPose? -> /* per-frame */ }
+                vrView.onInputSelect = { source: XRInputSource, pose: XRPose? -> /* trigger */ }
+                vrView.onInputSqueeze = { source, pose -> /* grip */ }
+                vrView.onSessionEnd = { }
+                vrView.start()
+            }
+        )
+    }
+}
+```
+
+---
+
+### WebXRSession (low-level — AR + VR unified)
+
+```kotlin
+WebXRSession.checkSupport(mode = XRSessionMode.IMMERSIVE_AR) { supported -> }
+
+WebXRSession.create(
+    canvas = canvas,
+    mode = XRSessionMode.IMMERSIVE_AR,  // or IMMERSIVE_VR
+    features = WebXRSession.Features(
+        required = arrayOf(XRFeature.HIT_TEST),
+        optional = arrayOf(XRFeature.DOM_OVERLAY, XRFeature.LIGHT_ESTIMATION, XRFeature.HAND_TRACKING)
+    ),
+    referenceSpaceType = XRReferenceSpaceType.LOCAL_FLOOR,
+    onError = { msg -> },
+    onReady = { session ->
+        session.onFrame = { frame, pose -> }
+        session.onHitTest = { pose -> }      // AR only
+        session.onInputSelect = { source, pose -> }
+        session.onInputSqueeze = { source, pose -> }
+        session.onInputSourcesChange = { added, removed -> }
+        session.onSessionEnd = { }
+        session.loadModel(url)
+        session.setEntityTransform(entity, xrTransform)
+        session.start()
+        session.stop()
+        session.isAR  // Boolean
+        session.isVR  // Boolean
+    }
+)
+```
+
+XRSessionMode: `XRSessionMode.IMMERSIVE_AR`, `XRSessionMode.IMMERSIVE_VR`
+XRReferenceSpaceType: `LOCAL_FLOOR`, `LOCAL`, `VIEWER`, `BOUNDED_FLOOR`, `UNBOUNDED`
+
+---
+
+### Threading rules (Web)
+
+- All Filament API calls happen on the **JS main thread** (there is no concept of background threads in browser JS).
+- `SceneView.create` and `loadModel` are async (Promise-based) — await them before calling instance methods.
+- `loadModel` internally calls `asset.loadResources()` which fetches external textures asynchronously; the `onLoaded` callback fires when textures are ready.
+- Never call `destroy()` inside an animation frame callback — defer to next microtask.
+
+---
+
+### Web Geometry DSL (Kotlin/JS)
+
+```kotlin
+SceneView.create(canvas, configure = {
+    geometry { cube(); size(1.0, 1.0, 1.0); color(1.0, 0.0, 0.0, 1.0); position(0.0, 0.5, -2.0) }
+    geometry { sphere(); radius(0.5); color(0.0, 0.5, 1.0, 1.0) }
+    geometry { cylinder(); radius(0.3); height(1.5); color(0.0, 1.0, 0.5, 1.0) }
+    geometry { plane(); size(5.0, 5.0, 0.0); color(0.3, 0.3, 0.3, 1.0); position(0.0, 0.0, 0.0) }
+}) { sceneView -> sceneView.startRendering() }
+```
+
+Geometry types: `cube` (w/h/d via `size(x,y,z)`), `sphere` (`radius(r)`), `cylinder` (`radius(r)` + `height(h)`), `plane` (`size(w,h,0)`)
+All geometry shares the PBR material pipeline — supports `color` (base color factor), `position`, `rotation` (Euler degrees), `scale`.
+
+---
+
+## SceneViewSwift (iOS / macOS / visionOS)
+
+Renderer: **RealityKit**. Requires iOS 17+ / macOS 14+ / visionOS 1+.
+
+SPM dependency (Package.swift or Xcode):
+```swift
+.package(url: "https://github.com/sceneview/sceneview-swift.git", from: "3.6.0")
+```
+
+Import: `import SceneViewSwift`
+
+Architecture: RealityKit is the rendering backend on all Apple platforms. Logic shared
+with Android uses the `sceneview-core` KMP XCFramework (collision, math, geometry,
+animations). There is NO Filament dependency on Apple.
+
+---
+
+### SceneView (SwiftUI view — 3D only)
+
+```swift
+// Declarative init — @NodeBuilder DSL
+public struct SceneView: View {
+    public init(@NodeBuilder content: @escaping () -> [Entity])
+
+    // Imperative init — receives root Entity, add children manually
+    public init(_ content: @escaping (Entity) -> Void)
+}
+```
+
+View modifiers (chainable):
+```swift
+.environment(_ environment: SceneEnvironment) -> SceneView  // IBL lighting
+.cameraControls(_ mode: CameraControlMode) -> SceneView     // .orbit (default), .pan, .firstPerson
+.onEntityTapped(_ handler: @escaping (Entity) -> Void) -> SceneView
+.autoRotate(speed: Float = 0.3) -> SceneView                // radians/s, default 0.3
+```
+
+Minimal usage:
+```swift
+@State private var model: ModelNode?
+
+var body: some View {
+    SceneView {
+        GeometryNode.cube(size: 0.3, color: .red)
+            .position(.init(x: -1, y: 0, z: -2))
+        GeometryNode.sphere(radius: 0.2, color: .blue)
+        LightNode.directional(intensity: 1000)
+    }
+    .environment(.studio)
+    .cameraControls(.orbit)
+    .task {
+        model = try? await ModelNode.load("models/car.usdz")
+    }
+}
+```
+
+With model loading:
+```swift
+@State private var model: ModelNode?
+
+SceneView { root in
+    if let model {
+        root.addChild(model.entity)
+    }
+}
+.environment(.outdoor)
+.cameraControls(.orbit)
+.onEntityTapped { entity in print("Tapped: \(entity)") }
+.task {
+    model = try? await ModelNode.load("models/car.usdz")
+}
+```
+
+---
+
+### ARSceneView (SwiftUI view — AR, iOS only)
+
+```swift
+public struct ARSceneView: UIViewRepresentable {
+    public init(
+        planeDetection: PlaneDetectionMode = .horizontal,
+        showPlaneOverlay: Bool = true,
+        showCoachingOverlay: Bool = true,
+        cameraExposure: Float? = nil,        // EV compensation — nil = ARKit auto-exposure
+        imageTrackingDatabase: Set<ARReferenceImage>? = nil,
+        onTapOnPlane: ((SIMD3<Float>, ARView) -> Void)? = nil,
+        onImageDetected: ((String, AnchorNode, ARView) -> Void)? = nil,
+        onFrame: ((ARFrame, ARView) -> Void)? = nil
+    )
+}
+```
+
+View modifiers (chainable):
+```swift
+.onSessionStarted(_ handler: @escaping (ARView) -> Void) -> ARSceneView
+.cameraExposure(_ ev: Float?) -> ARSceneView   // EV stops; iOS 15+ CIColorControls post-process
+.onFrame(_ handler: @escaping (ARFrame, ARView) -> Void) -> ARSceneView
+```
+
+`PlaneDetectionMode` values: `.none`, `.horizontal`, `.vertical`, `.both`
+
+`cameraExposure` notes:
+- Mirrors Android's `ARSceneView(cameraExposure: Float?)`.
+- Positive values brighten; negative values darken. One stop = ±0.5 brightness unit.
+- Implemented via `ARView.renderCallbacks.postProcess` (iOS 15+); no-op on earlier versions.
+
+Minimal AR usage:
+```swift
+ARSceneView(
+    planeDetection: .horizontal,
+    showCoachingOverlay: true,
+    onTapOnPlane: { position, arView in
+        let cube = GeometryNode.cube(size: 0.1, color: .blue)
+        let anchor = AnchorNode.world(position: position)
+        anchor.add(cube.entity)
+        arView.scene.addAnchor(anchor.entity)
+    }
+)
+```
+
+Image tracking:
+```swift
+let images = AugmentedImageNode.createImageDatabase([
+    AugmentedImageNode.ReferenceImage(
+        name: "poster",
+        image: UIImage(named: "poster_reference")!,
+        physicalWidth: 0.3  // 30 cm
+    )
+])
+
+ARSceneView(
+    imageTrackingDatabase: images,
+    onImageDetected: { imageName, anchor, arView in
+        let label = TextNode(text: imageName, fontSize: 0.05, color: .white)
+        anchor.add(label.entity)
+        arView.scene.addAnchor(anchor.entity)
+    }
+)
+```
+
+---
+
+### Node types
+
+#### ModelNode — 3D model (USDZ / Reality)
+
+```swift
+public struct ModelNode: @unchecked Sendable {
+    public let entity: ModelEntity
+
+    // Loading (always @MainActor, async)
+    public static func load(_ path: String, enableCollision: Bool = true) async throws -> ModelNode
+    public static func load(contentsOf url: URL, enableCollision: Bool = true) async throws -> ModelNode
+    public static func load(from remoteURL: URL, enableCollision: Bool = true, timeout: TimeInterval = 60.0) async throws -> ModelNode
+
+    // Transform (fluent / chainable)
+    public func position(_ position: SIMD3<Float>) -> ModelNode
+    public func scale(_ uniform: Float) -> ModelNode
+    public func scale(_ scale: SIMD3<Float>) -> ModelNode
+    public func rotation(_ rotation: simd_quatf) -> ModelNode
+    public func rotation(angle: Float, axis: SIMD3<Float>) -> ModelNode
+    public func scaleToUnits(_ units: Float = 1.0) -> ModelNode   // fits in cube of 'units' meters
+
+    // Animation
+    public var animationCount: Int
+    public var animationNames: [String]
+    public func playAllAnimations(loop: Bool = true, speed: Float = 1.0)
+    public func playAnimation(at index: Int, loop: Bool = true, speed: Float = 1.0, transitionDuration: TimeInterval = 0.2)
+    public func playAnimation(named name: String, loop: Bool = true, speed: Float = 1.0, transitionDuration: TimeInterval = 0.2)
+    public func stopAllAnimations()
+
+    // Material
+    public func setColor(_ color: SimpleMaterial.Color) -> ModelNode
+    public func setMetallic(_ value: Float) -> ModelNode     // 0 = dielectric, 1 = metal
+    public func setRoughness(_ value: Float) -> ModelNode    // 0 = smooth, 1 = rough
+    public func opacity(_ value: Float) -> ModelNode         // 0 = transparent, 1 = opaque
+
+    // Misc
+    public func enableCollision()
+    public func withGroundingShadow() -> ModelNode           // iOS 18+ / visionOS 2+
+    public mutating func onTap(_ handler: @escaping () -> Void) -> ModelNode
+}
+```
+
+Key behaviors:
+- Supports `.usdz` and `.reality` files natively. glTF support planned via GLTFKit2.
+- `load(_:)` calls `Entity(named:)` — file must be in the app bundle or an accessible URL.
+- `load(from:)` downloads to a temp file, loads, then cleans up.
+- `scaleToUnits(_:)` mirrors Android's `ModelNode(scaleToUnits = 1f)`.
+
+#### LightNode — light source
+
+```swift
+public struct LightNode: Sendable {
+    public static func directional(
+        color: LightNode.Color = .white,
+        intensity: Float = 1000,      // lux
+        castsShadow: Bool = true
+    ) -> LightNode
+
+    public static func point(
+        color: LightNode.Color = .white,
+        intensity: Float = 1000,       // lumens
+        attenuationRadius: Float = 10.0
+    ) -> LightNode
+
+    public static func spot(
+        color: LightNode.Color = .white,
+        intensity: Float = 1000,
+        innerAngle: Float = .pi / 6,   // radians
+        outerAngle: Float = .pi / 4,
+        attenuationRadius: Float = 10.0
+    ) -> LightNode
+
+    // Fluent modifiers
+    public func position(_ position: SIMD3<Float>) -> LightNode
+    public func lookAt(_ target: SIMD3<Float>) -> LightNode
+    public func castsShadow(_ enabled: Bool) -> LightNode
+    public func attenuationRadius(_ radius: Float) -> LightNode
+    public func shadowMaximumDistance(_ distance: Float) -> LightNode
+}
+
+// LightNode.Color
+public enum Color: Sendable {
+    case white
+    case warm    // ~3200K tungsten
+    case cool    // ~6500K daylight
+    case custom(r: Float, g: Float, b: Float)
+}
+```
+
+#### GeometryNode — procedural primitives
+
+```swift
+public struct GeometryNode: Sendable {
+    // Primitives (simple color)
+    public static func cube(size: Float = 1.0, color: SimpleMaterial.Color = .white, cornerRadius: Float = 0) -> GeometryNode
+    public static func sphere(radius: Float = 0.5, color: SimpleMaterial.Color = .white) -> GeometryNode
+    public static func cylinder(radius: Float = 0.5, height: Float = 1.0, color: SimpleMaterial.Color = .white) -> GeometryNode
+    public static func plane(width: Float = 1.0, depth: Float = 1.0, color: SimpleMaterial.Color = .white) -> GeometryNode
+    public static func cone(height: Float = 1.0, radius: Float = 0.5, color: SimpleMaterial.Color = .white) -> GeometryNode
+
+    // Primitives with PBR material
+    public static func cube(size: Float = 1.0, material: GeometryMaterial, cornerRadius: Float = 0) -> GeometryNode
+    public static func sphere(radius: Float = 0.5, material: GeometryMaterial) -> GeometryNode
+
+    // Fluent modifiers
+    public func position(_ position: SIMD3<Float>) -> GeometryNode
+    public func scale(_ uniform: Float) -> GeometryNode
+    public func rotation(_ rotation: simd_quatf) -> GeometryNode
+    public func rotation(angle: Float, axis: SIMD3<Float>) -> GeometryNode
+    public func withGroundingShadow() -> GeometryNode    // iOS 18+ / visionOS 2+
+}
+```
+
+`GeometryMaterial` (enum):
+```swift
+public enum GeometryMaterial: @unchecked Sendable {
+    case simple(color: SimpleMaterial.Color)
+    case pbr(color: SimpleMaterial.Color, metallic: Float = 0.0, roughness: Float = 0.5)
+    case textured(baseColor: TextureResource, normal: TextureResource? = nil, metallic: Float = 0.0, roughness: Float = 0.5, tint: SimpleMaterial.Color = .white)
+    case unlit(color: SimpleMaterial.Color)
+    case unlitTextured(texture: TextureResource, tint: SimpleMaterial.Color = .white)
+    case custom(any RealityKit.Material)
+
+    // Texture loading helpers
+    public static func loadTexture(_ name: String) async throws -> TextureResource
+    public static func loadTexture(contentsOf url: URL) async throws -> TextureResource
+}
+```
+
+#### AnchorNode — AR world anchors (iOS only)
+
+```swift
+public struct AnchorNode: Sendable {
+    public let entity: AnchorEntity
+
+    public static func world(position: SIMD3<Float>) -> AnchorNode
+    public static func plane(alignment: PlaneAlignment = .horizontal, minimumBounds: SIMD2<Float> = .init(0.1, 0.1)) -> AnchorNode
+
+    public func add(_ child: Entity)
+    public func remove(_ child: Entity)
+    public func removeAll()
+
+    public enum PlaneAlignment: Sendable { case horizontal, vertical }
+}
+```
+
+#### AugmentedImageNode — image tracking (iOS only)
+
+```swift
+public struct AugmentedImageNode: Sendable {
+    public let imageName: String
+    public let estimatedSize: CGSize
+    public let anchorEntity: AnchorEntity
+
+    public static func fromDetection(_ imageAnchor: ARImageAnchor) -> AugmentedImageNode
+
+    // Image database creation
+    public static func createImageDatabase(_ images: [ReferenceImage]) -> Set<ARReferenceImage>
+    public static func referenceImages(inGroupNamed groupName: String) -> Set<ARReferenceImage>?
+
+    public func add(_ child: Entity)
+    public func removeAll()
+
+    public struct ReferenceImage: Sendable {
+        public init(name: String, image: UIImage, physicalWidth: CGFloat)
+        public init(name: String, cgImage: CGImage, physicalWidth: CGFloat)
+    }
+
+    public enum TrackingState: Sendable { case tracking, limited, notTracking }
+}
+```
+
+#### TextNode — 3D text labels
+
+```swift
+public struct TextNode: Sendable {
+    public let entity: ModelEntity
+    public let text: String
+
+    public init(
+        text: String,
+        fontSize: Float = 0.05,         // meters (world space)
+        color: SimpleMaterial.Color = .white,
+        font: String = "Helvetica",
+        alignment: CTTextAlignment = .center,
+        depth: Float = 0.005,
+        isMetallic: Bool = false
+    )
+
+    public func position(_ position: SIMD3<Float>) -> TextNode
+    public func scale(_ uniform: Float) -> TextNode
+}
+```
+
+#### VideoNode — video playback on a 3D plane
+
+```swift
+public struct VideoNode: @unchecked Sendable {
+    public let entity: Entity
+    public let player: AVPlayer
+
+    public static func load(_ path: String) -> VideoNode        // bundle resource
+    public static func load(url: URL) -> VideoNode              // file or http URL
+
+    public func position(_ position: SIMD3<Float>) -> VideoNode
+    public func size(width: Float, height: Float) -> VideoNode
+    public func play()
+    public func pause()
+    public func stop()
+    public func loop(_ enabled: Bool) -> VideoNode
+}
+```
+
+---
+
+### SceneEnvironment — IBL lighting
+
+```swift
+public struct SceneEnvironment: Sendable {
+    public init(name: String, hdrResource: String? = nil, intensity: Float = 1.0, showSkybox: Bool = true)
+
+    public static func custom(name: String, hdrFile: String, intensity: Float = 1.0, showSkybox: Bool = true) -> SceneEnvironment
+
+    // Built-in presets
+    public static let studio: SceneEnvironment    // neutral studio (default)
+    public static let outdoor: SceneEnvironment   // warm daylight
+    public static let sunset: SceneEnvironment    // golden hour
+    public static let night: SceneEnvironment     // dark, moody
+    public static let warm: SceneEnvironment      // slightly orange tone
+    public static let autumn: SceneEnvironment    // soft natural outdoor
+
+    public static let allPresets: [SceneEnvironment]
+}
+```
+
+---
+
+### NodeBuilder — declarative scene composition
+
+`@resultBuilder` for composing scene content inside `SceneView { }`:
+
+```swift
+@resultBuilder
+public struct NodeBuilder {
+    // Used automatically with @NodeBuilder closure syntax
+}
+
+// All node types conform to EntityProvider:
+public protocol EntityProvider {
+    var sceneEntity: Entity { get }
+}
+// Conformers: GeometryNode, ModelNode, LightNode, MeshNode, TextNode,
+// ImageNode, BillboardNode, CameraNode, LineNode, PathNode, PhysicsNode,
+// DynamicSkyNode, FogNode, ReflectionProbeNode, VideoNode, ShapeNode, ViewNode
+```
+
+---
+
+### CameraControls
+
+```swift
+public enum CameraControlMode: Sendable {
+    case orbit         // drag to rotate, pinch to zoom (default)
+    case pan           // drag to pan, pinch to zoom
+    case firstPerson   // drag to look around
+}
+
+public struct CameraControls: Sendable {
+    public var mode: CameraControlMode
+    public var target: SIMD3<Float> = .zero
+    public var orbitRadius: Float = 5.0
+    public var azimuth: Float = 0.0
+    public var elevation: Float = .pi / 6   // 30 degrees
+    public var minRadius: Float = 0.5
+    public var maxRadius: Float = 50.0
+    public var sensitivity: Float = 0.005
+    public var isAutoRotating: Bool = false
+    public var autoRotateSpeed: Float = 0.3
+}
+```
+
+---
+
+### Entity modifiers (extension on RealityKit.Entity)
+
+Fluent, chainable helpers available on any `Entity`:
+
+```swift
+extension Entity {
+    public func positioned(at position: SIMD3<Float>) -> Self
+    public func scaled(to factor: Float) -> Self
+    public func scaled(to scale: SIMD3<Float>) -> Self
+    public func rotated(by angle: Float, around axis: SIMD3<Float>) -> Self
+    public func named(_ name: String) -> Self
+    public func enabled(_ isEnabled: Bool) -> Self
+}
+```
+
+---
+
+### RerunBridge (iOS only) — stream AR data to Rerun viewer
+
+```swift
+public final class RerunBridge: ObservableObject {
+    @Published public private(set) var eventCount: Int
+
+    public init(
+        host: String = "127.0.0.1",
+        port: UInt16 = 9876,
+        rateHz: Int = 10          // max frames/sec; 0 = unlimited
+    )
+
+    // Connection lifecycle
+    public func connect()      // non-blocking; uses NWConnection on background queue
+    public func disconnect()
+    public func setEnabled(_ enabled: Bool)
+
+    // High-level convenience (honours rate limiter)
+    public func logFrame(_ frame: ARFrame)    // logs camera pose + planes + point cloud
+
+    // Low-level per-event loggers
+    public func logCameraPose(_ camera: ARCamera, timestampNanos: Int64)
+    public func logPlanes(_ planes: [ARPlaneAnchor], timestampNanos: Int64)
+    public func logPointCloud(_ cloud: ARPointCloud, timestampNanos: Int64)
+    public func logAnchors(_ anchors: [ARAnchor], timestampNanos: Int64)
+}
+```
+
+Usage with `ARSceneView`:
+```swift
+@StateObject private var bridge = RerunBridge(host: "127.0.0.1", port: 9876, rateHz: 10)
+
+var body: some View {
+    ARSceneView()
+        .onFrame { frame, _ in bridge.logFrame(frame) }
+        .onAppear { bridge.connect() }
+        .onDisappear { bridge.disconnect() }
+    Text("Events: \(bridge.eventCount)")
+}
+```
+
+Threading: all I/O runs on a private `DispatchQueue` via `NWConnection`. `log*` methods
+are non-blocking — hand off data from any thread (ARKit delegate queue, main thread).
+Backpressure is absorbed by `rateHz`. Wire format: JSON-lines consumed by
+`tools/rerun-bridge.py` Python sidecar.
+
+---
+
 ## Platform Coverage Summary
 
 | Platform | Renderer | Framework | Sample | Status |
@@ -2164,68 +2958,97 @@ ferrari_f40.glb
 | visionOS | RealityKit | SwiftUI | via SceneViewSwift | Alpha |
 | Web | Filament.js + WebXR | Kotlin/JS | `samples/web-demo` | Alpha |
 
-SceneView Web (sceneview.js v3.6.2) — JavaScript API:
-  SceneView.modelViewer(canvas, url, options?) → Promise<instance>
-  SceneView.create(canvas, options?) → Promise<instance>
-  instance.loadModel(url) → Promise<instance>
-  instance.clearScene() → instance  // removes all models + primitives
-  instance.setAutoRotate(enabled) → instance
-  instance.setCameraDistance(d) → instance
-  instance.setCameraManipulator('orbit'|'map'|'freelook') → instance
-  instance.setBackgroundColor(r, g, b, a?) → instance
-  instance.setQuality('low'|'medium'|'high') → instance
-  instance.setBloom(true|false|{strength,resolution,threshold,levels}) → instance
-  instance.loadEnvironment(ktxUrl, intensity?) → Promise<instance>
-  instance.addLight({type?,color?,intensity?,direction?,position?,falloff?}) → entity
-  instance.removeLight(entity) → instance
-  instance.clearLights() → instance  // wipes base 3-point rig + IBL
-  instance.createBox(center, [w,h,d], [r,g,b,a]) → asset
-  instance.createSphere(center, radius, [r,g,b,a]) → asset
-  instance.createCylinder(center, radius, height, [r,g,b,a]) → asset
-  instance.playAnimation(index=0, loop=true) → instance  // glTF keyframe + skinning
-  instance.stopAnimation() → instance
-  instance.createText({text, fontSize?, color?, position?, billboard?}) → entity
-  instance.createImage({url, position?, size?, billboard?}) → entity
-  instance.createVideo({url, position?, size?, loop?, autoplay?, chromaKey?}) → entity
-  instance.removeNode(entity) → void
-  instance.dispose() → void
+SceneView Web (sceneview-web v4.0.0-rc.1) — see "## SceneView Web (Kotlin/JS + Filament.js)" section above for the full API reference.
 | Desktop | Software renderer | Compose Desktop | `samples/desktop-demo` | Alpha |
 | Flutter | Filament/RealityKit | PlatformView | `samples/flutter-demo` | Alpha |
 | React Native | Filament/RealityKit | Fabric | `samples/react-native-demo` | Alpha |
 
 ### Flutter Bridge API
-```dart
-// 3D Scene
-SceneView(onTap: (nodeName) => print(nodeName))
-// AR Scene
-ARSceneView(onTap: (nodeName) => ..., onPlaneDetected: (planeType) => ...)
-// Model with rotation
-ModelNode(url: "model.glb", position: [0, 0, -2], scale: 1.0,
-          rotationX: 45.0, rotationY: 0.0, rotationZ: 0.0)
+Package: `sceneview_flutter` (pub.dev) — Alpha, Android + iOS only.
+
+Install:
+```yaml
+# pubspec.yaml
+dependencies:
+  sceneview_flutter: ^4.0.0-rc.1
 ```
+
+Widgets: `SceneView` (3D), `ARSceneView` (AR).
+Controller: `SceneViewController` — attach via `onViewCreated`, then call imperative methods.
+
+```dart
+import 'package:sceneview_flutter/sceneview_flutter.dart';
+
+// 3D scene — declarative initial models
+SceneView(
+  initialModels: [
+    ModelNode(modelPath: 'models/helmet.glb', x: 0, y: 0, z: -2, scale: 0.5),
+  ],
+  onTap: (nodeName) => print('tapped: $nodeName'),
+)
+
+// 3D scene — imperative controller
+final controller = SceneViewController();
+SceneView(
+  controller: controller,
+  onViewCreated: () {
+    controller.loadModel(ModelNode(modelPath: 'models/helmet.glb'));
+    controller.setEnvironment('environments/studio.hdr');
+  },
+)
+
+// AR scene
+ARSceneView(
+  planeDetection: true,
+  onPlaneDetected: (planeType) => print('plane: $planeType'),
+  onTap: (nodeName) => print('tapped: $nodeName'),
+)
+```
+
+`ModelNode` fields: `modelPath` (required), `x/y/z` (world position), `scale`, `rotationX/Y/Z` (degrees).
+Controller methods: `loadModel(ModelNode)`, `addGeometry(GeometryNode)`, `addLight(LightNode)`,
+`clearScene()`, `setEnvironment(hdrPath)`.
+Note: `GeometryNode` and `LightNode` are acknowledged by the bridge but not yet rendered natively.
 
 ### React Native Bridge API
-```tsx
-// 3D Scene with geometry + lights
-<SceneView
-  modelNodes={[{ url: "model.glb", position: [0, 0, -2] }]}
-  geometryNodes={[{ type: "cube", size: [1,1,1], color: "#FF0000", position: [0, 0.5, -2] }]}
-  lightNodes={[{ type: "directional", intensity: 100000 }]}
-/>
-// AR Scene
-<ARSceneView
-  planeDetection={true}
-  onTap={(e) => console.log(e.nativeEvent)}
-  onPlaneDetected={(e) => console.log(e.nativeEvent)}
-/>
-// Geometry types: "cube", "sphere", "cylinder", "plane"
-// Light types: "directional", "point", "spot"
+Package: `@sceneview-sdk/react-native` (npm) — Alpha, Android + iOS only.
+
+Install:
+```sh
+npm install @sceneview-sdk/react-native
+# iOS: cd ios && pod install
 ```
 
-### Web Geometry DSL (Kotlin/JS)
-```kotlin
-SceneView.create(canvas) {
-    geometry { cube(); size(1.0, 1.0, 1.0); color(1.0, 0.0, 0.0, 1.0); position(0.0, 0.5, -2.0) }
-    geometry { sphere(); radius(0.5); color(0.0, 0.5, 1.0, 1.0) }
-}
+Components: `SceneView` (3D), `ARSceneView` (AR). Backed by Filament (Android) / RealityKit (iOS).
+
+```tsx
+import { SceneView, ARSceneView, ModelNode } from '@sceneview-sdk/react-native';
+
+// 3D scene
+<SceneView
+  style={{ flex: 1 }}
+  environment="environments/studio.hdr"
+  modelNodes={[{ src: 'models/robot.glb', position: [0, 0, -2], scale: 0.5 }]}
+  geometryNodes={[{ type: 'box', size: [1, 1, 1], color: '#FF5500', position: [0, 0.5, -2] }]}
+  lightNodes={[{ type: 'directional', intensity: 100000 }]}
+  onTap={(e) => console.log(e.nativeEvent.nodeName)}
+/>
+
+// AR scene
+<ARSceneView
+  style={{ flex: 1 }}
+  planeDetection={true}
+  depthOcclusion={false}
+  instantPlacement={false}
+  modelNodes={[{ src: 'models/chair.glb', position: [0, 0, -1] }]}
+  onTap={(e) => console.log(e.nativeEvent)}
+  onPlaneDetected={(e) => console.log(e.nativeEvent.type)}
+/>
 ```
+
+`ModelNode` fields: `src` (required), `position?: [x,y,z]`, `rotation?: [x,y,z]` (degrees),
+`scale?: number | [x,y,z]`, `animation?: string` (auto-play animation name).
+Geometry types: `'box' | 'cube' | 'sphere' | 'cylinder' | 'plane'`.
+Light types: `'directional' | 'point' | 'spot'`.
+
+See "## SceneView Web (Kotlin/JS + Filament.js)" for the full Web Geometry DSL reference.

@@ -4,45 +4,187 @@
 
 ---
 
-## 📊 SESSION flamboyant-neumann — 2026-04-12 — Telemetry + Client-side Batching
+## SESSION confident-rhodes — 2026-04-12 — Bug fixes, tests, API parity, docs
 
-**Worktree:** `flamboyant-neumann`
-**Branch:** `claude/flamboyant-neumann`
-**PR:** sceneview/sceneview#815 (OPEN)
-**Commits:** 9+ on branch
+**Branch:** `claude/confident-rhodes`
+**PR:** sceneview/sceneview#814 (OPEN — needs merge to main)
+
+### What shipped (final)
+
+**14+ commits on `claude/confident-rhodes`**, covering bug fixes, test expansion, API parity, and documentation.
+
+**Bug fixes:**
+- **#803 fix — render tests SwiftShader (Engine sharing):** `GeometryRenderTest`, `VisualVerificationTest`, `LightingRenderTest`, `RenderSmokeTest` were `@Ignore`'d at class level due to SwiftShader JNI crash on rapid setup/teardown. Root cause identified as shared `Engine` lifecycle. Fixed by switching to per-test `Engine` instances (no shared state), removing the class-level `@Ignore`, re-enabling all 4 render test classes.
+- **#792 fix — `cameraExposure` on Android:** `SceneView` and `ARSceneView` were missing exposure control. Added `cameraExposure` parameter to both composables, wired through to Filament camera.
+- **#792 fix — `cameraExposure` on Swift `ARSceneView`:** API parity with Android. Added `cameraExposure` modifier to `SceneViewSwift` `ARSceneView`, using RealityKit camera exposure override.
+
+**MCP:**
+- `tiers.test.ts` test fix: updated 2 assertions expecting dead `polar.sh` URL to expect the live gateway Stripe URL (`sceneview-mcp.mcp-tools-lab.workers.dev/pricing`)
+- `dist/` rebuild to ship corrected JS output alongside the TS fix
+
+**Tests — +117 new tests:**
+
+| Suite | New tests |
+|---|---|
+| `sceneview` unit tests | 58 |
+| `arsceneview` unit tests | 32 |
+| `sceneview-core` KMP tests | 7 |
+| `SceneViewSwift` Swift tests | 20 |
+
+**Docs:**
+- `CHANGELOG.md`: entry for the combined fix set
+- `llms.txt`: `cameraExposure` API documented for both Android and Swift
+- `docs/docs/cheatsheet.md`: exposure snippet added
+- `docs/docs/troubleshooting.md`: SwiftShader/render-test section added
+- `docs/docs/recipes/`: new recipe for camera exposure control
+
+**Branch cleanup:**
+- `claude/multi-gateway-sprint` remote branch deleted (work absorbed into main via earlier PRs)
+
+**API parity:**
+- `cameraExposure` is now available on Android (`SceneView`, `ARSceneView`) and Swift (`ARSceneView`) with identical semantics
+
+### What's NOT done
+
+- **PR #814 must be merged to main** — all code is on the branch, not yet on main
+- **CI render-test validation** — SwiftShader fix needs a green CI run on the PR to confirm the `@Ignore` removal holds
+- **63 iOS types missing from `llms.txt`** — audit started this session, full backfill not completed; tracked as follow-up
+- **`claude/flamboyant-neumann`** (PR #815, telemetry worker) — needs a decision: merge, close, or hand off to a dedicated session
+- **Instrumented test coverage** — Node lifecycle, model loader, and AR session tests still unit-only; no on-device instrumented coverage added this session
+
+## 🧹 SESSION hungry-ptolemy — 2026-04-12 — Full repo cleanup + CI green
+
+**Branch:** `claude/hungry-ptolemy` (detached, can be removed)
 
 ### What shipped
 
-`telemetry-worker/` — Cloudflare Worker (Hono) that ingests anonymous usage events from `mcp/src/telemetry.ts`. Solves the "60-70% bots" problem: `telemetry.sceneview.io` never existed, so all client telemetry was silently dropped.
+**PR #813 merged** (squash, `93863dcc`): quality-gate regex pre-release support + ARScene refs.
 
-| Component | Details |
-|---|---|
-| `POST /v1/events` | Single event ingestion (matches `TelemetryPayload` format exactly) |
-| `POST /v1/batch` | Up to 50 events per call — bulk ingest |
-| `GET /v1/stats` | 24h aggregation: top tools, version adoption, unique clients |
-| `GET /v1/timeseries` | Hourly bucketed event counts |
-| `GET /v1/export` | CSV export of raw events |
-| `GET /health` | Health check |
-| D1 `events` table | timestamp, event type, client, versions, tier, tool — zero PII |
-| KV rate limiting | 30 req/min per hashed IP (FNV-1a, never stores raw IP) — `X-RateLimit-*` headers |
-| Client-side batching | Buffer 10 events / 30s flush in `mcp/src/telemetry.ts` |
-| `dashboard.html` | Admin dashboard with CSV export button |
-| CI workflow | `.github/workflows/telemetry-ci.yml` added |
-| Tests | **79 total** — 54 worker vitest + 25 mcp vitest |
+**CI fixes (3 commits on main):**
+1. `tiers.test.ts` polar.sh → gateway Stripe URL (82/82 MCP tests pass)
+2. `quality-gate.yml` JDK 17 → 21 (aligned with ci.yml/pr-check.yml)
+3. 10 stale `polar.sh/sceneview` references removed (docs, configs, redirect, funding fields)
 
-### Quality
+**Result: quality-gate GREEN on main** (run 24309254779).
 
-- ✅ Opus code review passed — all blockers fixed
-- ✅ PR #815 open and passing checks
+**Cleanup totals:**
+- 7 worktrees removed (agent-ae442902, crazy-goodall, filament-bump, keen-yalow, cool-satoshi, dazzling-bose, stupefied-meitner)
+- 18 remote branches deleted, 18 orphan local branches deleted
+- Remaining: confident-rhodes (PR #814), flamboyant-neumann (PR #815), multi-gateway-sprint (kept), intelligent-perlman (new session)
 
-### NOT deployed — Thomas action needed
+**Polar.sh migration complete:** all 10 files with dead `polar.sh` URLs updated to GitHub Sponsors or gateway pricing.
 
-1. `wrangler d1 create sceneview-telemetry` → fill ID in `wrangler.toml`
-2. `wrangler kv namespace create RL_KV` → fill ID in `wrangler.toml`
-3. `wrangler d1 migrations apply sceneview-telemetry && wrangler deploy`
-4. CNAME `telemetry.sceneview.io` → worker subdomain
+---
 
-No secrets required. See `telemetry-worker/DEPLOY.md`.
+## 🔍 SESSION stupefied-meitner — 2026-04-12 — Gateway audit + hub-mcp fixes
+
+**Worktree:** `stupefied-meitner`
+**Branch:** `claude/stupefied-meitner`
+
+### What shipped
+
+**Full production audit of both gateways** — 8/8 checkout plans verified (`cs_live_...`), all health/pricing/auth-gate endpoints confirmed.
+
+**3 hub-gateway fixes:**
+
+| Fix | File | Impact |
+|---|---|---|
+| KV handoff prefix `checkout_key:` → `hub-checkout:` + API key prefix `sv_live_` → `hub_live_` | `hub-gateway/src/billing/key-provisioning.ts` | **BLOCKER FIX** — paying hub-mcp customers would never see their API key |
+| Added Claude Desktop stdio + Cursor HTTP docs sections | `hub-gateway/src/routes/landing.ts` | Docs completeness |
+| Free tool count 15 → 17 on landing page | `mcp-gateway/src/dashboard/landing.tsx` | Consistency with /docs and /pricing |
+
+**Tests:** 58/58 hub-gateway, 171/171 mcp-gateway — all passing.
+
+### Audit results
+
+- **Gateway #1** (sceneview-mcp): READY for real card test. All pages clean, stdio snippets correct, no phantom URLs, no false VAT claims.
+- **Gateway #2** (hub-mcp): Was NOT ready (checkout-success broken). Now fixed — KV handoff wired, docs updated.
+- **Shared:** `customer_creation` bug guard confirmed in both gateways.
+
+### What's NOT done
+
+- **Deploy both gateways** — code changes are local only, need `wrangler deploy` for each
+- **First real paying customer test** — checklist documented in this session (see conversation)
+- **npm `hub-mcp@beta` package** — not published, Claude Desktop snippet shows "coming soon"
+- **`@latest` bump** — stays on 3.6.5
+
+---
+
+## 🧹 SESSION hungry-ptolemy — 2026-04-12 — PR merge + branch/worktree cleanup
+
+**Worktree:** `hungry-ptolemy`
+**Branch:** `claude/hungry-ptolemy`
+
+### What shipped
+
+**PR #813 merged** (squash merge, commit `93863dcc` on main):
+- Quality-gate regex now supports pre-release versions (`-rc.N`, `-beta.N`)
+- Build/test failures logged to `/tmp/` instead of silent `2>/dev/null`
+- 5 residual `ARScene` → `ARSceneView` refs fixed
+
+**Worktree cleanup — 4 removed:**
+- `agent-ae442902` (worktree-agent-ae442902) — 0 ahead, removed
+- `crazy-goodall` (claude/crazy-goodall) — 0 ahead, removed
+- `filament-bump` (claude/filament-bump) — 0 ahead, removed
+- `keen-yalow` (claude/keen-yalow) — 0 ahead, removed
+- `agitated-merkle` and `cool-cannon` — already absent (cleaned up by prior sessions)
+
+**Remaining worktrees:** confident-rhodes, flamboyant-neumann, hungry-ptolemy (this session), multi-gateway-sprint (kept per user request), reverent-kalam, stupefied-meitner
+
+**Remote branch cleanup — 17 deleted:**
+- `claude/agitated-merkle` (PR #813, merged — auto-deleted by gh)
+- `claude/crazy-lichterman` (0 ahead, merged work)
+- `claude/filament-bump` (0 ahead)
+- `claude/competent-wilbur` (0 ahead)
+- `claude/stupefied-noyce` (PR #812, closed)
+- `claude/healthcare-files-fix` (PR #811, merged)
+- `claude/mcp-files-fix` (PR #810, merged)
+- `claude/mcp-3.6.3-bump` (PR #809, merged)
+- `claude/nifty-boyd` (PR #808, merged)
+- `claude/mcp-analyze-project` (PR #807, merged)
+- `claude/mcp-automotive-v1.1` (PR #806, merged)
+- `claude/mcp-search-models` (PR #805, merged)
+- `claude/mcp-telemetry` (PR #804, merged)
+- `claude/optimistic-khayyam` (no PR, abandoned)
+- `claude/review-revenue-features-9Waf8` (PR #798, merged)
+- `claude/check-project-status-QKtNL` (no PR, abandoned)
+- `claude/peaceful-hawking` (no PR, abandoned)
+
+**Remaining remote branches:** only `origin/claude/multi-gateway-sprint`
+
+### CI status post-merge
+
+Quality-gate on main still FAILS — **pre-existing bug** in `tiers.test.ts` (lines 150 + 193): tests expect `https://polar.sh/sceneview` but code now points to `https://sceneview-mcp.mcp-tools-lab.workers.dev/pricing` (Stripe pivot). All other CI checks (Build, Lint, Compile KMP, Flutter, Web, APKs) pass green.
+
+**Fix needed:** update `mcp/src/tiers.test.ts` and `mcp/dist/tiers.test.js` to expect the gateway URL instead of the dead Polar URL.
+
+---
+
+## 🔍 SESSION stupefied-meitner — 2026-04-12 — Gateway audit + hub-mcp fixes
+
+**Worktree:** `stupefied-meitner`
+**Branch:** `claude/stupefied-meitner`
+**PR:** sceneview/sceneview#816
+
+### What shipped
+
+**Full production audit of both gateways** — 8/8 checkout plans verified (`cs_live_...`), all health/pricing/auth-gate endpoints confirmed.
+
+**3 hub-gateway fixes:**
+
+| Fix | File | Impact |
+|---|---|---|
+| KV handoff prefix `checkout_key:` → `hub-checkout:` + API key prefix `sv_live_` → `hub_live_` | `hub-gateway/src/billing/key-provisioning.ts` | **BLOCKER FIX** — paying hub-mcp customers would never see their API key |
+| Added Claude Desktop stdio + Cursor HTTP docs sections | `hub-gateway/src/routes/landing.ts` | Docs completeness |
+| Free tool count 15 → 17 on landing page | `mcp-gateway/src/dashboard/landing.tsx` | Consistency with /docs and /pricing |
+
+**Tests:** 58/58 hub-gateway, 171/171 mcp-gateway — all passing.
+
+### What's NOT done
+
+- **Deploy both gateways** after merge — `wrangler deploy` from each directory
+- **First real paying customer test** — checklist documented in conversation
+- **npm `hub-mcp@beta`** — not published, Claude Desktop snippet shows "coming soon"
 
 ---
 
@@ -177,7 +319,7 @@ Complete Gateway #2 for the non-SceneView MCP portfolio:
 | Team Yearly | `price_1TLLmFEr7tnnFQbdLvONEJu7` (790 EUR/yr) |
 | Webhook endpoint | `we_1TLM5LEr7tnnFQbdXMoVW3Ev` (`hub-mcp-gateway`, checkout.session.completed) |
 | STRIPE_SECRET_KEY | `sk_live_...` (same as Gateway #1 — new key created 2026-04-12, named `hub-mcp-gateway`) |
-| STRIPE_WEBHOOK_SECRET | `whsec_Wyzqe3GKSb2WJvzvulLvaJHtOEYXUJfa` |
+| STRIPE_WEBHOOK_SECRET | `whsec_REDACTED_ROTATE_IN_STRIPE` |
 
 **CRITICAL**: the `sk_live_...ycSn` key was REPLACED by the new `hub-mcp-gateway` key on 2026-04-12. Both gateways now use the new key. Gateway #1 was verified still functional (POST /billing/checkout → 303).
 

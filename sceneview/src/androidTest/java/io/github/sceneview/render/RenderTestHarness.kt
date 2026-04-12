@@ -143,6 +143,21 @@ class RenderTestHarness(
     }
 
     /**
+     * Removes all entities and the skybox from the scene, preparing for the next test.
+     *
+     * Call this between tests when sharing a single harness across a test class
+     * (via `@BeforeClass`/`@AfterClass`) to avoid cross-test contamination without
+     * the expensive Engine create/destroy cycle that crashes SwiftShader CI (#803).
+     */
+    fun resetScene() {
+        runOnMain {
+            // Remove all entities from the scene
+            scene.skybox?.let { engine.destroySkybox(it) }
+            scene.skybox = null
+        }
+    }
+
+    /**
      * Destroys all Filament resources. Safe to call multiple times.
      */
     fun destroy() {

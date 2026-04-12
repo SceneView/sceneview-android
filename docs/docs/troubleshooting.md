@@ -195,6 +195,27 @@ rememberModelInstance(modelLoader, "models/helmet.glb")?.let { instance ->
 }
 ```
 
+### Washed-out or too-dark AR camera preview
+
+On some devices, ARCore's auto-exposure setting does not match what Camera2 actually delivers,
+producing a camera feed that looks overexposed (white / blown-out) or underexposed compared to the
+device's native camera app.
+
+**Fix — use `cameraExposure` to override the AR camera's EV:**
+
+```kotlin
+// Washed-out preview → lower the exposure
+ARSceneView(
+    cameraExposure = 1.0f   // positive = brighter; try -1.0f if preview is too dark
+) { }
+```
+
+`null` (the default) keeps ARCore's built-in exposure tuning. Adjust in 0.5 EV steps until the
+preview matches the device's native camera app. A value of `0f` is the standard middle-grey
+reference exposure.
+
+---
+
 ### Forgetting the HDR environment
 
 A scene with no environment and no explicit light is completely dark. Always set at least one of:

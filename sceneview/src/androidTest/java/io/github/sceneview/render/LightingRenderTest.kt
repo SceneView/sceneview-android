@@ -14,10 +14,10 @@ import io.github.sceneview.math.colorOf
 import io.github.sceneview.node.CubeNode
 import io.github.sceneview.node.LightNode
 import io.github.sceneview.render.RenderTestHarness.Companion.colorsMatch
-import org.junit.After
+import org.junit.AfterClass
 import org.junit.Assert.assertTrue
 import org.junit.Before
-import org.junit.Ignore
+import org.junit.BeforeClass
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -26,31 +26,39 @@ import org.junit.runner.RunWith
  *
  * These tests compare renders with and without lights to ensure the
  * lighting pipeline is working correctly.
+ *
+ * **Threading:** A single [RenderTestHarness] is shared across all tests (created once
+ * in [setupClass], destroyed in [teardownClass]) to avoid the rapid Engine create/destroy
+ * cycles that crash SwiftShader on CI (#803). The scene is reset between tests.
  */
 @RunWith(AndroidJUnit4::class)
-@Ignore(
-    "Shares the same RenderTestHarness setup/teardown pattern as GeometryRenderTest " +
-            "and VisualVerificationTest, which crashes the Filament JNI layer on the " +
-            "SwiftShader CI emulator. Tracked in #803."
-)
 class LightingRenderTest {
 
-    private lateinit var harness: RenderTestHarness
-    private lateinit var materialLoader: MaterialLoader
+    companion object {
+        private lateinit var harness: RenderTestHarness
+        private lateinit var materialLoader: MaterialLoader
 
-    @Before
-    fun setup() {
-        harness = RenderTestHarness(width = 128, height = 128)
-        harness.runOnMain {
-            val context = InstrumentationRegistry.getInstrumentation().targetContext
-            materialLoader = MaterialLoader(harness.engine, context)
+        @JvmStatic
+        @BeforeClass
+        fun setupClass() {
+            harness = RenderTestHarness(width = 128, height = 128)
+            harness.runOnMain {
+                val context = InstrumentationRegistry.getInstrumentation().targetContext
+                materialLoader = MaterialLoader(harness.engine, context)
+            }
+        }
+
+        @JvmStatic
+        @AfterClass
+        fun teardownClass() {
+            harness.runOnMain { materialLoader.destroy() }
+            harness.destroy()
         }
     }
 
-    @After
-    fun teardown() {
-        harness.runOnMain { materialLoader.destroy() }
-        harness.destroy()
+    @Before
+    fun resetScene() {
+        harness.resetScene()
     }
 
     // ── Directional light changes the render output ─────────────────────────

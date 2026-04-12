@@ -6,11 +6,11 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.android.filament.Camera
 import com.google.android.filament.Skybox
 import io.github.sceneview.render.RenderTestHarness.Companion.colorsMatch
-import org.junit.After
+import org.junit.AfterClass
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
-import org.junit.Ignore
+import org.junit.BeforeClass
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -27,25 +27,34 @@ import org.junit.runner.RunWith
  * **Important:** Camera exposure is set to 1.0 (unit-less) so that tone mapping produces
  * predictable output values. Without this, the default physical camera exposure (f/16,
  * 1/125s, ISO 100) would significantly darken the rendered colours.
+ *
+ * **Threading:** A single [RenderTestHarness] is shared across all tests in the class
+ * (created once in [setupClass], destroyed in [teardownClass]) to avoid rapid Engine
+ * create/destroy cycles that crash SwiftShader on CI (#803). The scene is reset between
+ * tests via [RenderTestHarness.resetScene].
  */
 @RunWith(AndroidJUnit4::class)
-@Ignore(
-    "Shares the same RenderTestHarness setup/teardown pattern as GeometryRenderTest " +
-            "and VisualVerificationTest, which crashes the Filament JNI layer on the " +
-            "SwiftShader CI emulator. Tracked in #803."
-)
 class RenderSmokeTest {
 
-    private lateinit var harness: RenderTestHarness
+    companion object {
+        private lateinit var harness: RenderTestHarness
 
-    @Before
-    fun setup() {
-        harness = RenderTestHarness(width = 64, height = 64)
+        @JvmStatic
+        @BeforeClass
+        fun setupClass() {
+            harness = RenderTestHarness(width = 64, height = 64)
+        }
+
+        @JvmStatic
+        @AfterClass
+        fun teardownClass() {
+            harness.destroy()
+        }
     }
 
-    @After
-    fun teardown() {
-        harness.destroy()
+    @Before
+    fun resetScene() {
+        harness.resetScene()
     }
 
     /**

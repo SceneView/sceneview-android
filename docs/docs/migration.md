@@ -488,7 +488,7 @@ the imports continue to work. No action required.
 
 | Change | Action |
 |---|---|
-| Bump dependency to `3.6.2` | Update `build.gradle` |
+| Bump dependency to `4.0.0-rc.1` | Update `build.gradle` |
 | Remove `childNodes = rememberNodes { }` | Move node declarations into `SceneView { }` |
 | Replace `add(ModelNode(...))` | Use `ModelNode(...)` composable directly |
 | Replace `addChildNode(...)` | Use nested `NodeScope` content lambda |

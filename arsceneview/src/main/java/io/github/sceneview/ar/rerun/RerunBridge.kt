@@ -13,6 +13,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
@@ -116,12 +117,12 @@ public constructor(
                         w.write(line)
                         w.flush()
                     } catch (e: Exception) {
-                        Log.w(tag, "write failed: ${e.message}")
+                        logWarning("write failed: ${e.message}")
                         break
                     }
                 }
             } catch (e: Exception) {
-                Log.w(tag, "connect to $host:$port failed: ${e.message}")
+                logWarning("connect to $host:$port failed: ${e.message}")
             } finally {
                 closeQuietly()
             }
@@ -133,9 +134,15 @@ public constructor(
      * The bridge can be reused: call [connect] again to re-open.
      */
     public fun disconnect() {
-        writerJob?.cancel()
+        val job = writerJob
         writerJob = null
         closeQuietly()
+        job?.cancel()
+        // Block briefly to let the cancelled coroutine finish its finally block,
+        // so that a subsequent connect() doesn't race with the old cleanup.
+        runCatching {
+            runBlocking { job?.join() }
+        }
     }
 
     /** Release all resources. The bridge is unusable after this call. */
@@ -177,7 +184,7 @@ public constructor(
         } catch (e: Exception) {
             // Point cloud acquisition can fail if the depth API isn't ready
             // — not a hard error, just drop the event for this frame.
-            Log.v(tag, "pointCloud skipped: ${e.message}")
+            logVerbose("pointCloud skipped: ${e.message}")
         }
     }
 
@@ -234,6 +241,16 @@ public constructor(
      */
     private fun enqueue(line: String) {
         outbox.trySend(line)
+    }
+
+    /** Log.w wrapper that swallows the "not mocked" error in unit tests. */
+    private fun logWarning(msg: String) {
+        try { Log.w(tag, msg) } catch (_: RuntimeException) { /* unit test stub */ }
+    }
+
+    /** Log.v wrapper that swallows the "not mocked" error in unit tests. */
+    private fun logVerbose(msg: String) {
+        try { Log.v(tag, msg) } catch (_: RuntimeException) { /* unit test stub */ }
     }
 
     private fun closeQuietly() {
