@@ -85,3 +85,12 @@ samples/react-native-demo/assets/models/
 samples/react-native-demo/ios/Models/
 samples/web-demo/src/jsMain/resources/models/
 samples/web-demo/src/jsMain/resources/environments/
+
+# Local MCP workspace artifacts (not canonical — canonical code is in mcp/packages/)
+mcp-automotive/
+mcp-healthcare/
+mcp-gaming/
+mcp-interior/
+hub-gateway/
+hub-mcp/
+mcp-strategy-report.md
