@@ -99,9 +99,9 @@ nav:
 extra:
   analytics:
     provider: google
-    # TODO: Replace G-XXXXXXXXXX with your real GA4 Measurement ID
+    # TODO: Replace G-HX1JWGSMTH with your real GA4 Measurement ID
     # Create one at https://analytics.google.com → Admin → Create Property
-    property: G-XXXXXXXXXX
+    property: G-HX1JWGSMTH
     feedback:
       title: Was this page helpful?
       ratings:

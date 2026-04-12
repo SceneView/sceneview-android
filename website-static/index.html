@@ -47,14 +47,14 @@
   <meta name="twitter:image:alt" content="SceneView — 3D and AR SDK for every platform">
 
   <!-- Google Analytics 4 -->
-  <!-- TODO: Replace G-XXXXXXXXXX with your real GA4 Measurement ID -->
+  <!-- TODO: Replace G-HX1JWGSMTH with your real GA4 Measurement ID -->
   <!-- Create one at https://analytics.google.com → Admin → Create Property -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-HX1JWGSMTH"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
-    gtag('config', 'G-XXXXXXXXXX', {
+    gtag('config', 'G-HX1JWGSMTH', {
       page_title: document.title,
       content_group: 'website'
     });
@@ -812,6 +812,43 @@
         </table>
       </div>
       <p class="comparison__note reveal">Filament is SceneView's rendering engine on Android and Web. SceneView adds the declarative API, scene graph, AR integration, and cross-platform abstractions on top.</p>
+    </div>
+  </section>
+
+  <!-- ===== DEVELOPER TOOLS ===== -->
+  <section class="devtools" id="devtools">
+    <div class="devtools__container">
+      <h2 class="devtools__title reveal">Developer tools</h2>
+      <p class="devtools__subtitle reveal">Debug, inspect, and replay your 3D and AR scenes in real time.</p>
+      <div class="devtools__grid">
+        <div class="devtools__card reveal">
+          <div class="devtools__card-header">
+            <span class="devtools__card-icon material-symbols-outlined">bug_report</span>
+            <span class="devtools__card-badge">New in v4</span>
+          </div>
+          <h3 class="devtools__card-title">AR Debug &mdash; Rerun.io</h3>
+          <p class="devtools__card-text">Stream ARCore and ARKit frame data to the <a href="https://rerun.io" target="_blank" rel="noopener">Rerun</a> viewer. Inspect camera poses, tracked planes, point clouds, and anchors &mdash; then scrub the timeline to replay any moment.</p>
+          <div class="devtools__card-platforms">
+            <span class="devtools__card-platform">Android</span>
+            <span class="devtools__card-platform">iOS</span>
+            <span class="devtools__card-platform">Python sidecar</span>
+          </div>
+        </div>
+        <div class="devtools__card reveal">
+          <div class="devtools__card-header">
+            <span class="devtools__card-icon material-symbols-outlined">analytics</span>
+          </div>
+          <h3 class="devtools__card-title">Anonymous telemetry</h3>
+          <p class="devtools__card-text">Usage analytics for MCP tool calls. No PII &mdash; just tool names, versions, and timestamps. Fully opt-out.</p>
+        </div>
+        <div class="devtools__card reveal">
+          <div class="devtools__card-header">
+            <span class="devtools__card-icon material-symbols-outlined">visibility</span>
+          </div>
+          <h3 class="devtools__card-title">Render tests</h3>
+          <p class="devtools__card-text">Automated visual regression testing with SwiftShader. Catch rendering bugs before they reach users.</p>
+        </div>
+      </div>
     </div>
   </section>
 
