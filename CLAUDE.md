@@ -162,8 +162,11 @@ Every Claude Code session MUST read this section first to stay in sync.
 **NOTE FOR OTHER SESSIONS:** Always run `/sync-check` at the start and end of every session.
 Never say "everything is good" without verifying published packages.
 
-### Current state (last updated: 2026-04-12, session crazy-lichterman + Gateway #1 LIVE)
+### Current state (last updated: 2026-04-12, session hungry-ptolemy — cleanup + CI green)
 
+- ✅ **CI quality-gate GREEN on main** (run 24309254779). All checks pass: quality-gate, CI, PR Check, Build APKs, Deploy Website.
+- ✅ **Repo cleanup complete**: 7 worktrees removed, 18 remote branches + 18 local branches deleted. Remaining: confident-rhodes (PR #814), flamboyant-neumann (PR #815), multi-gateway-sprint (kept), intelligent-perlman (active).
+- ✅ **polar.sh migration complete**: all 10 files with dead Polar URLs updated to GitHub Sponsors or gateway pricing URL. Zero polar.sh references remain in codebase (except historical handoff.md notes).
 - ✅ **SceneView ↔ Rerun.io integration SHIPPED** (session `crazy-lichterman`, 5 phases merged on `main`):
   - Phase 1: `rerun-3d-mcp@1.0.0` on npm `@latest` — 5 tools, 73 vitest, `npx rerun-3d-mcp`
   - Phase 2: Playground "AR Debug (Rerun)" example — iframe Rerun Web Viewer embed
