@@ -81,12 +81,6 @@ fun Float3.toVector3() = Vector3(x, y, z)
 //TODO: Remove when everything use Float3
 fun Vector3.toFloat3() = Float3(x, y, z)
 
-//TODO: Remove when everything use Quaternion
-fun Quaternion.toOldQuaternion() =
-    io.github.sceneview.collision.Quaternion(x, y, z, w)
-
-//TODO: Remove when everything use Quaternion
-fun io.github.sceneview.collision.Quaternion.toNewQuaternion() = Quaternion(x, y, z, w)
 
 fun Mat3.toColumnsFloatArray() = floatArrayOf(
     x.x, x.y, x.z,
