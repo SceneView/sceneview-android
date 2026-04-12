@@ -67,7 +67,7 @@ function isEnabled(): boolean {
 // Falls back to "unknown" so payloads stay well-formed even if
 // something goes wrong.
 function getMcpVersion(): string {
-  return process.env.SCENEVIEW_MCP_VERSION ?? "4.0.0-rc.3";
+  return process.env.SCENEVIEW_MCP_VERSION ?? "4.0.0";
 }
 
 // Fire-and-forget POST of a single payload to the individual event endpoint.

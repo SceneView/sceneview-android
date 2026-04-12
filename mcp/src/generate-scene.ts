@@ -4,7 +4,7 @@
  * Generates a complete SceneView{} or ARSceneView{} composable from a text description.
  * Maps common objects/concepts to SceneView node types and builds compilable code.
  *
- * All generated code targets SceneView v4.0.0-rc.1 API and is verified against llms.txt.
+ * All generated code targets SceneView v4.0.0 API and is verified against llms.txt.
  */
 
 export interface SceneElement {
@@ -303,7 +303,7 @@ export function generateScene(description: string): GeneratedScene {
 
   // Build the code
   const isAR = parsed.isAR;
-  dependencies.push(isAR ? "io.github.sceneview:arsceneview:4.0.0-rc.1" : "io.github.sceneview:sceneview:4.0.0-rc.1");
+  dependencies.push(isAR ? "io.github.sceneview:arsceneview:4.0.0" : "io.github.sceneview:sceneview:4.0.0");
 
   // Build model instance declarations
   const modelElements = elements.filter((e) => e.type === "model");

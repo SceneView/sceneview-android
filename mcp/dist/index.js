@@ -9,7 +9,7 @@
  * two MCP resources (`sceneview://api`, `sceneview://known-issues`) and
  * the pro-tier access / billing checks.
  *
- * IMPORTANT: the runtime behaviour must stay identical to v4.0.0-rc.1 for
+ * IMPORTANT: the runtime behaviour must stay identical to v4.0.0 for
  * existing npm consumers. Do not reorder checks, do not change content
  * strings, do not touch disclaimers.
  */
@@ -27,7 +27,7 @@ import { API_DOCS, TOOL_DEFINITIONS, dispatchTool, } from "./tools/index.js";
 // Claude Desktop surfaces this in the server's "Logs" panel. The banner
 // tells the user which mode they're in (hosted vs free) and where to
 // upgrade, without blocking the transport handshake.
-const PACKAGE_VERSION = "4.0.0-rc.1";
+const PACKAGE_VERSION = "4.0.0";
 function logStartupBanner() {
     if (process.env.SCENEVIEW_MCP_QUIET === "1")
         return;
@@ -57,7 +57,7 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => ({
         {
             uri: "sceneview://api",
             name: "SceneView API Reference",
-            description: "Complete SceneView 4.0.0-rc.1 API — SceneView, ARSceneView, SceneScope DSL, ARSceneScope DSL, node types, resource loading, camera, gestures, math types, threading rules, and common patterns. Read this before writing any SceneView code.",
+            description: "Complete SceneView 4.0.0 API — SceneView, ARSceneView, SceneScope DSL, ARSceneScope DSL, node types, resource loading, camera, gestures, math types, threading rules, and common patterns. Read this before writing any SceneView code.",
             mimeType: "text/markdown",
         },
         {

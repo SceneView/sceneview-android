@@ -100,12 +100,15 @@ jobs:
           # MCP has its own version cycle — always use package.json version
           VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          PUBLISHED=$(npm view sceneview-mcp version 2>/dev/null || echo "")
+          # Check the *specific* version rather than the latest dist-tag.
+          # npm view <pkg>@<ver> version returns the version string if it exists,
+          # or exits non-zero / returns empty if it has never been published.
+          PUBLISHED=$(npm view "sceneview-mcp@$VERSION" version 2>/dev/null || echo "")
           if [ "$PUBLISHED" = "$VERSION" ]; then
             echo "::notice::sceneview-mcp@$VERSION already published — skipping"
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
-            echo "Publishing sceneview-mcp@$VERSION (npm has $PUBLISHED)"
+            echo "Publishing sceneview-mcp@$VERSION (not yet on npm)"
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
@@ -158,12 +161,15 @@ jobs:
             VERSION=${GITHUB_REF_NAME#v}
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          PUBLISHED=$(npm view sceneview-web version 2>/dev/null || echo "")
+          # Check the *specific* version rather than the latest dist-tag.
+          # npm view <pkg>@<ver> version returns the version string if it exists,
+          # or exits non-zero / returns empty if it has never been published.
+          PUBLISHED=$(npm view "sceneview-web@$VERSION" version 2>/dev/null || echo "")
           if [ "$PUBLISHED" = "$VERSION" ]; then
             echo "::notice::sceneview-web@$VERSION already published — skipping"
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
-            echo "Publishing @sceneview/sceneview-web@$VERSION (npm has $PUBLISHED)"
+            echo "Publishing sceneview-web@$VERSION (not yet on npm)"
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 

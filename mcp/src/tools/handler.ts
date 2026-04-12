@@ -9,7 +9,7 @@
  *   1. The stdio MCP server in `../index.ts` (legacy npm package path).
  *   2. The HTTP gateway in `mcp-gateway/src/mcp/registry.ts` (hosted path).
  *
- * Zero runtime behaviour change from 4.0.0-rc.1: every tool returns exactly the
+ * Zero runtime behaviour change from 4.0.0: every tool returns exactly the
  * same content it did when the logic lived inside the stdio server's
  * `CallToolRequestSchema` handler.
  *
@@ -71,7 +71,7 @@ import { LLMS_TXT } from "../generated/llms-txt.js";
 
 import type { DispatchContext, ToolResult, ToolTextContent } from "./types.js";
 
-// ─── Legal disclaimer (identical to index.ts 4.0.0-rc.1) ─────────────────────
+// ─── Legal disclaimer (identical to index.ts 4.0.0) ─────────────────────
 
 const DISCLAIMER =
   "\n\n---\n*Generated code suggestion. Review before use in production. See [TERMS.md](https://github.com/sceneview/sceneview/blob/main/mcp/TERMS.md).*";
@@ -164,7 +164,7 @@ export async function dispatchTool(
         ? [
             `**SPM dependency:**`,
             `\`\`\`swift`,
-            `.package(url: "${sample.spmDependency ?? sample.dependency}", from: "4.0.0-rc.1")`,
+            `.package(url: "${sample.spmDependency ?? sample.dependency}", from: "4.0.0")`,
             `\`\`\``,
           ]
         : [
@@ -248,7 +248,7 @@ export async function dispatchTool(
                 `### build.gradle.kts`,
                 `\`\`\`kotlin`,
                 `dependencies {`,
-                `    implementation("io.github.sceneview:sceneview:4.0.0-rc.1")`,
+                `    implementation("io.github.sceneview:sceneview:4.0.0")`,
                 `}`,
                 `\`\`\``,
                 ``,
@@ -269,7 +269,7 @@ export async function dispatchTool(
                 `### build.gradle.kts`,
                 `\`\`\`kotlin`,
                 `dependencies {`,
-                `    implementation("io.github.sceneview:arsceneview:4.0.0-rc.1")`,
+                `    implementation("io.github.sceneview:arsceneview:4.0.0")`,
                 `}`,
                 `\`\`\``,
                 ``,
@@ -393,7 +393,7 @@ export async function dispatchTool(
                 `\`\`\``,
                 `https://github.com/sceneview/sceneview`,
                 `\`\`\``,
-                `Set version rule to **"from: 4.0.0-rc.1"**.`,
+                `Set version rule to **"from: 4.0.0"**.`,
                 ``,
                 `Or in Package.swift:`,
                 `\`\`\`swift`,
@@ -404,7 +404,7 @@ export async function dispatchTool(
                 `    name: "MyApp",`,
                 `    platforms: [.iOS(.v17), .macOS(.v14), .visionOS(.v1)],`,
                 `    dependencies: [`,
-                `        .package(url: "https://github.com/sceneview/sceneview", from: "4.0.0-rc.1")`,
+                `        .package(url: "https://github.com/sceneview/sceneview", from: "4.0.0")`,
                 `    ],`,
                 `    targets: [`,
                 `        .executableTarget(`,
@@ -475,7 +475,7 @@ export async function dispatchTool(
                 `### 1. Add SPM Dependency`,
                 ``,
                 `\`\`\`swift`,
-                `.package(url: "https://github.com/sceneview/sceneview", from: "4.0.0-rc.1")`,
+                `.package(url: "https://github.com/sceneview/sceneview", from: "4.0.0")`,
                 `\`\`\``,
                 ``,
                 `### 2. Minimum Platform`,
@@ -770,15 +770,15 @@ export async function dispatchTool(
     // ── list_platforms ────────────────────────────────────────────────────────
     case "list_platforms": {
       const platforms = [
-        { platform: "Android", renderer: "Filament", framework: "Jetpack Compose", status: "Stable", version: "4.0.0-rc.1", dependency: "io.github.sceneview:sceneview:4.0.0-rc.1", features: ["3D", "AR (ARCore)", "Model loading (GLB/glTF)", "Geometry nodes", "Physics", "Gestures"] },
-        { platform: "Android TV", renderer: "Filament", framework: "Compose TV", status: "Alpha", version: "4.0.0-rc.1", dependency: "io.github.sceneview:sceneview:4.0.0-rc.1", features: ["3D", "D-pad controls", "Auto-rotation", "Model loading"] },
+        { platform: "Android", renderer: "Filament", framework: "Jetpack Compose", status: "Stable", version: "4.0.0", dependency: "io.github.sceneview:sceneview:4.0.0", features: ["3D", "AR (ARCore)", "Model loading (GLB/glTF)", "Geometry nodes", "Physics", "Gestures"] },
+        { platform: "Android TV", renderer: "Filament", framework: "Compose TV", status: "Alpha", version: "4.0.0", dependency: "io.github.sceneview:sceneview:4.0.0", features: ["3D", "D-pad controls", "Auto-rotation", "Model loading"] },
         { platform: "Android XR", renderer: "Jetpack XR SceneCore", framework: "Compose XR", status: "Planned", version: "-", dependency: "-", features: ["Spatial computing", "Hand tracking", "Passthrough"] },
-        { platform: "iOS", renderer: "RealityKit", framework: "SwiftUI", status: "Alpha", version: "4.0.0-rc.1", dependency: "SceneViewSwift (SPM)", features: ["3D", "AR (ARKit)", "16 node types", "USDZ models"] },
-        { platform: "macOS", renderer: "RealityKit", framework: "SwiftUI", status: "Alpha", version: "4.0.0-rc.1", dependency: "SceneViewSwift (SPM)", features: ["3D", "Orbit camera", "USDZ models"] },
-        { platform: "visionOS", renderer: "RealityKit", framework: "SwiftUI", status: "Alpha", version: "4.0.0-rc.1", dependency: "SceneViewSwift (SPM)", features: ["3D", "Immersive spaces", "Hand tracking (planned)"] },
-        { platform: "Web", renderer: "Filament.js (WASM)", framework: "Kotlin/JS", status: "Alpha", version: "4.0.0-rc.1", dependency: "@sceneview/sceneview-web", features: ["3D", "WebXR AR/VR", "GLB models", "WebGL2"] },
-        { platform: "Desktop", renderer: "Software / Filament JNI", framework: "Compose Desktop", status: "Alpha", version: "4.0.0-rc.1", dependency: "sceneview-desktop (local)", features: ["3D", "Software renderer", "Wireframe"] },
-        { platform: "Flutter", renderer: "Filament / RealityKit", framework: "PlatformView", status: "Alpha", version: "4.0.0-rc.1", dependency: "flutter pub: sceneview", features: ["3D", "AR", "Android + iOS bridge"] },
+        { platform: "iOS", renderer: "RealityKit", framework: "SwiftUI", status: "Alpha", version: "4.0.0", dependency: "SceneViewSwift (SPM)", features: ["3D", "AR (ARKit)", "16 node types", "USDZ models"] },
+        { platform: "macOS", renderer: "RealityKit", framework: "SwiftUI", status: "Alpha", version: "4.0.0", dependency: "SceneViewSwift (SPM)", features: ["3D", "Orbit camera", "USDZ models"] },
+        { platform: "visionOS", renderer: "RealityKit", framework: "SwiftUI", status: "Alpha", version: "4.0.0", dependency: "SceneViewSwift (SPM)", features: ["3D", "Immersive spaces", "Hand tracking (planned)"] },
+        { platform: "Web", renderer: "Filament.js (WASM)", framework: "Kotlin/JS", status: "Alpha", version: "4.0.0", dependency: "@sceneview/sceneview-web", features: ["3D", "WebXR AR/VR", "GLB models", "WebGL2"] },
+        { platform: "Desktop", renderer: "Software / Filament JNI", framework: "Compose Desktop", status: "Alpha", version: "4.0.0", dependency: "sceneview-desktop (local)", features: ["3D", "Software renderer", "Wireframe"] },
+        { platform: "Flutter", renderer: "Filament / RealityKit", framework: "PlatformView", status: "Alpha", version: "4.0.0", dependency: "flutter pub: sceneview", features: ["3D", "AR", "Android + iOS bridge"] },
       ];
 
       const lines = [

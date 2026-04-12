@@ -23,7 +23,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 // ─── Constants ───────────────────────────────────────────────────────────────
 /** The latest SceneView release known to this build of the MCP. */
-export const LATEST_SCENEVIEW_VERSION = "4.0.0-rc.1";
+export const LATEST_SCENEVIEW_VERSION = "4.0.0";
 /** Hard cap on the number of source files inspected per call. */
 export const MAX_FILES_SCANNED = 30;
 /** Hard cap on total bytes read across all source files per call (500 KB). */

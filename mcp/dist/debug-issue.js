@@ -292,7 +292,7 @@ fun DebugModelViewer() {
         title: "Build / Gradle Errors",
         guide: `## Debugging: Build Errors
 
-### "Cannot resolve io.github.sceneview:sceneview:4.0.0-rc.1"
+### "Cannot resolve io.github.sceneview:sceneview:4.0.0"
 
 1. Check repositories in \`settings.gradle.kts\`:
    \`\`\`kotlin
@@ -335,7 +335,7 @@ SceneView bundles Filament. If you also depend on Filament directly:
 \`\`\`kotlin
 // Remove direct Filament dependency — SceneView includes it
 // implementation("com.google.android.filament:filament-android:1.x.x") // REMOVE
-implementation("io.github.sceneview:sceneview:4.0.0-rc.1") // This includes Filament
+implementation("io.github.sceneview:sceneview:4.0.0") // This includes Filament
 \`\`\`
 
 ### "Cannot find Filament material"
