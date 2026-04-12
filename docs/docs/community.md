@@ -65,7 +65,7 @@ supporting the project:
 | Platform | Link |
 |---|---|
 | GitHub Sponsors | [github.com/sponsors/ThomasGorisse](https://github.com/sponsors/ThomasGorisse) |
-| Polar.sh | [polar.sh/sceneview](https://polar.sh/sceneview) |
+| GitHub Sponsors (org) | [github.com/sponsors/sceneview](https://github.com/sponsors/sceneview) |
 
 Your sponsorship helps maintain the SDK, review PRs, write documentation, and keep
 the project alive.

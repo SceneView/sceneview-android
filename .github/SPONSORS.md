@@ -21,11 +21,8 @@ and keeping the SDK up to date across all 9 platforms.
 |----------|------|------|
 | **GitHub Sponsors** | [github.com/sponsors/sceneview](https://github.com/sponsors/sceneview) | 0% (GitHub absorbs fees) |
 | **Open Collective** | [opencollective.com/sceneview](https://opencollective.com/sceneview) | 10% fiscal host + processing |
-| **Polar** | [polar.sh/sceneview](https://polar.sh/sceneview) | 5% + processing |
-
 GitHub Sponsors is the most cost-effective (zero platform fees).
 Open Collective provides full expense transparency and corporate invoicing.
-Polar lets you fund specific features via issue funding.
 
 ---
 
