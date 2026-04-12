@@ -4,6 +4,55 @@
 
 ---
 
+## SESSION elegant-burnell — 2026-04-12 — Telemetry deploy, first paying customer, npm @latest 4.x
+
+**Worktree:** `elegant-burnell`
+**Branch:** `claude/elegant-burnell`
+
+### What shipped
+
+**Telemetry Worker DEPLOYED to Cloudflare:**
+- URL: `https://sceneview-telemetry.mcp-tools-lab.workers.dev`
+- Health: `{"ok":true,"service":"sceneview-telemetry","version":"1.0.0"}`
+- D1 + KV + STATS_TOKEN all configured
+- 58/58 tests passing
+- `mcp/src/telemetry.ts` already points to this endpoint
+
+**First real Stripe payment (LIVE mode):**
+- thomas.gorisse@gmail.com subscribed to **Pro 19€/month**
+- Stripe Customer: `cus_UK7AeKGIWuaqfj`
+- API key `sv_live_S76JMX...` provisioned in D1, saved in profile-private
+- Checkout flow tested end-to-end: pricing page → Stripe Checkout → success page
+
+**npm @latest bumped to 4.x:**
+- `sceneview-mcp@latest` = `4.0.0-rc.3` (was 3.6.5)
+- All ~3450 dl/month users now get v4 on `npx sceneview-mcp`
+
+**Worktree cleanup:**
+- Removed eager-sinoussi, hungry-ptolemy (stale dirs), happy-driscoll, confident-rhodes
+- Remaining: elegant-burnell (this session), intelligent-perlman
+
+**Other fixes:**
+- `launch.json` mkdocs config fixed (absolute path for `-f` flag)
+- Issue #388 NodeAnimator fix verified (already on main via intelligent-perlman)
+
+### Production state
+- **Gateway #1**: LIVE, Stripe LIVE, 1 paying customer (Thomas — Pro)
+- **Gateway #2**: LIVE, Stripe LIVE, 0 customers
+- **Telemetry Worker**: LIVE, 0 events (just deployed)
+- **npm**: `latest=4.0.0-rc.3`, `beta=4.0.0-beta.1`, `next=4.0.0-rc.3`
+- **CI**: all green on main
+- **Open issues**: 0 (issue #388 closed)
+- **Worktrees**: 2 (elegant-burnell, intelligent-perlman)
+
+### What's NOT done
+- CNAME `telemetry.sceneview.io` (domain not on Cloudflare — worker URL works fine)
+- Rename Stripe account "Nouvelle entreprise" → "SceneView"
+- Cancel Thomas's test subscription before next billing cycle (if desired)
+- Hub-MCP gateway: 0 paying customers yet
+
+---
+
 ## SESSION (issue-audit) — 2026-04-12 — Full 420-issue audit, discussions, dependency bumps
 
 **Branch:** `main`
