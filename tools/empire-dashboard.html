@@ -1039,24 +1039,24 @@ body {
       </div>
       <ul class="rec-list">
         <li class="rec-item">
-          <span class="rec-priority high">URGENT</span>
+          <span class="rec-priority low">FAIT</span>
           <div class="rec-text">
-            <strong>Ajouter Google Analytics 4 au site web</strong>
-            <p>Aucun tracking sur sceneview.github.io. Tu perds toute visibilité sur le trafic web, les sources d'acquisition, et le parcours utilisateur. Ajoute le snippet GA4 dans index.html — 5 min de travail, impact énorme.</p>
+            <strong>Google Analytics 4 — <a href="https://analytics.google.com/analytics/web/" target="_blank" style="color:var(--primary)">Ouvrir GA4 Dashboard</a></strong>
+            <p>GA4 est LIVE sur sceneview.github.io (G-HX1JWGSMTH). Les données commencent à s'accumuler. Vérifie dans 24-48h pour les premiers rapports.</p>
           </div>
         </li>
         <li class="rec-item">
-          <span class="rec-priority high">URGENT</span>
+          <span class="rec-priority low">FAIT</span>
           <div class="rec-text">
-            <strong>Déployer le Telemetry Worker</strong>
-            <p>Le worker Cloudflare est codé (79 tests) mais pas déployé. Sans lui, tu ne sais pas quels tools MCP sont utilisés, combien de fois, ni les erreurs. C'est la donnée la plus précieuse pour comprendre l'usage.</p>
+            <strong>Telemetry Worker — <a href="https://sceneview-telemetry.mcp-tools-lab.workers.dev/health" target="_blank" style="color:var(--primary)">Health Check</a></strong>
+            <p>Déployé et opérationnel. Voir l'onglet "Usage (Telemetry)" pour les données live. 4 clients uniques détectés.</p>
           </div>
         </li>
         <li class="rec-item">
-          <span class="rec-priority high">URGENT</span>
+          <span class="rec-priority high">PRIORITE</span>
           <div class="rec-text">
-            <strong>Premier client payant sur le gateway</strong>
-            <p>Le gateway Stripe est live en prod mais 0 client. Le funnel Free→Pro ne peut pas être validé tant qu'il n'y a pas un vrai checkout. Focalise les efforts marketing ici.</p>
+            <strong>Premier client payant sur le gateway — <a href="https://sceneview-mcp.mcp-tools-lab.workers.dev/pricing" target="_blank" style="color:var(--primary)">Page Pricing</a></strong>
+            <p>Le gateway Stripe est live en prod mais 0 client. Le CTA pricing est maintenant dans le MCP (rc.6). Surveille les checkouts dans le <a href="https://dashboard.stripe.com" target="_blank" style="color:var(--primary)">Stripe Dashboard</a>.</p>
           </div>
         </li>
         <li class="rec-item">
@@ -1583,42 +1583,38 @@ async function fetchTelemetry() {
 
   try {
     // Health check
-    const health = await fetchJSON(url + '/health');
+    const health = await fetch(url + '/health').then(r => r.json()).catch(() => null);
     if (!health || !health.ok) { status.textContent = 'Worker non joignable'; return; }
 
-    // Fetch stats + timeseries
-    const [stats, timeseries] = await Promise.all([
-      fetchJSON(url + '/stats'),
-      fetchJSON(url + '/timeseries?days=30')
-    ]);
-
-    if (!stats) { status.textContent = 'Erreur /stats'; return; }
+    // Fetch stats (with auth header)
+    const statsResp = await fetch(url + '/v1/stats', { headers });
+    if (statsResp.status === 401) { status.textContent = 'Token invalide (401)'; status.style.color = 'var(--danger)'; return; }
+    const stats = await statsResp.json();
+    if (stats.error) { status.textContent = 'Erreur: ' + stats.error; status.style.color = 'var(--danger)'; return; }
 
     // Show data
     document.getElementById('telemetryPlaceholder').style.display = 'none';
     document.getElementById('telemetryKpis').style.display = 'grid';
     document.getElementById('telemetryCharts').style.display = 'block';
 
-    // KPIs
-    document.getElementById('telTotalEvents').textContent = fmt(stats.totalEvents || 0);
-    document.getElementById('telUniqueUsers').textContent = fmt(stats.uniqueUsers || 0);
-    document.getElementById('telTopTool').textContent = stats.topTools?.[0]?.name || '—';
-    const errRate = stats.totalEvents > 0
-      ? ((stats.errorCount || 0) / stats.totalEvents * 100).toFixed(1) + '%'
-      : '—';
-    document.getElementById('telErrorRate').textContent = errRate;
+    // KPIs — real API format: stats.totals.{total, inits, tools, unique_clients}
+    const totals = stats.totals || {};
+    document.getElementById('telTotalEvents').textContent = fmt(totals.total || 0);
+    document.getElementById('telUniqueUsers').textContent = fmt(totals.unique_clients || 0);
+    document.getElementById('telTopTool').textContent = stats.topTools?.[0]?.tool || '—';
+    const errPct = totals.total > 0 ? ((totals.total - totals.inits - totals.tools) / totals.total * 100).toFixed(1) + '%' : '0%';
+    document.getElementById('telErrorRate').textContent = errPct;
 
-    // Tool usage chart
+    // Tool usage chart — real format: topTools[].tool, topTools[].count
     if (stats.topTools?.length) {
       const toolCtx = document.getElementById('toolUsageChart')?.getContext('2d');
       if (toolCtx) {
         if (chartInstances.toolUsage) chartInstances.toolUsage.destroy();
-        const isDark = document.documentElement.dataset.theme === 'dark';
         const colors = ['#005bc1', '#6446cd', '#16a34a', '#f59e0b', '#d97757', '#ea4335', '#5865f2', '#00897b'];
         chartInstances.toolUsage = new Chart(toolCtx, {
           type: 'bar',
           data: {
-            labels: stats.topTools.map(t => t.name),
+            labels: stats.topTools.map(t => t.tool),
             datasets: [{
               label: 'Appels',
               data: stats.topTools.map(t => t.count),
@@ -1665,7 +1661,7 @@ async function fetchTelemetry() {
       }
     }
 
-    // Versions chart
+    // Versions chart — real format: versions[].mcp_ver, versions[].count
     if (stats.versions?.length) {
       const verCtx = document.getElementById('versionChart')?.getContext('2d');
       if (verCtx) {
@@ -1673,7 +1669,7 @@ async function fetchTelemetry() {
         chartInstances.versions = new Chart(verCtx, {
           type: 'doughnut',
           data: {
-            labels: stats.versions.map(v => v.version),
+            labels: stats.versions.map(v => v.mcp_ver || v.version),
             datasets: [{
               data: stats.versions.map(v => v.count),
               backgroundColor: ['#005bc1', '#6446cd', '#16a34a', '#f59e0b', '#d97757'],
@@ -1701,6 +1697,10 @@ async function fetchTelemetry() {
 // ============================================================
 initTelemetryConfig();
 refreshAll();
+// Auto-load telemetry if URL and token are saved
+if (localStorage.getItem('empire-telemetry-url') && localStorage.getItem('empire-telemetry-token')) {
+  setTimeout(fetchTelemetry, 2000); // after npm data loads
+}
 </script>
 
 </body>
