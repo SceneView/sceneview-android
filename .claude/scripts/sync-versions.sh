@@ -198,12 +198,12 @@ fi
 echo -e "${CYAN}--- MCP Source/Dist ---${NC}"
 MCP_INDEX="$REPO_ROOT/mcp/src/index.ts"
 if [ -f "$MCP_INDEX" ]; then
-    V=$(grep -m1 'version:' "$MCP_INDEX" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' | head -1 || echo "NOT FOUND")
+    V=$(grep -m1 'PACKAGE_VERSION' "$MCP_INDEX" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' | head -1 || echo "NOT FOUND")
     add_check "mcp/src/index.ts" "$V" "false"
 fi
 MCP_DIST="$REPO_ROOT/mcp/dist/index.js"
 if [ -f "$MCP_DIST" ]; then
-    V=$(grep -m1 'version:' "$MCP_DIST" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' | head -1 || echo "NOT FOUND")
+    V=$(grep -m1 'PACKAGE_VERSION' "$MCP_DIST" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' | head -1 || echo "NOT FOUND")
     add_check "mcp/dist/index.js" "$V" "false"
 fi
 

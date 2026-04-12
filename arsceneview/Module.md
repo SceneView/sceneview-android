@@ -1,6 +1,6 @@
 # Module arsceneview
 
-AR scene rendering for Jetpack Compose, powered by ARCore 1.53.0 and Google Filament.
+AR scene rendering for Jetpack Compose, powered by ARCore and Google Filament.
 
 ## Quick start
 
