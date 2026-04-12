@@ -38,7 +38,7 @@
   },
   "publishConfig": {
     "access": "public",
-    "tag": "next"
+    "tag": "latest"
   },
   "files": [
     "dist/**/*.js",
