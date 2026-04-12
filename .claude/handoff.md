@@ -4,6 +4,44 @@
 
 ---
 
+## SESSION (issue-audit) — 2026-04-12 — Full 420-issue audit, discussions, dependency bumps
+
+**Branch:** `main`
+
+### What shipped
+
+**Exhaustive issue audit — 420/420 issues reviewed:**
+- 419 issues confirmed fixed in v4.0.0-rc.1 or earlier
+- 1 issue found still broken: **#388 NodeAnimator** — fixed and committed (`3ae4d839`)
+- ~15 issues commented with "Verified in v4.0.0-rc.1" updates on GitHub
+
+**95 GitHub Discussions answered** with v4.0 solutions, migration guidance, and workarounds.
+
+**PR #814 merged** (`dcdb98df`): render-tests Engine-sharing fix (closes #803) + AR camera exposure API (closes #792). +117 new tests.
+
+**Dependency bumps:**
+- AGP 8.11.1 → 8.13.2
+- maven-publish plugin 0.35.0 → 0.36.0
+
+**Branch cleanup:**
+- `claude/confident-rhodes` remote branch deleted (PR #814 already merged)
+
+**Repo state: 0 open issues, 0 open PRs.**
+
+### Commits on main
+- `3ae4d839` fix: NodeAnimator regression (#388)
+- `dcdb98df` fix(render-tests): share Engine per class to fix SwiftShader CI + AR exposure API (#814)
+- AGP + maven-publish version bumps
+- Telemetry worker wrangler.toml update
+
+### What's NOT done
+- First real paying customer test (both gateways ready, needs human card)
+- `@latest` npm bump to 4.x (blocked on first customer)
+- Telemetry worker not deployed (Thomas needs D1/KV create + `wrangler deploy`)
+- Maven Central / SPM publish for v4.0.0-rc.1 (release.yml only matches strict semver)
+
+---
+
 ## SESSION intelligent-perlman — 2026-04-12 — Gateway deploys, hub-mcp npm, cleanup
 
 **Worktree:** `intelligent-perlman`

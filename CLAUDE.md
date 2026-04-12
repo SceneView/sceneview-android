@@ -162,13 +162,15 @@ Every Claude Code session MUST read this section first to stay in sync.
 **NOTE FOR OTHER SESSIONS:** Always run `/sync-check` at the start and end of every session.
 Never say "everything is good" without verifying published packages.
 
-### Current state (last updated: 2026-04-12, session hungry-ptolemy — FINAL: all PRs merged, repo clean)
+### Current state (last updated: 2026-04-12, session issue-audit — 420/420 issues audited, 0 open issues/PRs)
 
-- ✅ **0 open PRs** — all 3 (#813, #814, #815) merged. 0 stale branches remain.
+- ✅ **0 open issues, 0 open PRs** — exhaustive audit of all 420 issues complete. 419 confirmed fixed, 1 found & fixed (#388 NodeAnimator, commit `3ae4d839`).
+- ✅ **95 GitHub Discussions answered** with v4.0 solutions, migration guidance, and workarounds.
 - ✅ **PR #814 merged** (`dcdb98df`): render-tests Engine-sharing fix (closes #803) + AR camera exposure API (closes #792). +117 new tests.
-- ✅ **PR #815 merged**: telemetry worker — Cloudflare Worker (Hono + D1 + KV), 6 endpoints, 79 tests, dashboard.html with CSV export. NOT deployed yet (Thomas needs D1/KV create + `wrangler deploy`).
+- ✅ **Dependency bumps**: AGP 8.11.1 → 8.13.2, maven-publish 0.35.0 → 0.36.0.
+- ✅ **Stale branch cleanup**: `claude/confident-rhodes` remote branch deleted.
 - ✅ **CI quality-gate GREEN on main** (run 24309254779). All checks pass: quality-gate, CI, PR Check, Build APKs, Deploy Website.
-- ✅ **Repo cleanup complete**: 10 worktrees removed, 35+ local branches cleaned, 19 remote branches deleted, 6 stashes dropped. Remaining worktrees: eager-sinoussi, festive-hawking, intelligent-perlman (3 only).
+- ✅ **Repo cleanup complete**: 10 worktrees removed, 35+ local branches cleaned, 19 remote branches deleted, 6 stashes dropped.
 - ✅ **polar.sh migration complete**: all 10 files with dead Polar URLs updated to GitHub Sponsors or gateway pricing URL. Zero polar.sh references remain in codebase (except historical handoff.md notes).
 - ✅ **SceneView ↔ Rerun.io integration SHIPPED** (session `crazy-lichterman`, 5 phases merged on `main`):
   - Phase 1: `rerun-3d-mcp@1.0.0` on npm `@latest` — 5 tools, 73 vitest, `npx rerun-3d-mcp`
@@ -178,7 +180,7 @@ Never say "everything is good" without verifying published packages.
   - Phase 5: `SceneViewSwift.RerunBridge` + new `ARSceneView.onFrame` modifier + `samples/ios-demo` demo — `NWConnection` + `@Published eventCount`, 12 Swift tests
   - Wire format parity: 24 golden tests (12 Kotlin + 12 Swift) with character-identical expected JSON
   - Plan: `.claude/plans/fuzzy-prancing-turing.md`
-- ✅ **Telemetry Worker MERGED** (PR #815, merged by hungry-ptolemy session): `telemetry-worker/` Cloudflare Worker (Hono + D1 + KV) ingesting anonymous events from `mcp/src/telemetry.ts`. 6 endpoints (events, batch, stats, timeseries, export, health), client-side batching in `mcp/src/telemetry.ts`, dashboard.html with CSV export, `X-RateLimit-*` headers, CI workflow. **79 tests** (54 worker + 25 mcp). NOT deployed — Thomas needs D1/KV create + `wrangler deploy` + CNAME `telemetry.sceneview.io`.
+- ✅ **Telemetry Worker MERGED** (PR #815): `telemetry-worker/` Cloudflare Worker (Hono + D1 + KV) ingesting anonymous events from `mcp/src/telemetry.ts`. 6 endpoints (events, batch, stats, timeseries, export, health), client-side batching in `mcp/src/telemetry.ts`, dashboard.html with CSV export, `X-RateLimit-*` headers, CI workflow. **79 tests** (54 worker + 25 mcp). NOT deployed — Thomas needs D1/KV create + `wrangler deploy` + CNAME `telemetry.sceneview.io`.
 - ✅ **v4.0.0-rc.1 release candidate** — all version locations bumped (`gradle.properties`, npm, flutter, docs, website, samples — 28 files). Git tag `v4.0.0-rc.1` + GitHub pre-release created. **Maven Central / SPM NOT published** (release.yml only matches strict semver `v[0-9]+.[0-9]+.[0-9]+`).
 - ✅ **npm dist-tags**: `{ latest: '3.6.5', beta: '4.0.0-beta.1', next: '4.0.0-rc.1' }`. `@latest` intentionally NOT bumped to 4.x — protected by `publishConfig: { tag: "next" }` in `mcp/package.json`. `3.6.5` was published by another session (Pro upgrade message fix). `rerun-3d-mcp@1.0.0` on separate `@latest`.
 - 🟢 **MCP GATEWAY #1 IS LIVE (Stripe production mode)** — see `.claude/NOTICE-2026-04-11-mcp-gateway-live.md`. 4 products, 4 `price_1TL6...` LIVE ids, webhook `we_1TL7HfEr7tnnFQbdFDu7bmUr`, all 4 plans return `cs_live_...`. **Pending: first real paying customer.** Do NOT bump `@latest` to 4.x until at least one real checkout succeeds.
