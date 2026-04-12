@@ -1,0 +1,99 @@
+package io.github.sceneview.demo.demos
+
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import io.github.sceneview.SceneView
+import io.github.sceneview.demo.DemoScaffold
+import io.github.sceneview.math.Position
+import io.github.sceneview.rememberCameraManipulator
+import io.github.sceneview.rememberEngine
+import io.github.sceneview.rememberMaterialLoader
+
+/**
+ * Demonstrates TextNode composables with editable text and adjustable font size.
+ * Three text labels are arranged in a row at different positions.
+ */
+@Composable
+fun TextDemo(onBack: () -> Unit) {
+    var inputText by remember { mutableStateOf("Hello SceneView") }
+    var fontSize by remember { mutableFloatStateOf(48f) }
+
+    val engine = rememberEngine()
+    val materialLoader = rememberMaterialLoader(engine)
+
+    DemoScaffold(
+        title = "Text Nodes",
+        onBack = onBack,
+        controls = {
+            Text("Text Content", style = MaterialTheme.typography.labelLarge)
+            OutlinedTextField(
+                value = inputText,
+                onValueChange = { inputText = it },
+                label = { Text("Display Text") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("Font Size: ${fontSize.toInt()}px", style = MaterialTheme.typography.labelLarge)
+            Slider(
+                value = fontSize,
+                onValueChange = { fontSize = it },
+                valueRange = 16f..96f
+            )
+        }
+    ) {
+        SceneView(
+            modifier = Modifier.fillMaxSize(),
+            engine = engine,
+            materialLoader = materialLoader,
+            cameraManipulator = rememberCameraManipulator()
+        ) {
+            // Left: user text with white on dark background
+            TextNode(
+                text = inputText,
+                fontSize = fontSize,
+                textColor = android.graphics.Color.WHITE,
+                backgroundColor = 0xCC000000.toInt(),
+                widthMeters = 0.8f,
+                heightMeters = 0.25f,
+                position = Position(x = -0.9f, y = 0.3f)
+            )
+
+            // Center: fixed label with yellow text
+            TextNode(
+                text = "SceneView 4.0",
+                fontSize = fontSize,
+                textColor = android.graphics.Color.YELLOW,
+                backgroundColor = 0xCC333333.toInt(),
+                widthMeters = 0.8f,
+                heightMeters = 0.25f,
+                position = Position(x = 0f, y = 0f)
+            )
+
+            // Right: fixed label with cyan text
+            TextNode(
+                text = "3D Text Labels",
+                fontSize = fontSize,
+                textColor = android.graphics.Color.CYAN,
+                backgroundColor = 0xCC003333.toInt(),
+                widthMeters = 0.8f,
+                heightMeters = 0.25f,
+                position = Position(x = 0.9f, y = -0.3f)
+            )
+        }
+    }
+}

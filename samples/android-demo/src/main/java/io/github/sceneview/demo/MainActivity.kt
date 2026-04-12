@@ -1,59 +1,41 @@
-@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
-
 package io.github.sceneview.demo
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.GridView
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.ViewInAr
-import androidx.compose.material.icons.outlined.CameraAlt
-import androidx.compose.material.icons.outlined.Code
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.ViewInAr
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
-import androidx.annotation.StringRes
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.res.stringResource
-import androidx.navigation.NavDestination.Companion.hierarchy
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import io.github.sceneview.demo.about.AboutScreen
-import io.github.sceneview.demo.ar.ARScreen
-import io.github.sceneview.demo.explore.ExploreScreen
-import io.github.sceneview.demo.samples.SamplesScreen
+import io.github.sceneview.demo.demos.AnimationDemo
+import io.github.sceneview.demo.demos.ARPlacementDemo
+import io.github.sceneview.demo.demos.CameraControlsDemo
+import io.github.sceneview.demo.demos.EnvironmentDemo
+import io.github.sceneview.demo.demos.FogDemo
+import io.github.sceneview.demo.demos.GeometryDemo
+import io.github.sceneview.demo.demos.LightingDemo
+import io.github.sceneview.demo.demos.ModelViewerDemo
+import io.github.sceneview.demo.demos.TextDemo
+import io.github.sceneview.demo.demos.LinesPathsDemo
+import io.github.sceneview.demo.demos.ImageDemo
+import io.github.sceneview.demo.demos.BillboardDemo
+import io.github.sceneview.demo.demos.VideoDemo
+import io.github.sceneview.demo.demos.ViewNodeDemo
+import io.github.sceneview.demo.demos.GestureEditingDemo
+import io.github.sceneview.demo.demos.CollisionDemo
 import io.github.sceneview.demo.theme.SceneViewDemoTheme
 import io.github.sceneview.demo.update.InAppUpdateManager
-import io.github.sceneview.demo.update.UpdateBanner
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 
 class MainActivity : ComponentActivity() {
 
@@ -62,12 +44,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-
         updateManager = InAppUpdateManager(this)
-
         setContent {
             SceneViewDemoTheme {
-                SceneViewDemoApp(updateManager)
+                SceneViewDemoApp()
             }
         }
     }
@@ -83,103 +63,79 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-sealed class Screen(
-    val route: String,
-    @StringRes val labelRes: Int,
-    val icon: ImageVector,
-    val iconSelected: ImageVector
-) {
-    data object ThreeD : Screen("3d", R.string.tab_3d, Icons.Outlined.ViewInAr, Icons.Default.ViewInAr)
-    data object AR : Screen("ar", R.string.tab_ar, Icons.Outlined.CameraAlt, Icons.Default.CameraAlt)
-    data object Samples : Screen("samples", R.string.tab_samples, Icons.Outlined.Code, Icons.Default.Code)
-    data object About : Screen("about", R.string.tab_about, Icons.Outlined.Info, Icons.Default.Info)
+@Composable
+fun SceneViewDemoApp() {
+    val navController = rememberNavController()
+
+    NavHost(
+        navController = navController,
+        startDestination = "list",
+        enterTransition = { slideInHorizontally(initialOffsetX = { it }) + fadeIn() },
+        exitTransition = { slideOutHorizontally(targetOffsetX = { -it / 4 }) + fadeOut() },
+        popEnterTransition = { slideInHorizontally(initialOffsetX = { -it / 4 }) + fadeIn() },
+        popExitTransition = { slideOutHorizontally(targetOffsetX = { it }) + fadeOut() }
+    ) {
+        composable("list") {
+            DemoListScreen(onDemoClick = { id -> navController.navigate("demo/$id") })
+        }
+        composable("demo/{id}") { backStackEntry ->
+            val id = backStackEntry.arguments?.getString("id") ?: return@composable
+            val onBack: () -> Unit = { navController.popBackStack() }
+            DemoRouter(id = id, onBack = onBack)
+        }
+    }
+}
+
+/**
+ * Routes a demo [id] to the corresponding composable.
+ * Demos not yet implemented show a placeholder.
+ */
+@Composable
+fun DemoRouter(id: String, onBack: () -> Unit) {
+    when (id) {
+        // 3D Basics
+        "model-viewer" -> ModelViewerDemo(onBack)
+        "geometry" -> GeometryDemo(onBack)
+        "animation" -> AnimationDemo(onBack)
+        // Lighting & Environment
+        "lighting" -> LightingDemo(onBack)
+        "fog" -> FogDemo(onBack)
+        "environment" -> EnvironmentDemo(onBack)
+        // Interaction
+        "camera-controls" -> CameraControlsDemo(onBack)
+        // Content
+        "text" -> TextDemo(onBack)
+        "lines-paths" -> LinesPathsDemo(onBack)
+        "image" -> ImageDemo(onBack)
+        "billboard" -> BillboardDemo(onBack)
+        "video" -> VideoDemo(onBack)
+        // Interaction
+        "gesture-editing" -> GestureEditingDemo(onBack)
+        "collision" -> CollisionDemo(onBack)
+        "view-node" -> ViewNodeDemo(onBack)
+        // Augmented Reality
+        "ar-placement" -> ARPlacementDemo(onBack)
+        // Not yet implemented
+        else -> PlaceholderDemo(id = id, onBack = onBack)
+    }
 }
 
 @Composable
-fun SceneViewDemoApp(updateManager: InAppUpdateManager) {
-    val navController = rememberNavController()
-    val screens = listOf(Screen.ThreeD, Screen.AR, Screen.Samples, Screen.About)
-
-    // Auto-check for updates on launch
-    LaunchedEffect(Unit) {
-        updateManager.checkForUpdate()
-    }
-
-    Scaffold(
-        bottomBar = {
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                contentColor = MaterialTheme.colorScheme.onSurface
-            ) {
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentDestination = navBackStackEntry?.destination
-                screens.forEach { screen ->
-                    val selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true
-                    val scale by animateFloatAsState(
-                        targetValue = if (selected) 1f else 0.92f,
-                        label = "navScale"
-                    )
-
-                    val label = stringResource(screen.labelRes)
-                    NavigationBarItem(
-                        icon = {
-                            Icon(
-                                imageVector = if (selected) screen.iconSelected else screen.icon,
-                                contentDescription = label,
-                                modifier = Modifier.scale(scale)
-                            )
-                        },
-                        label = { Text(label, style = MaterialTheme.typography.labelMedium, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal) },
-                        selected = selected,
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                            selectedTextColor = MaterialTheme.colorScheme.primary,
-                            indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        ),
-                        onClick = {
-                            navController.navigate(screen.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        }
-                    )
-                }
-            }
-        }
-    ) { innerPadding ->
-        Column(modifier = Modifier
-            .fillMaxSize()
-            .padding(innerPadding)) {
-            // Global update banner — visible across all tabs
-            UpdateBanner(updateManager)
-
-            NavHost(
-                navController = navController,
-                startDestination = Screen.ThreeD.route,
-                modifier = Modifier.weight(1f),
-                enterTransition = { fadeIn() + scaleIn(initialScale = 0.96f) },
-                exitTransition = { fadeOut() + scaleOut(targetScale = 0.96f) },
-                popEnterTransition = { fadeIn() + scaleIn(initialScale = 0.96f) },
-                popExitTransition = { fadeOut() + scaleOut(targetScale = 0.96f) }
-            ) {
-                composable(Screen.ThreeD.route) {
-                    ExploreScreen()
-                }
-                composable(Screen.AR.route) {
-                    ARScreen()
-                }
-                composable(Screen.Samples.route) {
-                    SamplesScreen()
-                }
-                composable(Screen.About.route) {
-                    AboutScreen()
-                }
-            }
+fun PlaceholderDemo(id: String, onBack: () -> Unit) {
+    val entry = ALL_DEMOS.find { it.id == id }
+    DemoScaffold(
+        title = entry?.title ?: id,
+        onBack = onBack
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "Coming soon",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
