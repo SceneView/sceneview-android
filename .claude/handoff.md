@@ -4,6 +4,30 @@
 
 ---
 
+## 🧹 SESSION hungry-ptolemy — 2026-04-12 — Full repo cleanup + CI green
+
+**Branch:** `claude/hungry-ptolemy` (detached, can be removed)
+
+### What shipped
+
+**PR #813 merged** (squash, `93863dcc`): quality-gate regex pre-release support + ARScene refs.
+
+**CI fixes (3 commits on main):**
+1. `tiers.test.ts` polar.sh → gateway Stripe URL (82/82 MCP tests pass)
+2. `quality-gate.yml` JDK 17 → 21 (aligned with ci.yml/pr-check.yml)
+3. 10 stale `polar.sh/sceneview` references removed (docs, configs, redirect, funding fields)
+
+**Result: quality-gate GREEN on main** (run 24309254779).
+
+**Cleanup totals:**
+- 7 worktrees removed (agent-ae442902, crazy-goodall, filament-bump, keen-yalow, cool-satoshi, dazzling-bose, stupefied-meitner)
+- 18 remote branches deleted, 18 orphan local branches deleted
+- Remaining: confident-rhodes (PR #814), flamboyant-neumann (PR #815), multi-gateway-sprint (kept), intelligent-perlman (new session)
+
+**Polar.sh migration complete:** all 10 files with dead `polar.sh` URLs updated to GitHub Sponsors or gateway pricing.
+
+---
+
 ## 🔍 SESSION stupefied-meitner — 2026-04-12 — Gateway audit + hub-mcp fixes
 
 **Worktree:** `stupefied-meitner`
