@@ -83,7 +83,7 @@ describe("hub-gateway /mcp", () => {
     // One canary from each of the 11 stubbed libraries — if the
     // registry wiring regresses, exactly one assertion below fails
     // so the offending package is easy to spot.
-    expect(names).toContain("architecture__list_building_types");
+    expect(names).toContain("architecture__generate_3d_concept");
     expect(names).toContain("realestate__search_listings");
     expect(names).toContain("french_admin__calculate_impots");
     expect(names).toContain("ecommerce3d__search_products");
@@ -109,7 +109,7 @@ describe("hub-gateway /mcp", () => {
         jsonrpc: "2.0",
         id: 3,
         method: "tools/call",
-        params: { name: "architecture__list_building_types", arguments: {} },
+        params: { name: "architecture__generate_3d_concept", arguments: {} },
       }),
       {},
       FAKE_ENV,
@@ -122,7 +122,7 @@ describe("hub-gateway /mcp", () => {
     expect(body.id).toBe(3);
     expect(body.result.isError).toBeFalsy();
     expect(body.result.content[0].type).toBe("text");
-    expect(body.result.content[0].text).toContain("architecture-mcp pilot stub");
+    expect(body.result.content[0].text).toContain("Not professional architectural advice");
   });
 
   it("returns METHOD_NOT_FOUND for an unknown JSON-RPC method", async () => {

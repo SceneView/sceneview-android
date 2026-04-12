@@ -39,10 +39,12 @@ export type ToolTier = "free" | "pro";
  * readability — the runtime uses a Set so order doesn't matter.
  */
 export const FREE_TOOLS: ReadonlySet<string> = new Set<string>([
+  // Real architecture-mcp from npm — 2 free discovery tools.
+  "architecture__generate_3d_concept",
+  "architecture__cost_estimate",
   // Stubbed libraries — one discovery tool per library (the
   // catalogue entry point). Tool names use the `{package}__tool`
   // scheme because the stubs were scaffolded from scratch.
-  "architecture__list_building_types",
   "ecommerce3d__list_categories",
   "education__build_quiz",
   "finance__compound_interest",

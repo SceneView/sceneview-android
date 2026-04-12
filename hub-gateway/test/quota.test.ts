@@ -79,7 +79,7 @@ describe("monthly quota + usage logging", () => {
         jsonrpc: "2.0",
         id: 1,
         method: "tools/call",
-        params: { name: "architecture__list_building_types", arguments: {} },
+        params: { name: "architecture__generate_3d_concept", arguments: {} },
       }),
       {},
       ctx.env,
@@ -91,7 +91,7 @@ describe("monthly quota + usage logging", () => {
     expect(records[0]).toMatchObject({
       api_key_id: "key_pro_q",
       user_id: "usr_pro_q",
-      tool_name: "architecture__list_building_types",
+      tool_name: "architecture__generate_3d_concept",
       // This tool is in the free whitelist (see src/mcp/access.ts)
       // so usage is logged with tier_required=free even when the
       // calling user is on `pro` — dashboards can tell free vs pro
@@ -113,7 +113,7 @@ describe("monthly quota + usage logging", () => {
         jsonrpc: "2.0",
         id: 1,
         method: "tools/call",
-        params: { name: "architecture__list_building_types", arguments: {} },
+        params: { name: "architecture__generate_3d_concept", arguments: {} },
       }),
       {},
       ctx.env,
@@ -159,7 +159,7 @@ describe("monthly quota + usage logging", () => {
         jsonrpc: "2.0",
         id: 1,
         method: "tools/call",
-        params: { name: "architecture__list_building_types", arguments: {} },
+        params: { name: "architecture__generate_3d_concept", arguments: {} },
       }),
       {},
       ctx.env,
