@@ -110,10 +110,10 @@ export const PRO_UPGRADE_MESSAGE = `## \u{1F512} Pro Feature
 
 This tool requires a SceneView MCP Pro subscription.
 
-**Upgrade for \u20AC9.99/month** to unlock:
-- 36+ premium tools (AR, multi-platform, scene generation, artifacts)
+**Upgrade for \u20AC19/month** to unlock:
+- 35+ premium tools (AR, multi-platform, scene generation, artifacts)
 - Specialized packages (Automotive, Gaming, Healthcare, Interior)
-- Priority support
+- Email support
 
-\u2192 Subscribe at https://polar.sh/sceneview
+\u2192 Subscribe at https://sceneview-mcp.mcp-tools-lab.workers.dev/pricing
 \u2192 Then set your API key: \`SCENEVIEW_API_KEY=your_key\``;
