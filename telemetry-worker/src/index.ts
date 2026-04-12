@@ -306,11 +306,11 @@ app.get("/v1/timeseries", async (c) => {
       // Daily total event counts — rollups for older days, live events for today
       const [rollupRes, liveRes] = await Promise.all([
         c.env.DB.prepare(
-          `SELECT day as time, SUM(event_count) as value
+          `SELECT date as time, SUM(count) as value
            FROM daily_rollups
-           WHERE day >= date('now', '-' || ? || ' days') AND day < ?
-           GROUP BY day
-           ORDER BY day ASC`,
+           WHERE date >= date('now', '-' || ? || ' days') AND date < ?
+           GROUP BY date
+           ORDER BY date ASC`,
         )
           .bind(days, todayStr)
           .all<{ time: string; value: number }>(),
@@ -328,12 +328,12 @@ app.get("/v1/timeseries", async (c) => {
       // Daily counts per tool
       const [rollupRes, liveRes] = await Promise.all([
         c.env.DB.prepare(
-          `SELECT day as time, tool as label, SUM(tool_count) as value
+          `SELECT date as time, tool as label, SUM(count) as value
            FROM daily_rollups
-           WHERE day >= date('now', '-' || ? || ' days') AND day < ?
-             AND tool IS NOT NULL
-           GROUP BY day, tool
-           ORDER BY day ASC, value DESC`,
+           WHERE date >= date('now', '-' || ? || ' days') AND date < ?
+             AND tool != ''
+           GROUP BY date, tool
+           ORDER BY date ASC, value DESC`,
         )
           .bind(days, todayStr)
           .all<{ time: string; label: string; value: number }>(),
@@ -352,11 +352,11 @@ app.get("/v1/timeseries", async (c) => {
       // Daily counts per mcp_ver
       const [rollupRes, liveRes] = await Promise.all([
         c.env.DB.prepare(
-          `SELECT day as time, mcp_ver as label, SUM(event_count) as value
+          `SELECT date as time, mcp_ver as label, SUM(count) as value
            FROM daily_rollups
-           WHERE day >= date('now', '-' || ? || ' days') AND day < ?
-           GROUP BY day, mcp_ver
-           ORDER BY day ASC, value DESC`,
+           WHERE date >= date('now', '-' || ? || ' days') AND date < ?
+           GROUP BY date, mcp_ver
+           ORDER BY date ASC, value DESC`,
         )
           .bind(days, todayStr)
           .all<{ time: string; label: string; value: number }>(),
@@ -375,11 +375,11 @@ app.get("/v1/timeseries", async (c) => {
       // metric === "clients" — daily counts per client
       const [rollupRes, liveRes] = await Promise.all([
         c.env.DB.prepare(
-          `SELECT day as time, client as label, SUM(event_count) as value
+          `SELECT date as time, client as label, SUM(count) as value
            FROM daily_rollups
-           WHERE day >= date('now', '-' || ? || ' days') AND day < ?
-           GROUP BY day, client
-           ORDER BY day ASC, value DESC`,
+           WHERE date >= date('now', '-' || ? || ' days') AND date < ?
+           GROUP BY date, client
+           ORDER BY date ASC, value DESC`,
         )
           .bind(days, todayStr)
           .all<{ time: string; label: string; value: number }>(),
