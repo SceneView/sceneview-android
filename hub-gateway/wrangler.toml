@@ -31,10 +31,10 @@ GATEWAY_BASE_URL = "https://hub-mcp.mcp-tools-lab.workers.dev"
 # Stripe price ids for the Portfolio Access plans. Placeholders until
 # the Stripe dashboard entries are created for Gateway #2 — see
 # README.md for the wiring checklist.
-STRIPE_PRICE_PORTFOLIO_MONTHLY = ""
-STRIPE_PRICE_PORTFOLIO_YEARLY = ""
-STRIPE_PRICE_TEAM_MONTHLY = ""
-STRIPE_PRICE_TEAM_YEARLY = ""
+STRIPE_PRICE_PORTFOLIO_MONTHLY = "price_1TLLkMEr7tnnFQbdxthTkpqZ"
+STRIPE_PRICE_PORTFOLIO_YEARLY = "price_1TLLl5Er7tnnFQbdAoRCEQHp"
+STRIPE_PRICE_TEAM_MONTHLY = "price_1TLLldEr7tnnFQbdG1n8uwOb"
+STRIPE_PRICE_TEAM_YEARLY = "price_1TLLmFEr7tnnFQbdLvONEJu7"
 
 # ── Shared infrastructure with Gateway #1 ──────────────────────────────────
 #
