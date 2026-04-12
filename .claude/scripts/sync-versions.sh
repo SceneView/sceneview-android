@@ -75,16 +75,16 @@ done
 
 # ─── 2. npm packages ────────────────────────────────────────────────────
 echo -e "${CYAN}--- npm Packages ---${NC}"
-for pkg in mcp sceneview-web react-native/react-native-sceneview; do
+# NOTE: mcp/package.json is EXCLUDED from this check entirely.
+# sceneview-mcp (npm) has its own independent version track (e.g. 4.0.0-rc.5)
+# separate from gradle.properties VERSION_NAME (Maven Central artifacts).
+# Forcing them to match caused a regression where the sync agent downgraded
+# mcp/package.json behind the published npm @next tag.
+for pkg in sceneview-web react-native/react-native-sceneview; do
     PKG_JSON="$REPO_ROOT/$pkg/package.json"
     if [ -f "$PKG_JSON" ]; then
         V=$(python3 -c "import json; print(json.load(open('$PKG_JSON'))['version'])" 2>/dev/null || echo "MISSING")
-        # MCP may have its own version cycle
-        if [ "$pkg" = "mcp" ]; then
-            add_check "$pkg/package.json" "$V" "false"
-        else
-            add_check "$pkg/package.json" "$V"
-        fi
+        add_check "$pkg/package.json" "$V"
     fi
 done
 
@@ -195,17 +195,10 @@ if [ -f "$DEMO_GRADLE" ]; then
 fi
 
 # ─── 7. MCP source/dist version ─────────────────────────────────────────
-echo -e "${CYAN}--- MCP Source/Dist ---${NC}"
-MCP_INDEX="$REPO_ROOT/mcp/src/index.ts"
-if [ -f "$MCP_INDEX" ]; then
-    V=$(grep -m1 'PACKAGE_VERSION' "$MCP_INDEX" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' | head -1 || echo "NOT FOUND")
-    add_check "mcp/src/index.ts" "$V" "false"
-fi
-MCP_DIST="$REPO_ROOT/mcp/dist/index.js"
-if [ -f "$MCP_DIST" ]; then
-    V=$(grep -m1 'PACKAGE_VERSION' "$MCP_DIST" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' | head -1 || echo "NOT FOUND")
-    add_check "mcp/dist/index.js" "$V" "false"
-fi
+# SKIPPED: MCP has its own version track independent of gradle.properties.
+# mcp/src/index.ts PACKAGE_VERSION and mcp/package.json version must match
+# each other, but NOT gradle.properties VERSION_NAME.
+echo -e "${CYAN}--- MCP Source/Dist (independent track, not checked) ---${NC}"
 
 # ─── 8. iOS demo ────────────────────────────────────────────────────────
 IOS_ABOUT="$REPO_ROOT/SceneViewSwift/Examples/SceneViewDemo/SceneViewDemo/Views/AboutView.swift"
