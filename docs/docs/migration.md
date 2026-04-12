@@ -70,8 +70,8 @@ Update your Gradle / SPM / pubspec / package.json references:
 
 ```kotlin
 // Before
-implementation("io.github.sceneview:sceneview:3.6.2")
-implementation("io.github.sceneview:arsceneview:3.6.2")
+implementation("io.github.sceneview:sceneview:4.0.0-rc.1")
+implementation("io.github.sceneview:arsceneview:4.0.0-rc.1")
 
 // After (4.0.0-rc.1)
 implementation("io.github.sceneview:sceneview:4.0.0-rc.1")

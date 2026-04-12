@@ -4,6 +4,57 @@
 
 ---
 
+## SESSION intelligent-perlman — 2026-04-12 — Gateway deploys, hub-mcp npm, cleanup
+
+**Worktree:** `intelligent-perlman`
+**Branch:** `claude/intelligent-perlman`
+
+### What shipped
+
+**Both gateways redeployed to Cloudflare:**
+- Gateway #1 `sceneview-mcp.mcp-tools-lab.workers.dev` — Version `373f7c33`, Stripe LIVE checkout verified
+- Gateway #2 `hub-mcp.mcp-tools-lab.workers.dev` — Version `62b9e1f6`, 11 libs / 52 tools, Stripe LIVE checkout verified
+
+**hub-mcp@0.1.0 published on npm** (`npx hub-mcp`):
+- 52 tools across 11 libraries (14 free, 38 pro)
+- Lite mode: free tools return stubs, pro tools return upsell
+- Hosted mode (`HUB_MCP_API_KEY`): proxies all calls to gateway via JSON-RPC
+- dist-tags: `latest=0.1.0`, `beta=0.1.0`
+
+**Hub-gateway fixes:**
+- Comment cleanup: MVP/stub → real handlers (6 files)
+- New dispatch-vendored.test.ts: 24 tests for 8 vendored libraries
+- Fixed test assertions: tool count 100→45, correct tool names
+- 82/82 hub-gateway tests passing
+
+**Worktree cleanup:**
+- Removed eager-sinoussi (0 ahead, stale)
+- Removed festive-hawking (commits already on main)
+- Confirmed confident-rhodes and flamboyant-neumann already merged/cleaned by prior sessions
+
+**Other:**
+- Fixed `.gitignore`: removed hub-mcp/ and hub-gateway/ from ignore list
+- Confirmed tiers.test.ts Polar→Stripe fix already on main
+
+### Commits pushed to main
+- `f375960b` chore(hub-gateway): cleanup stale MVP/stub comments
+- `1ca1f922` test(hub-gateway): add dispatch-vendored tests for 8 real upstream libraries
+- `e9d04f4a` fix(hub-gateway): fix test assertions to match actual registry state
+- `b5e47902` feat(hub-mcp): scaffold npm lite proxy package (0.1.0)
+
+### Production state
+- **Gateway #1**: LIVE, Stripe LIVE, 4 plans, 0 real paying customers
+- **Gateway #2**: LIVE, Stripe LIVE, 4 plans (Portfolio/Team), 0 real paying customers
+- **npm**: sceneview-mcp `latest=3.6.5` / `beta=4.0.0-beta.1` / `next=4.0.0-rc.1`; hub-mcp `latest=0.1.0`
+- **Worktrees**: only `intelligent-perlman` remains (this session)
+
+### What's NOT done
+- First real paying customer test (both gateways ready, needs human card)
+- Dependabot: 3 moderate vulnerabilities (audit in progress)
+- `@latest` bump to 4.x (blocked on first customer)
+
+---
+
 ## SESSION confident-rhodes — 2026-04-12 — Bug fixes, tests, API parity, docs
 
 **Branch:** `claude/confident-rhodes`

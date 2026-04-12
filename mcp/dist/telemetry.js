@@ -18,14 +18,20 @@
 //   - API keys, billing info
 //
 // Opt out with `SCENEVIEW_TELEMETRY=0` or by running in CI (`CI=true`).
-// TODO: Provision a Cloudflare Worker at this address that ingests events
-// into a lightweight store (Workers Analytics Engine or R2 + daily rollup).
-// Until the Worker is deployed, requests to this endpoint will fail silently,
-// which is fine — fetch errors are swallowed by design.
+// Worker implementation: telemetry-worker/ (Hono + D1 + KV rate limiting).
+// Deploy with: cd telemetry-worker && see DEPLOY.md
+// Until deployed, requests to this endpoint fail silently (by design).
 const TELEMETRY_ENDPOINT = "https://telemetry.sceneview.io/v1/events";
+const TELEMETRY_BATCH_ENDPOINT = "https://telemetry.sceneview.io/v1/batch";
 // Hard cap so we never hang the process on a slow endpoint.
 const TELEMETRY_TIMEOUT_MS = 2000;
+// Client-side batching: flush when buffer reaches this size or after this delay.
+const BATCH_MAX_SIZE = 10;
+const BATCH_FLUSH_INTERVAL_MS = 30_000;
 let clientContext;
+// ─── Client-side batch buffer ─────────────────────────────────────────────────
+let buffer = [];
+let flushTimer;
 // Read lazily so tests that mutate env vars between runs see the latest value.
 function isEnabled() {
     if (process.env.SCENEVIEW_TELEMETRY === "0")
@@ -38,21 +44,11 @@ function isEnabled() {
 // Falls back to "unknown" so payloads stay well-formed even if
 // something goes wrong.
 function getMcpVersion() {
-    return process.env.SCENEVIEW_MCP_VERSION ?? "3.6.4";
+    return process.env.SCENEVIEW_MCP_VERSION ?? "4.0.0-rc.1";
 }
-/** Exposed for tests — resets the cached client context. */
-export function __resetClientContext() {
-    clientContext = undefined;
-}
-// Fire-and-forget POST with a timeout. Never throws, never awaits the caller.
-function send(payload) {
-    if (!isEnabled())
-        return;
-    // Build a bounded promise so we never hang on a slow endpoint. We
-    // intentionally do NOT await this from the caller — telemetry must
-    // never block the handshake or a tool call. Wrap everything in a
-    // try/catch because a buggy fetch polyfill (or a test mock) could
-    // throw synchronously before we get a chance to attach .catch.
+// Fire-and-forget POST of a single payload to the individual event endpoint.
+// Used as fallback when batch delivery fails.
+function sendSingle(payload) {
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), TELEMETRY_TIMEOUT_MS);
@@ -72,6 +68,89 @@ function send(payload) {
     }
     catch {
         // Swallow synchronous throws too.
+    }
+}
+// Fire-and-forget POST of a batch of payloads. Falls back to individual sends
+// if the batch request fails.
+function sendBatch(events) {
+    if (events.length === 0)
+        return;
+    // Single-event shortcut: avoid the batch overhead.
+    if (events.length === 1) {
+        sendSingle(events[0]);
+        return;
+    }
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), TELEMETRY_TIMEOUT_MS);
+        fetch(TELEMETRY_BATCH_ENDPOINT, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ events }),
+            signal: controller.signal,
+        })
+            .catch(() => {
+            // Batch failed — fall back to individual sends so no data is lost.
+            clearTimeout(timeoutId);
+            for (const payload of events) {
+                sendSingle(payload);
+            }
+        })
+            .finally(() => {
+            clearTimeout(timeoutId);
+        });
+    }
+    catch {
+        // Synchronous throw from fetch — fall back to individual sends.
+        for (const payload of events) {
+            sendSingle(payload);
+        }
+    }
+}
+// Schedule the 30-second auto-flush timer (idempotent — only one timer at a time).
+function scheduleFlushTimer() {
+    if (flushTimer !== undefined)
+        return;
+    flushTimer = setTimeout(() => {
+        flushTimer = undefined;
+        flushTelemetry();
+    }, BATCH_FLUSH_INTERVAL_MS);
+    // Allow Node.js to exit even if the timer is still pending.
+    if (typeof flushTimer === "object" && flushTimer !== null && "unref" in flushTimer) {
+        flushTimer.unref();
+    }
+}
+/**
+ * Flush all buffered telemetry events immediately. Safe to call at any time.
+ * Useful for graceful shutdown. Fire-and-forget — never throws.
+ */
+export function flushTelemetry() {
+    if (flushTimer !== undefined) {
+        clearTimeout(flushTimer);
+        flushTimer = undefined;
+    }
+    if (buffer.length === 0)
+        return;
+    const snapshot = buffer.splice(0);
+    sendBatch(snapshot);
+}
+// Push a payload into the buffer and flush when the batch is full.
+function send(payload) {
+    if (!isEnabled())
+        return;
+    buffer.push(payload);
+    scheduleFlushTimer();
+    if (buffer.length >= BATCH_MAX_SIZE) {
+        flushTelemetry();
+    }
+}
+/** Exposed for tests — resets the cached client context and the batch buffer. */
+export function __resetClientContext() {
+    clientContext = undefined;
+    buffer = [];
+    if (flushTimer !== undefined) {
+        clearTimeout(flushTimer);
+        flushTimer = undefined;
     }
 }
 /**
