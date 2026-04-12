@@ -31,10 +31,10 @@ GATEWAY_BASE_URL = "https://hub-mcp.mcp-tools-lab.workers.dev"
 # Stripe price ids for the Portfolio Access plans. Placeholders until
 # the Stripe dashboard entries are created for Gateway #2 — see
 # README.md for the wiring checklist.
-STRIPE_PRICE_PORTFOLIO_MONTHLY = "price_REDACTED_PORT_MO_GW2"
-STRIPE_PRICE_PORTFOLIO_YEARLY = "price_REDACTED_PORT_YR_GW2"
-STRIPE_PRICE_TEAM_MONTHLY = "price_REDACTED_TEAM_MO_GW2"
-STRIPE_PRICE_TEAM_YEARLY = "price_REDACTED_TEAM_YR_GW2"
+STRIPE_PRICE_PORTFOLIO_MONTHLY = "price_1TLLkMEr7tnnFQbdxthTkpqZ"
+STRIPE_PRICE_PORTFOLIO_YEARLY = "price_1TLLl5Er7tnnFQbdAoRCEQHp"
+STRIPE_PRICE_TEAM_MONTHLY = "price_1TLLldEr7tnnFQbdG1n8uwOb"
+STRIPE_PRICE_TEAM_YEARLY = "price_1TLLmFEr7tnnFQbdLvONEJu7"
 
 # ── Shared infrastructure with Gateway #1 ──────────────────────────────────
 #
@@ -46,13 +46,13 @@ STRIPE_PRICE_TEAM_YEARLY = "price_REDACTED_TEAM_YR_GW2"
 [[d1_databases]]
 binding = "DB"
 database_name = "sceneview-mcp"
-database_id = "REDACTED-D1-DATABASE-ID"
+database_id = "8aaddcda-e36e-4287-9222-1df924426c9f"
 # Migrations live in mcp-gateway/migrations — Gateway #2 is a
 # read/write consumer of the same schema, not the owner.
 
 [[kv_namespaces]]
 binding = "RL_KV"
-id = "REDACTED-KV-NAMESPACE-ID"
+id = "9a40d334be6149f7a4ba18451a60245f"
 
 # Secrets (set with `wrangler secret put <NAME>`):
 #   STRIPE_SECRET_KEY     — Stripe secret key (sk_live_... in prod).
