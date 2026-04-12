@@ -9,7 +9,7 @@ description: "Migration guides for SceneView: 3.6.x to 4.0.0 Rerun integration, 
 
 ## SceneView 3.6.x to 4.0.0 (Release Candidate)
 
-**Status:** `v4.0.0-rc.1` is live as a release candidate. Maven Central and Swift Package Manager artifacts are **not** built from the RC tag — pin to the tag manually to test, or wait for the `v4.0.0` stable tag.
+**Status:** `v4.0.0` is live as a release candidate. Maven Central and Swift Package Manager artifacts are **not** built from the RC tag — pin to the tag manually to test, or wait for the `v4.0.0` stable tag.
 
 4.0.0 is a **strictly additive** release for the SDK side. Existing 3.6.x code compiles and runs unchanged. The version bump reflects two new capabilities, not breaking changes.
 
@@ -70,19 +70,19 @@ Update your Gradle / SPM / pubspec / package.json references:
 
 ```kotlin
 // Before
-implementation("io.github.sceneview:sceneview:4.0.0-rc.1")
-implementation("io.github.sceneview:arsceneview:4.0.0-rc.1")
+implementation("io.github.sceneview:sceneview:4.0.0")
+implementation("io.github.sceneview:arsceneview:4.0.0")
 
-// After (4.0.0-rc.1)
-implementation("io.github.sceneview:sceneview:4.0.0-rc.1")
-implementation("io.github.sceneview:arsceneview:4.0.0-rc.1")
+// After (4.0.0)
+implementation("io.github.sceneview:sceneview:4.0.0")
+implementation("io.github.sceneview:arsceneview:4.0.0")
 ```
 
-**Release candidate caveat:** Maven Central does **not** currently ship `4.0.0-rc.1`. Either build from source (`./gradlew :sceneview:publishToMavenLocal`) or wait for `v4.0.0` stable.
+**Release candidate caveat:** Maven Central does **not** currently ship `4.0.0`. Either build from source (`./gradlew :sceneview:publishToMavenLocal`) or wait for `v4.0.0` stable.
 
 ### 4. `sceneview-mcp` gained a `@next` dist-tag
 
-If you use the [`sceneview-mcp`](https://www.npmjs.com/package/sceneview-mcp) npm package in Claude Desktop / Cursor / etc., the `@latest` tag is still on `3.6.4` (unchanged, intentionally). The `@next` tag is on `4.0.0-rc.1`, which includes the Rerun integration docs and v4 lite-proxy routing to the hosted gateway. Opt in with:
+If you use the [`sceneview-mcp`](https://www.npmjs.com/package/sceneview-mcp) npm package in Claude Desktop / Cursor / etc., the `@latest` tag is still on `3.6.4` (unchanged, intentionally). The `@next` tag is on `4.0.0`, which includes the Rerun integration docs and v4 lite-proxy routing to the hosted gateway. Opt in with:
 
 ```json
 "sceneview": {
@@ -488,7 +488,7 @@ the imports continue to work. No action required.
 
 | Change | Action |
 |---|---|
-| Bump dependency to `4.0.0-rc.1` | Update `build.gradle` |
+| Bump dependency to `4.0.0` | Update `build.gradle` |
 | Remove `childNodes = rememberNodes { }` | Move node declarations into `SceneView { }` |
 | Replace `add(ModelNode(...))` | Use `ModelNode(...)` composable directly |
 | Replace `addChildNode(...)` | Use nested `NodeScope` content lambda |

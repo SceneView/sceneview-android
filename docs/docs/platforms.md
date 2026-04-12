@@ -13,10 +13,10 @@ SceneView uses **native renderers per platform** for the best performance and to
 
 | Platform | Renderer | Framework | Module | Status |
 |---|---|---|---|---|
-| **Android** | Filament | Jetpack Compose | `sceneview` / `arsceneview` | Stable (v4.0.0-rc.1) |
-| **iOS** | RealityKit | SwiftUI | `SceneViewSwift` | Alpha (v4.0.0-rc.1) |
-| **macOS** | RealityKit | SwiftUI | `SceneViewSwift` | Alpha (v4.0.0-rc.1) |
-| **visionOS** | RealityKit | SwiftUI | `SceneViewSwift` | Alpha (v4.0.0-rc.1) |
+| **Android** | Filament | Jetpack Compose | `sceneview` / `arsceneview` | Stable (v4.0.0) |
+| **iOS** | RealityKit | SwiftUI | `SceneViewSwift` | Alpha (v4.0.0) |
+| **macOS** | RealityKit | SwiftUI | `SceneViewSwift` | Alpha (v4.0.0) |
+| **visionOS** | RealityKit | SwiftUI | `SceneViewSwift` | Alpha (v4.0.0) |
 | **Web** | Filament.js (WASM) | Kotlin/JS | `sceneview-web` | Alpha |
 | **Desktop** | Software wireframe (placeholder) | Compose Desktop | `samples/desktop-demo` | Placeholder (not SceneView) |
 | **Android TV** | Filament | Compose TV | `sceneview` | Alpha |
@@ -32,7 +32,7 @@ The primary platform. SceneView wraps Google Filament (PBR rendering) and ARCore
 - **3D**: `SceneView { }` composable with 26+ node types
 - **AR**: `ARSceneView { }` with plane detection, image tracking, face mesh, cloud anchors, geospatial
 - **Min SDK**: 24 (Android 7.0)
-- **Install**: `implementation("io.github.sceneview:sceneview:4.0.0-rc.1")`
+- **Install**: `implementation("io.github.sceneview:sceneview:4.0.0")`
 
 [:octicons-arrow-right-24: Android Quickstart](quickstart.md)
 
