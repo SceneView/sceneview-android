@@ -314,6 +314,6 @@ SceneView is free and open source. Sponsors help keep it maintained across 9 pla
 |---|---|---|
 | :heart: | **GitHub Sponsors** (0% fees) | [Sponsor on GitHub](https://github.com/sponsors/sceneview) |
 | :blue_heart: | **Open Collective** (transparent) | [opencollective.com/sceneview](https://opencollective.com/sceneview) |
-| :rocket: | **GitHub Sponsors** | [github.com/sponsors/sceneview](https://github.com/sponsors/sceneview) |
+| :star: | **MCP Pro** (unlock all tools) | [sceneview-mcp.mcp-tools-lab.workers.dev/pricing](https://sceneview-mcp.mcp-tools-lab.workers.dev/pricing) |
 
 See [SPONSORS.md](.github/SPONSORS.md) for tiers and current sponsors.
