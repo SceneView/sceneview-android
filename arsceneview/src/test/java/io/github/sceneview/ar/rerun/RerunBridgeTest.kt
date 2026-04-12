@@ -151,7 +151,11 @@ class RerunBridgeTest {
         val bridge = RerunBridge(host = "127.0.0.1", port = port, rateHz = 0)
         try {
             bridge.connect()
+            // Accept and drain the first connection so it doesn't linger in
+            // the server's backlog and confuse the second accept() call below.
+            val firstClient = serverSocket.accept()
             bridge.disconnect()
+            firstClient.close()
             // Second connect should work — bridge is reusable.
             bridge.connect()
             bridge.testOnlyEnqueue(
@@ -161,8 +165,7 @@ class RerunBridgeTest {
                     qx = 0f, qy = 0f, qz = 0f, qw = 1f,
                 ),
             )
-            // Accept the second connection (we've had two `connect` calls now).
-            // The first one disconnected cleanly, so server accept() is the 2nd.
+            // Accept the second connection and read the event.
             val lines = acceptAndReadLines(1, timeoutMillis = 3000L)
             assertEquals(1, lines.size)
             assertTrue(lines[0].contains("camera_pose"))
