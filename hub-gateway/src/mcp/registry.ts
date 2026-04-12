@@ -5,13 +5,11 @@
  * files are intentionally copy-paste siblings so a future refactor can
  * extract them into a shared workspace package. Do not diverge.
  *
- * Scope: the registry ships ELEVEN pilot libraries as stubs
- * (schemas + dispatch stubs, real handlers land in follow-up
- * sessions — see each library file for its individual wiring
- * checklist). Together they cover every ACTIVE non-SceneView
- * package in the portfolio as of 2026-04-11:
+ * Scope: the registry ships ELEVEN libraries with real upstream
+ * handlers. Together they cover every ACTIVE non-SceneView package
+ * in the portfolio as of 2026-04-11:
  *
- *   [stubbed — all active portfolio MCPs]
+ *   [all active portfolio MCPs — real upstream handlers]
  *   - architecture-mcp      (1 134 DL/mo, sceneview-tools)
  *   - realestate-mcp        (1 276 DL/mo, sceneview-tools)
  *   - french-admin-mcp      (1 268 DL/mo, thomasgorisse)
@@ -28,7 +26,7 @@
  *   and its own lite package at mcp/ (session A is rewriting the
  *   4.0.0-beta.1 proxy on the claude/mcp-monetization branch).
  *
- * sceneview-mcp is intentionally EXCLUDED — it has its own gateway.
+ * sceneview-mcp is intentionally EXCLUDED — it has its own gateway (Gateway #1).
  *
  * When adding a new library:
  *   1. Drop a module in `../libraries/<id>.ts` that exports

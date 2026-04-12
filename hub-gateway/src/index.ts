@@ -9,19 +9,12 @@
  * The two workers share a D1 database and a KV namespace so one
  * subscription covers both. See wrangler.toml for the wiring.
  *
- * MVP scope (this commit):
+ * Current scope:
  *   - /health JSON endpoint
  *   - /, /pricing, /docs HTML routes
  *   - POST /mcp JSON-RPC endpoint with `initialize`, `tools/list`,
- *     `tools/call` — auth and rate-limit TODO, see routes/mcp.ts
- *   - 1 pilot library: architecture-mcp (stub dispatcher)
- *
- * Out of MVP (follow-up sessions):
- *   - Auth middleware (ported from mcp-gateway/src/auth/middleware.ts)
- *   - Rate limit middleware
- *   - Stripe checkout + webhook routes
- *   - Usage logging into D1
- *   - Wiring the remaining 14 portfolio MCPs
+ *     `tools/call` — auth middleware, rate limiting, Stripe checkout
+ *   - 11 libraries with real upstream handlers (104+ tools total)
  */
 
 import { Hono } from "hono";

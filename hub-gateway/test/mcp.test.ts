@@ -2,9 +2,9 @@
  * JSON-RPC MCP transport smoke tests.
  *
  * Exercises the three methods the MVP handles: initialize, tools/list,
- * tools/call. Dispatch goes against the architecture-mcp stub library,
- * which returns a "not yet wired" text payload — the test asserts that
- * the envelope shape is correct, not the upstream behavior.
+ * tools/call. Dispatch goes against the architecture-mcp library,
+ * which runs the real upstream handler — the test asserts that
+ * the envelope shape is correct and the real handler ran.
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
@@ -66,7 +66,7 @@ describe("hub-gateway /mcp", () => {
     expect(body.result.capabilities).toBeDefined();
   });
 
-  it("handles tools/list across every stubbed library", async () => {
+  it("handles tools/list across all vendored libraries", async () => {
     const res = await app.request(
       rpc({ jsonrpc: "2.0", id: 2, method: "tools/list" }),
       {},
@@ -78,9 +78,9 @@ describe("hub-gateway /mcp", () => {
       result: { tools: Array<{ name: string }> };
     };
     expect(body.id).toBe(2);
-    expect(body.result.tools.length).toBeGreaterThanOrEqual(33);
+    expect(body.result.tools.length).toBeGreaterThanOrEqual(100);
     const names = body.result.tools.map((t) => t.name);
-    // One canary from each of the 11 stubbed libraries — if the
+    // One canary from each of the 11 vendored libraries — if the
     // registry wiring regresses, exactly one assertion below fails
     // so the offending package is easy to spot.
     expect(names).toContain("architecture__generate_3d_concept");
@@ -92,18 +92,18 @@ describe("hub-gateway /mcp", () => {
     expect(names).toContain("education__generate_lesson_plan");
     expect(names).toContain("social_media__suggest_hashtags");
     expect(names).toContain("health_fitness__workout_plan");
-    // Real vendored libraries — upstream tool names (no prefix).
+    // Vendored monorepo libraries — upstream tool names (no prefix).
     expect(names).toContain("get_car_configurator");
     expect(names).toContain("get_anatomy_viewer");
     // Every hub tool must be a valid MCP tool name (lowercase,
-    // underscores, digits). Stubbed libraries use the
-    // `{package}__tool` prefix scheme; the real vendored libraries
+    // underscores, digits). Libraries from npm use the
+    // `{package}__tool` prefix scheme; the monorepo libraries
     // (automotive-3d, healthcare-3d) keep their upstream names for
     // parity with their stdio counterparts, which are NOT prefixed.
     for (const n of names) expect(n).toMatch(/^[a-z0-9_]+$/);
   });
 
-  it("dispatches tools/call to the architecture stub library", async () => {
+  it("dispatches tools/call to the architecture library", async () => {
     const res = await app.request(
       rpc({
         jsonrpc: "2.0",

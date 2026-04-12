@@ -2,7 +2,7 @@
  * automotive-3d-mcp library — REAL handlers vendored from the
  * sceneview monorepo (`mcp/packages/automotive/src/tools.ts`).
  *
- * First library to graduate from pilot stub to production code.
+ * Thin re-export that keeps hub in sync with the canonical package.
  * Exports are a thin re-export of the upstream `TOOL_DEFINITIONS`
  * + `dispatchTool` so a bug fix in the upstream package lands on
  * the hub the next time `wrangler deploy` runs, with no

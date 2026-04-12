@@ -2,7 +2,6 @@
  * healthcare-3d-mcp library — REAL handlers vendored from the
  * sceneview monorepo (`mcp/packages/healthcare/src/tools.ts`).
  *
- * Second library to graduate from pilot stub to production code.
  * Same pattern as automotive-3d.ts — thin re-export of the
  * upstream `TOOL_DEFINITIONS` + `dispatchTool` so the hub always
  * runs the canonical version of the healthcare tools.

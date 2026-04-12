@@ -2,8 +2,8 @@
  * Per-tool tier gate for the hub registry.
  *
  * Unlike Gateway #1 which delegates to `mcp/src/tiers.ts`, the hub
- * owns its own whitelist because the pilot libraries here are stubs
- * with no upstream tier module yet. The whitelist lives in this file
+ * owns its own whitelist because the vendored libraries here have no
+ * upstream tier module. The whitelist lives in this file
  * as a simple `Set<string>` — easy to audit, easy to grep, easy to
  * extend when a new library lands.
  *
