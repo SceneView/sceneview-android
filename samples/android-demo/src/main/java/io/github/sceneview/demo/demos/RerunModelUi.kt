@@ -15,8 +15,8 @@ import androidx.compose.material.icons.rounded.IosShare
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
@@ -46,7 +46,6 @@ import io.github.sceneview.demo.demos.internal.RerunMeshGlb
 import io.github.sceneview.demo.demos.internal.RerunMeshSimplifier
 import io.github.sceneview.demo.demos.internal.RerunSyntheticRoom
 import io.github.sceneview.demo.demos.internal.RerunTsdf
-import io.github.sceneview.demo.theme.LocalStageChrome
 import io.github.sceneview.demo.theme.SceneViewTokens
 import io.github.sceneview.demo.theme.SceneViewTokens.Space
 import io.github.sceneview.demo.ui.ConnectedChoiceRow
@@ -446,14 +445,13 @@ internal fun rememberRerunSurface(
 }
 
 /**
- * Points | Surface, the head of the replay's timeline card: what the 3D view above draws. The
- * surface builds on the first tap (its progress runs under the switch) and a lighter `.glb` of it
- * is shared from the button beside it: the first share takes a few seconds to simplify the mesh,
- * under the same progress line. A share that could not send that lighter copy says so in the
- * surface's caption ([RerunShareNote]).
+ * Points | Surface, a row of the replay's settings sheet (#4379): what the 3D view draws. The
+ * surface builds on the first tap (its progress runs under the switch), a lighter `.glb` of it is
+ * shared from the button beside it (the first share simplifies the mesh, under the same progress
+ * line; a share that could not send that lighter copy says so in the caption, [RerunShareNote]), and a line under it says what the surface is doing — building,
+ * failed, or its size.
  *
- * With [captioned] the switch says what the surface is doing — building, failed, or its size —
- * on a line of its own: the card of a phone on its side has no caption to say it in.
+ * It headed a card over the stage; in the sheet it wears the sheet's own colours.
  */
 @Composable
 internal fun RerunSurfaceSwitch(
@@ -461,9 +459,7 @@ internal fun RerunSurfaceSwitch(
     onWanted: (Boolean) -> Unit,
     title: String,
     modifier: Modifier = Modifier,
-    captioned: Boolean = false,
 ) {
-    val chrome = LocalStageChrome.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     // The share under way and its share done; null when there is none.
@@ -477,12 +473,6 @@ internal fun RerunSurfaceSwitch(
                 label = { if (it) ModelCopy.SURFACE else ModelCopy.POINTS },
                 modifier = Modifier.weight(1f).testTag(RERUN_SURFACE_SWITCH_TAG),
                 optionTestTag = { if (it) RERUN_BUILD_MODEL_TAG else RERUN_POINTS_TAG },
-                colors = ToggleButtonDefaults.colors(
-                    containerColor = chrome.track,
-                    contentColor = chrome.onCard,
-                    checkedContainerColor = chrome.accent,
-                    checkedContentColor = chrome.onAccent,
-                ),
             )
             val built = state.build
             if (state.wanted && built != null) {
@@ -502,7 +492,7 @@ internal fun RerunSurfaceSwitch(
                     enabled = sharing == null,
                     modifier = Modifier.size(SceneViewTokens.Layout.touchTarget).testTag(RERUN_SHARE_MODEL_TAG),
                 ) {
-                    Icon(Icons.Rounded.IosShare, contentDescription = ModelCopy.SHARE, tint = chrome.onCard)
+                    Icon(Icons.Rounded.IosShare, contentDescription = ModelCopy.SHARE)
                 }
             }
         }
@@ -511,16 +501,15 @@ internal fun RerunSurfaceSwitch(
             LinearProgressIndicator(
                 progress = { shareDone ?: state.progress },
                 modifier = Modifier.fillMaxWidth(),
-                color = chrome.accent,
-                trackColor = chrome.track,
                 drawStopIndicator = {},
             )
         }
-        state.caption?.takeIf { captioned }?.let { caption ->
+        state.caption?.let { caption ->
             Text(
                 caption,
-                style = OnScrimCaption,
-                // Two lines: on its side the card is narrow, and a share note runs to ~48 characters.
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                // Two lines: a share note runs to ~48 characters.
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.testTag(RERUN_SURFACE_CAPTION_TAG),
