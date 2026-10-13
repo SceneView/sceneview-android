@@ -29,6 +29,7 @@ import androidx.navigation.navArgument
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import io.github.sceneview.demo.common.ArDemoPermissionGate
 import io.github.sceneview.demo.common.ProvideStatusBarIcons
 import io.github.sceneview.demo.fragments.GeneratedDemos
 import io.github.sceneview.demo.theme.SceneViewDemoTheme
@@ -304,6 +305,7 @@ class MainActivity : ComponentActivity() {
                 ).show()
             }
         }
+        Telemetry.nextEntryId = launch.demoId?.let { it to (rawId ?: it) }
     }
 
     /**
@@ -405,6 +407,7 @@ class MainActivity : ComponentActivity() {
             val launch = DeepLinkRouter.resolveLaunch(sample, tap.sample, tabParam = null)
             pushLaunch = launch
             Telemetry.nextOpenSource = OpenSource.Push
+            Telemetry.nextEntryId = launch.demoId?.let { it to (tap.sample ?: it) }
             pendingPushDemo.value = launch.demoId
         } else {
             pendingHome.value = true
@@ -520,6 +523,7 @@ fun SceneViewDemoApp(activity: MainActivity? = null) {
     LaunchedEffect(openedModel) {
         val opened = openedModel ?: return@LaunchedEffect
         DemoSettings.openedModel = opened
+        Telemetry.nextEntryId = "model-viewer" to "model-viewer"
         navController.navigate("demo/model-viewer") {
             // One viewer on the stack however many files are opened in a row.
             popUpTo("demo/model-viewer") { inclusive = true }
@@ -597,7 +601,10 @@ fun SceneViewDemoApp(activity: MainActivity? = null) {
                 // handling above). The Play update snackbar lives in RootScreen's
                 // Scaffold, above the bottom navigation, on every tab.
                 RootScreen(
-                    onDemoClick = { id -> navController.navigate("demo/$id") },
+                    onDemoClick = { id ->
+                        Telemetry.nextEntryId = id to id
+                        navController.navigate("demo/$id")
+                    },
                     updatePrompt = activity?.updatePrompt,
                 )
             }
@@ -748,6 +755,21 @@ internal fun PendingDemoNavigation(
  */
 @Composable
 fun DemoRouter(id: String, onBack: () -> Unit) {
+    val entry = ALL_DEMOS.find { it.id == id }
+    if (entry?.opensCameraOnEntry == true) {
+        ArDemoPermissionGate(
+            title = stringResource(entry.titleRes),
+            onBack = onBack,
+        ) {
+            RoutedDemo(id = id, onBack = onBack)
+        }
+        return
+    }
+    RoutedDemo(id = id, onBack = onBack)
+}
+
+@Composable
+private fun RoutedDemo(id: String, onBack: () -> Unit) {
     val matched = GeneratedDemos.Screen(id = id, onBack = onBack)
     if (!matched) {
         check(!BuildConfig.DEBUG) {

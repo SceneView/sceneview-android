@@ -5,10 +5,12 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import io.github.sceneview.demo.fragments.TwoDInThreeDFragment
 import io.github.sceneview.demo.ui.home.CHIP_CATEGORY_KEYS
 import io.github.sceneview.demo.ui.home.FEATURED_IDS
-import io.github.sceneview.demo.ui.home.FEATURED_SECTION_IDS
+import io.github.sceneview.demo.ui.home.FEATURED_PAGER_IDS
 import io.github.sceneview.demo.ui.home.HERO_DEMO_ID
+import io.github.sceneview.demo.ui.home.homeTopSections
 
 /**
  * Pure-JVM integrity tests for the demo registry ([ALL_DEMOS]).
@@ -202,29 +204,39 @@ class DemoRegistryIntegrityTest {
     }
 
     @Test
-    fun `the featured shelf lists registered demos, once each, in the common Featured order`() {
-        // The shelf under the hero is the home's priority list. A renamed id would
-        // drop a card silently (the shelf skips what it cannot resolve), a repeat
-        // would collide on its grid key, and the hero repeated here wastes a slot.
+    fun `the featured lists name registered demos, once each, in the common Featured order`() {
+        // The pager and the shelf under it are the home's priority lists. A renamed id
+        // would drop a page or a card silently (both skip what they cannot resolve) and
+        // a repeat would collide on its key.
         val ids = ALL_DEMOS.map { it.id }.toSet()
-        val unknown = FEATURED_SECTION_IDS.filterNot { it in ids }
-        assertTrue("Featured shelf lists unregistered ids: $unknown", unknown.isEmpty())
+        val unknown = (FEATURED_IDS + FEATURED_PAGER_IDS).filterNot { it in ids }
+        assertTrue("Featured lists name unregistered ids: $unknown", unknown.isEmpty())
         assertEquals(
-            "Featured shelf lists a demo twice",
-            FEATURED_SECTION_IDS.size,
-            FEATURED_SECTION_IDS.toSet().size,
+            "The featured pager lists a demo twice",
+            FEATURED_PAGER_IDS.size,
+            FEATURED_PAGER_IDS.toSet().size,
         )
-        assertFalse("The hero demo must not repeat in the shelf", HERO_DEMO_ID in FEATURED_SECTION_IDS)
+        assertEquals("The hero demo opens the pager", HERO_DEMO_ID, FEATURED_PAGER_IDS.first())
         // The common Featured list of the samples audit (§ 5), the same five ids as iOS.
         assertEquals(
             "The Featured list drifted from the one iOS shows",
             listOf("cosmos", "ar-placement", "model-viewer", "ar-rerun", "materials"),
             FEATURED_IDS,
         )
+        // What the pager pages through never comes back as a banner (#4304), the hero
+        // first of all.
+        val shelf = homeTopSections(FEATURED_PAGER_IDS, FEATURED_IDS, fresh = emptyList()).featured
+        assertFalse("The hero demo must not repeat in the shelf", HERO_DEMO_ID in shelf)
+        assertTrue(
+            "A featured pager page repeats as a Featured banner",
+            shelf.none { it in FEATURED_PAGER_IDS },
+        )
+        // The banners are the card the Home is liked for: the pager stays short enough to
+        // leave some.
         assertEquals(
-            "The shelf is the Featured list minus the hero, in rank order",
-            FEATURED_IDS.filterNot { it == HERO_DEMO_ID },
-            FEATURED_SECTION_IDS,
+            "The Featured banners under the pager",
+            listOf("ar-placement", "ar-rerun", "materials"),
+            shelf,
         )
     }
 
@@ -260,10 +272,47 @@ class DemoRegistryIntegrityTest {
     }
 
     @Test
+    fun `2D in 3D exposes Inspect and Media on one searchable card`() {
+        val demo = ALL_DEMOS.single { it.id == "two-d-in-three-d" }
+        assertTrue(demo.tags.containsAll(setOf("picking", "material", "text", "image", "video", "billboard")))
+        assertEquals(listOf("inspect", "media"), TwoDInThreeDFragment.modes.map { it.key })
+        assertEquals(listOf(R.string.demo_mode_inspect, R.string.demo_mode_media),
+            TwoDInThreeDFragment.modes.map { it.labelRes })
+        assertEquals(mapOf("inspect" to 0, "media" to 1), DeepLinkRouter.TAB_NAMES[demo.id])
+        assertTrue(demo.id in DeepLinkRouter.TABBED_DEMOS)
+        for (alias in listOf("text", "image", "video", "billboard")) {
+            assertFalse(ALL_DEMOS.any { it.id == alias })
+            assertEquals(demo.id, DeepLinkRouter.validate(alias, ALL_DEMOS))
+            assertEquals(1, DeepLinkRouter.ALIAS_INITIAL_TAB[alias])
+        }
+    }
+
+    @Test
     fun `the fragment template id never ships`() {
         // `fragments/README.md` documents a copy-paste template registered as
         // `my-demo`; the collator rejects it and so does this.
         assertFalse("'my-demo' is the template id and must not be registered", ALL_DEMOS.any { it.id == "my-demo" })
+    }
+
+    /**
+     * #4139: the route asks for the camera before an AR demo composes — except the demos
+     * whose first screen needs none, which gate their camera screens themselves. Pinned by
+     * id: gating one of these again locks a replay, a chooser or a static pose behind a
+     * permission it never uses; a new AR demo is gated unless it is added here on purpose.
+     */
+    @Test
+    fun `every AR demo asks for the camera on entry, except the three that open without one`() {
+        val arDemos = ALL_DEMOS.filter { it.isArDemo }
+        assertEquals(
+            setOf("ar-placement", "ar-rerun", "ar-xr"),
+            arDemos.filterNot { it.opensCameraOnEntry }.map { it.id }.toSet(),
+        )
+        assertTrue("the AR demos behind the route gate", arDemos.count { it.opensCameraOnEntry } > 0)
+        assertEquals(
+            "a demo that is not AR never asks for the camera on entry",
+            emptyList<String>(),
+            ALL_DEMOS.filter { !it.isArDemo && it.opensCameraOnEntry }.map { it.id },
+        )
     }
 
     @Test

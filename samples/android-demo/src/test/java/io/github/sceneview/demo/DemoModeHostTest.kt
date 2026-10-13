@@ -56,14 +56,6 @@ class DemoModeHostTest {
     }
 
     @Test
-    fun `a mode opened by a link is logged, the default mode is not`() {
-        val modes = listOf(DemoMode("balls", 0), DemoMode("pendulum", 0))
-        assertEquals("mode_pendulum", launchModeControl(modes, 1))
-        assertNull("mode 0 is the card itself, already counted by sample_open", launchModeControl(modes, 0))
-        assertNull(launchModeControl(modes, 5))
-    }
-
-    @Test
     fun `an unknown tab is dropped when the default mode reads none`() {
         DemoSettings.initialTab = 7
         assertEquals(0, initialHostMode(mapOf(0 to 0, 1 to 1), defaultModeReadsTab = false, modeCount = 2))
@@ -74,6 +66,18 @@ class DemoModeHostTest {
     fun `a mode index out of range falls back to the first mode`() {
         DemoSettings.initialTab = 1
         assertEquals(0, initialHostMode(mapOf(1 to 5), defaultModeReadsTab = false, modeCount = 2))
+    }
+
+    @Test
+    fun `Inspect is the default and Media consumes its launch tab`() {
+        val tabs = mapOf(0 to 0, 1 to 1)
+        assertEquals(0, initialHostMode(tabs, defaultModeReadsTab = false, modeCount = 2))
+        DemoSettings.initialTab = DeepLinkRouter.resolveInitialTab("video", null)
+        assertEquals(1, initialHostMode(tabs, defaultModeReadsTab = false, modeCount = 2))
+        assertNull(DemoSettings.initialTab)
+        DemoSettings.initialTab = 99
+        assertEquals(0, initialHostMode(tabs, defaultModeReadsTab = false, modeCount = 2))
+        assertNull(DemoSettings.initialTab)
     }
 
     @Test

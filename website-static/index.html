@@ -85,7 +85,7 @@
     "url": "https://sceneview.github.io/",
     "applicationCategory": "DeveloperApplication",
     "operatingSystem": "Android, iOS, macOS, visionOS, Web, Windows, Linux",
-    "softwareVersion": "4.52.0",
+    "softwareVersion": "4.55.0",
     "license": "https://github.com/sceneview/sceneview/blob/main/LICENSE",
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
     "author": { "@type": "Organization", "name": "SceneView", "url": "https://github.com/sceneview" },
@@ -106,7 +106,7 @@
         "name": "How do I add 3D to my Android Jetpack Compose app?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Use SceneView SDK — the only Compose-native 3D library for Android. Add implementation(\"io.github.sceneview:sceneview:4.52.0\") to your build.gradle, then use SceneView { ModelNode(...) } composable. SceneView wraps Google Filament with a declarative API, supports 48+ node types, and adds only ~5MB to your APK."
+          "text": "Use SceneView SDK — the only Compose-native 3D library for Android. Add implementation(\"io.github.sceneview:sceneview:4.55.0\") to your build.gradle, then use SceneView { ModelNode(...) } composable. SceneView wraps Google Filament with a declarative API, supports 48+ node types, and adds only ~5MB to your APK."
         }
       },
       {
@@ -114,7 +114,7 @@
         "name": "What is the best AR SDK for Android with Jetpack Compose?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "SceneView's ARSceneView is the only Compose-native AR SDK for Android. It wraps ARCore with a declarative API: add implementation(\"io.github.sceneview:arsceneview:4.52.0\"), then use ARSceneView { AnchorNode(...) } composable. Supports plane detection, image tracking, cloud anchors, geospatial anchors, and depth."
+          "text": "SceneView's ARSceneView is the only Compose-native AR SDK for Android. It wraps ARCore with a declarative API: add implementation(\"io.github.sceneview:arsceneview:4.55.0\"), then use ARSceneView { AnchorNode(...) } composable. Supports plane detection, image tracking, cloud anchors, geospatial anchors, and depth."
         }
       },
       {
@@ -298,7 +298,7 @@
       <div class="hero__visual">
         <div class="hero__model-wrapper">
           <div class="hero__fallback-img" style="width:100%;aspect-ratio:16/9;border-radius:var(--radius-lg,16px);background:linear-gradient(135deg,var(--color-primary,#005bc1),var(--color-primary-container,#d4e3ff));display:flex;align-items:center;justify-content:center;color:var(--color-on-primary,#fff);font-size:1.25rem;font-weight:600" aria-label="3D Scene Preview">3D Scene Preview</div>
-          <canvas id="hero-canvas" class="hero__canvas" aria-label="3D damaged helmet rendered by SceneView Web (Filament.js)"></canvas>
+          <canvas id="hero-canvas" class="hero__canvas" aria-label="3D toy car rendered by SceneView Web (Filament.js)"></canvas>
           <div id="hero-loader" class="hero__loader">
             <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2" style="animation:spin 1.2s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="50 20"/></svg>
             <span>Loading 3D engine&hellip;</span>
@@ -395,9 +395,9 @@
             <pre class="code-block"><code><span class="syn-green">// build.gradle.kts</span>
 <span class="syn-purple">dependencies</span> {
     <span class="syn-green">// 3D only</span>
-    <span class="syn-blue">implementation</span>(<span class="syn-green-light">"io.github.sceneview:sceneview:4.52.0"</span>)
+    <span class="syn-blue">implementation</span>(<span class="syn-green-light">"io.github.sceneview:sceneview:4.55.0"</span>)
     <span class="syn-green">// 3D + AR</span>
-    <span class="syn-blue">implementation</span>(<span class="syn-green-light">"io.github.sceneview:arsceneview:4.52.0"</span>)
+    <span class="syn-blue">implementation</span>(<span class="syn-green-light">"io.github.sceneview:arsceneview:4.55.0"</span>)
 }</code></pre>
           </div>
           <div class="tabs__panel" data-panel="ios">
@@ -405,7 +405,7 @@
 <span class="syn-green">// Add in Xcode: File &rarr; Add Package Dependencies</span>
 
 <span class="syn-green-light">"https://github.com/sceneview/sceneview"</span>
-<span class="syn-green">// Version: 4.52.0</span>
+<span class="syn-green">// Version: 4.55.0</span>
 
 <span class="syn-purple">import</span> SceneViewSwift</code></pre>
           </div>
@@ -428,7 +428,7 @@
           <div class="tabs__panel" data-panel="desktop">
             <pre class="code-block"><code><span class="syn-green">// Compose Desktop &mdash; SceneViewer, Filament via filament-kmp (JDK 22+)</span>
 <span class="syn-purple">dependencies</span> {
-    <span class="syn-blue">implementation</span>(<span class="syn-green-light">"io.github.sceneview:sceneview-compose:4.52.0"</span>)
+    <span class="syn-blue">implementation</span>(<span class="syn-green-light">"io.github.sceneview:sceneview-compose:4.55.0"</span>)
 }</code></pre>
           </div>
         </div>
@@ -760,7 +760,7 @@ CLAUDE.md</code></pre>
 
 <span class="syn-green">// Render a 3D model:</span>
 <span class="syn-blue">SceneView</span>.<span class="syn-blue">modelViewer</span>(<span class="syn-green-light">"canvas"</span>, <span class="syn-green-light">"model.glb"</span>, {
-  backgroundColor: [<span class="syn-orange">0.05</span>, <span class="syn-orange">0.05</span>, <span class="syn-orange">0.08</span>, <span class="syn-orange">1</span>],
+  backgroundColor: [<span class="syn-orange">0.2</span>, <span class="syn-orange">0.2</span>, <span class="syn-orange">0.29</span>, <span class="syn-orange">1</span>],
   lightIntensity: <span class="syn-orange">150000</span>,
   fov: <span class="syn-orange">35</span>
 })</code></pre>
@@ -915,7 +915,7 @@ CLAUDE.md</code></pre>
           </article>
           <article class="runs-on__card reveal">
             <div class="runs-on__shot">
-              <img src="assets/demos/runs-on-web.jpg" alt="SceneView web demo: Damaged Helmet rendered by Filament.js in a browser" width="960" height="600" loading="lazy">
+              <img src="assets/demos/runs-on-web.jpg" alt="SceneView web demo: Toy Car rendered by Filament.js in a browser" width="960" height="600" loading="lazy">
             </div>
             <div class="runs-on__body">
               <div class="runs-on__meta">
@@ -1161,6 +1161,7 @@ CLAUDE.md</code></pre>
           </div>
           <a href="/rerun/" class="devtools__card-link">Open hosted viewer &rarr;</a>
           <a href="/open/?demo=ar-rerun" class="devtools__card-link" target="_blank" rel="noopener">Open AR Rerun in the demo app &rarr;</a>
+          <a href="/use-cases.html" class="devtools__card-link">Room scan use cases &rarr;</a>
         </div>
         <div class="devtools__card reveal">
           <div class="devtools__card-header">
@@ -1284,14 +1285,14 @@ CLAUDE.md</code></pre>
           <div class="metric-card__icon-wrap metric-card__icon-wrap--maven">
             <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true"><path d="M3 3h18v18H3V3zm2 2v14h14V5H5zm2 2h10v2H7V7zm0 4h10v2H7v-2zm0 4h7v2H7v-2z"/></svg>
           </div>
-          <div class="metric-card__value" data-metric="releases">149</div>
+          <div class="metric-card__value" data-metric="releases">159</div>
           <div class="metric-card__label">GitHub releases</div>
         </a>
         <a href="https://www.npmjs.com/package/sceneview-web" class="metric-card reveal" target="_blank" rel="noopener" aria-label="sceneview-web package on npm">
           <div class="metric-card__icon-wrap metric-card__icon-wrap--npm2">
             <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true"><path d="M1.763 0C.786 0 0 .786 0 1.763v20.474C0 23.214.786 24 1.763 24h20.474c.977 0 1.763-.786 1.763-1.763V1.763C24 .786 23.214 0 22.237 0zM5.13 5.323h13.74v13.354h-3.328V8.665h-3.564v4.012H5.13z"/></svg>
           </div>
-          <div class="metric-card__value" data-metric="web-downloads">1.1K</div>
+          <div class="metric-card__value" data-metric="web-downloads">3.1K</div>
           <div class="metric-card__label">npm downloads (Web, 30&nbsp;d)</div>
         </a>
         <a href="https://www.npmjs.com/package/@sceneview-sdk/react-native" class="metric-card reveal" target="_blank" rel="noopener" aria-label="@sceneview-sdk/react-native package on npm">
@@ -1396,7 +1397,7 @@ CLAUDE.md</code></pre>
         <!-- Web Demo -->
         <a href="/web-demo/" class="try-card reveal" target="_blank" rel="noopener">
           <div class="try-card__visual">
-            <img src="assets/demos/runs-on-web.jpg" alt="SceneView web demo: Damaged Helmet rendered by Filament.js in a browser" class="try-card__img" loading="lazy">
+            <img src="assets/demos/runs-on-web.jpg" alt="SceneView web demo: Toy Car rendered by Filament.js in a browser" class="try-card__img" loading="lazy">
           </div>
           <div class="try-card__body">
             <span class="try-card__badge try-card__badge--web">Web</span>
@@ -1441,10 +1442,10 @@ CLAUDE.md</code></pre>
           <p class="involved-card__text">Chat with developers, get help, share your projects.</p>
         </a>
 
-        <a href="https://opencollective.com/sceneview" class="involved-card reveal" target="_blank" rel="noopener">
+        <a href="/sponsors.html" class="involved-card reveal">
           <span class="material-symbols-outlined involved-card__icon">favorite</span>
-          <h3 class="involved-card__name">Donate</h3>
-          <p class="involved-card__text">Support development on Open Collective, or GitHub Sponsors.</p>
+          <h3 class="involved-card__name">Sponsor</h3>
+          <p class="involved-card__text">Fund the project on Open Collective, or through GitHub Sponsors.</p>
         </a>
 
         <a href="https://github.com/sceneview/sceneview/blob/main/CONTRIBUTING.md" class="involved-card reveal" target="_blank" rel="noopener">
@@ -1531,6 +1532,7 @@ CLAUDE.md</code></pre>
             <li><a href="https://github.com/sceneview/sceneview" target="_blank" rel="noopener">GitHub</a></li>
             <li><a href="https://discord.gg/UbNDDBTNqb" target="_blank" rel="noopener">Discord</a></li>
             <li><a href="/companies.html">For companies</a></li>
+            <li><a href="/sponsors.html">Sponsors</a></li>
           </ul>
         </div>
         <div class="footer__col">
@@ -1575,7 +1577,7 @@ CLAUDE.md</code></pre>
     var loader = document.getElementById('hero-loader');
     var fallback = document.querySelector('.hero__fallback-img');
 
-    SceneView.modelViewer('hero-canvas', 'models/platforms/DamagedHelmet.glb', {
+    SceneView.modelViewer('hero-canvas', 'models/platforms/ToyCar.glb', {
       backgroundColor: [0, 0, 0, 0],
       lightIntensity: 150000,
       fov: 35
@@ -1601,7 +1603,7 @@ CLAUDE.md</code></pre>
 
     function getThemeBg() {
       var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-      return isDark ? [0.09, 0.09, 0.13, 1.0] : [0.94, 0.95, 0.96, 1.0];
+      return isDark ? [0x50 / 255, 0x51 / 255, 0x69 / 255, 1.0] : [0xE4 / 255, 0xE0 / 255, 0xDA / 255, 1.0];
     }
 
     var loaded = new Set();

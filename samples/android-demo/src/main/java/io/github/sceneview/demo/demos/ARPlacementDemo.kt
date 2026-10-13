@@ -24,6 +24,7 @@ import io.github.sceneview.demo.DemoScaffold
 import io.github.sceneview.demo.DemoSettings
 import io.github.sceneview.demo.DockItem
 import io.github.sceneview.demo.R
+import io.github.sceneview.demo.common.ArDemoPermissionGate
 import io.github.sceneview.demo.common.ForceTrackingFailureMenu
 import io.github.sceneview.demo.common.placement.BUNDLED_PLACEMENT_MODELS
 import io.github.sceneview.demo.common.placement.PlacementChooserScreen
@@ -107,6 +108,7 @@ import java.util.concurrent.ConcurrentHashMap
 @Composable
 fun ARPlacementDemo(onBack: () -> Unit) {
     val context = LocalContext.current
+    val sampleId = io.github.sceneview.demo.telemetry.LocalSampleId.current
 
     // Phase holder. Saveable, so a rotation in the camera does not dump the user back onto
     // the chooser.
@@ -307,85 +309,100 @@ fun ARPlacementDemo(onBack: () -> Unit) {
             title = stringResource(R.string.demo_ar_placement_title),
             teaches = stringResource(R.string.ar_placement_teaches),
             wallMode = wallMode,
-            onWallModeChange = { wallMode = it },
+            onWallModeChange = { next ->
+                if (next != wallMode) {
+                    io.github.sceneview.demo.telemetry.logSampleModeChange(
+                        sampleId,
+                        AR_PLACEMENT_SURFACE_MODES[if (next) 1 else 0],
+                    )
+                    wallMode = next
+                }
+            },
         )
         return
     }
 
-    if (wallMode) {
-        WallPlacementDemo(
-            onBack = onBackPressed,
-            playbackDataset = io.github.sceneview.demo.rememberArPlaybackDataset(),
-        )
-        return
-    }
-
-    val engine = rememberEngine()
-    val modelLoader = rememberModelLoader(engine)
-    val materialLoader = rememberMaterialLoader(engine)
-
-    DemoScaffold(
+    // Only the camera phase asks for the camera: the chooser above — and its "View in 3D"
+    // way out — stays open to someone who refused it (#4139).
+    ArDemoPermissionGate(
         title = stringResource(R.string.demo_ar_placement_title),
-        // The scaffold's top-start arrow is the same rung as the system gesture: it leaves
-        // the camera for the chooser, not the demo.
         onBack = onBackPressed,
-        assetSource = assetSource,
-        controls = {
-            Text(
-                text = stringResource(R.string.ar_placement_teaches),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Text(
-                text = stringResource(R.string.ar_placement_catalogue_note),
-                style = MaterialTheme.typography.labelSmall,
-                modifier = Modifier.padding(top = SceneViewTokens.Space.sm),
-            )
-            // The QA tracking-failure shim: a debug affordance for a failure you can only
-            // stage while a session is running (#1881). It drives the tracking-lost state.
-            ForceTrackingFailureMenu()
-        },
-        // The two in-session actions, in the dock — where every other demo in the app puts
-        // its actions. They used to be a `PlacementModelBar` floated in the scaffold's
-        // bottom band (and over the camera on the AR View tab): a `primaryContainer` FAB
-        // and a `secondaryContainer` disc, i.e. theme colours over a camera frame that has
-        // no theme. The dock's Controls item (Settings) is appended by the scaffold, so
-        // this screen's dock is Models · Reset · Settings. Models is `Category`, the same
-        // glyph as the Model Viewer's Models item: one action, one icon across the app.
-        dock = listOf(
-            DockItem(
-                icon = Icons.Filled.Category,
-                label = stringResource(R.string.ar_dock_models_label),
-                caption = stringResource(R.string.ar_dock_models_caption),
-                onClick = picker::openSheet,
-            ),
-            // §2.2 *Restarting placement*: removes the anchor, keeps the chosen asset,
-            // scans again.
-            DockItem(
-                icon = Icons.Filled.Refresh,
-                label = stringResource(R.string.ar_dock_reset_label),
-                caption = stringResource(R.string.ar_dock_reset_caption),
-                onClick = { state.resetPlacement() },
-                enabled = state.placedCount > 0,
-            ),
-        ),
     ) {
-        key(sessionKey) {
-            TapToPlaceExperience(
-                models = models,
-                picker = picker,
-                state = state,
-                engine = engine,
-                modelLoader = modelLoader,
-                materialLoader = materialLoader,
-                // "View in 3D" on the no-surface card: back to the chooser, where the model
-                // is shown on a still, themed screen.
-                onViewIn3D = onBackPressed,
-                // "Try again" on the camera-error card: a fresh ARCore session.
-                onRestartSession = {
-                    state.clearAll()
-                    sessionKey++
-                },
+        if (wallMode) {
+            WallPlacementDemo(
+                onBack = onBackPressed,
+                playbackDataset = io.github.sceneview.demo.rememberArPlaybackDataset(),
             )
+            return@ArDemoPermissionGate
+        }
+
+        val engine = rememberEngine()
+        val modelLoader = rememberModelLoader(engine)
+        val materialLoader = rememberMaterialLoader(engine)
+
+        DemoScaffold(
+            title = stringResource(R.string.demo_ar_placement_title),
+            // The scaffold's top-start arrow is the same rung as the system gesture: it leaves
+            // the camera for the chooser, not the demo.
+            onBack = onBackPressed,
+            assetSource = assetSource,
+            controls = {
+                Text(
+                    text = stringResource(R.string.ar_placement_teaches),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Text(
+                    text = stringResource(R.string.ar_placement_catalogue_note),
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.padding(top = SceneViewTokens.Space.sm),
+                )
+                // The QA tracking-failure shim: a debug affordance for a failure you can only
+                // stage while a session is running (#1881). It drives the tracking-lost state.
+                ForceTrackingFailureMenu()
+            },
+            // The two in-session actions, in the dock — where every other demo in the app puts
+            // its actions. They used to be a `PlacementModelBar` floated in the scaffold's
+            // bottom band (and over the camera on the AR View tab): a `primaryContainer` FAB
+            // and a `secondaryContainer` disc, i.e. theme colours over a camera frame that has
+            // no theme. The dock's Controls item (Settings) is appended by the scaffold, so
+            // this screen's dock is Models · Reset · Settings. Models is `Category`, the same
+            // glyph as the Model Viewer's Models item: one action, one icon across the app.
+            dock = listOf(
+                DockItem(
+                    icon = Icons.Filled.Category,
+                    label = stringResource(R.string.ar_dock_models_label),
+                    caption = stringResource(R.string.ar_dock_models_caption),
+                    onClick = picker::openSheet,
+                ),
+                // §2.2 *Restarting placement*: removes the anchor, keeps the chosen asset,
+                // scans again.
+                DockItem(
+                    icon = Icons.Filled.Refresh,
+                    label = stringResource(R.string.ar_dock_reset_label),
+                    caption = stringResource(R.string.ar_dock_reset_caption),
+                    onClick = { state.resetPlacement() },
+                    enabled = state.placedCount > 0,
+                ),
+            ),
+        ) {
+            key(sessionKey) {
+                TapToPlaceExperience(
+                    models = models,
+                    picker = picker,
+                    state = state,
+                    engine = engine,
+                    modelLoader = modelLoader,
+                    materialLoader = materialLoader,
+                    // "View in 3D" on the no-surface card: back to the chooser, where the model
+                    // is shown on a still, themed screen.
+                    onViewIn3D = onBackPressed,
+                    // "Try again" on the camera-error card: a fresh ARCore session.
+                    onRestartSession = {
+                        state.clearAll()
+                        sessionKey++
+                    },
+                )
+            }
         }
     }
 }
@@ -395,6 +412,8 @@ fun ARPlacementDemo(onBack: () -> Unit) {
  * bundled row's id, and stable across catalogue rebuilds.
  */
 private fun streamedModelId(slug: SketchfabSlug): String = "streamed:${slug.uid}"
+
+internal val AR_PLACEMENT_SURFACE_MODES = listOf("place", "wall")
 
 /**
  * Process-wide memo of the streamed `ar_placement` rows' Sketchfab thumbnail URLs (#3987), so

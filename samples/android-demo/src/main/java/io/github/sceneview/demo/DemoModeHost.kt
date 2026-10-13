@@ -10,19 +10,17 @@ import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import io.github.sceneview.demo.telemetry.LocalSampleId
-import io.github.sceneview.demo.telemetry.logSampleInteraction
+import io.github.sceneview.demo.telemetry.logSampleModeChange
 import io.github.sceneview.demo.theme.SceneViewTokens
 import io.github.sceneview.demo.ui.ConnectedChoiceRow
 
@@ -32,7 +30,8 @@ import io.github.sceneview.demo.ui.ConnectedChoiceRow
  *
  * [key] is the lowercase token used three ways — the `?tab=<key>` deep-link name
  * ([DeepLinkRouter.TAB_NAMES]), the `sample_interaction` control (`mode_<key>`) and the pill's
- * test tag (`demo_mode_<key>`) — so the three never drift apart.
+ * test tag (`demo_mode_<key>`) — so the three never drift apart. A host that draws no switch
+ * (`showSwitch = false`) has no pill, and so no such tag: its modes open by deep link only.
  */
 @Immutable
 data class DemoMode(val key: String, @StringRes val labelRes: Int)
@@ -49,7 +48,10 @@ class DemoModeSwitch internal constructor(
     val onSelect: (Int) -> Unit,
 )
 
-/** The switch of the [DemoModeHost] around the current demo, or `null` outside one. */
+/**
+ * The switch of the [DemoModeHost] around the current demo, or `null` outside one — and inside
+ * a host that keeps its modes off the screen (`showSwitch = false`).
+ */
 val LocalDemoModeSwitch = compositionLocalOf<DemoModeSwitch?> { null }
 
 /**
@@ -63,12 +65,19 @@ val LocalDemoModeSwitch = compositionLocalOf<DemoModeSwitch?> { null }
  * [DemoSettings.initialTab] for mode 0's own demo when [defaultModeReadsTab] is set — so
  * `ar-placement?tab=1` still opens the wall inside the Place mode — and is dropped otherwise,
  * so it cannot pre-select a tab of the next demo opened.
+ *
+ * **No switch on screen.** [showSwitch] `= false` publishes no [LocalDemoModeSwitch]: the
+ * card opens on its first mode and nothing on screen leads to the others, which stay
+ * reachable by deep link (`?tab=<key>`, a retired id). Room Scan does this — its
+ * "Session MP4" mode is a developer tool the QA harness opens, not a choice to put in front
+ * of whoever came to scan a room.
  */
 @Composable
 fun DemoModeHost(
     modes: List<DemoMode>,
     tabToMode: Map<Int, Int>,
     defaultModeReadsTab: Boolean = false,
+    showSwitch: Boolean = true,
     content: @Composable (mode: Int) -> Unit,
 ) {
     val sampleId = LocalSampleId.current
@@ -81,21 +90,11 @@ fun DemoModeHost(
         onSelect = { selected ->
             if (selected != mode) {
                 mode = selected
-                logSampleInteraction(sampleId, "mode_${modes[selected].key}")
+                logSampleModeChange(sampleId, modes[selected].key)
             }
         },
     )
-    // A mode opened by a link (`double-pendulum`, `?tab=pendulum`, a push) is logged once, with
-    // the same `mode_<key>` control as a tap on the pill: `sample_open` only names the card.
-    // Saved, so a rotation does not log it twice.
-    var launchLogged by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        if (!launchLogged) {
-            launchLogged = true
-            launchModeControl(modes, mode)?.let { logSampleInteraction(sampleId, it) }
-        }
-    }
-    CompositionLocalProvider(LocalDemoModeSwitch provides switch) {
+    CompositionLocalProvider(LocalDemoModeSwitch provides switch.takeIf { showSwitch }) {
         key(mode) { content(mode) }
     }
 }
@@ -115,13 +114,6 @@ internal fun initialHostMode(
     DemoSettings.initialTab = null
     return owned?.takeIf { it in 0 until modeCount } ?: 0
 }
-
-/**
- * The `sample_interaction` control for the mode a [DemoModeHost] opened on, or `null` for the
- * default mode (the card itself, which `sample_open` already counts) and an out-of-range index.
- */
-internal fun launchModeControl(modes: List<DemoMode>, mode: Int): String? =
-    modes.getOrNull(mode)?.takeIf { mode != 0 }?.let { "mode_${it.key}" }
 
 /**
  * The shared mode pill (`mode-pill-*` tokens, `DESIGN.md`): the same segmented glass pill

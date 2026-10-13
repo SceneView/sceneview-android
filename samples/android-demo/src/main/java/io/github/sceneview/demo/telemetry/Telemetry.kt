@@ -81,6 +81,7 @@ object Telemetry {
             override fun log(event: AnalyticsEvent) = delegate.log(event)
             override fun setUserProperty(property: UserProperty, value: String) =
                 delegate.setUserProperty(property, value)
+            override fun setCrashKey(key: CrashKey, value: String) = delegate.setCrashKey(key, value)
             override fun setCollectionEnabled(enabled: Boolean) = delegate.setCollectionEnabled(enabled)
             override fun resetData() = delegate.resetData()
         },
@@ -89,6 +90,9 @@ object Telemetry {
 
     /** How the next sample was reached; read (and reset) by the demo route when it opens. */
     var nextOpenSource: OpenSource = OpenSource.Other
+
+    /** Canonical sample id and received id for the next open, before alias resolution. */
+    var nextEntryId: Pair<String, String>? = null
 
     /** Compose-observable mirror of the two About -> Privacy & notifications switches. */
     var analyticsEnabled by mutableStateOf(false)

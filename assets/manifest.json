@@ -52,6 +52,15 @@
       "extensions": [
         ".glb"
       ]
+    },
+    "web-test": {
+      "dirs": [
+        "samples/web-demo/site/kotlin-bundle"
+      ],
+      "extensions": [
+        ".spz"
+      ],
+      "_why": "fixtures of the kotlin-bundle test pages (local runs and test CI); docs.yml fetches the web scope only, so nothing here is deployed"
     }
   },
   "files": [
@@ -187,8 +196,8 @@
       "sha256": "8f5bd4830ee22b310c4b84cfe9cd82b818704d24dd2530dcc3f4a428665d945f",
       "size": 2152460,
       "source": "https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/ToyCar",
-      "license": "CC-BY-4.0",
-      "author": "KhronosGroup"
+      "license": "CC0-1.0",
+      "author": "Guido Odendahl (model); Eric Chadwick (extensions and scene composition)"
     },
     {
       "path": "samples/android-demo/src/main/assets/models/shiba.glb",
@@ -475,8 +484,8 @@
       "sha256": "b9a0e77282503e0663e5e202a2910dc6fb477824f2cf369738c26482cc379d14",
       "size": 9171863,
       "source": "https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/ToyCar",
-      "license": "CC-BY-4.0",
-      "author": "KhronosGroup"
+      "license": "CC0-1.0",
+      "author": "Guido Odendahl (model); Eric Chadwick (extensions and scene composition)"
     },
     {
       "path": "samples/ios-demo/SceneViewDemo/Models/lamborghini_countach.usdz",
@@ -614,6 +623,15 @@
       "author": "mateustorresg (modified by SceneView — grass-tuft prims removed)"
     },
     {
+      "path": "samples/web-demo/site/kotlin-bundle/raccoon_family.spz",
+      "scope": "web-test",
+      "sha256": "71a7677843a970e6f56b9c08b6fa2259a0afe39bc03d70053f8461215c37771b",
+      "size": 3306117,
+      "source": "https://github.com/nianticlabs/spz/blob/main/samples/racoonfamily.spz",
+      "license": "MIT",
+      "author": "Niantic Labs"
+    },
+    {
       "path": "website-static/models/platforms/AnimatedAstronaut.glb",
       "scope": "web",
       "sha256": "7264e88a90d58f00f15ca1d41f58105a7045f066735a3eeeab81ea5f5ac81b76",
@@ -646,8 +664,8 @@
       "sha256": "ae89695479ad997f09ebea8060a5ad01312ad8fe7ffb92f73b4e895109feecd2",
       "size": 17540348,
       "source": "https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/AntiqueCamera",
-      "license": "CC-BY-4.0",
-      "author": "KhronosGroup (UX3D)"
+      "license": "CC0-1.0",
+      "author": "UX3D (Maximillan Kamps)"
     },
     {
       "path": "website-static/models/platforms/CarConcept.glb",
@@ -684,15 +702,6 @@
       "source": "https://sketchfab.com/3d-models/coffee-cart-1a97f872c1ac4a83a0132cd749d0b2a8",
       "license": "CC-BY-4.0",
       "author": ""
-    },
-    {
-      "path": "website-static/models/platforms/DamagedHelmet.glb",
-      "scope": "web",
-      "sha256": "a1e3b04de97b11de564ce6e53b95f02954a297f0008183ac63a4f5974f6b32d8",
-      "size": 3773916,
-      "source": "https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/DamagedHelmet",
-      "license": "CC-BY-NC-4.0",
-      "author": "theblueturtle_ (original, CC-BY-NC-4.0); ctxwing (rebuild, CC-BY-4.0)"
     },
     {
       "path": "website-static/models/platforms/Duck.glb",
@@ -819,6 +828,15 @@
       "source": "https://sketchfab.com/3d-models/toon-cat-free-b2bd1ee7858444bda366110a2d960386",
       "license": "CC-BY-4.0",
       "author": ""
+    },
+    {
+      "path": "website-static/models/platforms/ToyCar.glb",
+      "scope": "web",
+      "sha256": "8f5bd4830ee22b310c4b84cfe9cd82b818704d24dd2530dcc3f4a428665d945f",
+      "size": 2152460,
+      "source": "https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/ToyCar",
+      "license": "CC0-1.0",
+      "author": "Guido Odendahl (model); Eric Chadwick (extensions and scene composition)"
     },
     {
       "path": "website-static/models/platforms/Trumpet.glb",

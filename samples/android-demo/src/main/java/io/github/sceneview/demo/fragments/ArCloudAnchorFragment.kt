@@ -17,6 +17,11 @@ import io.github.sceneview.demo.demos.ARCollaborativeDemo
  * Samples step 0 added `ar-collaborative` as the Collaborative mode (`?tab=collaborative`).
  */
 object ArCloudAnchorFragment : DemoFragment {
+    val modes = listOf(
+        DemoMode("cloud-anchors", R.string.demo_mode_cloud_anchors),
+        DemoMode("collaborative", R.string.demo_mode_collaborative),
+    )
+
     override val entry: DemoEntry = DemoEntry(
         id = "ar-cloud-anchor",
         titleRes = R.string.demo_ar_cloud_anchor_title,
@@ -25,7 +30,7 @@ object ArCloudAnchorFragment : DemoFragment {
         icon = Icons.Filled.CloudCircle,
         order = 20,
         addedIn = "4.0.0",
-        updatedIn = "4.51.0",
+        updatedIn = "4.52.0",
         tags = setOf(
             "ar", "cloud-anchor", "multi-user", "persistence", "arcore",
             "sync", "collaboration", "transport",
@@ -40,10 +45,7 @@ object ArCloudAnchorFragment : DemoFragment {
     @Composable
     override fun Screen(onBack: () -> Unit) {
         DemoModeHost(
-            modes = listOf(
-                DemoMode("cloud-anchors", R.string.demo_mode_cloud_anchors),
-                DemoMode("collaborative", R.string.demo_mode_collaborative),
-            ),
+            modes = modes,
             tabToMode = mapOf(0 to 0, 1 to 1),
         ) { mode ->
             when (mode) {

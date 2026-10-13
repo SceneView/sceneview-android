@@ -16,7 +16,10 @@ import android.view.ViewConfiguration
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Box
@@ -60,6 +63,7 @@ import io.github.sceneview.gesture.GestureDetector
 import io.github.sceneview.gesture.MoveGestureDetector
 import io.github.sceneview.gesture.RotateGestureDetector
 import io.github.sceneview.gesture.ScaleGestureDetector
+import io.github.sceneview.gesture.replayHandedBackDown
 import io.github.sceneview.loaders.EnvironmentLoader
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
@@ -165,6 +169,10 @@ import io.github.sceneview.node.findActivity
  *                              `CameraNode.frameToContent(padding = …)` (#2946). Not the iOS
  *                              `framingMargin` *multiplier*: `margin == 1 + padding`, so iOS
  *                              `1.15` is `0.15` here. No effect when [autoFitContent] is `false`.
+ * @param contentPadding        The part of this view covered by a sheet, a panel or a bar. The
+ *                              camera projects into what is left — optical centre and field of
+ *                              view — without resizing the surface or moving the camera, and
+ *                              hit-testing follows. Animable. See the parameter's own KDoc.
  * @param renderer              Filament [Renderer]. Use [rememberRenderer].
  * @param scene                 Filament [Scene] graph, shareable across views. Use [rememberScene].
  * @param environment           IBL + skybox environment. Use [rememberEnvironment].
@@ -347,6 +355,36 @@ fun SceneView(
      */
     framingPadding: Float = DEFAULT_FRAMING_PADDING,
     /**
+     * The part of this view that something else covers — a bottom sheet, a side panel, a toolbar —
+     * measured inwards from its edges. **What is left is the camera's viewport**: the subject is
+     * projected into the visible area, centred on it, while the scene keeps drawing on the whole
+     * surface, under the panel too.
+     *
+     * The surface is not resized and the camera is not moved: only the projection is offset, so
+     * an orbit the user dragged to is kept and no bounds have to be known. Because the mapping is
+     * linear, animating the padding on the curve the panel slides on moves the subject on that
+     * same curve:
+     *
+     * ```kotlin
+     * val cover by animateDpAsState(if (panelOpen) panelHeight else 0.dp)
+     * SceneView(contentPadding = PaddingValues(bottom = cover)) { … }
+     * ```
+     *
+     * Hit-testing follows: `View.screenToRay`, `viewToRay`, `worldToView` and the node gestures
+     * take the offset into account, so a tap still lands on what is drawn under it. Framing
+     * follows too — [autoFitContent], `frameToBounds` and [fitCameraToBounds] fit inside the
+     * visible area.
+     *
+     * Written to [cameraNode] as [CameraNode.contentPadding], which says which projections it
+     * rebuilds, and reset to nothing when the camera leaves this view. Left at its default, the
+     * parameter writes nothing at all — a [CameraNode.contentPadding] set by hand is kept. The
+     * visible area never goes below a tenth of the view on either axis.
+     *
+     * `ARSceneView` has no such parameter: an AR camera's projection is the device camera's and
+     * is never re-framed.
+     */
+    contentPadding: PaddingValues = PaddingValues(0.dp),
+    /**
      * A [Renderer] instance represents an operating system's window.
      * Typically, applications create a [Renderer] per window.
      */
@@ -462,7 +500,11 @@ fun SceneView(
     DisposableEffect(frameRateGate, sceneInvalidator, scene) {
         sceneInvalidator.attach(frameRateGate)
         SceneRenderInvalidators.register(scene, sceneInvalidator)
+        // And by engine, for the one change no node announces: a geometry upload that had to
+        // wait for the previous one and left from a Filament callback (#4365).
+        EngineRenderInvalidators.register(engine, sceneInvalidator)
         onDispose {
+            EngineRenderInvalidators.unregister(engine, sceneInvalidator)
             // Only this view's entry: another view may render the same scene (#3723).
             SceneRenderInvalidators.unregister(scene, sceneInvalidator)
             sceneInvalidator.detach(frameRateGate)
@@ -509,6 +551,25 @@ fun SceneView(
         // A different camera is a different picture — and the swap happens without anyone moving
         // the new camera, so `onTransformChanged` never fires for it.
         frameRateGate.requestRender()
+    }
+    // The visible area, in the pixels of the surface. Keyed on the pixel values so an animated
+    // padding writes the camera once per changed frame and an unrelated recomposition writes
+    // nothing — `CameraNode.contentPadding` asks for the frame that shows it by itself. An
+    // effect, not a coroutine: the write lands in the frame that composed the padding, and a
+    // padding animated every frame launches nothing.
+    val contentPaddingPx =
+        contentPadding.toViewportPadding(LocalDensity.current, LocalLayoutDirection.current)
+    val contentPaddingBinding = remember(cameraNode) {
+        ContentPaddingBinding { cameraNode.contentPadding = it }
+    }
+    DisposableEffect(contentPaddingBinding, contentPaddingPx) {
+        contentPaddingBinding.apply(contentPaddingPx)
+        onDispose { }
+    }
+    // A camera that leaves this view — swapped for another, or the view itself going away — gets
+    // back the whole viewport: the padding belonged to this view's chrome, not to the camera.
+    DisposableEffect(contentPaddingBinding) {
+        onDispose { contentPaddingBinding.release() }
     }
     LaunchedEffect(view, isOpaque) {
         // Pair with `uiHelper.isOpaque` set in SceneRenderer.attachToSurfaceView/
@@ -652,6 +713,14 @@ fun SceneView(
     // ── DSL nodes → Filament scene sync ──────────────────────────────────────────────────────────
 
     val childNodesRef = remember { AtomicReference(emptyList<Node>()) }
+    // Which of those nodes can ask for a frame, kept so the loop below does not re-walk the whole
+    // tree every tick to find out (#3724). Fed the same list, at the same moment, as
+    // `childNodesRef`; it survives a restart of the effect below and lets go of the nodes on exit.
+    val frameActivity = remember { SceneFrameActivity() }
+    DisposableEffect(frameActivity) { onDispose { frameActivity.clear() } }
+    // Hands each frame to the nodes that have per-frame work, instead of walking the tree (#4451).
+    val frameDispatch = remember { SceneFrameDispatch() }
+    DisposableEffect(frameDispatch) { onDispose { frameDispatch.clear() } }
 
     LaunchedEffect(nodeManager, autoCenterContent, contentRoot) {
         var prevNodes = emptyList<Node>()
@@ -682,6 +751,7 @@ fun SceneView(
             }
             prevNodes = newNodes
             childNodesRef.set(newNodes)
+            frameActivity.setRoots(newNodes)
             // A node was attached to (or detached from) the live scene — invalidate the same way
             // a surface resize does (#3560). Under [FrameRatePolicy.OnDemand] the frame loop below
             // parks on `shouldRender`, and only the gate can wake it. Before #3560 only
@@ -840,6 +910,12 @@ fun SceneView(
                 // Published before `gestureDetector` runs: its double-tap callback fires from
                 // inside that call and reads this to apply the same isolation (#3608).
                 cameraGesturesAbsorbedRef.set(absorbedByEditableNode)
+                // A drag that started on an interactive ViewNode may just have been handed back
+                // (#4033): replay the DOWN the detectors never saw.
+                replayHandedBackDown(
+                    event, capturedTouchNodeRef.get(), hitResult, gestureDetector,
+                    cameraGestureDetectorRef.get(), absorbedByEditableNode,
+                )
                 gestureDetector.onTouchEvent(event, hitResult)
                 if (!absorbedByEditableNode) {
                     cameraGestureDetectorRef.get()?.onTouchEvent(event)
@@ -1020,7 +1096,7 @@ fun SceneView(
                                 gestureInFlight = gestureInFlightRef.get(),
                                 cameraMoved = cameraMoved,
                                 cameraPending = cameraPending,
-                                hasActiveNode = childNodesRef.get().any { it.isFrameActive },
+                                hasActiveNode = frameActivity.hasActiveNode,
                                 // Not `progress < 1f`: Filament reports 0 for a loader that was
                                 // never asked for an async load, which read as "loading" for the
                                 // lifetime of every procedural scene. See [isAsyncLoadPending].
@@ -1063,7 +1139,7 @@ fun SceneView(
                         // TransformManager already sorted and reindex nothing (Engine.kt).
                         engine.sortTransformsIfUnsorted()
                         modelLoader.updateLoad()
-                        childNodesRef.get().forEach { it.onFrame(frameTimeNanos) }
+                        frameDispatch.dispatch(childNodesRef.get(), frameTimeNanos)
 
                         // One time step for everything this loop advances itself: capped, so a
                         // stall does not spend an ease in one frame, and nominal after a park —
@@ -1391,58 +1467,6 @@ fun rememberModelInstance(
         onDispose { instance?.let { modelLoader.destroyModel(it.model) } }
     }
     return instance
-}
-
-// ── Video helper ──────────────────────────────────────────────────────────────────────────────────
-
-/**
- * Creates and remembers a [android.media.MediaPlayer] configured for the given [assetFileLocation].
- *
- * The player is prepared synchronously on the IO dispatcher and returned once ready. Returns
- * `null` while loading. The player is released automatically when the composition leaves the
- * tree.
- *
- * Use this with [SceneScope.VideoNode] for easy video playback in 3D:
- * ```kotlin
- * SceneView {
- *     val player = rememberMediaPlayer(context, assetFileLocation = "videos/promo.mp4")
- *     if (player != null) {
- *         VideoNode(player = player, position = Position(z = -2f))
- *     }
- * }
- * ```
- *
- * @param context            Android context for resolving the asset.
- * @param assetFileLocation  Path to the video file relative to the `assets` folder.
- * @param isLooping          Whether the video should loop. Default `true`.
- * @param autoStart          Whether to start playback immediately once prepared. Default `true`.
- * @return The prepared [android.media.MediaPlayer], or `null` while loading.
- */
-@io.github.sceneview.ExperimentalSceneViewApi
-@Composable
-fun rememberMediaPlayer(
-    context: android.content.Context = LocalContext.current,
-    assetFileLocation: String,
-    isLooping: Boolean = true,
-    autoStart: Boolean = true
-): android.media.MediaPlayer? {
-    val player = remember(assetFileLocation) {
-        runCatching {
-            val afd = context.assets.openFd(assetFileLocation)
-            android.media.MediaPlayer().apply {
-                setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
-                this.isLooping = isLooping
-                prepare()
-                if (autoStart) start()
-            }
-        }.getOrNull()
-    }
-    DisposableEffect(player) {
-        onDispose {
-            player?.release()
-        }
-    }
-    return player
 }
 
 // ── Engine / resource lifecycle helpers ──────────────────────────────────────────────────────────
@@ -2262,6 +2286,7 @@ fun Scene(
     autoCenterContent: Boolean = true,
     autoFitContent: Boolean = false,
     framingPadding: Float = DEFAULT_FRAMING_PADDING,
+    contentPadding: PaddingValues = PaddingValues(0.dp),
     renderer: Renderer = rememberRenderer(engine),
     scene: Scene = rememberScene(engine),
     environment: Environment = rememberEnvironment(environmentLoader, isOpaque = isOpaque),
@@ -2293,6 +2318,7 @@ fun Scene(
     autoCenterContent = autoCenterContent,
     autoFitContent = autoFitContent,
     framingPadding = framingPadding,
+    contentPadding = contentPadding,
     renderer = renderer,
     scene = scene,
     environment = environment,

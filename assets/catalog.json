@@ -88,8 +88,11 @@
       "name": "Toy Car",
       "source": "khronos",
       "sourceUrl": "https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/ToyCar",
-      "author": "KhronosGroup",
-      "license": "CC-BY-4.0",
+      "author": "Guido Odendahl (model); Eric Chadwick (extensions and scene composition)",
+      "license": "CC0-1.0",
+      "shippedAs": [
+        "ToyCar.glb"
+      ],
       "formats": {
         "glb": {
           "file": "models/glb/khronos_toy_car.glb",
@@ -110,7 +113,8 @@
       ],
       "usedIn": [
         "android-demo",
-        "ios-demo"
+        "ios-demo",
+        "web-demo"
       ],
       "defaultScale": 0.8,
       "cameraDistance": 3.0
@@ -987,9 +991,6 @@
       "sourceUrl": "https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/DamagedHelmet",
       "author": "theblueturtle_ (original, CC-BY-NC-4.0); ctxwing (rebuild, CC-BY-4.0)",
       "license": "CC-BY-NC-4.0",
-      "shippedAs": [
-        "DamagedHelmet.glb"
-      ],
       "formats": {
         "glb": {
           "file": "models/glb/khronos_damaged_helmet.glb",
@@ -3097,7 +3098,12 @@
       "id": "rooftop_night",
       "name": "Rooftop Night",
       "source": "polyhaven",
+      "sourceId": "rooftop_night",
+      "sourceUrl": "https://polyhaven.com/a/rooftop_night",
+      "author": "Greg Zaal",
+      "license": "CC0-1.0",
       "file": "environments/hdr/rooftop_night_2k.hdr",
+      "note": "Verified 2026-10-10 against the Poly Haven download: a 1024x512 downsample of rooftop_night_2k.hdr (median pixel difference 0.3%) (#4453)",
       "tags": [
         "night",
         "urban",
@@ -3111,7 +3117,12 @@
       "id": "studio",
       "name": "Studio",
       "source": "polyhaven",
+      "sourceId": "christmas_photo_studio_07",
+      "sourceUrl": "https://polyhaven.com/a/christmas_photo_studio_07",
+      "author": "Sergej Majboroda",
+      "license": "CC0-1.0",
       "file": "environments/hdr/studio_2k.hdr",
+      "note": "Verified 2026-10-10 against the Poly Haven download: pixel-identical to christmas_photo_studio_07_1k.hdr (#4453)",
       "tags": [
         "neutral",
         "studio",
@@ -3155,7 +3166,12 @@
       "id": "studio_warm",
       "name": "Studio Warm",
       "source": "polyhaven",
+      "sourceId": "studio_small_08",
+      "sourceUrl": "https://polyhaven.com/a/studio_small_08",
+      "author": "Sergej Majboroda",
+      "license": "CC0-1.0",
       "file": "environments/hdr/studio_warm_2k.hdr",
+      "note": "Verified 2026-10-10 against the Poly Haven download: pixel-identical to studio_small_08_1k.hdr (#4453)",
       "tags": [
         "warm",
         "cozy",

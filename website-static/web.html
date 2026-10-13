@@ -48,13 +48,13 @@
 
   <link rel="preload" href="styles.css" as="style">
   <link rel="preload" href="js/filament/filament.js" as="script">
-  <link rel="preload" href="js/sceneview.js?v=4.52.0" as="script">
+  <link rel="preload" href="js/sceneview.js?v=4.55.0" as="script">
 
   <!-- Filament.js v1.72.1 WASM engine (required by SceneView Web) — version pinned by
        gradle/libs.versions.toml `filamentWebsite` + js/filament/RUNTIME.json (#2783) -->
   <script src="js/filament/filament.js"></script>
   <!-- SceneView Web library -->
-  <script src="js/sceneview.js?v=4.52.0"></script>
+  <script src="js/sceneview.js?v=4.55.0"></script>
 
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
@@ -785,7 +785,7 @@
     "url": "https://sceneview.github.io/web.html",
     "applicationCategory": "DeveloperApplication",
     "operatingSystem": "Web",
-    "softwareVersion": "4.52.0",
+    "softwareVersion": "4.55.0",
     "license": "https://github.com/sceneview/sceneview/blob/main/LICENSE",
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
     "author": {
@@ -891,7 +891,7 @@
       <div class="web-demo__header">
         <h2 class="web-demo__title">Live demo</h2>
         <p class="web-demo__subtitle">
-          The DamagedHelmet model rendered in real-time with Filament.js WASM. Drag to orbit. Scroll to zoom.
+          The Khronos Toy Car rendered in real time with Filament.js WASM. Drag to orbit. Scroll to zoom.
         </p>
       </div>
 
@@ -1126,6 +1126,9 @@
           <p class="web-api-card__desc">
             Creates an empty viewer without loading a model.
             Call <code>loadModel(url)</code> later. Useful when the model URL is dynamic.
+            Options include <code>transparent</code> (alpha canvas over the page),
+            <code>renderMode</code>, <code>autoRotate</code>, <code>fov</code>,
+            <code>backgroundColor</code> (sRGB 0&ndash;1, as displayed) and <code>iblUrl</code>.
           </p>
         </div>
 
@@ -1153,6 +1156,44 @@
           <p class="web-api-card__desc">
             Sets the orbit camera distance from the model center.
             Useful for controlling the initial zoom level.
+          </p>
+        </div>
+
+        <div class="web-api-card reveal">
+          <div class="web-api-card__name">viewer.getCameraOrbit / setCameraOrbit</div>
+          <div class="web-api-card__sig">setCameraOrbit({ angle, height, radius, target, fov })</div>
+          <p class="web-api-card__desc">
+            Reads or moves the orbit camera: azimuth in radians, eye height, distance,
+            look-at point and vertical FOV. Every field is optional. Chainable.
+          </p>
+        </div>
+
+        <div class="web-api-card reveal">
+          <div class="web-api-card__name">viewer.frameModel</div>
+          <div class="web-api-card__sig">frameModel({ fill })</div>
+          <p class="web-api-card__desc">
+            Re-centres the camera so the model covers at most a fraction of the view at any
+            orbit angle, for example <code>{ fill: 0.8 }</code>. Without options, reuses the
+            on-load framing.
+          </p>
+        </div>
+
+        <div class="web-api-card reveal">
+          <div class="web-api-card__name">viewer.setRenderMode / requestRender</div>
+          <div class="web-api-card__sig">setRenderMode('continuous' | 'onDemand')</div>
+          <p class="web-api-card__desc">
+            <code>'onDemand'</code> stops drawing once nothing moves and wakes on input,
+            camera calls, scene changes or <code>requestRender()</code>. Saves battery on
+            pages with several viewers.
+          </p>
+        </div>
+
+        <div class="web-api-card reveal">
+          <div class="web-api-card__name">viewer.onFrame</div>
+          <div class="web-api-card__sig">onFrame(callback) &rarr; unsubscribe</div>
+          <p class="web-api-card__desc">
+            Calls <code>callback(canvas)</code> after every drawn frame, while the image is
+            still readable: copy it with <code>drawImage</code> for reflections or thumbnails.
           </p>
         </div>
 
@@ -1235,6 +1276,8 @@
           <p class="web-api-card__desc">
             Cleans up all GPU resources, removes event listeners,
             and stops the render loop. Call when removing the viewer.
+            Safe to call more than once; loads still in flight are cancelled
+            and their promises reject with an <code>AbortError</code>.
           </p>
         </div>
       </div>
@@ -1348,7 +1391,7 @@
       var loading = document.getElementById('demoLoading');
       try {
         SceneView.modelViewer('demoCanvas',
-          'models/platforms/DamagedHelmet.glb',
+          'models/platforms/ToyCar.glb',
           { autoRotate: true }
         ).then(function() {
           if (loading) loading.classList.add('hidden');

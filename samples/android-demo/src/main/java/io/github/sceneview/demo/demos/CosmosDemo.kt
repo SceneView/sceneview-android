@@ -4,6 +4,7 @@ import io.github.sceneview.demo.recording.rememberSceneRecorderState
 import io.github.sceneview.rememberSurfaceMirrorer
 import io.github.sceneview.demo.telemetry.LocalSampleId
 import io.github.sceneview.demo.telemetry.logSampleInteraction
+import io.github.sceneview.demo.telemetry.logSampleModeChange
 import android.os.SystemClock
 import android.util.Log
 import androidx.compose.foundation.BorderStroke
@@ -57,6 +58,7 @@ import com.google.android.filament.Texture
 import com.google.android.filament.TextureSampler
 import com.google.android.filament.VertexBuffer
 import dev.romainguy.kotlin.math.Quaternion
+import io.github.sceneview.EngineDestroyQueue
 import io.github.sceneview.FrameRatePolicy
 import io.github.sceneview.SceneView
 import io.github.sceneview.demo.DemoPreviewPlaceholder
@@ -99,7 +101,6 @@ import io.github.sceneview.rememberOnGestureListener
 import io.github.sceneview.rememberRenderInvalidator
 import io.github.sceneview.rememberView
 import io.github.sceneview.safeDestroyIndexBuffer
-import io.github.sceneview.safeDestroyTexture
 import io.github.sceneview.safeDestroyVertexBuffer
 import io.github.sceneview.sample.ui.LabeledSlider
 import kotlinx.coroutines.Dispatchers
@@ -390,6 +391,7 @@ fun CosmosDemo(onBack: () -> Unit) {
     val showSpacetime: (Boolean) -> Unit = { on ->
         if (on != spacetime) {
             spacetime = on
+            logSampleModeChange(telemetrySampleId, COSMOS_MODES[if (on) 1 else 0])
             // The camera's turn is kept on the way back, so the return flight leaves from the
             // pose on screen; it is reset once the sequence is back at Starlight (onFrame).
             if (on) {
@@ -401,7 +403,6 @@ fun CosmosDemo(onBack: () -> Unit) {
                 voyage.resetDrag()
                 flight.start()
                 focus = CosmosFocus.System
-                logSampleInteraction(telemetrySampleId, "spacetime")
             }
         }
     }
@@ -933,6 +934,8 @@ fun CosmosDemo(onBack: () -> Unit) {
         }
     }
 }
+
+internal val COSMOS_MODES = listOf("starlight", "spacetime")
 
 @Composable
 private fun ToggleRow(label: String, value: Boolean, onChange: (Boolean) -> Unit) {
@@ -1566,7 +1569,11 @@ private const val MAX_BAKE_BANDS = 8
 private class GpuSheet(val mesh: GpuMesh, val horizon: Texture) {
     fun destroy(engine: Engine) {
         mesh.destroy(engine)
-        engine.safeDestroyTexture(horizon)
+        // Queued, not destroyed here: the sheet's material instance still samples this map when
+        // the sheet goes. It belongs to the material loader, which is remembered before the sheet
+        // and so disposed after it. The sheet is built once and never rebuilt while its material
+        // stays, so there is no replacement map to bind an instance to first (#4360).
+        EngineDestroyQueue.of(engine).enqueueTexture(horizon)
     }
 }
 

@@ -53,7 +53,7 @@ One minimal, working example per platform. The full reference for each is in
 
 ```kotlin
 // build.gradle.kts
-implementation("io.github.sceneview:sceneview:4.52.0")
+implementation("io.github.sceneview:sceneview:4.55.0")
 ```
 
 ```kotlin
@@ -75,7 +75,7 @@ coroutine: Filament calls must run on the main thread, and `rememberModelInstanc
 
 ```kotlin
 // build.gradle.kts
-implementation("io.github.sceneview:arsceneview:4.52.0")   // includes the 3D module
+implementation("io.github.sceneview:arsceneview:4.55.0")   // includes the 3D module
 ```
 
 ```kotlin
@@ -138,8 +138,8 @@ that finishes loading after the scene appears is never added.
 
 ```html
 <canvas id="viewer" style="width: 100%; height: 480px"></canvas>
-<script src="https://cdn.jsdelivr.net/gh/sceneview/sceneview@v4.52.0/website-static/js/filament/filament.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/sceneview/sceneview@v4.52.0/website-static/js/sceneview.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/sceneview/sceneview@v4.55.0/website-static/js/filament/filament.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/sceneview/sceneview@v4.55.0/website-static/js/sceneview.js"></script>
 <script> SceneView.modelViewer("viewer", "model.glb") </script>
 ```
 
@@ -147,7 +147,7 @@ that finishes loading after the scene appears is never added.
 
 ```kotlin
 // commonMain dependencies
-implementation("io.github.sceneview:sceneview-compose:4.52.0")
+implementation("io.github.sceneview:sceneview-compose:4.55.0")
 ```
 
 ```kotlin
@@ -160,7 +160,7 @@ A viewer by design — load, orbit, light, tap; no AR. Scope and the one-time iO
 ### Flutter
 
 ```dart
-// pubspec.yaml → flutter_sceneview: ^4.52.0
+// pubspec.yaml → flutter_sceneview: ^4.55.0
 final controller = SceneViewController();
 
 SceneView(
@@ -209,7 +209,7 @@ capture of it.
 |---|---|---|---|---|
 | **Android** | Shipped · Stable | [Maven Central](https://central.sonatype.com/artifact/io.github.sceneview/sceneview) | [Google Play](https://play.google.com/store/apps/details?id=io.github.sceneview.demo) | <img src="website-static/assets/demos/runs-on-android.jpg" alt="SceneView Android demo: Model Viewer rendering a helmet with Filament" height="160"> |
 | **iOS** | Shipped · Alpha | [Swift Package](SceneViewSwift/) | [App Store](https://apps.apple.com/us/app/sceneview-demo-sdk-samples/id6761329763) | <img src="website-static/assets/demos/runs-on-ios.jpg" alt="SceneView iOS demo: Model Viewer rendering a helmet with RealityKit" height="160"> |
-| **Web** | Shipped · Alpha | [npm `sceneview-web`](https://www.npmjs.com/package/sceneview-web) | [Live web demo](https://sceneview.github.io/web-demo/) | <img src="website-static/assets/demos/runs-on-web.jpg" alt="SceneView web demo: Damaged Helmet rendered by Filament.js in a browser" height="100"> |
+| **Web** | Shipped · Alpha | [npm `sceneview-web`](https://www.npmjs.com/package/sceneview-web) | [Live web demo](https://sceneview.github.io/web-demo/) | <img src="website-static/assets/demos/runs-on-web.jpg" alt="SceneView web demo: Toy Car rendered by Filament.js in a browser" height="100"> |
 
 *Shipped* means released and publicly reachable; the second word is the API maturity.
 The other platforms in the table below join this section once a capture backs them.
@@ -234,10 +234,10 @@ The other platforms in the table below join this section once a capture backs th
 
 | Platform | Coordinate |
 |---|---|
-| Android 3D | `io.github.sceneview:sceneview:4.52.0` |
-| Android AR | `io.github.sceneview:arsceneview:4.52.0` |
-| Compose Multiplatform | `io.github.sceneview:sceneview-compose:4.52.0` |
-| KMP core only (math, collision, physics) | `io.github.sceneview:sceneview-core:4.52.0` |
+| Android 3D | `io.github.sceneview:sceneview:4.55.0` |
+| Android AR | `io.github.sceneview:arsceneview:4.55.0` |
+| Compose Multiplatform | `io.github.sceneview:sceneview-compose:4.55.0` |
+| KMP core only (math, collision, physics) | `io.github.sceneview:sceneview-core:4.55.0` |
 | Apple (SPM) | `https://github.com/sceneview/sceneview.git`, from `4.39.0` |
 | Web, script tag | the two `<script>` tags in [Web](#web) |
 | Web, bundler (Kotlin/JS) | `npm install sceneview-web` — see [SceneView Web](#sceneview-web) |
@@ -497,7 +497,7 @@ npm install sceneview-web
 The package expects a `Filament` global and does not include the `SceneView.modelViewer` script
 helpers. A Kotlin Multiplatform project that only needs the shared core (collision, math,
 geometry, animation, physics — no renderer) uses
-`implementation("io.github.sceneview:sceneview-core-js:4.52.0")`.
+`implementation("io.github.sceneview:sceneview-core-js:4.55.0")`.
 
 [Landing page](https://sceneview.github.io/) · [Playground](https://sceneview.github.io/playground.html) · [npm](https://www.npmjs.com/package/sceneview-web)
 
@@ -573,13 +573,14 @@ sceneview-core (Kotlin Multiplatform)
 - [Website](https://sceneview.github.io/) · [Playground](https://sceneview.github.io/playground.html) · [Documentation](https://sceneview.github.io/docs/)
 - [Discord](https://discord.gg/UbNDDBTNqb) · [Contributing](CONTRIBUTING.md) · [Changelog](CHANGELOG.md) · [Migration v2 → v3](MIGRATION.md)
 
-## Support
+## Sponsors
 
-SceneView is free and open source. Donations keep it maintained across every platform above.
+SceneView is free and open source, funded by its users.
 
-| | Platform | Link |
-|---|---|---|
-| :heart: | **Open Collective** — transparent ledger, one-off or monthly | [Donate on Open Collective](https://opencollective.com/sceneview) |
-| :star: | **GitHub Sponsors** | [Sponsor on GitHub](https://github.com/sponsors/sceneview) |
+**[Sponsor on Open Collective](https://opencollective.com/sceneview)** · or through [GitHub Sponsors](https://github.com/sponsors/sceneview)
 
-See [SPONSORS.md](.github/SPONSORS.md) for how sponsorship works here.
+<a href="https://opencollective.com/sceneview"><img src="https://opencollective.com/sceneview/organizations.svg?avatarHeight=56&width=830" alt="Logos of the companies sponsoring SceneView on Open Collective"></a>
+
+<a href="https://opencollective.com/sceneview"><img src="https://opencollective.com/sceneview/individuals.svg?avatarHeight=40&width=830&button=false" alt="Avatars of the people backing SceneView on Open Collective"></a>
+
+[How sponsorship works](.github/SPONSORS.md)

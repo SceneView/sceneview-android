@@ -21,6 +21,11 @@ import io.github.sceneview.demo.demos.RollingBallsDemo
  * Samples step 0 added `double-pendulum` as the Pendulum mode (`?tab=pendulum`).
  */
 object RollingBallsFragment : DemoFragment {
+    val modes = listOf(
+        DemoMode("balls", R.string.demo_mode_balls),
+        DemoMode("pendulum", R.string.demo_mode_pendulum),
+    )
+
     override val entry: DemoEntry = DemoEntry(
         id = "rolling-balls",
         titleRes = R.string.demo_rolling_balls_title,
@@ -29,7 +34,7 @@ object RollingBallsFragment : DemoFragment {
         icon = Icons.Filled.Workspaces,
         order = 30,
         addedIn = "4.48.0",
-        updatedIn = "4.51.0",
+        updatedIn = "4.52.0",
         tags = setOf(
             "physics", "rigid-body", "collision", "simulation", "tilt", "balls",
             "pendulum", "chaos", "kmp",
@@ -39,10 +44,7 @@ object RollingBallsFragment : DemoFragment {
     @Composable
     override fun Screen(onBack: () -> Unit) {
         DemoModeHost(
-            modes = listOf(
-                DemoMode("balls", R.string.demo_mode_balls),
-                DemoMode("pendulum", R.string.demo_mode_pendulum),
-            ),
+            modes = modes,
             tabToMode = mapOf(0 to 0, 1 to 1),
         ) { mode ->
             when (mode) {

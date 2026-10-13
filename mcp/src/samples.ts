@@ -116,7 +116,7 @@ fun ModelViewerScreen() {
         mainLightNode = rememberMainLightNode(engine) { intensity = 100_000f },
         cameraManipulator = rememberCameraManipulator()
     ) {
-        rememberModelInstance(modelLoader, "models/damaged_helmet.glb")?.let { instance ->
+        rememberModelInstance(modelLoader, "models/toy_car.glb")?.let { instance ->
             ModelNode(
                 modelInstance = instance,
                 scaleToUnits = 1.0f,
@@ -140,7 +140,7 @@ fun ModelViewerScreen() {
 fun ARModelViewerScreen() {
     val engine = rememberEngine()
     val modelLoader = rememberModelLoader(engine)
-    val modelInstance = rememberModelInstance(modelLoader, "models/damaged_helmet.glb")
+    val modelInstance = rememberModelInstance(modelLoader, "models/toy_car.glb")
     var anchor by remember { mutableStateOf<Anchor?>(null) }
 
     ARSceneView(
@@ -395,7 +395,7 @@ fun CameraManipulatorScreen() {
             targetPosition = Position(0f)
         )
     ) {
-        rememberModelInstance(modelLoader, "models/damaged_helmet.glb")?.let { instance ->
+        rememberModelInstance(modelLoader, "models/toy_car.glb")?.let { instance ->
             ModelNode(modelInstance = instance, scaleToUnits = 1.0f)
         }
     }
@@ -451,7 +451,7 @@ fun CameraAnimationScreen() {
             },
             mainLightNode = rememberMainLightNode(engine) { intensity = 100_000f }
         ) {
-            rememberModelInstance(modelLoader, "models/damaged_helmet.glb")?.let { instance ->
+            rememberModelInstance(modelLoader, "models/toy_car.glb")?.let { instance ->
                 ModelNode(modelInstance = instance, scaleToUnits = 1.0f)
             }
         }
@@ -807,6 +807,7 @@ fun LinePathScreen() {
     code: `@Composable
 fun TextLabelsScreen() {
     val engine = rememberEngine()
+    val cameraNode = rememberCameraNode(engine)
     val materialLoader = rememberMaterialLoader(engine)
     val environmentLoader = rememberEnvironmentLoader(engine)
 
@@ -820,6 +821,7 @@ fun TextLabelsScreen() {
     SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
+        cameraNode = cameraNode,
         cameraManipulator = rememberCameraManipulator(
             orbitHomePosition = Position(x = 0f, y = 1.5f, z = 5f),
             targetPosition = Position(0f, 0.5f, 0f)
@@ -849,7 +851,9 @@ fun TextLabelsScreen() {
                 backgroundColor = 0xCC000000.toInt(),
                 widthMeters = 0.6f,
                 heightMeters = 0.2f,
-                position = Position(x = planet.x, y = 0.9f, z = 0f)
+                position = Position(x = planet.x, y = 0.9f, z = 0f),
+                // Without a provider a TextNode does not turn toward the camera.
+                cameraPositionProvider = { cameraNode.worldPosition }
             )
         }
     }
@@ -915,7 +919,7 @@ fun PostProcessingScreen() {
         modelLoader = modelLoader,
         view = view
     ) {
-        rememberModelInstance(modelLoader, "models/damaged_helmet.glb")?.let { instance ->
+        rememberModelInstance(modelLoader, "models/toy_car.glb")?.let { instance ->
             ModelNode(modelInstance = instance, scaleToUnits = 1.0f)
         }
     }
@@ -928,36 +932,27 @@ fun PostProcessingScreen() {
     id: "video-texture",
     title: "Video Texture",
     description:
-      "Video playback on a 3D plane using VideoNode with MediaPlayer — supports looping, chroma-key, and auto-sizing.",
+      "Video playback on a 3D plane using VideoNode — prepared off the main thread, with play/pause, looping, chroma-key, auto-sizing and an error callback.",
     tags: ["3d", "video", "model"],
     dependency: "io.github.sceneview:sceneview:" + LATEST_SCENEVIEW_RELEASE + "",
     prompt: `Create a 3D scene with a video playing on a floating 3D plane. Include play/pause controls and chroma-key support. Use SceneView \`io.github.sceneview:sceneview:${LATEST_SCENEVIEW_RELEASE}\`.`,
-    code: `@Composable
+    code: `@OptIn(ExperimentalSceneViewApi::class)
+@Composable
 fun VideoTextureScreen() {
-    val context = LocalContext.current
-    val engine = rememberEngine()
     var isPlaying by remember { mutableStateOf(true) }
-
-    val player = remember {
-        MediaPlayer().apply {
-            setDataSource(context, Uri.parse("android.resource://\${context.packageName}/raw/video"))
-            isLooping = true
-            prepare()
-            start()
-        }
-    }
-    DisposableEffect(Unit) { onDispose { player.release() } }
+    var error by remember { mutableStateOf<Exception?>(null) }
 
     Column {
-        SceneView(
-            modifier = Modifier.weight(1f).fillMaxWidth(),
-            engine = engine
-        ) {
+        SceneView(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            // Prepared off the main thread: the node appears once the video is ready.
             VideoNode(
-                player = player,
+                videoPath = "videos/promo.mp4", // under assets/, or an https:// URL
+                autoPlay = isPlaying,           // reactive: true plays, false pauses
+                isLooping = true,
                 // size = null auto-sizes from video aspect ratio (longer edge = 1 unit)
                 position = Position(z = -2f),
-                chromaKeyColor = null // set to android.graphics.Color.GREEN for green-screen
+                chromaKeyColor = null, // set to android.graphics.Color.GREEN for green-screen
+                onError = { cause -> error = cause } // missing file, unsupported codec, broken stream
             )
         }
         Row(
@@ -965,11 +960,12 @@ fun VideoTextureScreen() {
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Button(onClick = {
-                if (isPlaying) player.pause() else player.start()
-                isPlaying = !isPlaying
-            }) {
-                Text(if (isPlaying) "Pause" else "Play")
+            if (error != null) {
+                Text("This video cannot be played.")
+            } else {
+                Button(onClick = { isPlaying = !isPlaying }) {
+                    Text(if (isPlaying) "Pause" else "Play")
+                }
             }
         }
     }
@@ -1088,7 +1084,7 @@ fun GestureInteractionScreen() {
                 }
             )
         ) {
-            rememberModelInstance(modelLoader, "models/damaged_helmet.glb")?.let { instance ->
+            rememberModelInstance(modelLoader, "models/toy_car.glb")?.let { instance ->
                 ModelNode(
                     modelInstance = instance,
                     scaleToUnits = 1.0f,
@@ -1151,7 +1147,7 @@ fun EnvironmentLightingScreen() {
         PlaneNode(size = Size(10f, 10f), materialInstance = floorMat)
 
         // Model
-        rememberModelInstance(modelLoader, "models/damaged_helmet.glb")?.let { instance ->
+        rememberModelInstance(modelLoader, "models/toy_car.glb")?.let { instance ->
             ModelNode(modelInstance = instance, scaleToUnits = 1.0f, position = Position(y = 0.5f))
         }
 
@@ -1286,7 +1282,7 @@ fun ComposeUI3DScreen() {
         viewNodeWindowManager = windowManager
     ) {
         // 3D model behind the UI
-        rememberModelInstance(modelLoader, "models/damaged_helmet.glb")?.let { instance ->
+        rememberModelInstance(modelLoader, "models/toy_car.glb")?.let { instance ->
             ModelNode(modelInstance = instance, scaleToUnits = 1.0f, position = Position(z = -1f))
         }
 
@@ -1947,7 +1943,7 @@ fun BillboardSpriteScreen() {
         mainLightNode = rememberMainLightNode(engine) { intensity = 100_000f }
     ) {
         // A model with billboard markers above it
-        rememberModelInstance(modelLoader, "models/damaged_helmet.glb")?.let { instance ->
+        rememberModelInstance(modelLoader, "models/toy_car.glb")?.let { instance ->
             ModelNode(modelInstance = instance, scaleToUnits = 1.0f)
         }
 

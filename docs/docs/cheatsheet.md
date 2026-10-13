@@ -16,8 +16,8 @@ A quick reference for SceneView's most-used APIs. Print it, pin it, keep it next
 
 ```kotlin
 // build.gradle
-implementation("io.github.sceneview:sceneview:4.52.0")     // 3D
-implementation("io.github.sceneview:arsceneview:4.52.0")    // AR + 3D
+implementation("io.github.sceneview:sceneview:4.55.0")     // 3D
+implementation("io.github.sceneview:arsceneview:4.55.0")    // AR + 3D
 ```
 
 ---
@@ -273,10 +273,10 @@ mechanism (EV-stop post-process via CIColorControls) — do not copy values acro
 | `PlaneNode` | `size: Size`, `materialInstance` |
 | `LightNode` | `type: LightManager.Type`, `apply = { intensity(); color(); castShadows() }` |
 | `ImageNode` | `imageFileLocation` / `imageResId` / `bitmap`, `size` |
-| `VideoNode` | `videoPath` (simple) / `player: MediaPlayer` (advanced), `chromaKeyColor`, `size` |
-| `ViewNode` | `windowManager`, content = `@Composable` |
-| `TextNode` | `text`, `fontSize`, `textColor`, `backgroundColor`, `widthMeters` |
-| `BillboardNode` | `bitmap`, `widthMeters`, `heightMeters` |
+| `VideoNode` | `videoPath` (asset path or URL, with `autoPlay`, `isLooping`, `onError`) / `player: MediaPlayer` (advanced), `chromaKeyColor`, `size` |
+| `ViewNode` | `windowManager`, `unlit`, `position`, `rotation`, `scale`, `isVisible`, `cameraPositionProvider`, content = `@Composable` |
+| `TextNode` | `text`, `fontSize`, `textColor`, `backgroundColor`, `typeface`, `widthMeters`, `heightMeters`, `cameraPositionProvider` |
+| `BillboardNode` | `bitmap`, `widthMeters`, `heightMeters`, `cameraPositionProvider` |
 | `LineNode` | `start`, `end`, `materialInstance` |
 | `PathNode` | `points: List<Position>`, `closed`, `materialInstance` |
 | `DynamicSkyNode` | `timeOfDay` (0-24), `turbidity`, `sunIntensity` |

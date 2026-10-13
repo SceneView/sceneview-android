@@ -24,6 +24,7 @@ import androidx.activity.setViewTreeFullyDrawnReporterOwner
 import androidx.activity.setViewTreeOnBackPressedDispatcherOwner
 import androidx.annotation.LayoutRes
 import androidx.annotation.RequiresApi
+import androidx.annotation.RestrictTo
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
@@ -39,6 +40,7 @@ import com.google.android.filament.Texture
 import io.github.sceneview.EngineDestroyQueue
 import io.github.sceneview.collision.HitResult
 import io.github.sceneview.loaders.MaterialLoader
+import io.github.sceneview.math.Position
 import io.github.sceneview.math.Size
 import io.github.sceneview.math.worldToLocalDirection
 import io.github.sceneview.math.worldToLocalPosition
@@ -87,12 +89,31 @@ import io.github.sceneview.node.ViewNode.WindowManager
  *
  * Set [isTouchForwardingEnabled] to `false` to opt out and always get the scene-level behaviour.
  *
+ * ## Facing the camera
+ *
+ * Give the node a [cameraPositionProvider] and the quad turns to face the camera, exactly as a
+ * [BillboardNode] or a [TextNode] does (#4387): a full look-at — front toward the camera position,
+ * top toward world `+Y`, so it yaws and pitches and never rolls. Touches keep landing on the right
+ * pixel, because the mapping above works from the quad's own transform.
+ *
+ * ```kotlin
+ * val cameraNode = rememberCameraNode(engine)
+ * SceneView(cameraNode = cameraNode, viewNodeWindowManager = windowManager) {
+ *     ViewNode(
+ *         windowManager = windowManager,
+ *         cameraPositionProvider = { cameraNode.worldPosition }
+ *     ) { Card { Text("Always readable") } }
+ * }
+ * ```
+ *
  * @param view The 2D Android [View] that is rendered by this [ViewNode]
  * @param unlit True to disable all lights influences on the rendered view
  * @param invertFrontFaceWinding Inverts the winding order of front faces.
  * Inverting the winding order of front faces is useful when rendering mirrored reflections
  * (water, mirror surfaces, front camera in AR, etc.).
  * True to invert front faces, false otherwise
+ * @param cameraPositionProvider Initial value of [ViewNode.cameraPositionProvider]: the camera world
+ * position to face, read every frame. `null` (default) leaves the orientation alone.
  */
 class ViewNode(
     engine: Engine,
@@ -101,6 +122,7 @@ class ViewNode(
     view: View,
     unlit: Boolean = false,
     private val invertFrontFaceWinding: Boolean = false,
+    cameraPositionProvider: (() -> Position)? = null,
 ) : PlaneNode(engine = engine) {
 
     // Updated when the view is added to the view manager
@@ -151,8 +173,38 @@ class ViewNode(
      * drawing lets the scene park with it. Nothing about the embedded UI is frozen — the loop is
      * simply not awake for frames the view is not producing.
      */
-    override val isFrameActive: Boolean
-        get() = frameSignal.isActive() || super.isFrameActive
+    private fun isViewFrameActive(): Boolean = frameSignal.isActive() || cameraFacing.isPending
+
+    init {
+        // The view draws and the camera moves without telling this node: registered as a provider,
+        // so the scene asks on every tick (#3724).
+        addFrameActivityProvider(::isViewFrameActive)
+    }
+
+    private val cameraFacing = CameraFacing(NodeCameraFacingTarget(this), cameraPositionProvider)
+
+    /**
+     * Where the camera is, in world space. The quad turns to face it; `null` (default) leaves the
+     * orientation alone.
+     *
+     * The same parameter, with the same meaning, as on [BillboardNode] and [TextNode]: a full
+     * look-at — the front of the quad points at the camera position and its top edge stays toward
+     * world `+Y`, so it yaws and pitches and never rolls. For an upright panel that only turns
+     * about the vertical axis, level the position you report with the node:
+     * `{ cameraNode.worldPosition.copy(y = panelHeight) }`.
+     *
+     * While it is set the node owns its orientation: a [rotation] or [quaternion] written by hand
+     * is overwritten the next time the camera, the node or its parent moves. Clearing it stops the
+     * re-orientation and leaves the quad as it was last turned.
+     *
+     * Read every frame, settable at any time, and free while nothing moves — the scene still parks
+     * under [io.github.sceneview.FrameRatePolicy.OnDemand].
+     */
+    var cameraPositionProvider: (() -> Position)?
+        get() = cameraFacing.cameraPositionProvider
+        set(value) {
+            cameraFacing.cameraPositionProvider = value
+        }
 
     private val touchForwarder = ViewTouchForwarder(layout)
 
@@ -209,6 +261,9 @@ class ViewNode(
             { frameSignal.onFrameAvailable() },
             Handler(Looper.getMainLooper())
         )
+        // The library's own frame hook, not the public `onFrame`: that one pins the render loop.
+        // the activity provider above answers for the activity instead.
+        internalOnFrame = { _ -> cameraFacing.onFrame() }
     }
 
     constructor(
@@ -217,14 +272,16 @@ class ViewNode(
         materialLoader: MaterialLoader,
         @LayoutRes viewLayoutRes: Int,
         unlit: Boolean = false,
-        invertFrontFaceWinding: Boolean = false
+        invertFrontFaceWinding: Boolean = false,
+        cameraPositionProvider: (() -> Position)? = null
     ) : this(
         engine = engine,
         windowManager = windowManager,
         materialLoader = materialLoader,
         view = LayoutInflater.from(materialLoader.context).inflate(viewLayoutRes, null, false),
         unlit = unlit,
-        invertFrontFaceWinding = invertFrontFaceWinding
+        invertFrontFaceWinding = invertFrontFaceWinding,
+        cameraPositionProvider = cameraPositionProvider
     )
 
     /**
@@ -246,6 +303,7 @@ class ViewNode(
         materialLoader: MaterialLoader,
         unlit: Boolean = false,
         invertFrontFaceWinding: Boolean = false,
+        cameraPositionProvider: (() -> Position)? = null,
         content: @Composable () -> Unit
     ) : this(
         engine = engine,
@@ -258,12 +316,13 @@ class ViewNode(
             setContent(content)
         },
         unlit = unlit,
-        invertFrontFaceWinding = invertFrontFaceWinding
+        invertFrontFaceWinding = invertFrontFaceWinding,
+        cameraPositionProvider = cameraPositionProvider
     )
 
     fun updateGeometrySize() {
         // The collider follows the geometry on its own: `updateGeometry` reaches
-        // `RenderableNode.setGeometry`, which re-derives `collisionShape` from the new AABB
+        // `RenderableNode.applyBoundGeometry`, which re-derives `collisionShape` from the new AABB
         // (#3194). ViewNode needed an explicit `updateCollisionShape()` here while that refresh
         // was scoped to this one call site (#2845); it is now redundant, and removing it also
         // removes a second AABB read per resize.
@@ -362,6 +421,16 @@ class ViewNode(
      * itself.
      */
     override fun onCapturedTouchEvent(e: MotionEvent): Boolean = touchForwarder.onExit(e)
+
+    /**
+     * A drag that starts on the quad belongs to the scene (#4033): once the pointer passes the
+     * touch slop — or a second finger comes down — and nothing inside the embedded view has
+     * claimed the gesture (an inner list scrolling, a slider being dragged), the view gets an
+     * `ACTION_CANCEL` and the stream goes back to the scene gesture and camera detectors. A tap
+     * still clicks; a drag started on a card orbits the camera like a drag started beside it.
+     */
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+    override fun takeTouchStreamHandBack(): Boolean = touchForwarder.takeHandBack()
 
     override fun destroy() {
         // Once only (#4259): a second call would free handles, material instances and an
@@ -475,6 +544,17 @@ class ViewNode(
             val parent = super.invalidateChildInParent(location, dirty)
             invalidate()
             return parent
+        }
+
+        /**
+         * A descendant wants the current gesture for itself — a list that started scrolling, a
+         * slider being dragged (#4033). Compose reports it here for any pointer input that consumed
+         * movement. The forwarder then keeps the stream instead of handing the drag back to the
+         * scene's camera.
+         */
+        override fun requestDisallowInterceptTouchEvent(disallowIntercept: Boolean) {
+            super.requestDisallowInterceptTouchEvent(disallowIntercept)
+            touchForwarder.onContentClaimedGesture(disallowIntercept)
         }
 
         override fun dispatchDraw(canvas: Canvas) {

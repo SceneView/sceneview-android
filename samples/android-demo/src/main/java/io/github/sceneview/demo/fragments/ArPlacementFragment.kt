@@ -25,6 +25,12 @@ import io.github.sceneview.demo.demos.PlacementSceneDemo
  * ([PlacementSceneDemo]), the only floor demo of that API.
  */
 object ArPlacementFragment : DemoFragment {
+    val modes = listOf(
+        DemoMode("place", R.string.demo_mode_place),
+        DemoMode("free-pose", R.string.demo_mode_free_pose),
+        DemoMode("one-call", R.string.demo_mode_one_call),
+    )
+
     override val entry: DemoEntry = DemoEntry(
         id = "ar-placement",
         titleRes = R.string.demo_ar_placement_title,
@@ -33,7 +39,7 @@ object ArPlacementFragment : DemoFragment {
         icon = Icons.Filled.ViewInAr,
         order = 17,
         addedIn = "4.0.0",
-        updatedIn = "4.51.0",
+        updatedIn = "4.52.0",
         tags = setOf(
             "ar", "plane", "auto-place", "anchor", "gltf", "model", "floor", "wall", "tv",
             "pose", "transform", "gesture", "tap-to-place", "sceneform",
@@ -43,11 +49,7 @@ object ArPlacementFragment : DemoFragment {
     @Composable
     override fun Screen(onBack: () -> Unit) {
         DemoModeHost(
-            modes = listOf(
-                DemoMode("place", R.string.demo_mode_place),
-                DemoMode("free-pose", R.string.demo_mode_free_pose),
-                DemoMode("one-call", R.string.demo_mode_one_call),
-            ),
+            modes = modes,
             tabToMode = mapOf(FREE_POSE_TAB to 1, ONE_CALL_TAB to 2),
             defaultModeReadsTab = true,
         ) { mode ->

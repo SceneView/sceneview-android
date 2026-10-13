@@ -5,6 +5,8 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
@@ -13,6 +15,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
@@ -70,6 +73,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.sceneview.SceneView
 import io.github.sceneview.createDefaultCameraManipulator
@@ -81,6 +85,7 @@ import io.github.sceneview.verticalFovDegreesForFocalLength
 import io.github.sceneview.demo.AssetSourceState
 import io.github.sceneview.demo.DemoScaffold
 import io.github.sceneview.demo.LocalDemoChromeTopInset
+import io.github.sceneview.demo.LocalDemoSceneCover
 import io.github.sceneview.demo.LocalDemoSheetCover
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
@@ -131,7 +136,9 @@ import io.github.sceneview.demo.demos.internal.ParkSlot
 import io.github.sceneview.demo.demos.internal.parkCamera
 import io.github.sceneview.demo.initialDemoMode
 import io.github.sceneview.demo.EntranceCameraManipulator
+import io.github.sceneview.demo.demoSceneFrame
 import io.github.sceneview.demo.driving
+import io.github.sceneview.demo.isDemoCompactHeight
 import io.github.sceneview.demo.rememberContinuousCameraManipulator
 import io.github.sceneview.demo.filamentBackendDrainWait
 import io.github.sceneview.demo.rememberBackendDrainWait
@@ -207,6 +214,7 @@ fun ModelViewerDemo(onBack: () -> Unit) {
     var mode by remember {
         mutableStateOf(initialDemoMode(ModelViewerMode.entries, ModelViewerMode.Single))
     }
+    val sampleId = io.github.sceneview.demo.telemetry.LocalSampleId.current
     // Switching section drops any camera-distance override (#2913). The Single-Model slider writes
     // to the process-global `DemoSettings.cameraDistance` — that is how it drives the live camera,
     // since `rememberHeroOrbitCameraManipulator` reads the override itself (#1571) — and the
@@ -215,8 +223,11 @@ fun ModelViewerDemo(onBack: () -> Unit) {
     // exposes no slider to undo it. A cold launch never passes through here, so the `--ef
     // camera_distance` / `?cameraDistance=` deep link keeps working for either section.
     val onModeChange: (ModelViewerMode) -> Unit = { next ->
-        if (next != mode) DemoSettings.cameraDistance = null
-        mode = next
+        if (next != mode) {
+            DemoSettings.cameraDistance = null
+            io.github.sceneview.demo.telemetry.logSampleModeChange(sampleId, next.analyticsMode)
+            mode = next
+        }
     }
     // The model on the single-model stage lives here, above the sections, so the Models
     // sheet opened from the Park can open a model directly (#3828) — it used to
@@ -351,6 +362,9 @@ private const val CAMERA_ENTRANCE_MILLIS = 700
  */
 private const val FRAMING_SETTLE_MILLIS = 350
 
+/** An upright window frames with the camera's aim alone (see `SingleModelSection`). */
+private val NoContentPadding = PaddingValues(0.dp)
+
 /**
  * Largest step, in seconds, one frame may advance the camera flights by. The frames that first
  * show a model are the ones its upload drops; a flight timed on the wall clock spends itself in
@@ -441,9 +455,9 @@ private class EasedFraming {
     }
 }
 
-private enum class ModelViewerMode(val label: String) {
-    Single("Single Model"),
-    Multi("Multi-Model"),
+internal enum class ModelViewerMode(val label: String, val analyticsMode: String) {
+    Single("Single Model", "single_model"),
+    Multi("Multi-Model", "multi_model"),
 }
 
 @Composable
@@ -960,22 +974,23 @@ private fun SingleModelSection(
             }
         }
     }
-    // The first HDR decode runs on the main thread through Filament and stalls the UI for a
-    // couple of seconds on a software GPU; releasing the cover before it lands leaves a black
-    // composite on screen for that whole stall. One-way latch: later swaps re-decode but must
-    // not bring the preview back.
+    // The first HDR's Filament upload and prefilter run on the main thread and can stall for a
+    // couple of seconds on a software GPU; releasing the cover before they land leaves a black
+    // composite on screen for that whole stall. One-way latch: later swaps load in the background
+    // but must not bring the preview back.
     var firstEnvironmentLoaded by remember { mutableStateOf(false) }
     val firstModelFrame = remember {
         derivedStateOf { firstFrame.rendered.value && firstEnvironmentLoaded && modelFramesSeen.value >= MODEL_COVER_FRAMES }
     }
-    // The HDR decode is a `produceState` keyed on (asset, skybox): `key` forces a fresh slot
-    // per choice so a swap always re-decodes. Leaving the slot destroys the previous
-    // environment's IndirectLight/Skybox, so it must never stay attached to the scene
-    // (SIGSEGV in libfilament-jni) — the neutral default covers the decode instead.
+    // The first load uses the neutral environment. Later selections keep the complete HDR already
+    // on screen until the replacement's skybox and IBL are both ready; the helper also discards a
+    // superseded result when the user taps through the list quickly.
     val fallbackEnvironment = rememberEnvironment(environmentLoader)
-    val loadedEnvironment = key(requestedEnvironment.assetPath, showEnvironment) {
-        rememberHDREnvironment(environmentLoader, requestedEnvironment.assetPath, createSkybox = showEnvironment)
-    }
+    val loadedEnvironment = rememberHDREnvironment(
+        environmentLoader,
+        requestedEnvironment.assetPath,
+        createSkybox = showEnvironment,
+    )
     val viewerEnvironment = loadedEnvironment ?: fallbackEnvironment
     if (loadedEnvironment != null) firstEnvironmentLoaded = true
     LaunchedEffect(viewerEnvironment, iblIntensity) {
@@ -993,8 +1008,11 @@ private fun SingleModelSection(
     DisposableEffect(stageBackdrop) {
         onDispose { engine.destroySkybox(stageBackdrop) }
     }
+    // Gated on the skybox actually being there, not on the toggle alone: turning the environment
+    // on reloads the HDR with its skybox, and the one still on screen meanwhile has none — handed
+    // over as is, it would drop the view to the renderer's black clear until the reload lands.
     val stagedEnvironment = remember(viewerEnvironment, showEnvironment, stageBackdrop) {
-        if (showEnvironment && loadedEnvironment != null) viewerEnvironment
+        if (showEnvironment && loadedEnvironment?.skybox != null) viewerEnvironment
         else viewerEnvironment.copy(skybox = stageBackdrop)
     }
     // The arrival (#3406) — camera fly-in and model settle, started together and gated on
@@ -1341,6 +1359,11 @@ private fun SingleModelSection(
         // model can be watched while it changes, and the model used to lose its lower third
         // under them. The framing below fits the band above the sheet, and `EasedFraming` flies
         // the camera there and back as the sheet opens and closes — the model is never moved.
+        //
+        // #4326 — that is the upright window. On a phone held sideways the band is a strip:
+        // aiming past the model to lift it there tilts the shot, and the model ended half behind
+        // the dock. There the cover goes to the SDK as `contentPadding` instead — see below.
+        val compactHeight = isDemoCompactHeight()
         val topInset = LocalDemoChromeTopInset.current
         val sheetCover = maxOf(
             if (environmentSheetOpen) environmentSheetCover else 0.dp,
@@ -1351,13 +1374,31 @@ private fun SingleModelSection(
             sheetCover,
         )
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val framing = remember(bounds, maxWidth, maxHeight, topInset, bottomInset) {
+            // A phone held sideways (#4326): the lens projects into the area the chrome and the
+            // sheets leave free, wherever they are right now, so the model is drawn — and picked —
+            // there. The scaffold's sheet reports its real position; the Lighting sheet reports
+            // where it settles, eased here over the same time the upright framing takes to follow
+            // it. Read there only: an upright window must not recompose with a moving sheet.
+            val lightingCover = animateDpAsState(
+                targetValue = if (environmentSheetOpen) environmentSheetCover else 0.dp,
+                animationSpec = tween(FRAMING_SETTLE_MILLIS, easing = FastOutSlowInEasing),
+                label = "lightingCover",
+            )
+            val sceneFrame = if (compactHeight) {
+                demoSceneFrame(cover = viewerSceneCover(LocalDemoSceneCover.current, lightingCover.value))
+            } else {
+                null
+            }
+            val restingAspect = sceneFrame?.restingAspect
+            val framing = remember(bounds, maxWidth, maxHeight, topInset, bottomInset, restingAspect) {
                 val extents = bounds?.extents ?: return@remember null
-                DemoMath.viewerFraming(
-                    extentX = extents.x, extentY = extents.y, extentZ = extents.z,
-                    viewportWidth = maxWidth.value, viewportHeight = maxHeight.value,
-                    topInset = topInset.value, bottomInset = bottomInset.value,
-                    verticalFovDegrees = verticalFovDegreesForFocalLength(28.0),
+                viewerHomeFraming(
+                    extents = extents,
+                    viewportWidth = maxWidth.value,
+                    viewportHeight = maxHeight.value,
+                    topInset = topInset.value,
+                    bottomInset = bottomInset.value,
+                    restingAspect = restingAspect,
                 )
             }
             // Published for the "Camera distance" slider. A `SideEffect`, not a
@@ -1475,6 +1516,7 @@ private fun SingleModelSection(
                 environment = stagedEnvironment,
                 // OFF: the camera is aimed at the measured bbox centre, see the framing notes.
                 autoCenterContent = false,
+                contentPadding = sceneFrame?.contentPadding ?: NoContentPadding,
                 cameraNode = cameraNode,
                 cameraManipulator = cameraManipulator,
             ) {
@@ -2426,3 +2468,49 @@ private fun OverflowChipRow(content: @Composable RowScope.() -> Unit) {
         )
     }
 }
+
+/**
+ * What covers the viewer's scene on a phone held sideways: the scaffold's [chrome], and the
+ * Lighting sheet where it is taller than the dock — a sheet the scaffold does not know about.
+ */
+internal fun viewerSceneCover(chrome: PaddingValues, lightingCover: Dp): PaddingValues =
+    PaddingValues(
+        top = chrome.calculateTopPadding(),
+        bottom = maxOf(chrome.calculateBottomPadding(), lightingCover),
+    )
+
+/**
+ * The viewer's home framing of a model of [extents].
+ *
+ * Upright ([restingAspect] is `null`) the lens covers the whole window: the model is fitted to
+ * the band between [topInset] and [bottomInset] and the camera aims past it to lift it there.
+ * On a phone held sideways the free area at rest is handed to the SDK as `contentPadding` and is
+ * the whole frame as far as the lens is concerned — [restingAspect] is its width over its height:
+ * no inset to aim around, and nothing to redo while a sheet moves.
+ */
+internal fun viewerHomeFraming(
+    extents: Size,
+    viewportWidth: Float,
+    viewportHeight: Float,
+    topInset: Float,
+    bottomInset: Float,
+    restingAspect: Float?,
+): DemoMath.ViewerFraming =
+    if (restingAspect != null) {
+        DemoMath.viewerFraming(
+            extentX = extents.x, extentY = extents.y, extentZ = extents.z,
+            viewportWidth = restingAspect, viewportHeight = 1f,
+            topInset = 0f, bottomInset = 0f,
+            verticalFovDegrees = verticalFovDegreesForFocalLength(VIEWER_FOCAL_LENGTH_MM),
+        )
+    } else {
+        DemoMath.viewerFraming(
+            extentX = extents.x, extentY = extents.y, extentZ = extents.z,
+            viewportWidth = viewportWidth, viewportHeight = viewportHeight,
+            topInset = topInset, bottomInset = bottomInset,
+            verticalFovDegrees = verticalFovDegreesForFocalLength(VIEWER_FOCAL_LENGTH_MM),
+        )
+    }
+
+/** The SDK's default lens, which the viewer keeps. */
+private const val VIEWER_FOCAL_LENGTH_MM = 28.0
