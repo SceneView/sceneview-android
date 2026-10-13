@@ -16,6 +16,7 @@ import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
 import org.robolectric.RuntimeEnvironment
@@ -82,7 +83,18 @@ class ARCoreAvailabilityOverlayLayoutTest {
 
     @Test
     fun inABoxShorterThanTheCard_theTextGivesWay_andTheActionKeepsItsHeight() {
-        composeRule.setContent { ShortBox { ARCoreAvailabilityOverlay(state) } }
+        composeRule.setContent { ShortBox(160.dp) { ARCoreAvailabilityOverlay(state) } }
+        assertActionIsWholeInItsShortBox()
+    }
+
+    @Test
+    fun inABoxShorterThanItsPaddingAndAction_theCardGivesUpItsPadding_notItsAction() {
+        // 48 dp of margin and 52 dp for a card whose padding and one-line action ask for 80.
+        composeRule.setContent { ShortBox(100.dp) { ARCoreAvailabilityOverlay(state) } }
+        assertActionIsWholeInItsShortBox()
+    }
+
+    private fun assertActionIsWholeInItsShortBox() {
         composeRule.waitForIdle()
 
         val box = bounds(SHORT_BOX)
@@ -101,9 +113,12 @@ class ARCoreAvailabilityOverlayLayoutTest {
     }
 
     @Composable
-    private fun ShortBox(content: @Composable androidx.compose.foundation.layout.BoxScope.() -> Unit) {
+    private fun ShortBox(
+        height: Dp,
+        content: @Composable androidx.compose.foundation.layout.BoxScope.() -> Unit,
+    ) {
         // Shorter than the card's text alone at this width.
-        Box(Modifier.size(width = 320.dp, height = 160.dp).testTag(SHORT_BOX), content = content)
+        Box(Modifier.size(width = 320.dp, height = height).testTag(SHORT_BOX), content = content)
     }
 
     private fun assertWholeCard() {

@@ -1,5 +1,6 @@
 package io.github.sceneview.demo.common.placement
 
+import android.view.View
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.WbSunny
 import androidx.compose.runtime.Composable
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -23,6 +25,9 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.Insets
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import io.github.sceneview.ar.ARCoreAvailability
 import io.github.sceneview.ar.ARCoreAvailabilityOverlayTags
 import io.github.sceneview.ar.ARCoreAvailabilityState
@@ -300,6 +305,27 @@ class PlacementCardClearsChromeTest {
     }
 
     @Test
+    @Config(qualifiers = "w640dp-h360dp-land-xhdpi")
+    fun narrowPhoneHeldSideways_couldNotStartArCard_atMaximumFontScale_withSystemBars() {
+        // The same window on a real phone: a status bar above and the gesture handle below
+        // take 48 dp off the 360 the card had to itself in the case above (#4533).
+        assertAvailabilityCardClearsChrome(fontScale = 2.0f, systemBars = GESTURE_BARS)
+    }
+
+    @Test
+    @Config(qualifiers = "w640dp-h360dp-land-xhdpi")
+    fun narrowPhoneHeldSideways_couldNotStartArCard_atMaximumFontScale_withThreeButtonBar() {
+        // Three-button navigation sits on the short edge of a phone held sideways.
+        assertAvailabilityCardClearsChrome(fontScale = 2.0f, systemBars = THREE_BUTTON_BARS)
+    }
+
+    @Test
+    @Config(qualifiers = "w800dp-h360dp-land-xhdpi")
+    fun phoneHeldSideways_couldNotStartArCard_atMaximumFontScale_withSystemBars() {
+        assertAvailabilityCardClearsChrome(fontScale = 2.0f, systemBars = GESTURE_BARS)
+    }
+
+    @Test
     fun noSurfaceCard_inTheDarkTheme() {
         assertCardClearsChrome(PlacementPhase.NO_SURFACE, fontScale = 1.0f, darkTheme = true)
     }
@@ -307,8 +333,11 @@ class PlacementCardClearsChromeTest {
     private fun assertAvailabilityCardClearsChrome(
         fontScale: Float = 1.0f,
         darkTheme: Boolean = false,
+        systemBars: SystemBars? = null,
     ) {
+        var host: View? = null
         composeRule.setContent {
+          host = LocalView.current
           ScaledDensity(fontScale) {
             SceneViewDemoTheme(darkTheme = darkTheme) {
                 CompositionLocalProvider(
@@ -334,6 +363,7 @@ class PlacementCardClearsChromeTest {
           }
         }
         composeRule.waitForIdle()
+        if (systemBars != null) injectSystemBars(checkNotNull(host), systemBars)
         composeRule.mainClock.advanceTimeBy(1_000)
         composeRule.waitForIdle()
 
@@ -345,6 +375,8 @@ class PlacementCardClearsChromeTest {
         val identity = bounds(DemoScaffoldTestTags.IDENTITY_ROW)
         val where = "card $card, action $action, mode pill $pill, dock $dock, " +
             "identity row $identity, window $window"
+        // `card` is the card's ground — the dark rectangle that is drawn, not the text inside
+        // its padding: the SDK tags the ground (#4533).
         assertTrue("the card shares pixels with the mode pill — $where", !card.overlaps(pill))
         assertTrue("the card shares pixels with the dock — $where", !card.overlaps(dock))
         assertTrue("the card runs under the identity row — $where", !card.overlaps(identity))
@@ -363,12 +395,59 @@ class PlacementCardClearsChromeTest {
             action.top >= window.top && action.bottom <= window.bottom &&
                 action.left >= window.left && action.right <= window.right,
         )
+        if (systemBars != null) assertClearOfSystemBars(systemBars, card, identity, dock, window, where)
+    }
+
+    private fun assertClearOfSystemBars(
+        systemBars: SystemBars,
+        card: DpRect,
+        identity: DpRect,
+        dock: DpRect,
+        window: DpRect,
+        where: String,
+    ) {
+        // The injection took: the chrome moved off the bars.
+        assertTrue(
+            "the system bars were not applied ($systemBars) — $where",
+            identity.top >= window.top + systemBars.top.dp - TOLERANCE &&
+                dock.bottom <= window.bottom - systemBars.bottom.dp + TOLERANCE,
+        )
+        assertTrue(
+            "the card runs under a system bar ($systemBars) — $where",
+            card.top >= window.top + systemBars.top.dp - TOLERANCE &&
+                card.bottom <= window.bottom - systemBars.bottom.dp + TOLERANCE &&
+                card.right <= window.right - systemBars.right.dp + TOLERANCE,
+        )
+    }
+
+    /** What the system draws over the window's edges, in dp. */
+    private data class SystemBars(val top: Int, val bottom: Int, val right: Int = 0)
+
+    /**
+     * Hands the composition the insets a phone's system bars produce. Robolectric's window has
+     * none, so every other case here runs in a window the app has to itself; whether the
+     * injection took is asserted by the caller, on what was measured.
+     */
+    private fun injectSystemBars(host: View, bars: SystemBars) {
+        val density = host.resources.displayMetrics.density
+        fun px(dp: Int) = (dp * density).toInt()
+        val insets = WindowInsetsCompat.Builder()
+            .setInsets(WindowInsetsCompat.Type.statusBars(), Insets.of(0, px(bars.top), 0, 0))
+            .setInsets(
+                WindowInsetsCompat.Type.navigationBars(),
+                Insets.of(0, 0, px(bars.right), px(bars.bottom)),
+            )
+            .build()
+        composeRule.runOnUiThread { ViewCompat.dispatchApplyWindowInsets(host, insets) }
+        composeRule.waitForIdle()
     }
 
     /** Neither squeezed flat, nor so narrow that its label breaks inside a word. */
     private fun assertActionIsWhole(action: DpRect, fontScale: Float, where: String) {
         val height = action.bottom - action.top
-        assertTrue("\"Try again\" is squeezed to $height — $where", height >= 40.dp)
+        // Its padding and one whole line of its label, at this text size.
+        val whole = ACTION_PADDING + ACTION_LINE_AT_LEAST * fontScale
+        assertTrue("\"Try again\" is squeezed to $height, under $whole — $where", height >= whole)
         assertTrue(
             "\"Try again\" is $height tall: its label has so little width that it breaks " +
                 "inside a word — $where",
@@ -478,6 +557,15 @@ class PlacementCardClearsChromeTest {
         /** The SDK button's vertical padding, and one line of its label at font scale 1. */
         val ACTION_PADDING = 24.dp
         val ACTION_LINE = 17.dp
+
+        /** The least one line of that label takes: a 14 sp line box is a little over 15 dp. */
+        val ACTION_LINE_AT_LEAST = 15.dp
+
+        /** A status bar and the gesture handle, as a phone held sideways reports them. */
+        val GESTURE_BARS = SystemBars(top = 24, bottom = 24)
+
+        /** A status bar, and three-button navigation on the short edge. */
+        val THREE_BUTTON_BARS = SystemBars(top = 24, bottom = 0, right = 48)
         const val PROBE = "chrome-inset-probe"
         const val OVERLAY = "demo-bottom-overlay-content"
 

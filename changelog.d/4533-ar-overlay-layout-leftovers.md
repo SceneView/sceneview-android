@@ -1,0 +1,3 @@
+<!-- category: Fixed -->
+- **arsceneview**: `ARCameraPermissionOverlay` keeps its "Grant camera access" / "Open settings" button at full height in a short box — a phone held sideways, a large font. Its text scrolls instead of squeezing the button to nothing, as `ARCoreAvailabilityOverlay` already did; the two are now one card. In a box shorter still, that card gives up the gap above its button and then its own padding before it takes anything from the button (#4533).
+- **android-demo**: on AR Placement, "Try again" stays whole on a narrow phone held sideways at the largest font size with the status and navigation bars counted in (#4533).
