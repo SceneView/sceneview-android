@@ -279,11 +279,12 @@ code, pre, kbd { font-family: var(--font-mono); font-size: .875em; }
   .install__panels > .cmd[hidden] { display: flex !important; visibility: hidden; }
   /* The two web tags are a line each: the CDN path gives way in the middle, at
      the same column on both lines, the file name stays readable, and the copy
-     button (or a text selection) carries them whole. */
+     button (or a text selection) carries them whole. A <wbr> breaks even under
+     nowrap, so the ones that fold the URL at its slashes on a phone are off here. */
   .cmd .cmd__tags { display: grid; grid-template-columns: auto minmax(0, max-content) auto; justify-content: start; white-space: nowrap; }
   .cmd .tagline { display: contents; }
   .cmd .tagline__head { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-  .cmd .tagline + br { display: none; }
+  .cmd .tagline + br, .cmd .cmd__tags wbr { display: none; }
   .hero__ctas .btn { flex: 0 0 auto; }
 }
 /* Pinned hero: the copy gives way to what the car shows, the car turns and comes forward. */
