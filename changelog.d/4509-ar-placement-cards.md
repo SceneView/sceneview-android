@@ -1,0 +1,2 @@
+<!-- category: Fixed -->
+- **android-demo**: on AR Placement, the "No surface found", camera-error and "Couldn't start AR" cards no longer cover the Place / Free pose / One call selector or get drawn behind it. Cards, selector and dock now stack, including in a short window and at the largest font size, and in landscape the card moves to the corner beside the selector. The source chip that read "Offline" with Wi-Fi connected now reads "Built-in model", which is what it always meant (#4509, #4503).

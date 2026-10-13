@@ -1,0 +1,341 @@
+package io.github.sceneview.demo.common.placement
+
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.WbSunny
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.DpRect
+import androidx.compose.ui.unit.dp
+import io.github.sceneview.ar.ARCoreAvailability
+import io.github.sceneview.ar.ARCoreAvailabilityOverlayTags
+import io.github.sceneview.ar.ARCoreAvailabilityState
+import io.github.sceneview.demo.AssetSourceState
+import io.github.sceneview.demo.DEMO_MODE_PILL_TAG
+import io.github.sceneview.demo.DemoMode
+import io.github.sceneview.demo.DemoModeSwitch
+import io.github.sceneview.demo.DemoScaffold
+import io.github.sceneview.demo.DemoScaffoldTestTags
+import io.github.sceneview.demo.DockItem
+import io.github.sceneview.demo.LocalDemoChromeBottomInset
+import io.github.sceneview.demo.LocalDemoModeSwitch
+import io.github.sceneview.demo.R
+import io.github.sceneview.demo.common.ForcedTrackingFailure
+import io.github.sceneview.demo.theme.SceneViewDemoTheme
+import org.junit.After
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
+
+/**
+ * The placement screen's cards never share pixels with the scaffold's bottom chrome — the
+ * dock and the Place / Free pose / One call pill above it — measured on the real screen: the
+ * real [DemoScaffold], inside a mode switch, with the real [TapToPlaceStatusOverlays] in its
+ * scene slot.
+ *
+ * ## The regression this pins (#4509, #4503)
+ *
+ * The scaffold told the scene how tall its **dock** was, and the stack anchored one gutter
+ * above that. When AR Placement became one mode of three, the scaffold started drawing a mode
+ * pill above the dock — after the scene, so on top of it — and nothing told the stack. On a
+ * phone the "No surface found" card came up with its "Keep scanning" / "View in 3D" row under
+ * the pill: the card read as drawn behind the selector, and the action that leads out of a
+ * room with no usable surface could not be reached.
+ *
+ * [PlacementBottomAnchorTest] could not see it: it hands the stack a bottom inset by hand, and
+ * the defect was the value the scaffold hands it. So every case here goes through the scaffold.
+ */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34], qualifiers = "w411dp-h891dp-xhdpi")
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+class PlacementCardClearsChromeTest {
+
+    @get:Rule
+    val composeRule = createComposeRule()
+
+    private val state = TapToPlaceState()
+
+    @Before
+    fun setUp() {
+        ForcedTrackingFailure.override = null
+    }
+
+    @After
+    fun tearDown() {
+        ForcedTrackingFailure.override = null
+    }
+
+    @Test
+    fun noSurfaceCard_stacksAboveTheModePill() {
+        assertCardClearsChrome(PlacementPhase.NO_SURFACE, fontScale = 1.0f)
+    }
+
+    @Test
+    fun noSurfaceCard_stacksAboveTheModePill_atLargeFontScale() {
+        assertCardClearsChrome(PlacementPhase.NO_SURFACE, fontScale = 1.3f)
+    }
+
+    @Test
+    fun noSurfaceCard_stacksAboveTheModePill_atMaximumFontScale() {
+        // Android's accessibility slider goes to 2.0.
+        assertCardClearsChrome(PlacementPhase.NO_SURFACE, fontScale = 2.0f)
+    }
+
+    @Test
+    fun cameraErrorCard_stacksAboveTheModePill() {
+        // The card an emulator ends on — and the one device QA can photograph without a room.
+        assertCardClearsChrome(PlacementPhase.CAMERA_ERROR, fontScale = 1.0f)
+    }
+
+    @Test
+    @Config(qualifiers = "w320dp-h480dp-xhdpi")
+    fun smallWindow_theCardKeepsItsButtons_betweenTheTitleAndThePill() {
+        assertCardClearsChrome(PlacementPhase.NO_SURFACE, fontScale = 1.0f)
+    }
+
+    @Test
+    @Config(qualifiers = "w320dp-h480dp-xhdpi")
+    fun smallWindow_atMaximumFontScale_theTextScrolls_andTheButtonsStay() {
+        // The whole card does not fit here. What must hold: it is cut at neither end by the
+        // chrome, and both actions are still whole inside it.
+        assertCardClearsChrome(PlacementPhase.NO_SURFACE, fontScale = 2.0f)
+    }
+
+    @Test
+    @Config(qualifiers = "w800dp-h360dp-land-xhdpi")
+    fun phoneHeldSideways_theCardSitsBesideTheChrome_notUnderIt() {
+        // The band above the pill is thinner than the card's row of buttons; the corner next
+        // to the centred chrome is not.
+        assertCardClearsChrome(PlacementPhase.NO_SURFACE, fontScale = 1.0f)
+    }
+
+    @Test
+    @Config(qualifiers = "w800dp-h360dp-land-xhdpi")
+    fun phoneHeldSideways_atLargeFontScale() {
+        assertCardClearsChrome(PlacementPhase.NO_SURFACE, fontScale = 1.3f)
+    }
+
+    @Test
+    fun whateverPadsItselfByTheChromeInset_endsAboveTheModePill() {
+        // The SDK's coaching card, in this demo and six others, is handed the same number as
+        // `contentPadding`. A probe padded by it stands for all of them: it must end above the
+        // pill, not merely above the dock.
+        composeRule.setContent {
+            SceneViewDemoTheme(darkTheme = false) {
+                CompositionLocalProvider(
+                    LocalDemoModeSwitch provides DemoModeSwitch(MODES, selected = 0, onSelect = {}),
+                ) {
+                    DemoScaffold(
+                        title = "AR Placement",
+                        onBack = {},
+                        dock = listOf(DockItem(Icons.Outlined.WbSunny, "Models", onClick = {})),
+                    ) {
+                        Box(
+                            Modifier
+                                .fillMaxSize()
+                                .windowInsetsPadding(WindowInsets.safeDrawing)
+                                .padding(bottom = LocalDemoChromeBottomInset.current)
+                                .testTag(PROBE),
+                        )
+                    }
+                }
+            }
+        }
+        composeRule.waitForIdle()
+        composeRule.mainClock.advanceTimeBy(1_000)
+        composeRule.waitForIdle()
+
+        val probe = bounds(PROBE)
+        val pill = bounds(DEMO_MODE_PILL_TAG)
+        assertTrue(
+            "content padded by the chrome inset ends at ${probe.bottom}, but the mode pill " +
+                "starts at ${pill.top}: the scaffold is reporting its dock, not its chrome.",
+            probe.bottom <= pill.top + TOLERANCE,
+        )
+    }
+
+    @Test
+    fun couldNotStartArCard_staysBetweenTheTitleAndThePill() {
+        assertAvailabilityCardClearsChrome()
+    }
+
+    @Test
+    @Config(qualifiers = "w800dp-h360dp-land-xhdpi")
+    fun phoneHeldSideways_couldNotStartArCard_sitsBesideTheChrome() {
+        // What the emulator shows: the SDK centred this card in the scene, and sideways its
+        // "Try again" came up under the mode pill.
+        assertAvailabilityCardClearsChrome()
+    }
+
+    private fun assertAvailabilityCardClearsChrome() {
+        composeRule.setContent {
+            SceneViewDemoTheme(darkTheme = false) {
+                CompositionLocalProvider(
+                    LocalDemoModeSwitch provides DemoModeSwitch(MODES, selected = 0, onSelect = {}),
+                ) {
+                    DemoScaffold(
+                        title = "AR Placement",
+                        onBack = {},
+                        assetSource = AssetSourceState.Bundled,
+                        dock = listOf(
+                            DockItem(Icons.Outlined.WbSunny, "Models", onClick = {}),
+                            DockItem(Icons.Outlined.WbSunny, "Reset", onClick = {}),
+                        ),
+                    ) {
+                        Box(Modifier.fillMaxSize()) {
+                            PlacementAvailabilityOverlay(
+                                ARCoreAvailabilityState(ARCoreAvailability.SessionFailed, retry = {}),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        composeRule.waitForIdle()
+        composeRule.mainClock.advanceTimeBy(1_000)
+        composeRule.waitForIdle()
+
+        val window = composeRule.onRoot().getUnclippedBoundsInRoot()
+        val card = bounds(ARCoreAvailabilityOverlayTags.CARD)
+        val action = bounds(ARCoreAvailabilityOverlayTags.ACTION)
+        val pill = bounds(DEMO_MODE_PILL_TAG)
+        val dock = bounds(DemoScaffoldTestTags.DOCK)
+        val identity = bounds(DemoScaffoldTestTags.IDENTITY_ROW)
+        val where = "card $card, action $action, mode pill $pill, dock $dock, " +
+            "identity row $identity, window $window"
+        assertTrue("the card shares pixels with the mode pill — $where", !card.overlaps(pill))
+        assertTrue("the card shares pixels with the dock — $where", !card.overlaps(dock))
+        assertTrue("the card runs under the identity row — $where", !card.overlaps(identity))
+        assertTrue(
+            "the card leaves the window — $where",
+            card.top >= window.top && card.bottom <= window.bottom &&
+                card.left >= window.left && card.right <= window.right,
+        )
+        assertTrue(
+            "\"Try again\" is not whole inside its card — $where",
+            action.top >= card.top && action.bottom <= card.bottom,
+        )
+    }
+
+    private fun assertCardClearsChrome(phase: PlacementPhase, fontScale: Float) {
+        show(phase, fontScale)
+        val window = composeRule.onRoot().getUnclippedBoundsInRoot()
+        val card = bounds(PlacementTestTags.PLACEMENT_CARD)
+        val primary = bounds(PlacementTestTags.PLACEMENT_CARD_PRIMARY)
+        val pill = bounds(DEMO_MODE_PILL_TAG)
+        val dock = bounds(DemoScaffoldTestTags.DOCK)
+        val identity = bounds(DemoScaffoldTestTags.IDENTITY_ROW)
+        val where = "card $card, primary $primary, mode pill $pill, dock $dock, " +
+            "identity row $identity, window $window"
+
+        assertTrue("the card shares pixels with the mode pill — $where", !card.overlaps(pill))
+        assertTrue("the card shares pixels with the dock — $where", !card.overlaps(dock))
+        assertTrue("the card runs under the identity row — $where", !card.overlaps(identity))
+        assertTrue(
+            "the card leaves the window — $where",
+            card.top >= window.top && card.bottom <= window.bottom &&
+                card.left >= window.left && card.right <= window.right,
+        )
+        assertTrue(
+            "the primary action is not whole inside its card — $where",
+            primary.top >= card.top && primary.bottom <= card.bottom &&
+                primary.left >= card.left && primary.right <= card.right,
+        )
+        assertTrue(
+            "the primary action is under a 48 dp touch target — $where",
+            primary.bottom - primary.top >= 47.dp,
+        )
+        if (phase == PlacementPhase.NO_SURFACE) {
+            val secondary = bounds(PlacementTestTags.PLACEMENT_CARD_SECONDARY)
+            assertTrue(
+                "\"Keep scanning\" is not whole inside its card — $secondary; $where",
+                secondary.top >= card.top && secondary.bottom <= card.bottom &&
+                    secondary.left >= card.left && secondary.right <= card.right,
+            )
+            assertTrue(
+                "the two actions overlap — $secondary; $where",
+                !secondary.overlaps(primary),
+            )
+        }
+    }
+
+    private fun show(phase: PlacementPhase, fontScale: Float) {
+        state.cameraReady = true
+        state.isTracking = true
+        state.phase = phase
+        composeRule.setContent {
+            ScaledDensity(fontScale) {
+                SceneViewDemoTheme(darkTheme = false) {
+                    CompositionLocalProvider(
+                        LocalDemoModeSwitch provides DemoModeSwitch(MODES, selected = 0, onSelect = {}),
+                    ) {
+                        // The chrome `ARPlacementDemo` declares: two dock items and the source pill.
+                        DemoScaffold(
+                            title = "AR Placement",
+                            onBack = {},
+                            assetSource = AssetSourceState.Bundled,
+                            dock = listOf(
+                                DockItem(Icons.Outlined.WbSunny, "Models", onClick = {}),
+                                DockItem(Icons.Outlined.WbSunny, "Reset", onClick = {}),
+                            ),
+                        ) {
+                            TapToPlaceStatusOverlays(state = state, onViewIn3D = {}, onRestartSession = {})
+                        }
+                    }
+                }
+            }
+        }
+        composeRule.waitForIdle()
+        // Past every enter transition, and the frame the scaffold's measurements land on.
+        composeRule.mainClock.advanceTimeBy(1_000)
+        composeRule.waitForIdle()
+    }
+
+    private fun bounds(tag: String): DpRect = composeRule
+        .onNodeWithTag(tag)
+        .getUnclippedBoundsInRoot()
+
+    /** Sub-pixel tolerant: bounds are px rounded back to dp, and a real overlap is a row of buttons. */
+    private fun DpRect.overlaps(other: DpRect): Boolean =
+        left < other.right - TOLERANCE && other.left < right - TOLERANCE &&
+            top < other.bottom - TOLERANCE && other.top < bottom - TOLERANCE
+
+    @Composable
+    private fun ScaledDensity(fontScale: Float, content: @Composable () -> Unit) {
+        val density = LocalDensity.current
+        CompositionLocalProvider(
+            LocalDensity provides Density(density.density, fontScale),
+            content = content,
+        )
+    }
+
+    private companion object {
+        val TOLERANCE = 0.75.dp
+        const val PROBE = "chrome-inset-probe"
+
+        /** The three modes `ArPlacementFragment` hosts, with their real labels. */
+        val MODES = listOf(
+            DemoMode("place", R.string.demo_mode_place),
+            DemoMode("free-pose", R.string.demo_mode_free_pose),
+            DemoMode("one-call", R.string.demo_mode_one_call),
+        )
+    }
+}

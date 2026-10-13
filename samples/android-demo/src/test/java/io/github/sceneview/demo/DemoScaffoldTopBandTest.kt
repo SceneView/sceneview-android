@@ -193,7 +193,9 @@ class DemoScaffoldTopBandTest {
         composeRule.waitForIdle()
         composeRule.onNodeWithTag(DemoScaffoldTestTags.ASSET_SOURCE_CHIP).assertIsDisplayed()
         composeRule.onNodeWithText(title).assertExists()
-        composeRule.onNodeWithText("Offline").assertIsDisplayed()
+        // The suffix names where the model comes from. It used to read "Offline", which a
+        // phone on Wi-Fi took for a statement about its connection (#4503).
+        composeRule.onNodeWithText("Built-in model").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Navigate back").assertIsDisplayed()
 
         val pill = composeRule.onNodeWithTag(DemoScaffoldTestTags.ASSET_SOURCE_CHIP)
