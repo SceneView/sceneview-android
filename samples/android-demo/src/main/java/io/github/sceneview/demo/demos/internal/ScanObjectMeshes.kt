@@ -66,6 +66,76 @@ object ScanObjectMeshes {
 }
 
 /**
+ * A card hanging in a top corner of the replay's view — the 3D view's Camera card: [width] pixels
+ * in from the view's edge and the last [height] rows of the cards above; in the end corner, the
+ * left one with [atLeft].
+ */
+data class ScanCard(val width: Int, val height: Int, val atLeft: Boolean = false)
+
+/**
+ * What the replay draws over its view, in pixels of it: cards across the first [top] rows, the
+ * filmstrip and the dock across the last [bottom], and a [card] in a top corner. A picked object
+ * and its label keep [margin] from all of it, and the label [gap] from its box (#4505).
+ */
+data class ScanChrome(
+    val top: Int,
+    val bottom: Int,
+    val card: ScanCard? = null,
+    val margin: Int = 0,
+    val gap: Int = 0,
+) {
+
+    /**
+     * What is left of a view [width] × [height] for a box whose label, [label] pixels tall, goes
+     * over it: beside the corner card, or under it — one [FramingInsets] each, for
+     * [ArDebugFraming.reveal] to take the nearer of.
+     */
+    fun free(width: Int, height: Int, label: Int): List<FramingInsets> {
+        if (width <= 0 || height <= 0) return emptyList()
+        val side = margin.toFloat() / width
+        val over = margin + label + gap
+        val under = FramingInsets(side, (top + over).toFloat() / height, side, (bottom + margin).toFloat() / height)
+        val card = card ?: return listOf(under)
+        val column = (card.width + margin).toFloat() / width
+        val beside = under.copy(
+            top = (top - card.height + over).toFloat() / height,
+            left = if (card.atLeft) column else side,
+            right = if (card.atLeft) side else column,
+        )
+        return listOf(beside, under)
+    }
+
+    /**
+     * Where a label [labelWidth] × [labelHeight] puts its top left corner in a view [width] ×
+     * [height], for a box drawn from [above] down to [below] in column [x]: centred over it
+     * ([ScanObjectMeshes.labelTop]) — moved aside, level with the corner card, where it would lie
+     * under it, and under the box when the view is too narrow for that.
+     */
+    @Suppress("LongParameterList") // one box, one label, one view: two numbers each
+    fun labelAt(
+        x: Float,
+        above: Float,
+        below: Float,
+        labelWidth: Int,
+        labelHeight: Int,
+        width: Int,
+        height: Int,
+    ): Pair<Int, Int> {
+        val centred = (x - labelWidth / 2f).roundToInt().coerceIn(margin, max(margin, width - labelWidth - margin))
+        val clear = top + margin..height - bottom - margin
+        val card = card ?: return centred to ScanObjectMeshes.labelTop(above, below, labelHeight, gap, clear)
+        val y = ScanObjectMeshes.labelTop(above, below, labelHeight, gap, top - card.height + margin..clear.last)
+        val column = card.width + margin
+        val beside = if (card.atLeft) column..width - margin - labelWidth else margin..width - column - labelWidth
+        return when {
+            y >= clear.first || centred in beside -> centred to y
+            !beside.isEmpty() -> centred.coerceIn(beside.first, beside.last) to y
+            else -> centred to ScanObjectMeshes.labelTop(above, below, labelHeight, gap, clear)
+        }
+    }
+}
+
+/**
  * The pinhole this orbit is drawing through right now, [ArDebugOrbitCamera.getTransform]'s own
  * eye and pedestal drop: where a tap's ray starts, and where a point of the room lands on screen.
  */

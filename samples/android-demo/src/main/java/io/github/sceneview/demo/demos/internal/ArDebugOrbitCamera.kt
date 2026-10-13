@@ -139,6 +139,7 @@ class ArDebugOrbitCamera(
 
     /** Hands the camera back to the automatic framing — the double-tap and the Recenter button. */
     fun recenter() {
+        glide = null
         following = true
         followSeconds = 0f
         azimuthVelocity = 0f
@@ -150,6 +151,7 @@ class ArDebugOrbitCamera(
      * something in it must find that thing still there when the tap is told from a double-tap.
      */
     fun hold() {
+        glide = null
         if (following) takeOver()
     }
 
@@ -162,6 +164,20 @@ class ArDebugOrbitCamera(
     }
 
     private var recenteredByTap = false
+
+    /** Where the free camera is being slid to by [glideTo], `null` once there or once touched. */
+    private var glide: OrbitPose? = null
+
+    /**
+     * Slides the free camera to [target] — a picked object brought out from under the chrome. The
+     * next touch stops it where it is. While following, the view frames through [home] instead.
+     */
+    fun glideTo(target: OrbitPose) {
+        if (following) return
+        azimuthVelocity = 0f
+        elevationVelocity = 0f
+        glide = ArDebugFraming.clamp(target).takeIf { it != pose }
+    }
 
     /** Puts the camera at [target] at once — the first frame of a view, where easing would lag. */
     fun snapTo(target: OrbitPose) {
@@ -274,6 +290,12 @@ class ArDebugOrbitCamera(
             return
         }
 
+        glide?.let { to ->
+            pose = ArDebugFraming.approach(pose, to, dt)
+            if (pose == to) glide = null
+            return
+        }
+
         if (azimuthVelocity != 0f || elevationVelocity != 0f) {
             pose = ArDebugFraming.clamp(
                 pose.copy(
@@ -287,6 +309,7 @@ class ArDebugOrbitCamera(
     }
 
     private fun takeOver() {
+        glide = null
         following = false
         introFrom = null
         azimuthVelocity = 0f
@@ -420,54 +443,108 @@ object ArDebugFraming {
         aspect: Float,
         insets: FramingInsets = FramingInsets.None,
     ): OrbitPose {
-        val elevation = elevationDegrees.coerceIn(MIN_ELEVATION, MAX_ELEVATION)
-        val azimuth = Math.toRadians(azimuthDegrees.toDouble())
-        val tilt = Math.toRadians(elevation.toDouble())
-        val sinA = sin(azimuth).toFloat()
-        val cosA = cos(azimuth).toFloat()
-        val sinE = sin(tilt).toFloat()
-        val cosE = cos(tilt).toFloat()
-        // The camera's own axes at these angles, as CameraRig.eye and lookAt make them.
-        val right = Float3(cosA, 0f, -sinA)
-        val up = Float3(-sinA * sinE, cosE, -cosA * sinE)
-        val forward = Float3(-cosE * sinA, -sinE, -cosE * cosA)
         val centre = Position(
             (bounds[0] + bounds[3]) / 2f,
             (bounds[1] + bounds[4]) / 2f,
             (bounds[2] + bounds[5]) / 2f,
         )
-        // Each corner from the box's centre, along those axes: across, up the picture, and away.
-        val across = FloatArray(BOX_CORNERS)
-        val upward = FloatArray(BOX_CORNERS)
-        val away = FloatArray(BOX_CORNERS)
-        for (corner in 0 until BOX_CORNERS) {
-            val offset = Float3(
+        val corners = List(BOX_CORNERS) { corner ->
+            Position(
                 bounds[if (corner and 1 == 0) 0 else 3],
                 bounds[if (corner and 2 == 0) 1 else 4],
                 bounds[if (corner and 4 == 0) 2 else 5],
-            ) - centre
-            across[corner] = dot(offset, right)
-            upward[corner] = dot(offset, up)
-            away[corner] = dot(offset, forward)
-        }
-        val tanVertical = tan(Math.toRadians(verticalFovDegrees / 2.0)).toFloat()
-        val tanHorizontal = tanVertical * aspect.coerceIn(0.2f, 5f)
-        val free = insets.bounded()
-        val horizontal = FitAxis(across, away, tanHorizontal, -1f + 2f * free.left, 1f - 2f * free.right)
-        val vertical = FitAxis(upward, away, tanVertical, -1f + 2f * free.bottom, 1f - 2f * free.top)
-        // Never closer than the nearest corner: every corner stays in front of the lens.
-        val nearest = MIN_DISTANCE - away.min()
-        val framed = clamp(
-            OrbitPose(
-                target = centre,
-                azimuthDegrees = azimuthDegrees,
-                elevationDegrees = elevation,
-                distance = maxOf(nearest, horizontal.distance(), vertical.distance()),
             )
-        )
+        }
+        val from = OrbitPose(centre, azimuthDegrees, elevationDegrees.coerceIn(MIN_ELEVATION, MAX_ELEVATION))
+        val view = Framed(corners, from, verticalFovDegrees, aspect, insets)
+        val framed = clamp(from.copy(distance = view.distance()))
         return framed.copy(
-            target = centre + right * horizontal.slide(framed.distance) + up * vertical.slide(framed.distance),
+            target = centre + view.right * view.horizontal.slide(framed.distance) +
+                view.up * view.vertical.slide(framed.distance),
         )
+    }
+
+    /**
+     * [pose] moved as little as it takes to show the whole of [corners] — a picked object's box —
+     * inside what one of [insets] leaves free of the view: [pose] itself when it already does,
+     * else the same angles with the picture slid, and stepped back only for a box the free area
+     * is too small for at this distance. Never closer: the room keeps the size the finger left it.
+     *
+     * Each of [insets] is one way round the chrome — under a card in a corner, or beside it —
+     * and the one that moves the camera least wins. [lift] is [ArDebugOrbitCamera.lift]: the
+     * picture is drawn that share of the view's height above where the pose alone would put it.
+     */
+    fun reveal(
+        pose: OrbitPose,
+        corners: List<Position>,
+        verticalFovDegrees: Double,
+        aspect: Float,
+        insets: List<FramingInsets>,
+        lift: Float = 0f,
+    ): OrbitPose {
+        if (corners.isEmpty()) return pose
+        var best = pose
+        var bestCost = Float.MAX_VALUE
+        for (free in insets) {
+            val view = Framed(corners, pose, verticalFovDegrees, aspect, free)
+            val distance = clamp(pose.copy(distance = max(pose.distance, view.distance()))).distance
+            val across = view.horizontal.nudge(distance, raised = 0f)
+            val upward = view.vertical.nudge(distance, raised = lift * 2f * view.tanVertical * distance)
+            val cost = distance - pose.distance + abs(across) + abs(upward)
+            if (cost < bestCost) {
+                bestCost = cost
+                best = if (cost == 0f) {
+                    pose
+                } else {
+                    pose.copy(target = pose.target + view.right * across + view.up * upward, distance = distance)
+                }
+            }
+        }
+        return best
+    }
+
+    /**
+     * [points] as a camera at [from]'s angles sees them from its target: each one's offset across
+     * the picture, up it and away, and the two screen axes [insets] leave them.
+     */
+    private class Framed(
+        points: List<Position>,
+        from: OrbitPose,
+        verticalFovDegrees: Double,
+        aspect: Float,
+        insets: FramingInsets,
+    ) {
+        val right: Float3
+        val up: Float3
+        val tanVertical = tan(Math.toRadians(verticalFovDegrees / 2.0)).toFloat()
+        val horizontal: FitAxis
+        val vertical: FitAxis
+        private val nearest: Float
+
+        init {
+            val azimuth = Math.toRadians(from.azimuthDegrees.toDouble())
+            val tilt = Math.toRadians(from.elevationDegrees.toDouble())
+            val sinA = sin(azimuth).toFloat()
+            val cosA = cos(azimuth).toFloat()
+            val sinE = sin(tilt).toFloat()
+            val cosE = cos(tilt).toFloat()
+            // The camera's own axes at these angles, as CameraRig.eye and lookAt make them.
+            right = Float3(cosA, 0f, -sinA)
+            up = Float3(-sinA * sinE, cosE, -cosA * sinE)
+            val forward = Float3(-cosE * sinA, -sinE, -cosE * cosA)
+            val across = FloatArray(points.size) { dot(points[it] - from.target, right) }
+            val upward = FloatArray(points.size) { dot(points[it] - from.target, up) }
+            val away = FloatArray(points.size) { dot(points[it] - from.target, forward) }
+            val tanHorizontal = tanVertical * aspect.coerceIn(0.2f, 5f)
+            val free = insets.bounded()
+            horizontal = FitAxis(across, away, tanHorizontal, -1f + 2f * free.left, 1f - 2f * free.right)
+            vertical = FitAxis(upward, away, tanVertical, -1f + 2f * free.bottom, 1f - 2f * free.top)
+            // Never closer than the nearest point: every one stays in front of the lens.
+            nearest = MIN_DISTANCE - away.min()
+        }
+
+        /** The least distance at which every point fits the free area, on both axes. */
+        fun distance(): Float = maxOf(nearest, horizontal.distance(), vertical.distance())
     }
 
     /**
@@ -524,6 +601,21 @@ object ArDebugFraming {
                 if (least + most > low + high) floor = middle else ceiling = middle
             }
             return (floor + ceiling) / 2f
+        }
+
+        /**
+         * The least the target moves along this axis for the corners to be in the band at
+         * [distance]: nothing when they already are. [raised] is how far the picture is drawn up
+         * this axis from where the target alone would put it, in metres at the target's depth.
+         */
+        fun nudge(distance: Float, raised: Float): Float {
+            var floor = -Float.MAX_VALUE
+            var ceiling = Float.MAX_VALUE
+            for (i in along.indices) {
+                floor = max(floor, along[i] + raised - high * tanHalf * (distance + away[i]))
+                ceiling = minOf(ceiling, along[i] + raised - low * tanHalf * (distance + away[i]))
+            }
+            return if (floor >= ceiling) (floor + ceiling) / 2f else 0f.coerceIn(floor, ceiling)
         }
     }
 

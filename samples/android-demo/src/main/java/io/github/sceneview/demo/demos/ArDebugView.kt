@@ -48,6 +48,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpSize
 import com.google.android.filament.ColorGrading
 import com.google.android.filament.Colors
 import com.google.android.filament.Engine
@@ -591,6 +592,9 @@ private fun stageBoundsOf(frame: ArDebugFrame): FloatArray {
  *
  * [onShown] fires once, when the session's content has been on screen for a few rendered frames
  * — textures uploaded, nothing half-drawn — so a caller can hold its cover and chrome until then.
+ *
+ * [selection] keeps the object tapped in a [replay] while this view is away, and [cornerCard] is
+ * the card the caller hangs in its top end corner, which a tapped object is kept clear of (#4505).
  */
 @Composable
 internal fun ArDebugSceneView(
@@ -603,6 +607,8 @@ internal fun ArDebugSceneView(
     compact: Boolean = false,
     replay: RerunReplayMedia? = null,
     onShown: (() -> Unit)? = null,
+    selection: ScanSelection? = null,
+    cornerCard: DpSize = DpSize.Zero,
 ) {
     val context = LocalContext.current
     val shown by rememberUpdatedState(onShown)
@@ -655,7 +661,8 @@ internal fun ArDebugSceneView(
     }
     DisposableEffect(replayLayers) { onDispose { replayLayers?.destroy() } }
     // A tap on an object of the scan boxes it (#4485); the picture-in-picture takes no touch.
-    val objectPick = rememberScanObjectPick(replay.takeUnless { compact }, session, orbit, engine, materialLoader)
+    val objectPick =
+        rememberScanObjectPick(replay.takeUnless { compact }, session, orbit, engine, materialLoader, selection)
     var anchors by remember { mutableStateOf(emptyList<DebugAnchor>()) }
     val clock = remember { FrameClock() }
 
@@ -724,7 +731,8 @@ internal fun ArDebugSceneView(
                     elevationDegrees = orbit.homeElevation,
                     margin = if (replay != null) ArDebugFraming.REPLAY_MARGIN else ArDebugFraming.HOME_MARGIN,
                 )
-                if (orbit.following) orbit.home = home
+                // Following, the view frames the room — moved by what a picked box needs to be seen.
+                if (orbit.following) orbit.home = objectPick?.framed(home) ?: home
                 if (!orbit.hasFramedContent && bounds != null) {
                     orbit.hasFramedContent = true
                     val intro = replay != null && !replay.growing && orbit.drift
@@ -799,7 +807,7 @@ internal fun ArDebugSceneView(
                 }
             }
         }
-        ScanObjectOverlay(objectPick, Modifier.matchParentSize())
+        ScanObjectOverlay(objectPick, Modifier.matchParentSize(), cornerCard)
     }
 }
 
