@@ -513,7 +513,9 @@
     }
 
     /* ── Mobile ───────────────────────────────────────────────────── */
-    @media (max-width: 600px) {
+    /* Up to 720px, not 600: with their labels the five buttons squeezed the title out below
+       700px, and pushed the theme switch off the screen from 620px down to 601px. */
+    @media (max-width: 720px) {
       header { padding: 0 10px; gap: 10px; }
       .brand-text { display: none; }
       .toolbar .btn-label { display: none; }
