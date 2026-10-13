@@ -225,6 +225,20 @@ class MotionSensorCheckTest {
     }
 
     @Test
+    fun `the pinned restart card is honoured only in a debug build under QA mode`() {
+        val state = MOTION_SENSOR_SILENT_QA_STATE
+        assertEquals("motion_sensor_silent", state)
+        assertTrue(motionSensorSilentForced(state, overridesAllowed = true, debugBuild = true))
+        // The store build never tells a working phone to restart, whatever the intent says.
+        assertFalse(motionSensorSilentForced(state, overridesAllowed = true, debugBuild = false))
+        assertFalse(motionSensorSilentForced(state, overridesAllowed = false, debugBuild = true))
+        assertFalse(motionSensorSilentForced(state, overridesAllowed = false, debugBuild = false))
+        val other = MOTION_SENSOR_MEASURE_QA_STATE
+        assertFalse(motionSensorSilentForced(other, overridesAllowed = true, debugBuild = true))
+        assertFalse(motionSensorSilentForced(null, overridesAllowed = true, debugBuild = true))
+    }
+
+    @Test
     fun `the measure state makes a measurement due on a session that tracks`() {
         val reason = TrackingFailureReason.INSUFFICIENT_LIGHT
         val forced = watchedArStartup(

@@ -247,6 +247,49 @@ class MotionSensorWatchTest {
         assertFalse(cardShown)
     }
 
+    // ── The pinned restart card ───────────────────────────────────────────────────────
+
+    @Test
+    fun `a debug build under QA mode pins the restart card without measuring`() {
+        assumeTrue("the pinned card is a debug-build seam", BuildConfig.DEBUG)
+        DemoSettings.qaMode = true
+        DemoSettings.qaDemoState = MOTION_SENSOR_SILENT_QA_STATE
+        watch(measuring(DELIVERING))
+
+        advance(5_000)
+        assertTrue("the pinned state did not raise the card", cardShown)
+        assertEquals(0, probeCalls)
+        assertNull(MotionSensorReport.line())
+        assertEquals(0, silentEvents)
+    }
+
+    @Test
+    fun `a release build ignores the pinned restart card even in QA mode`() {
+        assumeFalse("only a release build ignores the state under QA mode", BuildConfig.DEBUG)
+        DemoSettings.qaMode = true
+        DemoSettings.qaDemoState = MOTION_SENSOR_SILENT_QA_STATE
+        watch(measuring(DELIVERING))
+
+        advance(5_000)
+        assertFalse("a release build told a phone to restart on an intent extra", cardShown)
+        assertNull(MotionSensorReport.line())
+        // The real path is all that is left: a delivering gyroscope, and still no card.
+        advance(60_000)
+        assertFalse(cardShown)
+        assertEquals(0, silentEvents)
+    }
+
+    @Test
+    fun `the pinned restart card does nothing without QA mode`() {
+        DemoSettings.qaMode = false
+        DemoSettings.qaDemoState = MOTION_SENSOR_SILENT_QA_STATE
+        watch(measuring(DELIVERING))
+
+        advance(5_000)
+        assertFalse(cardShown)
+        assertNull(MotionSensorReport.line())
+    }
+
     // ── The card leaves ───────────────────────────────────────────────────────────────
 
     @Test

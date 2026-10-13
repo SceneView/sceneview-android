@@ -160,15 +160,30 @@ object MotionSensorReport {
 
 /**
  * The `qa_state` id that pins an AR screen on the restart message, so the card can be captured
- * on an emulator: `--ez qa_mode true --es qa_state motion_sensor_silent`. Honoured only under
- * [qaStateOverridesAllowed], like every other pinned state.
+ * on an emulator: `--ez qa_mode true --es qa_state motion_sensor_silent`. Honoured only in a
+ * debug build under [qaStateOverridesAllowed]: `qa_mode` is an intent extra any app can send,
+ * and the store build must never tell a working phone to restart.
  */
 const val MOTION_SENSOR_SILENT_QA_STATE = "motion_sensor_silent"
+
+/**
+ * Whether [MOTION_SENSOR_SILENT_QA_STATE] is honoured: only in a debug build **and** under
+ * [qaStateOverridesAllowed].
+ *
+ * @param qaState the launch's `qa_state`.
+ * @param overridesAllowed [qaStateOverridesAllowed].
+ * @param debugBuild `BuildConfig.DEBUG`; a parameter so the release answer is tested.
+ */
+fun motionSensorSilentForced(
+    qaState: String?,
+    overridesAllowed: Boolean,
+    debugBuild: Boolean = BuildConfig.DEBUG,
+): Boolean = debugBuild && overridesAllowed && qaState == MOTION_SENSOR_SILENT_QA_STATE
 
 /** Whether QA pinned this screen on the restart message. */
 @Composable
 fun motionSensorSilentForced(): Boolean =
-    DemoSettings.qaDemoState == MOTION_SENSOR_SILENT_QA_STATE && qaStateOverridesAllowed()
+    motionSensorSilentForced(DemoSettings.qaDemoState, qaStateOverridesAllowed())
 
 /**
  * The `qa_state` id that makes a **working** phone take the real measurement, so the part of
@@ -190,8 +205,10 @@ const val MOTION_SENSOR_MEASURE_QA_STATE = "motion_sensor_measure"
 
 /**
  * Whether [MOTION_SENSOR_MEASURE_QA_STATE] is honoured: only in a debug build **and** under
- * [qaStateOverridesAllowed]. A release build ignores it even in QA mode — nothing a user
- * installs listens to the sensors of a session that tracks.
+ * [qaStateOverridesAllowed]. A release build ignores it even in QA mode. Debug builds are
+ * installable too (the debug APK attached to GitHub releases, the `.qa` variant): there, under
+ * `qa_mode` and this state, the effect is one second of listening per session, and never a
+ * card while the gyroscope delivers.
  *
  * @param qaState the launch's `qa_state`.
  * @param overridesAllowed [qaStateOverridesAllowed].
