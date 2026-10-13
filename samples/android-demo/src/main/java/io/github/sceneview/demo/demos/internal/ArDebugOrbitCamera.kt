@@ -169,6 +169,21 @@ class ArDebugOrbitCamera(
     private var glide: OrbitPose? = null
 
     /**
+     * Where the camera is once [glideTo]'s slide is over — [pose] itself with none under way. What
+     * is written over the view is placed for this pose, so it is there from the slide's first frame.
+     */
+    val heading: OrbitPose get() = glide ?: pose
+
+    /**
+     * `true` while a finger moves the camera — an orbit, a pan, a pinch — and while the spin it
+     * let go of dies down: nothing brings the picture back under a finger still at work on it.
+     */
+    val moving: Boolean
+        get() = grabbing || pinching || azimuthVelocity != 0f || elevationVelocity != 0f
+
+    private var pinching = false
+
+    /**
      * Slides the free camera to [target] — a picked object brought out from under the chrome. The
      * next touch stops it where it is. While following, the view frames through [home] instead.
      */
@@ -232,13 +247,16 @@ class ArDebugOrbitCamera(
         pose = next
     }
 
+    // The gesture detector ends every gesture here, a pinch included: it never calls scrollEnd.
     override fun grabEnd() {
         grabbing = false
         panning = false
+        pinching = false
     }
 
     override fun scrollBegin(x: Int, y: Int, separation: Float) {
         takeOver()
+        pinching = true
     }
 
     override fun scrollUpdate(x: Int, y: Int, prevSeparation: Float, currSeparation: Float) {
@@ -253,7 +271,9 @@ class ArDebugOrbitCamera(
         )
     }
 
-    override fun scrollEnd() = Unit
+    override fun scrollEnd() {
+        pinching = false
+    }
 
     override fun doubleTapZoom(x: Int, y: Int, zoomIn: Boolean) {
         recenter()

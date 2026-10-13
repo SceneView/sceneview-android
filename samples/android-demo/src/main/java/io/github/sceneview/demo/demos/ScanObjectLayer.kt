@@ -54,7 +54,7 @@ import io.github.sceneview.demo.demos.internal.ScanChrome
 import io.github.sceneview.demo.demos.internal.ScanObjectMeshes
 import io.github.sceneview.demo.demos.internal.ScanObjects
 import io.github.sceneview.demo.demos.internal.ScanPick
-import io.github.sceneview.demo.demos.internal.Vec3
+import io.github.sceneview.demo.demos.internal.ScanReveal
 import io.github.sceneview.demo.demos.internal.scanCamera
 import io.github.sceneview.demo.theme.DebugPalette
 import io.github.sceneview.demo.theme.LocalStageChrome
@@ -75,8 +75,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import kotlin.math.max
-import kotlin.math.min
 
 /*
  * Tap an object in a scan's replay (#4485): the points it is made of light up, a box is drawn
@@ -148,11 +146,10 @@ internal class ScanObjectPick(
     private var hintJob: Job? = null
 
     private var found: ScanPick.Found? = null
-    private var corners: List<Vec3> = emptyList()
     private var cornerPositions: List<Position> = emptyList()
 
-    /** Rendered frames a tap's box still waits for its label's height before it is brought out. */
-    private var revealIn = 0
+    /** When the camera is slid to bring the box and its label out from under the chrome. */
+    private val reveal = ScanReveal()
 
     /** What the replay draws over this view, as [ScanObjectOverlay] lays it out. */
     var chrome: ScanChrome? = null
@@ -162,7 +159,10 @@ internal class ScanObjectPick(
 
     private var edgesFor: ArDebugStyle? = null
     private val edgeMesh = DebugMesh()
-    private var drawn = false
+
+    /** `true` while the picked object is drawn — and its label written, once it has a place. */
+    var drawn: Boolean by mutableStateOf(false)
+        private set
 
     /** The picked object's box, `null` with nothing picked. */
     var box: ScanBox? by mutableStateOf(null)
@@ -189,7 +189,7 @@ internal class ScanObjectPick(
         // camera is where it was left — nothing to bring out.
         selection.found?.takeIf { it.surfels.isNotEmpty() && it.surfels.last() < dense.cloud.count }?.let {
             show(it, Offset.Unspecified)
-            revealIn = 0
+            reveal.settled()
         }
     }
 
@@ -228,12 +228,11 @@ internal class ScanObjectPick(
     private fun show(pick: ScanPick, at: Offset) {
         found = pick as? ScanPick.Found
         selection.found = found
-        revealIn = if (found == null) 0 else REVEAL_AFTER_FRAMES
+        if (found == null) reveal.settled() else reveal.picked()
         box = found?.box
         // The room does not turn away under a box being read, not even after a recenter.
         orbit.steady = found != null
-        corners = found?.box?.corners().orEmpty()
-        cornerPositions = corners.map { Position(it.x, it.y, it.z) }
+        cornerPositions = found?.box?.corners().orEmpty().map { Position(it.x, it.y, it.z) }
         edgesFor = null
         tintNode.upload(found?.let { ScanObjectMeshes.surfels(dense.mesh, it.surfels) })
         if (pick == ScanPick.TapCloser) {
@@ -259,6 +258,7 @@ internal class ScanObjectPick(
             drawn = visible
             nodes.forEach { it.isVisible = visible }
         }
+        if (found == null) reveal.settled()
         if (found == null || !visible) {
             anchor = Offset.Unspecified
             foot = Offset.Unspecified
@@ -270,11 +270,15 @@ internal class ScanObjectPick(
             hiddenNode.upload(edgeMesh)
             edgeNode.upload(edgeMesh)
         }
-        follow(found.box)
-        // The tapped box and its label, out from under the cards: once, then the finger has it.
-        if (revealIn > 0 && (labelHeight > 0 || --revealIn == 0)) {
-            revealIn = 0
-            orbit.glideTo(framed(orbit.pose))
+        // The box and its label, out from under the cards: after the tap, and again each time a
+        // finger has turned the room and let go of it.
+        if (reveal.due(labelMeasured = labelHeight > 0, moving = orbit.moving)) orbit.glideTo(framed(orbit.pose))
+        if (reveal.pending) {
+            // Not written yet: the label is born where that slide ends, it does not jump there.
+            anchor = Offset.Unspecified
+            foot = Offset.Unspecified
+        } else {
+            follow(found.box)
         }
     }
 
@@ -289,19 +293,14 @@ internal class ScanObjectPick(
         return ArDebugFraming.reveal(pose, cornerPositions, orbit.verticalFovDegrees, orbit.aspect, free, orbit.lift)
     }
 
-    /** Where [box] is drawn this frame: [anchor] over its highest corner, [foot] under its lowest. */
+    /**
+     * Where [box] is drawn: [anchor] over its highest corner, [foot] under its lowest — this frame,
+     * or, while the camera slides to bring it out, where the slide ends: the label waits there.
+     */
     private fun follow(box: ScanBox) {
-        val camera = orbit.scanCamera()
-        val middle = camera.project(box.top)
-        var high = middle?.second ?: 0f
-        var low = high
-        for (corner in corners) {
-            val y = camera.project(corner)?.second ?: continue
-            high = min(high, y)
-            low = max(low, y)
-        }
-        anchor = middle?.let { Offset(it.first, high) } ?: Offset.Unspecified
-        foot = middle?.let { Offset(it.first, low) } ?: Offset.Unspecified
+        val span = ScanObjectMeshes.drawnSpan(box, orbit.scanCamera(orbit.heading))
+        anchor = span?.let { (x, high, _) -> Offset(x, high) } ?: Offset.Unspecified
+        foot = span?.let { (x, _, low) -> Offset(x, low) } ?: Offset.Unspecified
     }
 
     /** The surfels the dense layer is drawing now, the cloud's first ones; none with Points off. */
@@ -335,9 +334,6 @@ internal class ScanObjectPick(
         /** In `glPolygonOffset` units, towards the eye: Filament flips the sign for its reversed depth. */
         const val TINT_OFFSET = -1f
         const val HINT_MILLIS = 2600L
-
-        /** The label is laid out a frame or two after the box: no longer than this is waited. */
-        const val REVEAL_AFTER_FRAMES = 4
         const val NANOS_PER_MILLI = 1_000_000L
     }
 }
@@ -415,15 +411,17 @@ internal fun ScanObjectOverlay(pick: ScanObjectPick?, modifier: Modifier = Modif
     if (box != null) lastBox = box
     val lastAnchor = remember(pick) { LastOffset() }
     val lastFoot = remember(pick) { LastOffset() }
+    // Measured as soon as the object is drawn, placed only once the pick says where: the camera
+    // may first slide to bring the box out, and the label is written where that ends.
     Anchored(
-        above = { lastAnchor.of(pick.anchor) },
-        below = { lastFoot.of(pick.foot) },
+        above = { lastAnchor.of(pick.anchor, live = pick.drawn) },
+        below = { lastFoot.of(pick.foot, live = pick.drawn) },
         chrome = chrome,
         modifier = modifier,
         onHeight = { pick.labelHeight = it },
     ) {
         AnimatedVisibility(
-            visible = box != null && pick.anchor.isSpecified,
+            visible = box != null && pick.drawn,
             enter = fadeIn(SceneViewTokens.Motion.fade()),
             exit = fadeOut(SceneViewTokens.Motion.fade()),
         ) {
@@ -448,12 +446,15 @@ internal fun ScanObjectOverlay(pick: ScanObjectPick?, modifier: Modifier = Modif
     }
 }
 
-/** The last specified offset it was given, so a label fading out stays where it was. */
+/**
+ * The last specified offset it was given, so a label fading out stays where it was. While what it
+ * names is [live], an unspecified offset is one too: a label still waiting for its place has none.
+ */
 private class LastOffset {
     private var last = Offset.Unspecified
 
-    fun of(offset: Offset): Offset {
-        if (offset.isSpecified) last = offset
+    fun of(offset: Offset, live: Boolean = false): Offset {
+        if (live || offset.isSpecified) last = offset
         return last
     }
 }
