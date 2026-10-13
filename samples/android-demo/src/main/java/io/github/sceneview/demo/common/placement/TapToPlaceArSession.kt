@@ -91,6 +91,7 @@ import io.github.sceneview.demo.LocalDemoChromeBottomInset
 import io.github.sceneview.demo.LocalDemoChromeBottomWidth
 import io.github.sceneview.demo.LocalDemoChromeTopInset
 import io.github.sceneview.demo.isDemoCompactHeight
+import io.github.sceneview.demo.reportsDemoSceneBottomCard
 import io.github.sceneview.demo.R
 import io.github.sceneview.demo.common.DemoStatusBanner
 import io.github.sceneview.demo.common.DemoStatusTone
@@ -523,7 +524,8 @@ fun BoxScope.TapToPlaceStatusOverlays(
                 .testTag(PlacementTestTags.COACH_STACK)
                 .padding(horizontal = SceneViewTokens.Space.md)
                 .padding(bottom = slot.bottom)
-                .then(if (slot.besideChrome) Modifier.width(slot.width) else Modifier),
+                .then(if (slot.besideChrome) Modifier.width(slot.width) else Modifier)
+                .reportsDemoSceneBottomCard(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             CoachStackContent(
