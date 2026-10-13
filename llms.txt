@@ -4571,12 +4571,18 @@ An exception thrown inside the frame loop of a **running** session does not reac
 **A session that delivers camera frames but never tracks, with no reason** (`TrackingState.PAUSED`, `TrackingFailureReason.NONE`, for good) is usually a phone whose gyroscope has stopped delivering samples: ARCore reports nothing, and only restarting the phone brings the sensor back. `probeARMotionSensors(context)` listens to the gyroscope and the accelerometer for one second and returns the two event counts; `ARMotionSensorSample.health` is `DELIVERING`, `SILENT` (accelerometer delivers, gyroscope does not — tell the person to restart their phone) or `UNKNOWN` (no verdict — say nothing). `arMotionSensorHealth(gyroscopeEvents, accelerometerEvents, windowMillis)` is the same verdict as a pure function. SceneView draws nothing for it and no failure callback fires; call it once, some ten seconds into a session that has never tracked, never while tracking works:
 
 ```kotlin
-var restartPhone by remember { mutableStateOf(false) }
-LaunchedEffect(neverTracked) {            // frames arriving, never TRACKING, no failure reason
-    if (!neverTracked) return@LaunchedEffect
-    delay(10_000)
-    val sample = probeARMotionSensors(context) ?: return@LaunchedEffect   // null: no gyroscope
-    restartPhone = sample.health == ARMotionSensorHealth.SILENT
+/** `neverTracked`: camera frames arriving, never TRACKING, no TrackingFailureReason. */
+@Composable
+fun rememberRestartPhoneAdvice(neverTracked: Boolean): Boolean {
+    val context = LocalContext.current
+    var restartPhone by remember { mutableStateOf(false) }
+    LaunchedEffect(neverTracked) {
+        if (!neverTracked) return@LaunchedEffect
+        delay(10_000)
+        val sample = probeARMotionSensors(context) ?: return@LaunchedEffect   // null: no gyroscope
+        restartPhone = sample.health == ARMotionSensorHealth.SILENT
+    }
+    return restartPhone
 }
 ```
 
