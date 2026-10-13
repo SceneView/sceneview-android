@@ -1947,10 +1947,11 @@ private fun notifyHostOfFrame(
     )
 }
 
-// One logcat line per tracking transition, never one per frame (#4510) — see ARTrackingStateLog.
+// One logcat line per tracking transition, repeated every ten seconds while the camera is not
+// tracking, never one per frame (#4510) — see ARTrackingStateLog.
 private fun logTrackingTransition(log: ARTrackingStateLog, frame: Frame) {
     val camera = frame.camera
-    log.transition(camera.trackingState, camera.trackingFailureReason)
+    log.transition(camera.trackingState, camera.trackingFailureReason, frame.timestamp)
         ?.let { android.util.Log.i("SceneView", it) }
 }
 

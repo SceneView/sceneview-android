@@ -171,4 +171,124 @@ class BugReportFormatTest {
         val url = buildGitHubIssueUrl(info(logcat = emptyList()), "y".repeat(50_000))
         assertTrue("url length ${url.length}", url.length <= ISSUE_URL_MAX_LENGTH)
     }
+
+    // ── AR tracking lines (#4510) ────────────────────────────────────────────
+
+    /** [count] lines as `ARSceneView` logs them, numbered through their `for=` field. */
+    private fun trackingLines(count: Int): List<String> = (1..count).map {
+        "10-13 16:55:46.108 29383 29383 I SceneView: AR tracking: state=PAUSED reason=NONE for=${it}0s"
+    }
+
+    private val appLine = "10-13 16:56:00.000 29383 29716 I native  : VisualInertialState is kNotTracking."
+
+    @Test
+    fun `only AR tracking lines are kept from the SceneView tag, the newest sixty`() {
+        val read = listOf(
+            "10-13 16:55:40.000 29383 29383 E SceneView: rememberSplatCloud: cannot load " +
+                "content://com.android.providers.downloads.documents/document/42",
+            "10-13 16:55:40.001 29383 29383 E SceneView: java.io.FileNotFoundException: /sdcard/a.spz",
+        ) + trackingLines(AR_TRACKING_MAX_LINES + 5)
+
+        val kept = arTrackingLines(read)
+
+        assertEquals(AR_TRACKING_MAX_LINES, kept.size)
+        assertTrue(kept.all { AR_TRACKING_LOG_PREFIX in it })
+        assertTrue(kept.first().endsWith("for=60s"))   // the five oldest are dropped
+        assertTrue(kept.last().endsWith("for=650s"))
+    }
+
+    @Test
+    fun `share text puts the AR tracking lines ahead of the general log`() {
+        val text = formatShareText(
+            BugReportInfo(metadata, logcat = listOf(appLine), arTracking = trackingLines(3)),
+            "Stuck on Getting ready",
+        )
+
+        val tracking = text.indexOf("AR tracking (last 3 lines):")
+        val general = text.indexOf("Recent app log (last 1 lines):")
+        assertTrue(tracking > text.indexOf("Android: 15 (API 35)"))
+        assertTrue("tracking block at $tracking, general log at $general", tracking in 0 until general)
+        assertTrue(text.indexOf("for=30s") < general)
+    }
+
+    @Test
+    fun `share text carries no more than sixty AR tracking lines, the newest`() {
+        val info = BugReportInfo(metadata, logcat = emptyList(), arTracking = trackingLines(75))
+
+        val text = formatShareText(info, "")
+
+        assertTrue(text.contains("AR tracking (last $AR_TRACKING_MAX_LINES lines):"))
+        assertFalse(text.contains("for=150s"))
+        assertTrue(text.contains("for=160s"))
+        assertTrue(text.contains("for=750s"))
+    }
+
+    @Test
+    fun `a report without AR tracking lines reads as it did`() {
+        val info = info()
+
+        assertFalse(formatShareText(info, "note").contains("AR tracking"))
+        assertFalse(formatIssueBody(info, "note").contains("AR tracking"))
+    }
+
+    @Test
+    fun `issue body puts the AR tracking block ahead of the app log`() {
+        val body = formatIssueBody(
+            BugReportInfo(metadata, logcat = listOf(appLine), arTracking = trackingLines(2)),
+            "Stuck on Getting ready",
+        )
+
+        val tracking = body.indexOf("<details><summary>AR tracking (last 2 lines)</summary>")
+        val general = body.indexOf("<details><summary>App log (last 1 lines)</summary>")
+        assertTrue("tracking block at $tracking, app log at $general", tracking in 0 until general)
+        assertTrue(tracking > body.indexOf("### Context"))
+    }
+
+    @Test
+    fun `issue body takes the AR tracking lines out of the log ceiling instead of adding to it`() {
+        val info = BugReportInfo(
+            metadata,
+            logcat = (1..LOGCAT_TAIL_LINES).map { "line $it" },
+            arTracking = trackingLines(AR_TRACKING_MAX_LINES),
+        )
+
+        val body = formatIssueBody(info, "")
+
+        val general = ISSUE_LOGCAT_MAX_LINES - ISSUE_AR_TRACKING_MAX_LINES
+        assertTrue(body.contains("AR tracking (last $ISSUE_AR_TRACKING_MAX_LINES lines)"))
+        assertTrue(body.contains("App log (last $general lines)"))
+        // The newest of each, and nothing older than the ceiling allows.
+        assertTrue(body.contains("for=600s"))
+        assertFalse(body.contains("for=480s"))
+        assertTrue(body.contains("line ${LOGCAT_TAIL_LINES - general + 1}\n"))
+        assertFalse(body.contains("line ${LOGCAT_TAIL_LINES - general}\n"))
+    }
+
+    @Test
+    fun `issue url keeps the AR tracking lines, compacted, under the length cap`() {
+        val general = (1..ISSUE_LOGCAT_MAX_LINES).map {
+            "10-13 16:56:00.000 29383 29716 I native  : " + "x".repeat(120)
+        }
+        val info = BugReportInfo(metadata, logcat = general, arTracking = trackingLines(40))
+
+        val url = buildGitHubIssueUrl(info, "Stuck on Getting ready")
+
+        assertTrue("url length ${url.length}", url.length <= ISSUE_URL_MAX_LENGTH)
+        val body = URLDecoder.decode(url.substringAfter("&body="), "UTF-8")
+        assertTrue(body.contains("AR tracking (last $ISSUE_AR_TRACKING_MAX_LINES lines)"))
+        assertTrue(body.contains("16:55:46.108 I SceneView: AR tracking: state=PAUSED reason=NONE for=400s"))
+        assertFalse(body.contains("29383"))
+        val packed = Regex("""App log \(last (\d+) lines\)""").find(body)!!.groupValues[1].toInt()
+        assertTrue("packed only $packed general lines", packed >= 10)
+    }
+
+    @Test
+    fun `issue url drops every log block for a pathological note`() {
+        val info = BugReportInfo(metadata, logcat = listOf(appLine), arTracking = trackingLines(12))
+
+        val url = buildGitHubIssueUrl(info, "y".repeat(50_000))
+
+        assertTrue("url length ${url.length}", url.length <= ISSUE_URL_MAX_LENGTH)
+        assertFalse(URLDecoder.decode(url.substringAfter("&body="), "UTF-8").contains("<details>"))
+    }
 }
