@@ -54,7 +54,9 @@
     });
   }
   function loadRuntime() {
-    return runtime || (runtime = loadScript('/js/filament/filament.js').then(function () { return loadScript('/js/sceneview.js'); }));
+    // A failed download is forgotten, so the next tap tries again instead of failing forever.
+    return runtime || (runtime = loadScript('/js/filament/filament.js').then(function () { return loadScript('/js/sceneview.js'); })
+      .catch(function (e) { runtime = null; throw e; }));
   }
 
   /* ── Stage ─────────────────────────────────────────────────
@@ -170,13 +172,15 @@
       return sv.loadModel(stage.dataset.src).then(function () {
         applyFit(stage, sv);
         if (stage.dataset.anim && stage._animate !== false) sv.playAnimation(parseInt(stage.dataset.anim, 10), true);
-        setTimeout(function () { stage.classList.remove('is-loading'); stage.classList.add('is-live'); }, 400);
+        setTimeout(function () { if (stage._sv !== sv) return; stage.classList.remove('is-loading'); stage.classList.add('is-live'); }, 400);
         setPlaying(stage, !caps.reduced);
         // Motion stops by itself after 20 s (WCAG 2.2.2); the pause button stops it sooner.
         if (!caps.reduced) stage._idle = setTimeout(function () { setPlaying(stage, false); }, 20000);
       });
     }).catch(function (e) {
       console.warn('[site] live 3D unavailable, keeping the poster:', e && e.message);
+      // A viewer whose model never arrived is torn down: the poster stays and the next tap starts clean.
+      for (var i = live.length; i--;) if (live[i].stage === stage) park(live.splice(i, 1)[0]);
       stage.classList.remove('is-loading');
     });
   }
@@ -197,6 +201,9 @@
       sv.loadModel(stage.dataset.src).then(function () {
         applyFit(stage, sv);
         if (stage.dataset.anim && stage._animate !== false) sv.playAnimation(parseInt(stage.dataset.anim, 10), true);
+        stage.classList.remove('is-loading');
+      }).catch(function (e) {
+        console.warn('[site] model swap failed:', e && e.message);
         stage.classList.remove('is-loading');
       });
     }
@@ -302,7 +309,14 @@
       a.href = 'https://github.com/sceneview/sceneview/releases/tag/v' + ver[1] + '.' + ver[2] + '.' + ver[3];
     });
 
-    /* Copy */
+    /* Copy: the tick and "Copied" show only once the text is on the clipboard. */
+    function copy(b, text) {
+      if (!navigator.clipboard) return;
+      navigator.clipboard.writeText(text).then(function () {
+        b.classList.add('is-done'); b.setAttribute('aria-label', 'Copied');
+        setTimeout(function () { b.classList.remove('is-done'); b.setAttribute('aria-label', 'Copy to clipboard'); }, 1600);
+      }, function () {});
+    }
     $$('.copy').forEach(function (b) {
       on(b, 'click', function () {
         var src = b.dataset.copy ? document.getElementById(b.dataset.copy) : $('code', b.parentElement);
@@ -310,10 +324,7 @@
           var block = b.closest('.codecard');
           src = block && $('[role="tabpanel"]:not([hidden]) code', block);
         }
-        var text = b.dataset.copyText || (src && src.textContent) || '';
-        (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).catch(function () {});
-        b.classList.add('is-done'); b.setAttribute('aria-label', 'Copied');
-        setTimeout(function () { b.classList.remove('is-done'); b.setAttribute('aria-label', 'Copy to clipboard'); }, 1600);
+        copy(b, b.dataset.copyText || (src && src.textContent) || '');
       });
     });
 
@@ -329,10 +340,7 @@
           if (tpl && out) {
             out.innerHTML = tpl.innerHTML;
             $$('.copy', out).forEach(function (c) {
-              on(c, 'click', function () {
-                navigator.clipboard && navigator.clipboard.writeText(c.dataset.copyText || $('code', c.parentElement).textContent).catch(function () {});
-                c.classList.add('is-done'); setTimeout(function () { c.classList.remove('is-done'); }, 1600);
-              });
+              on(c, 'click', function () { copy(c, c.dataset.copyText || $('code', c.parentElement).textContent); });
             });
           }
         });

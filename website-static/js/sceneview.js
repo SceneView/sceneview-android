@@ -833,7 +833,11 @@
       );
     }
 
-    setAutoRotate(enabled) { this._autoRotate = enabled; this._wantsAutoRotate = enabled; return this.requestRender(); }
+    setAutoRotate(enabled) {
+      // A drag that just ended has a resume pending (3 s): drop it, or it would undo a pause.
+      if (this._autoRotateTimer) { clearTimeout(this._autoRotateTimer); this._autoRotateTimer = null; }
+      this._autoRotate = enabled; this._wantsAutoRotate = enabled; return this.requestRender();
+    }
     setCameraDistance(d) { this._orbitRadius = d; return this.requestRender(); }
 
     /**
@@ -2369,8 +2373,12 @@
         self._lastMouse = { x: e.clientX, y: e.clientY };
         self.requestRender();
       });
+      // One resume timer at a time, as in endTouchDrag below: a mouseup followed by the
+      // mouseleave on the way to a pause button used to leave the first timer running,
+      // out of reach of setAutoRotate(false), and the rotation came back 3 s later.
       this._addListener(canvas, 'mouseup', function() {
         self._isDragging = false;
+        if (self._autoRotateTimer) { clearTimeout(self._autoRotateTimer); self._autoRotateTimer = null; }
         // Resume auto-rotate after 3s idle (like model-viewer)
         if (self._wantsAutoRotate) {
           self._autoRotateTimer = setTimeout(() => { self._autoRotate = true; self.requestRender(); }, 3000);
@@ -2378,6 +2386,7 @@
       });
       this._addListener(canvas, 'mouseleave', function() {
         self._isDragging = false;
+        if (self._autoRotateTimer) { clearTimeout(self._autoRotateTimer); self._autoRotateTimer = null; }
         if (self._wantsAutoRotate) {
           self._autoRotateTimer = setTimeout(() => { self._autoRotate = true; self.requestRender(); }, 3000);
         }
