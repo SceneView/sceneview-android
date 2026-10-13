@@ -372,8 +372,12 @@ internal fun DollhousePreview(
     }
     // One opening per room and per camera: another room is veiled until its own framing is drawn.
     val opening = remember(bounds, orbit) { DollhouseOpening() }
-    // Before the first frame, not on it: the tone mapping is part of the first picture.
-    remember(view, colorGrading) { view.configureForDebug(colorGrading) }
+    // Before the first frame, not on it: the tone mapping is part of the first picture. Effects
+    // run when the composition is applied, ahead of the frame that draws it.
+    DisposableEffect(view, colorGrading) {
+        view.configureForDebug(colorGrading)
+        onDispose { }
+    }
     BoxWithConstraints(modifier.background(chrome.ground)) {
         // What the chrome leaves of this view at rest — under the recording's chip, above the dock
         // and the sheet's peek, between the window's safe sides — less a gutter: the room opens
