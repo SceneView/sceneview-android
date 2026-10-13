@@ -581,6 +581,8 @@
       this._fallbackEl = null;     // load-failure placeholder overlay, if shown (#2509)
       this._isDragging = false;
       this._lastMouse = { x: 0, y: 0 };
+      this._touchStart = null;     // where an undecided touch began (canvas with touch-action: pan-y)
+      this._touchPansY = false;    // the current touch leaves the vertical swipe to the page
       // Inertia for smooth orbit deceleration
       this._velocityAngle = 0;
       this._velocityHeight = 0;
@@ -831,7 +833,11 @@
       );
     }
 
-    setAutoRotate(enabled) { this._autoRotate = enabled; this._wantsAutoRotate = enabled; return this.requestRender(); }
+    setAutoRotate(enabled) {
+      // A drag that just ended has a resume pending (3 s): drop it, or it would undo a pause.
+      if (this._autoRotateTimer) { clearTimeout(this._autoRotateTimer); this._autoRotateTimer = null; }
+      this._autoRotate = enabled; this._wantsAutoRotate = enabled; return this.requestRender();
+    }
     setCameraDistance(d) { this._orbitRadius = d; return this.requestRender(); }
 
     /**
@@ -2367,8 +2373,12 @@
         self._lastMouse = { x: e.clientX, y: e.clientY };
         self.requestRender();
       });
+      // One resume timer at a time, as in endTouchDrag below: a mouseup followed by the
+      // mouseleave on the way to a pause button used to leave the first timer running,
+      // out of reach of setAutoRotate(false), and the rotation came back 3 s later.
       this._addListener(canvas, 'mouseup', function() {
         self._isDragging = false;
+        if (self._autoRotateTimer) { clearTimeout(self._autoRotateTimer); self._autoRotateTimer = null; }
         // Resume auto-rotate after 3s idle (like model-viewer)
         if (self._wantsAutoRotate) {
           self._autoRotateTimer = setTimeout(() => { self._autoRotate = true; self.requestRender(); }, 3000);
@@ -2376,6 +2386,7 @@
       });
       this._addListener(canvas, 'mouseleave', function() {
         self._isDragging = false;
+        if (self._autoRotateTimer) { clearTimeout(self._autoRotateTimer); self._autoRotateTimer = null; }
         if (self._wantsAutoRotate) {
           self._autoRotateTimer = setTimeout(() => { self._autoRotate = true; self.requestRender(); }, 3000);
         }
@@ -2388,35 +2399,85 @@
         self.requestRender();
       }, { passive: false });
 
-      this._addListener(canvas, 'touchstart', function(e) {
-        if (e.touches.length === 1) {
-          self._isDragging = true;
-          self._lastMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-          self._autoRotate = false;
+      // Touch: one finger orbits, and the page stays still under it.
+      //
+      // `touch-action: pan-y` on the canvas hands the vertical swipe back to the
+      // page, for a viewer that sits in a scrolling page: the drag then starts
+      // only once the finger has clearly moved sideways, and a vertical swipe
+      // scrolls the page as it does anywhere else. Read at every touchstart, so a
+      // page can change it at any time. Any other value keeps every move.
+      function pagePansY() {
+        var action = window.getComputedStyle(canvas).touchAction || '';
+        return action.split(' ').indexOf('pan-y') !== -1;
+      }
+      function beginTouchDrag(touch) {
+        self._isDragging = true;
+        self._lastMouse = { x: touch.clientX, y: touch.clientY };
+        self._autoRotate = false;
+        self._velocityAngle = 0;
+        self._velocityHeight = 0;
+        if (self._autoRotateTimer) { clearTimeout(self._autoRotateTimer); self._autoRotateTimer = null; }
+        self.requestRender();
+      }
+      // `coast` keeps the last velocity, so a flick carries on and slows down.
+      function endTouchDrag(coast) {
+        self._touchStart = null;
+        if (!self._isDragging) return;
+        self._isDragging = false;
+        if (!coast) {
           self._velocityAngle = 0;
           self._velocityHeight = 0;
-          if (self._autoRotateTimer) { clearTimeout(self._autoRotateTimer); self._autoRotateTimer = null; }
-          self.requestRender();
+        }
+        if (self._autoRotateTimer) { clearTimeout(self._autoRotateTimer); self._autoRotateTimer = null; }
+        if (self._wantsAutoRotate) {
+          self._autoRotateTimer = setTimeout(() => { self._autoRotate = true; self.requestRender(); }, 3000);
+        }
+      }
+
+      this._addListener(canvas, 'touchstart', function(e) {
+        if (e.touches.length !== 1) { self._touchStart = null; return; }
+        var touch = e.touches[0];
+        self._touchPansY = pagePansY();
+        if (self._touchPansY) {
+          // Whose gesture this is gets decided on the first real move.
+          self._touchStart = { x: touch.clientX, y: touch.clientY };
+        } else {
+          beginTouchDrag(touch);
         }
       });
       this._addListener(canvas, 'touchmove', function(e) {
-        if (!self._isDragging || e.touches.length !== 1) return;
-        e.preventDefault();
-        var dx = (e.touches[0].clientX - self._lastMouse.x) * 0.005;
-        var dy = (e.touches[0].clientY - self._lastMouse.y) * 0.01;
+        if (e.touches.length !== 1) return;
+        var touch = e.touches[0];
+        if (self._touchStart) {
+          var ax = Math.abs(touch.clientX - self._touchStart.x);
+          var ay = Math.abs(touch.clientY - self._touchStart.y);
+          if (ax < 8 && ay < 8) return;        // too short to tell
+          self._touchStart = null;
+          if (ax <= ay) return;                // a vertical swipe: the page scrolls
+          beginTouchDrag(touch);
+        }
+        if (!self._isDragging) return;
+        if (e.cancelable) {
+          e.preventDefault();
+        } else if (self._touchPansY) {
+          // The browser is already scrolling with this touch: it is the page's.
+          endTouchDrag(false);
+          return;
+        }
+        var dx = (touch.clientX - self._lastMouse.x) * 0.005;
+        var dy = (touch.clientY - self._lastMouse.y) * 0.01;
         self._velocityAngle = -dx;
         self._velocityHeight = dy;
         self._angle -= dx;
         self._orbitHeight += dy;
-        self._lastMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        self._lastMouse = { x: touch.clientX, y: touch.clientY };
         self.requestRender();
       }, { passive: false });
-      this._addListener(canvas, 'touchend', function() {
-        self._isDragging = false;
-        if (self._wantsAutoRotate) {
-          self._autoRotateTimer = setTimeout(() => { self._autoRotate = true; self.requestRender(); }, 3000);
-        }
-      });
+      this._addListener(canvas, 'touchend', function() { endTouchDrag(true); });
+      // The system took the touch away (a call, a system gesture, the browser's
+      // own scroll): there is no touchend. Without this the drag never ended, and
+      // the viewer neither resumed its rotation nor went back to idle.
+      this._addListener(canvas, 'touchcancel', function() { endTouchDrag(false); });
     }
 
     /**
