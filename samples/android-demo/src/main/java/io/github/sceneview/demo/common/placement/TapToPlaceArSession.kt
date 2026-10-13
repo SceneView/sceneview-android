@@ -3,6 +3,7 @@ package io.github.sceneview.demo.common.placement
 import io.github.sceneview.demo.telemetry.AR_VIEW_SAMPLE_ID
 import io.github.sceneview.demo.telemetry.ArFunnelLog
 import io.github.sceneview.demo.telemetry.LocalSampleId
+import io.github.sceneview.demo.telemetry.arCoreVersionName
 import android.os.SystemClock
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -53,11 +54,15 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import com.google.android.filament.Engine
 import com.google.ar.core.Anchor
 import com.google.ar.core.Config
@@ -175,8 +180,21 @@ fun TapToPlaceArSession(
 
     // AR funnel (docs/docs/recipes/measure-ar-funnel.md), demo-app analytics only. The AR View
     // tab hosts this session outside any sample, hence its own id.
-    val funnel = remember { ArFunnelLog() }
+    val appContext = LocalContext.current.applicationContext
+    val funnel = remember { ArFunnelLog(arCoreVersion = { arCoreVersionName(appContext) }) }
     funnel.sampleId = LocalSampleId.current ?: AR_VIEW_SAMPLE_ID
+    // #4510: a resumed session that delivers no frame has no callback to say so — ask on a timer.
+    // The timer follows the lifecycle the session itself resumes and pauses on: in the background
+    // it does not run, so time spent there is never counted as a session delivering no frame.
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(funnel, lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            while (true) {
+                delay(ArFunnelLog.FRAME_WATCH_MS)
+                funnel.framesExpected()
+            }
+        }
+    }
 
     Box(
         modifier = modifier
@@ -200,11 +218,13 @@ fun TapToPlaceArSession(
             instantPlacementMode = Config.InstantPlacementMode.DISABLED,
             sessionConfiguration = sessionConfiguration,
             onSessionCreated = { funnel.sessionCreated() },
+            onSessionResumed = { funnel.sessionResumed() },
+            onSessionPaused = { funnel.sessionPaused() },
             onSessionFailure = { failure -> funnel.sessionFailed(failure) },
             onSessionUpdated = { session, frame: Frame ->
                 state.cameraReady = true
                 // ar_tracking_ready: the camera's own state, not the QA-shimmed one below.
-                funnel.frameTracked(frame.camera.trackingState == TrackingState.TRACKING)
+                funnel.frameTracked(frame.camera.trackingState)
                 // The #1881 QA shim forces a tracking failure on the emulator; the
                 // controller sees it as a real loss so both surfaces rehearse the state.
                 val tracking = frame.camera.trackingState == TrackingState.TRACKING &&

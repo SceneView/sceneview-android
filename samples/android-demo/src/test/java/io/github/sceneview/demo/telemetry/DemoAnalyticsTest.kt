@@ -26,6 +26,10 @@ class DemoAnalyticsTest {
         override fun setCrashKey(key: CrashKey, value: String) {
             crashKeys[key] = value
         }
+        val nonFatals = mutableListOf<Throwable>()
+        override fun recordNonFatal(throwable: Throwable) {
+            nonFatals += throwable
+        }
         override fun setCollectionEnabled(enabled: Boolean) {
             collection += enabled
         }
@@ -61,6 +65,15 @@ class DemoAnalyticsTest {
     }
 
     @Test
+    fun `problems the app survived follow the same switch as crash reports`() {
+        val kept = IllegalStateException("kept")
+        analytics.recordNonFatal(kept)
+        enabled = false
+        analytics.recordNonFatal(IllegalStateException("dropped"))
+        assertEquals(listOf<Throwable>(kept), recorder.nonFatals)
+    }
+
+    @Test
     fun `the opt-out itself always reaches the sink`() {
         enabled = false
         analytics.setCollectionEnabled(false)
@@ -76,6 +89,7 @@ class DemoAnalyticsTest {
                 override fun log(event: AnalyticsEvent) = error("boom")
                 override fun setUserProperty(property: UserProperty, value: String) = error("boom")
                 override fun setCrashKey(key: CrashKey, value: String) = error("boom")
+                override fun recordNonFatal(throwable: Throwable) = error("boom")
                 override fun setCollectionEnabled(enabled: Boolean) = error("boom")
                 override fun resetData() = error("boom")
             },
@@ -83,6 +97,7 @@ class DemoAnalyticsTest {
         throwing.log(AnalyticsEvent.PushPromptShown)
         throwing.setUserProperty(UserProperty.NotifEnabled, "true")
         throwing.setCrashKey(CrashKey.HeroSurface, "still")
+        throwing.recordNonFatal(IllegalStateException("from the AR frame loop"))
         throwing.setCollectionEnabled(false)
         throwing.resetData()
     }

@@ -66,6 +66,7 @@ import com.google.ar.core.Frame
 import com.google.ar.core.Session
 import com.google.ar.core.Trackable
 import com.google.ar.core.TrackingFailureReason
+import com.google.ar.core.TrackingState
 import com.google.ar.core.exceptions.PlaybackFailedException
 import io.github.sceneview.EngineRenderInvalidators
 import io.github.sceneview.FrameRateGate
@@ -266,8 +267,12 @@ import java.util.concurrent.atomic.AtomicReference
  *                                 should wire [onSessionFailure] only.
  * @param onSessionFailure         Typed [ARSessionFailure] callback (#1759). Fires alongside
  *                                 [onSessionFailed]; pick the one that matches your codebase.
- * @param onSessionUpdated         Called once per AR frame before the scene is updated.
- * @param onTrackingFailureChanged Called when the camera [TrackingFailureReason] changes.
+ * @param onSessionUpdated         Called once per AR frame before the scene is updated. An
+ *                                 exception it throws is logged under its name (tag `SceneView`)
+ *                                 and stays in that frame: the session and the frame loop carry on.
+ * @param onTrackingFailureChanged Called when the camera [TrackingFailureReason] changes. An
+ *                                 exception it throws is logged and isolated the same way, and
+ *                                 does not skip that frame's [onSessionUpdated].
  * @param surfaceMirrorer          Mirrors every rendered frame (camera feed + virtual content
  *                                 composited) to additional [android.view.Surface]s — attach a
  *                                 `MediaRecorder` input surface for clean in-app AR video
@@ -1571,6 +1576,8 @@ fun ARSceneView(
     // performs no reprojection between camera images, so an unchanged `Frame.timestamp` is an
     // exact duplicate test rather than a heuristic — the pose really has not moved.
     val lastArFrameTimestamp = remember { AtomicLong(0L) }
+    // One logcat line per tracking transition, so a bug report shows where tracking stood (#4510).
+    val trackingStateLog = remember { ARTrackingStateLog() }
     // Frames owed to a surface that holds no pixels yet — first attach, app foregrounded, fold,
     // split-screen resize. Separate from the timestamp test, because a brand-new swap chain needs
     // a frame even on a vsync where ARCore returns a duplicate.
@@ -1666,6 +1673,9 @@ fun ARSceneView(
                             session.updateOrNull()?.let { frame ->
                                 hasNewArFrame =
                                     lastArFrameTimestamp.getAndSet(frame.timestamp) != frame.timestamp
+                                val trackingFailureReason = readTrackingFailureReason(
+                                    trackingStateLog, session, frame, frameTimeNanos
+                                )
                                 onARFrame(
                                     engine = engine,
                                     scene = scene,
@@ -1677,14 +1687,19 @@ fun ARSceneView(
                                     environment = environment,
                                     arPlaneRenderer = arPlaneRenderer,
                                     childNodes = childNodes,
-                                    prevTrackingFailureRef = prevTrackingFailureRef,
-                                    onTrackingFailureChangedRef = onTrackingFailureChangedRef,
-                                    onSessionUpdatedRef = onSessionUpdatedRef,
                                     baselineMainLightColorRef = baselineMainLightColorRef,
                                     baselineMainLightIntensityRef = baselineMainLightIntensityRef,
                                     builtIndirectLightRef = builtIndirectLightRef,
                                     session = session,
                                     frame = frame
+                                )
+                                notifyHostOfFrame(
+                                    prevTrackingFailureRef = prevTrackingFailureRef,
+                                    onTrackingFailureChangedRef = onTrackingFailureChangedRef,
+                                    onSessionUpdatedRef = onSessionUpdatedRef,
+                                    session = session,
+                                    frame = frame,
+                                    trackingFailureReason = trackingFailureReason
                                 )
                             }
                         } catch (e: Exception) {
@@ -1802,18 +1817,12 @@ private fun onARFrame(
     environment: Environment,
     arPlaneRenderer: PlaneRendererBase,
     childNodes: List<Node>,
-    prevTrackingFailureRef: AtomicReference<TrackingFailureReason?>,
-    onTrackingFailureChangedRef: AtomicReference<((TrackingFailureReason?) -> Unit)?>,
-    onSessionUpdatedRef: AtomicReference<((Session, Frame) -> Unit)?>,
     baselineMainLightColorRef: AtomicReference<io.github.sceneview.math.Color?>,
     baselineMainLightIntensityRef: AtomicReference<Float?>,
     builtIndirectLightRef: AtomicReference<IndirectLight?>,
     session: Session,
     frame: Frame
 ) {
-    val camera = frame.camera
-    val isCameraTracking = camera.isTracking
-
     cameraStream?.update(session, frame)
     cameraNode.update(session, frame)
 
@@ -1917,17 +1926,62 @@ private fun onARFrame(
         is DepthMeshNode -> n.update(session, frame)
         is PointCloudNode -> n.update(session, frame)
     }
+}
 
-    val newTrackingFailure = if (!isCameraTracking) {
-        camera.trackingFailureReason.takeIf { it != TrackingFailureReason.NONE }
-    } else null
+/**
+ * Hands the frame to the host's `onTrackingFailureChanged` / `onSessionUpdated`, once [onARFrame]
+ * has updated the scene — a frame update that throws still skips them, as it always did. Each
+ * callback runs in its own guard (#4510, [dispatchHostFrameCallbacks]): what the host's code
+ * throws is logged under the callback's name instead of as an ARCore failure.
+ */
+private fun notifyHostOfFrame(
+    prevTrackingFailureRef: AtomicReference<TrackingFailureReason?>,
+    onTrackingFailureChangedRef: AtomicReference<((TrackingFailureReason?) -> Unit)?>,
+    onSessionUpdatedRef: AtomicReference<((Session, Frame) -> Unit)?>,
+    session: Session,
+    frame: Frame,
+    trackingFailureReason: TrackingFailureReason
+) {
+    dispatchHostFrameCallbacks(
+        newTrackingFailure = trackingFailureReason.takeIf { it != TrackingFailureReason.NONE },
+        prevTrackingFailureRef = prevTrackingFailureRef,
+        onTrackingFailureChanged = { onTrackingFailureChangedRef.get()?.invoke(it) },
+        onSessionUpdated = { onSessionUpdatedRef.get()?.invoke(session, frame) },
+        onThrow = { name, exception -> android.util.Log.e("SceneView", "$name threw", exception) }
+    )
+}
 
-    if (prevTrackingFailureRef.get() != newTrackingFailure) {
-        prevTrackingFailureRef.set(newTrackingFailure)
-        onTrackingFailureChangedRef.get()?.invoke(newTrackingFailure)
+/**
+ * Reads the camera's tracking state **once** for the frame — for the tracking log and for
+ * [notifyHostOfFrame] alike — and returns why the camera is not tracking, `NONE` when it is.
+ *
+ * Same ARCore calls per frame as before the log existed (#4510): one `Camera`, its state, and its
+ * failure reason only while it is not tracking — ARCore documents that reason as `NONE` whenever
+ * the camera tracks, so it is not asked then. The log itself is a few comparisons on a frame where
+ * nothing changed: one line per transition, repeated every ten seconds while the camera is not
+ * tracking, never one per frame — see [ARTrackingStateLog].
+ *
+ * Not skipped on a vsync that brings no new camera image: the values are read for the host's
+ * callbacks anyway, and a session that stops delivering images is one the repeat has to report.
+ *
+ * @param nowNanos the render loop's frame time, a monotonic clock.
+ */
+private fun readTrackingFailureReason(
+    log: ARTrackingStateLog,
+    session: Session,
+    frame: Frame,
+    nowNanos: Long
+): TrackingFailureReason {
+    val camera = frame.camera
+    val state = camera.trackingState
+    val reason = if (state == TrackingState.TRACKING) {
+        TrackingFailureReason.NONE
+    } else {
+        camera.trackingFailureReason
     }
-
-    onSessionUpdatedRef.get()?.invoke(session, frame)
+    log.transition(state, reason, nowNanos, System.identityHashCode(session))
+        ?.let { android.util.Log.i("SceneView", it) }
+    return reason
 }
 
 /**
