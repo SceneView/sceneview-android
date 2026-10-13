@@ -16,6 +16,7 @@ import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.google.ar.core.TrackingFailureReason
 import io.github.sceneview.ar.ARMotionSensorSample
+import io.github.sceneview.demo.DemoSettings
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import org.junit.After
@@ -73,6 +74,8 @@ class MotionSensorWatchTest {
 
     @After
     fun tearDown() {
+        DemoSettings.qaMode = false
+        DemoSettings.qaDemoState = null
         MotionSensorReport.clear()
     }
 
@@ -184,6 +187,45 @@ class MotionSensorWatchTest {
         assertTrue(cardShown)
         assertEquals(1, probeCalls)
         assertEquals(1, silentEvents)
+    }
+
+    // ── The QA measurement on a working phone ─────────────────────────────────────────
+
+    @Test
+    fun `the measure state takes the real path on a session that tracks, and keeps its line`() {
+        DemoSettings.qaMode = true
+        DemoSettings.qaDemoState = MOTION_SENSOR_MEASURE_QA_STATE
+        tracking = true
+        watch(measuring(DELIVERING))
+
+        advance(9_900)
+        assertEquals("the sensors were listened to before the ten seconds were up", 0, probeCalls)
+        advance(1_600)
+        assertEquals(1, probeCalls)
+        assertFalse("a delivering gyroscope raised the card", cardShown)
+        assertEquals(0, silentEvents)
+        assertTrue(
+            "tracking dropped the line the state exists to produce: ${MotionSensorReport.line()}",
+            MotionSensorReport.line()?.startsWith("198 events in 1 s (accelerometer: 301)") == true,
+        )
+
+        // The verdict is final: no second measurement, and the line is still there to read.
+        advance(60_000)
+        assertEquals(1, probeCalls)
+        assertTrue(MotionSensorReport.line() != null)
+    }
+
+    @Test
+    fun `the measure state does nothing without QA mode`() {
+        DemoSettings.qaMode = false
+        DemoSettings.qaDemoState = MOTION_SENSOR_MEASURE_QA_STATE
+        tracking = true
+        watch(measuring(DELIVERING))
+
+        advance(60_000)
+        assertEquals("a tracking session was measured outside QA mode", 0, probeCalls)
+        assertNull(MotionSensorReport.line())
+        assertFalse(cardShown)
     }
 
     // ── The card leaves ───────────────────────────────────────────────────────────────
@@ -344,6 +386,9 @@ class MotionSensorWatchTest {
     private companion object {
         /** The measured Pixel 9: a gyroscope with nothing to say, an accelerometer at 200 Hz. */
         val SILENT = ARMotionSensorSample(0, 204, 1_000)
+
+        /** A working phone: both sensors deliver. */
+        val DELIVERING = ARMotionSensorSample(198, 301, 1_000)
 
         /** What the SDK returns when the sensor service refuses the gyroscope's listener. */
         val NOT_LISTENED = ARMotionSensorSample(-1, 0, 0)

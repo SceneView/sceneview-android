@@ -20,6 +20,7 @@ import com.google.ar.core.TrackingFailureReason
 import io.github.sceneview.ar.ARMotionSensorHealth
 import io.github.sceneview.ar.ARMotionSensorSample
 import io.github.sceneview.ar.probeARMotionSensors
+import io.github.sceneview.demo.BuildConfig
 import io.github.sceneview.demo.DemoSettings
 import io.github.sceneview.demo.telemetry.ArFunnelLog
 import kotlinx.coroutines.delay
@@ -170,6 +171,57 @@ fun motionSensorSilentForced(): Boolean =
     DemoSettings.qaDemoState == MOTION_SENSOR_SILENT_QA_STATE && qaStateOverridesAllowed()
 
 /**
+ * The `qa_state` id that makes a **working** phone take the real measurement, so the part of
+ * #4522 a healthy phone never reaches can be proven on one:
+ * `--ez qa_mode true --es qa_state motion_sensor_measure`.
+ *
+ * Only the precondition is forced: [rememberMotionSensorSilent] reads the session as never
+ * tracked and unexplained while the real session tracks behind it. Everything after that is
+ * real — the [AR_NEVER_TRACKED_MS] wait in the foreground, the listeners on the phone's own
+ * sensors, [MotionSensorReport], the verdict. On a healthy phone that is one registration of a
+ * second in `dumpsys sensorservice`, a delivering verdict, no card, and the `gyroscope:` line
+ * in the bug report.
+ *
+ * The session's own tracking does not drop that line while this state is on — the watch does
+ * not see it — so the report can be opened and read after the measurement. It is dropped as
+ * usual by the next AR session that tracks without this state.
+ */
+const val MOTION_SENSOR_MEASURE_QA_STATE = "motion_sensor_measure"
+
+/**
+ * Whether [MOTION_SENSOR_MEASURE_QA_STATE] is honoured: only in a debug build **and** under
+ * [qaStateOverridesAllowed]. A release build ignores it even in QA mode — nothing a user
+ * installs listens to the sensors of a session that tracks.
+ *
+ * @param qaState the launch's `qa_state`.
+ * @param overridesAllowed [qaStateOverridesAllowed].
+ * @param debugBuild `BuildConfig.DEBUG`; a parameter so the release answer is tested.
+ */
+fun motionSensorMeasureForced(
+    qaState: String?,
+    overridesAllowed: Boolean,
+    debugBuild: Boolean = BuildConfig.DEBUG,
+): Boolean = debugBuild && overridesAllowed && qaState == MOTION_SENSOR_MEASURE_QA_STATE
+
+/**
+ * What [rememberMotionSensorSilent] reads of the session: the session itself, or — with
+ * [measureForced] — one that never tracked and that ARCore does not explain, whatever the real
+ * one does. Frames, the wait and the measurement are never forced.
+ */
+fun watchedArStartup(
+    framesArriving: Boolean,
+    everTracked: Boolean,
+    tracking: Boolean,
+    failureReason: TrackingFailureReason?,
+    waitedMillis: Long,
+    measureForced: Boolean,
+): ArStartup = if (measureForced) {
+    ArStartup(framesArriving, everTracked = false, tracking = false, failureReason = null, waitedMillis)
+} else {
+    ArStartup(framesArriving, everTracked || tracking, tracking, failureReason, waitedMillis)
+}
+
+/**
  * Watches one AR session's start and returns `true` once it is known that the phone's
  * gyroscope delivers nothing (#4522) — the session then shows a restart message instead of a
  * "Getting ready" card that would never leave. It returns `false` again, for good, the moment
@@ -202,14 +254,18 @@ fun rememberMotionSensorSilent(
     var waitedMillis by remember { mutableLongStateOf(0L) }
     var probes by remember { mutableIntStateOf(0) }
     var health by remember { mutableStateOf<ARMotionSensorHealth?>(null) }
+    val measureForced = motionSensorMeasureForced(DemoSettings.qaDemoState, qaStateOverridesAllowed())
     SideEffect {
-        if (tracking && !everTracked) {
+        // Not under the QA measurement: its session does track, and dropping the count here
+        // would leave nothing to read in the bug report it exists to fill.
+        if (tracking && !everTracked && !measureForced) {
             everTracked = true
             MotionSensorReport.clear()
         }
     }
 
-    val startup = ArStartup(framesArriving, everTracked || tracking, tracking, failureReason, waitedMillis)
+    val startup =
+        watchedArStartup(framesArriving, everTracked, tracking, failureReason, waitedMillis, measureForced)
     val context = LocalContext.current.applicationContext
     val currentProbe by rememberUpdatedState(probe)
     val currentOnSilent by rememberUpdatedState(onSilent)

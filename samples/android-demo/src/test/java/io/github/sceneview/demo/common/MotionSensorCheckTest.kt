@@ -206,6 +206,51 @@ class MotionSensorCheckTest {
         assertNull(MotionSensorReport.line(nowMillis = 100_400))
     }
 
+    // ── The QA measurement on a working phone ────────────────────────────────────────────
+
+    @Test
+    fun `the measure state is honoured only in a debug build under QA mode`() {
+        val state = MOTION_SENSOR_MEASURE_QA_STATE
+        assertEquals("motion_sensor_measure", state)
+        assertTrue(motionSensorMeasureForced(state, overridesAllowed = true, debugBuild = true))
+        // No `qa_mode`: an intent extra alone is never enough.
+        assertFalse(motionSensorMeasureForced(state, overridesAllowed = false, debugBuild = true))
+        // A release build ignores it, QA mode or not.
+        assertFalse(motionSensorMeasureForced(state, overridesAllowed = true, debugBuild = false))
+        assertFalse(motionSensorMeasureForced(state, overridesAllowed = false, debugBuild = false))
+        // Another state, or none, is not this one.
+        val other = MOTION_SENSOR_SILENT_QA_STATE
+        assertFalse(motionSensorMeasureForced(other, overridesAllowed = true, debugBuild = true))
+        assertFalse(motionSensorMeasureForced(null, overridesAllowed = true, debugBuild = true))
+    }
+
+    @Test
+    fun `the measure state makes a measurement due on a session that tracks`() {
+        val reason = TrackingFailureReason.INSUFFICIENT_LIGHT
+        val forced = watchedArStartup(
+            framesArriving = true, everTracked = true, tracking = true, failureReason = reason,
+            waitedMillis = 0, measureForced = true,
+        )
+        assertTrue(forced.neverStartedUnexplained)
+        assertTrue(motionSensorProbeDue(forced, probes = 0, last = null))
+        // A delivering gyroscope is a final verdict and never a card, forced or not.
+        val measured = forced.copy(waitedMillis = AR_NEVER_TRACKED_MS)
+        assertFalse(motionSensorProbeDue(measured, probes = 1, last = ARMotionSensorHealth.DELIVERING))
+        assertEquals(ArStartupMessage.NONE, arStartupMessage(measured, ARMotionSensorHealth.DELIVERING))
+        // Frames are never forced: no camera image, no measurement.
+        val noFrame = watchedArStartup(false, false, true, null, 0, measureForced = true)
+        assertFalse(motionSensorProbeDue(noFrame, probes = 0, last = null))
+    }
+
+    @Test
+    fun `without the measure state the watch reads the session as it is`() {
+        val tracking = watchedArStartup(true, false, true, null, 0, measureForced = false)
+        assertEquals(ArStartup(true, true, true, null, 0), tracking)
+        assertFalse(motionSensorProbeDue(tracking, probes = 0, last = null))
+        val lost = watchedArStartup(true, true, false, null, 0, measureForced = false)
+        assertFalse(motionSensorProbeDue(lost, probes = 0, last = null))
+    }
+
     @Test
     fun `the report text reads gyroscope N events in 1 s`() {
         val line = MotionSensorReport.line(ARMotionSensorSample(0, 204, 1_000))
