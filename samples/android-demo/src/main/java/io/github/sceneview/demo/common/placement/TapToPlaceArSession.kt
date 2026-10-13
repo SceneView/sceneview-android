@@ -60,6 +60,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import com.google.android.filament.Engine
 import com.google.ar.core.Anchor
 import com.google.ar.core.Config
@@ -181,10 +184,15 @@ fun TapToPlaceArSession(
     val funnel = remember { ArFunnelLog(arCoreVersion = { arCoreVersionName(appContext) }) }
     funnel.sampleId = LocalSampleId.current ?: AR_VIEW_SAMPLE_ID
     // #4510: a resumed session that delivers no frame has no callback to say so — ask on a timer.
-    LaunchedEffect(funnel) {
-        while (true) {
-            delay(ArFunnelLog.FRAME_WATCH_MS)
-            funnel.framesExpected()
+    // The timer follows the lifecycle the session itself resumes and pauses on: in the background
+    // it does not run, so time spent there is never counted as a session delivering no frame.
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(funnel, lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            while (true) {
+                delay(ArFunnelLog.FRAME_WATCH_MS)
+                funnel.framesExpected()
+            }
         }
     }
 

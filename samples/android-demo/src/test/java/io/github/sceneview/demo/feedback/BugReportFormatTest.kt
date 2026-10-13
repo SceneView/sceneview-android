@@ -1,5 +1,7 @@
 package io.github.sceneview.demo.feedback
 
+import com.google.ar.core.TrackingFailureReason
+import com.google.ar.core.TrackingState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -198,6 +200,68 @@ class BugReportFormatTest {
     }
 
     @Test
+    fun `a line that only contains the AR tracking prefix is dropped, with the path it names`() {
+        val head = "10-13 16:55:40.000 29383 29383"
+        val transition = "$head I SceneView: AR tracking: state=PAUSED reason=CAMERA_UNAVAILABLE"
+        val repeat = "$head I SceneView: AR tracking: state=PAUSED reason=NONE for=20s"
+        val read = listOf(
+            // The prefix inside a file name the user picked, at either level.
+            "$head E SceneView: rememberSplatCloud: cannot load " +
+                "content://com.android.providers.downloads.documents/AR tracking: notes.spz",
+            "$head I SceneView: loading /sdcard/Download/AR tracking: state=PAUSED reason=NONE",
+            // A real line with something after it.
+            "$head I SceneView: AR tracking: state=PAUSED reason=NONE /sdcard/Download/home.spz",
+            "$head I SceneView: AR tracking: state=PAUSED reason=NONE for=20s /sdcard/home.spz",
+            // Not an enum name, not a number of seconds.
+            "$head I SceneView: AR tracking: state=/sdcard/home.spz reason=NONE",
+            "$head I SceneView: AR tracking: state=PAUSED reason=NONE for=home.spz",
+            // Another tag, another level.
+            "$head I Downloads: AR tracking: state=PAUSED reason=NONE",
+            "$head E SceneView: AR tracking: state=PAUSED reason=NONE",
+            transition,
+            repeat,
+        )
+
+        assertEquals(listOf(transition, repeat), arTrackingLines(read))
+    }
+
+    /**
+     * [AR_TRACKING_LOG_PREFIX] is a copy: the library's prefix is `internal` to another module,
+     * so nothing but this test holds the two together. It reads the library's constant, then
+     * runs the library's own lines through the report's filter — every state and reason ARCore
+     * has, the repeated form included.
+     */
+    @Test
+    fun `the report keeps exactly the lines the library writes`() {
+        val log = Class.forName("io.github.sceneview.ar.ARTrackingStateLog")
+        assertEquals(log.getField("PREFIX").get(null), AR_TRACKING_LOG_PREFIX)
+
+        val transition = log.getMethod(
+            "transition",
+            TrackingState::class.java,
+            TrackingFailureReason::class.java,
+            Long::class.javaPrimitiveType,
+            Int::class.javaPrimitiveType,
+        )
+        val repeatNanos = log.getField("REPEAT_NANOS").getLong(null)
+        val written = TrackingState.values().flatMap { state ->
+            TrackingFailureReason.values().flatMap { reason ->
+                val instance = log.getDeclaredConstructor().newInstance()
+                // The line of the transition, then the one repeated while it lasts.
+                listOf(0L, repeatNanos).mapNotNull { now ->
+                    transition.invoke(instance, state, reason, now, 1) as String?
+                }
+            }
+        }.map { "10-13 16:55:46.108 29383 29383 I SceneView: $it" }
+
+        // One line per pair, and a repeat for every pair but the tracking ones.
+        val pairs = TrackingState.values().size * TrackingFailureReason.values().size
+        assertEquals(2 * pairs - TrackingFailureReason.values().size, written.size)
+        assertTrue(written.any { it.endsWith(" for=10s") })
+        assertEquals(written, arTrackingLines(written, maxLines = written.size))
+    }
+
+    @Test
     fun `share text puts the AR tracking lines ahead of the general log`() {
         val text = formatShareText(
             BugReportInfo(metadata, logcat = listOf(appLine), arTracking = trackingLines(3)),
@@ -280,6 +344,23 @@ class BugReportFormatTest {
         assertFalse(body.contains("29383"))
         val packed = Regex("""App log \(last (\d+) lines\)""").find(body)!!.groupValues[1].toInt()
         assertTrue("packed only $packed general lines", packed >= 10)
+    }
+
+    @Test
+    fun `issue url gives up the AR tracking lines before a character of the note`() {
+        val bare = BugReportInfo(metadata, logcat = emptyList())
+        // As long a note as the URL holds with no log at all: the tracking lines no longer fit.
+        val room = ISSUE_URL_MAX_LENGTH - buildGitHubIssueUrl(bare, "Stuck\n").length - 10
+        val note = "Stuck\n" + "y".repeat(room)
+        assertTrue("the note has to be longer than the truncation it used to get", room > 1000)
+        val info = BugReportInfo(metadata, logcat = listOf(appLine), arTracking = trackingLines(12))
+
+        val url = buildGitHubIssueUrl(info, note)
+
+        assertTrue("url length ${url.length}", url.length <= ISSUE_URL_MAX_LENGTH)
+        val body = URLDecoder.decode(url.substringAfter("&body="), "UTF-8")
+        assertTrue("the note was cut", body.startsWith(note))
+        assertFalse(body.contains("<details>"))
     }
 
     @Test

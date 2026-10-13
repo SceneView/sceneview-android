@@ -684,10 +684,9 @@ fun SceneViewDemoApp(activity: MainActivity? = null) {
             )
             reportScope.launch {
                 val screenshot = activity?.let { captureBugReportScreenshot(it) }
-                bugReport = PendingBugReport(
-                    info = captureBugReportInfo(context, screen),
-                    screenshot = screenshot,
-                )
+                // Two `logcat` runs, each waited for: not on the main thread.
+                val info = withContext(Dispatchers.IO) { captureBugReportInfo(context, screen) }
+                bugReport = PendingBugReport(info = info, screenshot = screenshot)
             }
         }
 

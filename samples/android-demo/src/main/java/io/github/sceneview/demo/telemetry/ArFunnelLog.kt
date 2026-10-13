@@ -31,8 +31,8 @@ fun arCoreVersionName(context: Context): String =
  *   creates again), so one visit to an AR screen on a device that cannot run AR reports the
  *   same failure twice, then once more per return from the background.
  *
- * Two things the funnel cannot say are filed with the crash reports instead, as problems the app
- * survived (#4510) — no new analytics event, the taxonomy stays the one shared with iOS:
+ * Three things the funnel cannot say are filed with the crash reports instead, as problems the
+ * app survived (#4510) — no new analytics event, the taxonomy stays the one shared with iOS:
  * - a session failure with no code of its own (`unknown`, `fatal`), with the exception that
  *   caused it, once;
  * - a session that delivers camera frames for [TRACKING_STALL_MS] and never tracks — the screen
@@ -41,8 +41,9 @@ fun arCoreVersionName(context: Context): String =
  * - a resumed session that delivers no frame at all for [FRAME_STALL_MS] — a frame loop that
  *   keeps throwing leaves the app nothing else to see — once ([ArFramesStalled]).
  *
- * Both carry the sample id, a duration and the ARCore version: no image, no pose, nothing about
- * the place or the person. Neither changes anything on screen.
+ * The first is the exception as it was thrown; the two stalls carry the sample id, a duration and
+ * the ARCore version. None of the three carries an image, a pose, or anything about the place or
+ * the person, and none changes anything on screen.
  *
  * @param monotonicMillis the clock the stalls are measured on; injected by the tests.
  * @param arCoreVersion the installed "Google Play Services for AR" version name, read only when

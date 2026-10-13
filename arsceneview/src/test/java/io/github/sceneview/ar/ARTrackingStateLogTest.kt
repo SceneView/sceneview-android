@@ -75,7 +75,9 @@ class ARTrackingStateLogTest {
     fun `a camera that stays out of tracking says so again every ten seconds, with how long`() {
         val log = ARTrackingStateLog()
 
-        // 35 s of frames in the same state, starting at an arbitrary session time.
+        // 35 s of display frames in the same state, from an arbitrary time on the injected clock.
+        // The clock is the render loop's, not the camera image's: a session whose images stopped
+        // coming would freeze the latter, and that is a state the repeat has to keep reporting.
         val lines =
             log.frames(TrackingState.PAUSED, TrackingFailureReason.NONE, 100 * second, frames = 1061)
 
@@ -116,16 +118,52 @@ class ARTrackingStateLogTest {
     }
 
     @Test
-    fun `a timestamp that goes back starts the count over instead of reporting a stale duration`() {
+    fun `a clock that goes back starts the count over instead of reporting a stale duration`() {
         val log = ARTrackingStateLog()
         log.transition(TrackingState.PAUSED, TrackingFailureReason.NONE, 500 * second)
 
-        // Another recording, or a session that was recreated: its clock starts lower.
+        // Not the clock the count started on: no line for it, and the count restarts from it.
         assertNull(log.transition(TrackingState.PAUSED, TrackingFailureReason.NONE, 2 * second))
         assertNull(log.transition(TrackingState.PAUSED, TrackingFailureReason.NONE, 11 * second))
         assertEquals(
             "AR tracking: state=PAUSED reason=NONE for=10s",
             log.transition(TrackingState.PAUSED, TrackingFailureReason.NONE, 12 * second)
+        )
+    }
+
+    @Test
+    fun `a recreated session starts the log over, in the same state included`() {
+        val log = ARTrackingStateLog()
+        log.transition(TrackingState.PAUSED, TrackingFailureReason.NONE, 0L, sessionId = 1)
+        assertEquals(
+            "AR tracking: state=PAUSED reason=NONE for=10s",
+            log.transition(TrackingState.PAUSED, TrackingFailureReason.NONE, 10 * second, sessionId = 1)
+        )
+
+        // Same state, same reason, another session: its first frame is a line of its own…
+        assertEquals(
+            "AR tracking: state=PAUSED reason=NONE",
+            log.transition(TrackingState.PAUSED, TrackingFailureReason.NONE, 15 * second, sessionId = 2)
+        )
+        // …and `for=` counts from that frame, not from the session before it.
+        assertNull(
+            log.transition(TrackingState.PAUSED, TrackingFailureReason.NONE, 24 * second, sessionId = 2)
+        )
+        assertEquals(
+            "AR tracking: state=PAUSED reason=NONE for=10s",
+            log.transition(TrackingState.PAUSED, TrackingFailureReason.NONE, 25 * second, sessionId = 2)
+        )
+    }
+
+    @Test
+    fun `a recreated session that tracks at once says so, the one before it tracking too`() {
+        val log = ARTrackingStateLog()
+        log.transition(TrackingState.TRACKING, TrackingFailureReason.NONE, 0L, sessionId = 1)
+        assertNull(log.transition(TrackingState.TRACKING, TrackingFailureReason.NONE, second, sessionId = 1))
+
+        assertEquals(
+            "AR tracking: state=TRACKING reason=NONE",
+            log.transition(TrackingState.TRACKING, TrackingFailureReason.NONE, 2 * second, sessionId = 2)
         )
     }
 }
