@@ -67,8 +67,11 @@
     return 'website';
   }
 
+  // No `page_title` here, on purpose. This file runs from a synchronous <script> that
+  // sits ABOVE <title> in every page's <head>, so `document.title` is still empty at this
+  // point, and passing it pinned an empty title on every hit (#4552). Left alone, the tag
+  // library reads the title itself when it sends the hit, after the document has one.
   var config = {
-    page_title: document.title,
     content_group: contentGroup(),
     // First-party measurement only — no Google Signals, no ad personalisation. This is
     // what lets privacy.html say "no advertising features are enabled".
