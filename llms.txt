@@ -4566,6 +4566,8 @@ SceneView(surfaceType = SurfaceType.TextureSurface, isOpaque = false)  // Textur
 
 `onSessionFailed: (Exception) -> Unit` lumps all 25 ARCore exception subclasses into a single `Exception`. Apps that want to retry vs fallback vs "install ARCore" vs "open Settings" need exhaustive `when` matching — string-matching on exception messages is fragile. Wire `onSessionFailure: (ARSessionFailure) -> Unit` instead (it fires alongside `onSessionFailed`, so legacy callers keep working).
 
+Both callbacks also fire for a **running** session whose frame loop keeps failing: when every frame has thrown for about 1.5 s — `Session.update()`, a node update, or your own `onSessionUpdated` / `onTrackingFailureChanged` — the exception is reported once per exception type. One bad frame is only logged (`SceneView` tag), and the loop keeps running, so a session that recovers draws again. A throw from your own frame callback is logged under that callback's name ("onSessionUpdated threw"), not as an ARCore failure.
+
 Use an **exhaustive `when` with NO `else` branch** — that is the whole point of the sealed hierarchy. The compiler then forces you to revisit this site the day SceneView adds a new subtype (#1759). An `else ->` fallback silently defeats that contract.
 
 ```kotlin

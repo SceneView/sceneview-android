@@ -93,6 +93,8 @@ The extension `View.applyRenderQuality(RenderQuality)` configures `shadowOptions
 
 `onSessionFailed: (Exception) -> Unit` lumps all 25 ARCore exception subclasses into a single `Exception`. Apps that want to retry vs fallback vs "install ARCore" vs "open Settings" need exhaustive `when` matching — string-matching on exception messages is fragile. Wire `onSessionFailure: (ARSessionFailure) -> Unit` instead (it fires alongside `onSessionFailed`, so legacy callers keep working).
 
+Both callbacks also fire for a **running** session whose frame loop keeps failing: when every frame has thrown for about 1.5 s — `Session.update()`, a node update, or your own `onSessionUpdated` / `onTrackingFailureChanged` — the exception is reported once per exception type. One bad frame is only logged (`SceneView` tag), and the loop keeps running, so a session that recovers draws again. A throw from your own frame callback is logged under that callback's name ("onSessionUpdated threw"), not as an ARCore failure.
+
 Use an **exhaustive `when` with NO `else` branch** — that is the whole point of the sealed hierarchy. The compiler then forces you to revisit this site the day SceneView adds a new subtype (#1759). An `else ->` fallback silently defeats that contract.
 
 ```kotlin
@@ -238,6 +240,8 @@ Stream an ARCore or ARKit session to the [Rerun](https://rerun.io) viewer for sc
 - **Save & share** — sidecar writes a `.rrd` file. Drop it onto https://sceneview.github.io/rerun/ to view in-place, or re-host (R2, GitHub release, gist) and open `https://sceneview.github.io/rerun/?url=<encoded>` to share with remote teammates. Lets you attach a fully-replayable session to a bug report.
 
 The Android demo's Rerun Debug screen also draws the session **on the phone, with no computer**: a second `SceneView` on the same `Engine` (`SurfaceType.TextureSurface`, `isOpaque = true`, a custom `CameraGestureDetector.CameraManipulator`) shows the camera trail, the live frustum, the feature-point map, the planes and the anchors from a free orbit camera, with a timeline to scrub the session. It is demo code, not SDK API — `samples/android-demo/.../demos/ArDebugView.kt` is the pattern to copy for a second 3D view over an `ARSceneView`.
+
+Its export sheet also writes a recorded session to a `.rrd` with no sidecar and no Rerun SDK (`RerunRrdWriter`, pure Kotlin, Rerun 0.38.1 format). On Android the file opens on a default layout, written as a Rerun blueprint next to the recording: the room in 3D beside the camera's photos (2 : 1), the side panels collapsed, the time panel open. It is a *default* blueprint, so a layout the viewer's user saved for the app still wins, and "Reset to default blueprint" brings this one back. The iOS demo's writer does not write the layout yet.
 
 ### Architecture
 

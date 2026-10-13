@@ -20,24 +20,71 @@ const val AR_VIEW_SAMPLE_ID = "ar_view"
  *   create on every resume (`create()` at ON_CREATE, then `resume()` finds no session and
  *   creates again), so one visit to an AR screen on a device that cannot run AR reports the
  *   same failure twice, then once more per return from the background.
+ *
+ * Two things the funnel cannot say are filed with the crash reports instead, as problems the app
+ * survived (#4510) — no new analytics event, the taxonomy stays the one shared with iOS:
+ * - a session failure with no code of its own (`unknown`, `fatal`), with the exception that
+ *   caused it, once;
+ * - a session that delivers camera frames for [TRACKING_STALL_MS] and never tracks — the screen
+ *   that stays on "Getting ready" over a live camera image — with ARCore's own reason, once.
+ *   It carries the sample id, the reason and a duration: no image, no pose, nothing about the
+ *   place or the person.
+ *
+ * @param monotonicMillis the clock the stall is measured on; injected by the tests.
  */
-class ArFunnelLog(private val analytics: () -> DemoAnalytics = { Telemetry.analytics }) {
+class ArFunnelLog(
+    private val analytics: () -> DemoAnalytics = { Telemetry.analytics },
+    private val monotonicMillis: () -> Long = { System.nanoTime() / 1_000_000 },
+) {
     var sampleId: String = AR_VIEW_SAMPLE_ID
 
     private var tracked = false
     private var placedOnce = false
     private val failuresLogged = mutableSetOf<String>()
 
+    private var lastUntrackedFrameAt = NO_FRAME
+    private var untrackedForMillis = 0L
+    private var stallReported = false
+    private var lastFailureReason: TrackingFailureReason? = null
+
     fun sessionCreated() = analytics().log(AnalyticsEvent.ArSessionCreated(sampleId))
 
     /** Called on every frame (60 Hz): a single boolean check once tracking was reached. */
     fun frameTracked(isTracking: Boolean) {
-        if (tracked || !isTracking) return
+        if (tracked) return
+        if (!isTracking) {
+            if (!stallReported) countUntrackedFrame()
+            return
+        }
         tracked = true
         analytics().log(AnalyticsEvent.ArTrackingReady(sampleId))
     }
 
+    /**
+     * Adds this frame to the time spent receiving frames without ever tracking. Only the time
+     * between two frames close together counts, so a session left in the background for a
+     * minute is not a stalled one.
+     */
+    private fun countUntrackedFrame() {
+        val now = monotonicMillis()
+        val sinceLast = now - lastUntrackedFrameAt
+        if (lastUntrackedFrameAt != NO_FRAME && sinceLast in 0..MAX_FRAME_GAP_MS) {
+            untrackedForMillis += sinceLast
+        }
+        lastUntrackedFrameAt = now
+        if (untrackedForMillis < TRACKING_STALL_MS) return
+        stallReported = true
+        analytics().recordNonFatal(
+            ArTrackingStalled(
+                sampleId = sampleId,
+                reason = lastFailureReason?.name?.lowercase() ?: "none",
+                seconds = untrackedForMillis / 1_000,
+            ),
+        )
+    }
+
     fun trackingFailureChanged(reason: TrackingFailureReason?) {
+        lastFailureReason = reason
         reason ?: return
         analytics().log(AnalyticsEvent.ArTrackingLost(sampleId, reason.name.lowercase()))
     }
@@ -52,9 +99,28 @@ class ArFunnelLog(private val analytics: () -> DemoAnalytics = { Telemetry.analy
         val reason = failureReason(failure)
         if (!failuresLogged.add(reason)) return
         analytics().log(AnalyticsEvent.ArSessionFailed(sampleId, reason))
+        // `unknown` and `fatal` name no cause: the exception itself is the only lead.
+        if (failure is ARSessionFailure.Other || failure is ARSessionFailure.Fatal) {
+            analytics().recordNonFatal(failure.cause)
+        }
     }
 
+    /**
+     * An AR session that received camera frames for [seconds] and never reached tracking.
+     * [reason] is ARCore's `TrackingFailureReason` in lower case, or `none` when ARCore gave none.
+     */
+    class ArTrackingStalled(val sampleId: String, val reason: String, val seconds: Long) :
+        RuntimeException("AR never tracked in $sampleId after $seconds s of frames, reason=$reason")
+
     companion object {
+        /** Frames without tracking for this long, and the session is reported as stalled. */
+        const val TRACKING_STALL_MS = 10_000L
+
+        /** Two frames further apart than this are not the same stretch of frames. */
+        const val MAX_FRAME_GAP_MS = 1_000L
+
+        private const val NO_FRAME = -1L
+
         /**
          * A stable snake_case code per failure type, the same vocabulary as iOS. Spelled out
          * rather than derived from the class name, which R8 renames in a release build; the
