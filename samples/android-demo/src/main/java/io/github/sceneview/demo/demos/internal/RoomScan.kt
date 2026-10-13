@@ -362,20 +362,33 @@ enum class ScanBackState {
 }
 
 /** What Back does on the Record screen. */
-enum class ScanBackAction { Leave, Ask }
+enum class ScanBackAction {
+    /** Leave the screen at once. */
+    Leave,
+
+    /** Ask "Discard this scan?" first. */
+    Ask,
+
+    /** Stay on the screen: Back does nothing. */
+    Stay,
+}
 
 /**
- * Whether Back leaves the Record screen at once or asks first. A scan is taken walking, phone in
- * hand, where a swipe from the screen's edge is an accident waiting: Back asks before it drops a
- * scan that already holds something, and only then.
+ * What Back — the gesture and the arrow alike — does on the Record screen. A scan is taken
+ * walking, phone in hand, where a swipe from the screen's edge is an accident waiting: Back asks
+ * before it drops a scan that already holds something, and does nothing while that scan is saved.
  */
 object ScanBack {
     /**
-     * [points] is the count the scan's line shows. Nothing to lose before the first point, and
-     * nothing to ask once Stop was tapped: the scan is being saved, not dropped by a tap.
+     * [points] is the count the scan's line shows. Nothing to lose before the first point. Once
+     * Stop was tapped the scan is being built and saved, whatever it holds: leaving then cancelled
+     * the save and lost the scan (#4500), so Back waits for the scan to open.
      */
-    fun on(state: ScanBackState, points: Int): ScanBackAction =
-        if (state == ScanBackState.Recording && points > 0) ScanBackAction.Ask else ScanBackAction.Leave
+    fun on(state: ScanBackState, points: Int): ScanBackAction = when (state) {
+        ScanBackState.Building -> ScanBackAction.Stay
+        ScanBackState.Recording -> if (points > 0) ScanBackAction.Ask else ScanBackAction.Leave
+        ScanBackState.Waiting -> ScanBackAction.Leave
+    }
 }
 
 /** The clock of the scan's line. */

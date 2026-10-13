@@ -1092,15 +1092,24 @@ private fun RerunLiveScreen(
         arCoreAvailability == null && qaDebug == null && !qaRecord && qaState == null
     // Back — the gesture and the arrow alike — asks before it drops a scan that holds something
     // ([ScanBack]). The scan is not paused meanwhile: "Keep scanning" returns to one that lost
-    // nothing.
+    // nothing. Under "Building your scan…" Back does nothing at all: leaving would cancel the
+    // save this screen's scope runs, and the scan with it (#4500).
     val backState = when {
         finishing -> ScanBackState.Building
         recording -> ScanBackState.Recording
         else -> ScanBackState.Waiting
     }
-    val backAsks = ScanBack.on(backState, scanFigures?.points ?: 0) == ScanBackAction.Ask
+    val backAction = ScanBack.on(backState, scanFigures?.points ?: 0)
+    val backAsks = backAction == ScanBackAction.Ask
     var confirmingDiscard by remember { mutableStateOf(false) }
-    BackHandler(enabled = backAsks) { confirmingDiscard = true }
+    val scanBack = {
+        when (backAction) {
+            ScanBackAction.Ask -> confirmingDiscard = true
+            ScanBackAction.Stay -> Unit
+            ScanBackAction.Leave -> onBack()
+        }
+    }
+    BackHandler(enabled = backAction != ScanBackAction.Leave, onBack = scanBack)
     if (confirmingDiscard && backAsks) {
         ScanDiscardDialog(
             onDiscard = {
@@ -1112,7 +1121,7 @@ private fun RerunLiveScreen(
     }
     DemoScaffold(
         title = stringResource(R.string.demo_ar_rerun_title),
-        onBack = { if (backAsks) confirmingDiscard = true else onBack() },
+        onBack = scanBack,
         // The sheet holds what the screen must not (#4379): a scan's counts, the stream's status
         // and the connection steps a developer types once. The screen keeps the camera.
         controls = {

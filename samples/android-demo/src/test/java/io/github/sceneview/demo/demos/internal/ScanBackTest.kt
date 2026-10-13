@@ -1,7 +1,9 @@
 package io.github.sceneview.demo.demos.internal
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
 /**
  * Back on the Record screen: it asks only when leaving would drop a scan that holds something,
@@ -29,9 +31,41 @@ class ScanBackTest {
     }
 
     @Test
-    fun `back does not ask while the scan is built`() {
-        assertEquals(ScanBackAction.Leave, ScanBack.on(ScanBackState.Building, points = 0))
-        assertEquals(ScanBackAction.Leave, ScanBack.on(ScanBackState.Building, points = 4_000))
+    fun `back stays on the screen while the scan is built and saved`() {
+        // #4500: leaving here cancelled the save and lost the scan. Neither Leave nor Ask —
+        // "Discard" under "Building your scan…" would drop it just the same.
+        assertEquals(ScanBackAction.Stay, ScanBack.on(ScanBackState.Building, points = 0))
+        assertEquals(ScanBackAction.Stay, ScanBack.on(ScanBackState.Building, points = 4_000))
+    }
+
+    @Test
+    fun `only the building scan holds back in place`() {
+        val staying = ScanBackState.entries.filter { state ->
+            listOf(0, 1, 4_000).any { ScanBack.on(state, it) == ScanBackAction.Stay }
+        }
+        assertEquals(listOf(ScanBackState.Building), staying)
+    }
+
+    @Test
+    fun `the arrow and the gesture take the same decision`() {
+        // The decision has no notion of where Back came from, so the screen must hand both to
+        // the same handler: one `scanBack`, given to the system gesture and to the bar's arrow.
+        val record = File("src/main/java/io/github/sceneview/demo/demos/ARRerunDemo.kt").readText()
+            .substringAfter("val backAction = ScanBack.on(", missingDelimiterValue = "")
+            .replace(Regex("""\s+"""), " ")
+        assertTrue("the Record screen's Back decision was moved — point this test at it", record.isNotEmpty())
+        assertTrue(
+            "the gesture is not swallowed while the scan is built",
+            record.contains("BackHandler(enabled = backAction != ScanBackAction.Leave, onBack = scanBack)"),
+        )
+        assertTrue(
+            "the arrow does not go through the same decision as the gesture",
+            record.substringAfter("DemoScaffold(").substringBefore("controls = {").contains("onBack = scanBack,"),
+        )
+        assertTrue(
+            "Stay must do nothing: no dialog, no leaving",
+            record.contains("ScanBackAction.Stay -> Unit"),
+        )
     }
 
     @Test
