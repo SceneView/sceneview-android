@@ -553,7 +553,7 @@ fun SceneViewDemoApp(activity: MainActivity? = null) {
         if (!hasHome) {
             navController.navigate("list") { popUpTo(navController.graph.id) { inclusive = true } }
         }
-        navController.navigate("demo/$id") { popUpTo("list") }
+        navController.navigate("demo/$id")
         activity?.consumePendingPushDemo()
     }
 
@@ -723,7 +723,12 @@ fun SceneViewDemoApp(activity: MainActivity? = null) {
     }
 }
 
-/** Pushes a deep-linked demo above Home so leaving it disposes all destination-scoped work. */
+/**
+ * Opens a deep-linked demo directly above Home, so leaving it disposes all destination-scoped
+ * work. A link that arrives while another demo is open replaces that demo (#4502): Back
+ * returns to Home, exactly as after a cold start by the same link, never to the demo the link
+ * interrupted. A link to the demo already open replaces it too, so its `?tab=` is read again.
+ */
 @Composable
 internal fun PendingDemoNavigation(
     navController: NavHostController,
@@ -732,7 +737,7 @@ internal fun PendingDemoNavigation(
 ) {
     LaunchedEffect(pendingId) {
         val id = pendingId ?: return@LaunchedEffect
-        navController.navigate("demo/$id")
+        navController.navigate("demo/$id") { popUpTo("list") }
         onConsumed()
     }
 }
