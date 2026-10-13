@@ -272,6 +272,35 @@ so the eye lands on the one thing the screen is for.
   live on the App Store, with their App Store icon and name, and a tap opens the App
   Store listing — never another store's.
 
+### Website Home (`website-static/index.html`)
+
+The home page reads its palette from `website-static/assets/tokens.css` (CSS custom
+properties, dark and light) and `assets/site.css` never writes a colour literal: a
+value that is missing gets a token there first. Three groups are **the same in both
+themes** because their ground does not change with the theme — the code card and the
+command boxes stay dark, the media tiles are photographs, and the sheet scrim sits
+over whatever page is behind it.
+
+| Token | Value | Usage |
+|---|---|---|
+| `--code-strong` | #F3F5F9 | Selected code tab, hovered copy button — 17.5:1 on `--code-bg` (#0C1017) |
+| `--code-fg-2` | #B4BCCB | Copy icon at rest — 10.0:1 on `--code-bg` |
+| `--code-border` | #252D3B | Edge of the code card |
+| `--code-line` | #1F2633 | Rule between the tab strip, the code and the footer — decorative, never the only edge of a control |
+| `--code-hover` · `--code-hover-strong` | rgba(255,255,255,.04) · rgba(255,255,255,.08) | Hover wash on a tab · on the copy button |
+| `--code-ok` · `--code-alpha` | #5BD49A · #F5C66B | Platform status inside the card ("Stable" / "Alpha") — 10.3:1 and 12.0:1 on `--code-bg`. Outside the card, status uses the themed `--ok` / `--alpha` |
+| `--code-flash` | rgba(255,184,107,.35) | Wash on a code literal that just changed (`--syn-str` at 35%), fades to transparent |
+| `--media-bg` · `--media-void` | #07090D · #000 | Ground of a media tile · behind the galaxy photograph |
+| `--media-glow` | #1A2233 | Light pool at the top of the AR tile |
+| `--media-border` | #252D3B | Edge of a media tile |
+| `--media-fg` · `--media-fg-2` | #F3F5F9 · #B4BCCB | Title · caption and tag on a media tile — 18.3:1 and 10.4:1 on `--media-bg` |
+| `--media-accent` | #8AB4FF | Link on a media tile — 9.5:1 on `--media-bg` |
+| `--media-veil` · `--media-veil-0` | rgba(7,9,13,.94) · rgba(7,9,13,0) | Gradient under the caption so the text never sits on the picture |
+| `--media-dots` · `--media-ring` | rgba(138,180,255,.55) · rgba(243,245,249,.85) | Detected-plane dot grid · placement reticle in the AR tile |
+| `--media-chip` · `--media-chip-border` | rgba(28,34,48,.8) · rgba(255,255,255,.14) | Read-out chips in the AR tile |
+| `--scrim` | rgba(3,4,6,.6) | Behind the navigation sheet |
+| `--live` · `--live-halo` · `--live-halo-0` | #2FBF7A · rgba(47,191,122,.2) · rgba(47,191,122,0) | The dot next to "Live" on the 3D stage and its pulse. A dot only: the word beside it carries the state |
+
 ### Text
 
 | Token | Light | Dark | Usage |

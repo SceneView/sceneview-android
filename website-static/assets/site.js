@@ -104,42 +104,10 @@
     // The SDK zooms on wheel and calls preventDefault, which would trap the
     // page scroll over the canvas. Stop the event before it reaches the canvas.
     on(stage, 'wheel', function (e) { e.stopPropagation(); }, { capture: true, passive: true });
-    // Touch: the SDK calls preventDefault on every touchmove, which cancels the
-    // vertical pan the canvas allows (touch-action: pan-y) and holds the page
-    // still under the finger. Keep the touch events away from the canvas and
-    // turn the model here, through the public API: a sideways drag turns it,
-    // any other gesture is the browser's.
-    var drag = null;
-    function onCanvas(e) { return !!stage._sv && e.target.nodeName === 'CANVAS'; }
-    on(stage, 'touchstart', function (e) {
-      if (!onCanvas(e)) return;
-      e.stopPropagation();
-      clearTimeout(stage._resume);
-      drag = e.touches.length === 1 ? { x: e.touches[0].clientX, y: e.touches[0].clientY, angle: 0, turning: false } : null;
-    }, { capture: true, passive: true });
-    on(stage, 'touchmove', function (e) {
-      if (!onCanvas(e)) return;
-      e.stopPropagation();
-      if (!drag || e.touches.length !== 1) return;
-      var sv = stage._sv, t = e.touches[0], dx = t.clientX - drag.x;
-      if (!drag.turning) {
-        if (Math.abs(dx) < 8 || Math.abs(dx) <= Math.abs(t.clientY - drag.y)) return;
-        drag.turning = true; drag.x = t.clientX; drag.angle = sv.getCameraOrbit().angle; dx = 0;
-        sv.setAutoRotate(false);
-      }
-      sv.setCameraOrbit({ angle: drag.angle - dx * 0.005 });   // the SDK's own drag ratio
-    }, { capture: true, passive: true });
-    function release(e) {
-      if (!onCanvas(e)) return;
-      e.stopPropagation();
-      // Like the SDK after a mouse drag: the rotation picks up again 3 s later.
-      if (drag && drag.turning && stage._playing) {
-        stage._resume = setTimeout(function () { if (stage._sv && stage._playing) stage._sv.setAutoRotate(true); }, 3000);
-      }
-      drag = null;
-    }
-    on(stage, 'touchend', release, { capture: true, passive: true });
-    on(stage, 'touchcancel', release, { capture: true, passive: true });
+    // Touch: the canvas has touch-action: pan-y, so the SDK leaves a vertical
+    // swipe to the page and turns the model on a sideways drag. It cancels the
+    // moves it takes: those are the ones to lock to the fit, like the mouse.
+    on(stage, 'touchmove', function (e) { if (e.defaultPrevented) applyOrbit(stage); }, { passive: true });
   }
 
   // "minX,minY,minZ,maxX,maxY,maxZ" of the model, in its own units. Written in
@@ -166,13 +134,12 @@
       b.setAttribute('aria-pressed', String(!playing));
       b.setAttribute('aria-label', playing ? 'Pause the rotation' : 'Resume the rotation');
     }
-    stage._playing = playing;
     if (stage._sv) { stage._sv.setAutoRotate(playing); stage._sv.requestRender(); }
   }
 
   function park(entry) {
     try { entry.sv.dispose(); } catch (e) {}
-    clearTimeout(entry.stage._idle); clearTimeout(entry.stage._resume);
+    clearTimeout(entry.stage._idle);
     entry.stage.classList.remove('is-live', 'is-loading');
     var old = $('canvas', entry.stage), fresh = old.cloneNode(false);
     old.replaceWith(fresh);             // a disposed canvas cannot be re-initialised
