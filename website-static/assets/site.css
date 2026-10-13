@@ -228,11 +228,12 @@ code, pre, kbd { font-family: var(--font-mono); font-size: .875em; }
 .seg button[aria-selected="true"] { background: var(--stage-fg); color: var(--stage-bg); }
 .cmd {
   display: flex; align-items: center; gap: 8px; margin-top: 10px; min-height: 52px; padding: 6px 6px 6px 16px; border-radius: var(--r-md);
-  background: var(--code-bg); border: 1px solid #2A3242; font: 400 .8125rem/1.5 var(--font-mono); color: var(--code-fg);
+  background: var(--code-bg); border: 1px solid var(--code-edge); font: 400 .8125rem/1.5 var(--font-mono); color: var(--code-fg);
 }
 .cmd code { flex: 1; min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: inherit; }
 .cmd .pfx { color: var(--code-muted); user-select: none; }
 .cmd .str { color: var(--syn-str); }
+.cmd .nb { white-space: nowrap; }   /* a flag or a package name never splits at its hyphen */
 .copy { flex: none; width: 44px; height: 44px; display: grid; place-items: center; border-radius: var(--r-sm); color: #B4BCCB; }
 .copy:hover { background: rgba(255,255,255,.08); color: #F3F5F9; }
 .copy svg { width: 18px; height: 18px; }
@@ -410,6 +411,9 @@ code, pre, kbd { font-family: var(--font-mono); font-size: .875em; }
 
 /* ── AI section ───────────────────────────────────────────── */
 .ai { display: grid; gap: var(--s-6); }
+/* Same rhythm as .section__head (32px under the eyebrow, 16px under the title). */
+.ai .eyebrow { margin-bottom: var(--s-6); }
+.ai .lead { margin-top: var(--s-4); }
 .ai .lead code { font-size: .85em; }
 .ai__links { display: flex; flex-wrap: wrap; gap: 0 20px; margin-top: var(--s-4); font-size: .9375rem; }
 .ai__links a { color: var(--accent); display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-weight: 600; }

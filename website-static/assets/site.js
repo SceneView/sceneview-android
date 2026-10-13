@@ -95,16 +95,51 @@
     if (stage._sv) applyOrbit(stage);
   }
 
+  // Bound once per stage in mount(); every handler reads stage._sv when it runs.
   function attach(stage) {
-    // Lock the orbit to the fit: a horizontal drag turns the model, but the
-    // vertical part of a drag cannot lift the camera off the fitted height.
-    // The SDK's own handlers sit on the canvas; these run after them (bubble).
-    var relock = function () { applyOrbit(stage); };
-    on(stage, 'mousemove', function (e) { if (e.buttons) relock(); });
-    on(stage, 'touchmove', relock, { passive: true });
+    // Mouse: lock the orbit to the fit. A horizontal drag turns the model, but
+    // the vertical part of a drag cannot lift the camera off the fitted height.
+    // The SDK's own handlers sit on the canvas; this runs after them (bubble).
+    on(stage, 'mousemove', function (e) { if (e.buttons) applyOrbit(stage); });
     // The SDK zooms on wheel and calls preventDefault, which would trap the
     // page scroll over the canvas. Stop the event before it reaches the canvas.
     on(stage, 'wheel', function (e) { e.stopPropagation(); }, { capture: true, passive: true });
+    // Touch: the SDK calls preventDefault on every touchmove, which cancels the
+    // vertical pan the canvas allows (touch-action: pan-y) and holds the page
+    // still under the finger. Keep the touch events away from the canvas and
+    // turn the model here, through the public API: a sideways drag turns it,
+    // any other gesture is the browser's.
+    var drag = null;
+    function onCanvas(e) { return !!stage._sv && e.target.nodeName === 'CANVAS'; }
+    on(stage, 'touchstart', function (e) {
+      if (!onCanvas(e)) return;
+      e.stopPropagation();
+      clearTimeout(stage._resume);
+      drag = e.touches.length === 1 ? { x: e.touches[0].clientX, y: e.touches[0].clientY, angle: 0, turning: false } : null;
+    }, { capture: true, passive: true });
+    on(stage, 'touchmove', function (e) {
+      if (!onCanvas(e)) return;
+      e.stopPropagation();
+      if (!drag || e.touches.length !== 1) return;
+      var sv = stage._sv, t = e.touches[0], dx = t.clientX - drag.x;
+      if (!drag.turning) {
+        if (Math.abs(dx) < 8 || Math.abs(dx) <= Math.abs(t.clientY - drag.y)) return;
+        drag.turning = true; drag.x = t.clientX; drag.angle = sv.getCameraOrbit().angle; dx = 0;
+        sv.setAutoRotate(false);
+      }
+      sv.setCameraOrbit({ angle: drag.angle - dx * 0.005 });   // the SDK's own drag ratio
+    }, { capture: true, passive: true });
+    function release(e) {
+      if (!onCanvas(e)) return;
+      e.stopPropagation();
+      // Like the SDK after a mouse drag: the rotation picks up again 3 s later.
+      if (drag && drag.turning && stage._playing) {
+        stage._resume = setTimeout(function () { if (stage._sv && stage._playing) stage._sv.setAutoRotate(true); }, 3000);
+      }
+      drag = null;
+    }
+    on(stage, 'touchend', release, { capture: true, passive: true });
+    on(stage, 'touchcancel', release, { capture: true, passive: true });
   }
 
   // "minX,minY,minZ,maxX,maxY,maxZ" of the model, in its own units. Written in
@@ -131,12 +166,13 @@
       b.setAttribute('aria-pressed', String(!playing));
       b.setAttribute('aria-label', playing ? 'Pause the rotation' : 'Resume the rotation');
     }
+    stage._playing = playing;
     if (stage._sv) { stage._sv.setAutoRotate(playing); stage._sv.requestRender(); }
   }
 
   function park(entry) {
     try { entry.sv.dispose(); } catch (e) {}
-    clearTimeout(entry.stage._idle);
+    clearTimeout(entry.stage._idle); clearTimeout(entry.stage._resume);
     entry.stage.classList.remove('is-live', 'is-loading');
     var old = $('canvas', entry.stage), fresh = old.cloneNode(false);
     old.replaceWith(fresh);             // a disposed canvas cannot be re-initialised
@@ -164,7 +200,6 @@
     }).then(function (sv) {
       if (signal.aborted) { sv.dispose(); return; }
       stage._sv = sv; live.push({ stage: stage, sv: sv });
-      attach(stage);
       return sv.loadModel(stage.dataset.src).then(function () {
         applyFit(stage, sv);
         if (stage.dataset.anim && stage._animate !== false) sv.playAnimation(parseInt(stage.dataset.anim, 10), true);
@@ -256,7 +291,8 @@
         });
       }
       var card = list.closest('.codecard');
-      var status = card && $('[data-status]', card);
+      // The tabs carry data-status too: aim at the footer, or the first tab is rewritten.
+      var status = card && $('.codecard__foot [data-status]', card);
       if (status && tab.dataset.status) { status.className = 'status status--' + tab.dataset.status; status.textContent = tab.dataset.statusLabel || tab.dataset.status; }
       var qlink = card && $('[data-quickstart]', card);
       if (qlink && tab.dataset.href) { qlink.href = tab.dataset.href; qlink.textContent = 'Quickstart · ' + tab.textContent + ' →'; }
@@ -351,6 +387,7 @@
     $$('[data-stage]').forEach(function (stage) {
       var wrap = stage.closest('[data-stage-wrap]') || stage;
       var btn = $('.stage__load', wrap), pause = $('.stage__pause', wrap);
+      attach(stage);
       on(btn, 'click', function () { goLive(stage); });
       on(pause, 'click', function () { clearTimeout(stage._idle); setPlaying(stage, pause.getAttribute('aria-pressed') === 'true'); });
       var mode = stage.dataset.autoload || 'tap';
