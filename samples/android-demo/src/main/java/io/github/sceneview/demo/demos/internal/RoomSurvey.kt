@@ -16,14 +16,21 @@ import kotlin.math.sqrt
  *
  * The walls are measured on the cloud's vertical surfels — one line per wall, each facing the
  * room — never on the extent of the cloud or of ARCore's planes: a plane grows past the wall it
- * lies on and a stray point beyond a window is still a point, which is how a bounding rectangle
- * read a room at 1.7 times its walls (#4328). The floor is the densest layer of upward-facing
- * surfels under the camera, not the lowest horizontal plane.
+ * lies on and a stray point beyond a window is still a point, so a bounding rectangle reads a
+ * room larger than its walls (#4328). The floor is the lowest well-seen layer of upward-facing
+ * surfels under the camera, not the lowest horizontal plane nor the densest one.
  *
  * What the scan did not see is not invented: a wall seen on less than [MIN_SEEN_SHARE] of its
- * length is an estimate, and no area is given unless two pairs of facing walls were seen. Every
- * figure carries the spread of the surfels it was read from. Same cloud, same figures: nothing
- * here is random or order-dependent beyond floating-point sums over the cloud's own order.
+ * length is an estimate, and so is every length that ends on it; no area is given unless two
+ * pairs of facing walls were seen. A measured figure carries the scatter of the surfels it was
+ * read from — a scatter, not an accuracy — and an estimate carries none: it was not measured.
+ * Same cloud, same figures: nothing here is random or order-dependent beyond floating-point sums
+ * over the cloud's own order.
+ *
+ * What it cannot tell, it says or documents: walls are read at right angles to each other (one
+ * that is not gives [SurveyGap.ObliqueWall]); a tall piece of furniture is told from the wall
+ * only when the wall was seen above it; a floor seen on less than [RoomSurveyor.FLOOR_RIVAL_SHARE]
+ * of the densest horizontal layer above it is taken for noise.
  */
 
 /** A scan as the survey reads it: the dense cloud's surfels ([normals] per point) and the camera's path. */
@@ -33,8 +40,17 @@ class RoomSurveyInput(
     val trail: FloatArray = FloatArray(0),
 )
 
-/** One figure: its [value], the spread it was read with ([plusMinus]), and whether part of it was not seen. */
-data class SurveyFigure(val value: Float, val plusMinus: Float, val estimate: Boolean = false)
+/**
+ * One figure: its [value], the scatter of the surfels it was read from ([plusMinus] — not an
+ * accuracy), and whether part of it was not seen. An [estimate] has no scatter: [plusMinus] is 0.
+ */
+data class SurveyFigure(val value: Float, val plusMinus: Float, val estimate: Boolean = false) {
+    companion object {
+        /** A figure read with [spread] — which an [estimate], not being measured, does not carry. */
+        fun of(value: Float, spread: Float, estimate: Boolean) =
+            SurveyFigure(value, if (estimate) 0f else spread, estimate)
+    }
+}
 
 /**
  * One wall of the outline, from ([ax], [ay]) to ([bx], [by]) in the plan's own frame: metres, x
@@ -70,6 +86,9 @@ enum class SurveyGap {
     /** Fewer than two pairs of facing walls: no area is given. */
     MissingWall,
 
+    /** A wall stands square to no other: the plan draws right angles only, so its area is an estimate. */
+    ObliqueWall,
+
     /** Too little ceiling seen for a height. */
     Ceiling,
 }
@@ -101,7 +120,12 @@ class RoomSurvey(
     /** `true` when any figure or wall is an estimate: the exports then explain the mark. */
     val hasEstimates: Boolean
         get() = walls.any { it.length.estimate } || area?.estimate == true || length?.estimate == true ||
-            width?.estimate == true
+            width?.estimate == true || perimeter?.estimate == true || ceilingHeight?.estimate == true
+
+    /** `true` when any figure is measured, and so carries a ±: the exports then say what the ± is. */
+    val hasSpread: Boolean
+        get() = (walls.map { it.length } + listOfNotNull(area, length, width, perimeter, ceilingHeight))
+            .any { !it.estimate }
 
     companion object {
         fun empty(gap: SurveyGap) =
@@ -124,7 +148,10 @@ object RoomSurveyor {
     /** A wall is a line seen on at least this much of its length. */
     const val MIN_WALL_SEEN_M = 0.6f
 
-    /** Layers of one wall — a scan that drifted draws a wall twice, some 22 cm apart — are one wall within this. */
+    /**
+     * Layers of one wall are one wall within this: a scan that drifted draws a wall twice, and
+     * 0.3 m is under the thinnest gap two real facing walls leave between them.
+     */
     const val WALL_MERGE_M = 0.3f
 
     /** A ceiling is a height only once this much of it was seen. */
@@ -133,8 +160,21 @@ object RoomSurveyor {
     /** The lowest a ceiling is looked for above the floor. */
     const val MIN_CEILING_M = 2f
 
-    /** The spread given to a side of the outline no wall was seen on. */
-    const val UNSEEN_SPREAD_M = 0.25f
+    /**
+     * The lowest horizontal layer holding this share of the densest one's surfels is the floor: a
+     * bed or a table scanned closely can outweigh the floor around it, a stray patch under the
+     * floor cannot weigh a quarter of it.
+     */
+    const val FLOOR_RIVAL_SHARE = 0.25f
+
+    /** A vertical face is furniture when the same wall is seen this much higher, within [STRIP_M] behind it. */
+    const val FURNITURE_UNDER_M = 0.2f
+
+    /** Ceiling seen this far from the height that is given, over [MIN_CEILING_AREA_M2], is a second level. */
+    const val CEILING_LEVEL_M = 0.2f
+
+    /** A wall square to no other is said once this much of it bounds the room. */
+    const val OBLIQUE_MIN_M = 1f
 
     /** No figure is given tighter than this, however thin the wall read. */
     const val MIN_SPREAD_M = 0.02f
@@ -163,6 +203,9 @@ object RoomSurveyor {
     private const val CLOSURE_SNAP_M = 0.3f
     private const val MAX_LINES = 12
     private const val CLASSES = 4
+
+    /** The fifth kind of vertical surfel: one facing none of the four ways the room is squared to. */
+    private const val OBLIQUE = 4
     private const val U_PLUS = 0
     private const val U_MINUS = 1
     private const val V_PLUS = 2
@@ -201,31 +244,36 @@ object RoomSurveyor {
         val ceilingH = ArrayList<Float>()
         val ceilingCell = ArrayList<Int>()
         grid.fill(input.positions, normals, floorY, c, s, ceilingH, ceilingCell)
+        grid.sortFurniture()
 
         val linesU = linesOf(grid, U_PLUS, vertical = true) + linesOf(grid, U_MINUS, vertical = true)
         val linesV = linesOf(grid, V_PLUS, vertical = false) + linesOf(grid, V_MINUS, vertical = false)
         if (linesU.isEmpty() && linesV.isEmpty()) {
-            val height = ceilingOf(ceilingH, ceilingCell, grid, floor[1], null)
+            val height = ceilingOf(ceilingH, ceilingCell, grid, floor, null)
             return RoomSurvey(
                 emptyList(), 0f, 0f, null, null, null, null, height,
                 listOfNotNull(SurveyGap.NoWalls, SurveyGap.Ceiling.takeIf { height == null }), floorY, floor[1], yaw,
             )
         }
         val reach = grid.reach(input.trail, c, s)
+        val oblique = grid.obliqueReached(reach) * CELL_M >= OBLIQUE_MIN_M
         val coordsU = coordsOf(linesU, grid.closures(reach, vertical = true))
         val coordsV = coordsOf(linesV, grid.closures(reach, vertical = false))
         val edges = outlineOf(grid, reach, coordsU, coordsV, input.trail, c, s)
         if (edges.size < CLASSES) return RoomSurvey.empty(SurveyGap.NoWalls)
-        return assemble(edges, coordsU, coordsV, grid, floor, yaw, ceilingH, ceilingCell)
+        return assemble(edges, coordsU, coordsV, grid, floor, yaw, ceilingH, ceilingCell, oblique)
     }
 
     // ── Floor and orientation ────────────────────────────────────────────────────────────────
 
     /**
-     * `[y, thickness]` of the floor: the densest layer of upward-facing surfels under the camera.
-     * A real floor is 17 to 26 cm thick in a phone's cloud; its height is the layer's mean.
+     * `[y, thickness, rival]` of the floor: the lowest layer of upward-facing surfels under the
+     * camera that holds [FLOOR_RIVAL_SHARE] of the densest one. Its height is the layer's mean,
+     * over a band of ± [FLOOR_BAND_BINS] bins: wide enough for the layer a drifting scan
+     * thickens, narrower than the lowest seat. `rival` is 1 when a denser layer lies above it —
+     * a bed, a table: the floor is then the lower one, and the height read from it an estimate.
      */
-    @Suppress("LoopWithTooManyJumpStatements") // one skip per surfel that is not of this kind
+    @Suppress("LoopWithTooManyJumpStatements", "CyclomaticComplexMethod") // one skip per surfel of another kind
     private fun floorOf(positions: FloatArray, normals: FloatArray, trail: FloatArray): FloatArray? {
         val n = positions.size / 3
         var lo = Float.POSITIVE_INFINITY
@@ -252,7 +300,12 @@ object RoomSurveyor {
             if (y < lo || y >= hi) continue
             hist[((y - lo) / BIN_M).toInt().coerceIn(0, bins - 1)]++
         }
-        val peak = peakOf(hist, FLOOR_SMOOTH_BINS) ?: return null
+        val windows = windowsOf(hist, FLOOR_SMOOTH_BINS)
+        val densest = peakOf(windows, 0, bins - 1) ?: return null
+        val need = windows[densest] * FLOOR_RIVAL_SHARE
+        val lowest = (0 until bins).first { windows[it] >= need }
+        val peak = peakOf(windows, lowest, min(bins - 1, lowest + FLOOR_BAND_BINS)) ?: return null
+        val rival = densest - peak > FLOOR_BAND_BINS
         val from = max(0, peak - FLOOR_BAND_BINS)
         val to = min(bins - 1, peak + FLOOR_BAND_BINS)
         var weight = 0L
@@ -271,27 +324,36 @@ object RoomSurveyor {
             if (acc <= weight * TAIL) low = b
             if (acc < weight * (1 - TAIL)) high = b + 1
         }
-        return floatArrayOf((sum / weight).toFloat(), (min(high, to) - low + 1) * BIN_M)
+        return floatArrayOf((sum / weight).toFloat(), (min(high, to) - low + 1) * BIN_M, if (rival) 1f else 0f)
     }
 
-    /**
-     * The index where [hist], summed over ± [radius] bins, is highest; `null` when empty. A thin
-     * layer makes that sum a plateau as wide as the window: its middle is the layer, not its edge.
-     */
-    private fun peakOf(hist: IntArray, radius: Int): Int? {
-        var best = 0L
-        var first = -1
-        var last = -1
+    /** [hist] summed over ± [radius] bins around each. */
+    private fun windowsOf(hist: IntArray, radius: Int): LongArray {
+        val windows = LongArray(hist.size)
         var window = 0L
         for (b in 0 until min(radius, hist.size)) window += hist[b]
         for (b in hist.indices) {
             if (b + radius < hist.size) window += hist[b + radius]
             if (b - radius - 1 >= 0) window -= hist[b - radius - 1]
-            if (window > best) {
-                best = window
+            windows[b] = window
+        }
+        return windows
+    }
+
+    /**
+     * The index in [from]..[to] where [windows] is highest; `null` when empty. A thin layer makes
+     * that sum a plateau as wide as the window: its middle is the layer, not its edge.
+     */
+    private fun peakOf(windows: LongArray, from: Int, to: Int): Int? {
+        var best = 0L
+        var first = -1
+        var last = -1
+        for (b in from..to) {
+            if (windows[b] > best) {
+                best = windows[b]
                 first = b
                 last = b
-            } else if (window == best && last == b - 1) {
+            } else if (windows[b] == best && last == b - 1) {
                 last = b
             }
         }
@@ -319,10 +381,16 @@ object RoomSurveyor {
     /** The cloud on a [CELL_M] grid squared to the room: what stands in each cell, per facing. */
     private class Grid(val minU: Float, val minV: Float, val nu: Int, val nv: Int) {
         val occupied = BooleanArray(nu * nv)
-        val counts = Array(CLASSES) { IntArray(nu * nv) }
-        val lows = Array(CLASSES) { FloatArray(nu * nv) { Float.POSITIVE_INFINITY } }
-        val highs = Array(CLASSES) { FloatArray(nu * nv) { Float.NEGATIVE_INFINITY } }
-        val sums = Array(CLASSES) { FloatArray(nu * nv) }
+        val counts = Array(CLASSES + 1) { IntArray(nu * nv) }
+        val lows = Array(CLASSES + 1) { FloatArray(nu * nv) { Float.POSITIVE_INFINITY } }
+        val highs = Array(CLASSES + 1) { FloatArray(nu * nv) { Float.NEGATIVE_INFINITY } }
+        val sums = Array(CLASSES + 1) { FloatArray(nu * nv) }
+
+        /** Faces that are furniture: the same wall was seen higher behind them. */
+        val fronted = Array(CLASSES + 1) { BooleanArray(nu * nv) }
+
+        /** Walls seen over furniture: a wall there however short the stretch that shows. */
+        val backed = Array(CLASSES + 1) { BooleanArray(nu * nv) }
 
         fun cell(u: Float, v: Float): Int {
             val iu = floor((u - minU) / CELL_M).toInt()
@@ -330,10 +398,41 @@ object RoomSurveyor {
             return if (iu in 0 until nu && iv in 0 until nv) iv * nu + iu else -1
         }
 
-        fun wall(k: Int, cell: Int): Boolean = counts[k][cell] >= WALL_CELL_SURFELS &&
-            highs[k][cell] - lows[k][cell] >= WALL_CELL_SPAN_M && highs[k][cell] >= WALL_MIN_TOP_M
+        /** Enough surfels of facing [k], reaching high enough, to be a wall if they span enough of it. */
+        private fun stands(k: Int, cell: Int): Boolean =
+            counts[k][cell] >= WALL_CELL_SURFELS && highs[k][cell] >= WALL_MIN_TOP_M
 
-        fun anyWall(cell: Int): Boolean = (0 until CLASSES).any { wall(it, cell) }
+        fun wall(k: Int, cell: Int): Boolean = stands(k, cell) && !fronted[k][cell] &&
+            (highs[k][cell] - lows[k][cell] >= WALL_CELL_SPAN_M || backed[k][cell])
+
+        fun anyWall(cell: Int): Boolean = (0..CLASSES).any { wall(it, cell) }
+
+        /**
+         * Tells tall furniture from the wall behind it: a face is furniture when the same facing
+         * is seen [FURNITURE_UNDER_M] higher within [STRIP_M] behind it — the wall, showing over
+         * a wardrobe. A face with no wall seen over it cannot be told from one, and stays a wall.
+         */
+        fun sortFurniture() {
+            val depth = (STRIP_M / CELL_M).toInt()
+            for (k in 0 until CLASSES) {
+                // Behind a face is the way it does not look.
+                val back = (if (k == U_PLUS || k == V_PLUS) -1 else 1) * (if (k < V_PLUS) 1 else nu)
+                for (at in 0 until nu * nv) {
+                    if (!stands(k, at)) continue
+                    val behind = (1..depth).map { at + it * back }
+                        .takeWhile { it in 0 until nu * nv && (k >= V_PLUS || it / nu == at / nu) }
+                        .firstOrNull { stands(k, it) && highs[k][it] >= highs[k][at] + FURNITURE_UNDER_M }
+                    if (behind != null) {
+                        fronted[k][at] = true
+                        backed[k][behind] = true
+                    }
+                }
+            }
+        }
+
+        /** How many cells of a wall square to no other the room reaches — none stands where a squared wall does. */
+        fun obliqueReached(reach: BooleanArray): Int =
+            reach.indices.count { reach[it] && wall(OBLIQUE, it) && (0 until CLASSES).none { k -> wall(k, it) } }
 
         // The one pass over the cloud, one skip per surfel that is not of this kind.
         @Suppress("LongParameterList", "CyclomaticComplexMethod", "LoopWithTooManyJumpStatements")
@@ -371,7 +470,7 @@ object RoomSurveyor {
                     -nu >= AXIS * flat -> U_MINUS
                     nv >= AXIS * flat -> V_PLUS
                     -nv >= AXIS * flat -> V_MINUS
-                    else -> continue
+                    else -> OBLIQUE
                 }
                 counts[k][at]++
                 lows[k][at] = min(lows[k][at], h)
@@ -485,8 +584,8 @@ object RoomSurveyor {
     /**
      * The walls of one facing: the strongest line first, then the next outside its
      * [WALL_MERGE_M], each kept only when seen on [MIN_WALL_SEEN_M]. A wall's position is the
-     * mean of its surfels and its spread their deviation — two layers 22 cm apart are one wall,
-     * given ± 11 cm.
+     * mean of its surfels and its spread their deviation — two layers of one wall are one wall,
+     * given half their distance as its scatter.
      */
     @Suppress("NestedBlockDepth", "CyclomaticComplexMethod", "LongMethod", "LoopWithTooManyJumpStatements")
     private fun linesOf(grid: Grid, k: Int, vertical: Boolean): List<Line> {
@@ -762,6 +861,7 @@ object RoomSurveyor {
         yaw: Float,
         ceilingH: List<Float>,
         ceilingCell: List<Int>,
+        oblique: Boolean,
     ): RoomSurvey {
         val n = edges.size
         val lines = edges.map { (if (it.vertical) coordsU else coordsV)[it.coord].line(it.facing) }
@@ -791,13 +891,14 @@ object RoomSurveyor {
         val seen = BooleanArray(n) { lines[it] != null && shares[it] >= MIN_SEEN_SHARE }
         if (seen.none { it }) {
             // An outline with no wall seen on it would only be the extent of the floor: not drawn.
-            val height = ceilingOf(ceilingH, ceilingCell, grid, floor[1], null)
+            val height = ceilingOf(ceilingH, ceilingCell, grid, floor, null)
             return RoomSurvey(
                 emptyList(), 0f, 0f, null, null, null, null, height,
                 listOfNotNull(SurveyGap.NoWalls, SurveyGap.Ceiling.takeIf { height == null }), floor[0], floor[1], yaw,
             )
         }
-        val spread = FloatArray(n) { if (seen[it]) lines[it]!!.spread else UNSEEN_SPREAD_M }
+        // A side that was not seen has no scatter to give: what is read from it is an estimate.
+        val spread = FloatArray(n) { if (seen[it]) lines[it]!!.spread else 0f }
 
         // The page frame: the room's longer side along x, its top-left corner at the origin.
         val minU = cu.min()
@@ -816,10 +917,9 @@ object RoomSurveyor {
             SurveyWall(
                 tag = tagOf(k),
                 ax = px[i], ay = py[i], bx = px[next], by = py[next],
-                length = SurveyFigure(
-                    length,
-                    spread[before] + spread[next],
-                    !seen[i] || lines[before] == null || lines[next] == null,
+                // A wall runs from one neighbour to the other: it is measured when all three were seen.
+                length = SurveyFigure.of(
+                    length, spread[before] + spread[next], estimate = !seen[i] || !seen[before] || !seen[next],
                 ),
                 seenShare = shares[i],
                 seen = seen[i],
@@ -839,21 +939,26 @@ object RoomSurveyor {
         }
         val whole = pairU && pairV
         val bounds = floatArrayOf(minU, minV, minU + extentU, minV + extentV)
-        val height = ceilingOf(ceilingH, ceilingCell, grid, floor[1], bounds)
+        val height = ceilingOf(ceilingH, ceilingCell, grid, floor, bounds)
+        val rough = oblique || seen.any { !it }
         return RoomSurvey(
             walls = walls,
             planLength = max(extentU, extentV),
             planWidth = min(extentU, extentV),
             length = if (turned) alongV else alongU,
             width = if (turned) alongU else alongV,
-            area = SurveyFigure(abs(area / 2).toFloat(), areaSpread, seen.any { !it }).takeIf { whole },
-            perimeter = SurveyFigure(
+            area = SurveyFigure.of(abs(area / 2).toFloat(), areaSpread, rough).takeIf { whole },
+            perimeter = SurveyFigure.of(
                 walls.sumOf { it.length.value.toDouble() }.toFloat(),
                 walls.sumOf { it.length.plusMinus.toDouble() }.toFloat(),
-                seen.any { !it },
+                rough,
             ).takeIf { whole },
             ceilingHeight = height,
-            gaps = listOfNotNull(SurveyGap.MissingWall.takeIf { !whole }, SurveyGap.Ceiling.takeIf { height == null }),
+            gaps = listOfNotNull(
+                SurveyGap.MissingWall.takeIf { !whole },
+                SurveyGap.ObliqueWall.takeIf { oblique },
+                SurveyGap.Ceiling.takeIf { height == null },
+            ),
             floorY = floor[0],
             floorThickness = floor[1],
             yaw = yaw,
@@ -912,19 +1017,23 @@ object RoomSurveyor {
         val high = sides.maxBy { pos[it] }
         // Every side on the outermost coordinates has to be seen for the extent to be measured.
         val outer = sides.filter { pos[it] == pos[low] || pos[it] == pos[high] }
-        return SurveyFigure(pos[high] - pos[low], spread[low] + spread[high], outer.any { !seen[it] })
+        return SurveyFigure.of(pos[high] - pos[low], spread[low] + spread[high], outer.any { !seen[it] })
     }
 
     /**
-     * The ceiling's height: the densest layer of downward-facing surfels at [MIN_CEILING_M] or
-     * more, once [MIN_CEILING_AREA_M2] of it was seen over the room ([bounds], grid frame). Its
-     * spread carries the floor's thickness: the height is read between two thick layers.
+     * The ceiling's height above the [floor] (`[y, thickness, rival]`): the densest layer of
+     * downward-facing surfels at [MIN_CEILING_M] or more, once [MIN_CEILING_AREA_M2] of it was
+     * seen over the room ([bounds], grid frame). Its spread carries the floor's thickness: the
+     * height is read between two thick layers. It is an estimate when the room has more than one
+     * to give — a second ceiling level [CEILING_LEVEL_M] away, or a floor that was not the
+     * densest layer under the camera.
      */
+    @Suppress("LoopWithTooManyJumpStatements") // one skip per surfel outside the room
     private fun ceilingOf(
         heights: List<Float>,
         cells: List<Int>,
         grid: Grid,
-        floorThickness: Float,
+        floor: FloatArray,
         bounds: FloatArray?,
     ): SurveyFigure? {
         if (heights.isEmpty()) return null
@@ -938,13 +1047,17 @@ object RoomSurveyor {
         for (i in heights.indices) {
             if (inside(cells[i])) hist[((heights[i] - MIN_CEILING_M) / BIN_M).toInt().coerceIn(0, hist.size - 1)]++
         }
-        val peak = peakOf(hist, FLOOR_SMOOTH_BINS)?.let { MIN_CEILING_M + (it + HALF) * BIN_M } ?: return null
+        val peak = peakOf(windowsOf(hist, FLOOR_SMOOTH_BINS), 0, hist.size - 1)
+            ?.let { MIN_CEILING_M + (it + HALF) * BIN_M } ?: return null
         val seen = HashSet<Int>()
+        val elsewhere = HashSet<Int>()
         var sum = 0.0
         var squares = 0.0
         var count = 0
         for (i in heights.indices) {
-            if (!inside(cells[i]) || abs(heights[i] - peak) > CEILING_BAND_M) continue
+            if (!inside(cells[i])) continue
+            if (abs(heights[i] - peak) > CEILING_LEVEL_M) elsewhere += cells[i]
+            if (abs(heights[i] - peak) > CEILING_BAND_M) continue
             seen += cells[i]
             sum += heights[i]
             squares += heights[i].toDouble() * heights[i]
@@ -953,7 +1066,8 @@ object RoomSurveyor {
         if (seen.size * CELL_M * CELL_M < MIN_CEILING_AREA_M2) return null
         val mean = sum / count
         val spread = sqrt(max(0.0, squares / count - mean * mean)).toFloat()
-        return SurveyFigure(mean.toFloat(), max(MIN_SPREAD_M, floorThickness / 2 + spread))
+        val levels = elsewhere.size * CELL_M * CELL_M >= MIN_CEILING_AREA_M2
+        return SurveyFigure.of(mean.toFloat(), max(MIN_SPREAD_M, floor[1] / 2 + spread), levels || floor[2] > 0f)
     }
 
     private const val HALF = 0.5f

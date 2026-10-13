@@ -25,7 +25,7 @@ class RoomPlanLayoutTest {
             val seen = i !in unseen
             SurveyWall(
                 RoomSurveyor.tagOf(i), corners[i * 2], corners[i * 2 + 1], corners[j * 2], corners[j * 2 + 1],
-                SurveyFigure(length, if (seen) 0.03f else 0.25f, estimate = !seen),
+                SurveyFigure(length, if (seen) 0.03f else 0f, estimate = !seen),
                 if (seen) 1f else 0f, seen, if (seen) emptyList() else listOf(0f..length),
             )
         }
@@ -142,13 +142,57 @@ class RoomPlanLayoutTest {
     }
 
     @Test
-    fun `lengths round to 5 cm and areas to half a square metre`() {
+    fun `lengths round to 5 cm and areas to a tenth of a square metre`() {
         assertEquals("3.60", SurveyFormat.length(3.62f))
         assertEquals("3.65", SurveyFormat.length(3.63f))
-        assertEquals("14.5", SurveyFormat.area(14.3f))
-        assertEquals("14.0", SurveyFormat.area(14.2f))
-        assertEquals("20.0 m² ± 0.5", SurveyReport.area(SurveyFigure(19.9f, 0.3f)))
-        assertEquals("≈ 5.00 m ± 0.25", SurveyReport.length(SurveyFigure(4.98f, 0.25f, estimate = true)))
+        assertEquals("14.3", SurveyFormat.area(14.26f))
+        assertEquals("14.2", SurveyFormat.area(14.24f))
+        assertEquals("19.9 m² ± 0.3", SurveyReport.area(SurveyFigure(19.9f, 0.3f)))
+        assertEquals("5.00 m ± 0.05", SurveyReport.length(SurveyFigure(4.98f, 0.03f)))
+    }
+
+    @Test
+    fun `an estimate is marked and carries no plus-minus, on the table, the plan and the text`() {
+        assertEquals("≈ 5.00 m", SurveyReport.length(SurveyFigure.of(4.98f, 0.25f, estimate = true)))
+        assertEquals("≈ 19.9 m²", SurveyReport.area(SurveyFigure.of(19.9f, 0.3f, estimate = true)))
+        val rough = RoomSurvey(
+            rectangle.walls, 5f, 4f,
+            SurveyFigure(5f, 0f, estimate = true), SurveyFigure(4f, 0.03f),
+            SurveyFigure(20f, 0f, estimate = true), SurveyFigure(18f, 0f, estimate = true),
+            SurveyFigure(2.5f, 0f, estimate = true), listOf(SurveyGap.ObliqueWall), 0f, 0.02f, 0f,
+        )
+
+        val rows = SurveyReport.rows(rough, WORDING).map { it.value }
+        assertEquals(listOf("≈ 20.0 m²", "≈ 5.00 × 4.00 m", "≈ 18.00 m", "≈ 2.50 m"), rows)
+        val texts = SurveyReport.planTexts(rough, WORDING)
+        assertEquals("≈ 20.0 m²", texts.area)
+        assertNull(texts.areaNote)
+        assertClean(layout(rough))
+        val text = SurveyReport.text(rough, WORDING, "Attic", null)
+        assertEquals("Attic", text.lines().first())
+        assertTrue(text.contains("Floor area: ≈ 20.0 m² · Length × width: ≈ 5.00 × 4.00 m · Perimeter: ≈ 18.00 m"))
+        assertTrue(text.contains("This wall is not square to the others."))
+        assertTrue(text.contains(WORDING.estimateNote))
+        // Its walls are measured: their ± is explained.
+        assertTrue(text.contains(WORDING.spreadNote))
+    }
+
+    @Test
+    fun `the screen, the PDF and the text read the same rows and the same notes`() {
+        val survey = surveyOf(0f, 0f, 5f, 0f, 5f, 4f, 0f, 4f, unseen = setOf(1), measured = false)
+        val text = SurveyReport.text(survey, WORDING, "Bedroom", "13 Oct 2026")
+
+        for (row in SurveyReport.rows(survey, WORDING)) {
+            assertTrue(row.value, text.contains(row.label + ": " + row.value))
+        }
+        SurveyReport.wallRows(survey, WORDING).forEachIndexed { i, row ->
+            assertTrue(row.value, text.contains(survey.walls[i].tag + " " + row.value))
+        }
+        for (note in SurveyReport.notes(survey, WORDING)) assertTrue(note, text.contains(note))
+        for (hint in SurveyReport.hints(survey, WORDING)) assertTrue(hint, text.contains(hint))
+        assertEquals(listOf(WORDING.estimateNote, WORDING.spreadNote), SurveyReport.notes(survey, WORDING))
+        // Nothing measured, nothing to explain a ± for.
+        assertEquals(emptyList<String>(), SurveyReport.notes(RoomSurvey.empty(SurveyGap.NoWalls), WORDING))
     }
 
     @Test
@@ -156,15 +200,27 @@ class RoomPlanLayoutTest {
         val text = SurveyReport.text(rectangle, WORDING, "Living room", "13 Oct 2026")
         val lines = text.lines()
 
-        assertTrue(lines.size in 3..6)
+        assertTrue(lines.size in 3..7)
         assertEquals("Living room · 13 Oct 2026", lines.first())
-        assertTrue(lines[1].contains("Floor area: 20.0 m² ± 0.5"))
-        assertTrue(lines[1].contains("Length × width: 5.00 × 4.00 m"))
-        assertTrue(text.contains("Ceiling height: 2.50 m"))
-        assertTrue(text.contains("Walls: A 5.00 m, B 4.00 m, C 5.00 m, D 4.00 m"))
+        assertTrue(lines[1].contains("Floor area: 20.0 m² ± 0.3"))
+        assertTrue(lines[1].contains("Length × width: 5.00 × 4.00 m ± 0.05"))
+        assertTrue(text.contains("Ceiling height: 2.50 m ± 0.05"))
+        // A measured wall keeps its ±, as on the screen and the PDF.
+        assertTrue(text.contains("Walls: A 5.00 m ± 0.05, B 4.00 m ± 0.05, C 5.00 m ± 0.05, D 4.00 m ± 0.05"))
         assertTrue(lines.last().startsWith(WORDING.notice))
+        // Every ± is explained, once.
+        assertEquals(WORDING.spreadNote, lines[lines.size - 2])
         // Nothing here is an estimate: the text does not explain a mark it does not use.
         assertFalse(text.contains("≈"))
+        assertFalse(text.contains(WORDING.estimateNote))
+    }
+
+    @Test
+    fun `a scan without a date gives none, never today's`() {
+        val text = SurveyReport.text(rectangle, WORDING, "Living room", null)
+
+        assertEquals("Living room", text.lines().first())
+        assertEquals("Living room", SurveyReport.heading(WORDING, "Living room", null))
     }
 
     @Test
@@ -173,10 +229,12 @@ class RoomPlanLayoutTest {
         val text = SurveyReport.text(survey, WORDING, "Bedroom", "13 Oct 2026")
         val rows = SurveyReport.rows(survey, WORDING)
 
-        assertTrue(text.lines().size in 3..6)
-        assertTrue(text.contains("Floor area: not measured (Scan the missing wall.)"))
+        assertTrue(text.lines().size in 3..8)
+        assertTrue(text.contains("Floor area: not measured"))
+        assertTrue(text.lines().contains("Scan the missing wall. Raise the phone to the ceiling."))
         assertTrue(text.contains("Ceiling height: not seen"))
-        assertTrue(text.contains("B ≈ 4.00 m (not seen)"))
+        assertTrue(text.contains("B ≈ 4.00 m · not seen"))
+        assertFalse(text.contains("≈ 4.00 m ±"))
         assertTrue(text.contains(WORDING.estimateNote))
         assertTrue(text.contains(WORDING.notice))
         assertFalse(text.contains("m²"))
@@ -191,11 +249,12 @@ class RoomPlanLayoutTest {
         val text = SurveyReport.text(RoomSurvey.empty(SurveyGap.NoWalls), WORDING, "Hall", "13 Oct 2026")
 
         assertTrue(text.lines().size in 3..6)
+        assertFalse(text.contains("±"))
         assertTrue(text.contains("not measured"))
         assertTrue(text.contains(WORDING.notice))
     }
 
-    private companion object {
+    internal companion object {
         val WORDING = SurveyWording(
             heading = "%1\$s · %2\$s",
             area = "Floor area",
@@ -209,6 +268,7 @@ class RoomPlanLayoutTest {
             notMeasured = "not measured",
             estimated = "estimated",
             estimateNote = "≈ and dashed walls are estimates.",
+            spreadNote = "± is the scatter of the scan, not an accuracy.",
             notice = "Indicative plan — not a certified measurement.",
             madeWith = "Made with SceneView.",
             scaleBar = "%1\$s m",
@@ -216,6 +276,7 @@ class RoomPlanLayoutTest {
                 SurveyGap.NoDepth to "This scan has no depth.",
                 SurveyGap.NoWalls to "Scan the walls.",
                 SurveyGap.MissingWall to "Scan the missing wall.",
+                SurveyGap.ObliqueWall to "This wall is not square to the others.",
                 SurveyGap.Ceiling to "Raise the phone to the ceiling.",
             ),
         )

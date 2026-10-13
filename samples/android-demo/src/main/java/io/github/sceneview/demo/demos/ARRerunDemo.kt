@@ -386,8 +386,12 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
         LaunchedEffect(Unit) {
             val pack = syntheticPlanCapture(partial = qaState == QA_STATE_PLAN_PARTIAL)
             val kept = withContext(Dispatchers.IO) {
-                store.list().filter { it.title == QA_PLAN_TITLE }.forEach { store.delete(it.id) }
-                store.save(pack, QA_PLAN_TITLE, RerunSessionSource.Recorded)
+                // It replaces the one session it kept the time before, whose id it wrote beside
+                // the sessions — never another session, whatever that one is titled.
+                val mine = File(store.root, QA_PLAN_MARKER)
+                val last = runCatching { mine.readText().trim() }.getOrNull()
+                store.list().firstOrNull { it.id == last && it.title == QA_PLAN_TITLE }?.let { store.delete(it.id) }
+                store.save(pack, QA_PLAN_TITLE, RerunSessionSource.Recorded).also { mine.writeText(it.id) }
             }
             sessionsVersion++
             val opened = loadRerunSession(pack) ?: return@LaunchedEffect
@@ -596,7 +600,7 @@ private fun RerunReplayScreen(
     media: RerunReplayMedia?,
     isScan: Boolean,
     scanTitle: String,
-    scanDate: String,
+    scanDate: String?,
     revealed: Boolean,
     onRevealed: () -> Unit,
     session: ArDebugSession,
@@ -681,14 +685,9 @@ private fun RerunReplayScreen(
         onBack = onBack,
         controls = {
             RerunSheet {
-                // What the 3D view draws: the points of your scan or its surface, then its layers.
-                if (surfaceSource != null) {
-                    RerunSurfaceSwitch(surface, onWanted = { surfaceWanted = it }, title = title)
-                }
-                RerunLayersSection(session)
-                // A scan's dock holds its views and View in AR: its files are exported from here.
+                // A scan's dock holds its views and View in AR: its files are exported from here,
+                // at the head of the sheet — on screen as it opens, before anything is scrolled.
                 if (onViewInAr != null) {
-                    Spacer(Modifier.size(Space.md))
                     FilledTonalButton(
                         onClick = onExport,
                         enabled = media != null,
@@ -696,11 +695,19 @@ private fun RerunReplayScreen(
                     ) {
                         Icon(Icons.Rounded.IosShare, contentDescription = null)
                         Spacer(Modifier.size(Space.sm))
-                        Text(stringResource(R.string.demo_ar_rerun_plan_export_files))
+                        Text(stringResource(R.string.demo_ar_rerun_export_files))
                     }
+                    Spacer(Modifier.size(Space.md))
                 }
+                // What the 3D view draws: the points of your scan or its surface, then its layers.
+                if (surfaceSource != null) {
+                    RerunSurfaceSwitch(surface, onWanted = { surfaceWanted = it }, title = title)
+                }
+                RerunLayersSection(session)
             }
         },
+        // Over the plan the sheet lies on a table of figures, not on a scene: no glass to read through.
+        opaqueSheet = mode == RerunMode.Plan,
         firstFrameRendered = readyState,
         loadingLabel = if (isScan) ScanCopy.LOADING else RERUN_REPLAY_LOADING,
         themedStage = true,
@@ -1755,6 +1762,9 @@ private const val QA_STATE_PLAN_SYNTHETIC = "plan-synthetic"
 private const val QA_STATE_PLAN_PARTIAL = "plan-partial"
 
 private val PLAN_QA_STATES = setOf(QA_STATE_PLAN_SYNTHETIC, QA_STATE_PLAN_PARTIAL)
+
+/** Beside the sessions, the id of the one session QA's Plan states kept: the only one they replace. */
+private const val QA_PLAN_MARKER = "qa-plan-session.txt"
 
 private const val RERUN_EXPORT_FILES_TAG = "rerun-export-files"
 

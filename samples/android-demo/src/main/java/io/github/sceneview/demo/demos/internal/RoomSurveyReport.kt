@@ -5,6 +5,10 @@ import kotlin.math.max
 /*
  * A room survey in words (#4540): the rows of its table, on the screen and on the PDF, and the
  * few plain lines that are shared as text. What was not measured is said, never filled in.
+ *
+ * The three outputs read the same rows and the same notes from here, so a figure carries the
+ * same marks wherever it is read: "≈" in front of an estimate, which has no "±"; "±" behind a
+ * measured figure, with the note that says it is the scan's scatter and not an accuracy.
  */
 
 /** The survey's words, read from the app's resources: this file holds none of its own. */
@@ -23,7 +27,10 @@ class SurveyWording(
     val notSeen: String,
     val notMeasured: String,
     val estimated: String,
+    /** What "≈" and a dashed wall mean. */
     val estimateNote: String,
+    /** What "±" is: the scatter of the scan, not an accuracy. */
+    val spreadNote: String,
     val notice: String,
     val madeWith: String,
     /** `%1$s` the bar's length in metres. */
@@ -41,19 +48,34 @@ object SurveyReport {
     private const val SQUARE_METRES = " m²"
     private const val PLUS_MINUS = " ± "
 
-    /** `≈ 20.0 m² ± 0.5`. */
-    fun area(figure: SurveyFigure): String =
-        (if (figure.estimate) SurveyFormat.ESTIMATE else "") + SurveyFormat.area(figure.value) + SQUARE_METRES +
-            PLUS_MINUS + SurveyFormat.areaSpread(figure.plusMinus)
+    /** `20.0 m² ± 0.3` when measured, `≈ 20.0 m²` when an estimate. */
+    fun area(figure: SurveyFigure): String = when {
+        figure.estimate -> SurveyFormat.ESTIMATE + SurveyFormat.area(figure.value) + SQUARE_METRES
+        else -> SurveyFormat.area(figure.value) + SQUARE_METRES + PLUS_MINUS + SurveyFormat.areaSpread(figure.plusMinus)
+    }
 
-    /** `≈ 5.00 m ± 0.05`. */
-    fun length(figure: SurveyFigure): String =
-        (if (figure.estimate) SurveyFormat.ESTIMATE else "") + SurveyFormat.length(figure.value) + METRES +
-            PLUS_MINUS + SurveyFormat.lengthSpread(figure.plusMinus)
+    /** `5.00 m ± 0.05` when measured, `≈ 5.00 m` when an estimate. */
+    fun length(figure: SurveyFigure): String = when {
+        figure.estimate -> SurveyFormat.ESTIMATE + SurveyFormat.length(figure.value) + METRES
+        else -> SurveyFormat.length(figure.value) + METRES + PLUS_MINUS + SurveyFormat.lengthSpread(figure.plusMinus)
+    }
+
+    /** The scan's name and, when the scan has one, its date. */
+    fun heading(wording: SurveyWording, title: String, date: String?): String =
+        if (date == null) title else wording.heading.format(title, date)
 
     /** What the scan lacks for an area, as the thing to go and scan; `null` when it lacks nothing. */
     fun areaHint(survey: RoomSurvey, wording: SurveyWording): String? =
         survey.gaps.firstOrNull { it != SurveyGap.Ceiling }?.let { wording.gaps[it] }
+
+    /** What to go and scan, one line per thing the survey lacks. */
+    fun hints(survey: RoomSurvey, wording: SurveyWording): List<String> = survey.gaps.mapNotNull { wording.gaps[it] }
+
+    /** What the marks in use mean: "≈" when a figure is an estimate, "±" when one is measured. */
+    fun notes(survey: RoomSurvey, wording: SurveyWording): List<String> = listOfNotNull(
+        wording.estimateNote.takeIf { survey.hasEstimates },
+        wording.spreadNote.takeIf { survey.hasSpread },
+    )
 
     /** The survey's figures: area, length × width, perimeter and ceiling height — or what is missing. */
     fun rows(survey: RoomSurvey, wording: SurveyWording): List<SurveyRow> {
@@ -66,13 +88,12 @@ object SurveyReport {
             else -> SurveyRow(wording.area, area(area))
         }
         if (length != null && width != null) {
-            val mark = if (length.estimate || width.estimate) SurveyFormat.ESTIMATE else ""
-            val spread = SurveyFormat.lengthSpread(max(length.plusMinus, width.plusMinus))
-            rows += SurveyRow(
-                wording.dimensions,
-                mark + SurveyFormat.length(length.value) + " × " + SurveyFormat.length(width.value) + METRES +
-                    PLUS_MINUS + spread,
-            )
+            val both = SurveyFormat.length(length.value) + " × " + SurveyFormat.length(width.value) + METRES
+            val value = when {
+                length.estimate || width.estimate -> SurveyFormat.ESTIMATE + both
+                else -> both + PLUS_MINUS + SurveyFormat.lengthSpread(max(length.plusMinus, width.plusMinus))
+            }
+            rows += SurveyRow(wording.dimensions, value)
         } else {
             (length ?: width)?.let { rows += SurveyRow(wording.span, length(it)) }
         }
@@ -96,36 +117,47 @@ object SurveyReport {
         }
     }
 
+    /**
+     * [rows] cut into pages: [first] of them on the page the table starts on, [following] on
+     * each page after it. No row is dropped, however many walls the room has.
+     */
+    fun pages(rows: List<SurveyRow>, first: Int, following: Int): List<List<SurveyRow>> {
+        if (rows.size <= first) return listOf(rows)
+        return listOf(rows.take(first)) + rows.drop(first).chunked(following)
+    }
+
     /** The plan's own words: a label per wall, the area in the middle, the scale bar's length. */
     fun planTexts(survey: RoomSurvey, wording: SurveyWording): PlanTexts = PlanTexts(
         walls = survey.walls.map { SurveyFormat.wall(it) },
         area = survey.area?.let {
             (if (it.estimate) SurveyFormat.ESTIMATE else "") + SurveyFormat.area(it.value) + SQUARE_METRES
         },
-        areaNote = survey.area?.let { PLUS_MINUS.trim() + " " + SurveyFormat.areaSpread(it.plusMinus) + SQUARE_METRES },
+        // An estimate has no scatter to give.
+        areaNote = survey.area?.takeIf { !it.estimate }?.let {
+            PLUS_MINUS.trim() + " " + SurveyFormat.areaSpread(it.plusMinus) + SQUARE_METRES
+        },
         scale = { metres -> wording.scaleBar.format(if (metres < 1f) "0.5" else metres.toInt().toString()) },
     )
 
     /**
-     * The survey as a few plain lines, ready to paste: the figures, the walls, what is an
-     * estimate, and the notice that this is no certified measurement.
+     * The survey as a few plain lines, ready to paste: the figures, the walls, what to scan for
+     * what is missing, what the marks mean, and the notice that this is no certified measurement.
+     * The figures and the walls are the table's own rows: the same marks as on the screen and the PDF.
      */
-    fun text(survey: RoomSurvey, wording: SurveyWording, title: String, date: String): String {
+    fun text(survey: RoomSurvey, wording: SurveyWording, title: String, date: String?): String {
         val lines = ArrayList<String>()
-        lines += wording.heading.format(title, date)
+        lines += heading(wording, title, date)
         val rows = rows(survey, wording)
         val height = rows.last()
-        lines += rows.dropLast(1).joinToString(SEPARATOR) { row ->
-            val hint = areaHint(survey, wording).takeIf { row.label == wording.area && survey.area == null }
-            row.label + ": " + row.value + (hint?.let { " ($it)" } ?: "")
-        }
+        lines += rows.dropLast(1).joinToString(SEPARATOR) { it.label + ": " + it.value }
         lines += height.label + ": " + height.value
         if (survey.walls.isNotEmpty()) {
-            lines += wording.walls + ": " + survey.walls.joinToString(", ") { wall ->
-                wall.tag + " " + SurveyFormat.wall(wall) + METRES + if (wall.seen) "" else " (" + wording.notSeen + ")"
-            }
+            val walls = wallRows(survey, wording)
+            lines += wording.walls + ": " +
+                survey.walls.indices.joinToString(", ") { survey.walls[it].tag + " " + walls[it].value }
         }
-        if (survey.hasEstimates) lines += wording.estimateNote
+        hints(survey, wording).takeIf { it.isNotEmpty() }?.let { lines += it.joinToString(" ") }
+        lines += notes(survey, wording)
         lines += wording.notice + " " + wording.madeWith
         return lines.joinToString("\n")
     }

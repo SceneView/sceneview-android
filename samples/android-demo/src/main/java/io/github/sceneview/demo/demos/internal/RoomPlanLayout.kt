@@ -18,8 +18,12 @@ object SurveyFormat {
     /** Lengths are given to the nearest 5 cm. */
     const val LENGTH_STEP_M = 0.05f
 
-    /** Areas are given to the nearest half square metre. */
-    const val AREA_STEP_M2 = 0.5f
+    /**
+     * Areas are given to the nearest tenth of a square metre, beside sides given to 5 cm: a
+     * coarser step would move the area further than its sides do. How far the figure can be
+     * trusted is what its "±" says, not its last digit.
+     */
+    const val AREA_STEP_M2 = 0.1f
 
     /** The mark in front of a figure that was not measured end to end. */
     const val ESTIMATE = "≈ "
