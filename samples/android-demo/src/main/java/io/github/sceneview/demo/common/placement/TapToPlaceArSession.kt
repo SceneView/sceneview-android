@@ -46,6 +46,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -95,6 +96,8 @@ import io.github.sceneview.demo.R
 import io.github.sceneview.demo.common.DemoStatusBanner
 import io.github.sceneview.demo.common.DemoStatusTone
 import io.github.sceneview.demo.common.ForcedTrackingFailure
+import io.github.sceneview.demo.common.motionSensorSilentForced
+import io.github.sceneview.demo.common.rememberMotionSensorSilent
 import io.github.sceneview.demo.common.QaCameraBackdrop
 import io.github.sceneview.demo.common.qaCameraBackdropEnabled
 import io.github.sceneview.demo.common.qaCameraBackdropSurfaceType
@@ -189,6 +192,15 @@ fun TapToPlaceArSession(
     val appContext = LocalContext.current.applicationContext
     val funnel = remember { ArFunnelLog(arCoreVersion = { arCoreVersionName(appContext) }) }
     funnel.sampleId = LocalSampleId.current ?: AR_VIEW_SAMPLE_ID
+    // #4522: frames for ten seconds, never tracking, no reason from ARCore — is the gyroscope
+    // delivering at all? If not, say so instead of "Getting ready" for ever.
+    val motionSensorSilent = rememberMotionSensorSilent(
+        framesArriving = state.cameraReady,
+        tracking = state.isTracking,
+        failureReason = state.trackingFailureReason,
+        sampleId = funnel.sampleId,
+    )
+    SideEffect { state.motionSensorSilent = motionSensorSilent }
     // #4510: a resumed session that delivers no frame has no callback to say so — ask on a timer.
     // The timer follows the lifecycle the session itself resumes and pauses on: in the background
     // it does not run, so time spent there is never counted as a session delivering no frame.
@@ -224,7 +236,9 @@ fun TapToPlaceArSession(
             instantPlacementMode = Config.InstantPlacementMode.DISABLED,
             sessionConfiguration = sessionConfiguration,
             // The SDK's own card, kept off the mode pill and the dock (#4509).
-            arCoreAvailabilityOverlay = { PlacementAvailabilityOverlay(it) },
+            // Stands down for the pinned QA state of #4522, which an emulator can only reach
+            // from a session that could not start.
+            arCoreAvailabilityOverlay = { if (!motionSensorSilentForced()) PlacementAvailabilityOverlay(it) },
             onSessionCreated = { funnel.sessionCreated() },
             onSessionResumed = { funnel.sessionResumed() },
             onSessionPaused = { funnel.sessionPaused() },
@@ -460,7 +474,13 @@ fun BoxScope.TapToPlaceStatusOverlays(
     // overlay is silent on them). Silent while the SDK's "Couldn't start AR" card is up:
     // both are centred, and the coaching used to sit on that card's Try again button (#3986).
     val guidance = rememberArGuidanceState(state.controller, trackingFailureReason = trackingFailure)
-    val coachingCue = if (state.arCoreAvailability == null) guidance.cue else ArGuidanceCue.NONE
+    // Silent too once the phone's gyroscope is known to deliver nothing (#4522): "Getting
+    // ready" would never leave, and the card below says what to do.
+    val coachingCue = if (state.arCoreAvailability == null && !state.motionSensorSilent) {
+        guidance.cue
+    } else {
+        ArGuidanceCue.NONE
+    }
     ARCoachingOverlay(
         cue = coachingCue,
         surface = guidance.surface,
@@ -476,7 +496,7 @@ fun BoxScope.TapToPlaceStatusOverlays(
         lowLight = lowLight,
         coachingActive = coachingCue != ArGuidanceCue.NONE,
     )
-    val card = placementCard(state.phase)
+    val card = placementCard(state.phase, state.motionSensorSilent)
 
     // ── The one bottom anchor ─────────────────────────────────────────────────────────
     //
@@ -690,7 +710,7 @@ internal fun PlacementActionCard(
     ) {
         val title: String
         val detail: String?
-        val primary: String
+        val primary: String?
         val onPrimary: (() -> Unit)?
         val secondary: String?
         val onSecondary: (() -> Unit)?
@@ -725,7 +745,19 @@ internal fun PlacementActionCard(
                 secondary = null
                 onSecondary = null
             }
+
+            // No action: restarting the session, or the app, does not bring a gyroscope back.
+            PlacementCard.MOTION_SENSOR_SILENT -> {
+                title = stringResource(R.string.ar_place_motion_sensor_title)
+                detail = stringResource(R.string.ar_place_motion_sensor_detail)
+                primary = null
+                onPrimary = null
+                secondary = null
+                onSecondary = null
+            }
         }
+        val hasSecondary = secondary != null && onSecondary != null
+        val hasPrimary = primary != null && onPrimary != null
 
         Column(
             modifier = Modifier
@@ -763,40 +795,42 @@ internal fun PlacementActionCard(
             }
             // A FlowRow: at a large font size, or in the corner of a sideways phone, the two
             // buttons no longer fit one line, and a Row would squeeze the second one's label.
-            FlowRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = SceneViewTokens.Space.sm),
-                horizontalArrangement = Arrangement.spacedBy(SceneViewTokens.Space.sm, Alignment.End),
-                verticalArrangement = Arrangement.spacedBy(SceneViewTokens.Space.xs),
-            ) {
-                if (secondary != null && onSecondary != null) {
-                    TextButton(
-                        onClick = onSecondary,
-                        shape = buttonShape,
-                        colors = ButtonDefaults.textButtonColors(
-                            contentColor = SceneViewTokens.ArOverlay.onScrim,
-                        ),
-                        modifier = Modifier
-                            .heightIn(min = SceneViewTokens.Layout.touchTarget)
-                            .testTag(PlacementTestTags.PLACEMENT_CARD_SECONDARY),
-                    ) {
-                        Text(secondary, style = MaterialTheme.typography.labelLarge)
+            if (hasPrimary || hasSecondary) {
+                FlowRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = SceneViewTokens.Space.sm),
+                    horizontalArrangement = Arrangement.spacedBy(SceneViewTokens.Space.sm, Alignment.End),
+                    verticalArrangement = Arrangement.spacedBy(SceneViewTokens.Space.xs),
+                ) {
+                    if (secondary != null && onSecondary != null) {
+                        TextButton(
+                            onClick = onSecondary,
+                            shape = buttonShape,
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = SceneViewTokens.ArOverlay.onScrim,
+                            ),
+                            modifier = Modifier
+                                .heightIn(min = SceneViewTokens.Layout.touchTarget)
+                                .testTag(PlacementTestTags.PLACEMENT_CARD_SECONDARY),
+                        ) {
+                            Text(secondary, style = MaterialTheme.typography.labelLarge)
+                        }
                     }
-                }
-                if (onPrimary != null) {
-                    Button(
-                        onClick = onPrimary,
-                        shape = buttonShape,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary,
-                        ),
-                        modifier = Modifier
-                            .heightIn(min = SceneViewTokens.Layout.touchTarget)
-                            .testTag(PlacementTestTags.PLACEMENT_CARD_PRIMARY),
-                    ) {
-                        Text(primary, style = MaterialTheme.typography.labelLarge)
+                    if (primary != null && onPrimary != null) {
+                        Button(
+                            onClick = onPrimary,
+                            shape = buttonShape,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary,
+                            ),
+                            modifier = Modifier
+                                .heightIn(min = SceneViewTokens.Layout.touchTarget)
+                                .testTag(PlacementTestTags.PLACEMENT_CARD_PRIMARY),
+                        ) {
+                            Text(primary, style = MaterialTheme.typography.labelLarge)
+                        }
                     }
                 }
             }
