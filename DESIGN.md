@@ -662,6 +662,14 @@ themed surface — so it is theme-independent and uses the "Button glass" row.
     `space-md` above the dock at rest and `space-md` above the sheet's top edge while
     the sheet is up, over the scene it reports on; it never climbs past the identity
     row. Under the glass, "Demo reset" was a grey ghost across the sliders.
+  - **A snackbar rests above the demo's bottom stack, never across it (#4483).**
+    With the sheet closed, "the dock" above means whatever is highest at the bottom
+    of the scene: the demo's chips, status pill or Record pill when it has any, the
+    dock otherwise — and above those, the card a demo anchors over its own scene
+    (the AR placement screens' "No surface found" and coaching line), which reports
+    itself to the scaffold. The stack does not fade or move for a snackbar. The
+    `space-md` is kept by the snackbar's layout box; Material draws the container
+    12dp inside it, so the eye reads 28dp, over a stack exactly as over the dock.
   - The Model Viewer's Lighting sheet uses the same glass fill and no scrim.
     Browsing sheets (model picker, credits, what's new) stay opaque and modal — you
     read those, you do not watch something change behind them.
