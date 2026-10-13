@@ -132,6 +132,10 @@ import io.github.sceneview.demo.demos.internal.RerunSetupStep
 import io.github.sceneview.demo.demos.internal.RerunStatusUx
 import io.github.sceneview.demo.demos.internal.DollhouseCopy
 import io.github.sceneview.demo.demos.internal.RoomDollhouse
+import io.github.sceneview.demo.demos.internal.ScanBack
+import io.github.sceneview.demo.demos.internal.ScanBackAction
+import io.github.sceneview.demo.demos.internal.ScanBackState
+import io.github.sceneview.demo.demos.internal.ScanClock
 import io.github.sceneview.demo.demos.internal.ScanCopy
 import io.github.sceneview.demo.demos.internal.ScanFigures
 import io.github.sceneview.demo.demos.internal.ScanLimits
@@ -900,6 +904,9 @@ private fun RerunLiveScreen(
     // debug session's trace, so the 3D view and the scan are the same data.
     var scan by remember { mutableStateOf<ScanCapture?>(null) }
     var finishing by remember { mutableStateOf(false) }
+    // When Stop was tapped, on the clock the scan's line runs on: the line holds that time
+    // while the scan is built.
+    var stoppedNanos by remember { mutableStateOf<Long?>(null) }
     // Rerun v2: whether this phone runs ARCore's raw depth, set when the session is configured.
     // With it a scan also fuses a dense surfel map (tier "depth"); without it, the sparse v1 scan.
     var rawDepth by remember { mutableStateOf(false) }
@@ -1028,6 +1035,7 @@ private fun RerunLiveScreen(
         val qaTrace = qaScan?.trace
         val capture = scan
         if (finishing || (qaTrace == null && capture == null)) return@stop
+        stoppedNanos = SystemClock.elapsedRealtimeNanos()
         finishing = true
         scope.launch {
             val now = System.currentTimeMillis()
@@ -1051,6 +1059,7 @@ private fun RerunLiveScreen(
                 scan = null
             }
             finishing = false
+            stoppedNanos = null
             if (opened != null) onScanned(opened.first, title, opened.second)
         }
     }
@@ -1081,9 +1090,29 @@ private fun RerunLiveScreen(
     // cell that leads elsewhere — instead of three seconds of another screen over a black camera.
     val starting = !recording && !autoStarted && !debugFullScreen &&
         arCoreAvailability == null && qaDebug == null && !qaRecord && qaState == null
+    // Back — the gesture and the arrow alike — asks before it drops a scan that holds something
+    // ([ScanBack]). The scan is not paused meanwhile: "Keep scanning" returns to one that lost
+    // nothing.
+    val backState = when {
+        finishing -> ScanBackState.Building
+        recording -> ScanBackState.Recording
+        else -> ScanBackState.Waiting
+    }
+    val backAsks = ScanBack.on(backState, scanFigures?.points ?: 0) == ScanBackAction.Ask
+    var confirmingDiscard by remember { mutableStateOf(false) }
+    BackHandler(enabled = backAsks) { confirmingDiscard = true }
+    if (confirmingDiscard && backAsks) {
+        ScanDiscardDialog(
+            onDiscard = {
+                confirmingDiscard = false
+                onBack()
+            },
+            onKeep = { confirmingDiscard = false },
+        )
+    }
     DemoScaffold(
         title = stringResource(R.string.demo_ar_rerun_title),
-        onBack = onBack,
+        onBack = { if (backAsks) confirmingDiscard = true else onBack() },
         // The sheet holds what the screen must not (#4379): a scan's counts, the stream's status
         // and the connection steps a developer types once. The screen keeps the camera.
         controls = {
@@ -1107,7 +1136,8 @@ private fun RerunLiveScreen(
                 val hud: @Composable () -> Unit = {
                     if (scanFigures != null) {
                         ScanHud(
-                            seconds = scan?.elapsedSeconds(now) ?: debugSession.stats.duration,
+                            seconds = scan?.elapsedSeconds(ScanClock.readAt(now, stoppedNanos))
+                                ?: debugSession.stats.duration,
                             figures = scanFigures,
                         )
                     } else {

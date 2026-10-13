@@ -20,4 +20,11 @@
     <string name="demo_ar_rerun_surface_out_of_memory">Not enough memory to build the surface.</string>
     <!-- The build failed, or the 3D view could not load what it built. -->
     <string name="demo_ar_rerun_surface_unavailable">The surface could not be shown.</string>
+
+    <!-- Back during a scan that already holds points: asked before the scan is dropped. The
+         scan keeps recording under the dialog. -->
+    <string name="demo_ar_rerun_discard_title">Discard this scan?</string>
+    <string name="demo_ar_rerun_discard_detail">What you have scanned so far will be lost.</string>
+    <string name="demo_ar_rerun_discard_confirm">Discard</string>
+    <string name="demo_ar_rerun_discard_dismiss">Keep scanning</string>
 </resources>

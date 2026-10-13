@@ -349,6 +349,45 @@ object ScanLimits {
     fun isNear(count: Int, budget: Int): Boolean = budget > 0 && count >= budget * NEAR_SHARE
 }
 
+/** Where the Record screen stands when Back is asked of it. */
+enum class ScanBackState {
+    /** No scan yet: "Starting camera…", "Looking for the room…", or a scan stopped empty. */
+    Waiting,
+
+    /** A scan is being taken. */
+    Recording,
+
+    /** Stop was tapped: "Building your scan…". */
+    Building,
+}
+
+/** What Back does on the Record screen. */
+enum class ScanBackAction { Leave, Ask }
+
+/**
+ * Whether Back leaves the Record screen at once or asks first. A scan is taken walking, phone in
+ * hand, where a swipe from the screen's edge is an accident waiting: Back asks before it drops a
+ * scan that already holds something, and only then.
+ */
+object ScanBack {
+    /**
+     * [points] is the count the scan's line shows. Nothing to lose before the first point, and
+     * nothing to ask once Stop was tapped: the scan is being saved, not dropped by a tap.
+     */
+    fun on(state: ScanBackState, points: Int): ScanBackAction =
+        if (state == ScanBackState.Recording && points > 0) ScanBackAction.Ask else ScanBackAction.Leave
+}
+
+/** The clock of the scan's line. */
+object ScanClock {
+    /**
+     * The instant the line reads, on the clock Record started on: [nowNanos] while the scan runs,
+     * [stoppedNanos] from the tap on Stop — the time a scan took does not grow while it is built.
+     * On a phone the line went from 2:57 to 3:06 under "Building your scan…".
+     */
+    fun readAt(nowNanos: Long, stoppedNanos: Long?): Long = stoppedNanos?.coerceAtMost(nowNanos) ?: nowNanos
+}
+
 /** Copy of the Record mode, pure so a test holds it to what the brief promised. */
 object ScanCopy {
     /** The promise under the Record button, and in the sheet. */

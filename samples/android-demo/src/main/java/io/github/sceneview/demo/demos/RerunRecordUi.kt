@@ -25,11 +25,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CloseFullscreen
 import androidx.compose.material.icons.rounded.OpenInFull
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -45,6 +47,7 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -54,6 +57,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import com.google.android.filament.Engine
+import io.github.sceneview.demo.R
 import io.github.sceneview.demo.demos.internal.ArDebugFormat
 import io.github.sceneview.demo.demos.internal.ArDebugOrbitCamera
 import io.github.sceneview.demo.demos.internal.ArDebugSession
@@ -384,10 +388,38 @@ internal fun ScanShutter(
             isRecording = recording,
             startEnabled = startEnabled && !finishing,
             onStart = onStart,
-            onStop = { if (!finishing) onStop() },
+            onStop = onStop,
+            // Stop was taken: the square is no longer a button, and no longer looks like one.
+            stopEnabled = !finishing,
         )
     }
 }
+
+/**
+ * Asked when Back would drop a scan that already holds points — the landing's delete
+ * confirmation, worded for a scan still being taken: the confirm in `error`, the way out first.
+ */
+@Composable
+internal fun ScanDiscardDialog(onDiscard: () -> Unit, onKeep: () -> Unit) {
+    val destructive = MaterialTheme.colorScheme.error
+    AlertDialog(
+        onDismissRequest = onKeep,
+        title = { Text(stringResource(R.string.demo_ar_rerun_discard_title)) },
+        text = { Text(stringResource(R.string.demo_ar_rerun_discard_detail)) },
+        confirmButton = {
+            TextButton(onClick = onDiscard) {
+                Text(stringResource(R.string.demo_ar_rerun_discard_confirm), color = destructive)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onKeep) { Text(stringResource(R.string.demo_ar_rerun_discard_dismiss)) }
+        },
+        modifier = Modifier.testTag(SCAN_DISCARD_DIALOG_TAG),
+    )
+}
+
+/** The "Discard this scan?" dialog, for the QA harness. */
+internal const val SCAN_DISCARD_DIALOG_TAG = "rerun_scan_discard_dialog"
 
 /** The scan type's row in the settings sheet, for the QA harness. */
 internal const val SCAN_TIER_TAG = "rerun_scan_tier"
