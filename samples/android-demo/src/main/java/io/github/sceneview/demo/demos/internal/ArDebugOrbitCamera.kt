@@ -2,6 +2,7 @@ package io.github.sceneview.demo.demos.internal
 
 import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.cross
+import dev.romainguy.kotlin.math.dot
 import dev.romainguy.kotlin.math.lookAt
 import dev.romainguy.kotlin.math.normalize
 import io.github.sceneview.gesture.CameraGestureDetector
@@ -10,10 +11,12 @@ import io.github.sceneview.math.Position
 import io.github.sceneview.math.Transform
 import io.github.sceneview.verticalFovDegreesForFocalLength
 import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.max
 import kotlin.math.sin
 import kotlin.math.sqrt
+import kotlin.math.tan
 
 /**
  * The third-person camera of the Rerun demo's in-app 3D view (#3950).
@@ -369,6 +372,137 @@ object ArDebugFraming {
     }
 
     /**
+     * The closest pose at [azimuthDegrees] and [elevationDegrees] that shows the whole of [bounds]
+     * (`[minX, minY, minZ, maxX, maxY, maxZ]`) inside what [insets] leave free of a view of
+     * [aspect] (width / height), through a lens of [verticalFovDegrees] (#4492).
+     *
+     * Where [home] fits a sphere around the content and shortens the result by a margin, this
+     * projects the box's eight corners: a room is a flat box seen from above at an angle, and the
+     * sphere says nothing of how wide it lands on a tall screen — a squarish room opened with a
+     * side past the screen's edge. The distance is the least one at which every corner projects
+     * inside the free area, on both axes; the target then slides in the picture plane so the
+     * projected box is centred there, since perspective draws the near half of a box larger than
+     * the far one and chrome is rarely the same height top and bottom.
+     */
+    fun fit(
+        bounds: FloatArray,
+        azimuthDegrees: Float,
+        elevationDegrees: Float,
+        verticalFovDegrees: Double,
+        aspect: Float,
+        insets: FramingInsets = FramingInsets.None,
+    ): OrbitPose {
+        val elevation = elevationDegrees.coerceIn(MIN_ELEVATION, MAX_ELEVATION)
+        val azimuth = Math.toRadians(azimuthDegrees.toDouble())
+        val tilt = Math.toRadians(elevation.toDouble())
+        val sinA = sin(azimuth).toFloat()
+        val cosA = cos(azimuth).toFloat()
+        val sinE = sin(tilt).toFloat()
+        val cosE = cos(tilt).toFloat()
+        // The camera's own axes at these angles, as CameraRig.eye and lookAt make them.
+        val right = Float3(cosA, 0f, -sinA)
+        val up = Float3(-sinA * sinE, cosE, -cosA * sinE)
+        val forward = Float3(-cosE * sinA, -sinE, -cosE * cosA)
+        val centre = Position(
+            (bounds[0] + bounds[3]) / 2f,
+            (bounds[1] + bounds[4]) / 2f,
+            (bounds[2] + bounds[5]) / 2f,
+        )
+        // Each corner from the box's centre, along those axes: across, up the picture, and away.
+        val across = FloatArray(BOX_CORNERS)
+        val upward = FloatArray(BOX_CORNERS)
+        val away = FloatArray(BOX_CORNERS)
+        for (corner in 0 until BOX_CORNERS) {
+            val offset = Float3(
+                bounds[if (corner and 1 == 0) 0 else 3],
+                bounds[if (corner and 2 == 0) 1 else 4],
+                bounds[if (corner and 4 == 0) 2 else 5],
+            ) - centre
+            across[corner] = dot(offset, right)
+            upward[corner] = dot(offset, up)
+            away[corner] = dot(offset, forward)
+        }
+        val tanVertical = tan(Math.toRadians(verticalFovDegrees / 2.0)).toFloat()
+        val tanHorizontal = tanVertical * aspect.coerceIn(0.2f, 5f)
+        val free = insets.bounded()
+        val horizontal = FitAxis(across, away, tanHorizontal, -1f + 2f * free.left, 1f - 2f * free.right)
+        val vertical = FitAxis(upward, away, tanVertical, -1f + 2f * free.bottom, 1f - 2f * free.top)
+        // Never closer than the nearest corner: every corner stays in front of the lens.
+        val nearest = MIN_DISTANCE - away.min()
+        val framed = clamp(
+            OrbitPose(
+                target = centre,
+                azimuthDegrees = azimuthDegrees,
+                elevationDegrees = elevation,
+                distance = maxOf(nearest, horizontal.distance(), vertical.distance()),
+            )
+        )
+        return framed.copy(
+            target = centre + right * horizontal.slide(framed.distance) + up * vertical.slide(framed.distance),
+        )
+    }
+
+    /**
+     * One screen axis of [fit]: each corner's offset [along] it and its depth [away] past the
+     * target, the tangent of half the field of view on this axis ([tanHalf]), and the free band
+     * in normalised device coordinates, from [low] to [high] (-1 and 1 are the view's edges).
+     */
+    private class FitAxis(
+        private val along: FloatArray,
+        private val away: FloatArray,
+        private val tanHalf: Float,
+        private val low: Float,
+        private val high: Float,
+    ) {
+        /**
+         * The least distance at which the corners fit the band, wherever the target slides to.
+         * Corner `i` stays under [high] when the slide is at least `along[i] - high·tan·(d + away[i])`
+         * and corner `j` over [low] when it is at most `along[j] - low·tan·(d + away[j])`: a slide
+         * exists once every such floor is under every such ceiling, which is linear in `d`.
+         */
+        fun distance(): Float {
+            var distance = 0f
+            for (i in along.indices) for (j in along.indices) {
+                val needed = (along[i] - along[j] + tanHalf * (low * away[j] - high * away[i])) /
+                    ((high - low) * tanHalf)
+                distance = max(distance, needed)
+            }
+            return distance
+        }
+
+        /**
+         * How far the target moves along this axis to centre the corners in the band at [distance].
+         * On the axis that set the distance there is one slide that fits; on the other there is a
+         * range, and the one that puts the corners' two extremes the same way from the band's
+         * edges is found by halving it — both extremes move the same way as the target slides.
+         */
+        fun slide(distance: Float): Float {
+            var floor = -Float.MAX_VALUE
+            var ceiling = Float.MAX_VALUE
+            for (i in along.indices) {
+                floor = max(floor, along[i] - high * tanHalf * (distance + away[i]))
+                ceiling = minOf(ceiling, along[i] - low * tanHalf * (distance + away[i]))
+            }
+            if (floor >= ceiling) return (floor + ceiling) / 2f
+            repeat(CENTRING_STEPS) {
+                val middle = (floor + ceiling) / 2f
+                var least = Float.MAX_VALUE
+                var most = -Float.MAX_VALUE
+                for (i in along.indices) {
+                    val drawn = (along[i] - middle) / (tanHalf * (distance + away[i]))
+                    least = minOf(least, drawn)
+                    most = max(most, drawn)
+                }
+                if (least + most > low + high) floor = middle else ceiling = middle
+            }
+            return (floor + ceiling) / 2f
+        }
+    }
+
+    private const val BOX_CORNERS = 8
+    private const val CENTRING_STEPS = 24
+
+    /**
      * One frame of the ease from [pose] to [home]: an exponential approach, which is frame-rate
      * independent and retargets smoothly — home moves every time the trail grows.
      */
@@ -382,5 +516,42 @@ object ArDebugFraming {
             abs(next.target.z - home.target.z)
         val reachSettled = abs(next.distance - home.distance) < 1e-4f && targetOffset < 1e-4f
         return if (angleSettled && reachSettled) home else next
+    }
+}
+
+/**
+ * What covers a view, as fractions of its width ([left], [right]) and of its height ([top],
+ * [bottom]) measured inwards from each edge: the chrome [ArDebugFraming.fit] keeps the content
+ * clear of.
+ */
+data class FramingInsets(
+    val left: Float = 0f,
+    val top: Float = 0f,
+    val right: Float = 0f,
+    val bottom: Float = 0f,
+) {
+    /**
+     * These insets, never negative, and leaving at least [MIN_FREE] of each axis free: two bands
+     * that add up to more than that are cut back in proportion.
+     */
+    fun bounded(): FramingInsets {
+        val (boundedLeft, boundedRight) = boundedPair(left, right)
+        val (boundedTop, boundedBottom) = boundedPair(top, bottom)
+        return FramingInsets(boundedLeft, boundedTop, boundedRight, boundedBottom)
+    }
+
+    private fun boundedPair(first: Float, second: Float): Pair<Float, Float> {
+        val a = first.takeIf { it.isFinite() }?.coerceAtLeast(0f) ?: 0f
+        val b = second.takeIf { it.isFinite() }?.coerceAtLeast(0f) ?: 0f
+        val covered = a + b
+        val most = 1f - MIN_FREE
+        return if (covered <= most) a to b else a * most / covered to b * most / covered
+    }
+
+    companion object {
+        val None = FramingInsets()
+
+        /** The least share of a view's width or height a framing is given. */
+        const val MIN_FREE = 0.2f
     }
 }

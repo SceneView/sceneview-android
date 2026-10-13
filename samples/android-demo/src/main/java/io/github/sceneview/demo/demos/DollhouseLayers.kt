@@ -1,7 +1,10 @@
 package io.github.sceneview.demo.demos
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
@@ -12,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import com.google.android.filament.ColorGrading
 import com.google.android.filament.Engine
 import com.google.android.filament.Material
@@ -27,6 +31,8 @@ import io.github.sceneview.SurfaceType
 import io.github.sceneview.collision.Box as CollisionBox
 import io.github.sceneview.collision.Vector3
 import io.github.sceneview.createEnvironment
+import io.github.sceneview.demo.LocalDemoSceneRestingCover
+import io.github.sceneview.demo.demoContentPadding
 import io.github.sceneview.demo.demos.internal.ArDebugFraming
 import io.github.sceneview.demo.demos.internal.ArDebugGeometry
 import io.github.sceneview.demo.demos.internal.ArDebugOrbitCamera
@@ -34,10 +40,13 @@ import io.github.sceneview.demo.demos.internal.DebugLayer
 import io.github.sceneview.demo.demos.internal.DebugMesh
 import io.github.sceneview.demo.demos.internal.DenseSurfels
 import io.github.sceneview.demo.demos.internal.DollhouseRoom
+import io.github.sceneview.demo.demos.internal.FramingInsets
 import io.github.sceneview.demo.demos.internal.PlaneLayering
 import io.github.sceneview.demo.demos.internal.RoomDollhouse
+import io.github.sceneview.demo.isDemoCompactHeight
 import io.github.sceneview.demo.theme.DebugPalette
 import io.github.sceneview.demo.theme.LocalStageChrome
+import io.github.sceneview.demo.theme.SceneViewTokens
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
 import io.github.sceneview.math.Position
@@ -355,12 +364,40 @@ internal fun DollhousePreview(
     val view = rememberView(engine)
     val renderer = rememberRenderer(engine)
     val fit = room.fit
-    // The room as it stands here: centred on the origin, its floor at 0.
-    val bounds = remember(fit) {
-        floatArrayOf(-fit.width / 2f, 0f, -fit.depth / 2f, fit.width / 2f, fit.height, fit.depth / 2f)
-    }
+    // The room as it stands here: centred on the origin, on its plinth, the plinth's foot at 0.
+    val bounds = remember(fit) { RoomDollhouse.previewBounds(fit) }
     val frames = remember { IntArray(2) }
-    Box(modifier.background(chrome.ground)) {
+    BoxWithConstraints(modifier.background(chrome.ground)) {
+        // What the chrome leaves of this view at rest — under the recording's chip, above the dock
+        // and the sheet's peek, between the window's safe sides — less a gutter: the room opens
+        // whole in there (#4492). The camera is aimed for it; the surface keeps the whole view, so
+        // the stage's ground still runs under the glass and a drag pans at the speed it always did.
+        //
+        // A phone held sideways has no such band: the chip, the scale pill and the dock stack up
+        // the middle of a view barely taller than they are, and a room fitted between them is a
+        // thumbnail behind the chip. There the room takes the window's safe area, as large as it
+        // goes, and the glass floats over it.
+        val direction = LocalLayoutDirection.current
+        val safe = WindowInsets.safeDrawing.asPaddingValues()
+        val cover = if (isDemoCompactHeight()) {
+            safe
+        } else {
+            demoContentPadding(
+                cover = LocalDemoSceneRestingCover.current,
+                sceneHeight = maxHeight,
+                left = safe.calculateLeftPadding(direction),
+                right = safe.calculateRightPadding(direction),
+            )
+        }
+        val gutter = SceneViewTokens.Space.md
+        val insets = rememberUpdatedState(
+            FramingInsets(
+                left = (cover.calculateLeftPadding(direction) + gutter) / maxWidth,
+                top = (cover.calculateTopPadding() + gutter) / maxHeight,
+                right = (cover.calculateRightPadding(direction) + gutter) / maxWidth,
+                bottom = (cover.calculateBottomPadding() + gutter) / maxHeight,
+            )
+        )
         SceneView(
             modifier = Modifier.matchParentSize(),
             surfaceType = SurfaceType.TextureSurface,
@@ -376,13 +413,20 @@ internal fun DollhousePreview(
             cameraManipulator = orbit,
             onFrame = {
                 if (frames[0] == 0) view.configureForDebug(colorGrading)
-                val home = ArDebugFraming.home(
-                    bounds, orbit.home.azimuthDegrees, orbit.verticalFovDegrees, orbit.aspect,
+                val home = ArDebugFraming.fit(
+                    bounds = bounds,
+                    azimuthDegrees = orbit.home.azimuthDegrees,
                     elevationDegrees = PREVIEW_ELEVATION,
-                    margin = ArDebugFraming.REPLAY_MARGIN,
+                    verticalFovDegrees = orbit.verticalFovDegrees,
+                    aspect = orbit.aspect,
+                    insets = insets.value,
                 )
                 if (orbit.following) orbit.home = home
-                if (!orbit.hasFramedContent) {
+                // Until the view is shown the camera is put on the framing, not eased to it: the
+                // viewport and the chrome are measured over the first frames, and an ease from a
+                // framing made for a size the view never had would be the first thing seen.
+                val opening = frames[0] < SHOWN_AFTER_FRAMES && orbit.following
+                if (!orbit.hasFramedContent || opening) {
                     orbit.hasFramedContent = true
                     orbit.snapTo(home)
                 }

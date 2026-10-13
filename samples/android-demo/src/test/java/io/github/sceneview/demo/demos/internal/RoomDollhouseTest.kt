@@ -543,6 +543,29 @@ class RoomDollhouseTest {
         }
     }
 
+    @Test
+    fun `the 3D view's bounds hold the room and the whole of its plinth`() {
+        val fit = DollhouseFit(1f, -1f, 2f, width = 4f, height = 2.5f, depth = 3f, denominator = 12)
+        val bounds = RoomDollhouse.previewBounds(fit)
+        val drop = RoomDollhouse.BASE_DROP_M + RoomDollhouse.plinthThickness(fit.scale)
+
+        // Centred on the origin, standing on the plinth's foot, the ceiling that much higher.
+        assertEquals(0f, bounds[1], 0f)
+        assertEquals(fit.height + drop, bounds[4], 1e-6f)
+        assertEquals(-bounds[0], bounds[3], 0f)
+        assertEquals(-bounds[2], bounds[5], 0f)
+        // The plinth of a room without planes, moved where the 3D view stands it, is inside.
+        val plinth = RoomDollhouse.basePolygon(fit)
+        for (i in 0 until plinth.size / 3) {
+            val x = plinth[i * 3] - fit.centerX
+            val z = plinth[i * 3 + 2] - fit.centerZ
+            assertTrue("plinth corner $i sticks out in x", x >= bounds[0] - 1e-5f && x <= bounds[3] + 1e-5f)
+            assertTrue("plinth corner $i sticks out in z", z >= bounds[2] - 1e-5f && z <= bounds[5] + 1e-5f)
+        }
+        // And wider than the walls alone: that margin is what the opening frame used to cut.
+        assertTrue(bounds[3] > fit.width / 2f && bounds[5] > fit.depth / 2f)
+    }
+
     // ─── The scan's dense cloud (P1, 2026-09-30) ──────────────────────────────────────────────
 
     /**
