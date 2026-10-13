@@ -5,18 +5,24 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import io.github.sceneview.ar.ARCameraPermissionOverlay
 import io.github.sceneview.ar.ARCameraPermissionState
 import io.github.sceneview.ar.ArGuidanceCue
@@ -45,6 +51,9 @@ import kotlinx.coroutines.delay
  * # the app's own permission screen): "camera-permission" or "camera-permission-settings"
  * adb shell am start -n io.github.sceneview.demo.qa/io.github.sceneview.demo.ARCoachingPreviewActivity \
  *     --es overlay camera-permission
+ * # the same card in a box of that height, outlined, to see what it gives up when it is short
+ * adb shell am start -n io.github.sceneview.demo.qa/io.github.sceneview.demo.ARCoachingPreviewActivity \
+ *     --es overlay camera-permission --ei box_height_dp 160
  * ```
  */
 class ARCoachingPreviewActivity : ComponentActivity() {
@@ -58,7 +67,7 @@ class ARCoachingPreviewActivity : ComponentActivity() {
                 val backdrop = painterResource(R.drawable.qa_backdrop_1)
                 val permission = permissionState()
                 if (permission != null) {
-                    SdkCameraPermissionFrame(permission, backdrop)
+                    SdkCameraPermissionFrame(permission, backdrop, intent.getIntExtra(EXTRA_BOX_HEIGHT_DP, 0))
                 } else if (fixed != null) {
                     ARCoachingFrame(fixed, backdrop = backdrop)
                 } else {
@@ -104,6 +113,7 @@ class ARCoachingPreviewActivity : ComponentActivity() {
         const val EXTRA_HINT = "hint"
         const val EXTRA_LINGERING = "lingering"
         const val EXTRA_OVERLAY = "overlay"
+        const val EXTRA_BOX_HEIGHT_DP = "box_height_dp"
 
         /** A session's journey, with roughly the dwell times the real state machine gives. */
         val JOURNEY: List<Pair<ARCoachingSample, Long>> = listOf(
@@ -121,11 +131,25 @@ class ARCoachingPreviewActivity : ComponentActivity() {
     }
 }
 
-/** The card as `ARScene` draws it: in the scene's own box, edge to edge, over the camera. */
+/**
+ * The card as `ARScene` draws it: in the scene's own box, edge to edge, over the camera. With
+ * a [boxHeightDp] the scene is an outlined box of that height instead — a short parent, which
+ * no window of the emulator is.
+ */
 @Composable
-private fun SdkCameraPermissionFrame(state: ARCameraPermissionState, backdrop: Painter) {
+private fun SdkCameraPermissionFrame(state: ARCameraPermissionState, backdrop: Painter, boxHeightDp: Int) {
     Box(Modifier.fillMaxSize()) {
         Image(backdrop, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-        ARCameraPermissionOverlay(state)
+        if (boxHeightDp > 0) {
+            Box(
+                Modifier
+                    .align(Alignment.Center)
+                    .fillMaxWidth()
+                    .height(boxHeightDp.dp)
+                    .border(1.dp, MaterialTheme.colorScheme.outline),
+            ) { ARCameraPermissionOverlay(state) }
+        } else {
+            ARCameraPermissionOverlay(state)
+        }
     }
 }

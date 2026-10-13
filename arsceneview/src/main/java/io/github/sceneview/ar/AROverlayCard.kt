@@ -100,6 +100,8 @@ internal fun BoxScope.AROverlayCard(
                             color = Color(0xFF1A1A2E),
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold,
+                            // A label that wraps is centred like the text above it.
+                            textAlign = TextAlign.Center,
                         ),
                     )
                 }
