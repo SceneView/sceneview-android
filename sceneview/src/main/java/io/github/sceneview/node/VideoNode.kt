@@ -27,23 +27,12 @@ import io.github.sceneview.safeDestroyTexture
  *
  * Optionally supports chroma-key (green-screen) compositing via [chromaKeyColor].
  *
+ * In a `SceneView { }` block, declare it with the `VideoNode` composables: `VideoNode(videoPath = …)`
+ * prepares and owns the player, `VideoNode(player = …)` takes one from `rememberMediaPlayer`.
+ *
  * ```kotlin
  * SceneView {
- *     val player = remember {
- *         MediaPlayer().apply {
- *             setDataSource(context, videoUri)
- *             isLooping = true
- *             prepare()
- *             start()
- *         }
- *     }
- *     DisposableEffect(Unit) { onDispose { player.release() } }
- *
- *     VideoNode(
- *         materialLoader = materialLoader,
- *         player = player,
- *         position = Position(z = -2f)
- *     )
+ *     VideoNode(videoPath = "videos/promo.mp4", position = Position(z = -2f))
  * }
  * ```
  *
@@ -154,11 +143,17 @@ open class VideoNode(
      * **seek** or a **frame-step** on a paused player produces exactly one new frame and leaves
      * `isPlaying` false throughout, so a parked scene kept showing the frame from before the seek.
      * [SurfaceFrameSignal] answers for those — every frame the surface receives, playing or not.
+     *
+     * A player starts, seeks and stops without telling this node, so this is registered as a
+     * provider and the scene asks on every tick (#3724).
      */
-    override val isFrameActive: Boolean
-        get() = frameSignal.isActive(
-            forcedActive = runCatching { player.isPlaying }.getOrDefault(false)
-        ) || super.isFrameActive
+    private fun isVideoFrameActive(): Boolean = frameSignal.isActive(
+        forcedActive = runCatching { player.isPlaying }.getOrDefault(false)
+    )
+
+    init {
+        addFrameActivityProvider(::isVideoFrameActive)
+    }
 
     private val onVideoSizeChanged = MediaPlayer.OnVideoSizeChangedListener { _, width, height ->
         if (size == null && width > 0 && height > 0) {
