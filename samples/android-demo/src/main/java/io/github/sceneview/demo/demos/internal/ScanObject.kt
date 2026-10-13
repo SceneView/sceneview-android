@@ -121,7 +121,14 @@ class ScanCamera(val eye: Vec3, forward: Vec3, val tanHalfFov: Float, val width:
  * 4. **[pick].** A ray finds the first surfel under the finger; if it is none of the above, the
  *    region grows from it through solid voxels only, so the stray points between two pieces of
  *    furniture do not weld them, and gets its box: the smallest rectangle on the floor that holds
- *    it, as high as it stands. A speck of noise on the way is gone through.
+ *    it, as high as it stands. A speck of noise or a sliver on the way is gone through.
+ * 5. **What a region is not.** A scan that saw only a piece of a wall leaves it unsorted in 3, so
+ *    a region is judged again on its own: the sheet standing behind a piece of furniture and
+ *    sticking out past it is cut away, a sheet alone answers like a wall, and a box that runs
+ *    along most of the room is refused ([ScanPick.TapCloser]) rather than drawn.
+ * 6. **A finger is not a ray.** When the ray itself found nothing, a wider cone looks for an
+ *    object beside it — a lamp's pole is thinner than a fingertip — and a thing too sparse to
+ *    grow through (a plant) is grown again with a looser net.
  *
  * Both [of] and [pick] belong off the main thread: [of] walks every surfel a few times, [pick]
  * takes a few milliseconds on a chair and tens of them on a sofa. [pick] is not thread-safe —
@@ -135,11 +142,35 @@ class ScanObjects private constructor(
     private val ground: GroundMap,
     /** How thick the scan drew its floor, in metres: what is this close to the ground is floor. */
     val floorTolerance: Float,
+    /** The direction the room's walls face, modulo a quarter turn; `null` with too few of them. */
+    private val roomYaw: Float?,
 ) {
     private val bounds = cloud.bounds()
     private val stamps = IntArray(voxels.slotCount)
     private var stamp = 0
-    private val neighbours = IntArray(NEIGHBOURS)
+
+    /** Per voxel, the tap (its first stamp) that cut it away as the wall behind an object. */
+    private val cutAway = IntArray(voxels.slotCount)
+    private val neighbours = IntArray(LOOSE_NEIGHBOURS)
+
+    /** How thick an upright sheet of this scan is: a wall's noise, as [of] measured the floor's. */
+    private val sheetTolerance = floorTolerance.coerceIn(voxelM * 2, MAX_WALL_TOLERANCE_M)
+
+    /**
+     * The fewest voxels an object is made of: [MIN_SEEN_AREA_M2] of surface, at one surfel a
+     * voxel.
+     */
+    val minVoxels: Int = ceil(MIN_SEEN_AREA_M2 / (voxelM * voxelM)).toInt()
+
+    /**
+     * The longest box drawn, in metres: [ROOM_SHARE] of the scan's longer side — what runs along
+     * more of the room than that is a wall or a row of furniture — and never past [MAX_SIDE_M].
+     */
+    val maxSide: Float = if (cloud.count == 0) {
+        MAX_SIDE_M
+    } else {
+        (max(bounds[3] - bounds[0], bounds[5] - bounds[2]) * ROOM_SHARE).coerceIn(MIN_ROOM_CAP_M, MAX_SIDE_M)
+    }
 
     /** What surfel [index] was sorted as. */
     fun surfaceOf(index: Int): ScanSurface = SURFACES[kinds[index].toInt()]
@@ -154,11 +185,20 @@ class ScanObjects private constructor(
         val (near, far) = span(origin, d) ?: return -1
         var t = near
         while (t <= far) {
-            val surfel = nearest(origin, d, t, limit, Int.MAX_VALUE)
+            val surfel = nearest(Cast(origin, d, limit, Int.MAX_VALUE, Int.MAX_VALUE), t, PICK_SPREAD, false)
             if (surfel >= 0) return surfel
             t += voxelM
         }
         return -1
+    }
+
+    /**
+     * One tap's ray, and what it has been through: [speck], the first thing too small for a box,
+     * and [stop], how far along it the floor or a wall ended it.
+     */
+    private class Cast(val origin: Vec3, val d: Vec3, val limit: Int, val maxVoxels: Int, val id: Int) {
+        var speck = -1
+        var stop = Float.MAX_VALUE
     }
 
     /** The stretch of the ray that is inside the cloud's bounds, or `null` when it misses them. */
@@ -184,22 +224,23 @@ class ScanObjects private constructor(
     }
 
     /**
-     * Of the surfels round the ray's point at [t], the one closest to the ray inside its cone; or
-     * -1. A surfel of a region grown since stamp [lookedThrough] is not there: the ray has already
-     * been through it.
+     * Of the surfels round the ray's point at [t], the one closest to the ray inside a cone of
+     * half-angle [spread] — objects only with [objectsOnly]; or -1. A surfel of a region grown
+     * since [cast] began is not there: the ray has already been through it.
      */
-    private fun nearest(origin: Vec3, d: Vec3, t: Float, limit: Int, lookedThrough: Int): Int {
-        val radius = max(voxelM * PICK_RADIUS_VOXELS, t * PICK_SPREAD)
+    private fun nearest(cast: Cast, t: Float, spread: Float, objectsOnly: Boolean): Int {
+        val radius = max(voxelM * PICK_RADIUS_VOXELS, t * spread)
         val reach = ceil(radius / voxelM).toInt()
-        val cx = voxels.cell(origin.x + d.x * t)
-        val cy = voxels.cell(origin.y + d.y * t)
-        val cz = voxels.cell(origin.z + d.z * t)
+        val cx = voxels.cell(cast.origin.x + cast.d.x * t)
+        val cy = voxels.cell(cast.origin.y + cast.d.y * t)
+        val cz = voxels.cell(cast.origin.z + cast.d.z * t)
         var best = -1
         var bestDistance = radius * radius
         for (ix in cx - reach..cx + reach) for (iy in cy - reach..cy + reach) for (iz in cz - reach..cz + reach) {
             val surfel = voxels.surfelAt(ix, iy, iz)
-            val there = surfel in 0 until limit && stamps[voxels.slotOf(surfel)] < lookedThrough
-            val distance = if (there) offRay(surfel, origin, d) else Float.MAX_VALUE
+            val there = surfel in 0 until cast.limit && stamps[voxels.slotOf(surfel)] < cast.id &&
+                (!objectsOnly || kinds[surfel] == OBJECT)
+            val distance = if (there) offRay(surfel, cast.origin, cast.d) else Float.MAX_VALUE
             if (distance <= bestDistance) {
                 best = surfel
                 bestDistance = distance
@@ -219,11 +260,15 @@ class ScanObjects private constructor(
 
     /**
      * What a tap along the ray from [origin] finds among the first [limit] surfels. A region
-     * past [maxVoxels], or whose box is longer than [MAX_SIDE_M], is [ScanPick.TapCloser].
+     * past [maxVoxels], or whose box is longer than [maxSide], is [ScanPick.TapCloser].
      *
-     * The ray goes through specks: a clump of fewer than [MIN_REGION_VOXELS] voxels, or one under
-     * [MIN_SIDE_M] in every direction, is depth noise hanging in the room — it gets no box, and
-     * does not hide the piece of furniture behind it either.
+     * The ray goes through what is no object: a clump of under [minVoxels] voxels, or one that is
+     * not [MIN_SIDE_M] by [MIN_SECOND_SIDE_M] in any two directions, is depth noise or a sliver of
+     * it hanging in the room — it gets no box, and does not hide the piece of furniture behind it.
+     *
+     * A ray that found nothing is cast again as wide as a fingertip, for the objects only; and
+     * when that finds nothing either, the first clump it went through is grown with a looser
+     * net — it may be a plant, which no dense growth holds together.
      */
     fun pick(
         origin: Vec3,
@@ -235,15 +280,30 @@ class ScanObjects private constructor(
         val (near, far) = span(origin, d) ?: return ScanPick.Empty
         if (stamp > Int.MAX_VALUE / 2) {
             stamps.fill(0)
+            cutAway.fill(0)
             stamp = 0
         }
-        // Every region grown from here on is a speck this ray has been through.
-        val lookedThrough = stamp + 1
+        // Every region grown from here on is one this ray has been through.
+        val cast = Cast(origin, d, limit, maxVoxels, id = stamp + 1)
+        val under = along(cast, near, far, PICK_SPREAD, objectsOnly = false)
+        if (under != ScanPick.Empty) return under
+        // No further than the wall the ray ended on: what stands behind a wall is not under the finger.
+        val beside = along(cast, near, min(far, cast.stop), FINGER_SPREAD, objectsOnly = true)
+        return beside as? ScanPick.Found ?: sparse(cast) ?: ScanPick.Empty
+    }
+
+    /**
+     * The first answer along [cast] between [near] and [far]. With [objectsOnly] the floor and the
+     * walls are looked past and only an object is an answer: the wide cast adds a box, it never
+     * takes away the "nothing" of a tap on the floor.
+     */
+    private fun along(cast: Cast, near: Float, far: Float, spread: Float, objectsOnly: Boolean): ScanPick {
         var t = near
         while (t <= far) {
-            val surfel = nearest(origin, d, t, limit, lookedThrough)
-            val answer = if (surfel < 0) null else answerAt(surfel, limit, maxVoxels)
-            if (answer != null) return answer
+            val surfel = nearest(cast, t, spread, objectsOnly)
+            val answer = if (surfel < 0) null else answerAt(surfel, cast)
+            if (!objectsOnly && answer === ScanPick.Empty) cast.stop = t
+            if (answer != null && (!objectsOnly || answer is ScanPick.Found)) return answer
             // Past a speck the ray stays where it is: what it hid may stand at the same step.
             if (surfel < 0) t += voxelM
         }
@@ -251,23 +311,65 @@ class ScanObjects private constructor(
     }
 
     /** What a tap whose ray stops on [surfel] answers; `null` on a speck, which it goes through. */
-    private fun answerAt(surfel: Int, limit: Int, maxVoxels: Int): ScanPick? {
+    private fun answerAt(surfel: Int, cast: Cast): ScanPick? {
         if (surfaceOf(surfel) != ScanSurface.Object) return ScanPick.Empty
-        val region = grow(voxels.slotOf(surfel), limit, maxVoxels) ?: return ScanPick.TapCloser
-        val box = if (region.size < MIN_REGION_VOXELS) null else boxOf(region)
+        val seed = voxels.slotOf(surfel)
+        val answer = judge(seed, cast, loose = false)
+        if (answer == null && cast.speck < 0) cast.speck = seed
+        return answer
+    }
+
+    /**
+     * The first clump [cast] went through, grown again with the looser net; `null` when that is
+     * still no object, or one past [SPARSE_MAX_SIDE_M] — a plant, a lamp or a chair is found this
+     * way, a sofa is not: the net has caught the neighbours, and the tap answers nothing.
+     */
+    private fun sparse(cast: Cast): ScanPick.Found? {
+        if (cast.speck < 0) return null
+        val found = judge(cast.speck, cast, loose = true) as? ScanPick.Found
+        return found?.takeIf { it.box.length <= SPARSE_MAX_SIDE_M }
+    }
+
+    /**
+     * What the region grown from [seed] is: an object and its box, the wall ([ScanPick.Empty]),
+     * too much for one box ([ScanPick.TapCloser]), or — `null` — nothing a box could be drawn
+     * round, which the ray goes through.
+     */
+    private fun judge(seed: Int, cast: Cast, loose: Boolean): ScanPick? {
+        var region = grow(seed, cast, loose) ?: return ScanPick.TapCloser
+        if (region.size >= minVoxels && cutBackdrops(region, seed, cast.id)) {
+            // The tap was on the sheet itself: a wall, sorted or not.
+            if (cutAway[seed] == cast.id) return ScanPick.Empty
+            region = grow(seed, cast, loose) ?: return ScanPick.TapCloser
+        }
+        val box = if (region.size < minVoxels) null else boxOf(region)
         return when {
-            box == null || max(box.length, box.height) < MIN_SIDE_M -> null
-            box.length > MAX_SIDE_M -> ScanPick.TapCloser
+            box == null || !box.isAnObject() -> null
+            box.isASheet() -> ScanPick.Empty
+            box.length > maxSide -> ScanPick.TapCloser
             else -> ScanPick.Found(box, region)
         }
     }
 
+    /** Whether a box has two sides an object has: a stick or a shard does not. */
+    private fun ScanBox.isAnObject(): Boolean {
+        val longest = max(length, height)
+        val second = max(min(length, height), depth)
+        return longest >= MIN_SIDE_M && second >= MIN_SECOND_SIDE_M
+    }
+
+    /** Whether a box is a piece of wall — or a door, a window: long, tall, and no deeper than its noise. */
+    private fun ScanBox.isASheet(): Boolean =
+        depth <= SHEET_DEPTH_M && length >= SHEET_LENGTH_M && height >= SHEET_HEIGHT_M
+
     /**
-     * The surfels of the object [seed]'s voxel belongs to, or `null` past [maxVoxels]. Only a
-     * voxel with [CORE_NEIGHBOURS] occupied neighbours passes the region on: the thin bridges
-     * depth noise throws between two objects join a region, they do not carry it across.
+     * The surfels of the object [seed]'s voxel belongs to, or `null` past the cast's budget. Only
+     * a voxel with [CORE_NEIGHBOURS] occupied neighbours passes the region on: the thin bridges
+     * depth noise throws between two objects join a region, they do not carry it across. With
+     * [loose], a voxel without them passes it on [LOOSE_REACH] voxels away instead: across the
+     * gaps between a plant's leaves.
      */
-    private fun grow(seed: Int, limit: Int, maxVoxels: Int): IntArray? {
+    private fun grow(seed: Int, cast: Cast, loose: Boolean): IntArray? {
         stamp++
         var queue = IntArray(INITIAL_QUEUE)
         var size = 0
@@ -276,12 +378,14 @@ class ScanObjects private constructor(
         var head = 0
         while (head < size) {
             val slot = queue[head++]
-            val found = objectNeighbours(slot, limit)
-            val passedOn = if (found >= CORE_NEIGHBOURS || slot == seed) found else 0
-            for (k in 0 until passedOn) {
+            var found = objectNeighbours(slot, cast, 1)
+            if (found < CORE_NEIGHBOURS) {
+                found = if (loose) objectNeighbours(slot, cast, LOOSE_REACH) else if (slot == seed) found else 0
+            }
+            for (k in 0 until found) {
                 val next = neighbours[k]
                 val fresh = stamps[next] != stamp
-                if (fresh && size == maxVoxels) return null
+                if (fresh && size == cast.maxVoxels) return null
                 if (fresh) {
                     if (size == queue.size) queue = queue.copyOf(size * 2)
                     stamps[next] = stamp
@@ -293,17 +397,109 @@ class ScanObjects private constructor(
         return IntArray(size) { voxels.surfel(queue[it]) }.also { it.sort() }
     }
 
-    /** Fills [neighbours] with the object voxels round [slot] a replay has drawn; returns how many. */
-    private fun objectNeighbours(slot: Int, limit: Int): Int {
+    /**
+     * Fills [neighbours] with the object voxels within [reach] of [slot] that a replay has drawn
+     * and this tap has not cut away; returns how many.
+     */
+    private fun objectNeighbours(slot: Int, cast: Cast, reach: Int): Int {
         val ix = voxels.x(slot)
         val iy = voxels.y(slot)
         val iz = voxels.z(slot)
         var found = 0
-        for (k in 0 until NEIGHBOURS) {
-            val surfel = voxels.surfelAt(ix + OFFSETS[k * 3], iy + OFFSETS[k * 3 + 1], iz + OFFSETS[k * 3 + 2])
-            if (surfel in 0 until limit && kinds[surfel] == OBJECT) neighbours[found++] = voxels.slotOf(surfel)
+        for (dx in -reach..reach) for (dy in -reach..reach) for (dz in -reach..reach) {
+            val surfel = voxels.surfelAt(ix + dx, iy + dy, iz + dz)
+            val other = if (surfel in 0 until cast.limit && kinds[surfel] == OBJECT) voxels.slotOf(surfel) else slot
+            if (other != slot && cutAway[other] != cast.id) neighbours[found++] = other
         }
         return found
+    }
+
+    /**
+     * Cuts away of [region] the sheets that stand behind it and are no part of it — the piece of
+     * wall a scan saw round a piece of furniture, too small for [of] to have sorted as a wall.
+     * Looked for along the faces the region agrees on and along the room's own; `true` when
+     * something was cut.
+     */
+    private fun cutBackdrops(region: IntArray, seed: Int, tap: Int): Boolean {
+        val normals = cloud.normals ?: return false
+        val floorY = ground.at(cloud.positions[voxels.surfel(seed) * 3], cloud.positions[voxels.surfel(seed) * 3 + 2])
+        val yaws = listOfNotNull(faceVote(region).takeIf { it.second >= MIN_FACE_AGREEMENT }?.first, roomYaw)
+        var cut = false
+        for (yaw in yaws) for (quarter in 0 until QUARTERS) {
+            val angle = yaw + quarter * PI / 2
+            val sheet = Sheet(cos(angle).toFloat(), sin(angle).toFloat())
+            if (sheet.place(region, normals) && sheet.isBackdrop(region, floorY)) {
+                sheet.cut(region, normals, tap)
+                cut = true
+            }
+        }
+        return cut
+    }
+
+    /**
+     * An upright sheet of a region facing ([ax], [az]) — the room's side of it — at [offset]
+     * along that direction: the first plane heavy enough coming from behind the region.
+     */
+    private inner class Sheet(val ax: Float, val az: Float) {
+        private var offset = 0f
+
+        private fun along(i: Int) = cloud.positions[i * 3] * ax + cloud.positions[i * 3 + 2] * az
+        private fun across(i: Int) = -cloud.positions[i * 3] * az + cloud.positions[i * 3 + 2] * ax
+        private fun faces(i: Int, normals: FloatArray, least: Float) =
+            abs(normals[i * 3 + 1]) <= UPRIGHT_NORMAL_Y && normals[i * 3] * ax + normals[i * 3 + 2] * az > least
+
+        /** Finds the sheet in [region]; `false` when no plane of it faces this way. */
+        fun place(region: IntArray, normals: FloatArray): Boolean {
+            val facing = region.filter { faces(it, normals, ALONG_AXIS) }
+            if (facing.size < MIN_SHEET_VOXELS) return false
+            val lo = facing.minOf { along(it) }
+            val bins = IntArray(((facing.maxOf { along(it) } - lo) / LEVEL_BIN_M).toInt() + 1)
+            fun binOf(i: Int) = ((along(i) - lo) / LEVEL_BIN_M).toInt()
+            for (i in facing) bins[binOf(i)]++
+            fun weightAt(bin: Int) = (bin until bin + WALL_WINDOW_BINS).sumOf { bins.getOrElse(it) { 0 } }
+            val first = bins.indices.firstOrNull { weightAt(it) >= MIN_SHEET_VOXELS } ?: return false
+            val on = facing.filter { binOf(it) in first until first + WALL_WINDOW_BINS }
+            offset = (on.sumOf { along(it).toDouble() } / on.size).toFloat()
+            return true
+        }
+
+        /**
+         * Whether the sheet is the wall behind what [region] holds, not a side of it: nearly
+         * nothing behind it, an object's worth in front, and it sticks out — by [OVERHANG_M] past
+         * the object on a side, or above it up to where only a wall goes ([WALL_HEIGHT_M] over
+         * [floorY]). A sofa's back, a headboard, a shelf's back panel do neither.
+         */
+        fun isBackdrop(region: IntArray, floorY: Float): Boolean {
+            val on = region.filter { abs(along(it) - offset) <= sheetTolerance }
+            val front = region.filter { along(it) - offset > sheetTolerance }
+            val behind = region.size - on.size - front.size
+            if (on.size < MIN_SHEET_VOXELS || front.size < minVoxels || behind > on.size * MAX_PAST_WALL) return false
+            val sheetTop = end(on, high = true) { cloud.positions[it * 3 + 1] }
+            val frontTop = end(front, high = true) { cloud.positions[it * 3 + 1] }
+            val taller = sheetTop - floorY >= WALL_HEIGHT_M && sheetTop - frontTop >= OVERHANG_M
+            val wider = end(on, high = true, ::across) - end(front, high = true, ::across) >= OVERHANG_M ||
+                end(front, high = false, ::across) - end(on, high = false, ::across) >= OVERHANG_M
+            return taller || wider
+        }
+
+        /**
+         * Marks the sheet cut away for [tap]: what is behind it, what faces its way within its
+         * noise, and its own voxel-thin skin — not the sides of the furniture standing against it.
+         */
+        fun cut(region: IntArray, normals: FloatArray, tap: Int) {
+            for (i in region) {
+                val out = along(i) - offset
+                val skin = abs(out) <= voxelM || (abs(out) <= sheetTolerance && faces(i, normals, FACING_SHEET))
+                if (skin || out < -sheetTolerance) cutAway[voxels.slotOf(i)] = tap
+            }
+        }
+
+        /** The high or low end of [value] over [surfels], [SHEET_TRIM] of them dropped as strays. */
+        private fun end(surfels: List<Int>, high: Boolean, value: (Int) -> Float): Float {
+            val sorted = FloatArray(surfels.size) { value(surfels[it]) }.also { it.sort() }
+            val drop = (sorted.size * SHEET_TRIM).toInt()
+            return if (high) sorted[sorted.size - 1 - drop] else sorted[drop]
+        }
     }
 
     /**
@@ -427,32 +623,71 @@ class ScanObjects private constructor(
         /** A region past this many voxels has run into the rest of the room. */
         const val MAX_REGION_VOXELS = 80_000
 
-        /** Fewer voxels than this is a speck of depth noise, not an object. */
-        const val MIN_REGION_VOXELS = 24
+        /**
+         * The least surface a scan must have seen of an object, in square metres: 0.2 m² is 500
+         * surfels at the scan's 2 cm — three faces of a 26 cm cube. On the Pixel 4a's scans the
+         * smallest thing that was furniture had 749 surfels (0.46 × 0.28 × 0.30 m) and the two
+         * shards that got a box had 136 and 328 (#4505).
+         */
+        const val MIN_SEEN_AREA_M2 = 0.2f
 
-        /** Smaller than this in every direction is a speck too, however many voxels it has. */
+        /** Smaller than this in every direction is a speck, however many voxels it has. */
         const val MIN_SIDE_M = 0.3f
+
+        /**
+         * And an object has a second side: under 20 cm in two directions it is a stick or a shard
+         * of depth noise (the 0.11 × 0.07 × 0.56 m one of #4505), which no tape would be put to.
+         */
+        const val MIN_SECOND_SIDE_M = 0.2f
+
+        /** A box along more than this share of the scan's longer side is the room's, not an object's. */
+        const val ROOM_SHARE = 2f / 3f
+
+        /** A scan of one corner of a room still boxes a table: [ROOM_SHARE] never caps below this. */
+        const val MIN_ROOM_CAP_M = 1.5f
+
+        /** A thing found with the looser net is a plant, a lamp, a chair: never longer than this. */
+        const val SPARSE_MAX_SIDE_M = 1.5f
+
+        /**
+         * A piece of wall seen alone: at least a metre long and 1.2 m tall, and no deeper than
+         * 15 cm — a wall's depth noise, and thinner than the slimmest cabinet.
+         */
+        const val SHEET_DEPTH_M = 0.15f
+        const val SHEET_LENGTH_M = 1f
+        const val SHEET_HEIGHT_M = 1.2f
+
+        /** The sheet behind an object is the wall when it sticks out this far past it. */
+        const val OVERHANG_M = 0.3f
+
+        /** Furniture's own backs stop below this; what stands taller behind an object is the wall. */
+        const val WALL_HEIGHT_M = 1.8f
 
         /** Occupied neighbours (of 26) a voxel needs to pass a region on. */
         const val CORE_NEIGHBOURS = 6
 
-        private const val NEIGHBOURS = 26
-        private val OFFSETS = IntArray(NEIGHBOURS * 3).also { offsets ->
-            var k = 0
-            for (dx in -1..1) for (dy in -1..1) for (dz in -1..1) {
-                if (dx != 0 || dy != 0 || dz != 0) {
-                    offsets[k++] = dx
-                    offsets[k++] = dy
-                    offsets[k++] = dz
-                }
-            }
-        }
+        /** The looser net's reach, in voxels: it crosses one empty voxel, 4 cm at the scan's 2 cm. */
+        private const val LOOSE_REACH = 2
+        private const val LOOSE_NEIGHBOURS = 124
+
+        /** A sheet: at least this many voxels in one plane — 0.08 m², an [OVERHANG_M] square. */
+        private const val MIN_SHEET_VOXELS = 200
+        private const val MIN_FACE_AGREEMENT = 0.1f
+        private const val FACING_SHEET = 0.5f
+        private const val SHEET_TRIM = 0.02f
+        private const val QUARTERS = 4
         private const val INITIAL_QUEUE = 1024
         private const val MAX_RANGE_M = 30f
         private const val PICK_RADIUS_VOXELS = 0.9f
 
-        /** The pick cone's half-angle, in radians: about a fingertip on a phone screen. */
+        /** The pick cone's half-angle, in radians: 4 dp on a phone, a surfel's width at arm's length. */
         private const val PICK_SPREAD = 0.004f
+
+        /**
+         * The second cast's half-angle: 12 dp on a phone (0.37 mrad a pixel at 2.75 px a dp), a
+         * quarter of the 48 dp a touch target is given — what a fingertip can be off by.
+         */
+        private const val FINGER_SPREAD = 0.012f
         private const val ANGLE_SAMPLES = 1024
         private const val TRIM = 0.005f
         private const val FACE_BONUS = 0.2f
@@ -511,8 +746,8 @@ class ScanObjects private constructor(
                 kinds[i] = if (h < tolerance || (flat && h < tolerance + FLOOR_SKIN_M)) FLOOR else OBJECT
             }
             markCeiling(cloud, kinds, ground.level, max(tolerance, voxelM * 2))
-            markWalls(cloud, kinds, tolerance.coerceIn(voxelM * 2, MAX_WALL_TOLERANCE_M))
-            return ScanObjects(cloud, voxelM, voxels, kinds, ground, tolerance)
+            val yaw = markWalls(cloud, kinds, tolerance.coerceIn(voxelM * 2, MAX_WALL_TOLERANCE_M))
+            return ScanObjects(cloud, voxelM, voxels, kinds, ground, tolerance, yaw)
         }
 
         private fun normalY(cloud: DenseCloud, i: Int): Float = cloud.normals?.get(i * 3 + 1) ?: 1f
@@ -560,13 +795,14 @@ class ScanObjects private constructor(
          * The walls: the room's two directions from its upright surfels' normals, then on each of
          * the four sides the outermost plane of them — large enough to be a wall, or that side has
          * none. A plane with a good part of the scan behind it is a piece of furniture seen from the
-         * side, not a wall. Whatever is on a wall, or past it, is wall.
+         * side, not a wall. Whatever is on a wall, or past it, is wall. Returns the room's
+         * direction, `null` when the scan has too few upright surfels to tell.
          */
-        private fun markWalls(cloud: DenseCloud, kinds: ByteArray, tolerance: Float) {
-            val normals = cloud.normals ?: return
+        private fun markWalls(cloud: DenseCloud, kinds: ByteArray, tolerance: Float): Float? {
+            val normals = cloud.normals ?: return null
             fun upright(i: Int) = kinds[i] == OBJECT && abs(normals[i * 3 + 1]) <= UPRIGHT_NORMAL_Y
             val count = (0 until cloud.count).count { upright(it) }
-            if (count < MIN_WALL_SURFELS) return
+            if (count < MIN_WALL_SURFELS) return null
             val yaw = roomYaw(cloud, normals, ::upright)
             val planes = ArrayList<Wall>()
             for (axis in 0 until 2) {
@@ -589,6 +825,7 @@ class ScanObjects private constructor(
                     if (beyond && kinds[i] == OBJECT) kinds[i] = WALL
                 }
             }
+            return yaw.toFloat()
         }
 
         /** Whether what the scan saw past [wall] is little next to what it saw of the wall itself. */

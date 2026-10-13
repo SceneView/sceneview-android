@@ -106,6 +106,12 @@ class ArDebugOrbitCamera(
             recenter()
         }
 
+    /**
+     * Keeps the turntable still while something in the view is being read — a picked object's
+     * box and its dimensions: a recenter still reframes, it does not start the room turning again.
+     */
+    var steady: Boolean = false
+
     /** The elevation the view frames [home] at: the three-quarter view, or the map's. */
     val homeElevation: Float
         get() = if (overhead) ArDebugFraming.MAP_ELEVATION else ArDebugFraming.HOME_ELEVATION
@@ -138,6 +144,24 @@ class ArDebugOrbitCamera(
         azimuthVelocity = 0f
         elevationVelocity = 0f
     }
+
+    /**
+     * Stops the automatic framing where it is, as a drag does: a finger put on the view to tap
+     * something in it must find that thing still there when the tap is told from a double-tap.
+     */
+    fun hold() {
+        if (following) takeOver()
+    }
+
+    /**
+     * A finger put down on the view: [hold], unless it is the second tap of the double-tap that
+     * has just asked for a recenter — the double-tap is told before its own finger down.
+     */
+    fun fingerDown() {
+        if (!recenteredByTap) hold()
+    }
+
+    private var recenteredByTap = false
 
     /** Puts the camera at [target] at once — the first frame of a view, where easing would lag. */
     fun snapTo(target: OrbitPose) {
@@ -215,9 +239,13 @@ class ArDebugOrbitCamera(
 
     override fun scrollEnd() = Unit
 
-    override fun doubleTapZoom(x: Int, y: Int, zoomIn: Boolean) = recenter()
+    override fun doubleTapZoom(x: Int, y: Int, zoomIn: Boolean) {
+        recenter()
+        recenteredByTap = true
+    }
 
     override fun update(deltaTime: Float) {
+        recenteredByTap = false
         val dt = deltaTime.takeIf { it.isFinite() && it > 0f && it < 0.25f } ?: return
         if (grabbing && !panning) {
             azimuthVelocity = (dragAzimuth / dt).coerceIn(-MAX_SPIN, MAX_SPIN)
@@ -237,7 +265,7 @@ class ArDebugOrbitCamera(
                 return
             }
             followSeconds += dt
-            if (drift && !overhead) {
+            if (drift && !overhead && !steady) {
                 // Ramp in over two seconds so recentering does not lurch into a spin.
                 val ramp = (followSeconds / 2f).coerceAtMost(1f)
                 home = home.copy(azimuthDegrees = home.azimuthDegrees + DRIFT_DEGREES_PER_SECOND * ramp * dt)
