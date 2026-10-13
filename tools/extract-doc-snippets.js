@@ -113,6 +113,7 @@ const PREAMBLE_IMPORTS = [
   "androidx.compose.ui.unit.Dp",
   "androidx.lifecycle.Lifecycle",
   "androidx.lifecycle.compose.LocalLifecycleOwner",
+  "androidx.lifecycle.repeatOnLifecycle",
   "com.google.android.filament.*",
   // llms.txt's ground-shadow snippets use the doc-established `FilamentBox`
   // alias to disambiguate from io.github.sceneview.collision.Box.

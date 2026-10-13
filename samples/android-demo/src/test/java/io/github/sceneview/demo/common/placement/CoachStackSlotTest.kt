@@ -1,5 +1,6 @@
 package io.github.sceneview.demo.common.placement
 
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.sceneview.demo.demoChromeBottomInset
@@ -147,5 +148,28 @@ class CoachStackSlotTest {
         val NAV_BAR = 24.dp
         val GUTTER = 16.dp
         val MAX_WIDTH = 480.dp
+    }
+
+    // ── coachStackAlignment ───────────────────────────────────────────────────────────
+
+    @Test
+    fun `above the chrome every card is centred on it`() {
+        val above = CoachStackSlot(besideChrome = false, width = Dp.Unspecified, bottom = 168.dp)
+        PlacementCard.entries.forEach { assertEquals(Alignment.BottomCenter, coachStackAlignment(above, it)) }
+        assertEquals(Alignment.BottomCenter, coachStackAlignment(above, null))
+    }
+
+    @Test
+    fun `beside the chrome a card with buttons sits in the bottom corner`() {
+        val beside = CoachStackSlot(besideChrome = true, width = 254.dp, bottom = 16.dp)
+        assertEquals(Alignment.BottomEnd, coachStackAlignment(beside, PlacementCard.NO_SURFACE))
+        assertEquals(Alignment.BottomEnd, coachStackAlignment(beside, PlacementCard.CAMERA_ERROR))
+        assertEquals(Alignment.BottomEnd, coachStackAlignment(beside, PlacementCard.RECOVERY_FAILED))
+    }
+
+    @Test
+    fun `beside the chrome the card with nothing to press stands above the dock's scrim`() {
+        val beside = CoachStackSlot(besideChrome = true, width = 254.dp, bottom = 16.dp)
+        assertEquals(Alignment.TopEnd, coachStackAlignment(beside, PlacementCard.MOTION_SENSOR_SILENT))
     }
 }

@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -46,6 +47,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -53,7 +55,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onSizeChanged
@@ -96,6 +104,8 @@ import io.github.sceneview.demo.R
 import io.github.sceneview.demo.common.DemoStatusBanner
 import io.github.sceneview.demo.common.DemoStatusTone
 import io.github.sceneview.demo.common.ForcedTrackingFailure
+import io.github.sceneview.demo.common.motionSensorSilentForced
+import io.github.sceneview.demo.common.rememberMotionSensorSilent
 import io.github.sceneview.demo.common.QaCameraBackdrop
 import io.github.sceneview.demo.common.qaCameraBackdropEnabled
 import io.github.sceneview.demo.common.qaCameraBackdropSurfaceType
@@ -190,6 +200,15 @@ fun TapToPlaceArSession(
     val appContext = LocalContext.current.applicationContext
     val funnel = remember { ArFunnelLog(arCoreVersion = { arCoreVersionName(appContext) }) }
     funnel.sampleId = LocalSampleId.current ?: AR_VIEW_SAMPLE_ID
+    // #4522: frames for ten seconds, never tracking, no reason from ARCore — is the gyroscope
+    // delivering at all? If not, say so instead of "Getting ready" for ever.
+    val motionSensorSilent = rememberMotionSensorSilent(
+        framesArriving = state.cameraReady,
+        tracking = state.isTracking,
+        failureReason = state.trackingFailureReason,
+        onSilent = funnel::motionSensorSilent,
+    )
+    SideEffect { state.motionSensorSilent = motionSensorSilent }
     // #4510: a resumed session that delivers no frame has no callback to say so — ask on a timer.
     // The timer follows the lifecycle the session itself resumes and pauses on: in the background
     // it does not run, so time spent there is never counted as a session delivering no frame.
@@ -225,7 +244,9 @@ fun TapToPlaceArSession(
             instantPlacementMode = Config.InstantPlacementMode.DISABLED,
             sessionConfiguration = sessionConfiguration,
             // The SDK's own card, kept off the mode pill and the dock (#4509).
-            arCoreAvailabilityOverlay = { PlacementAvailabilityOverlay(it) },
+            // Stands down for the pinned QA state of #4522, which an emulator can only reach
+            // from a session that could not start.
+            arCoreAvailabilityOverlay = { if (!motionSensorSilentForced()) PlacementAvailabilityOverlay(it) },
             onSessionCreated = { funnel.sessionCreated() },
             onSessionResumed = { funnel.sessionResumed() },
             onSessionPaused = { funnel.sessionPaused() },
@@ -461,7 +482,13 @@ fun BoxScope.TapToPlaceStatusOverlays(
     // overlay is silent on them). Silent while the SDK's "Couldn't start AR" card is up:
     // both are centred, and the coaching used to sit on that card's Try again button (#3986).
     val guidance = rememberArGuidanceState(state.controller, trackingFailureReason = trackingFailure)
-    val coachingCue = if (state.arCoreAvailability == null) guidance.cue else ArGuidanceCue.NONE
+    // Silent too once the phone's gyroscope is known to deliver nothing (#4522): "Getting
+    // ready" would never leave, and the card below says what to do.
+    val coachingCue = if (state.arCoreAvailability == null && !state.motionSensorSilent) {
+        guidance.cue
+    } else {
+        ArGuidanceCue.NONE
+    }
     ARCoachingOverlay(
         cue = coachingCue,
         surface = guidance.surface,
@@ -477,7 +504,7 @@ fun BoxScope.TapToPlaceStatusOverlays(
         lowLight = lowLight,
         coachingActive = coachingCue != ArGuidanceCue.NONE,
     )
-    val card = placementCard(state.phase)
+    val card = placementCard(state.phase, state.motionSensorSilent)
 
     // ── The one bottom anchor ─────────────────────────────────────────────────────────
     //
@@ -501,6 +528,10 @@ fun BoxScope.TapToPlaceStatusOverlays(
         if (shownCard == null) delay(SceneViewTokens.Duration.shortMillis.toLong())
         cardSlotHeld = shownCard != null
     }
+    // And so does its kind: the card that is leaving decides where the stack stands.
+    var lastShownCard by remember { mutableStateOf<PlacementCard?>(null) }
+    SideEffect { if (shownCard != null) lastShownCard = shownCard }
+    val slotCard = shownCard ?: lastShownCard
 
     BoxWithConstraints(
         modifier = Modifier
@@ -520,7 +551,7 @@ fun BoxScope.TapToPlaceStatusOverlays(
         )
         Column(
             modifier = Modifier
-                .align(if (slot.besideChrome) Alignment.BottomEnd else Alignment.BottomCenter)
+                .align(coachStackAlignment(slot, slotCard))
                 .testTag(PlacementTestTags.COACH_STACK)
                 .padding(horizontal = SceneViewTokens.Space.md)
                 .padding(bottom = slot.bottom)
@@ -692,7 +723,7 @@ internal fun PlacementActionCard(
     ) {
         val title: String
         val detail: String?
-        val primary: String
+        val primary: String?
         val onPrimary: (() -> Unit)?
         val secondary: String?
         val onSecondary: (() -> Unit)?
@@ -727,7 +758,19 @@ internal fun PlacementActionCard(
                 secondary = null
                 onSecondary = null
             }
+
+            // No action: restarting the session, or the app, does not bring a gyroscope back.
+            PlacementCard.MOTION_SENSOR_SILENT -> {
+                title = stringResource(R.string.ar_place_motion_sensor_title)
+                detail = stringResource(R.string.ar_place_motion_sensor_detail)
+                primary = null
+                onPrimary = null
+                secondary = null
+                onSecondary = null
+            }
         }
+        val hasSecondary = secondary != null && onSecondary != null
+        val hasPrimary = primary != null && onPrimary != null
 
         Column(
             modifier = Modifier
@@ -743,10 +786,12 @@ internal fun PlacementActionCard(
         ) {
             // The words give way before the buttons do: in a window too short for the whole
             // card they scroll, and the actions stay on screen and in reach (#4509).
+            val textScroll = rememberScrollState()
             Column(
                 modifier = Modifier
                     .weight(1f, fill = false)
-                    .verticalScroll(rememberScrollState()),
+                    .scrollEdgeFade(textScroll)
+                    .verticalScroll(textScroll),
                 verticalArrangement = Arrangement.spacedBy(SceneViewTokens.Space.xs),
             ) {
                 Text(
@@ -765,46 +810,80 @@ internal fun PlacementActionCard(
             }
             // A FlowRow: at a large font size, or in the corner of a sideways phone, the two
             // buttons no longer fit one line, and a Row would squeeze the second one's label.
-            FlowRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = SceneViewTokens.Space.sm),
-                horizontalArrangement = Arrangement.spacedBy(SceneViewTokens.Space.sm, Alignment.End),
-                verticalArrangement = Arrangement.spacedBy(SceneViewTokens.Space.xs),
-            ) {
-                if (secondary != null && onSecondary != null) {
-                    TextButton(
-                        onClick = onSecondary,
-                        shape = buttonShape,
-                        colors = ButtonDefaults.textButtonColors(
-                            contentColor = SceneViewTokens.ArOverlay.onScrim,
-                        ),
-                        modifier = Modifier
-                            .heightIn(min = SceneViewTokens.Layout.touchTarget)
-                            .testTag(PlacementTestTags.PLACEMENT_CARD_SECONDARY),
-                    ) {
-                        Text(secondary, style = MaterialTheme.typography.labelLarge)
+            if (hasPrimary || hasSecondary) {
+                FlowRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = SceneViewTokens.Space.sm),
+                    horizontalArrangement = Arrangement.spacedBy(SceneViewTokens.Space.sm, Alignment.End),
+                    verticalArrangement = Arrangement.spacedBy(SceneViewTokens.Space.xs),
+                ) {
+                    if (secondary != null && onSecondary != null) {
+                        TextButton(
+                            onClick = onSecondary,
+                            shape = buttonShape,
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = SceneViewTokens.ArOverlay.onScrim,
+                            ),
+                            modifier = Modifier
+                                .heightIn(min = SceneViewTokens.Layout.touchTarget)
+                                .testTag(PlacementTestTags.PLACEMENT_CARD_SECONDARY),
+                        ) {
+                            Text(secondary, style = MaterialTheme.typography.labelLarge)
+                        }
                     }
-                }
-                if (onPrimary != null) {
-                    Button(
-                        onClick = onPrimary,
-                        shape = buttonShape,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary,
-                        ),
-                        modifier = Modifier
-                            .heightIn(min = SceneViewTokens.Layout.touchTarget)
-                            .testTag(PlacementTestTags.PLACEMENT_CARD_PRIMARY),
-                    ) {
-                        Text(primary, style = MaterialTheme.typography.labelLarge)
+                    if (primary != null && onPrimary != null) {
+                        Button(
+                            onClick = onPrimary,
+                            shape = buttonShape,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary,
+                            ),
+                            modifier = Modifier
+                                .heightIn(min = SceneViewTokens.Layout.touchTarget)
+                                .testTag(PlacementTestTags.PLACEMENT_CARD_PRIMARY),
+                        ) {
+                            Text(primary, style = MaterialTheme.typography.labelLarge)
+                        }
                     }
                 }
             }
         }
     }
 }
+
+/**
+ * Dissolves the edge of a scrolling column that has more beyond it: words cut by a hard edge
+ * read as the end of the message, words that fade read as "there is more" (#4522 — the card of
+ * a phone held sideways at the largest text). Draws nothing extra while everything fits.
+ */
+private fun Modifier.scrollEdgeFade(scroll: ScrollState): Modifier = this
+    .graphicsLayer {
+        val scrollable = scroll.canScrollBackward || scroll.canScrollForward
+        compositingStrategy = if (scrollable) CompositingStrategy.Offscreen else CompositingStrategy.Auto
+    }
+    .drawWithContent {
+        drawContent()
+        // A mask, not a colour: only its alpha reaches the screen.
+        val fade = SceneViewTokens.Space.md.toPx().coerceAtMost(size.height / 3)
+        if (scroll.canScrollBackward) {
+            drawRect(
+                Brush.verticalGradient(listOf(Color.Transparent, Color.Black), startY = 0f, endY = fade),
+                blendMode = BlendMode.DstIn,
+            )
+        }
+        if (scroll.canScrollForward) {
+            drawRect(
+                Brush.verticalGradient(
+                    listOf(Color.Black, Color.Transparent),
+                    startY = size.height - fade,
+                    endY = size.height,
+                ),
+                blendMode = BlendMode.DstIn,
+            )
+        }
+    }
 
 /**
  * The live pinch read-out: the placed model's size as a percentage of its real-world

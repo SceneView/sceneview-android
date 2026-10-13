@@ -160,6 +160,32 @@ public final class io/github/sceneview/ar/ARHapticFeedbackKt {
 	public static final fun ARHapticFeedback (Lio/github/sceneview/ar/AutoPlacementState;Lio/github/sceneview/haptic/SceneViewHaptic;ZLandroidx/compose/runtime/Composer;II)V
 }
 
+public final class io/github/sceneview/ar/ARMotionSensorHealth : java/lang/Enum {
+	public static final field DELIVERING Lio/github/sceneview/ar/ARMotionSensorHealth;
+	public static final field SILENT Lio/github/sceneview/ar/ARMotionSensorHealth;
+	public static final field UNKNOWN Lio/github/sceneview/ar/ARMotionSensorHealth;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/github/sceneview/ar/ARMotionSensorHealth;
+	public static fun values ()[Lio/github/sceneview/ar/ARMotionSensorHealth;
+}
+
+public final class io/github/sceneview/ar/ARMotionSensorSample {
+	public static final field $stable I
+	public fun <init> (IIJ)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAccelerometerEvents ()I
+	public final fun getGyroscopeEvents ()I
+	public final fun getHealth ()Lio/github/sceneview/ar/ARMotionSensorHealth;
+	public final fun getWindowMillis ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/sceneview/ar/ARMotionSensorsKt {
+	public static final fun probeARMotionSensors (Landroid/content/Context;JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun probeARMotionSensors$default (Landroid/content/Context;JLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+}
+
 public abstract interface class io/github/sceneview/ar/ARPermissionHandler {
 	public abstract fun checkARCoreAvailability ()Lcom/google/ar/core/ArCoreApk$Availability;
 	public abstract fun hasCameraPermission ()Z

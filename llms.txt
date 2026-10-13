@@ -4636,6 +4636,29 @@ fun ArScreenWithFailureHandling() = ARSceneView(
 ) { /* … */ }
 ```
 
+**A session that delivers camera frames but never tracks, with no reason** (`TrackingState.PAUSED`, `TrackingFailureReason.NONE`, for good) is usually a phone whose gyroscope has stopped delivering samples: ARCore reports nothing, and only restarting the phone brings the sensor back. `probeARMotionSensors(context)` listens to the gyroscope and the accelerometer for one second and returns the two event counts; `ARMotionSensorSample.health` is `DELIVERING`, `SILENT` (accelerometer delivers, gyroscope does not — tell the person to restart their phone) or `UNKNOWN` (no verdict — the sensor service refused a listener, or delivered nothing at all — say nothing, and measure again later if the session still has not tracked). SceneView draws nothing for it and no failure callback fires; call it some ten seconds into a session that has never tracked, in the foreground only, never while tracking works:
+
+```kotlin
+/** `neverTracked`: camera frames arriving, never TRACKING, no TrackingFailureReason. */
+@Composable
+fun rememberRestartPhoneAdvice(neverTracked: Boolean): Boolean {
+    val context = LocalContext.current
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    var restartPhone by remember { mutableStateOf(false) }
+    LaunchedEffect(neverTracked, lifecycle) {
+        if (!neverTracked) return@LaunchedEffect
+        // Foreground only: a paused session is not a stalled one. The wait starts over on return.
+        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            if (restartPhone) return@repeatOnLifecycle
+            delay(10_000)
+            val sample = probeARMotionSensors(context) ?: return@repeatOnLifecycle   // null: no gyroscope
+            restartPhone = sample.health == ARMotionSensorHealth.SILENT
+        }
+    }
+    return restartPhone
+}
+```
+
 For apps that route many subtypes to the same action, extract a tiny helper that returns a coarse category and `when` on that — still exhaustive, no `else ->`:
 
 ```kotlin
