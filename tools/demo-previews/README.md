@@ -60,7 +60,7 @@ ids, so do not pass them to `gen.py --only` for Android (the iOS imagesets still
 |---|---|---|
 | `materials` | `materials_default.png` | 540, 1102, 1080 — the nine-sphere grid |
 | `debug-overlay` | — | Superseded 2026-09-30: the card is now the iOS pair, see "Cards shared with Android" below. Was 540, 800, 1400, black-padded — the stats HUD over its sphere |
-| `camera-gestures` | `cameragestures_default.png` | 575, 1065, 1000 — the whole stage |
+| `camera-gestures` | `cameragestures_default.png` | 575, 1065, 1000 — the whole stage. Dark card only since #4351: the demo follows the theme, so the light card is its own capture — Pixel_7a (1280×2856) in light mode, `--ez qa_mode true`, window x 74–1280, y 910–1875, framed like the dark one |
 | `lighting` | `lighting_default.png` | 540, 1080, 1080 — helmet and probes under the photo environment |
 | `lighting-lab` | `lightinglab_default.png` | 540, 990, 1080 — the lit floor with its sun disc |
 | `secondary-camera` | — | Superseded 2026-09-30: generated from a real capture, see "Cards generated from real captures" below. Was `secondarycamera_default.png`, 540, 870, 1600, black-padded — the picture-in-picture inset |
