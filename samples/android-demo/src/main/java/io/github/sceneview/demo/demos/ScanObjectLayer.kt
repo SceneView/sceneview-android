@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,25 +25,32 @@ import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.LayoutDirection
 import com.google.android.filament.Colors
 import com.google.android.filament.Engine
 import com.google.android.filament.Material
 import com.google.android.filament.MaterialInstance
 import io.github.sceneview.demo.LocalDemoSceneCover
 import io.github.sceneview.demo.R
+import io.github.sceneview.demo.demos.internal.ArDebugFraming
 import io.github.sceneview.demo.demos.internal.ArDebugOrbitCamera
 import io.github.sceneview.demo.demos.internal.ArDebugSession
 import io.github.sceneview.demo.demos.internal.ArDebugStyle
 import io.github.sceneview.demo.demos.internal.DebugGroup
 import io.github.sceneview.demo.demos.internal.DebugMesh
 import io.github.sceneview.demo.demos.internal.DenseSurfels
+import io.github.sceneview.demo.demos.internal.OrbitPose
 import io.github.sceneview.demo.demos.internal.ScanBox
+import io.github.sceneview.demo.demos.internal.ScanCard
+import io.github.sceneview.demo.demos.internal.ScanChrome
 import io.github.sceneview.demo.demos.internal.ScanObjectMeshes
 import io.github.sceneview.demo.demos.internal.ScanObjects
 import io.github.sceneview.demo.demos.internal.ScanPick
@@ -54,6 +62,7 @@ import io.github.sceneview.demo.theme.SceneViewTokens
 import io.github.sceneview.demo.theme.SceneViewTokens.Space
 import io.github.sceneview.demo.ui.overMediaEdge
 import io.github.sceneview.loaders.MaterialLoader
+import io.github.sceneview.math.Position
 import io.github.sceneview.math.colorOf
 import io.github.sceneview.math.toLinearSpace
 import kotlinx.coroutines.CoroutineScope
@@ -68,7 +77,6 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.roundToInt
 
 /*
  * Tap an object in a scan's replay (#4485): the points it is made of light up, a box is drawn
@@ -80,6 +88,14 @@ import kotlin.math.roundToInt
  */
 
 private const val TAG = "ScanObject"
+
+/**
+ * The object picked in one replay, kept by the replay's screen: the view that draws it comes and
+ * goes — the Camera view takes its place, the theme changes — and finds it again (#4505).
+ */
+internal class ScanSelection {
+    var found: ScanPick.Found? = null
+}
 
 /**
  * The object picked in one replay: three layers of the replay's scene — the tint over the
@@ -95,6 +111,7 @@ internal class ScanObjectPick(
     private val dense: ReplayDenseLayer,
     private val session: ArDebugSession,
     private val orbit: ArDebugOrbitCamera,
+    private val selection: ScanSelection,
     engine: Engine,
     private val materialLoader: MaterialLoader,
     palette: DebugPalette,
@@ -132,6 +149,17 @@ internal class ScanObjectPick(
 
     private var found: ScanPick.Found? = null
     private var corners: List<Vec3> = emptyList()
+    private var cornerPositions: List<Position> = emptyList()
+
+    /** Rendered frames a tap's box still waits for its label's height before it is brought out. */
+    private var revealIn = 0
+
+    /** What the replay draws over this view, as [ScanObjectOverlay] lays it out. */
+    var chrome: ScanChrome? = null
+
+    /** How tall the dimensions' label is, in pixels, once it has been laid out. */
+    var labelHeight = 0
+
     private var edgesFor: ArDebugStyle? = null
     private val edgeMesh = DebugMesh()
     private var drawn = false
@@ -157,6 +185,12 @@ internal class ScanObjectPick(
 
     init {
         nodes.forEach { it.isVisible = false }
+        // Back from the Camera view: the object picked before it is still the one picked, and the
+        // camera is where it was left — nothing to bring out.
+        selection.found?.takeIf { it.surfels.isNotEmpty() && it.surfels.last() < dense.cloud.count }?.let {
+            show(it, Offset.Unspecified)
+            revealIn = 0
+        }
     }
 
     /**
@@ -193,10 +227,13 @@ internal class ScanObjectPick(
 
     private fun show(pick: ScanPick, at: Offset) {
         found = pick as? ScanPick.Found
+        selection.found = found
+        revealIn = if (found == null) 0 else REVEAL_AFTER_FRAMES
         box = found?.box
         // The room does not turn away under a box being read, not even after a recenter.
         orbit.steady = found != null
         corners = found?.box?.corners().orEmpty()
+        cornerPositions = corners.map { Position(it.x, it.y, it.z) }
         edgesFor = null
         tintNode.upload(found?.let { ScanObjectMeshes.surfels(dense.mesh, it.surfels) })
         if (pick == ScanPick.TapCloser) {
@@ -215,6 +252,8 @@ internal class ScanObjectPick(
      */
     fun sync(style: ArDebugStyle) {
         val found = found
+        // Said again here: the pick this one replaced let go of the turntable as it left.
+        orbit.steady = found != null
         val visible = found != null && found.surfels.isNotEmpty() && found.surfels.last() < shownSurfels()
         if (visible != drawn) {
             drawn = visible
@@ -232,6 +271,22 @@ internal class ScanObjectPick(
             edgeNode.upload(edgeMesh)
         }
         follow(found.box)
+        // The tapped box and its label, out from under the cards: once, then the finger has it.
+        if (revealIn > 0 && (labelHeight > 0 || --revealIn == 0)) {
+            revealIn = 0
+            orbit.glideTo(framed(orbit.pose))
+        }
+    }
+
+    /**
+     * [pose] moved as little as it takes for the picked box and its label to be clear of the
+     * replay's cards ([ArDebugFraming.reveal]); [pose] itself with nothing picked.
+     */
+    fun framed(pose: OrbitPose): OrbitPose {
+        val chrome = chrome ?: return pose
+        if (found == null) return pose
+        val free = chrome.free(orbit.viewportWidth, orbit.viewportHeight, labelHeight)
+        return ArDebugFraming.reveal(pose, cornerPositions, orbit.verticalFovDegrees, orbit.aspect, free, orbit.lift)
     }
 
     /** Where [box] is drawn this frame: [anchor] over its highest corner, [foot] under its lowest. */
@@ -257,7 +312,7 @@ internal class ScanObjectPick(
             0
         }
 
-    /** The material instances, once the nodes are gone. */
+    /** The material instances, once the nodes are gone; the [selection] stays with the replay. */
     fun destroy() {
         orbit.steady = false
         hintJob?.cancel()
@@ -280,6 +335,9 @@ internal class ScanObjectPick(
         /** In `glPolygonOffset` units, towards the eye: Filament flips the sign for its reversed depth. */
         const val TINT_OFFSET = -1f
         const val HINT_MILLIS = 2600L
+
+        /** The label is laid out a frame or two after the box: no longer than this is waited. */
+        const val REVEAL_AFTER_FRAMES = 4
         const val NANOS_PER_MILLI = 1_000_000L
     }
 }
@@ -298,6 +356,7 @@ private fun MaterialLoader.selectionMaterial(color: Color, glow: Float): Materia
 /**
  * The picker of [replay]'s dense cloud, `null` for a replay without one, one still recording, or
  * none at all. Called before the `SceneView` it draws in, so its materials outlive its nodes.
+ * [selection] is where the picked object is kept while this view is away.
  */
 @Composable
 internal fun rememberScanObjectPick(
@@ -306,13 +365,15 @@ internal fun rememberScanObjectPick(
     orbit: ArDebugOrbitCamera,
     engine: Engine,
     materialLoader: MaterialLoader,
+    selection: ScanSelection? = null,
 ): ScanObjectPick? {
     val palette = LocalStageChrome.current.debug
     val scope = rememberCoroutineScope()
-    val pick = remember(engine, materialLoader, replay, session, orbit, palette) {
+    val kept = selection ?: remember(replay) { ScanSelection() }
+    val pick = remember(engine, materialLoader, replay, session, orbit, palette, kept) {
         val dense = replay?.dense?.takeUnless { replay.growing }
         if (replay != null && dense != null) {
-            ScanObjectPick(replay, dense, session, orbit, engine, materialLoader, palette, scope)
+            ScanObjectPick(replay, dense, session, orbit, kept, engine, materialLoader, palette, scope)
         } else {
             null
         }
@@ -325,17 +386,42 @@ internal fun rememberScanObjectPick(
  * What [pick] writes over the replay: the picked object's three dimensions over its box — under
  * it where the replay's cards leave no room —, or, where a tap found something no single box
  * holds, a word saying so. It takes no touch — the view under it keeps every gesture.
+ *
+ * [cornerCard] is the card the replay hangs in the top end corner of this view, as far as it
+ * reaches in from that corner under the other cards — nothing is written under it either.
  */
 @Composable
-internal fun ScanObjectOverlay(pick: ScanObjectPick?, modifier: Modifier = Modifier) {
+internal fun ScanObjectOverlay(pick: ScanObjectPick?, modifier: Modifier = Modifier, cornerCard: DpSize = DpSize.Zero) {
     if (pick == null) return
+    val cover = LocalDemoSceneCover.current
+    val density = LocalDensity.current
+    val atLeft = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val chrome = remember(cover, density, cornerCard, atLeft) {
+        with(density) {
+            ScanChrome(
+                top = cover.calculateTopPadding().roundToPx(),
+                bottom = cover.calculateBottomPadding().roundToPx(),
+                card = ScanCard(cornerCard.width.roundToPx(), cornerCard.height.roundToPx(), atLeft)
+                    .takeIf { cornerCard != DpSize.Zero },
+                margin = Space.md.roundToPx(),
+                gap = Space.sm.roundToPx(),
+            )
+        }
+    }
+    SideEffect { pick.chrome = chrome }
     val box = pick.box
     // The last box and the last place stay through the fade out.
     var lastBox by remember(pick) { mutableStateOf(box) }
     if (box != null) lastBox = box
     val lastAnchor = remember(pick) { LastOffset() }
     val lastFoot = remember(pick) { LastOffset() }
-    Anchored(above = { lastAnchor.of(pick.anchor) }, below = { lastFoot.of(pick.foot) }, modifier = modifier) {
+    Anchored(
+        above = { lastAnchor.of(pick.anchor) },
+        below = { lastFoot.of(pick.foot) },
+        chrome = chrome,
+        modifier = modifier,
+        onHeight = { pick.labelHeight = it },
+    ) {
         AnimatedVisibility(
             visible = box != null && pick.anchor.isSpecified,
             enter = fadeIn(SceneViewTokens.Motion.fade()),
@@ -346,7 +432,7 @@ internal fun ScanObjectOverlay(pick: ScanObjectPick?, modifier: Modifier = Modif
     }
     val lastHint = remember(pick) { LastOffset() }
     val hintAt = { lastHint.of(pick.tooLargeAt) }
-    Anchored(above = hintAt, below = hintAt, modifier = modifier) {
+    Anchored(above = hintAt, below = hintAt, chrome = chrome, modifier = modifier) {
         AnimatedVisibility(
             visible = pick.tooLargeAt.isSpecified,
             enter = fadeIn(SceneViewTokens.Motion.fade()),
@@ -406,36 +492,32 @@ private fun ObjectLabel(title: String, caption: String, description: String?, mo
 
 /**
  * Lays [content] out centred over [above], a point of this layout in pixels — or under [below]
- * where the chrome the scaffold draws over the scene ([LocalDemoSceneCover]: the cards above,
- * the dock below) leaves no room over it —, always in the band that chrome leaves free. The two
- * points are read while placing, so a label following a moving camera is only moved — never
- * recomposed, never measured again.
+ * where [chrome], what the replay draws over the scene, leaves no room over it —, always in what
+ * that chrome leaves free ([ScanChrome.labelAt]). The two points are read while placing, so a
+ * label following a moving camera is only moved — never recomposed, never measured again.
+ * [onHeight] is told how tall the content is once it has one.
  */
 @Composable
 private fun Anchored(
     above: () -> Offset,
     below: () -> Offset,
+    chrome: ScanChrome,
     modifier: Modifier = Modifier,
+    onHeight: (Int) -> Unit = {},
     content: @Composable () -> Unit,
 ) {
-    val cover = LocalDemoSceneCover.current
-    val density = LocalDensity.current
-    val gap = with(density) { Space.sm.roundToPx() }
-    val margin = with(density) { Space.md.roundToPx() }
-    val coverTop = with(density) { cover.calculateTopPadding().roundToPx() }
-    val coverBottom = with(density) { cover.calculateBottomPadding().roundToPx() }
     Layout(content = content, modifier = modifier) { measurables, constraints ->
         val placeable = measurables.firstOrNull()?.measure(constraints.copy(minWidth = 0, minHeight = 0))
+        if (placeable != null && placeable.height > 0) onHeight(placeable.height)
         layout(constraints.maxWidth, constraints.maxHeight) {
             val over = above()
             val under = below()
             if (placeable != null && over.isSpecified && under.isSpecified) {
-                val x = (over.x - placeable.width / 2f).roundToInt()
-                val band = coverTop + margin..constraints.maxHeight - coverBottom - margin
-                placeable.place(
-                    x.coerceIn(margin, max(margin, constraints.maxWidth - placeable.width - margin)),
-                    ScanObjectMeshes.labelTop(over.y, under.y, placeable.height, gap, band),
+                val (x, y) = chrome.labelAt(
+                    over.x, over.y, under.y,
+                    placeable.width, placeable.height, constraints.maxWidth, constraints.maxHeight,
                 )
+                placeable.place(x, y)
             }
         }
     }

@@ -129,6 +129,8 @@ class ScanCamera(val eye: Vec3, forward: Vec3, val tanHalfFov: Float, val width:
  * 6. **A finger is not a ray.** When the ray itself found nothing, a wider cone looks for an
  *    object beside it — a lamp's pole is thinner than a fingertip — and a thing too sparse to
  *    grow through (a plant) is grown again with a looser net.
+ * 7. **A slat is looked at twice.** An object shallower than [SLAT_DEPTH_M] is grown again with
+ *    that looser net: two passes of a scan leave a seam through a long piece of furniture.
  *
  * Both [of] and [pick] belong off the main thread: [of] walks every surfel a few times, [pick]
  * takes a few milliseconds on a chair and tens of them on a sofa. [pick] is not thread-safe —
@@ -334,8 +336,21 @@ class ScanObjects private constructor(
      * What the region grown from [seed] is: an object and its box, the wall ([ScanPick.Empty]),
      * too much for one box ([ScanPick.TapCloser]), or — `null` — nothing a box could be drawn
      * round, which the ray goes through.
+     *
+     * An object under [SLAT_DEPTH_M] deep may be a slat of a larger one — a daybed the scan drew
+     * in two passes that do not quite meet (#4505) — so it is grown again with the looser net,
+     * which crosses the seam: when that reaches at least an object's worth more and is still one
+     * object, that is the answer. A shelf or a lamp's foot, with nothing a seam away, keeps its box.
      */
     private fun judge(seed: Int, cast: Cast, loose: Boolean): ScanPick? {
+        val answer = regionAt(seed, cast, loose)
+        val slat = (answer as? ScanPick.Found)?.takeIf { !loose && it.box.depth < SLAT_DEPTH_M } ?: return answer
+        val whole = regionAt(seed, cast, loose = true) as? ScanPick.Found
+        return whole?.takeIf { it.surfels.size - slat.surfels.size >= minVoxels } ?: slat
+    }
+
+    /** [judge], of the region one growth from [seed] gives. */
+    private fun regionAt(seed: Int, cast: Cast, loose: Boolean): ScanPick? {
         var region = grow(seed, cast, loose) ?: return ScanPick.TapCloser
         if (region.size >= minVoxels && cutBackdrops(region, seed, cast.id)) {
             // The tap was on the sheet itself: a wall, sorted or not.
@@ -639,6 +654,12 @@ class ScanObjects private constructor(
          * of depth noise (the 0.11 × 0.07 × 0.56 m one of #4505), which no tape would be put to.
          */
         const val MIN_SECOND_SIDE_M = 0.2f
+
+        /**
+         * Shallower than this, an object is looked at again for the rest of it: the Pixel 4a's
+         * scans gave a daybed as 0.90 × 0.23 × 0.25 m and 0.75 × 0.23 × 0.28 m (#4505).
+         */
+        const val SLAT_DEPTH_M = 0.3f
 
         /** A box along more than this share of the scan's longer side is the room's, not an object's. */
         const val ROOM_SHARE = 2f / 3f

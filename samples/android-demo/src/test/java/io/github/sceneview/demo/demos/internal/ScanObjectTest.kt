@@ -177,6 +177,43 @@ class ScanObjectTest {
     }
 
     @Test
+    fun `a daybed scanned in two passes that do not quite meet is one object, whichever half is tapped`() {
+        val scene = Scene()
+        scene.room(HALF_ROOM, HALF_ROOM, ROOM_HEIGHT)
+        // Two slats 23 cm deep, 3.5 cm apart: one empty voxel between them, at z cell -50.
+        scene.box(0f, -1.125f, yawDeg = 0f, length = 1.8f, depth = 0.23f, height = 0.4f)
+        scene.box(0f, -0.86f, yawDeg = 0f, length = 1.8f, depth = 0.23f, height = 0.4f)
+        val objects = ScanObjects.of(scene.cloud())
+        for (z in floatArrayOf(-1.125f, -0.86f)) {
+            val box = (objects.pick(EYE, toward(Vec3(0.3f, 0.4f, z))) as ScanPick.Found).box
+            assertEquals(1.8f, box.length, VOXEL)
+            assertEquals("tapped at z = $z", 0.495f, box.depth, VOXEL)
+            assertEquals(0.4f, box.height, VOXEL)
+            assertEquals(-0.9925f, box.centerZ, VOXEL)
+        }
+    }
+
+    @Test
+    fun `a thin console standing alone keeps its own box, next to a cupboard or not`() {
+        fun console(withCupboard: Boolean): ScanPick.Found {
+            val scene = Scene()
+            scene.room(HALF_ROOM, HALF_ROOM, ROOM_HEIGHT)
+            scene.box(0f, -1.2f, yawDeg = 0f, length = 1f, depth = 0.24f, height = 0.6f)
+            // A hand behind it: past any seam a scan leaves in one piece of furniture.
+            if (withCupboard) scene.box(0f, -1.67f, yawDeg = 0f, length = 1f, depth = 0.5f, height = 0.9f)
+            return ScanObjects.of(scene.cloud()).pick(EYE, toward(Vec3(0.2f, 0.6f, -1.2f))) as ScanPick.Found
+        }
+        val alone = console(withCupboard = false)
+        assertEquals(1f, alone.box.length, VOXEL)
+        assertEquals(0.24f, alone.box.depth, VOXEL)
+        assertEquals(0.6f, alone.box.height, VOXEL)
+        val beside = console(withCupboard = true)
+        assertEquals("the same points", alone.surfels.size, beside.surfels.size)
+        assertEquals(alone.box.depth, beside.box.depth, 0f)
+        assertEquals(alone.box.centerZ, beside.box.centerZ, 0f)
+    }
+
+    @Test
     fun `an object too long to be one piece of furniture says tap closer, never a box`() {
         val scene = Scene()
         scene.room(3f, HALF_ROOM, ROOM_HEIGHT)
