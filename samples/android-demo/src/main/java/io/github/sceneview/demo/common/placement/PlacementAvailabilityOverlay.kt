@@ -16,7 +16,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.constrainHeight
-import androidx.compose.ui.unit.dp
 import io.github.sceneview.ar.ARCoreAvailabilityOverlay
 import io.github.sceneview.ar.ARCoreAvailabilityState
 import io.github.sceneview.demo.LocalDemoChromeBottomInset
@@ -59,7 +58,7 @@ internal fun BoxScope.PlacementAvailabilityOverlay(state: ARCoreAvailabilityStat
             // the band above the pill has room for little more than the button once the text
             // is large. The corner is taken as soon as it leaves the button's label its
             // minimum width — which grows with the font — around the SDK card's own margins.
-            minWidth = SDK_CARD_HORIZONTAL_INSETS +
+            minWidth = SceneViewTokens.ArOverlay.sdkCardActionInsets +
                 SceneViewTokens.ArOverlay.actionLabelMinWidth * LocalDensity.current.fontScale -
                 gutter * 2,
             maxWidth = SceneViewTokens.ArOverlay.maxWidth,
@@ -87,24 +86,20 @@ internal fun BoxScope.PlacementAvailabilityOverlay(state: ARCoreAvailabilityStat
 }
 
 /**
- * What `ARCoreAvailabilityOverlay` puts on either side of its action's label: a 24 dp margin,
- * 20 dp of card padding and 20 dp of button padding, twice. A measurement of the SDK card, not
- * a spacing this screen applies — `PlacementCardClearsChromeTest` fails if the two drift apart.
- */
-private val SDK_CARD_HORIZONTAL_INSETS = 128.dp
-
-/** The margin `ARCoreAvailabilityOverlay` keeps around its card, on every side. */
-private val SDK_CARD_MARGIN = 24.dp
-
-/**
  * In a short window that is too narrow for the corner, the band between the identity row and
  * the mode pill is all there is, and at the largest text it is shorter than the card's button
- * and the SDK's margin together. The band is already a gutter away from the chrome on both
- * sides, so the card may grow into its own margin there — only when it needs to: a card that
- * fits is measured, and sits, exactly as before.
+ * and the SDK's margin together. So the card may grow into its own margin there — only when
+ * it needs to: a card that fits is measured, and sits, exactly as before.
+ *
+ * A card that takes all of it ends **on** the band's edges, not a gutter inside them. At the
+ * top that edge is already a gutter under the identity row (`LocalDemoChromeTopInset`); at
+ * the bottom it is the mode pill's own top edge, so the card's ground then touches the pill
+ * — 640 × 360 dp at font scale 2.0 — without ever going under it. With system bars on top
+ * of that the band is shorter than the card's padding and button together, and the SDK card
+ * gives up its padding before its button (`fitAROverlayCard`, #4533).
  */
 private fun Modifier.lendSdkCardMargin(): Modifier = layout { measurable, constraints ->
-    val lent = if (constraints.hasBoundedHeight) SDK_CARD_MARGIN.roundToPx() * 2 else 0
+    val lent = if (constraints.hasBoundedHeight) SceneViewTokens.ArOverlay.sdkCardMargin.roundToPx() * 2 else 0
     val placeable = measurable.measure(constraints.copy(maxHeight = constraints.maxHeight + lent))
     val height = constraints.constrainHeight(placeable.height)
     layout(placeable.width, height) {

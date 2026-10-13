@@ -608,6 +608,22 @@ object SceneViewTokens {
          * into a corner that narrow.
          */
         val actionLabelMinWidth = 36.dp
+
+        /**
+         * `sdk-card-margin` — the margin the SDK's own AR cards (`ARCameraPermissionOverlay`,
+         * `ARCoreAvailabilityOverlay`) keep around themselves, on every side (#4533). Not a
+         * spacing this app chooses: a measurement of the SDK card, which the app needs to
+         * place that card beside its chrome. `ArOverlaySdkCardTokensTest` measures the card
+         * and fails when the SDK moves away from this value.
+         */
+        val sdkCardMargin = 24.dp
+
+        /**
+         * `sdk-card-action-insets` — everything the SDK's AR card puts on either side of its
+         * action's label, both sides together: [sdkCardMargin], 20 dp of card padding and
+         * 20 dp of button padding, twice (#4533). Measured by the same test.
+         */
+        val sdkCardActionInsets = 128.dp
     }
 
     /**

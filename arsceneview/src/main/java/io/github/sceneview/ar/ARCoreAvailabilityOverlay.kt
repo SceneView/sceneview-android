@@ -1,34 +1,10 @@
 package io.github.sceneview.ar
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.Layout
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.constrainHeight
-import androidx.compose.ui.unit.constrainWidth
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.google.ar.core.ArCoreApk
 import com.google.ar.core.exceptions.UnavailableApkTooOldException
 import com.google.ar.core.exceptions.UnavailableArcoreNotInstalledException
@@ -190,82 +166,13 @@ fun BoxScope.ARCoreAvailabilityOverlay(
     state: ARCoreAvailabilityState,
     modifier: Modifier = Modifier,
 ) {
-    Layout(
-        content = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                BasicText(
-                    text = stringResource(state.availability.titleRes()),
-                    style = TextStyle(
-                        color = Color.White,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        textAlign = TextAlign.Center,
-                    ),
-                )
-                Spacer(Modifier.height(8.dp))
-                BasicText(
-                    text = stringResource(state.availability.bodyRes()),
-                    style = TextStyle(
-                        color = Color.White.copy(alpha = 0.72f),
-                        fontSize = 14.sp,
-                        textAlign = TextAlign.Center,
-                    ),
-                )
-            }
-            state.availability.actionRes()?.let { actionRes ->
-                Box(
-                    modifier = Modifier
-                        .padding(top = 16.dp)
-                        .background(Color.White, RoundedCornerShape(22.dp))
-                        .clickable(role = Role.Button) { state.retry() }
-                        .padding(horizontal = 20.dp, vertical = 12.dp)
-                        .testTag(ARCoreAvailabilityOverlayTags.ACTION),
-                ) {
-                    BasicText(
-                        text = stringResource(actionRes),
-                        style = TextStyle(
-                            color = Color(0xFF1A1A2E),
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
-                        ),
-                    )
-                }
-            }
-        },
-        modifier = modifier
-            .align(Alignment.Center)
-            .padding(24.dp)
-            .widthIn(max = 320.dp)
-            .background(OverlayCardBackground, RoundedCornerShape(16.dp))
-            .padding(20.dp)
-            .testTag(ARCoreAvailabilityOverlayTags.CARD),
-    ) { measurables, constraints ->
-        // The action is measured first and the text takes what it leaves, scrolling when that
-        // is less than it needs — a phone held sideways, a large font. A plain Column handed
-        // every pixel to the text and measured "Try again" at zero (#4509).
-        //
-        // Not a `weight` on the text: in a parent with no height limit — a scrolling column, a
-        // `LazyColumn` item — a weighted child is given zero, and this card is public.
-        val loose = constraints.copy(minWidth = 0, minHeight = 0)
-        val action = measurables.getOrNull(1)?.measure(loose)
-        val actionHeight = action?.height ?: 0
-        val textMaxHeight = if (constraints.hasBoundedHeight) {
-            (constraints.maxHeight - actionHeight).coerceAtLeast(0)
-        } else {
-            // A scrolling container refuses an unlimited height: hand it the height it asks for.
-            measurables[0].maxIntrinsicHeight(constraints.maxWidth)
-        }
-        val text = measurables[0].measure(loose.copy(maxHeight = textMaxHeight))
-        val width = constraints.constrainWidth(maxOf(text.width, action?.width ?: 0))
-        val height = constraints.constrainHeight(text.height + actionHeight)
-        layout(width, height) {
-            text.placeRelative((width - text.width) / 2, 0)
-            action?.placeRelative((width - action.width) / 2, text.height)
-        }
-    }
+    AROverlayCard(
+        title = stringResource(state.availability.titleRes()),
+        body = stringResource(state.availability.bodyRes()),
+        action = state.availability.actionRes()?.let { stringResource(it) },
+        onAction = { state.retry() },
+        cardTag = ARCoreAvailabilityOverlayTags.CARD,
+        actionTag = ARCoreAvailabilityOverlayTags.ACTION,
+        modifier = modifier,
+    )
 }
-
-private val OverlayCardBackground = Color.Black.copy(alpha = 0.85f)

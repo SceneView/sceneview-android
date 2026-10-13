@@ -917,6 +917,16 @@ A card with a single action may take a narrower corner, down to the room its lab
 `action-label-min-width` (36dp per unit of font scale, the width at which "Try again" breaks
 at its space and each word stays whole) around the card's own margins.
 
+The cards the SDK draws itself (`ARCameraPermissionOverlay`, `ARCoreAvailabilityOverlay`)
+are one internal card, and the app places it by two numbers it does not own:
+`sdk-card-margin` (24dp, the margin that card keeps on every side) and
+`sdk-card-action-insets` (128dp, everything between the card's outer edge and its button's
+label, both sides: margin, card padding, button padding). They mirror the SDK; a test
+measures the SDK card and fails when they drift (`ArOverlaySdkCardTokensTest`, #4533).
+When its parent gets shorter that card gives up, in order: its **text** (which scrolls),
+the **gap** above its button, its own **padding** — and its button last, because the
+button is the only way out of the state the card explains.
+
 - **Theme-independent, like the coaching overlay, and for the same reason.** The ground is
   a camera frame. A demo card that used `surface` at 90% opacity — as the Cloud Anchors
   screen did before #3421 — is a near-white slab over the room in light mode and a
