@@ -159,8 +159,15 @@ internal class ScanObjectPick(
         nodes.forEach { it.isVisible = false }
     }
 
+    /**
+     * A finger down on the view: the turntable stops under it, so what a tap is aimed at is still
+     * under the finger when the tap is confirmed, a double-tap's delay later.
+     */
+    fun down() = orbit.fingerDown()
+
     /** A single tap at ([x], [y]) of the view, in pixels: picks what is drawn under it. */
     fun tap(x: Float, y: Float) {
+        orbit.hold()
         val tap = ++taps
         hintJob?.cancel()
         tooLargeAt = Offset.Unspecified
@@ -187,6 +194,8 @@ internal class ScanObjectPick(
     private fun show(pick: ScanPick, at: Offset) {
         found = pick as? ScanPick.Found
         box = found?.box
+        // The room does not turn away under a box being read, not even after a recenter.
+        orbit.steady = found != null
         corners = found?.box?.corners().orEmpty()
         edgesFor = null
         tintNode.upload(found?.let { ScanObjectMeshes.surfels(dense.mesh, it.surfels) })
@@ -250,6 +259,7 @@ internal class ScanObjectPick(
 
     /** The material instances, once the nodes are gone. */
     fun destroy() {
+        orbit.steady = false
         hintJob?.cancel()
         objects.cancel()
         listOf(tintMaterial, hiddenMaterial, edgeMaterial).forEach { materialLoader.destroyMaterialInstance(it) }

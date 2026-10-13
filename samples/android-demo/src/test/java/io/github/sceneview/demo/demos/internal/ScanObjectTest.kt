@@ -5,6 +5,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.Random
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -199,6 +200,127 @@ class ScanObjectTest {
         assertTrue(furnished.objects.pick(EYE, ray, limit = furnished.cloud.count) is ScanPick.Found)
     }
 
+    // ── What is no object (#4505, seen on a Pixel 4a) ─────────────────────────
+
+    @Test
+    fun `a shard of depth noise gets no box, the smallest piece of furniture does`() {
+        val scene = Scene()
+        scene.room(HALF_ROOM, HALF_ROOM, ROOM_HEIGHT)
+        // The two shards a phone's scan gave a box to: a stick 0.11 x 0.07 x 0.56 m, and a flake
+        // half a metre long that no scan had seen 0.2 m2 of.
+        scene.box(1.2f, -1.1f, yawDeg = 0f, length = 0.11f, depth = 0.07f, height = 0.56f)
+        scene.rect(Vec3(-1.4f, 0f, 1.2f), Vec3(0.52f, 0f, 0f), Vec3(0f, 0.23f, 0f), Vec3(0f, 0f, -1f))
+        // And the smallest thing that was furniture in the same scans.
+        scene.box(-1.2f, -1.1f, yawDeg = 0f, length = 0.46f, depth = 0.28f, height = 0.3f)
+        val objects = ScanObjects.of(scene.cloud())
+        val stick = Vec3(1.2f, 0.3f, -1.1f)
+        assertEquals("the stick is there", ScanSurface.Object, objects.surfaceOf(objects.hit(EYE, toward(stick))))
+        assertSame("a stick", ScanPick.Empty, objects.pick(EYE, toward(stick)))
+        assertSame("a flake", ScanPick.Empty, objects.pick(EYE, toward(Vec3(-1.14f, 0.12f, 1.2f))))
+        val small = (objects.pick(EYE, toward(Vec3(-1.2f, 0.3f, -1.1f))) as ScanPick.Found).box
+        assertEquals(0.46f, small.length, VOXEL)
+        assertEquals(0.28f, small.depth, VOXEL)
+        assertEquals(0.3f, small.height, VOXEL)
+    }
+
+    @Test
+    fun `furniture against a piece of wall the scan did not sort is boxed alone, and that wall gives no box`() {
+        val scene = Scene()
+        scene.floor(HALF_ROOM, HALF_ROOM, 0f)
+        // 1.4 m of wall: under the 1.5 m a wall is recognised from, so it stays the objects' stuff.
+        scene.rect(Vec3(-0.7f, 0f, -1f), Vec3(1.4f, 0f, 0f), Vec3(0f, 2.2f, 0f), Vec3(0f, 0f, 1f))
+        scene.box(0f, -0.74f, yawDeg = 0f, length = 0.8f, depth = 0.5f, height = 0.7f)
+        val objects = ScanObjects.of(scene.cloud())
+        val onTheWall = Vec3(0f, 1.6f, -1f)
+        assertEquals("unsorted", ScanSurface.Object, objects.surfaceOf(objects.hit(EYE, toward(onTheWall))))
+
+        val box = (objects.pick(EYE, toward(Vec3(0f, 0.7f, -0.6f))) as ScanPick.Found).box
+        assertEquals(0.8f, box.length, VOXEL)
+        // Up to the wall's own skin, which is cut away with it.
+        assertEquals(0.5f, box.depth, 2 * VOXEL)
+        assertEquals(0.7f, box.height, VOXEL)
+        assertSame("the wall above it", ScanPick.Empty, objects.pick(EYE, toward(onTheWall)))
+        assertSame("the wall beside it", ScanPick.Empty, objects.pick(EYE, toward(Vec3(0.6f, 0.4f, -1f))))
+    }
+
+    @Test
+    fun `a piece of wall alone, or the corner of two, gives no box`() {
+        val alone = Scene()
+        alone.floor(HALF_ROOM, HALF_ROOM, 0f)
+        alone.rect(Vec3(-0.7f, 0f, -1f), Vec3(1.4f, 0f, 0f), Vec3(0f, 2.2f, 0f), Vec3(0f, 0f, 1f))
+        val sheet = ScanObjects.of(alone.cloud())
+        assertEquals(ScanSurface.Object, sheet.surfaceOf(sheet.hit(EYE, toward(Vec3(0f, 1.2f, -1f)))))
+        assertSame(ScanPick.Empty, sheet.pick(EYE, toward(Vec3(0f, 1.2f, -1f))))
+
+        val corner = Scene()
+        corner.floor(HALF_ROOM, HALF_ROOM, 0f)
+        corner.rect(Vec3(-0.7f, 0f, -1f), Vec3(1.4f, 0f, 0f), Vec3(0f, 2.2f, 0f), Vec3(0f, 0f, 1f))
+        corner.rect(Vec3(-0.7f, 0f, -1f), Vec3(0f, 0f, 1.4f), Vec3(0f, 2.2f, 0f), Vec3(1f, 0f, 0f))
+        val walls = ScanObjects.of(corner.cloud())
+        assertSame("one side", ScanPick.Empty, walls.pick(EYE, toward(Vec3(0.3f, 1.2f, -1f))))
+        assertSame("the other", ScanPick.Empty, walls.pick(EYE, toward(Vec3(-0.7f, 1.2f, 0f))))
+    }
+
+    @Test
+    fun `a box along most of the room says tap closer, never a box`() {
+        val scene = Scene()
+        scene.room(HALF_ROOM, HALF_ROOM, ROOM_HEIGHT)
+        // 2.8 m in a 4 m room: under the 3 m no furniture passes, over two thirds of the room.
+        scene.box(0f, 0f, yawDeg = 0f, length = 2.8f, depth = 0.5f, height = 0.8f)
+        assertSame(ScanPick.TapCloser, ScanObjects.of(scene.cloud()).pick(EYE, toward(Vec3(0.4f, 0.8f, 0f))))
+    }
+
+    @Test
+    fun `a tap on a wall seen from outside the room does not reach the furniture behind it`() {
+        val scene = Scene()
+        scene.room(HALF_ROOM, HALF_ROOM, ROOM_HEIGHT)
+        scene.box(0f, -1.4f, yawDeg = 0f, length = 1f, depth = 0.7f, height = 0.76f)
+        val objects = ScanObjects.of(scene.cloud())
+        val outside = Vec3(0.02f, 1.2f, -5f)
+        val throughTheWall = (Vec3(0.03f, 0.5f, -1.4f) - outside).normalized()
+        assertSame(ScanPick.Empty, objects.pick(outside, throughTheWall))
+        // From inside, the same table is there to be picked.
+        assertTrue(objects.pick(EYE, toward(Vec3(0f, 0.76f, -1.4f))) is ScanPick.Found)
+    }
+
+    // ── What a ray alone misses (#4505) ───────────────────────────────────────
+
+    @Test
+    fun `a plant, too sparse to grow through, gets its box`() {
+        val scene = Scene()
+        scene.room(HALF_ROOM, HALF_ROOM, ROOM_HEIGHT)
+        // Leaves: one voxel in eight of 0.4 x 0.4 x 0.9 m, nothing a dense growth holds together.
+        val random = Random(4505)
+        for (a in 0 until 20) for (b in 0 until 45) for (c in 0 until 20) {
+            if (random.nextInt(8) == 0) {
+                scene.point(Vec3(1f + (a + 0.5f) * VOXEL, (b + 0.5f) * VOXEL, -1.3f + (c + 0.5f) * VOXEL))
+            }
+        }
+        val objects = ScanObjects.of(scene.cloud())
+        val box = (objects.pick(EYE, toward(Vec3(1.2f, 0.45f, -1.1f))) as ScanPick.Found).box
+        assertEquals(0.9f, box.height, 2 * VOXEL)
+        assertEquals(0.4f, box.length, 3 * VOXEL)
+        assertEquals(0.4f, box.depth, 3 * VOXEL)
+        assertEquals(1.2f, box.centerX, 2 * VOXEL)
+    }
+
+    @Test
+    fun `a tap a fingertip beside a lamp's pole finds the lamp, a tap further off does not`() {
+        val scene = Scene()
+        scene.room(3f, 3f, ROOM_HEIGHT)
+        scene.box(0f, -2.5f, yawDeg = 0f, length = 0.3f, depth = 0.3f, height = 0.04f)
+        scene.box(0f, -2.5f, yawDeg = 0f, length = 0.04f, depth = 0.04f, height = 1.3f)
+        scene.box(0f, -2.5f, yawDeg = 0f, length = 0.36f, depth = 0.36f, height = 0.3f, y = 1.3f)
+        // The shade's underside, which is what holds it to the pole.
+        scene.rect(Vec3(-0.18f, 1.3f, -2.68f), Vec3(0.36f, 0f, 0f), Vec3(0f, 0f, 0.36f), Vec3(0f, -1f, 0f))
+        val objects = ScanObjects.of(scene.cloud())
+        // 2.5 cm off the pole's side from 2.6 m: outside the ray's own reach, inside a fingertip's.
+        val box = (objects.pick(EYE, toward(Vec3(0.045f, 0.9f, -2.5f))) as ScanPick.Found).box
+        assertEquals(1.6f, box.height, VOXEL)
+        assertEquals(0.36f, box.length, VOXEL)
+        assertSame(ScanPick.Empty, objects.pick(EYE, toward(Vec3(0.12f, 0.9f, -2.5f))))
+    }
+
     // ── The camera ────────────────────────────────────────────────────────────
 
     @Test
@@ -264,11 +386,11 @@ class ScanObjectTest {
             rect(Vec3(-halfX, y, -halfZ), Vec3(2 * halfX, 0f, 0f), Vec3(0f, 0f, 2 * halfZ), Vec3.Up)
 
         /** A box standing on the floor: its top and four sides, as a scan sees it. */
-        fun box(x: Float, z: Float, yawDeg: Float, length: Float, depth: Float, height: Float) {
+        fun box(x: Float, z: Float, yawDeg: Float, length: Float, depth: Float, height: Float, y: Float = 0f) {
             val yaw = Math.toRadians(yawDeg.toDouble()).toFloat()
             val u = Vec3(cos(yaw), 0f, sin(yaw))
             val v = Vec3(-sin(yaw), 0f, cos(yaw))
-            val corner = Vec3(x, 0f, z) - u * (length / 2) - v * (depth / 2)
+            val corner = Vec3(x, y, z) - u * (length / 2) - v * (depth / 2)
             val up = Vec3(0f, height, 0f)
             rect(corner + up, u * length, v * depth, Vec3.Up)
             rect(corner, u * length, up, v * -1f)
@@ -291,7 +413,11 @@ class ScanObjectTest {
             }
         }
 
-        private fun rect(origin: Vec3, u: Vec3, v: Vec3, normal: Vec3) {
+        /** One point with no telling normal: a leaf. */
+        fun point(p: Vec3) = add(p, Vec3.Up)
+
+        /** A flat patch from [origin] along [u] and [v], looking along [normal]. */
+        fun rect(origin: Vec3, u: Vec3, v: Vec3, normal: Vec3) {
             val nu = (u.length() / STEP).toInt()
             val nv = (v.length() / STEP).toInt()
             for (a in 0..nu) for (b in 0..nv) add(origin + u * (a.toFloat() / nu) + v * (b.toFloat() / nv), normal)

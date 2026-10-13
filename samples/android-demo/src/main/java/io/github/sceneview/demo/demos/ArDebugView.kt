@@ -677,6 +677,7 @@ internal fun ArDebugSceneView(
             environment = environment,
             cameraManipulator = orbit,
             onGestureListener = rememberOnGestureListener(
+                onDown = { _, _ -> objectPick?.down() },
                 onSingleTapConfirmed = { event, _ -> objectPick?.tap(event.x, event.y) },
             ),
             onFrame = { frameTimeNanos ->
