@@ -59,10 +59,79 @@ object ScanObjectMeshes {
         return if (over >= band.first) min(over, lowest) else under.coerceIn(band.first, lowest)
     }
 
+    /**
+     * Where [camera] draws [box]: the column of the middle of its top, then the highest and the
+     * lowest row any of it reaches — what [labelTop] is given; `null` with that middle behind the
+     * lens.
+     */
+    fun drawnSpan(box: ScanBox, camera: ScanCamera): Triple<Float, Float, Float>? {
+        val (x, middle) = camera.project(box.top) ?: return null
+        var high = middle
+        var low = middle
+        for (corner in box.corners()) {
+            val y = camera.project(corner)?.second ?: continue
+            high = min(high, y)
+            low = max(low, y)
+        }
+        return Triple(x, high, low)
+    }
+
     const val VERTICES_PER_SURFEL = 4
 
     /** Twelve tubes of eight vertices. */
     private const val EDGE_VERTICES = 96
+}
+
+/**
+ * When the replay's camera is slid to bring a picked box, and its label, out from under the
+ * chrome ([ArDebugFraming.reveal]), asked once a rendered frame ([due]) (#4505):
+ *
+ * - after the tap, as soon as the label has a height — or [WAIT_FRAMES] frames later. Until
+ *   then the pick is [pending] and nothing is written over it: the label is placed for where the
+ *   slide ends, so it is born where it stays instead of jumping there when the slide is over;
+ * - and each time a finger that moved the camera has let go and the spin it left has died: an
+ *   orbit can turn the box back under the chrome, and a box being read stays whole in view.
+ */
+class ScanReveal {
+    private var waiting = 0
+    private var moved = false
+
+    /** `true` from [picked] until the tap's slide has been decided. */
+    val pending: Boolean get() = waiting > 0
+
+    /** A tap has just picked an object. */
+    fun picked() {
+        waiting = WAIT_FRAMES
+        moved = false
+    }
+
+    /** Nothing to bring out: nothing picked, or a pick found again where the camera had left it. */
+    fun settled() {
+        waiting = 0
+        moved = false
+    }
+
+    /**
+     * Whether the camera is to be slid now. [labelMeasured] is whether the label's height is
+     * known, [moving] is [ArDebugOrbitCamera.moving].
+     */
+    fun due(labelMeasured: Boolean, moving: Boolean): Boolean {
+        if (waiting > 0) {
+            if (!labelMeasured && --waiting > 0) return false
+            settled()
+            return true
+        }
+        if (moving) {
+            moved = true
+            return false
+        }
+        return moved.also { moved = false }
+    }
+
+    companion object {
+        /** The label is laid out a frame or two after the box: no longer than this is waited. */
+        const val WAIT_FRAMES = 4
+    }
 }
 
 /**
@@ -138,8 +207,10 @@ data class ScanChrome(
 /**
  * The pinhole this orbit is drawing through right now, [ArDebugOrbitCamera.getTransform]'s own
  * eye and pedestal drop: where a tap's ray starts, and where a point of the room lands on screen.
+ * With another [pose], the pinhole it would draw through from there — [ArDebugOrbitCamera.heading],
+ * for what must already be where a slide ends.
  */
-fun ArDebugOrbitCamera.scanCamera(): ScanCamera {
+fun ArDebugOrbitCamera.scanCamera(pose: OrbitPose = this.pose): ScanCamera {
     val at = CameraRig.eye(pose)
     val eye = Vec3(at.x, at.y, at.z)
     val forward = (Vec3(pose.target.x, pose.target.y, pose.target.z) - eye).normalized()

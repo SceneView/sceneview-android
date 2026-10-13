@@ -341,12 +341,20 @@ class ScanObjects private constructor(
      * in two passes that do not quite meet (#4505) — so it is grown again with the looser net,
      * which crosses the seam: when that reaches at least an object's worth more and is still one
      * object, that is the answer. A shelf or a lamp's foot, with nothing a seam away, keeps its box.
+     *
+     * That net crosses the gap to a neighbour as readily as a seam, so what it brings back is held
+     * to what the net is trusted with everywhere else ([sparse]): no longer than
+     * [SPARSE_MAX_SIDE_M] — or than the slat itself, made [SLAT_DEPTH_M] longer at most, when the
+     * slat is already past that. A small object next to larger furniture came back as one box
+     * round the lot; past that length it keeps its own.
      */
     private fun judge(seed: Int, cast: Cast, loose: Boolean): ScanPick? {
         val answer = regionAt(seed, cast, loose)
         val slat = (answer as? ScanPick.Found)?.takeIf { !loose && it.box.depth < SLAT_DEPTH_M } ?: return answer
-        val whole = regionAt(seed, cast, loose = true) as? ScanPick.Found
-        return whole?.takeIf { it.surfels.size - slat.surfels.size >= minVoxels } ?: slat
+        val whole = regionAt(seed, cast, loose = true) as? ScanPick.Found ?: return slat
+        val longest = max(SPARSE_MAX_SIDE_M, slat.box.length + SLAT_DEPTH_M)
+        val more = whole.surfels.size - slat.surfels.size
+        return if (more >= minVoxels && whole.box.length <= longest) whole else slat
     }
 
     /** [judge], of the region one growth from [seed] gives. */
@@ -640,9 +648,9 @@ class ScanObjects private constructor(
 
         /**
          * The least surface a scan must have seen of an object, in square metres: 0.2 m² is 500
-         * surfels at the scan's 2 cm — three faces of a 26 cm cube. On the Pixel 4a's scans the
-         * smallest thing that was furniture had 749 surfels (0.46 × 0.28 × 0.30 m) and the two
-         * shards that got a box had 136 and 328 (#4505).
+         * surfels at the scan's 2 cm — three faces of a 26 cm cube. On a phone's scans the
+         * smallest thing that was furniture stood well over it, and the shards of depth noise that
+         * had got a box well under (#4505).
          */
         const val MIN_SEEN_AREA_M2 = 0.2f
 
@@ -651,13 +659,13 @@ class ScanObjects private constructor(
 
         /**
          * And an object has a second side: under 20 cm in two directions it is a stick or a shard
-         * of depth noise (the 0.11 × 0.07 × 0.56 m one of #4505), which no tape would be put to.
+         * of depth noise (#4505), which no tape would be put to.
          */
         const val MIN_SECOND_SIDE_M = 0.2f
 
         /**
-         * Shallower than this, an object is looked at again for the rest of it: the Pixel 4a's
-         * scans gave a daybed as 0.90 × 0.23 × 0.25 m and 0.75 × 0.23 × 0.28 m (#4505).
+         * Shallower than this, an object is looked at again for the rest of it: a scan in two
+         * passes gave one long piece of furniture as two slats, each its own box (#4505).
          */
         const val SLAT_DEPTH_M = 0.3f
 

@@ -214,6 +214,30 @@ class ScanObjectTest {
     }
 
     @Test
+    fun `a small object next to larger furniture keeps its own box`() {
+        fun small(withNeighbours: Boolean): ScanPick.Found {
+            val scene = Scene()
+            scene.room(HALF_ROOM, HALF_ROOM, ROOM_HEIGHT)
+            // Under a slat's depth, so it is grown again with the looser net.
+            scene.box(0f, -0.86f, yawDeg = 0f, length = 0.4f, depth = 0.23f, height = 0.4f)
+            if (withNeighbours) {
+                // 3.5 cm behind it — one empty voxel, a seam's width — and another as near to that one.
+                scene.box(0f, -1.26f, yawDeg = 0f, length = 1.6f, depth = 0.5f, height = 0.8f)
+                scene.box(1.085f, -1.26f, yawDeg = 0f, length = 0.5f, depth = 0.5f, height = 0.6f)
+            }
+            return ScanObjects.of(scene.cloud()).pick(EYE, toward(Vec3(0.05f, 0.4f, -0.86f))) as ScanPick.Found
+        }
+        val alone = small(withNeighbours = false)
+        assertEquals(0.4f, alone.box.length, VOXEL)
+        assertEquals(0.23f, alone.box.depth, VOXEL)
+        val beside = small(withNeighbours = true)
+        assertEquals("the same points", alone.surfels.size, beside.surfels.size)
+        assertEquals(alone.box.length, beside.box.length, 0f)
+        assertEquals(alone.box.depth, beside.box.depth, 0f)
+        assertEquals(alone.box.centerZ, beside.box.centerZ, 0f)
+    }
+
+    @Test
     fun `an object too long to be one piece of furniture says tap closer, never a box`() {
         val scene = Scene()
         scene.room(3f, HALF_ROOM, ROOM_HEIGHT)

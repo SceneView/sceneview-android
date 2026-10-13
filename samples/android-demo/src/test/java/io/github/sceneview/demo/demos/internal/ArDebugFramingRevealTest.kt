@@ -102,6 +102,94 @@ class ArDebugFramingRevealTest {
         assertTrue(held != start)
     }
 
+    @Test
+    fun `a box a finger's orbit turned under the chrome is brought back once the spin has died`() {
+        val start = OrbitPose(Position(0f, 0.4f, 0f), azimuthDegrees = 35f, elevationDegrees = 32f, distance = 6f)
+        // On the floor behind the pivot: tilting the view over the room sends it up the screen.
+        val box = boxDrawnAt(start, 0.5f * WIDTH, 0.3f * HEIGHT)
+        assertTrue("clear to begin with", isClear(start, box, CHROME))
+        val orbit = orbit(start).apply { hold() }
+        val reveal = ScanReveal().apply { settled() }
+        assertFalse("nothing moved: nothing to bring back", reveal.due(labelMeasured = true, moving = orbit.moving))
+
+        orbit.grabBegin(WIDTH / 2, HEIGHT / 2, false)
+        repeat(DRAG_STEPS) { step ->
+            orbit.grabUpdate(WIDTH / 2, HEIGHT / 2 - DRAG_PIXELS * (step + 1))
+            orbit.update(FRAME)
+            assertFalse("not under the finger", reveal.due(labelMeasured = true, moving = orbit.moving))
+        }
+        orbit.grabEnd()
+        assertTrue("the finger let go of a spin", orbit.moving)
+
+        var frames = 0
+        while (!reveal.due(labelMeasured = true, moving = orbit.moving)) {
+            assertTrue("still spinning", orbit.moving)
+            assertTrue("the spin dies", ++frames < SPIN_FRAMES)
+            orbit.update(FRAME)
+        }
+        assertTrue("the spin went on after the finger", frames > 1)
+        val left = orbit.pose
+        assertFalse("turned under the cards", isClear(left, box, CHROME))
+
+        orbit.glideTo(reveal(left, box, listOf(CHROME)))
+        repeat(GLIDE_FRAMES) {
+            orbit.update(FRAME)
+            assertFalse("once a let go", reveal.due(labelMeasured = true, moving = orbit.moving))
+        }
+        assertTrue("whole in the free area again", isClear(orbit.pose, box, CHROME))
+        assertEquals("the angle the finger chose", left.azimuthDegrees, orbit.pose.azimuthDegrees, 0f)
+        assertEquals(left.elevationDegrees, orbit.pose.elevationDegrees, 0f)
+    }
+
+    @Test
+    fun `a pinch is a finger at work until the gesture ends`() {
+        val orbit = orbit(OrbitPose(Position(0f, 0.4f, 0f), 35f, 32f, distance = 6f)).apply { hold() }
+        assertFalse(orbit.moving)
+        orbit.scrollBegin(WIDTH / 2, HEIGHT / 2, 200f)
+        orbit.scrollUpdate(WIDTH / 2, HEIGHT / 2, 200f, 260f)
+        assertTrue(orbit.moving)
+        // The gesture detector ends a pinch as it ends a drag.
+        orbit.grabEnd()
+        assertFalse(orbit.moving)
+    }
+
+    @Test
+    fun `the label waits for the slide to be decided, then is placed where the slide ends`() {
+        val reveal = ScanReveal()
+        assertFalse(reveal.pending)
+        reveal.picked()
+        repeat(ScanReveal.WAIT_FRAMES - 1) {
+            assertFalse("the label has no height yet", reveal.due(labelMeasured = false, moving = false))
+            assertTrue("nothing is written meanwhile", reveal.pending)
+        }
+        assertTrue("no longer waited for", reveal.due(labelMeasured = false, moving = false))
+        assertFalse(reveal.pending)
+        reveal.picked()
+        assertTrue("measured: at once", reveal.due(labelMeasured = true, moving = false))
+        assertFalse(reveal.pending)
+        assertFalse("once a pick", reveal.due(labelMeasured = true, moving = false))
+
+        val pose = OrbitPose(Position(0f, 0f, 0f), 0f, ArDebugFraming.MAP_ELEVATION, distance = 9f)
+        val box = ScanBox(0.3f, -3.2f, baseY = 0f, yaw = 0f, length = 1.4f, depth = 0.6f, height = 0.8f)
+        val orbit = orbit(pose).apply { hold() }
+        assertEquals("no slide: where the camera is", pose, orbit.heading)
+        val to = reveal(pose, box, listOf(CHROME))
+        orbit.glideTo(to)
+        assertEquals(to, orbit.heading)
+
+        // Placed for the slide's end from its first frame: the same pixels until it is over.
+        val born = ScanObjectMeshes.drawnSpan(box, orbit.scanCamera(orbit.heading))!!
+        val now = ScanObjectMeshes.drawnSpan(box, orbit.scanCamera())!!
+        assertTrue("it would have jumped ${born.second - now.second} px", born.second - now.second > PIXELS)
+        orbit.update(FRAME)
+        assertTrue("under way", orbit.pose != to)
+        assertEquals(born, ScanObjectMeshes.drawnSpan(box, orbit.scanCamera(orbit.heading)))
+        repeat(GLIDE_FRAMES) { orbit.update(FRAME) }
+        assertEquals(to, orbit.pose)
+        assertEquals(born, ScanObjectMeshes.drawnSpan(box, orbit.scanCamera()))
+        assertEquals("the box's top, where the chrome ends", CHROME.top * HEIGHT, born.second, PIXELS)
+    }
+
     private fun reveal(pose: OrbitPose, box: ScanBox, insets: List<FramingInsets>): OrbitPose {
         val orbit = orbit(pose)
         val corners = box.corners().map { Position(it.x, it.y, it.z) }
@@ -143,6 +231,13 @@ class ArDebugFramingRevealTest {
         const val HEIGHT = 2340
         const val LIFT = 0.07f
         const val PIXELS = 1.5f
+        const val FRAME = 1f / 60f
+
+        /** A drag up the screen that stops short of the steepest tilt, so it is let go spinning. */
+        const val DRAG_STEPS = 9
+        const val DRAG_PIXELS = 20
+        const val SPIN_FRAMES = 600
+        const val GLIDE_FRAMES = 240
 
         /** A header and a stats card above, a filmstrip and a dock below. */
         val CHROME = FramingInsets(left = 0.03f, top = 0.2f, right = 0.03f, bottom = 0.3f)
