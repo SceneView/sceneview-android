@@ -1,2 +1,0 @@
-<!-- category: Fixed -->
-- **Android demo: an exported Rerun recording passes Rerun's own file check ([#4486](https://github.com/sceneview/sceneview/issues/4486)).** A `.rrd` exported from Rerun Record or Rerun Showcase opened in the viewer, but `rerun rrd verify` rejected it: the file ended without the index Rerun 0.38 writes at the end of every recording. The export now ends with that index, so the file verifies, and tools that read a recording through its index can use it. Nothing else in the file changes, and a recording cut short before its end still opens.
