@@ -930,6 +930,14 @@ must read as one language: same `ar-scrim` ground, same `ar-scrim-border` hairli
 shadow shows through as a darker inner rectangle in dark mode. Padding `space-md`,
 children spaced `space-sm`.
 
+On a phone held sideways the band above the bottom chrome is too thin for a card with
+buttons: the card moves to the corner beside the centred dock and mode pill, and is never
+narrower there than `card-min-width` (192dp, the width at which its title and each button
+still hold on one line). With less room than that it stays above the chrome and scrolls.
+A card with a single action may take a narrower corner, down to the room its label needs:
+`action-label-min-width` (36dp per unit of font scale, the width at which "Try again" breaks
+at its space and each word stays whole) around the card's own margins.
+
 - **Theme-independent, like the coaching overlay, and for the same reason.** The ground is
   a camera frame. A demo card that used `surface` at 90% opacity — as the Cloud Anchors
   screen did before #3421 — is a near-white slab over the room in light mode and a

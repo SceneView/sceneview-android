@@ -20,6 +20,13 @@ interface DemoAnalytics {
     fun setCrashKey(key: CrashKey, value: String) = Unit
 
     /**
+     * Files [throwable] with the crash reports as a problem the app survived (#4510) — an AR
+     * session that failed for a reason the funnel has no code for, or that never started
+     * tracking. Same switch as crash reports: nothing is recorded while collection is off.
+     */
+    fun recordNonFatal(throwable: Throwable) = Unit
+
+    /**
      * Turns usage statistics and crash reports on or off together (About → Privacy &
      * notifications). Re-applied at every launch.
      */
@@ -67,6 +74,11 @@ class GatedDemoAnalytics(
     override fun setCrashKey(key: CrashKey, value: String) {
         if (!isEnabled()) return
         runCatching { delegate.setCrashKey(key, value.take(CRASH_KEY_MAX_VALUE)) }
+    }
+
+    override fun recordNonFatal(throwable: Throwable) {
+        if (!isEnabled()) return
+        runCatching { delegate.recordNonFatal(throwable) }
     }
 
     override fun setCollectionEnabled(enabled: Boolean) {

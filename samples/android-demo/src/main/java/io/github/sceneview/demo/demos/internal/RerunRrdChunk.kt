@@ -90,8 +90,11 @@ internal class RerunComponentColumn private constructor(
 ) {
     val array: RerunArrowArray = RerunArrowArray.list(counts, values)
 
-    private val archetypeName = qualified(archetype, "rerun.archetypes")
-    private val componentTypeName = qualified(componentType, "rerun.components")
+    /** The archetype's full name (`rerun.archetypes.Points3D`). */
+    val archetypeName: String = qualified(archetype, "rerun.archetypes")
+
+    /** The component type's full name (`rerun.components.Position3D`). */
+    val componentTypeName: String = qualified(componentType, "rerun.components")
 
     val fieldName: String = "${archetype.substringAfterLast('.')}:$name"
 

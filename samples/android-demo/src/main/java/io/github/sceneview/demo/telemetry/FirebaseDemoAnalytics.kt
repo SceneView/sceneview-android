@@ -56,6 +56,11 @@ internal class FirebaseDemoAnalytics(context: Context) : DemoAnalytics {
         FirebaseCrashlytics.getInstance().setCustomKey(key.key, value)
     }
 
+    override fun recordNonFatal(throwable: Throwable) {
+        if (BuildConfig.DEBUG) Log.d(TAG, "non-fatal $throwable")
+        FirebaseCrashlytics.getInstance().recordException(throwable)
+    }
+
     override fun setCollectionEnabled(enabled: Boolean) {
         if (BuildConfig.DEBUG) Log.d(TAG, "collection enabled=$enabled")
         analytics.setAnalyticsCollectionEnabled(enabled)

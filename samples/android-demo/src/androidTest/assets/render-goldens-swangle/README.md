@@ -115,3 +115,38 @@ matched. One more run is not a proof of stability; read the next ones.
 - `splatpreview_default` now waits for the decoded scan, which removes the
   empty-stage capture; what made it differ between runs was the sort order, see
   "What moved the Splat Preview picture" above.
+
+## Debug Overlay: the reference was the early picture (#4448)
+
+After #4459 one case kept going red, about three runs in ten:
+`debugoverlay_default`, 3.49 % of pixels (86 774 to 86 803), always the same
+ones — the sphere's shading and the floor's grid lines, nothing in the chrome.
+
+Debug Overlay was not among the screens #4459 rewired: it named itself "Scene
+ready" on its first frame and never waited for its studio HDR. The capture was
+therefore taken before the HDR on a slow runner and after it on a fast one, and
+the reference recorded in #4458 was the slow runner's picture — the scene lit by
+the neutral fallback, with white grid lines. The red runs were the ones that
+showed the real screen.
+
+The screen now holds "Scene ready" for the HDR, and so does Picking & Collision,
+which had the same unheld environment behind a wider budget. With the hold, three
+runs on the same commit (38394278289, 38394282012, 38394285785) all held for 15 to
+28 s and all produced the HDR-lit picture, 86 774 px from the old reference each
+time. The reference here is the first of the three.
+
+## The emulator is gone when the suite ends (#4448)
+
+`adb: device offline` in this job is not a case that kills the emulator. In the
+eight nightlies read for #4448 and in every run since, all 15 cases execute; the
+emulator process dies **after** the last one, within half a second of the
+framework killing the instrumented process ("Force stopping … finished inst").
+The test runner has already finished the activity and the Filament engine is
+already destroyed at that point, so a live viewport is not what it trips on.
+The three jobs of the same workflow that run `-gpu swiftshader_indirect` end
+with "OK: killing emulator"; only this one, on `swangle_indirect`, does not.
+
+What it costs: Gradle cannot uninstall the APKs (hidden by `|| true`), the final
+`adb pull` finds no device, and whatever a case wrote after the harvest loop's
+last 20 s pass is not in the artifact. Verdicts are not affected — the JUnit XML
+is complete.

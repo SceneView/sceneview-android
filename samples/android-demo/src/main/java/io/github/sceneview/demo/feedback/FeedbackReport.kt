@@ -22,7 +22,8 @@ import java.util.Locale
  * - a [BugReportInfo.metadata] snapshot (the screen the report was filed from,
  *   app version, device, OS, ABI, display),
  * - the app's own logcat tail ([collectAppLogcat] — readable without any
- *   permission for the app's own pid),
+ *   permission for the app's own pid), and the AR tracking lines found further
+ *   back in it ([collectArTrackingLog]),
  * - an optional screenshot captured via `PixelCopy` (see `CapturedScreenshot.kt`).
  *
  * Nothing ever leaves the device by itself: the user explicitly shares the
@@ -35,6 +36,11 @@ data class BugReportInfo(
     val metadata: Map<String, String>,
     /** Tail of the app's own logcat, oldest line first. Empty if unreadable. */
     val logcat: List<String>,
+    /**
+     * The `AR tracking:` lines of the app's own logcat, oldest first — see
+     * [collectArTrackingLog]. Empty outside AR, or if unreadable.
+     */
+    val arTracking: List<String> = emptyList(),
 )
 
 /**
@@ -59,6 +65,34 @@ internal const val SHARE_LOGCAT_MAX_LINES = LOGCAT_TAIL_LINES
  * allows.
  */
 internal const val ISSUE_LOGCAT_MAX_LINES = 400
+
+/**
+ * Message prefix of the lines `ARSceneView` logs under the `SceneView` tag when
+ * the camera's tracking state changes, and every ten seconds while it is not
+ * tracking (#4510): `AR tracking: state=PAUSED reason=NONE for=20s`.
+ *
+ * A copy of the library's own prefix, which is not part of its public API;
+ * `BugReportFormatTest` holds the two together.
+ */
+internal const val AR_TRACKING_LOG_PREFIX = "AR tracking:"
+
+/** Max AR tracking lines kept by [collectArTrackingLog] and carried by the share text. */
+internal const val AR_TRACKING_MAX_LINES = 60
+
+/**
+ * How far back [collectArTrackingLog] looks: this many of the app's most recent
+ * log lines, whatever their tag. Five minutes of an AR session at ARCore's
+ * sixty lines a second — more than a default 256 KiB log buffer holds, so on
+ * most phones the bound is the buffer itself.
+ */
+internal const val AR_TRACKING_SCAN_LINES = 20_000
+
+/**
+ * Max AR tracking lines in a GitHub-issue body. Fewer than the share text
+ * carries: every line is paid for out of [ISSUE_URL_MAX_LENGTH], and a dozen
+ * lines already cover two minutes of a camera that does not track.
+ */
+internal const val ISSUE_AR_TRACKING_MAX_LINES = 12
 
 /**
  * Hard cap for the pre-filled GitHub issue URL. Browsers and the GitHub app
@@ -126,29 +160,81 @@ fun captureBugReportMetadata(context: Context, screen: ReportScreen): Map<String
  * Returns an empty list if the `logcat` binary is unavailable or errors
  * (e.g. under Robolectric) — the report is then metadata + note only.
  */
-fun collectAppLogcat(maxLines: Int = LOGCAT_TAIL_LINES): List<String> = runCatching {
-    val process = Runtime.getRuntime().exec(
-        // `-v threadtime` pins the line shape so [compactLogLine] can strip the
-        // redundant columns when the URL budget is tight.
-        arrayOf(
-            "logcat", "-d", "-v", "threadtime",
-            "-t", maxLines.toString(), "--pid=${Process.myPid()}",
-        ),
-    )
+fun collectAppLogcat(maxLines: Int = LOGCAT_TAIL_LINES): List<String> =
+    readOwnLogcat(listOf("-t", maxLines.toString())).takeLast(maxLines)
+
+/**
+ * Read the AR tracking lines of this app's own logcat — the whole buffer, not
+ * its tail (#4510).
+ *
+ * [collectAppLogcat] cannot be relied on for them: ARCore writes some sixty
+ * lines a second from the app's process, so its [LOGCAT_TAIL_LINES] are the
+ * last twenty seconds of an AR session, and the line that says where tracking
+ * stood may be older than that.
+ *
+ * Only whole AR tracking lines are kept (see [arTrackingLines]), not the whole
+ * `SceneView` tag: other lines under that tag can name a file the user picked,
+ * and this block is the one that always makes it into a public issue.
+ *
+ * The read is bounded to the app's last [AR_TRACKING_SCAN_LINES] log lines, of
+ * which `logcat` hands back the `SceneView` ones only. It still spawns a
+ * process and waits for it: call it off the main thread.
+ *
+ * Returns an empty list when `logcat` is unavailable, like [collectAppLogcat].
+ */
+fun collectArTrackingLog(maxLines: Int = AR_TRACKING_MAX_LINES): List<String> = arTrackingLines(
+    readOwnLogcat(listOf("-t", AR_TRACKING_SCAN_LINES.toString(), "-s", "SceneView:I")),
+    maxLines,
+)
+
+/**
+ * The newest [maxLines] of [lines] that are AR tracking lines — the whole line
+ * has to be one, tag included (see [AR_TRACKING_LINE]). A line that merely
+ * contains the prefix is dropped.
+ */
+internal fun arTrackingLines(
+    lines: List<String>,
+    maxLines: Int = AR_TRACKING_MAX_LINES,
+): List<String> = lines.filter(AR_TRACKING_LINE::matches).takeLast(maxLines)
+
+/**
+ * A `threadtime` line of the `SceneView` tag whose whole message is an AR
+ * tracking line: `10-13 17:12:08.316 30621 30621 I SceneView: AR tracking:
+ * state=PAUSED reason=NONE for=20s`.
+ *
+ * Anchored at both ends on purpose. The prefix alone is not enough: a line of
+ * the same tag such as `cannot load content://…/AR tracking: notes.spz` carries
+ * it too, with a path the user picked, and this block goes into a public issue.
+ * Past the prefix, only enum names and a number of seconds can match.
+ */
+private val AR_TRACKING_LINE = Regex(
+    """^\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}\s+\d+\s+\d+\s+I\s+SceneView\s*: """ +
+        Regex.escape(AR_TRACKING_LOG_PREFIX) +
+        """ state=[A-Z_]+ reason=[A-Z_]+( for=\d+s)?$"""
+)
+
+/** `logcat -d` for this app's own pid with [arguments], or an empty list if it fails. */
+private fun readOwnLogcat(arguments: List<String>): List<String> = runCatching {
+    // `-v threadtime` pins the line shape so [compactLogLine] can strip the
+    // redundant columns when the URL budget is tight.
+    val command = listOf("logcat", "-d", "-v", "threadtime", "--pid=${Process.myPid()}")
+    val process = Runtime.getRuntime().exec((command + arguments).toTypedArray())
     process.inputStream.bufferedReader().use { reader ->
         reader.readLines()
             .map { it.trimEnd() }
             .filter { it.isNotBlank() && !it.startsWith("--------- beginning of") }
-            .takeLast(maxLines)
     }.also { process.destroy() }
 }.getOrDefault(emptyList())
 
-/** Assemble the full report snapshot. Cheap enough for the main thread, but
- *  callers run it alongside the (async) screenshot capture anyway. */
+/**
+ * Assemble the full report snapshot. Runs `logcat` twice and waits for both:
+ * call it off the main thread.
+ */
 fun captureBugReportInfo(context: Context, screen: ReportScreen): BugReportInfo =
     BugReportInfo(
         metadata = captureBugReportMetadata(context, screen),
         logcat = collectAppLogcat(),
+        arTracking = collectArTrackingLog(),
     )
 
 /** Issue / share subject line — includes the demo id when there is one. */
@@ -175,6 +261,14 @@ fun formatShareText(info: BugReportInfo, note: String): String = buildString {
         appendLine()
     }
     info.metadata.forEach { (key, value) -> appendLine("$key: $value") }
+    // Ahead of the general log on purpose: it is short, and it answers the
+    // first question about an AR report.
+    val arTracking = info.arTracking.takeLast(AR_TRACKING_MAX_LINES)
+    if (arTracking.isNotEmpty()) {
+        appendLine()
+        appendLine("AR tracking (last ${arTracking.size} lines):")
+        arTracking.forEach { appendLine(it) }
+    }
     val logcat = info.logcat.takeLast(SHARE_LOGCAT_MAX_LINES)
     if (logcat.isNotEmpty()) {
         appendLine()
@@ -185,10 +279,14 @@ fun formatShareText(info: BugReportInfo, note: String): String = buildString {
 
 /**
  * Markdown body for a pre-filled GitHub issue: the note, a metadata table,
- * and the logcat tail folded in a `<details>` block.
+ * the AR tracking lines and the logcat tail, each folded in a `<details>` block.
  *
  * The screenshot cannot ride in a URL — the UI says so and keeps it on the
  * share path instead.
+ *
+ * @param maxLogcatLines ceiling for the log lines of the body, both blocks
+ *   together: the AR tracking lines are taken out of it first, the general
+ *   tail gets what is left.
  */
 fun formatIssueBody(
     info: BugReportInfo,
@@ -205,22 +303,28 @@ fun formatIssueBody(
     info.metadata.forEach { (key, value) ->
         appendLine("| $key | ${value.replace("|", "\\|")} |")
     }
-    val logcat = info.logcat.takeLast(maxLogcatLines)
-    if (logcat.isNotEmpty()) {
-        appendLine()
-        appendLine("<details><summary>App log (last ${logcat.size} lines)</summary>")
-        appendLine()
-        appendLine("```")
-        // A log line containing a ``` fence would terminate the block early
-        // and spill raw log into the issue markdown — de-fang it.
-        logcat.forEach { appendLine(it.replace("```", "'''")) }
-        appendLine("```")
-        appendLine()
-        appendLine("</details>")
-    }
+    val arTracking = info.arTracking.takeLast(ISSUE_AR_TRACKING_MAX_LINES)
+    val logcat = info.logcat.takeLast((maxLogcatLines - arTracking.size).coerceAtLeast(0))
+    appendLogDetails("AR tracking (last ${arTracking.size} lines)", arTracking)
+    appendLogDetails("App log (last ${logcat.size} lines)", logcat)
     appendLine()
     appendLine("_Reported from the in-app bug reporter._")
 }.trimEnd()
+
+/** One folded, fenced block of log [lines] under [summary]; nothing when there are none. */
+private fun StringBuilder.appendLogDetails(summary: String, lines: List<String>) {
+    if (lines.isEmpty()) return
+    appendLine()
+    appendLine("<details><summary>$summary</summary>")
+    appendLine()
+    appendLine("```")
+    // A log line containing a ``` fence would terminate the block early
+    // and spill raw log into the issue markdown — de-fang it.
+    lines.forEach { appendLine(it.replace("```", "'''")) }
+    appendLine("```")
+    appendLine()
+    appendLine("</details>")
+}
 
 /**
  * Drop the columns a maintainer never reads back from a `threadtime` line —
@@ -252,7 +356,10 @@ private val LEADING_DATE = Regex("""^\d{2}-\d{2} (?=\d{2}:\d{2}:\d{2})""")
  */
 fun buildGitHubIssueUrl(info: BugReportInfo, note: String): String {
     val title = formatReportTitle(info, note)
-    val compact = info.copy(logcat = info.logcat.map(::compactLogLine))
+    val compact = info.copy(
+        logcat = info.logcat.map(::compactLogLine),
+        arTracking = info.arTracking.map(::compactLogLine),
+    )
 
     fun url(body: String): String = GITHUB_NEW_ISSUE_URL +
         "?title=" + urlEncode(title) +
@@ -263,11 +370,19 @@ fun buildGitHubIssueUrl(info: BugReportInfo, note: String): String {
 
     var best = urlWith(lines = 0)
     if (best.length > ISSUE_URL_MAX_LENGTH) {
+        // What the user wrote comes before any diagnostic line: give up the AR
+        // tracking block before a single character of the note.
+        val noLog = compact.copy(logcat = emptyList(), arTracking = emptyList())
+        val wholeNote = url(formatIssueBody(noLog, note, 0))
+        if (wholeNote.length <= ISSUE_URL_MAX_LENGTH) return wholeNote
         // Metadata-only body still too long (pathological note) — truncate the note.
-        return url(formatIssueBody(compact.copy(logcat = emptyList()), note.take(1000), 0))
+        return url(formatIssueBody(noLog, note.take(1000), 0))
     }
-    var low = 1
-    var high = minOf(ISSUE_LOGCAT_MAX_LINES, compact.logcat.size)
+    // The ceiling counts both log blocks, so the search starts above the AR
+    // tracking lines the zero-line body already carries.
+    val arTracking = minOf(ISSUE_AR_TRACKING_MAX_LINES, compact.arTracking.size)
+    var low = arTracking + 1
+    var high = minOf(ISSUE_LOGCAT_MAX_LINES, arTracking + compact.logcat.size)
     while (low <= high) {
         val mid = (low + high) / 2
         val candidate = urlWith(mid)
