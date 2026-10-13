@@ -1,7 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://www.googletagmanager.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' blob: https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://cdn.jsdelivr.net https://api.sketchfab.com https://media.sketchfab.com; frame-src https://app.rerun.io; worker-src 'self' blob:; base-uri 'self'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://www.googletagmanager.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' blob: https:; frame-src https://app.rerun.io; worker-src 'self' blob:; base-uri 'self'; object-src 'none'">
+  <!-- This page's address can hold a recording's link (`?url=`), possibly a signed one. A page
+       of this site opened from here would otherwise receive that address as its referrer, and
+       report it to the site's analytics. Other hosts already got the origin alone; with this,
+       every request and every link from this page does. -->
+  <meta name="referrer" content="strict-origin">
   <script>
     (function() {
       try {
@@ -648,33 +653,57 @@
     const directUrl = params.get('url');
     const sessionHash = params.get('r');
 
-    // Resolved against this page, because the viewer reads a relative path as a host name, and
-    // kept to http(s): the same value becomes the Download link.
+    // What `?url=` may name: an https address on any host — this page's `connect-src` is open to
+    // `https:` for that, and to nothing else outside the site — or a path on this site, resolved
+    // against this page because the viewer reads a relative path as a host name. The value is
+    // fetched and becomes the Download link, so every other scheme (`javascript:`, `data:`,
+    // `blob:`, `file:`, plain `http:`) stops here, with the reason on screen.
     const resolveRecordingUrl = (raw) => {
+      let url;
       try {
-        const url = new URL(raw, location.href);
-        return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : null;
+        url = new URL(raw, location.href);
       } catch (e) {
-        return null;
+        return { refused: 'That is not a link this page can read. A link to a recording looks like https://example.com/session.rrd.' };
       }
+      const onThisSite = url.protocol === 'http:' && url.origin === location.origin; // a local preview
+      if (url.protocol === 'https:' || onThisSite) {
+        // `https://name:password@host/…`: a browser refuses to fetch such an address, before any
+        // request leaves. The message does not repeat the link: a password stays off the screen.
+        if (url.username || url.password) {
+          return { refused: `This link carries a user name or a password (the part before the "@"), and a browser does not open such a link from a page. A link to share must not hold credentials: host the recording at a public https address, or download it and drop it on ${START_PAGE}.` };
+        }
+        return { href: url.href };
+      }
+      if (url.protocol === 'file:') {
+        // What the capture sidecar hands back for a file it saved on the computer: `?url=file://…`.
+        return { refused: `That is a file on a computer, and a web page cannot open it from a link. Drop the file on ${START_PAGE} instead.` };
+      }
+      if (url.protocol === 'http:') {
+        return { refused: `This page only loads recordings over https, and this link starts with http://. Host the file at an https address, or download it and drop it on ${START_PAGE}.` };
+      }
+      return { refused: `This page only opens https:// links to a recording, not "${url.protocol}" ones. For a file on this device, drop it on ${START_PAGE} instead.` };
     };
 
     let rrdUrl = null;
     let metadataUrl = null;
+    let refusedLink = null;
 
     if (directUrl) {
-      rrdUrl = resolveRecordingUrl(directUrl);
-      // Allow caller to pass metadata URL alongside via &m=
-      metadataUrl = params.get('m') || null;
+      const recording = resolveRecordingUrl(directUrl);
+      rrdUrl = recording.href || null;
+      refusedLink = recording.refused || null;
+      // Allow caller to pass metadata URL alongside via &m= — same rule, and optional: one that
+      // is refused is left out.
+      const metadataParam = params.get('m');
+      metadataUrl = (metadataParam && resolveRecordingUrl(metadataParam).href) || null;
     } else if (sessionHash && R2_BASE) {
       rrdUrl = `${R2_BASE}/sessions/${encodeURIComponent(sessionHash)}.rrd`;
       metadataUrl = `${R2_BASE}/sessions/${encodeURIComponent(sessionHash)}.json`;
     }
 
     // ─── Empty state ───────────────────────────────────────────────────────
-    if (directUrl && !rrdUrl) {
-      // What the capture sidecar hands back for a file it saved on the computer: `?url=file://…`.
-      showLoadError(new Error(`A browser only opens http(s) links to a recording. For a file on this device, drop it on ${START_PAGE} instead.`));
+    if (refusedLink) {
+      showLoadError(new Error(refusedLink));
     } else if (!rrdUrl) {
       renderEmptyState();
       // Wire share to copy current URL anyway
@@ -738,7 +767,7 @@
             <div class="panel">
               <div class="panel-eyebrow">Already have a recording?</div>
               <h2 class="panel-title">Drop a <code>.rrd</code> file</h2>
-              <p class="panel-body">Or paste a hosted URL — anything reachable with CORS works.</p>
+              <p class="panel-body">Or paste an https link to one. Its host has to let other websites read the file (CORS).</p>
 
               <label class="dropzone" id="dropzone">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -890,34 +919,73 @@
       return r.json();
     }
 
-    // The viewer stays on an empty screen when it cannot fetch the recording, and tells the
-    // page nothing. Ask for the file's headers first, so a dead link ends on the page's error.
+    // The viewer stays on an empty screen when it cannot read the recording, and tells the page
+    // nothing. Ask for the start of the file first, so a link that cannot open ends on the
+    // page's error, with the cause when the browser lets the page know it and the possible
+    // causes when it does not.
     async function checkReachable(url) {
       if (url.startsWith('blob:')) return; // a file picked on this device
+      const host = new URL(url).host;
       let blockedByPolicy = false;
       const onViolation = (e) => { if (e.effectiveDirective === 'connect-src') blockedByPolicy = true; };
       document.addEventListener('securitypolicyviolation', onViolation);
       const request = new AbortController();
-      let response;
       try {
-        response = await fetch(url, { signal: request.signal });
-      } catch (err) {
-        await new Promise((resolve) => setTimeout(resolve)); // the violation event comes as a task
-        throw new Error(blockedByPolicy
-          ? `This page is not allowed to load recordings from ${new URL(url).host}. Download the file, then drop it on ${START_PAGE} instead.`
-          : 'The recording could not be reached. Check the link, and that its host allows cross-origin requests (CORS).');
+        let response;
+        try {
+          response = await fetch(url, { signal: request.signal });
+        } catch (err) {
+          await new Promise((resolve) => setTimeout(resolve)); // the violation event comes as a task
+          if (blockedByPolicy) {
+            // Left to a link that redirects off https: `connect-src` holds on every hop.
+            throw new Error(`The link sends the browser to an address this page may not load: only https addresses are allowed. Download the file, then drop it on ${START_PAGE} instead.`);
+          }
+          // A browser reports an answer the page may not read and no answer at all with the same
+          // error. A request that asks to read nothing back tells those two apart — and no more:
+          // it hides the status, so a host that forbids the read and a host that answered 404 or
+          // 403 without a CORS header look the same from here. The message names both.
+          const hostAnswers = await fetch(url, { mode: 'no-cors', signal: request.signal }).then(() => true, () => false);
+          throw new Error(hostAnswers
+            ? `The browser could not read the answer from ${host}. Either ${host} does not let other websites read the file (it sends no cross-origin, or CORS, permission), or the link is wrong, private or expired. Check the link. If it is right, host the recording where cross-origin requests are allowed, or download it and drop it on ${START_PAGE}.`
+            : `The browser got no answer from ${host}. The address may be wrong, this device may be offline, a content blocker may have stopped the request, or the secure connection (TLS) to ${host} may have failed.`);
+        }
+        if (!response.ok) {
+          throw new Error(response.status === 404
+            ? `There is no file at this link: ${host} answered 404 (not found). Check the address.`
+            : `${host} answered ${response.status} instead of a recording. The file may be private or the link may have expired.`);
+        }
+        if (!(await startsWithRrdHeader(response))) {
+          throw new Error(`The file at this link is not a Rerun recording: a .rrd file starts with "RRF2", and this one does not. Check that the link goes to the file itself, not to a page about it.`);
+        }
+        // The viewer tells a recording by the end of the link's path — a query string after it
+        // is fine — and opens nothing otherwise.
+        if (!/\.rrd$/i.test(new URL(url).pathname)) {
+          throw new Error(`This is a Rerun recording, but its link does not end in .rrd, and the viewer only opens links that do. Host it under a name that ends in .rrd, or download it and drop it on ${START_PAGE}.`);
+        }
       } finally {
         document.removeEventListener('securitypolicyviolation', onViolation);
-        request.abort(); // the headers are enough: the viewer downloads the recording itself
+        request.abort(); // the first bytes are enough: the viewer downloads the recording itself
       }
-      if (!response.ok) throw new Error(`The link answered ${response.status} instead of a recording.`);
+    }
+
+    // The four bytes every `.rrd` starts with — `RerunRrdWriter.kt`, `RerunRRDWriter.swift`.
+    async function startsWithRrdHeader(response) {
+      if (!response.body) return false;
+      const reader = response.body.getReader();
+      const head = [];
+      while (head.length < 4) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        head.push(...value.subarray(0, 4 - head.length));
+      }
+      return String.fromCharCode(...head) === 'RRF2';
     }
 
     // On startup the viewer asks GitHub for the latest Rerun release and tells the visitor to
-    // download it when it is newer than itself. This page pins the viewer on purpose, the web
-    // viewer has no option to skip the check, and the page's `connect-src` blocks the call
-    // (two console errors per load). Answer that one request here with the pinned version:
-    // nothing leaves the browser, and the viewer has nothing to announce.
+    // download it when it is newer than itself. This page pins the viewer on purpose, and the
+    // web viewer has no option to skip the check. Answer that one request here with the pinned
+    // version: nothing leaves the browser — `connect-src` is open to https hosts, so the call
+    // would go out otherwise — and the viewer has nothing to announce.
     let updateCheckAnswered = false;
     function answerViewerUpdateCheck() {
       if (updateCheckAnswered) return;
@@ -977,9 +1045,17 @@
         const a = document.createElement('a');
         a.href = rrdUrl;
         a.download = (metadata?.title || 'sceneview-session') + '.rrd';
-        document.body.appendChild(a);
+        // A browser ignores `download` for a file on another host and follows the link instead:
+        // in a new tab then, so the viewer stays open, and without handing that host this
+        // window or this page's address.
+        if (new URL(rrdUrl).origin !== location.origin) {
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+        }
+        // The link is never added to the page: its click then reaches no listener of the
+        // document, and the site's analytics, which records clicks on links to other hosts
+        // with the link's address, does not see the recording's link.
         a.click();
-        a.remove();
       });
 
       const embed = $('btn-embed');
