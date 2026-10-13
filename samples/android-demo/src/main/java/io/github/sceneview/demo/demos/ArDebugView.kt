@@ -845,6 +845,7 @@ internal fun ArDebugSceneView(
                         anchors = visible(DebugGroup.Anchors),
                         trail = visible(DebugGroup.Trail),
                         measure = !compact && solid == null,
+                        measureOnTop = orbit.overhead,
                     ),
                     eye = CameraRig.eye(orbit.pose).let { Vec3(it.x, it.y, it.z) },
                 )

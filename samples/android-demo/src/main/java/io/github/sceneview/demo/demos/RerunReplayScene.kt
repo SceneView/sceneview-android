@@ -378,6 +378,7 @@ internal class ReplayLayers(
     var measure: RoomMeasure? = null
         private set
     private var measureLabels: Pair<String, String>? = null
+    private var measureOnTop = false
     private var measureLabelWidths = FloatArray(2)
 
     val nodes: List<DebugLayerNode> =
@@ -406,6 +407,7 @@ internal class ReplayLayers(
     ) {
         syncPlanes(frame, floorY, show.planes)
         syncMeasure(frame, pointStyle, floorY, show.measure && show.planes, eye)
+        setMeasureOnTop(show.measureOnTop)
         // A dense cloud stands in for the sparse one, under the same toggle — a scan still
         // recording shows its feature points until the first dense snapshot.
         syncDense(frame, show.points)
@@ -466,6 +468,19 @@ internal class ReplayLayers(
             )
         }
         measureNode.upload(mesh)
+    }
+
+    /**
+     * Whether the dimensions are drawn over everything else, whatever stands in front of them.
+     * They lie on the floor outside the walls, and seen from above everything taller than the
+     * floor leans outwards over that strip: a wall's photo, the cloud, the camera's path. On a
+     * phone the map hid one of a room's two figures under a wall and wrote the other on the path.
+     */
+    private fun setMeasureOnTop(onTop: Boolean) {
+        if (onTop == measureOnTop) return
+        measureOnTop = onTop
+        measureMaterial.setDepthCulling(!onTop)
+        measureNode.setPriority(if (onTop) MEASURE_TOP_PRIORITY else MEASURE_PRIORITY)
     }
 
     /**
@@ -665,6 +680,9 @@ internal class ReplayLayers(
         /** Over the grid and the outlines, under the frustums' photos. */
         const val MEASURE_PRIORITY = 4
 
+        /** Filament's last: after the path, the frustums and the live points ([ReplayLayers.setMeasureOnTop]). */
+        const val MEASURE_TOP_PRIORITY = 7
+
         /** A millimetre over the grid: the dimensions are drawn on the floor, not in it. */
         const val MEASURE_LIFT_M = 0.003f
 
@@ -718,4 +736,6 @@ internal data class ReplayVisibility(
     val trail: Boolean,
     /** The room's floor-plan dimensions ([RoomMeasure]), drawn with the planes. */
     val measure: Boolean = false,
+    /** The dimensions over everything else: the map, where the room is read as a plan. */
+    val measureOnTop: Boolean = false,
 )
