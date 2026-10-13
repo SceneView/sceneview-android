@@ -66,6 +66,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SnackbarHost
@@ -105,7 +106,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalViewConfiguration
@@ -343,6 +346,34 @@ internal fun demoChromeBottomInset(
  * reads this to know how much of it there is.
  */
 val LocalDemoChromeBottomWidth = androidx.compose.runtime.compositionLocalOf { Dp.Unspecified }
+
+/**
+ * How a demo tells the scaffold about what it anchors over the bottom of its own scene, one
+ * gutter above the scaffold's chrome ([LocalDemoChromeBottomInset]): the placement screen's
+ * decision card and coaching line. Called with that element's top edge in window pixels, or
+ * with null when it shows nothing. A no-op outside a [DemoScaffold].
+ *
+ * The scaffold cannot measure it — it lives in the `scene` slot — yet its snackbar lands
+ * exactly there, one gutter above the same chrome. Reported, the snackbar rests above it
+ * instead of across its buttons (#4483). Use [reportsDemoSceneBottomCard].
+ */
+internal val LocalDemoSceneBottomCard =
+    androidx.compose.runtime.compositionLocalOf<(Int?) -> Unit> { {} }
+
+/**
+ * Reports this element to the scaffold as the demo's bottom-anchored card
+ * ([LocalDemoSceneBottomCard]), so a snackbar rests above it. Goes after the paddings that
+ * place the element, so the reported box is what is drawn. An element measured empty reports
+ * nothing, as does one that has left the composition.
+ */
+@Composable
+internal fun Modifier.reportsDemoSceneBottomCard(): Modifier {
+    val report = LocalDemoSceneBottomCard.current
+    androidx.compose.runtime.DisposableEffect(report) { onDispose { report(null) } }
+    return onGloballyPositioned { coordinates ->
+        report(coordinates.positionInWindow().y.roundToInt().takeIf { coordinates.size.height > 0 })
+    }
+}
 
 /**
  * How much of the scene the scaffold's settings sheet covers from the bottom edge, in dp — zero
@@ -732,6 +763,30 @@ fun DemoScaffold(
     CompositionLocalProvider(LocalStageChrome provides chrome, LocalGlassGround provides glassGround) {
         // Measured by the dock, read by the scene's bottom stack and by the snackbar.
         var dockBandPx by remember { mutableIntStateOf(0) }
+        // Whether anything stacks above the dock: the demo's status pill and overlays, the
+        // Record pill, the mode pill.
+        val bottomStackShown = bottomOverlay != null || peekHeader != null ||
+            modeSwitch != null || recordPillShown
+        // Whether the bottom band is composed at all. Its measurement outlives it — the
+        // Record pill comes and goes, an AR session fails — so the scene and the snackbar are
+        // only told about a band that is up.
+        val bottomBandShown = if (arSessionFailed) {
+            modeSwitch != null
+        } else {
+            arOverlaysEnabled && bottomStackShown
+        }
+        // Height of the `bottomOverlay` band, measured (never assumed) so
+        // `bottomOverlayReservesScene` can inset the viewport by exactly the room the
+        // overlay takes — including the dock band it stacks on, the system-bar inset,
+        // and whatever the font scale does to the chip text (#2957). The snackbar reads
+        // it too, to rest above the stack instead of across it (#4483).
+        var bottomOverlayBandPx by remember { mutableIntStateOf(0) }
+        // Height of what that band actually draws, apart from its dock reserve: zero for a
+        // band that is composed but empty, which is then no stack for anyone.
+        var bottomOverlayContentPx by remember { mutableIntStateOf(0) }
+        // Top edge, in window pixels, of what the demo itself anchors over the bottom of its
+        // scene, above the stack ([reportsDemoSceneBottomCard]); null while it shows nothing.
+        var sceneBottomCardTopPx by remember { mutableStateOf<Int?>(null) }
         Box(Modifier.fillMaxSize()) {
             BottomSheetScaffold(
                 sheetContent = {
@@ -780,20 +835,14 @@ fun DemoScaffold(
                 // No `snackbarHost` slot here on purpose (#3325): the scaffold would place it
                 // flush with the window edge, where it covered the dock's buttons instead of
                 // floating clear above them. [DemoSnackbarHost] places it by hand, after the
-                // scaffold, from the same measured dock band as `bottomOverlay`.
+                // scaffold, from the same measured dock band as `bottomOverlay` and from that
+                // overlay's own measured band.
             ) { _ ->
-                // Height of the `bottomOverlay` band, measured (never assumed) so
-                // `bottomOverlayReservesScene` can inset the viewport by exactly the room the
-                // overlay takes — including the dock band it stacks on, the system-bar inset,
-                // and whatever the font scale does to the chip text (#2957).
-                var bottomOverlayBandPx by remember { mutableIntStateOf(0) }
                 val bottomOverlayBand = with(LocalDensity.current) { bottomOverlayBandPx.toDp() }
                 // Width of the dock and of the scaffold's own pills above it (mode, Record),
                 // for [LocalDemoChromeBottomWidth].
                 var dockWidthPx by remember { mutableIntStateOf(0) }
                 var bandFooterWidthPx by remember { mutableIntStateOf(0) }
-                // Height of what the bottom band actually draws, apart from its dock reserve.
-                var bottomOverlayContentPx by remember { mutableIntStateOf(0) }
                 var topOverlayBandPx by remember { mutableIntStateOf(0) }
                 val density = LocalDensity.current
                 val topOverlayBand = with(density) { topOverlayBandPx.toDp() }
@@ -854,16 +903,6 @@ fun DemoScaffold(
                 // The whole bottom stack above the system inset, for a scene that scrolls under it.
                 // The measured band counts the inset (see `DemoBottomOverlay`), so it comes off here.
                 val bottomChromeCover = maxOf(dockClearance, bottomOverlayBand - navigationBarInset)
-                // Whether the bottom band is composed at all. Its measurement outlives it — the
-                // Record pill comes and goes — so the scene is only told about a band that is up.
-                val bottomBandShown = if (arSessionFailed) {
-                    modeSwitch != null
-                } else {
-                    arOverlaysEnabled && (
-                        bottomOverlay != null || peekHeader != null ||
-                            modeSwitch != null || recordPillShown
-                        )
-                }
                 val reservesScene = bottomOverlayReservesScene && demoSceneReserveFits(
                     windowHeight = with(density) { rootHeightPx.toDp() },
                     topBand = chromeTop,
@@ -947,6 +986,7 @@ fun DemoScaffold(
                                 },
                                 LocalDemoBottomChromeCover provides bottomChromeCover,
                                 LocalDemoSheetCover provides settingsSheetCover,
+                                LocalDemoSceneBottomCard provides { sceneBottomCardTopPx = it },
                             ) {
                                 ProvideDemoSceneCover(
                                     sheetState = settingsSheetState,
@@ -1057,8 +1097,6 @@ fun DemoScaffold(
                         dockBand = dockBandClearance,
                         navigationBarInset = navigationBarInset,
                     )
-                    val bottomStackShown = bottomOverlay != null || peekHeader != null ||
-                        modeSwitch != null || recordPillShown
                     AnimatedVisibility(
                         visible = chromeVisible || (overlaysShown && bottomStackShown && !compactHeight),
                         enter = fadeIn(SceneViewTokens.Motion.fade()),
@@ -1087,9 +1125,7 @@ fun DemoScaffold(
                     // Bottom band: status pill + demo overlays stacked above the dock.
                     // The record pill and the consolidated card's mode pill close the stack,
                     // in that order, so the mode pill always sits just above the dock.
-                    val hasBottomBandContent = bottomOverlay != null || peekHeader != null ||
-                        modeSwitch != null || recordPillShown
-                    if (!arSessionFailed && arOverlaysEnabled && hasBottomBandContent) {
+                    if (!arSessionFailed && arOverlaysEnabled && bottomStackShown) {
                         DemoBottomOverlay(
                             reservedBottom = dockClearance,
                             dockGap = dockClearance - dockBandClearance,
@@ -1166,6 +1202,18 @@ fun DemoScaffold(
                     SceneViewTokens.Layout.dockHeight + SceneViewTokens.Space.md,
                     with(rootDensity) { dockBandPx.toDp() },
                 ),
+                // The very test the scene's inset makes ([demoChromeBottomInset]): a band that
+                // has left, or that draws nothing, must not lift the snackbar over nothing.
+                bottomStackBandPx = if (bottomBandShown && bottomOverlayContentPx > 0) {
+                    bottomOverlayBandPx
+                } else {
+                    0
+                },
+                sceneBottomCardTopPx = sceneBottomCardTopPx,
+                // The chrome a tap on the scene hides takes the band with it (the replay's
+                // timeline): hidden, it is no more there to rest above than under a full sheet.
+                bottomStackHidden = dockHidden || !overlaysShown,
+                sheetRequested = settingsExpanded,
             )
         }
     }
@@ -1175,29 +1223,57 @@ fun DemoScaffold(
  * The scaffold's snackbar: over the whole window and above the settings sheet in z-order,
  * so nothing a demo or the sheet draws can cover it (#4019).
  *
- * At rest it floats `space-md` above the dock band — the measured band, not the 104 dp
- * reserve, which would add the reserve's breathing room to the gutter (#3325). While the
- * settings sheet is up it rides `space-md` above the sheet's top edge instead, over the
- * scene the message is about. A sheet dragged all the way up leaves no scene to float
- * over: the snackbar then stops under the identity row and lies on the sheet's header.
+ * At rest it floats `space-md` above whatever is highest at the bottom of the scene: the
+ * card a demo anchors over its scene ([reportsDemoSceneBottomCard]), the demo's bottom stack
+ * when it has one (#4483), the dock band otherwise — the measured band, not the 104 dp
+ * reserve, which would add the reserve's breathing room to the gutter (#3325). That gutter
+ * is kept by the snackbar's layout box; Material draws the container 12 dp inside it, so the
+ * eye reads 28 dp from edge to edge — over a stack exactly as over the dock. While the settings sheet is up it rides `space-md` above the sheet's top edge
+ * instead, over the scene the message is about. A sheet dragged all the way up leaves no
+ * scene to float over: the snackbar then stops under the identity row and lies on the
+ * sheet's header.
  *
- * The sheet's offset is read while placing, so a sheet on the move re-places the snackbar
- * without recomposing anything.
+ * The stack fades out under an open sheet, and only then may the snackbar come down over the
+ * place it has left — which matters for a sheet whose peek ends lower than the stack. The
+ * resting line is let down once the sheet has **settled** open, not while it travels: a sheet
+ * on its way up meets a snackbar still above the stack and pushes it, and a sheet on its way
+ * out ([sheetRequested] already false, or a drag aimed at hidden) finds the line back above
+ * the stack at once, so the snackbar rides the sheet down and stops there. Either way it is
+ * one travel, never a dip across the chips and back.
  *
- * What this does not clear is a demo's `bottomOverlay` stack with the sheet closed: a
- * snackbar raised then overlaps it and wins on z-order, as it always has.
+ * The sheet's offset and the resting line are read while placing, so a sheet on the move
+ * re-places the snackbar without recomposing anything.
  */
 @Composable
 private fun BoxScope.DemoSnackbarHost(
     hostState: SnackbarHostState,
     sheetState: SheetState,
     dockBand: Dp,
+    bottomStackBandPx: Int,
+    sceneBottomCardTopPx: Int?,
+    bottomStackHidden: Boolean,
+    sheetRequested: Boolean,
 ) {
     val density = LocalDensity.current
     val topInsetPx = WindowInsets.safeDrawing.getTop(density)
     val bottomInsetPx = WindowInsets.safeDrawing.getBottom(density)
+    val stackGone = demoBottomStackGone(
+        hidden = bottomStackHidden,
+        sheetRequested = sheetRequested,
+        sheetShown = sheetState.currentValue != SheetValue.Hidden,
+        sheetSettled = sheetState.targetValue == sheetState.currentValue,
+    )
+    // Down at the pace of the stack's own fade; back up at once, ahead of a closing sheet.
+    val bottomStackVisibility = animateFloatAsState(
+        targetValue = if (stackGone) 0f else 1f,
+        animationSpec = if (stackGone) SceneViewTokens.Motion.fade() else snap(),
+        label = "snackbar-above-bottom-stack",
+    )
     SnackbarHost(
         hostState = hostState,
+        // Material's own snackbar, tagged. The tag is on its layout box, which is what is
+        // placed below; the container is drawn 12 dp inside it.
+        snackbar = { Snackbar(it, Modifier.testTag(DemoScaffoldTestTags.SNACKBAR)) },
         modifier = Modifier
             .matchParentSize()
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
@@ -1218,6 +1294,9 @@ private fun BoxScope.DemoSnackbarHost(
                             windowHeight = windowHeight,
                             snackbarHeight = snackbar.height,
                             dockBandTop = windowHeight - bottomInsetPx - dockBand.roundToPx(),
+                            bottomStackTop = demoBottomStackTop(windowHeight, bottomStackBandPx),
+                            bottomStackVisibility = bottomStackVisibility.value,
+                            sceneCardTop = sceneBottomCardTopPx ?: windowHeight,
                             sheetTop = sheetTop,
                             identityRowBottom = topInsetPx + IDENTITY_ROW_MIN_HEIGHT.roundToPx(),
                             gap = SceneViewTokens.Space.md.roundToPx(),
@@ -1229,22 +1308,67 @@ private fun BoxScope.DemoSnackbarHost(
 }
 
 /**
+ * Whether the demo's bottom stack is out of the snackbar's way: the caller hides it
+ * ([hidden]), or the settings sheet has **settled** open over it.
+ *
+ * A sheet that is only on its way does not count. On its way up ([sheetRequested], not yet
+ * [sheetSettled]) it must meet a snackbar still above the stack and push it; on its way out —
+ * [sheetRequested] already false, or a drag aimed at hidden, which un-settles it — the stack
+ * is coming back and the snackbar has to be above it before the sheet lets go.
+ */
+internal fun demoBottomStackGone(
+    hidden: Boolean,
+    sheetRequested: Boolean,
+    sheetShown: Boolean,
+    sheetSettled: Boolean,
+): Boolean = hidden || (sheetRequested && sheetShown && sheetSettled)
+
+/**
+ * Top edge, in window pixels, of what a demo stacks above the dock — or [windowHeight] when it
+ * stacks nothing.
+ *
+ * [band] is the measured `bottomOverlay` band, which runs down to the window's bottom edge
+ * (its content, the dock reserve under it and the system bar), or zero when the scaffold has
+ * no band up or the band draws nothing.
+ */
+internal fun demoBottomStackTop(windowHeight: Int, band: Int): Int =
+    if (band > 0) windowHeight - band else windowHeight
+
+/**
  * Where [DemoSnackbarHost] puts the snackbar's top edge, in window pixels.
  *
- * [gap] above the dock band at rest; [gap] above the settings sheet while that reaches higher
- * than the dock; never above [identityRowBottom], where it would cover the back button — a
- * sheet dragged that far up gets the snackbar on its header instead. [sheetTop] is `NaN`
- * before the sheet has been laid out and [windowHeight] or more while it is hidden.
+ * At rest, [gap] above the highest of the dock band, the demo's bottom stack
+ * ([bottomStackTop], from [demoBottomStackTop]) and the card the demo anchors over its scene
+ * above that stack ([sceneCardTop], [windowHeight] when it shows none).
+ * [bottomStackVisibility] is how much of the stack the snackbar still has to clear, 1 at rest
+ * and 0 once it has faded out under a sheet that has settled open: the resting line slides
+ * with it, down to the dock. The scene's card does not fade with the chrome, so it holds the
+ * snackbar up whatever the stack does. [gap] above the settings sheet while that reaches
+ * higher than the resting line.
+ *
+ * Never above [identityRowBottom], where it would cover the back button: a sheet dragged that
+ * far up gets the snackbar on its header, and a stack or a card that leaves no room under the
+ * identity row gets it across its topmost element. [sheetTop] is `NaN` before the sheet has
+ * been laid out and [windowHeight] or more while it is hidden.
  */
+@Suppress("LongParameterList") // Nine edges of one layout; a holder would only rename them.
 internal fun demoSnackbarTop(
     windowHeight: Int,
     snackbarHeight: Int,
     dockBandTop: Int,
+    bottomStackTop: Int,
+    bottomStackVisibility: Float,
+    sceneCardTop: Int,
     sheetTop: Float,
     identityRowBottom: Int,
     gap: Int,
 ): Int {
-    val resting = dockBandTop - gap - snackbarHeight
+    val aboveDock = dockBandTop - gap - snackbarHeight
+    // A stack that ends under the dock band's top edge lifts nothing.
+    val aboveStack = minOf(aboveDock, bottomStackTop - gap - snackbarHeight)
+    val lift = ((aboveDock - aboveStack) * bottomStackVisibility.coerceIn(0f, 1f)).roundToInt()
+    val aboveCard = sceneCardTop - gap - snackbarHeight
+    val resting = maxOf(minOf(aboveDock - lift, aboveCard), identityRowBottom)
     val sheetEdge = if (sheetTop.isNaN()) windowHeight else sheetTop.roundToInt()
     val aboveSheet = sheetEdge - gap - snackbarHeight
     return minOf(resting, maxOf(aboveSheet, identityRowBottom))
@@ -1824,6 +1948,9 @@ object DemoScaffoldTestTags {
     const val FIRST_FRAME_SCRIM = "demo-first-frame-scrim"
     const val LOADING_STALLED = "demo-loading-stalled"
     const val BOTTOM_OVERLAY = "demo-bottom-overlay"
+
+    /** The snackbar's layout box: Material's container plus the 12 dp margin it carries. */
+    const val SNACKBAR = "demo-snackbar"
     const val TOP_OVERLAY = "demo-top-overlay"
 }
 
