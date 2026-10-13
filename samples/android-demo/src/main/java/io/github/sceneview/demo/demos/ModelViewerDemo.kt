@@ -2118,7 +2118,7 @@ private fun MultiModelSection(
     )
 
     // Same asset-source vocabulary as the other streamed demos, and what keeps the chip
-    // labels honest: they name the catalogue entry, and an "Offline model" pill says
+    // labels honest: they name the catalogue entry, and a "Built-in model" pill says
     // the geometry under them is the bundled stand-in rather than the oak the label
     // names (#2933).
     //
@@ -2132,11 +2132,11 @@ private fun MultiModelSection(
     // `allLoaded` watches the INSTANCES while the probe's fallback branch watches the
     // FILES — two different signals on purpose, which is what makes this a MOVING
     // verdict during load: a slot that falls back last flips the pill Streaming →
-    // Offline after the fact. All four slots are streamed `park` slugs, so the whole
+    // Built-in after the fact. All four slots are streamed `park` slugs, so the whole
     // list is passed; none is a bundled-by-design slot.
     //
     // Whole-scene and pessimistic (see the probe): one fallen-back slot out of four
-    // reads "Offline model" for all of them, and the pill never says which one swapped.
+    // reads "Built-in model" for all of them, and the pill never says which one swapped.
     val assetSource = if (slugs.all { it == null }) {
         null
     } else {

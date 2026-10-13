@@ -592,6 +592,22 @@ object SceneViewTokens {
 
         /** Widest a coaching pill may grow — a long line stays one readable column. */
         val maxWidth = 480.dp
+
+        /**
+         * `card-min-width` — narrowest a decision card may be when it moves into the corner
+         * beside the bottom chrome on a phone held sideways (#4509). Its title and each of
+         * its buttons still hold on one line at this width; with less room than this the
+         * card stays above the chrome instead.
+         */
+        val cardMinWidth = 192.dp
+
+        /**
+         * `action-label-min-width` — the least room a card's action label is given, per unit
+         * of font scale (#4509). "Try again" breaks at its space and each word stays whole at
+         * this width; with less, the label would break inside a word, so the card is not moved
+         * into a corner that narrow.
+         */
+        val actionLabelMinWidth = 36.dp
     }
 
     /**

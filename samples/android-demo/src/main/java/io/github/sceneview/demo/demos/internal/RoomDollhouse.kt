@@ -368,6 +368,20 @@ object RoomDollhouse {
     fun plinthThickness(scale: Float): Float = PLINTH_ON_TABLE_M / scale.coerceAtLeast(MIN_SCALE)
 
     /**
+     * Everything the 3D view draws of a room, as `[minX, minY, minZ, maxX, maxY, maxZ]` with the
+     * room centred on the origin and standing on its plinth's foot at 0: the [fit]'s own box and
+     * the plinth under it, which runs [BASE_MARGIN_M] past the walls all round. The opening camera
+     * frames this, not the walls alone — a plinth cut by the screen's edge reads as a room that
+     * does not fit (#4492).
+     */
+    fun previewBounds(fit: DollhouseFit): FloatArray {
+        val halfWidth = fit.width / 2f + BASE_MARGIN_M
+        val halfDepth = fit.depth / 2f + BASE_MARGIN_M
+        val top = BASE_DROP_M + plinthThickness(fit.scale) + fit.height
+        return floatArrayOf(-halfWidth, 0f, -halfDepth, halfWidth, top, halfDepth)
+    }
+
+    /**
      * [polygon] (flat `[x,y,z, …]`, horizontal) pushed [margin] metres outwards from its centre,
      * at height [y]: the rings of the contact shadow around the plinth.
      */

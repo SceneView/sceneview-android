@@ -1,0 +1,3 @@
+<!-- category: Fixed -->
+- **android-demo**: on AR Placement, the "No surface found", camera-error and "Couldn't start AR" cards no longer cover the Place / Free pose / One call selector or get drawn behind it. Cards, selector and dock now stack, including in a short window and at the largest font size, and in landscape the card moves to the corner beside the selector. The source chip that read "Offline" with Wi-Fi connected now reads "Built-in model", which is what it always meant, and it steps aside rather than cut the screen's title short (#4509, #4503).
+- **arsceneview**: `ARCoreAvailabilityOverlay` keeps its "Try again" / "Install" button at full height in a short box. Its text scrolls instead of squeezing the button to nothing (#4509).

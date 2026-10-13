@@ -1,7 +1,10 @@
 package io.github.sceneview.demo.demos
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
@@ -11,6 +14,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.platform.LocalLayoutDirection
 import com.google.android.filament.ColorGrading
 import com.google.android.filament.Engine
 import com.google.android.filament.Material
@@ -22,17 +26,23 @@ import io.github.sceneview.SceneView
 import io.github.sceneview.SurfaceType
 import io.github.sceneview.collision.Box as CollisionBox
 import io.github.sceneview.collision.Vector3
-import io.github.sceneview.demo.demos.internal.ArDebugFraming
+import io.github.sceneview.demo.LocalDemoSceneRestingCover
+import io.github.sceneview.demo.demoContentPadding
 import io.github.sceneview.demo.demos.internal.ArDebugGeometry
 import io.github.sceneview.demo.demos.internal.ArDebugOrbitCamera
 import io.github.sceneview.demo.demos.internal.DebugLayer
 import io.github.sceneview.demo.demos.internal.DebugMesh
 import io.github.sceneview.demo.demos.internal.DenseSurfels
+import io.github.sceneview.demo.demos.internal.DollhouseFraming
+import io.github.sceneview.demo.demos.internal.DollhouseOpening
 import io.github.sceneview.demo.demos.internal.DollhouseRoom
+import io.github.sceneview.demo.demos.internal.FramingInsets
 import io.github.sceneview.demo.demos.internal.PlaneLayering
 import io.github.sceneview.demo.demos.internal.RoomDollhouse
+import io.github.sceneview.demo.isDemoCompactHeight
 import io.github.sceneview.demo.theme.DebugPalette
 import io.github.sceneview.demo.theme.LocalStageChrome
+import io.github.sceneview.demo.theme.SceneViewTokens
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
 import io.github.sceneview.material.setColor
@@ -385,12 +395,58 @@ internal fun DollhousePreview(
     val view = rememberView(engine)
     val renderer = rememberRenderer(engine)
     val fit = room.fit
-    // The room as it stands here: centred on the origin, its floor at 0.
-    val bounds = remember(fit) {
-        floatArrayOf(-fit.width / 2f, 0f, -fit.depth / 2f, fit.width / 2f, fit.height, fit.depth / 2f)
+    // The room as it stands here: centred on the origin, on its plinth, the plinth's foot at 0.
+    val bounds = remember(fit) { RoomDollhouse.previewBounds(fit) }
+    val framing = remember(bounds, orbit) {
+        DollhouseFraming(bounds, PREVIEW_ELEVATION, orbit.verticalFovDegrees)
     }
-    val frames = remember { IntArray(2) }
-    Box(modifier.background(chrome.ground)) {
+    // One opening per room and per camera: another room is veiled until its own framing is drawn.
+    val opening = remember(bounds, orbit) { DollhouseOpening() }
+    // Before the first frame, not on it: the tone mapping is part of the first picture. Effects
+    // run when the composition is applied, ahead of the frame that draws it.
+    DisposableEffect(view, colorGrading) {
+        view.configureForDebug(colorGrading)
+        onDispose { }
+    }
+    BoxWithConstraints(modifier.background(chrome.ground)) {
+        // What the chrome leaves of this view at rest — under the recording's chip, above the dock
+        // and the sheet's peek, between the window's safe sides — less a gutter: the room opens
+        // whole in there (#4492). The camera is aimed for it; the surface keeps the whole view, so
+        // the stage's ground still runs under the glass and a drag pans at the speed it always did.
+        //
+        // A phone held sideways has no such band: the chip, the scale pill and the dock stack up
+        // the middle of a view barely taller than they are, and a room fitted between them is a
+        // thumbnail behind the chip. There the room takes the window's safe area, as large as it
+        // goes, and the glass floats over it.
+        val direction = LocalLayoutDirection.current
+        val safe = WindowInsets.safeDrawing.asPaddingValues()
+        val cover = if (isDemoCompactHeight()) {
+            safe
+        } else {
+            demoContentPadding(
+                cover = LocalDemoSceneRestingCover.current,
+                sceneHeight = maxHeight,
+                left = safe.calculateLeftPadding(direction),
+                right = safe.calculateRightPadding(direction),
+            )
+        }
+        val gutter = SceneViewTokens.Space.md
+        val insets = FramingInsets(
+            left = (cover.calculateLeftPadding(direction) + gutter) / maxWidth,
+            top = (cover.calculateTopPadding() + gutter) / maxHeight,
+            right = (cover.calculateRightPadding(direction) + gutter) / maxWidth,
+            bottom = (cover.calculateBottomPadding() + gutter) / maxHeight,
+        )
+        // The view's shape from its constraints, not from the camera's viewport: the surface
+        // reports its size after the composition, and the first frame is aimed from here.
+        val aspect = constraints.maxWidth.toFloat() / constraints.maxHeight.coerceAtLeast(1)
+        val home = rememberUpdatedState {
+            framing.home(orbit.home.azimuthDegrees, aspect, insets)
+        }
+        // SceneView draws with the pose the camera holds, then calls onFrame: the camera is put on
+        // the room's framing here, before the first frame and whenever the chrome moves, and again
+        // after each frame for the next one (DollhouseOpening).
+        SideEffect { opening.aim(orbit, home.value()) }
         SceneView(
             modifier = Modifier.matchParentSize(),
             surfaceType = SurfaceType.TextureSurface,
@@ -405,20 +461,10 @@ internal fun DollhousePreview(
             environment = environment,
             cameraManipulator = orbit,
             onFrame = {
-                if (frames[0] == 0) view.configureForDebug(colorGrading)
-                val home = ArDebugFraming.home(
-                    bounds, orbit.home.azimuthDegrees, orbit.verticalFovDegrees, orbit.aspect,
-                    elevationDegrees = PREVIEW_ELEVATION,
-                    band = orbit.band,
-                )
-                if (orbit.following) orbit.home = home
-                if (!orbit.hasFramedContent) {
-                    orbit.hasFramedContent = true
-                    orbit.snapTo(home)
-                }
-                frames[0]++
-                // A few frames on screen: the photos are uploaded, nothing is half drawn.
-                if (frames[0] == SHOWN_AFTER_FRAMES) shown.value()
+                // The frame just drawn was aimed before it: shown once it was on the framing.
+                val framed = home.value()
+                if (opening.drawn(orbit, framed)) shown.value()
+                opening.aim(orbit, framed)
             },
         ) {
             DollhouseModel(
@@ -439,4 +485,3 @@ internal fun DollhousePreview(
 
 /** A little higher than the replay's three-quarter view: a dollhouse is looked into from above. */
 private const val PREVIEW_ELEVATION = 40f
-private const val SHOWN_AFTER_FRAMES = 3

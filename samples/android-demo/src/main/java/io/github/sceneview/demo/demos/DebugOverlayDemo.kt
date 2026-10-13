@@ -170,7 +170,11 @@ fun DebugOverlayDemo(onBack: () -> Unit) {
     val sky = themedStageSky()
     val stageSkybox = rememberStageSkybox(engine, sky, renderInvalidator::requestRender)
     StageSkyFog(view, sky, renderInvalidator::requestRender)
-    val baseEnvironment = rememberModelDemoEnvironment(environmentLoader)
+    // "Scene ready" waits for the studio HDR (#4448): until it lands the sphere and the grid are
+    // lit by the neutral fallback, and that is not this screen's picture. The render goldens
+    // captured it on the faster CI runners, 3.49 % of pixels away from the reference.
+    val firstFrame = rememberFirstFrameState(engine)
+    val baseEnvironment = rememberModelDemoEnvironment(environmentLoader, firstFrame)
     val environment = remember(baseEnvironment, stageSkybox) {
         baseEnvironment.copy(skybox = stageSkybox)
     }
@@ -252,12 +256,12 @@ fun DebugOverlayDemo(onBack: () -> Unit) {
         }
     }
 
-    val firstFrame = rememberFirstFrameState(engine)
-
     DemoScaffold(
         title = stringResource(R.string.demo_debug_overlay_title),
         onBack = onBack,
         firstFrameRendered = firstFrame.rendered,
+        sceneReady = firstFrame.sceneReady,
+        contentIssue = firstFrame.contentIssue,
         bottomOverlay = {
             Button(
                     onClick = {
