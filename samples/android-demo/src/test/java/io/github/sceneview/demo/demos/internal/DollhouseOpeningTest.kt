@@ -1,5 +1,6 @@
 package io.github.sceneview.demo.demos.internal
 
+import io.github.sceneview.demo.FIRST_FRAME_SCRIM_TIMEOUT_MS
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -26,8 +27,8 @@ class DollhouseOpeningTest {
     private val large = floatArrayOf(-3f, 0f, -4.5f, 3f, 2.6f, 4.5f)
 
     /** One view of one room: its camera, its framing, its opening, and the frames it drew. */
-    private inner class View(bounds: FloatArray, var insets: FramingInsets) {
-        val orbit = ArDebugOrbitCamera(drift = false)
+    private inner class View(bounds: FloatArray, var insets: FramingInsets, drift: Boolean = false) {
+        val orbit = ArDebugOrbitCamera(drift = drift)
         val framing = DollhouseFraming(bounds, 40f, fov)
         val opening = DollhouseOpening()
         val drawn = mutableListOf<OrbitPose>()
@@ -73,6 +74,42 @@ class DollhouseOpeningTest {
         assertTrue(view.opening.shown)
         assertEquals(DollhouseOpening.STEADY_FRAMES, view.shownOn)
         assertTrue(view.drawn.all { it == view.home() })
+    }
+
+    @Test
+    fun `an orbit that does not drift lifts the veil on the third frame`() {
+        // The dollhouse's orbit: `ArDebugOrbitCamera(drift = false)` in RoomDollhouseScreen.
+        val view = View(small, chrome, drift = false)
+        view.compose()
+        repeat(DollhouseOpening.STEADY_FRAMES) { view.frame() }
+        assertEquals(3, DollhouseOpening.STEADY_FRAMES)
+        assertEquals(DollhouseOpening.STEADY_FRAMES, view.shownOn)
+    }
+
+    /**
+     * The contract the opening rests on: its camera stands still while it follows. A drifting
+     * orbit turns its own `home` every frame, so each frame is fitted for another heading, the
+     * count starts again each time and [DollhouseOpening.drawn] never says shown. On the screen
+     * the veil would then leave only by the scaffold's timeout, twelve seconds in, under a
+     * "Still loading…" the room does not deserve.
+     *
+     * Whoever gives the dollhouse a drifting orbit has to change the opening with it — count
+     * frames on the framing whatever its heading — and this test with it.
+     */
+    @Test
+    fun `a drifting orbit never lifts the veil, so the dollhouse's orbit must not drift`() {
+        val view = View(small, chrome, drift = true)
+        view.compose()
+        val untilTheScaffoldGivesUp = (FIRST_FRAME_SCRIM_TIMEOUT_MS * 60 / 1000).toInt()
+        repeat(untilTheScaffoldGivesUp) { view.frame() }
+        assertFalse(
+            "A drifting orbit now lifts the veil: the opening learnt to wait on a moving " +
+                "framing. Rewrite this contract for what it does now.",
+            view.opening.shown,
+        )
+        assertEquals(0, view.shownOn)
+        // Why: no two frames in a row were fitted for the same heading.
+        assertTrue(view.drawn.zipWithNext().all { (a, b) -> a.azimuthDegrees != b.azimuthDegrees })
     }
 
     @Test
