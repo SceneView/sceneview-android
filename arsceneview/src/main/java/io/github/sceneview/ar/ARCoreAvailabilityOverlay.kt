@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
@@ -195,24 +197,34 @@ fun BoxScope.ARCoreAvailabilityOverlay(
             .testTag(ARCoreAvailabilityOverlayTags.CARD),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        BasicText(
-            text = stringResource(state.availability.titleRes()),
-            style = TextStyle(
-                color = Color.White,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.Center,
-            ),
-        )
-        Spacer(Modifier.height(8.dp))
-        BasicText(
-            text = stringResource(state.availability.bodyRes()),
-            style = TextStyle(
-                color = Color.White.copy(alpha = 0.72f),
-                fontSize = 14.sp,
-                textAlign = TextAlign.Center,
-            ),
-        )
+        // The text scrolls when the box is shorter than the card — a phone held sideways, a
+        // large font — so the action below always keeps its full height. Without this the
+        // Column handed every pixel to the text and measured "Try again" at zero (#4509).
+        Column(
+            modifier = Modifier
+                .weight(1f, fill = false)
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            BasicText(
+                text = stringResource(state.availability.titleRes()),
+                style = TextStyle(
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center,
+                ),
+            )
+            Spacer(Modifier.height(8.dp))
+            BasicText(
+                text = stringResource(state.availability.bodyRes()),
+                style = TextStyle(
+                    color = Color.White.copy(alpha = 0.72f),
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Center,
+                ),
+            )
+        }
         state.availability.actionRes()?.let { actionRes ->
             Spacer(Modifier.height(16.dp))
             Box(

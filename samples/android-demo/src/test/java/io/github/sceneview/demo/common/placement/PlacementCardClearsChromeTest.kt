@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
@@ -24,6 +25,7 @@ import io.github.sceneview.ar.ARCoreAvailability
 import io.github.sceneview.ar.ARCoreAvailabilityOverlayTags
 import io.github.sceneview.ar.ARCoreAvailabilityState
 import io.github.sceneview.demo.AssetSourceState
+import io.github.sceneview.demo.DemoBottomOverlayScope
 import io.github.sceneview.demo.DEMO_MODE_PILL_TAG
 import io.github.sceneview.demo.DemoMode
 import io.github.sceneview.demo.DemoModeSwitch
@@ -172,9 +174,91 @@ class PlacementCardClearsChromeTest {
         )
     }
 
+    // ── Screens with no mode pill: the inset only grows by what is really drawn ───────────
+
+    @Test
+    fun noPillAndNoOverlay_theInsetIsTheDockBand_asBefore() {
+        // What `main` published everywhere: the dock's toolbar and its gutter.
+        val probe = probeBottomInset(bottomOverlay = null)
+        val dock = bounds(DemoScaffoldTestTags.DOCK)
+        assertInsetIsTheDockBand(probe, dock)
+    }
+
+    @Test
+    fun anOverlayThatDrawsNothing_leavesTheInsetAtTheDockBand() {
+        // The recordings gallery, and every AR demo whose status line steps aside while the
+        // coaching card speaks: the band is composed, and empty. Its 104 dp dock reserve must
+        // not reach the scene, or those screens move by 24 dp for nothing.
+        val probe = probeBottomInset(bottomOverlay = {})
+        val dock = bounds(DemoScaffoldTestTags.DOCK)
+        assertInsetIsTheDockBand(probe, dock)
+    }
+
+    @Test
+    fun anOverlayWithNoPill_raisesTheInsetToItsOwnTopEdge() {
+        // AR Measure's action bar, a status banner: drawn after the scene, so over it.
+        val probe = probeBottomInset(
+            bottomOverlay = { Box(Modifier.size(120.dp, 40.dp).testTag(OVERLAY)) },
+        )
+        val overlay = bounds(OVERLAY)
+        assertTrue(
+            "content padded by the chrome inset ends at ${probe.bottom}, under the demo's " +
+                "overlay which starts at ${overlay.top}",
+            probe.bottom <= overlay.top + TOLERANCE,
+        )
+        assertTrue(
+            "the inset is further above the overlay than its top edge: probe ${probe.bottom}, " +
+                "overlay ${overlay.top}",
+            probe.bottom >= overlay.top - TOLERANCE,
+        )
+    }
+
+    /** Composes a scaffold with no mode switch and returns a probe padded by the inset. */
+    private fun probeBottomInset(
+        bottomOverlay: (@Composable DemoBottomOverlayScope.() -> Unit)?,
+    ): DpRect {
+        composeRule.setContent {
+            SceneViewDemoTheme(darkTheme = false) {
+                DemoScaffold(
+                    title = "AR Measure",
+                    onBack = {},
+                    dock = listOf(DockItem(Icons.Outlined.WbSunny, "Models", onClick = {})),
+                    bottomOverlay = bottomOverlay,
+                ) {
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .windowInsetsPadding(WindowInsets.safeDrawing)
+                            .padding(bottom = LocalDemoChromeBottomInset.current)
+                            .testTag(PROBE),
+                    )
+                }
+            }
+        }
+        composeRule.waitForIdle()
+        composeRule.mainClock.advanceTimeBy(1_000)
+        composeRule.waitForIdle()
+        return bounds(PROBE)
+    }
+
+    private fun assertInsetIsTheDockBand(probe: DpRect, dock: DpRect) {
+        // The dock band ends where the toolbar starts: that is the number `main` publishes.
+        val gap = dock.top - probe.bottom
+        assertTrue(
+            "the inset ends $gap above the dock (probe ${probe.bottom}, dock ${dock.top}): " +
+                "it must stop at the dock's top edge, not at the band's 104 dp reserve.",
+            gap >= -TOLERANCE && gap <= TOLERANCE,
+        )
+    }
+
     @Test
     fun couldNotStartArCard_staysBetweenTheTitleAndThePill() {
         assertAvailabilityCardClearsChrome()
+    }
+
+    @Test
+    fun couldNotStartArCard_inTheDarkTheme() {
+        assertAvailabilityCardClearsChrome(darkTheme = true)
     }
 
     @Test
@@ -185,9 +269,25 @@ class PlacementCardClearsChromeTest {
         assertAvailabilityCardClearsChrome()
     }
 
-    private fun assertAvailabilityCardClearsChrome() {
+    @Test
+    @Config(qualifiers = "w800dp-h360dp-land-xhdpi")
+    fun phoneHeldSideways_couldNotStartArCard_atMaximumFontScale() {
+        // "Try again" must stay in the window, and reachable, at the largest text size.
+        assertAvailabilityCardClearsChrome(fontScale = 2.0f)
+    }
+
+    @Test
+    fun noSurfaceCard_inTheDarkTheme() {
+        assertCardClearsChrome(PlacementPhase.NO_SURFACE, fontScale = 1.0f, darkTheme = true)
+    }
+
+    private fun assertAvailabilityCardClearsChrome(
+        fontScale: Float = 1.0f,
+        darkTheme: Boolean = false,
+    ) {
         composeRule.setContent {
-            SceneViewDemoTheme(darkTheme = false) {
+          ScaledDensity(fontScale) {
+            SceneViewDemoTheme(darkTheme = darkTheme) {
                 CompositionLocalProvider(
                     LocalDemoModeSwitch provides DemoModeSwitch(MODES, selected = 0, onSelect = {}),
                 ) {
@@ -208,6 +308,7 @@ class PlacementCardClearsChromeTest {
                     }
                 }
             }
+          }
         }
         composeRule.waitForIdle()
         composeRule.mainClock.advanceTimeBy(1_000)
@@ -233,10 +334,23 @@ class PlacementCardClearsChromeTest {
             "\"Try again\" is not whole inside its card — $where",
             action.top >= card.top && action.bottom <= card.bottom,
         )
+        assertTrue(
+            "\"Try again\" is squeezed to ${action.bottom - action.top} — $where",
+            action.bottom - action.top >= 40.dp,
+        )
+        assertTrue(
+            "\"Try again\" leaves the window — $where",
+            action.top >= window.top && action.bottom <= window.bottom &&
+                action.left >= window.left && action.right <= window.right,
+        )
     }
 
-    private fun assertCardClearsChrome(phase: PlacementPhase, fontScale: Float) {
-        show(phase, fontScale)
+    private fun assertCardClearsChrome(
+        phase: PlacementPhase,
+        fontScale: Float,
+        darkTheme: Boolean = false,
+    ) {
+        show(phase, fontScale, darkTheme)
         val window = composeRule.onRoot().getUnclippedBoundsInRoot()
         val card = bounds(PlacementTestTags.PLACEMENT_CARD)
         val primary = bounds(PlacementTestTags.PLACEMENT_CARD_PRIMARY)
@@ -277,13 +391,13 @@ class PlacementCardClearsChromeTest {
         }
     }
 
-    private fun show(phase: PlacementPhase, fontScale: Float) {
+    private fun show(phase: PlacementPhase, fontScale: Float, darkTheme: Boolean = false) {
         state.cameraReady = true
         state.isTracking = true
         state.phase = phase
         composeRule.setContent {
             ScaledDensity(fontScale) {
-                SceneViewDemoTheme(darkTheme = false) {
+                SceneViewDemoTheme(darkTheme = darkTheme) {
                     CompositionLocalProvider(
                         LocalDemoModeSwitch provides DemoModeSwitch(MODES, selected = 0, onSelect = {}),
                     ) {
@@ -330,6 +444,7 @@ class PlacementCardClearsChromeTest {
     private companion object {
         val TOLERANCE = 0.75.dp
         const val PROBE = "chrome-inset-probe"
+        const val OVERLAY = "demo-bottom-overlay-content"
 
         /** The three modes `ArPlacementFragment` hosts, with their real labels. */
         val MODES = listOf(

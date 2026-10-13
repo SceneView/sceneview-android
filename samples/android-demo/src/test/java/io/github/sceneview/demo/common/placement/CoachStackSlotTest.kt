@@ -43,6 +43,25 @@ class CoachStackSlotTest {
         )
     }
 
+    @Test
+    fun `an empty band is not chrome - its dock reserve is not reported`() {
+        // A `bottomOverlay` lambda that emits nothing still composes the band, which then
+        // measures its 104 dp dock reserve and the system bar. Nothing is drawn there: the
+        // scene keeps the 80 dp it has on a screen with no band at all.
+        assertEquals(
+            80.dp,
+            chromeInset(overlayBand = 104.dp + NAV_BAR, overlayContent = 0.dp),
+        )
+    }
+
+    @Test
+    fun `a demo overlay with no mode pill raises the chrome to its own top edge`() {
+        assertEquals(
+            140.dp,
+            chromeInset(overlayBand = 36.dp + 104.dp + NAV_BAR, overlayContent = 36.dp),
+        )
+    }
+
     // ── coachStackSlot ────────────────────────────────────────────────────────────────
 
     @Test
@@ -94,10 +113,16 @@ class CoachStackSlotTest {
         assertFalse(slot.besideChrome)
     }
 
-    private fun chromeInset(overlayBand: Dp, sceneReserved: Boolean = false): Dp =
+    private fun chromeInset(
+        overlayBand: Dp,
+        sceneReserved: Boolean = false,
+        // By default the band holds something whenever it measures anything.
+        overlayContent: Dp = overlayBand,
+    ): Dp =
         demoChromeBottomInset(
             dockBand = 80.dp,
             overlayBand = overlayBand,
+            overlayContent = overlayContent,
             navigationBarInset = NAV_BAR,
             sceneReserved = sceneReserved,
         )

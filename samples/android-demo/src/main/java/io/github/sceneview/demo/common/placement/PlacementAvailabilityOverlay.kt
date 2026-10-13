@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import io.github.sceneview.ar.ARCoreAvailabilityOverlay
 import io.github.sceneview.ar.ARCoreAvailabilityState
 import io.github.sceneview.demo.LocalDemoChromeBottomInset
@@ -38,8 +37,7 @@ internal fun BoxScope.PlacementAvailabilityOverlay(state: ARCoreAvailabilityStat
     val chromeBottom = LocalDemoChromeBottomInset.current
     val chromeWidth = LocalDemoChromeBottomWidth.current
     val compactHeight = isDemoCompactHeight()
-    // In a short window the identity row is beside the card, not above it.
-    val chromeTop = if (compactHeight) 0.dp else LocalDemoChromeTopInset.current
+    val chromeTop = LocalDemoChromeTopInset.current
     val gutter = SceneViewTokens.Space.md
     BoxWithConstraints(
         modifier = Modifier
@@ -53,17 +51,23 @@ internal fun BoxScope.PlacementAvailabilityOverlay(state: ARCoreAvailabilityStat
             chromeWidth = chromeWidth,
             chromeBottom = chromeBottom,
             gutter = gutter,
-            minWidth = COACH_STACK_CORNER_MIN_WIDTH,
+            // One action, where the placement card lays two side by side: half the room. And
+            // the alternative, the band above the pill, cannot hold this card's button at all
+            // once the text is large — the corner has the window's whole height, and the
+            // card's text scrolls.
+            minWidth = SceneViewTokens.ArOverlay.cardMinWidth / 2,
             maxWidth = SceneViewTokens.ArOverlay.maxWidth,
         )
         Box(
             modifier = if (slot.besideChrome) {
                 // The SDK card brings its own margin; the corner is the stack's width plus the
-                // two gutters `coachStackSlot` set aside around it.
+                // two gutters `coachStackSlot` set aside around it. Under the identity row:
+                // its overflow button sits in this same corner.
                 Modifier
                     .align(Alignment.CenterEnd)
                     .width(slot.width + gutter * 2)
                     .fillMaxHeight()
+                    .padding(top = chromeTop)
             } else {
                 Modifier
                     .fillMaxSize()

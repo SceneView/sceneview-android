@@ -47,7 +47,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -481,7 +480,6 @@ fun BoxScope.TapToPlaceStatusOverlays(
         if (shownCard == null) delay(SceneViewTokens.Duration.shortMillis.toLong())
         cardSlotHeld = shownCard != null
     }
-    var coachStackPx by remember { mutableIntStateOf(0) }
 
     BoxWithConstraints(
         modifier = Modifier
@@ -496,7 +494,7 @@ fun BoxScope.TapToPlaceStatusOverlays(
             chromeWidth = chromeWidth,
             chromeBottom = chromeBottom,
             gutter = SceneViewTokens.Space.md,
-            minWidth = COACH_STACK_CORNER_MIN_WIDTH,
+            minWidth = SceneViewTokens.ArOverlay.cardMinWidth,
             maxWidth = SceneViewTokens.ArOverlay.maxWidth,
         )
         Column(
@@ -505,9 +503,7 @@ fun BoxScope.TapToPlaceStatusOverlays(
                 .testTag(PlacementTestTags.COACH_STACK)
                 .padding(horizontal = SceneViewTokens.Space.md)
                 .padding(bottom = slot.bottom)
-                .then(if (slot.besideChrome) Modifier.width(slot.width) else Modifier)
-                // LAST in the chain: reports the stack's own content and nothing else.
-                .onSizeChanged { coachStackPx = it.height },
+                .then(if (slot.besideChrome) Modifier.width(slot.width) else Modifier),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             CoachStackContent(
@@ -521,12 +517,6 @@ fun BoxScope.TapToPlaceStatusOverlays(
         }
     }
 }
-
-/**
- * The narrowest corner beside the bottom chrome a decision card moves into on a phone held
- * sideways ([coachStackSlot]). Its title and each of its buttons hold on one line down to here.
- */
-internal val COACH_STACK_CORNER_MIN_WIDTH = SceneViewTokens.ArOverlay.maxWidth * 0.4f
 
 /** The children of the placement screen's bottom stack, top to bottom. */
 @Composable
@@ -588,7 +578,7 @@ object PlacementTestTags {
     /** The live resize read-out — on screen only while two fingers are on the model. */
     const val SCALE_READOUT = "placement-scale-readout"
 
-    /** The anchored Column itself — the node whose measured content height is `coachStackPx`. */
+    /** The anchored Column itself: the whole bottom stack of the placement screen. */
     const val COACH_STACK = "placement-coach-stack"
 
     /** The action card (no surface / recovery failed / camera error). */

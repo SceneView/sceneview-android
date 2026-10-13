@@ -309,6 +309,11 @@ val LocalDemoChromeBottomInset = androidx.compose.runtime.compositionLocalOf { 0
  * @param dockBand           The dock band: toolbar plus gutter, system bar excluded.
  * @param overlayBand        The measured bottom band — its content, the dock reserve under it
  *   and the system bar. Zero when nothing is stacked above the dock.
+ * @param overlayContent     Height of what is actually drawn in that band: the status pill,
+ *   the demo's overlay, the mode and Record pills. Zero when the band is composed but empty —
+ *   a `bottomOverlay` lambda that emits nothing at this step — and then the band's own dock
+ *   reserve (104 dp against an 80 dp dock) is not chrome: the scene is told about the dock
+ *   alone, exactly as on a screen with no band at all.
  * @param navigationBarInset The system bar that [overlayBand] includes.
  * @param sceneReserved      The scene slot is already inset by the band
  *   (`bottomOverlayReservesScene`): none of it is over the scene, so only the dock band is
@@ -317,9 +322,14 @@ val LocalDemoChromeBottomInset = androidx.compose.runtime.compositionLocalOf { 0
 internal fun demoChromeBottomInset(
     dockBand: Dp,
     overlayBand: Dp,
+    overlayContent: Dp,
     navigationBarInset: Dp,
     sceneReserved: Boolean,
-): Dp = if (sceneReserved) dockBand else maxOf(dockBand, overlayBand - navigationBarInset)
+): Dp = if (sceneReserved || overlayContent <= 0.dp) {
+    dockBand
+} else {
+    maxOf(dockBand, overlayBand - navigationBarInset)
+}
 
 /**
  * Width of the scaffold's bottom chrome — the dock and the pills stacked above it, all
@@ -758,6 +768,8 @@ fun DemoScaffold(
                 // for [LocalDemoChromeBottomWidth].
                 var dockWidthPx by remember { mutableIntStateOf(0) }
                 var bandFooterWidthPx by remember { mutableIntStateOf(0) }
+                // Height of what the bottom band actually draws, apart from its dock reserve.
+                var bottomOverlayContentPx by remember { mutableIntStateOf(0) }
                 var topOverlayBandPx by remember { mutableIntStateOf(0) }
                 val density = LocalDensity.current
                 val topOverlayBand = with(density) { topOverlayBandPx.toDp() }
@@ -887,6 +899,11 @@ fun DemoScaffold(
                                 LocalDemoChromeBottomInset provides demoChromeBottomInset(
                                     dockBand = dockBandClearance,
                                     overlayBand = if (bottomBandShown) bottomOverlayBand else 0.dp,
+                                    overlayContent = if (bottomBandShown) {
+                                        with(density) { bottomOverlayContentPx.toDp() }
+                                    } else {
+                                        0.dp
+                                    },
                                     navigationBarInset = navigationBarInset,
                                     sceneReserved = reservesScene,
                                 ),
@@ -1064,6 +1081,7 @@ fun DemoScaffold(
                                 null
                             },
                             onFooterWidthChanged = { bandFooterWidthPx = it },
+                            onContentHeightChanged = { bottomOverlayContentPx = it },
                         )
                     } else if (modeSwitch != null && arSessionFailed) {
                         // An AR mode whose session failed still offers the way to the other mode.
@@ -1075,6 +1093,7 @@ fun DemoScaffold(
                             content = null,
                             footer = { DemoModePill(modeSwitch) },
                             onFooterWidthChanged = { bandFooterWidthPx = it },
+                            onContentHeightChanged = { bottomOverlayContentPx = it },
                         )
                     }
 
@@ -1346,15 +1365,35 @@ private fun BoxScope.DemoIdentityRow(
                 color = LocalStageChrome.current.onGlass,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f, fill = false),
+                // Measured first, so the title — the screen's name — takes the room it needs
+                // and the source label gets what is left. The other way round, a 14-letter
+                // label at 200 % text left "AR …" for a title on a 320 dp window (#4503).
+                modifier = if (sourceLabel != null) Modifier else Modifier.weight(1f, fill = false),
             )
             if (sourceLabel != null) {
+                // A label that does not fit whole is not drawn at all: half a word next to
+                // the title says less than nothing. It stays in the pill's content description.
+                var sourceLabelCut by remember { mutableStateOf(false) }
                 Spacer(Modifier.width(SceneViewTokens.Space.sm))
                 Text(
                     text = sourceLabel,
                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
                     color = LocalStageChrome.current.onGlassMuted,
                     maxLines = 1,
+                    softWrap = false,
+                    onTextLayout = { sourceLabelCut = it.hasVisualOverflow },
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .layout { measurable, constraints ->
+                            val placeable = measurable.measure(constraints)
+                            if (sourceLabelCut) {
+                                layout(0, 0) {}
+                            } else {
+                                layout(placeable.width, placeable.height) {
+                                    placeable.place(0, 0)
+                                }
+                            }
+                        },
                 )
             }
         }
@@ -1818,6 +1857,7 @@ private fun BoxScope.DemoBottomOverlay(
     content: (@Composable DemoBottomOverlayScope.() -> Unit)?,
     footer: (@Composable ColumnScope.() -> Unit)? = null,
     onFooterWidthChanged: (Int) -> Unit = {},
+    onContentHeightChanged: (Int) -> Unit = {},
 ) {
     val bandAlpha by animateFloatAsState(
         targetValue = if (faded) 0f else 1f,
@@ -1838,30 +1878,39 @@ private fun BoxScope.DemoBottomOverlay(
             .padding(bottom = reservedBottom)
             .testTag(DemoScaffoldTestTags.BOTTOM_OVERLAY),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(OVERLAY_STACK_SPACING),
     ) {
-        if (status != null) {
-            GlassPill(modifier = Modifier.testTag(DemoScaffoldTestTags.STATUS_PILL)) {
-                Text(
-                    text = status,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = LocalStageChrome.current.onGlass,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        // The band's content, apart from the dock reserve and the system bar padded under it:
+        // measured on its own so an empty band reports nothing to the scene (#4509).
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .onSizeChanged { onContentHeightChanged(it.height) },
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(OVERLAY_STACK_SPACING),
+        ) {
+            if (status != null) {
+                GlassPill(modifier = Modifier.testTag(DemoScaffoldTestTags.STATUS_PILL)) {
+                    Text(
+                        text = status,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = LocalStageChrome.current.onGlass,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    )
+                }
+            }
+            if (content != null) {
+                DemoBottomOverlayScope(this, 0.dp).content()
+            }
+            if (footer != null) {
+                // A Column of its own only so the scaffold's pills can be measured apart from
+                // the demo's overlay: same alignment and spacing as the band around it.
+                Column(
+                    modifier = Modifier.onSizeChanged { onFooterWidthChanged(it.width) },
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(OVERLAY_STACK_SPACING),
+                    content = footer,
                 )
             }
-        }
-        if (content != null) {
-            DemoBottomOverlayScope(this, 0.dp).content()
-        }
-        if (footer != null) {
-            // A Column of its own only so the scaffold's pills can be measured apart from the
-            // demo's overlay: same alignment and spacing as the band around it.
-            Column(
-                modifier = Modifier.onSizeChanged { onFooterWidthChanged(it.width) },
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(OVERLAY_STACK_SPACING),
-                content = footer,
-            )
         }
     }
 }
