@@ -134,7 +134,7 @@ mediapipeTasksVision = "0.10.26"
 # two AARs declaring the same namespace, which fails AGP 9's app manifest merge unless
 # `android.uniquePackageNames=false` is set for the whole build. Bump only once Google gives
 # the two halves distinct namespaces (`:samples:android-demo:processDebugMainManifest` is the proof).
-litert = "2.1.5"
+litert = "2.3.0"
 
 # Publishing & Docs
 mavenPublish = "0.37.0"
