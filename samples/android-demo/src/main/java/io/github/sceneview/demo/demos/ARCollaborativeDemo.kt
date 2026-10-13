@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -41,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -66,9 +68,12 @@ import io.github.sceneview.demo.common.StageSkyFog
 import io.github.sceneview.demo.common.rememberModelDemoEnvironment
 import io.github.sceneview.demo.common.rememberStageSkybox
 import io.github.sceneview.demo.common.themedStageSky
+import io.github.sceneview.demo.isDemoCompactHeight
 import io.github.sceneview.demo.rememberFirstFrameState
 import io.github.sceneview.demo.theme.LocalStageChrome
 import io.github.sceneview.demo.theme.SceneViewTokens
+import io.github.sceneview.demo.theme.StageChrome
+import io.github.sceneview.demo.theme.themedStageChrome
 import io.github.sceneview.demo.ui.GlassPill
 import io.github.sceneview.environment.Environment
 import io.github.sceneview.loaders.EnvironmentLoader
@@ -89,10 +94,8 @@ import io.github.sceneview.rememberRenderInvalidator
 import io.github.sceneview.rememberView
 import io.github.sceneview.sample.rememberMaterialInstance
 import io.github.sceneview.utils.screenToRay
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.isActive
 
 /**
  * Two independently orbitable views of one shared space, backed by two real sessions.
@@ -115,7 +118,9 @@ fun ARCollaborativeDemo(onBack: () -> Unit) {
     val bobName = stringResource(R.string.demo_ar_collaborative_bob)
     val alice = rememberCollaborativeSession(aliceTransport, displayName = aliceName)
     val bob = rememberCollaborativeSession(bobTransport, displayName = bobName)
-    val slots = remember(alice, bob) { IntArray(2) }
+    // Each viewer's own objects, oldest first, and how many it has placed so far.
+    val ownKeys = remember(alice, bob) { List(2) { ArrayDeque<String>() } }
+    val placedCount = remember(alice, bob) { IntArray(2) }
     var shape by remember { mutableStateOf("cube") }
     val engine = rememberEngine()
     val modelLoader = rememberModelLoader(engine)
@@ -130,6 +135,8 @@ fun ARCollaborativeDemo(onBack: () -> Unit) {
     DemoScaffold(
         title = title, onBack = onBack, themedStage = true,
         firstFrameRendered = bothRendered, sceneReady = bothReady,
+        // The HDR both views are lit by is held on the first view's state.
+        contentIssue = firstFrames[0].contentIssue,
         peekHeader = if (alice.placedNodes.isEmpty() && bob.placedNodes.isEmpty()) {
             stringResource(R.string.demo_ar_collaborative_hint)
         } else null,
@@ -182,14 +189,17 @@ fun ARCollaborativeDemo(onBack: () -> Unit) {
                 ) { point ->
                     val session = if (index == 0) alice else bob
                     val peerId = if (index == 0) "alice" else "bob"
-                    // No AR anchor: the stage origin IS shared-anchor space in this demo.
-                    // Per-peer keys avoid concurrent writes to a key without a logical clock.
+                    val keys = ownKeys[index]
+                    // One key per object. No AR anchor: the stage origin IS shared-anchor space.
+                    val nodeKey = "$peerId-${placedCount[index]++}"
                     session.placeNode(
-                        nodeKey = "$peerId-${slots[index]}", modelKey = shape,
+                        nodeKey = nodeKey, modelKey = shape,
                         translation = floatArrayOf(point.x, OBJECT_SIZE / 2f, point.z),
                         quaternion = floatArrayOf(0f, 0f, 0f, 1f),
                     )
-                    slots[index] = (slots[index] + 1) % OBJECTS_PER_PEER
+                    keys.addLast(nodeKey)
+                    // The fifth object takes the place of this viewer's oldest, for everyone.
+                    if (keys.size > OBJECTS_PER_PEER) session.removeNode(keys.removeFirst())
                 }
             }
             val seam = Modifier.background(MaterialTheme.colorScheme.outlineVariant)
@@ -233,9 +243,12 @@ private fun SharedSpacePane(
     val skybox = rememberStageSkybox(engine, sky, invalidator::requestRender)
     StageSkyFog(view, sky, invalidator::requestRender)
     val environment = remember(baseEnvironment, skybox) { baseEnvironment.copy(skybox = skybox) }
-    val floor = rememberMaterialInstance(materials, sky.floor, metallic = 0f, roughness = 0.7f)
-    val aliceMaterial = rememberMaterialInstance(materials, SceneViewColors.Ramp4[0])
-    val bobMaterial = rememberMaterialInstance(materials, SceneViewColors.Ramp4[1])
+    val dark = themedStageChrome() !== StageChrome.Light
+    // On the dark stage the `surface-dim` floor is the sky's own tone: one container step up.
+    val floorColor = if (dark) MaterialTheme.colorScheme.surfaceContainerHighest else sky.floor
+    val floor = rememberMaterialInstance(materials, floorColor, metallic = 0f, roughness = 0.7f)
+    val aliceMaterial = rememberMaterialInstance(materials, peerColor(0, dark))
+    val bobMaterial = rememberMaterialInstance(materials, peerColor(1, dark))
     // A low orbit and a wide lens: the viewer across the floor is inside the frame from the start.
     // Side by side the chrome leaves each view a strip: a lower orbit and a longer lens fill it.
     val home = remember(index, wide) {
@@ -254,22 +267,17 @@ private fun SharedSpacePane(
         camera.lookAt(Position(0f))
         camera.focalLength = focalLength
     }
-    // broadcastLocalPose has NO throttle. Sample cached camera values on the main thread;
-    // polling also sends the final pose after a short drag, even if rendering has parked.
-    LaunchedEffect(session, camera) {
-        var lastPosition: Position? = null
-        var lastQuaternion: Quaternion? = null
-        while (isActive) {
-            delay(1_000L / CollaborativeSession.DEFAULT_POSE_RATE_HZ)
-            val p = camera.worldPosition
-            val q = camera.worldQuaternion
-            if (p != lastPosition || q != lastQuaternion) {
-                session.broadcastLocalPose(Pose(
-                    floatArrayOf(p.x, p.y, p.z), floatArrayOf(q.x, q.y, q.z, q.w),
-                ))
-                lastPosition = Position(p.x, p.y, p.z)
-                lastQuaternion = Quaternion(q.x, q.y, q.z, q.w)
-            }
+    // The session rate-limits poses and always sends the one a viewer stops on: hand it the
+    // camera on each frame that moved it. An unchanged pose is not sent again, so a view that
+    // only redraws for the other viewer's cone does not answer with its own.
+    val sentPose = remember(session, camera) { FloatArray(POSE_COMPONENTS) { Float.NaN } }
+    val broadcastPose = {
+        val p = camera.worldPosition
+        val q = camera.worldQuaternion
+        val pose = floatArrayOf(p.x, p.y, p.z, q.x, q.y, q.z, q.w)
+        if (!pose.contentEquals(sentPose)) {
+            pose.copyInto(sentPose)
+            session.broadcastLocalPose(Pose(pose.copyOfRange(0, 3), pose.copyOfRange(3, POSE_COMPONENTS)))
         }
     }
     Box(modifier) {
@@ -280,7 +288,10 @@ private fun SharedSpacePane(
             view = view, renderInvalidator = invalidator, cameraNode = camera,
             cameraManipulator = rememberCameraManipulator(home, Position(0f)),
             autoCenterContent = false, contentPadding = chromePadding,
-            onFrame = firstFrame.onFrame,
+            onFrame = { frameTimeNanos ->
+                firstFrame.onFrame(frameTimeNanos)
+                broadcastPose()
+            },
             onGestureListener = rememberOnGestureListener(onSingleTapConfirmed = { event, _ ->
                 // The tapped view supplies its own ray; intersect the round floor at y = 0.
                 val ray = view.screenToRay(event.x, event.y)
@@ -337,21 +348,33 @@ private fun SharedSpacePane(
                 }
             }
         }
-        PeerTag(name, index, session, peerId,
+        // Compact height leaves the scene a strip, and a tag under the title row sat on the floor:
+        // there it joins the title row, at the far end of its half, above the scene band.
+        val tagModifier = if (isDemoCompactHeight()) {
+            Modifier.align(Alignment.TopEnd)
+                .height(chromePadding.calculateTopPadding())
+                .windowInsetsPadding(
+                    WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top),
+                )
+                .wrapContentHeight(Alignment.CenterVertically)
+                .padding(horizontal = SceneViewTokens.Space.md)
+        } else {
             Modifier.align(Alignment.TopStart)
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
                 .padding(top = chromePadding.calculateTopPadding())
-                .padding(SceneViewTokens.Space.md))
+                .padding(SceneViewTokens.Space.md)
+        }
+        PeerTag(name, peerColor(index, dark), session, peerId, tagModifier)
     }
 }
 
 @Composable
 private fun PeerTag(
-    name: String, index: Int, session: CollaborativeSession, peerId: String, modifier: Modifier,
+    name: String, color: Color, session: CollaborativeSession, peerId: String, modifier: Modifier,
 ) {
     val pulse = remember(session) { Animatable(0f) }
     LaunchedEffect(session, peerId) {
-        // The peer's camera pose arrives ten times a second: pulse on its objects only.
+        // The other viewer's camera pose arrives too: pulse on its objects only.
         snapshotFlow { session.placedNodes.filter { it.ownerPeerId != peerId } }
             .drop(1).collectLatest {
                 pulse.snapTo(1f)
@@ -361,13 +384,21 @@ private fun PeerTag(
     GlassPill(modifier.border(SceneViewTokens.Layout.selectedOutlineWidth,
         LocalStageChrome.current.accent.copy(alpha = pulse.value),
         RoundedCornerShape(SceneViewTokens.Radius.full))) {
-        Box(Modifier.size(SceneViewTokens.Space.sm).background(SceneViewColors.Ramp4[index], CircleShape))
+        Box(Modifier.size(SceneViewTokens.Space.sm).background(color, CircleShape))
         Spacer(Modifier.width(SceneViewTokens.Space.sm))
         Text(name, style = SceneViewTokens.Type.caption, color = LocalStageChrome.current.onGlass)
     }
 }
 
+/**
+ * A viewer's colour, for its objects, its cone and its tag. `primary` and `accent` sink into the
+ * dark stage, where the pair is their dark-scheme counterparts, `tint-light` and `tint-soft`.
+ */
+private fun peerColor(index: Int, dark: Boolean): Color =
+    SceneViewColors.Ramp4[if (dark) index + 2 else index]
+
 private const val OBJECTS_PER_PEER = 4
+private const val POSE_COMPONENTS = 7
 private const val OBJECT_SIZE = 0.28f
 private const val FLOOR_RADIUS = 1.2f
 private const val FLOOR_SIDES = 72
