@@ -629,6 +629,10 @@ themed surface — so it is theme-independent and uses the "Button glass" row.
     sharp image; 88 % leaves the scene as a silhouette.
   - **The dock fades out while a glass sheet is open.** Seen through the glass it
     read as a row of live buttons that were not there.
+  - **A snackbar is drawn above the sheet, never under it (#4019).** It floats
+    `space-md` above the dock at rest and `space-md` above the sheet's top edge while
+    the sheet is up, over the scene it reports on; it never climbs past the identity
+    row. Under the glass, "Demo reset" was a grey ghost across the sliders.
   - The Model Viewer's Lighting sheet uses the same glass fill and no scrim.
     Browsing sheets (model picker, credits, what's new) stay opaque and modal — you
     read those, you do not watch something change behind them.
