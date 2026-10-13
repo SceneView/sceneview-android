@@ -240,12 +240,106 @@ class FingerDrawingTest {
 
     @Test
     fun `a stroke hangs from the nearest anchor in reach and asks for a new one out of reach`() {
-        val anchors = listOf(Position(0f, 0f, 0f), Position(2f, 0f, 0f))
+        val anchors = listOf(tracked(0f), tracked(2f))
         val reach = FingerDrawingPlacement.AR_ANCHOR_REACH_METERS
         assertEquals(0, FingerDrawingPlacement.anchorToReuse(Position(0.2f, 0.1f, 0f), anchors, reach))
         assertEquals(1, FingerDrawingPlacement.anchorToReuse(Position(1.6f, 0f, 0f), anchors, reach))
         assertNull(FingerDrawingPlacement.anchorToReuse(Position(1f, 0f, 0f), anchors, reach))
         assertNull(FingerDrawingPlacement.anchorToReuse(Position(0f, 0f, 0f), emptyList(), reach))
+    }
+
+    // ── AR anchors that stop being tracked (#4082, found on a Pixel 4a) ───────
+
+    private fun tracked(x: Float) = AnchorSpot(Position(x, 0f, 0f), AnchorHealth.Tracking)
+    private fun paused(x: Float) = AnchorSpot(Position(x, 0f, 0f), AnchorHealth.Paused)
+    private fun stopped(x: Float) = AnchorSpot(Position(x, 0f, 0f), AnchorHealth.Stopped)
+
+    @Test
+    fun `a stroke never hangs from an anchor that is not tracked, however near`() {
+        val reach = FingerDrawingPlacement.AR_ANCHOR_REACH_METERS
+        val onIt = Position(0f, 0f, 0f)
+        // Back from the background: the only anchor is paused and the pen is right on it.
+        assertNull(FingerDrawingPlacement.anchorToReuse(onIt, listOf(paused(0f)), reach))
+        assertNull(FingerDrawingPlacement.anchorToReuse(onIt, listOf(stopped(0f)), reach))
+    }
+
+    @Test
+    fun `a tracked anchor further away wins over a nearer one that is not tracked`() {
+        val reach = FingerDrawingPlacement.AR_ANCHOR_REACH_METERS
+        val anchors = listOf(paused(0f), tracked(0.5f), stopped(0.1f))
+        assertEquals(1, FingerDrawingPlacement.anchorToReuse(Position(0f, 0f, 0f), anchors, reach))
+        assertNull(
+            "the tracked one is out of reach: a fresh anchor, not the paused one",
+            FingerDrawingPlacement.anchorToReuse(Position(-0.5f, 0f, 0f), anchors, reach),
+        )
+    }
+
+    private fun threeStrokes(): Drawing {
+        var drawing = Drawing()
+        repeat(3) { drawing = drawing.down(it.toFloat()).penMove(Position(x = it + 0.5f), 0.05f).penUp() }
+        return drawing
+    }
+
+    private fun stage(
+        drawing: Drawing,
+        healthOf: Map<Int, AnchorHealth>,
+        cameraReady: Boolean = true,
+        cameraTracking: Boolean = true,
+    ) = ArDrawingStage.of(drawing, healthOf, cameraReady, cameraTracking)
+
+    @Test
+    fun `strokes on tracked anchors are counted and the banner has nothing to say`() {
+        val stage = stage(threeStrokes(), (0..2).associateWith { AnchorHealth.Tracking })
+        assertEquals(ArDrawingStatus.Drawing, stage.status)
+        assertEquals(3, stage.visibleStrokeCount)
+        assertTrue(stage.lostStrokeIds.isEmpty())
+    }
+
+    @Test
+    fun `strokes on a paused anchor are not counted and the banner says they are hidden`() {
+        // The Pixel 4a case: three strokes, Home, back — "3 strokes" and an empty screen.
+        val paused = (0..2).associateWith { AnchorHealth.Paused }
+        val allHidden = stage(threeStrokes(), paused)
+        assertEquals(ArDrawingStatus.DrawingHidden, allHidden.status)
+        assertEquals(0, allHidden.visibleStrokeCount)
+        assertTrue("a paused anchor may come back: nothing is removed", allHidden.lostStrokeIds.isEmpty())
+
+        // A new stroke on a fresh anchor is counted; the banner still tells of the others.
+        val oneNew = stage(threeStrokes().down(5f), paused)
+        assertEquals(ArDrawingStatus.DrawingHidden, oneNew.status)
+        assertEquals(1, oneNew.visibleStrokeCount)
+    }
+
+    @Test
+    fun `strokes on a stopped anchor are lost and neither counted nor announced`() {
+        val health = mapOf(0 to AnchorHealth.Stopped, 1 to AnchorHealth.Tracking, 2 to AnchorHealth.Stopped)
+        val stage = stage(threeStrokes(), health)
+        assertEquals(setOf(0, 2), stage.lostStrokeIds)
+        assertEquals(1, stage.visibleStrokeCount)
+        assertEquals(ArDrawingStatus.Drawing, stage.status)
+
+        val allGone = stage(threeStrokes(), (0..2).associateWith { AnchorHealth.Stopped })
+        assertEquals(0, allGone.visibleStrokeCount)
+        assertEquals("the stage is empty again: back to the draw hint", ArDrawingStatus.ReadyToDraw, allGone.status)
+    }
+
+    @Test
+    fun `the banner asks for tracking before it speaks of the drawing`() {
+        val paused = (0..2).associateWith { AnchorHealth.Paused }
+        assertEquals(ArDrawingStatus.Starting, stage(threeStrokes(), paused, cameraReady = false).status)
+        assertEquals(ArDrawingStatus.FindingPlace, stage(threeStrokes(), paused, cameraTracking = false).status)
+        assertEquals(ArDrawingStatus.ReadyToDraw, stage(Drawing(), emptyMap()).status)
+        assertEquals(ArDrawingStatus.FindingPlace, stage(Drawing(), emptyMap(), cameraTracking = false).status)
+    }
+
+    @Test
+    fun `removing strokes by id keeps the others, their order and the id counter`() {
+        val drawing = threeStrokes().down(9f)
+        val kept = drawing.without(setOf(1, 3))
+        assertEquals(listOf(0, 2), kept.strokes.map { it.id })
+        assertNull("the stroke under the finger was one of them", kept.active)
+        assertEquals(4, kept.down(0f).active!!.id)
+        assertSame(drawing, drawing.without(emptySet()))
     }
 
     // ── Centreline ────────────────────────────────────────────────────────────

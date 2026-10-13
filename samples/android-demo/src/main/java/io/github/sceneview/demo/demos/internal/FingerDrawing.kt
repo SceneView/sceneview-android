@@ -166,6 +166,15 @@ internal data class Drawing(
 
     /** Wipes the stage. Ids keep counting, so a new stroke never reuses a disposed mesh. */
     fun clear(): Drawing = copy(strokes = emptyList(), active = null)
+
+    /**
+     * The stage without the strokes whose id is in [ids] — the AR mode drops the strokes
+     * whose anchor ARCore gave up on. Ids keep counting, like after [clear].
+     */
+    fun without(ids: Set<Int>): Drawing {
+        if (ids.isEmpty()) return this
+        return copy(strokes = strokes.filter { it.id !in ids }, active = active?.takeIf { it.id !in ids })
+    }
 }
 
 /**

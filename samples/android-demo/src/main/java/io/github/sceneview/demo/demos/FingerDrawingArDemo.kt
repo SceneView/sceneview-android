@@ -10,11 +10,8 @@ import androidx.compose.material.icons.rounded.Gesture
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
@@ -39,6 +36,10 @@ import io.github.sceneview.demo.R
 import io.github.sceneview.demo.common.ArDemoPermissionGate
 import io.github.sceneview.demo.common.DemoStatusBanner
 import io.github.sceneview.demo.common.DemoStatusTone
+import io.github.sceneview.demo.demos.internal.AnchorHealth
+import io.github.sceneview.demo.demos.internal.AnchorSpot
+import io.github.sceneview.demo.demos.internal.ArDrawingStage
+import io.github.sceneview.demo.demos.internal.ArDrawingStatus
 import io.github.sceneview.demo.demos.internal.Drawing
 import io.github.sceneview.demo.demos.internal.FingerDrawing
 import io.github.sceneview.demo.demos.internal.FingerDrawingPlacement
@@ -74,9 +75,19 @@ import io.github.sceneview.utils.screenToRay
  *
  * An anchor is released by leaving the composition: `AnchorNode` detaches it when the last
  * stroke that hung on it is undone.
+ *
+ * **An anchor is not always tracked**, and `AnchorNode` hides what hangs on one that is not.
+ * After a trip to the background ARCore pauses every anchor until it recognises the room
+ * again, which a phone lying still may never do. So the state of each anchor is read on
+ * every camera frame, and three things follow from it ([ArDrawingStage]): a new stroke never
+ * hangs on an anchor that is not tracked, the stroke count is what is on screen and the
+ * banner says how to bring the rest back, and the strokes of an anchor ARCore stopped for
+ * good are removed.
+ *
+ * @param brush Colour and thickness, shared with the 3D mode so a mode switch keeps them.
  */
 @Composable
-fun FingerDrawingArDemo(onBack: () -> Unit) {
+fun FingerDrawingArDemo(onBack: () -> Unit, brush: FingerBrush = rememberFingerBrush()) {
     // Inspection mode (Android Studio @Preview pane, Roborazzi snapshot tests): bypass the
     // Filament-backed body BEFORE any rememberEngine() call — LayoutLib ships no .so files.
     if (LocalInspectionMode.current) {
@@ -89,17 +100,17 @@ fun FingerDrawingArDemo(onBack: () -> Unit) {
         title = stringResource(R.string.demo_finger_drawing_title),
         onBack = onBack,
     ) {
-        FingerDrawingArScene(onBack)
+        FingerDrawingArScene(onBack, brush)
     }
 }
 
 @Composable
-private fun FingerDrawingArScene(onBack: () -> Unit) {
+private fun FingerDrawingArScene(onBack: () -> Unit, brush: FingerBrush) {
     var drawing by remember { mutableStateOf(Drawing()) }
     // Which anchor each stroke hangs on, by stroke id.
     var anchorOf by remember { mutableStateOf(emptyMap<Int, Anchor>()) }
-    var colorIndex by rememberSaveable { mutableIntStateOf(0) }
-    var thicknessDp by rememberSaveable { mutableFloatStateOf(FingerDrawing.DEFAULT_THICKNESS_DP) }
+    // What ARCore said of each of those anchors on the last camera frame.
+    var healthOf by remember { mutableStateOf(emptyMap<Anchor, AnchorHealth>()) }
 
     var isTracking by remember { mutableStateOf(false) }
     // Cover the jet-black ARSceneView surface until ARCore delivers its first camera frame.
@@ -143,9 +154,11 @@ private fun FingerDrawingArScene(onBack: () -> Unit) {
         val point = paintPoint(pen.x, pen.y) ?: return
         val aside = paintPoint(pen.x + SCALE_PROBE_DP * density, pen.y) ?: return
         val anchors = anchorOf.values.distinct()
+        // Read from ARCore now, not from the last frame's state: only a tracked anchor is
+        // on screen and has a pose worth measuring a distance to.
         val reused = FingerDrawingPlacement.anchorToReuse(
             point = point,
-            anchorPositions = anchors.map { it.pose.position() },
+            anchors = anchors.map { AnchorSpot(it.pose.position(), it.trackingState.toHealth()) },
             reach = FingerDrawingPlacement.AR_ANCHOR_REACH_METERS,
         )
         val anchor = reused?.let { anchors[it] }
@@ -163,8 +176,8 @@ private fun FingerDrawingArScene(onBack: () -> Unit) {
         pen.speed = 0f
         val next = drawing.penDown(
             point = FingerDrawingPlacement.worldToAnchor(point, pose.position(), pose.rotation()),
-            radius = FingerDrawing.radiusFor(thicknessDp, pen.unitsPerDp, 0f),
-            colorIndex = colorIndex,
+            radius = FingerDrawing.radiusFor(brush.thicknessDp, pen.unitsPerDp, 0f),
+            colorIndex = brush.colorIndex,
             frameHint = FingerDrawingPlacement.worldDirectionToAnchor(
                 direction = cameraNode.forwardDirection,
                 anchorRotation = pose.rotation(),
@@ -175,9 +188,21 @@ private fun FingerDrawingArScene(onBack: () -> Unit) {
         commit(next)
     }
 
+    fun endStroke() {
+        pen.anchor = null
+        pen.steady = null
+        commit(drawing.penUp())
+    }
+
     fun extendStroke(frameNanos: Long) {
         val anchor = pen.anchor ?: return
         val steady = pen.steady ?: return
+        // The anchor went under the pen: its pose means nothing now and the stroke is
+        // hidden. End it where it is; the next touch gets an anchor that is tracked.
+        if (anchor.trackingState != TrackingState.TRACKING) {
+            endStroke()
+            return
+        }
         val point = paintPoint(pen.x, pen.y) ?: return
         val dtSeconds = (frameNanos - pen.lastNanos) / NANOS_PER_SECOND
         pen.speed = FingerDrawing.smoothedSpeed(
@@ -193,20 +218,42 @@ private fun FingerDrawingArScene(onBack: () -> Unit) {
         val pose = anchor.pose
         val next = drawing.penMove(
             point = FingerDrawingPlacement.worldToAnchor(followed.paint, pose.position(), pose.rotation()),
-            targetRadius = FingerDrawing.radiusFor(thicknessDp, pen.unitsPerDp, pen.speed),
+            targetRadius = FingerDrawing.radiusFor(brush.thicknessDp, pen.unitsPerDp, pen.speed),
         )
         // A very long stroke is continued in a new one; it hangs on the same anchor.
         next.active?.let { if (it.id !in anchorOf) anchorOf = anchorOf + (it.id to anchor) }
         commit(next)
     }
 
-    fun endStroke() {
-        pen.anchor = null
-        pen.steady = null
-        commit(drawing.penUp())
+    /**
+     * Reads every anchor's state from ARCore — a handful of anchors, one call each — and
+     * drops the strokes of those it stopped for good. A paused anchor keeps its strokes: it
+     * may come back.
+     */
+    fun readAnchors() {
+        if (anchorOf.isEmpty()) {
+            if (healthOf.isNotEmpty()) healthOf = emptyMap()
+            return
+        }
+        val health = HashMap<Anchor, AnchorHealth>()
+        anchorOf.values.forEach { anchor -> health.getOrPut(anchor) { anchor.trackingState.toHealth() } }
+        if (health != healthOf) healthOf = health
+        val lost = anchorOf.filterValues { health[it] == AnchorHealth.Stopped }.keys
+        if (lost.isEmpty()) return
+        if (pen.anchor?.let { health[it] } == AnchorHealth.Stopped) {
+            pen.anchor = null
+            pen.steady = null
+        }
+        commit(drawing.without(lost))
     }
 
-    val strokeCount = drawing.strokeCount
+    val stage = ArDrawingStage.of(
+        drawing = drawing,
+        healthOf = anchorOf.mapValues { (_, anchor) -> healthOf[anchor] ?: AnchorHealth.Tracking },
+        cameraReady = cameraReady,
+        cameraTracking = isTracking,
+    )
+    val strokeCount = stage.visibleStrokeCount
     val compactHeight = isDemoCompactHeight()
 
     DemoScaffold(
@@ -216,10 +263,7 @@ private fun FingerDrawingArScene(onBack: () -> Unit) {
             compactHeight || strokeCount == 0 -> null
             else -> pluralStringResource(R.plurals.demo_finger_drawing_strokes, strokeCount, strokeCount)
         },
-        onResetSettings = {
-            colorIndex = 0
-            thicknessDp = FingerDrawing.DEFAULT_THICKNESS_DP
-        },
+        onResetSettings = brush::reset,
         dock = listOf(
             DockItem(
                 icon = Icons.AutoMirrored.Outlined.Undo,
@@ -237,10 +281,10 @@ private fun FingerDrawingArScene(onBack: () -> Unit) {
         controls = {
             FingerDrawingControls(
                 explainer = stringResource(R.string.demo_finger_drawing_ar_explainer),
-                colorIndex = colorIndex,
-                onColorChange = { colorIndex = it },
-                thicknessDp = thicknessDp,
-                onThicknessChange = { thicknessDp = it },
+                colorIndex = brush.colorIndex,
+                onColorChange = { brush.colorIndex = it },
+                thicknessDp = brush.thicknessDp,
+                onThicknessChange = { brush.thicknessDp = it },
                 canUndo = !drawing.isEmpty,
                 onUndo = { commit(drawing.undo()) },
                 onClear = { commit(drawing.clear()) },
@@ -248,14 +292,19 @@ private fun FingerDrawingArScene(onBack: () -> Unit) {
         },
         bottomOverlay = {
             DemoStatusBanner(
-                text = when {
-                    !cameraReady -> null
-                    !isTracking -> stringResource(R.string.demo_finger_drawing_ar_tracking_hint)
-                    drawing.isEmpty -> stringResource(R.string.demo_finger_drawing_ar_draw_hint)
-                    else -> null
+                text = when (stage.status) {
+                    ArDrawingStatus.Starting, ArDrawingStatus.Drawing -> null
+                    ArDrawingStatus.FindingPlace ->
+                        stringResource(R.string.demo_finger_drawing_ar_tracking_hint)
+
+                    ArDrawingStatus.DrawingHidden ->
+                        stringResource(R.string.demo_finger_drawing_ar_hidden_hint)
+
+                    ArDrawingStatus.ReadyToDraw ->
+                        stringResource(R.string.demo_finger_drawing_ar_draw_hint)
                 },
                 tone = if (isTracking) DemoStatusTone.Guidance else DemoStatusTone.Progress,
-                icon = if (isTracking) Icons.Rounded.Gesture else null,
+                icon = if (stage.status == ArDrawingStatus.ReadyToDraw) Icons.Rounded.Gesture else null,
             )
         },
     ) {
@@ -278,6 +327,7 @@ private fun FingerDrawingArScene(onBack: () -> Unit) {
                     cameraReady = true
                     val tracking = frame.camera.trackingState == TrackingState.TRACKING
                     isTracking = tracking
+                    readAnchors()
                     // Down, move and up in that order, so a tap shorter than a camera frame
                     // still leaves its dot.
                     if (pen.pendingDown) {
@@ -313,9 +363,13 @@ private fun FingerDrawingArScene(onBack: () -> Unit) {
                     true
                 },
             ) {
+                // Reading the anchors' state here also recomposes every `AnchorNode` when one
+                // changes, and a recomposed `AnchorNode` works out again whether it shows,
+                // from the anchor itself: the screen cannot lag behind the count.
+                val health = healthOf
                 val strokes = drawing.strokes + listOfNotNull(drawing.active)
                 strokes.groupBy { anchorOf[it.id] }.forEach { (anchor, hung) ->
-                    if (anchor != null) {
+                    if (anchor != null && health[anchor] != AnchorHealth.Stopped) {
                         key(anchor) {
                             AnchorNode(anchor = anchor) {
                                 hung.forEach { stroke ->
@@ -350,6 +404,12 @@ private class ArPen {
 }
 
 private fun Pose.position() = Position(tx(), ty(), tz())
+
+private fun TrackingState.toHealth() = when (this) {
+    TrackingState.TRACKING -> AnchorHealth.Tracking
+    TrackingState.PAUSED -> AnchorHealth.Paused
+    TrackingState.STOPPED -> AnchorHealth.Stopped
+}
 
 private fun Pose.rotation() = Quaternion(qx(), qy(), qz(), qw())
 

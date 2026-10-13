@@ -37,6 +37,9 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -113,9 +116,11 @@ import kotlin.math.roundToInt
  *   and `false` under **Orbit**, so it gets every gesture.
  *
  * The AR mode, [FingerDrawingArDemo], reuses [StrokeMesh], the materials and the controls.
+ *
+ * @param brush Colour and thickness, shared with the AR mode so a mode switch keeps them.
  */
 @Composable
-fun FingerDrawingDemo(onBack: () -> Unit) {
+fun FingerDrawingDemo(onBack: () -> Unit, brush: FingerBrush = rememberFingerBrush()) {
     // Inspection mode (Android Studio @Preview pane, Roborazzi snapshot tests): bypass the
     // Filament-backed body BEFORE any rememberEngine() call — LayoutLib ships no .so files.
     if (LocalInspectionMode.current) {
@@ -124,8 +129,6 @@ fun FingerDrawingDemo(onBack: () -> Unit) {
     }
 
     var drawing by remember { mutableStateOf(Drawing()) }
-    var colorIndex by rememberSaveable { mutableIntStateOf(0) }
-    var thicknessDp by rememberSaveable { mutableFloatStateOf(FingerDrawing.DEFAULT_THICKNESS_DP) }
     var orbiting by rememberSaveable { mutableStateOf(false) }
     // The orbit hint has done its job at the first drag; it comes back with the next Orbit.
     var orbitHintSeen by remember { mutableStateOf(false) }
@@ -175,7 +178,7 @@ fun FingerDrawingDemo(onBack: () -> Unit) {
         pen.steady = followed
         return from.penMove(
             point = followed.paint,
-            targetRadius = FingerDrawing.radiusFor(thicknessDp, pen.unitsPerDp, pen.speed),
+            targetRadius = FingerDrawing.radiusFor(brush.thicknessDp, pen.unitsPerDp, pen.speed),
         )
     }
 
@@ -205,8 +208,8 @@ fun FingerDrawingDemo(onBack: () -> Unit) {
                     pen.steady = SteadyPen.at(point)
                     drawing = drawing.penDown(
                         point = point,
-                        radius = FingerDrawing.radiusFor(thicknessDp, pen.unitsPerDp, 0f),
-                        colorIndex = colorIndex,
+                        radius = FingerDrawing.radiusFor(brush.thicknessDp, pen.unitsPerDp, 0f),
+                        colorIndex = brush.colorIndex,
                         frameHint = forward,
                         spacing = FingerDrawing.RING_SPACING_DP * pen.unitsPerDp,
                     )
@@ -272,10 +275,7 @@ fun FingerDrawingDemo(onBack: () -> Unit) {
             strokeCount == 0 -> stringResource(R.string.demo_finger_drawing_draw_hint)
             else -> pluralStringResource(R.plurals.demo_finger_drawing_strokes, strokeCount, strokeCount)
         },
-        onResetSettings = {
-            colorIndex = 0
-            thicknessDp = FingerDrawing.DEFAULT_THICKNESS_DP
-        },
+        onResetSettings = brush::reset,
         dock = listOf(
             DockItem(
                 icon = Icons.Rounded._3dRotation,
@@ -305,10 +305,10 @@ fun FingerDrawingDemo(onBack: () -> Unit) {
         controls = {
             FingerDrawingControls(
                 explainer = stringResource(R.string.demo_finger_drawing_explainer),
-                colorIndex = colorIndex,
-                onColorChange = { colorIndex = it },
-                thicknessDp = thicknessDp,
-                onThicknessChange = { thicknessDp = it },
+                colorIndex = brush.colorIndex,
+                onColorChange = { brush.colorIndex = it },
+                thicknessDp = brush.thicknessDp,
+                onThicknessChange = { brush.thicknessDp = it },
                 canUndo = !drawing.isEmpty,
                 onUndo = { erase(drawing.undo()) },
                 onClear = { erase(drawing.clear()) },
@@ -380,6 +380,40 @@ private class Pen {
     var speed = 0f
     var steady: SteadyPen? = null
 }
+
+/**
+ * The brush of both Finger Drawing modes: the colour and the thickness the next stroke is
+ * painted with. It is held above the 3D | AR switch (`FingerDrawingFragment`), so a colour
+ * picked in one mode is still the one in hand in the other.
+ */
+@Stable
+class FingerBrush internal constructor(colorIndex: Int, thicknessDp: Float) {
+    /** Index of the colour in the palette. */
+    var colorIndex by mutableIntStateOf(colorIndex)
+
+    /** Stroke width at rest, in dp of screen. */
+    var thicknessDp by mutableFloatStateOf(thicknessDp)
+
+    /** Back to the first colour and the default thickness. */
+    fun reset() {
+        colorIndex = 0
+        thicknessDp = FingerDrawing.DEFAULT_THICKNESS_DP
+    }
+
+    internal companion object {
+        val Saver: Saver<FingerBrush, Any> = listSaver(
+            save = { listOf(it.colorIndex.toFloat(), it.thicknessDp) },
+            restore = { FingerBrush(colorIndex = it[0].toInt(), thicknessDp = it[1]) },
+        )
+    }
+}
+
+/** A [FingerBrush] that survives a rotation; call it above whatever swaps the two modes. */
+@Composable
+fun rememberFingerBrush(): FingerBrush =
+    rememberSaveable(saver = FingerBrush.Saver) {
+        FingerBrush(colorIndex = 0, thicknessDp = FingerDrawing.DEFAULT_THICKNESS_DP)
+    }
 
 /**
  * The paint: one glossy, non-metallic material per palette colour — wet enamel. The gloss is

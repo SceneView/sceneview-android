@@ -10,6 +10,7 @@ import io.github.sceneview.demo.DemoModeHost
 import io.github.sceneview.demo.R
 import io.github.sceneview.demo.demos.FingerDrawingArDemo
 import io.github.sceneview.demo.demos.FingerDrawingDemo
+import io.github.sceneview.demo.demos.rememberFingerBrush
 
 /**
  * Append-only fragment for the `finger-drawing` demo (#4082). See [DemoFragment].
@@ -41,13 +42,15 @@ object FingerDrawingFragment : DemoFragment {
 
     @Composable
     override fun Screen(onBack: () -> Unit) {
+        // Above the mode switch: the colour and thickness in hand survive 3D <-> AR.
+        val brush = rememberFingerBrush()
         DemoModeHost(
             modes = modes,
             tabToMode = mapOf(0 to 0, 1 to 1),
         ) { mode ->
             when (mode) {
-                1 -> FingerDrawingArDemo(onBack)
-                else -> FingerDrawingDemo(onBack)
+                1 -> FingerDrawingArDemo(onBack, brush)
+                else -> FingerDrawingDemo(onBack, brush)
             }
         }
     }

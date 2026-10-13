@@ -10,6 +10,7 @@
     <string name="demo_finger_drawing_orbit_hint">Drag to look around your drawing</string>
     <string name="demo_finger_drawing_ar_draw_hint">Draw with one finger, or hold it still and move the phone</string>
     <string name="demo_finger_drawing_ar_tracking_hint">Move the phone slowly so it can find its place in the room</string>
+    <string name="demo_finger_drawing_ar_hidden_hint">Move the phone slowly to bring your drawing back</string>
     <string name="demo_finger_drawing_orbit">Orbit</string>
     <string name="demo_finger_drawing_undo">Undo</string>
     <string name="demo_finger_drawing_clear">Clear</string>

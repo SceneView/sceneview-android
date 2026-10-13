@@ -57,6 +57,90 @@ internal data class SteadyPen(val paint: Position, val finger: Position) {
 }
 
 /**
+ * What ARCore says of an anchor, without the ARCore type so the rules below run in a JVM
+ * test: `TrackingState.TRACKING`, `PAUSED` and `STOPPED`, in that order.
+ */
+internal enum class AnchorHealth {
+    /** Tracked: its pose is current and what hangs on it is on screen. */
+    Tracking,
+
+    /**
+     * Not tracked for now, and ARCore may pick it up again: tracking was lost, or the session
+     * was paused and the phone has not recognised the room yet. `AnchorNode` hides what
+     * hangs on it meanwhile.
+     */
+    Paused,
+
+    /** Given up for good: ARCore never tracks it again. */
+    Stopped,
+}
+
+/** An anchor the AR drawing already has: where it is and whether ARCore tracks it. */
+internal data class AnchorSpot(val position: Position, val health: AnchorHealth)
+
+/** What the AR mode's status banner has to say. */
+internal enum class ArDrawingStatus {
+    /** No camera frame yet: the init scrim is up, the banner stays out of its way. */
+    Starting,
+
+    /** The camera is not tracking: nothing can be painted. */
+    FindingPlace,
+
+    /** The camera is tracking and part of the drawing is hidden on a paused anchor. */
+    DrawingHidden,
+
+    /** Tracking, nothing drawn yet. */
+    ReadyToDraw,
+
+    /** Tracking, and every stroke is on screen: nothing to say. */
+    Drawing,
+}
+
+/**
+ * What the AR mode shows of a drawing whose strokes hang on ARCore anchors (#4082).
+ *
+ * A stroke on a paused anchor still exists and is not on screen, so it is not counted: the
+ * count is what can be seen, and [status] says where the rest went.
+ *
+ * @param visibleStrokeCount Strokes on a tracked anchor, as the person drawing counts them.
+ * @param lostStrokeIds      Strokes whose anchor is stopped for good: to be removed.
+ */
+internal data class ArDrawingStage(
+    val status: ArDrawingStatus,
+    val visibleStrokeCount: Int,
+    val lostStrokeIds: Set<Int>,
+) {
+    companion object {
+        /**
+         * @param healthOf Health of the anchor of each stroke, by stroke id. A stroke missing
+         *   from it hangs on an anchor created this frame, which is tracked.
+         */
+        fun of(
+            drawing: Drawing,
+            healthOf: Map<Int, AnchorHealth>,
+            cameraReady: Boolean,
+            cameraTracking: Boolean,
+        ): ArDrawingStage {
+            val lost = healthOf.filterValues { it == AnchorHealth.Stopped }.keys
+            val hidden = healthOf.filterValues { it == AnchorHealth.Paused }.keys
+            val kept = drawing.without(lost)
+            val anyHidden = (kept.strokes + listOfNotNull(kept.active)).any { it.id in hidden }
+            return ArDrawingStage(
+                status = when {
+                    !cameraReady -> ArDrawingStatus.Starting
+                    !cameraTracking -> ArDrawingStatus.FindingPlace
+                    anyHidden -> ArDrawingStatus.DrawingHidden
+                    kept.isEmpty -> ArDrawingStatus.ReadyToDraw
+                    else -> ArDrawingStatus.Drawing
+                },
+                visibleStrokeCount = kept.without(hidden).strokeCount,
+                lostStrokeIds = lost,
+            )
+        }
+    }
+}
+
+/**
  * Where the *Finger Drawing* demo puts its paint: which surface a touch lands on, how big a
  * dp is there, and — in AR — which anchor a stroke hangs from. [FingerDrawing] turns the
  * points this object finds into a mesh.
@@ -121,19 +205,26 @@ internal object FingerDrawingPlacement {
 
     /**
      * Index of the anchor a stroke starting at [point] should hang from: the nearest of
-     * [anchorPositions] within [reach], or `null` when the stroke starts somewhere new and
-     * needs its own.
+     * [anchors] within [reach] that ARCore is tracking, or `null` when the stroke starts
+     * somewhere new and needs its own.
      *
      * One anchor per stroke would be the simplest rule, and ARCore pays for every live anchor
      * on every frame. Strokes drawn in one spot share one, so a detailed doodle costs the
      * same as its first line, while a line drawn at the other end of the room still gets an
      * anchor of its own and stays put there.
+     *
+     * An anchor ARCore is not tracking is never reused, however near (#4082). Its node is
+     * hidden, so the new stroke would be painted where nobody can see it, and its pose is
+     * not to be trusted either: ARCore says so of every state but `TRACKING`. That is the
+     * state of every earlier anchor after a trip to the background, until the phone has
+     * recognised the room again.
      */
-    fun anchorToReuse(point: Position, anchorPositions: List<Position>, reach: Float): Int? {
+    fun anchorToReuse(point: Position, anchors: List<AnchorSpot>, reach: Float): Int? {
         var best: Int? = null
         var bestDistance = reach
-        anchorPositions.forEachIndexed { index, anchor ->
-            val distance = length(point - anchor)
+        anchors.forEachIndexed { index, anchor ->
+            if (anchor.health != AnchorHealth.Tracking) return@forEachIndexed
+            val distance = length(point - anchor.position)
             if (distance <= bestDistance) {
                 best = index
                 bestDistance = distance
