@@ -18,6 +18,8 @@ import dev.romainguy.kotlin.math.lookTowards
 import io.github.sceneview.Entity
 import io.github.sceneview.EntityInstance
 import io.github.sceneview.FilamentEntity
+import io.github.sceneview.FrameActivityTracker
+import io.github.sceneview.FrameDispatchEpoch
 import io.github.sceneview.SceneRenderInvalidators
 import io.github.sceneview.animation.NodeAnimator
 import io.github.sceneview.collision.Collider
@@ -45,6 +47,7 @@ import io.github.sceneview.math.toMatrix
 import io.github.sceneview.math.toQuaternion
 import io.github.sceneview.math.worldToLocalQuaternion
 import io.github.sceneview.NULL_ENTITY
+import io.github.sceneview.overridesOnFrameCached
 import io.github.sceneview.safeDestroyEntity
 import io.github.sceneview.safeDestroyTransformable
 import io.github.sceneview.markTransformOrderUnsorted
@@ -726,6 +729,13 @@ open class Node protected constructor(
                 val removedNodes = field - value
                 val addedNodes = value - field
                 field = value
+                // First, and before any hook below can throw: the trackers mirror this field
+                // (#3724), so they hear about every write to it, whatever happens afterwards.
+                // Same for the per-frame plan (#4451): it was built by walking this field.
+                FrameDispatchEpoch.bump()
+                frameActivityTrackers.forEach {
+                    it.onChildrenChanged(this, removedNodes, addedNodes)
+                }
                 removedNodes.forEach { child ->
                     if (child.parent == this@Node) {
                         child.parent = null
@@ -919,6 +929,15 @@ open class Node protected constructor(
      * is on screen in the same frame — no one-frame lag.
      */
     var onFrame: ((frameTimeNanos: Long) -> Unit)? = null
+        set(value) {
+            val changed = (field == null) != (value == null)
+            field = value
+            if (changed) {
+                frameActivityChanged()
+                // Whether this node has a step in the per-frame plan just changed (#4451).
+                FrameDispatchEpoch.bump()
+            }
+        }
     var onAddedToScene: ((scene: Scene) -> Unit)? = null
     var onRemovedFromScene: ((scene: Scene) -> Unit)? = null
 
@@ -939,20 +958,81 @@ open class Node protected constructor(
      * nothing means "I never need a frame of my own".
      */
     internal var internalOnFrame: ((frameTimeNanos: Long) -> Unit)? = null
+        set(value) {
+            val changed = (field == null) != (value == null)
+            field = value
+            // Whether this node has a step in the per-frame plan just changed (#4451).
+            if (changed) FrameDispatchEpoch.bump()
+        }
 
     /**
-     * Extra activity terms OR-ed into [isFrameActive], for library components that attach to a node
-     * they do not own and therefore cannot override the property.
+     * True while this node's **type** has per-frame work of its own: [onOwnFrame] is then called
+     * once per frame, after [internalOnFrame] and the public [onFrame] callback.
      *
-     * `SceneScope.PhysicsNode` is the case: it drives an arbitrary caller-supplied node, needs
-     * frames while its body is in flight, and needs to stop asking once the body has settled.
+     * It is what a library node type uses instead of overriding the public `onFrame` (#4451). An
+     * override is opaque — the scene has to call it on every frame, and it ticks its whole subtree
+     * itself — whereas this says *when* there is something to do: `ModelNode` raises it while an
+     * animation plays, lowers it once the model is at rest, and a scene of static models then has
+     * nothing to hand a frame to. Like [internalOnFrame] it does **not** mean "keep rendering":
+     * a type that needs frames of its own says so with [addFrameActivityProvider].
+     *
+     * Not a slot: [internalOnFrame] is one, and components attached from outside take it
+     * (`SceneScope.PhysicsNode`, `rememberModelAnimationState`). A node type's own work cannot
+     * live where another component's assignment would discard it.
+     */
+    internal var hasOwnFrameWork: Boolean = false
+        set(value) {
+            if (field == value) return
+            field = value
+            // Whether this node has a step in the per-frame plan just changed (#4451).
+            FrameDispatchEpoch.bump()
+        }
+
+    /** The node type's own per-frame work. Called only while [hasOwnFrameWork] is true. */
+    internal open fun onOwnFrame(frameTimeNanos: Long) = Unit
+
+    /**
+     * Extra activity terms OR-ed into [isFrameActive]: the one way the library adds a term to a
+     * node, whether it owns the node type or not.
+     *
+     * A node type registers its own from `init` — `ModelNode` for a playing animation, `VideoNode`
+     * for a frame landing on its surface. A component attached to a node it does not own does the
+     * same from outside: `SceneScope.PhysicsNode` drives an arbitrary caller-supplied node, needs
+     * frames while its body is in flight, and stops asking once the body has settled.
+     *
+     * One mechanism on purpose (#3724): a node holding a provider is asked on every tick, so a term
+     * added this way cannot be left out of the set the render loop asks. There is no second
+     * member to remember.
      */
     private val frameActivityProviders = mutableListOf<() -> Boolean>()
 
     /** Registers [provider] as an extra [isFrameActive] term. Returns a handle that removes it. */
     internal fun addFrameActivityProvider(provider: () -> Boolean): () -> Unit {
         frameActivityProviders += provider
-        return { frameActivityProviders -= provider }
+        frameActivityChanged()
+        return {
+            frameActivityProviders -= provider
+            frameActivityChanged()
+        }
+    }
+
+    /**
+     * The scenes currently counting this node, so the render loop can find the frame-active nodes
+     * without walking the tree (#3724). Empty for a node in no scene; one entry otherwise.
+     * Maintained by [FrameActivityTracker] alone.
+     */
+    internal var frameActivityTrackers: List<FrameActivityTracker<Node>> = emptyList()
+
+    /**
+     * Tells the tracking scenes that [mayBeSelfFrameActive] may have changed.
+     *
+     * Called from the three places a term appears or disappears: the [onFrame] slot, the
+     * smooth-transform target, and the [frameActivityProviders] list. It moves the node in or out
+     * of the set the loop asks; it never decides the answer — what a provider returns is read on
+     * every tick, by nobody's leave.
+     */
+    internal fun frameActivityChanged() {
+        frameActivityTrackers.forEach { it.update(this) }
     }
 
     // ---- Derived transforms ----
@@ -1377,6 +1457,11 @@ open class Node protected constructor(
      * transform still converging and a user [onFrame] callback. Subclasses that animate by other
      * means override it.
      *
+     * The loop does not reach this getter by walking the tree (#3724): it asks each node for its
+     * own terms, and skips the nodes that have none. A node type that overrides this getter is the
+     * exception — nothing can be assumed about an override, so that node is asked here, in full,
+     * on every tick. Keep an override cheap.
+     *
      * **`Node.onFrame` pins the loop; `SceneView(onFrame = …)` does not.** The asymmetry is
      * deliberate and it is the one thing to remember about the two callbacks that share a name.
      * `SceneView`'s is an observer, handed each frame *after* it was presented. This one is a
@@ -1391,27 +1476,91 @@ open class Node protected constructor(
      * reported busy only costs frames.
      */
     open val isFrameActive: Boolean
+        get() = isSelfFrameActive || childNodes.any { it.isFrameActive }
+
+    /**
+     * [isFrameActive] without the descent into [childNodes]: this node's own terms only.
+     *
+     * Final, and so is [mayBeSelfFrameActive] right below: the two are one definition read two
+     * ways, and they only stay in step if nobody can change one of them. The library's node types
+     * add their term with [addFrameActivityProvider] rather than by overriding anything, which
+     * keeps the shape of [isFrameActive] known — "own terms, or any child" — and lets the render
+     * loop ask each node for itself instead of re-walking the tree every tick (#3724).
+     */
+    internal val isSelfFrameActive: Boolean
         get() = animationDelegate.smoothTransform != null ||
                 onFrame != null ||
-                frameActivityProviders.any { it() } ||
-                childNodes.any { it.isFrameActive }
+                frameActivityProviders.any { it() }
+
+    /**
+     * False only when [isSelfFrameActive] is false **and** cannot turn true without a call to
+     * [frameActivityChanged] — the test for leaving this node out of the set the loop asks.
+     *
+     * Term for term the same three as [isSelfFrameActive], each read as "is there one" instead of
+     * "is it true now": a transform target and an [onFrame] slot are set through setters that
+     * report, and a provider is registered through a function that does. What a provider *returns*
+     * is reported by nobody, so a node holding one stays in the set for as long as it holds it.
+     */
+    internal val mayBeSelfFrameActive: Boolean
+        get() = animationDelegate.smoothTransform != null ||
+                onFrame != null ||
+                frameActivityProviders.isNotEmpty()
 
     // ---- Per-frame lifecycle ----
 
+    /**
+     * One frame for this node and everything under it: its smooth transform, then its children,
+     * then its own hooks.
+     *
+     * A scene does not call this on every node any more (#4451). A node whose class inherits this
+     * method is handed its two halves — [advanceSmoothTransform] and [invokeFrameCallbacks] — by
+     * [io.github.sceneview.SceneFrameDispatch], in the same order, and only when it has one; a
+     * node with neither is not visited. A class that **overrides** this method is still called on
+     * every frame, in full, and reaches its children through `super.onFrame` as it always has.
+     * The library's own node types do not: `ModelNode` and `SplatNode` declare their work with
+     * `hasOwnFrameWork` instead.
+     */
     open fun onFrame(frameTimeNanos: Long) {
         // Smooth transform interpolation
-        animationDelegate.onFrame(frameTimeNanos)
+        advanceSmoothTransform(frameTimeNanos)
 
         // Propagate to children
         childNodes.forEach { it.onFrame(frameTimeNanos) }
 
+        invokeFrameCallbacks(frameTimeNanos)
+    }
+
+    /** First half of [onFrame], before the children: the smooth-transform glide. */
+    internal fun advanceSmoothTransform(frameTimeNanos: Long) {
+        animationDelegate.onFrame(frameTimeNanos)
+    }
+
+    /**
+     * Second half of [onFrame], after the children: the library's hook, then the app's, then the
+     * node type's own work.
+     */
+    internal fun invokeFrameCallbacks(frameTimeNanos: Long) {
         // Library hook first, so a user callback observing this node sees the library's write-back
         // of the same frame rather than the previous one.
         internalOnFrame?.invoke(frameTimeNanos)
 
         // User callback
         onFrame?.invoke(frameTimeNanos)
+
+        // The node type's own work, last: a `ModelNode` updates its bone matrices after a callback
+        // that posed the skeleton, as it did when this was the tail of its `onFrame` override.
+        if (hasOwnFrameWork) onOwnFrame(frameTimeNanos)
     }
+
+    /** True while [advanceSmoothTransform] has something to advance. */
+    internal val hasSmoothTransform: Boolean get() = animationDelegate.smoothTransform != null
+
+    /** True while [invokeFrameCallbacks] has something to call. */
+    internal val hasFrameCallbacks: Boolean
+        get() = internalOnFrame != null || onFrame != null || hasOwnFrameWork
+
+    /** True when this node's class overrides [onFrame]. Fixed per class, read by reflection once. */
+    internal val overridesOnFrame: Boolean get() = overridesOnFrameCached(javaClass)
 
     // ---- Transform change notifications ----
 
