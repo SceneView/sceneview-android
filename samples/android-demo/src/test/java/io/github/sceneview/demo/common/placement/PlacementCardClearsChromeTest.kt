@@ -7,6 +7,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -195,6 +197,20 @@ class PlacementCardClearsChromeTest {
     }
 
     @Test
+    fun twoBannersWithNothingToSay_leaveTheInsetAtTheDockBand() {
+        // Two children with no height still get a gap between them: the band measures 8 dp
+        // of nothing. That is not chrome, and must not send the inset to the 104 dp reserve.
+        val probe = probeBottomInset(
+            bottomOverlay = {
+                Box(Modifier.fillMaxWidth().height(0.dp))
+                Box(Modifier.fillMaxWidth().height(0.dp))
+            },
+        )
+        val dock = bounds(DemoScaffoldTestTags.DOCK)
+        assertInsetIsTheDockBand(probe, dock)
+    }
+
+    @Test
     fun anOverlayWithNoPill_raisesTheInsetToItsOwnTopEdge() {
         // AR Measure's action bar, a status banner: drawn after the scene, so over it.
         val probe = probeBottomInset(
@@ -277,6 +293,13 @@ class PlacementCardClearsChromeTest {
     }
 
     @Test
+    @Config(qualifiers = "w640dp-h360dp-land-xhdpi")
+    fun narrowPhoneHeldSideways_couldNotStartArCard_atMaximumFontScale() {
+        // The corner beside the chrome is too narrow for the button's label here.
+        assertAvailabilityCardClearsChrome(fontScale = 2.0f)
+    }
+
+    @Test
     fun noSurfaceCard_inTheDarkTheme() {
         assertCardClearsChrome(PlacementPhase.NO_SURFACE, fontScale = 1.0f, darkTheme = true)
     }
@@ -334,14 +357,22 @@ class PlacementCardClearsChromeTest {
             "\"Try again\" is not whole inside its card — $where",
             action.top >= card.top && action.bottom <= card.bottom,
         )
-        assertTrue(
-            "\"Try again\" is squeezed to ${action.bottom - action.top} — $where",
-            action.bottom - action.top >= 40.dp,
-        )
+        assertActionIsWhole(action, fontScale, where)
         assertTrue(
             "\"Try again\" leaves the window — $where",
             action.top >= window.top && action.bottom <= window.bottom &&
                 action.left >= window.left && action.right <= window.right,
+        )
+    }
+
+    /** Neither squeezed flat, nor so narrow that its label breaks inside a word. */
+    private fun assertActionIsWhole(action: DpRect, fontScale: Float, where: String) {
+        val height = action.bottom - action.top
+        assertTrue("\"Try again\" is squeezed to $height — $where", height >= 40.dp)
+        assertTrue(
+            "\"Try again\" is $height tall: its label has so little width that it breaks " +
+                "inside a word — $where",
+            height <= ACTION_PADDING + ACTION_LINE * fontScale * 2 + TOLERANCE,
         )
     }
 
@@ -443,6 +474,10 @@ class PlacementCardClearsChromeTest {
 
     private companion object {
         val TOLERANCE = 0.75.dp
+
+        /** The SDK button's vertical padding, and one line of its label at font scale 1. */
+        val ACTION_PADDING = 24.dp
+        val ACTION_LINE = 17.dp
         const val PROBE = "chrome-inset-probe"
         const val OVERLAY = "demo-bottom-overlay-content"
 

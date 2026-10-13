@@ -3,9 +3,13 @@ package io.github.sceneview.demo
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -240,6 +244,39 @@ class DemoScaffoldTopBandTest {
         )
     }
 
+    @Test
+    fun identityPill_dropsTheGapWithTheLabel_andBringsBothBackWithTheWidth() {
+        var width by mutableStateOf(NARROW_WINDOW)
+        composeRule.setContent {
+            SceneViewDemoTheme(darkTheme = false) {
+                Box(Modifier.width(width)) {
+                    DemoScaffold(
+                        title = "AR Placement",
+                        onBack = {},
+                        assetSource = AssetSourceState.Bundled,
+                    ) {}
+                }
+            }
+        }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Built-in model").assertIsNotDisplayed()
+        val title = composeRule.onNodeWithText("AR Placement").getUnclippedBoundsInRoot()
+        val pill = composeRule.onNodeWithTag(DemoScaffoldTestTags.ASSET_SOURCE_CHIP)
+            .getUnclippedBoundsInRoot()
+        val before = title.left - pill.left
+        val after = pill.right - title.right
+        assertTrue(
+            "with its label dropped the pill keeps $after after the title and $before before " +
+                "it — the label's 8 dp gap must go with the label.",
+            after - before < 1.dp,
+        )
+
+        width = WIDE_WINDOW
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("AR Placement").assertIsDisplayed()
+        composeRule.onNodeWithText("Built-in model").assertIsDisplayed()
+    }
+
     private fun showPlacementIdentity(fontScale: Float) {
         composeRule.setContent {
             ScaledDensity(fontScale) {
@@ -309,6 +346,8 @@ class DemoScaffoldTopBandTest {
     }
 
     private companion object {
+        val NARROW_WINDOW = 240.dp
+        val WIDE_WINDOW = 411.dp
         const val PROBE_PLAIN = "top-overlay-probe-plain"
         const val PROBE_FIRST = "top-overlay-probe-first"
         const val PROBE_SECOND = "top-overlay-probe-second"

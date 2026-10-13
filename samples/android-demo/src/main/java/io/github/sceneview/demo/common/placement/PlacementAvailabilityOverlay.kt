@@ -13,6 +13,10 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.constrainHeight
+import androidx.compose.ui.unit.dp
 import io.github.sceneview.ar.ARCoreAvailabilityOverlay
 import io.github.sceneview.ar.ARCoreAvailabilityState
 import io.github.sceneview.demo.LocalDemoChromeBottomInset
@@ -51,11 +55,13 @@ internal fun BoxScope.PlacementAvailabilityOverlay(state: ARCoreAvailabilityStat
             chromeWidth = chromeWidth,
             chromeBottom = chromeBottom,
             gutter = gutter,
-            // One action, where the placement card lays two side by side: half the room. And
-            // the alternative, the band above the pill, cannot hold this card's button at all
-            // once the text is large — the corner has the window's whole height, and the
-            // card's text scrolls.
-            minWidth = SceneViewTokens.ArOverlay.cardMinWidth / 2,
+            // The corner has the window's whole height, so the card's text can scroll there;
+            // the band above the pill has room for little more than the button once the text
+            // is large. The corner is taken as soon as it leaves the button's label its
+            // minimum width — which grows with the font — around the SDK card's own margins.
+            minWidth = SDK_CARD_HORIZONTAL_INSETS +
+                SceneViewTokens.ArOverlay.actionLabelMinWidth * LocalDensity.current.fontScale -
+                gutter * 2,
             maxWidth = SceneViewTokens.ArOverlay.maxWidth,
         )
         Box(
@@ -72,9 +78,36 @@ internal fun BoxScope.PlacementAvailabilityOverlay(state: ARCoreAvailabilityStat
                 Modifier
                     .fillMaxSize()
                     .padding(top = chromeTop, bottom = chromeBottom)
+                    .then(if (compactHeight) Modifier.lendSdkCardMargin() else Modifier)
             },
         ) {
             ARCoreAvailabilityOverlay(state)
         }
+    }
+}
+
+/**
+ * What `ARCoreAvailabilityOverlay` puts on either side of its action's label: a 24 dp margin,
+ * 20 dp of card padding and 20 dp of button padding, twice. A measurement of the SDK card, not
+ * a spacing this screen applies — `PlacementCardClearsChromeTest` fails if the two drift apart.
+ */
+private val SDK_CARD_HORIZONTAL_INSETS = 128.dp
+
+/** The margin `ARCoreAvailabilityOverlay` keeps around its card, on every side. */
+private val SDK_CARD_MARGIN = 24.dp
+
+/**
+ * In a short window that is too narrow for the corner, the band between the identity row and
+ * the mode pill is all there is, and at the largest text it is shorter than the card's button
+ * and the SDK's margin together. The band is already a gutter away from the chrome on both
+ * sides, so the card may grow into its own margin there — only when it needs to: a card that
+ * fits is measured, and sits, exactly as before.
+ */
+private fun Modifier.lendSdkCardMargin(): Modifier = layout { measurable, constraints ->
+    val lent = if (constraints.hasBoundedHeight) SDK_CARD_MARGIN.roundToPx() * 2 else 0
+    val placeable = measurable.measure(constraints.copy(maxHeight = constraints.maxHeight + lent))
+    val height = constraints.constrainHeight(placeable.height)
+    layout(placeable.width, height) {
+        placeable.place(0, (height - placeable.height) / 2)
     }
 }

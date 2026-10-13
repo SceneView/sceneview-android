@@ -600,6 +600,14 @@ object SceneViewTokens {
          * card stays above the chrome instead.
          */
         val cardMinWidth = 192.dp
+
+        /**
+         * `action-label-min-width` — the least room a card's action label is given, per unit
+         * of font scale (#4509). "Try again" breaks at its space and each word stays whole at
+         * this width; with less, the label would break inside a word, so the card is not moved
+         * into a corner that narrow.
+         */
+        val actionLabelMinWidth = 36.dp
     }
 
     /**

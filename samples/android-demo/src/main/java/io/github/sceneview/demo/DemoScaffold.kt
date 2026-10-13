@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
@@ -38,7 +37,6 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
@@ -90,6 +88,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -114,6 +113,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -1374,7 +1374,6 @@ private fun BoxScope.DemoIdentityRow(
                 // A label that does not fit whole is not drawn at all: half a word next to
                 // the title says less than nothing. It stays in the pill's content description.
                 var sourceLabelCut by remember { mutableStateOf(false) }
-                Spacer(Modifier.width(SceneViewTokens.Space.sm))
                 Text(
                     text = sourceLabel,
                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
@@ -1393,7 +1392,9 @@ private fun BoxScope.DemoIdentityRow(
                                     placeable.place(0, 0)
                                 }
                             }
-                        },
+                        }
+                        // The gap to the title belongs to the label: it goes when the label does.
+                        .padding(start = SceneViewTokens.Space.sm),
                 )
             }
         }
@@ -1881,12 +1882,11 @@ private fun BoxScope.DemoBottomOverlay(
     ) {
         // The band's content, apart from the dock reserve and the system bar padded under it:
         // measured on its own so an empty band reports nothing to the scene (#4509).
+        val reportDrawnHeight by rememberUpdatedState(onContentHeightChanged)
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .onSizeChanged { onContentHeightChanged(it.height) },
+            modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(OVERLAY_STACK_SPACING),
+            verticalArrangement = remember { DrawnHeightSpacing { reportDrawnHeight(it) } },
         ) {
             if (status != null) {
                 GlassPill(modifier = Modifier.testTag(DemoScaffoldTestTags.STATUS_PILL)) {
@@ -1939,6 +1939,29 @@ private fun RecordPill(recorder: SceneRecorderState, onClick: () -> Unit) {
 
 /** Gap between two elements stacked in an overlay slot. */
 private val OVERLAY_STACK_SPACING = SceneViewTokens.Space.sm
+
+/**
+ * `Arrangement.spacedBy(OVERLAY_STACK_SPACING)` for the bottom band, which also reports how
+ * tall what the band **draws** is: its children's heights and the gaps between the ones that
+ * have a height.
+ *
+ * The band's own measured height will not do. A child with no height — a status banner with
+ * nothing to say, an `AnimatedVisibility` that is hidden — still gets a gap, so two of them
+ * measure 8 dp of nothing and the scaffold would report chrome where none is drawn (#4509).
+ */
+private class DrawnHeightSpacing(private val onDrawnHeight: (Int) -> Unit) : Arrangement.Vertical {
+    private val spaced = Arrangement.spacedBy(OVERLAY_STACK_SPACING)
+
+    override val spacing: Dp get() = spaced.spacing
+
+    override fun Density.arrange(totalSize: Int, sizes: IntArray, outPositions: IntArray) {
+        with(spaced) { arrange(totalSize, sizes, outPositions) }
+        val drawn = sizes.count { it > 0 }
+        onDrawnHeight(
+            if (drawn == 0) 0 else sizes.sum() + spacing.roundToPx() * (drawn - 1),
+        )
+    }
+}
 
 /**
  * The band as a gradient of [color], solid at the screen edge it grounds: the top one, or the
