@@ -14,9 +14,9 @@ private typealias Column = RerunComponentColumn
  * ([RerunRrdBlueprint]) this writer puts before it.
  *
  * Targets the `.rrd` format of Rerun **0.38.1** (`RRF2` framing, sorbet `0.1.3` chunks),
- * uncompressed, without the optional footer — viewers read such a file with a full scan, the way
- * they read a live stream. What the viewer shows, on the `time` timeline (seconds since the
- * session started):
+ * uncompressed, closed by the footer `rerun rrd verify` asks for ([RerunRrdFooter]): an index of
+ * the chunks, which a viewer scanning the file does not need. What the viewer shows, on the
+ * `time` timeline (seconds since the session started):
  *
  * - `world` — Y-up, right-handed (`ViewCoordinates` RUB), static.
  * - `world/points` — the coloured map (`Points3D`), static.
@@ -61,6 +61,7 @@ object RerunRrdWriter {
     /** Plane photos are sent as raw RGB texels, at most this many on a side. */
     const val PLANE_TEXTURE_SIZE = 512
 
+    private const val MESSAGE_HEADER_SIZE = 16
     private const val KIND_SET_STORE_INFO = 1L
     private const val KIND_ARROW_MSG = 2L
     private const val KIND_BLUEPRINT_ACTIVATION = 3L
@@ -97,15 +98,18 @@ object RerunRrdWriter {
         val chunks = chunks(scene, codec)
         val hasPhotos = chunks.any { chunk -> chunk.components.any { it.fieldName == "EncodedImage:blob" } }
         val out = LittleEndian()
+        val footer = RerunRrdFooter()
         out.bytes(streamHeader())
         // The blueprint first, as the Rerun SDKs write it, so the viewer has the layout before data.
         appendMessage(KIND_SET_STORE_INFO, setStoreInfo(blueprint, ids.next()), out)
-        for (chunk in RerunRrdBlueprint.chunks(recordingId, hasPhotos)) {
-            appendMessage(KIND_ARROW_MSG, arrowMessage(chunk, blueprint, ids), out)
-        }
+        val layout = footer.manifest(RerunProtobufWriter().apply { storeId(blueprint) }.bytes)
+        for (chunk in RerunRrdBlueprint.chunks(recordingId, hasPhotos)) appendChunk(chunk, blueprint, ids, layout, out)
         appendMessage(KIND_BLUEPRINT_ACTIVATION, blueprintActivation(blueprint), out)
         appendMessage(KIND_SET_STORE_INFO, setStoreInfo(store, ids.next()), out)
-        for (chunk in chunks) appendMessage(KIND_ARROW_MSG, arrowMessage(chunk, store, ids), out)
+        val recording = footer.manifest(RerunProtobufWriter().apply { storeId(store) }.bytes)
+        for (chunk in chunks) appendChunk(chunk, store, ids, recording, out)
+        // Last, and nothing above depends on it: a file cut before here still reads by full scan.
+        footer.appendTo(out)
         return out.toByteArray()
     }
 
@@ -166,8 +170,17 @@ object RerunRrdWriter {
         return proto.bytes
     }
 
-    /** `rerun.log_msg.v1alpha1.ArrowMsg` carrying one chunk as an uncompressed IPC stream. */
-    private fun arrowMessage(chunk: RerunChunk, store: StoreIdentity, ids: RerunTuidSequence): ByteArray {
+    /**
+     * Writes [chunk] as a `rerun.log_msg.v1alpha1.ArrowMsg` — one uncompressed IPC stream — and
+     * records where it went in its store's [manifest].
+     */
+    private fun appendChunk(
+        chunk: RerunChunk,
+        store: StoreIdentity,
+        ids: RerunTuidSequence,
+        manifest: RerunRrdFooter.Manifest,
+        out: LittleEndian,
+    ) {
         val chunkId = ids.next()
         val rowIds = List(chunk.rowCount) { ids.next() }
         val payload = chunk.arrowIpc(chunkId, rowIds)
@@ -179,7 +192,15 @@ object RerunRrdWriter {
         proto.bytes(5, payload)
         proto.message(6) { tuid(chunkId) }
         proto.bool(7, chunk.times == null)
-        return proto.bytes
+        val message = proto.bytes
+        manifest.add(
+            chunk = chunk,
+            chunkId = chunkId,
+            byteOffset = out.size.toLong() + MESSAGE_HEADER_SIZE,
+            byteSize = message.size.toLong(),
+            uncompressedSize = payload.size.toLong(),
+        )
+        appendMessage(KIND_ARROW_MSG, message, out)
     }
 
     // Scene → chunks

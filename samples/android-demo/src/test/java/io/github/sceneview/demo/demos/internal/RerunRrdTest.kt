@@ -45,17 +45,18 @@ class RerunRrdTest {
         assertArrayEquals(data.copyOf(12), RerunRrdWriter.streamHeader())
     }
 
-    /** Each message: its kind and its protobuf payload. */
+    /** Each message: its kind and its protobuf payload. After the last one, only the footer's locator. */
     private fun messages(data: ByteArray): List<Pair<Long, RrdProto>> {
         val bytes = RrdBytes(data)
+        val end = data.size - RerunRrdFooter.STREAM_FOOTER_SIZE
         var position = 12
         val messages = ArrayList<Pair<Long, RrdProto>>()
-        while (position < data.size) {
+        while (position < end) {
             val length = bytes.u64(position + 8).toInt()
             messages += bytes.u64(position) to RrdProto(bytes.slice(position + 16, length))
             position += 16 + length
         }
-        assertEquals(data.size, position)
+        assertEquals(end, position)
         return messages
     }
 
@@ -68,8 +69,10 @@ class RerunRrdTest {
         val kinds = messages.map { it.first }
         // Blueprint store info, its chunks, its activation; then the recording's store info and chunks.
         assertEquals(listOf(1L) + List(layout) { 2L } + listOf(3L, 1L), kinds.take(layout + 3))
-        assertTrue(kinds.drop(layout + 3).all { it == 2L })
-        assertTrue(kinds.size - layout - 3 > 5)
+        // ...and the `End` message that carries the footer.
+        assertTrue(kinds.drop(layout + 3).dropLast(1).all { it == 2L })
+        assertEquals(0L, kinds.last())
+        assertTrue(kinds.size - layout - 4 > 5)
 
         val blueprintStore = messages[0].second.message(2)!!.message(2)!!
         assertEquals(2L, blueprintStore.varint(1))
@@ -351,7 +354,9 @@ class RerunRrdTest {
         val data = rrd()
         assertFails<RerunRrdReader.Failure.Truncated>(data.copyOf(8))
         assertFails<RerunRrdReader.Failure.Truncated>(data.copyOf(data.size / 2))
-        assertFails<RerunRrdReader.Failure.Truncated>(data.copyOf(data.size - 1))
+        // One byte short of the last chunk. A cut later, in the footer, loses nothing (RerunRrdFooterTest).
+        val footer = RrdBytes(data).u64(data.size - RerunRrdFooter.STREAM_FOOTER_SIZE).toInt() - 16
+        assertFails<RerunRrdReader.Failure.Truncated>(data.copyOf(footer - 1))
     }
 
     @Test
