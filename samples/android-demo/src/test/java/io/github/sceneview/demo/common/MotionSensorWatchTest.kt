@@ -16,6 +16,7 @@ import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.google.ar.core.TrackingFailureReason
 import io.github.sceneview.ar.ARMotionSensorSample
+import io.github.sceneview.demo.BuildConfig
 import io.github.sceneview.demo.DemoSettings
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
@@ -24,6 +25,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeFalse
+import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -193,6 +196,8 @@ class MotionSensorWatchTest {
 
     @Test
     fun `the measure state takes the real path on a session that tracks, and keeps its line`() {
+        // The state exists in debug builds only; the release unit tests run the next test.
+        assumeTrue("the measure state is a debug-build seam", BuildConfig.DEBUG)
         DemoSettings.qaMode = true
         DemoSettings.qaDemoState = MOTION_SENSOR_MEASURE_QA_STATE
         tracking = true
@@ -213,6 +218,20 @@ class MotionSensorWatchTest {
         advance(60_000)
         assertEquals(1, probeCalls)
         assertTrue(MotionSensorReport.line() != null)
+    }
+
+    @Test
+    fun `a release build ignores the measure state even in QA mode`() {
+        assumeFalse("only a release build ignores the state under QA mode", BuildConfig.DEBUG)
+        DemoSettings.qaMode = true
+        DemoSettings.qaDemoState = MOTION_SENSOR_MEASURE_QA_STATE
+        tracking = true
+        watch(measuring(DELIVERING))
+
+        advance(60_000)
+        assertEquals("a release build measured a session that tracks", 0, probeCalls)
+        assertNull(MotionSensorReport.line())
+        assertFalse(cardShown)
     }
 
     @Test
