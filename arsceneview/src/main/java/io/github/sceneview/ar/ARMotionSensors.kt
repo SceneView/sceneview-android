@@ -39,11 +39,16 @@ enum class ARMotionSensorHealth {
  * How many events each motion sensor delivered over one listening window — what
  * [probeARMotionSensors] measures.
  *
- * @property gyroscopeEvents `Sensor.TYPE_GYROSCOPE` events received.
- * @property accelerometerEvents `Sensor.TYPE_ACCELEROMETER` events received over the same window.
- * @property windowMillis how long both sensors were listened to.
+ * A plain class, not a `data class`: it can gain a property without breaking a caller.
+ *
+ * @property gyroscopeEvents `Sensor.TYPE_GYROSCOPE` events received, or a negative number when
+ *   the gyroscope was not listened to at all — the sensor service refused the registration.
+ * @property accelerometerEvents `Sensor.TYPE_ACCELEROMETER` events received over the same
+ *   window, or a negative number when that registration was refused.
+ * @property windowMillis how long both sensors were listened to; `0` when a registration was
+ *   refused.
  */
-data class ARMotionSensorSample(
+class ARMotionSensorSample(
     val gyroscopeEvents: Int,
     val accelerometerEvents: Int,
     val windowMillis: Long,
@@ -51,6 +56,18 @@ data class ARMotionSensorSample(
     /** The verdict for this sample — see [arMotionSensorHealth]. */
     val health: ARMotionSensorHealth
         get() = arMotionSensorHealth(gyroscopeEvents, accelerometerEvents, windowMillis)
+
+    override fun equals(other: Any?): Boolean = other is ARMotionSensorSample &&
+        gyroscopeEvents == other.gyroscopeEvents &&
+        accelerometerEvents == other.accelerometerEvents &&
+        windowMillis == other.windowMillis
+
+    override fun hashCode(): Int =
+        (gyroscopeEvents * 31 + accelerometerEvents) * 31 + windowMillis.hashCode()
+
+    override fun toString(): String =
+        "ARMotionSensorSample(gyroscopeEvents=$gyroscopeEvents, " +
+            "accelerometerEvents=$accelerometerEvents, windowMillis=$windowMillis)"
 }
 
 /**
@@ -58,10 +75,10 @@ data class ARMotionSensorSample(
  * object is read.
  *
  * - any gyroscope event → [ARMotionSensorHealth.DELIVERING];
- * - no gyroscope event while the accelerometer delivered at least
- *   [AR_MOTION_SENSOR_MIN_REFERENCE_EVENTS] over at least [AR_MOTION_SENSOR_MIN_WINDOW_MS] →
- *   [ARMotionSensorHealth.SILENT];
- * - anything else → [ARMotionSensorHealth.UNKNOWN].
+ * - no gyroscope event while the accelerometer delivered at least 5 over a window of at least
+ *   500 ms → [ARMotionSensorHealth.SILENT];
+ * - anything else — a negative count included, which is how a sensor that was never listened
+ *   to is reported — → [ARMotionSensorHealth.UNKNOWN].
  *
  * The accelerometer is the control: it sits in the same IMU and goes through the same sensor
  * service, so a window in which it delivered is a window in which a working gyroscope would
@@ -81,17 +98,20 @@ fun arMotionSensorHealth(
 }
 
 /** The shortest window [arMotionSensorHealth] accepts a [ARMotionSensorHealth.SILENT] verdict on. */
-const val AR_MOTION_SENSOR_MIN_WINDOW_MS: Long = 500L
+internal const val AR_MOTION_SENSOR_MIN_WINDOW_MS: Long = 500L
 
 /**
  * The fewest accelerometer events that prove the sensor service was delivering during the
  * window. A handful, not one: a single event can be the value the service replays on
  * registration.
  */
-const val AR_MOTION_SENSOR_MIN_REFERENCE_EVENTS: Int = 5
+internal const val AR_MOTION_SENSOR_MIN_REFERENCE_EVENTS: Int = 5
 
-/** The default listening window of [probeARMotionSensors]. */
-const val AR_MOTION_SENSOR_PROBE_WINDOW_MS: Long = 1_000L
+/** The default listening window of [probeARMotionSensors]: one second. */
+internal const val AR_MOTION_SENSOR_PROBE_WINDOW_MS: Long = 1_000L
+
+/** The count [probeARMotionSensors] reports for a sensor whose registration was refused. */
+internal const val AR_MOTION_SENSOR_NOT_LISTENED: Int = -1
 
 /**
  * Listens to the gyroscope and the accelerometer for [windowMillis] and returns how many events
@@ -104,12 +124,18 @@ const val AR_MOTION_SENSOR_PROBE_WINDOW_MS: Long = 1_000L
  * restart their phone. SceneView draws nothing for it and reports no session failure: ARCore
  * itself reports none.
  *
+ * Wait and listen in the foreground only — a paused session is not a stalled one, and a
+ * backgrounded app is delivered no sensor event:
+ *
  * ```kotlin
- * LaunchedEffect(neverTracked) {
+ * val lifecycle = LocalLifecycleOwner.current.lifecycle
+ * LaunchedEffect(neverTracked, lifecycle) {
  *     if (!neverTracked) return@LaunchedEffect
- *     delay(10_000)
- *     val sample = probeARMotionSensors(context) ?: return@LaunchedEffect
- *     restartPhoneCard = sample.health == ARMotionSensorHealth.SILENT
+ *     lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+ *         delay(10_000)
+ *         val sample = probeARMotionSensors(context) ?: return@repeatOnLifecycle
+ *         restartPhoneCard = sample.health == ARMotionSensorHealth.SILENT
+ *     }
  * }
  * ```
  *
@@ -117,9 +143,14 @@ const val AR_MOTION_SENSOR_PROBE_WINDOW_MS: Long = 1_000L
  * cancelled: no sensor registration outlives the call. Do not run it while tracking works —
  * it has nothing to say then.
  *
+ * When the sensor service refuses either registration, nothing is listened to and the sample
+ * comes back at once with a negative count for the refused sensor: its
+ * [health][ARMotionSensorSample.health] is [ARMotionSensorHealth.UNKNOWN], never
+ * [ARMotionSensorHealth.SILENT] — a gyroscope that was not listened to has not been heard silent.
+ *
  * @param context any context; its application context is used.
- * @param windowMillis how long to listen. Shorter than [AR_MOTION_SENSOR_MIN_WINDOW_MS] can
- *   only ever yield [ARMotionSensorHealth.UNKNOWN] or [ARMotionSensorHealth.DELIVERING].
+ * @param windowMillis how long to listen, one second by default. Shorter than 500 ms can only
+ *   ever yield [ARMotionSensorHealth.UNKNOWN] or [ARMotionSensorHealth.DELIVERING].
  */
 suspend fun probeARMotionSensors(
     context: Context,
@@ -127,6 +158,20 @@ suspend fun probeARMotionSensors(
 ): ARMotionSensorSample? {
     val manager = context.applicationContext.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
         ?: return null
+    return probeARMotionSensors(manager, windowMillis) { listener, sensor ->
+        manager.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_GAME)
+    }
+}
+
+/**
+ * [probeARMotionSensors] over a [manager], with the registration call as a parameter so a test
+ * can refuse one sensor and accept the other.
+ */
+internal suspend fun probeARMotionSensors(
+    manager: SensorManager,
+    windowMillis: Long,
+    register: (SensorEventListener, Sensor) -> Boolean,
+): ARMotionSensorSample? {
     val gyroscope = manager.getDefaultSensor(Sensor.TYPE_GYROSCOPE) ?: return null
     val accelerometer = manager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) ?: return null
     val gyroscopeEvents = AtomicInteger()
@@ -144,8 +189,17 @@ suspend fun probeARMotionSensors(
     try {
         // The accelerometer first, so the control never listens for less time than the sensor
         // it vouches for.
-        manager.registerListener(listener, accelerometer, SensorManager.SENSOR_DELAY_GAME)
-        manager.registerListener(listener, gyroscope, SensorManager.SENSOR_DELAY_GAME)
+        val accelerometerListened = register(listener, accelerometer)
+        val gyroscopeListened = register(listener, gyroscope)
+        if (!accelerometerListened || !gyroscopeListened) {
+            // A refused gyroscope next to a listened accelerometer would count 0 against N —
+            // the very signature of a silent gyroscope, on a phone that may be healthy.
+            return ARMotionSensorSample(
+                gyroscopeEvents = if (gyroscopeListened) 0 else AR_MOTION_SENSOR_NOT_LISTENED,
+                accelerometerEvents = if (accelerometerListened) 0 else AR_MOTION_SENSOR_NOT_LISTENED,
+                windowMillis = 0L,
+            )
+        }
         delay(windowMillis)
     } finally {
         manager.unregisterListener(listener)

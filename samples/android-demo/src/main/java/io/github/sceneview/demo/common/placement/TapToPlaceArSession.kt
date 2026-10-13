@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -54,7 +55,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onSizeChanged
@@ -198,7 +205,7 @@ fun TapToPlaceArSession(
         framesArriving = state.cameraReady,
         tracking = state.isTracking,
         failureReason = state.trackingFailureReason,
-        sampleId = funnel.sampleId,
+        onSilent = funnel::motionSensorSilent,
     )
     SideEffect { state.motionSensorSilent = motionSensorSilent }
     // #4510: a resumed session that delivers no frame has no callback to say so — ask on a timer.
@@ -520,6 +527,9 @@ fun BoxScope.TapToPlaceStatusOverlays(
         if (shownCard == null) delay(SceneViewTokens.Duration.shortMillis.toLong())
         cardSlotHeld = shownCard != null
     }
+    // And so does its kind: the card that is leaving decides where the stack stands.
+    var slotCard by remember { mutableStateOf<PlacementCard?>(null) }
+    if (shownCard != null) slotCard = shownCard
 
     BoxWithConstraints(
         modifier = Modifier
@@ -539,7 +549,7 @@ fun BoxScope.TapToPlaceStatusOverlays(
         )
         Column(
             modifier = Modifier
-                .align(if (slot.besideChrome) Alignment.BottomEnd else Alignment.BottomCenter)
+                .align(coachStackAlignment(slot, slotCard))
                 .testTag(PlacementTestTags.COACH_STACK)
                 .padding(horizontal = SceneViewTokens.Space.md)
                 .padding(bottom = slot.bottom)
@@ -773,10 +783,12 @@ internal fun PlacementActionCard(
         ) {
             // The words give way before the buttons do: in a window too short for the whole
             // card they scroll, and the actions stay on screen and in reach (#4509).
+            val textScroll = rememberScrollState()
             Column(
                 modifier = Modifier
                     .weight(1f, fill = false)
-                    .verticalScroll(rememberScrollState()),
+                    .scrollEdgeFade(textScroll)
+                    .verticalScroll(textScroll),
                 verticalArrangement = Arrangement.spacedBy(SceneViewTokens.Space.xs),
             ) {
                 Text(
@@ -837,6 +849,38 @@ internal fun PlacementActionCard(
         }
     }
 }
+
+/**
+ * Dissolves the edge of a scrolling column that has more beyond it: words cut by a hard edge
+ * read as the end of the message, words that fade read as "there is more" (#4522 — the card of
+ * a phone held sideways at the largest text). Draws nothing extra while everything fits.
+ */
+private fun Modifier.scrollEdgeFade(scroll: ScrollState): Modifier = this
+    .graphicsLayer {
+        val scrollable = scroll.canScrollBackward || scroll.canScrollForward
+        compositingStrategy = if (scrollable) CompositingStrategy.Offscreen else CompositingStrategy.Auto
+    }
+    .drawWithContent {
+        drawContent()
+        // A mask, not a colour: only its alpha reaches the screen.
+        val fade = SceneViewTokens.Space.md.toPx().coerceAtMost(size.height / 3)
+        if (scroll.canScrollBackward) {
+            drawRect(
+                Brush.verticalGradient(listOf(Color.Transparent, Color.Black), startY = 0f, endY = fade),
+                blendMode = BlendMode.DstIn,
+            )
+        }
+        if (scroll.canScrollForward) {
+            drawRect(
+                Brush.verticalGradient(
+                    listOf(Color.Black, Color.Transparent),
+                    startY = size.height - fade,
+                    endY = size.height,
+                ),
+                blendMode = BlendMode.DstIn,
+            )
+        }
+    }
 
 /**
  * The live pinch read-out: the placed model's size as a percentage of its real-world

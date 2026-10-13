@@ -26,10 +26,11 @@ fun arCoreVersionName(context: Context): String =
  * - `ar_first_placement` logs once.
  * - `ar_tracking_lost` logs every time ARCore reports a new failure reason (ARSceneView
  *   already de-duplicates).
- * - `ar_session_failed` logs once per failure reason. ARCore retries a session it could not
- *   create on every resume (`create()` at ON_CREATE, then `resume()` finds no session and
- *   creates again), so one visit to an AR screen on a device that cannot run AR reports the
- *   same failure twice, then once more per return from the background.
+ * - `ar_session_failed` logs once per failure reason, [motionSensorSilent] included. ARCore
+ *   retries a session it could not create on every resume (`create()` at ON_CREATE, then
+ *   `resume()` finds no session and creates again), so one visit to an AR screen on a device
+ *   that cannot run AR reports the same failure twice, then once more per return from the
+ *   background.
  *
  * Three things the funnel cannot say are filed with the crash reports instead, as problems the
  * app survived (#4510) — no new analytics event, the taxonomy stays the one shared with iOS:
@@ -143,12 +144,27 @@ class ArFunnelLog(
 
     fun sessionFailed(failure: ARSessionFailure) {
         val reason = failureReason(failure)
-        if (!failuresLogged.add(reason)) return
-        analytics().log(AnalyticsEvent.ArSessionFailed(sampleId, reason))
+        if (!failedOnce(reason)) return
         // `unknown` and `fatal` name no cause: the exception itself is the only lead.
         if (failure is ARSessionFailure.Other || failure is ARSessionFailure.Fatal) {
             analytics().recordNonFatal(failure.cause)
         }
+    }
+
+    /**
+     * The session never tracked and the phone's gyroscope was measured silent (#4522): ARCore
+     * raises no failure for it, so the screen that measured it reports it here. One
+     * `ar_session_failed` with [MOTION_SENSOR_SILENT_REASON], once like every other reason.
+     */
+    fun motionSensorSilent() {
+        failedOnce(MOTION_SENSOR_SILENT_REASON)
+    }
+
+    /** Logs `ar_session_failed` for [reason] unless this funnel already did; `true` when it logged. */
+    private fun failedOnce(reason: String): Boolean {
+        if (!failuresLogged.add(reason)) return false
+        analytics().log(AnalyticsEvent.ArSessionFailed(sampleId, reason))
+        return true
     }
 
     /**
@@ -186,6 +202,12 @@ class ArFunnelLog(
         const val FRAME_WATCH_MS = 2_000L
 
         const val UNKNOWN_VERSION = "unknown"
+
+        /**
+         * The `ar_session_failed` reason of a session that cannot start because the phone's
+         * gyroscope delivers nothing — the one reason ARCore has no exception for.
+         */
+        const val MOTION_SENSOR_SILENT_REASON = "motion_sensor_silent"
 
         private const val NO_FRAME = -1L
 

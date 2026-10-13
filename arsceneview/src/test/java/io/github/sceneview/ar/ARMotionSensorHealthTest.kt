@@ -70,6 +70,28 @@ class ARMotionSensorHealthTest {
     }
 
     @Test
+    fun `a sample is compared by what it measured`() {
+        // Not a data class (it may gain a property), but still a value.
+        assertEquals(ARMotionSensorSample(0, 180, 1_000), ARMotionSensorSample(0, 180, 1_000))
+        assertEquals(
+            ARMotionSensorSample(0, 180, 1_000).hashCode(),
+            ARMotionSensorSample(0, 180, 1_000).hashCode(),
+        )
+        assert(ARMotionSensorSample(0, 180, 1_000) != ARMotionSensorSample(1, 180, 1_000))
+        assertEquals(
+            "ARMotionSensorSample(gyroscopeEvents=0, accelerometerEvents=180, windowMillis=1000)",
+            ARMotionSensorSample(0, 180, 1_000).toString(),
+        )
+    }
+
+    @Test
+    fun `a sensor that was not listened to is no verdict`() {
+        val refused = AR_MOTION_SENSOR_NOT_LISTENED
+        assertEquals(ARMotionSensorHealth.UNKNOWN, ARMotionSensorSample(refused, 200, 1_000).health)
+        assertEquals(ARMotionSensorHealth.UNKNOWN, ARMotionSensorSample(0, refused, 1_000).health)
+    }
+
+    @Test
     fun `the default probe window can reach a silent verdict`() {
         assert(AR_MOTION_SENSOR_PROBE_WINDOW_MS >= AR_MOTION_SENSOR_MIN_WINDOW_MS)
     }

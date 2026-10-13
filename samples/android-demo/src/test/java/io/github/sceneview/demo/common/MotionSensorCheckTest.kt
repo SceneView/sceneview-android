@@ -104,23 +104,36 @@ class MotionSensorCheckTest {
     // ── When the sensors are listened to ─────────────────────────────────────────────────
 
     @Test
-    fun `the sensors are listened to once, at the ten second mark`() {
-        assertFalse(motionSensorProbeDue(startup(waitedMillis = AR_NEVER_TRACKED_MS - 1), alreadyProbed = false))
-        assertTrue(motionSensorProbeDue(startup(), alreadyProbed = false))
-        assertFalse(motionSensorProbeDue(startup(), alreadyProbed = true))
+    fun `a session that never tracked has a measurement to wait for, until a verdict falls`() {
+        assertTrue(motionSensorProbeDue(startup(waitedMillis = 0), probes = 0, last = null))
+        // A verdict is final, either way.
+        assertFalse(motionSensorProbeDue(startup(), probes = 1, last = silent))
+        assertFalse(motionSensorProbeDue(startup(), probes = 1, last = ARMotionSensorHealth.DELIVERING))
+        // A phone with no gyroscope at all: measured once, nothing to measure again.
+        assertFalse(motionSensorProbeDue(startup(), probes = 1, last = null))
+    }
+
+    @Test
+    fun `a measurement that says nothing is taken again, three times at most`() {
+        // A refused listener, or an IMU that had not started delivering: not the last word.
+        val unknown = ARMotionSensorHealth.UNKNOWN
+        assertTrue(motionSensorProbeDue(startup(), probes = 1, last = unknown))
+        assertTrue(motionSensorProbeDue(startup(), probes = MOTION_SENSOR_MAX_PROBES - 1, last = unknown))
+        assertFalse(motionSensorProbeDue(startup(), probes = MOTION_SENSOR_MAX_PROBES, last = unknown))
+        assertEquals(3, MOTION_SENSOR_MAX_PROBES)
     }
 
     @Test
     fun `the sensors are never listened to while tracking works, or once it has`() {
-        assertFalse(motionSensorProbeDue(startup(tracking = true, everTracked = true), alreadyProbed = false))
-        assertFalse(motionSensorProbeDue(startup(everTracked = true), alreadyProbed = false))
+        assertFalse(motionSensorProbeDue(startup(tracking = true, everTracked = true), probes = 0, last = null))
+        assertFalse(motionSensorProbeDue(startup(everTracked = true), probes = 0, last = null))
     }
 
     @Test
     fun `the sensors are not listened to when ARCore explains the wait, or when no frame came`() {
         val explained = startup(failureReason = TrackingFailureReason.INSUFFICIENT_FEATURES)
-        assertFalse(motionSensorProbeDue(explained, alreadyProbed = false))
-        assertFalse(motionSensorProbeDue(startup(framesArriving = false), alreadyProbed = false))
+        assertFalse(motionSensorProbeDue(explained, probes = 0, last = null))
+        assertFalse(motionSensorProbeDue(startup(framesArriving = false), probes = 0, last = null))
     }
 
     @Test
@@ -158,13 +171,44 @@ class MotionSensorCheckTest {
     }
 
     @Test
+    fun `a sensor that was not listened to says so instead of a count`() {
+        assertEquals(
+            "not listened to in 0 s (accelerometer: 0)",
+            MotionSensorReport.line(ARMotionSensorSample(-1, 0, 0)),
+        )
+    }
+
+    @Test
     fun `nothing measured, no line`() {
-        assertNull(MotionSensorReport.line(null))
+        MotionSensorReport.clear()
+        assertNull(MotionSensorReport.line(nowMillis = 5_000))
+    }
+
+    @Test
+    fun `the line of a kept measurement says how old it is`() {
+        MotionSensorReport.record(ARMotionSensorSample(0, 204, 1_000), nowMillis = 100_000)
+        assertEquals(
+            "0 events in 1 s (accelerometer: 204), measured 0 s ago",
+            MotionSensorReport.line(nowMillis = 100_400),
+        )
+        // A report filed ten minutes later carries the same count, and says how stale it is.
+        assertEquals(
+            "0 events in 1 s (accelerometer: 204), measured 600 s ago",
+            MotionSensorReport.line(nowMillis = 700_000),
+        )
+        MotionSensorReport.clear()
+    }
+
+    @Test
+    fun `a session that tracks drops the measurement`() {
+        MotionSensorReport.record(ARMotionSensorSample(0, 204, 1_000), nowMillis = 100_000)
+        MotionSensorReport.clear()
+        assertNull(MotionSensorReport.line(nowMillis = 100_400))
     }
 
     @Test
     fun `the report text reads gyroscope N events in 1 s`() {
-        val line = MotionSensorReport.line(ARMotionSensorSample(0, 204, 1_000))!!
+        val line = MotionSensorReport.line(ARMotionSensorSample(0, 204, 1_000))
         val info = BugReportInfo(
             metadata = linkedMapOf("Device" to "Google Pixel 9", MotionSensorReport.KEY to line),
             logcat = emptyList(),

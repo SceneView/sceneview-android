@@ -18,6 +18,8 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
@@ -35,6 +37,7 @@ import io.github.sceneview.demo.LocalDemoModeSwitch
 import io.github.sceneview.demo.R
 import io.github.sceneview.demo.common.ForcedTrackingFailure
 import io.github.sceneview.demo.theme.SceneViewDemoTheme
+import io.github.sceneview.demo.theme.SceneViewTokens
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -105,12 +108,85 @@ class MotionSensorSilentCardTest {
 
     @Test
     @Config(qualifiers = "w800dp-h360dp-land-xhdpi")
-    fun phoneHeldSideways_light() = assertRestartCard("landscape-light")
+    fun phoneHeldSideways_light() {
+        assertRestartCard("landscape-light")
+        assertWholeMessageAboveTheDockScrim()
+    }
 
     @Test
     @Config(qualifiers = "w800dp-h360dp-land-xhdpi")
-    fun phoneHeldSideways_dark_atMaximumFontScale() =
+    fun phoneHeldSideways_dark() {
+        assertRestartCard("landscape-dark", darkTheme = true)
+        assertWholeMessageAboveTheDockScrim()
+    }
+
+    @Test
+    @Config(qualifiers = "w800dp-h360dp-land-xhdpi")
+    fun phoneHeldSideways_light_atMaximumFontScale() {
+        assertRestartCard("landscape-light-font-2", fontScale = 2.0f)
+        assertTheCutMessageScrollsToItsEnd("landscape-light-font-2-scrolled")
+    }
+
+    @Test
+    @Config(qualifiers = "w800dp-h360dp-land-xhdpi")
+    fun phoneHeldSideways_dark_atMaximumFontScale() {
         assertRestartCard("landscape-dark-font-2", fontScale = 2.0f, darkTheme = true)
+        assertTheCutMessageScrollsToItsEnd("landscape-dark-font-2-scrolled")
+    }
+
+    /**
+     * Sideways at the default text size the card has the corner beside the chrome: the whole
+     * message is on screen, and none of it under the scrim the scaffold draws over the dock.
+     */
+    private fun assertWholeMessageAboveTheDockScrim() {
+        val card = bounds(PlacementTestTags.PLACEMENT_CARD)
+        val dock = bounds(DemoScaffoldTestTags.DOCK)
+        val detail = detailNode().getUnclippedBoundsInRoot()
+        detailNode().assertIsDisplayed()
+        assertTrue(
+            "the detail line runs out of the card — detail $detail, card $card",
+            detail.top >= card.top && detail.bottom <= card.bottom,
+        )
+        assertTrue(
+            "the card reaches into the dock band, where the scaffold's scrim dims it — card $card, dock $dock",
+            card.bottom <= dock.top,
+        )
+    }
+
+    /**
+     * Sideways at the largest text the band above the chrome is shorter than the message: it
+     * is cut, with a fading edge, and a drag brings its last line inside the card.
+     */
+    private fun assertTheCutMessageScrollsToItsEnd(name: String) {
+        val card = bounds(PlacementTestTags.PLACEMENT_CARD)
+        val before = detailNode().getUnclippedBoundsInRoot()
+        assertTrue(
+            "expected a message taller than the card here — detail $before, card $card",
+            before.bottom > card.bottom,
+        )
+
+        // A finger put down on the words and dragged up, further than they can travel.
+        composeRule.onNodeWithTag(PlacementTestTags.PLACEMENT_CARD).performTouchInput {
+            swipeUp(startY = centerY, endY = centerY - height * 2)
+        }
+        composeRule.mainClock.advanceTimeBy(2_000)
+        composeRule.waitForIdle()
+
+        val after = detailNode().getUnclippedBoundsInRoot()
+        assertTrue(
+            "scrolling does not bring the last line of the message inside the card's padding — " +
+                "detail $after, card $card",
+            after.bottom <= card.bottom - CARD_PADDING + TOLERANCE,
+        )
+        composeRule.onRoot().captureRoboImage(
+            "src/test/snapshots/motion_sensor_silent_$name.png",
+            roborazziOptions = CROSS_PLATFORM_TOLERANT,
+        )
+    }
+
+    private fun detailNode() = composeRule.onNodeWithText(
+        composeRule.activity.resources.getString(R.string.ar_place_motion_sensor_detail),
+    )
 
     private fun assertRestartCard(name: String, fontScale: Float = 1.0f, darkTheme: Boolean = false) {
         state.motionSensorSilent = true
@@ -205,6 +281,9 @@ class MotionSensorSilentCardTest {
 
     private companion object {
         val TOLERANCE = 0.75.dp
+
+        /** The card's own padding, `space-md`: the text's viewport ends this far above its edge. */
+        val CARD_PADDING = SceneViewTokens.Space.md
         val CAMERA_STAND_IN = Color(0xFF7C7F86)
 
         val MODES = listOf(

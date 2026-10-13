@@ -1,25 +1,27 @@
 package io.github.sceneview.demo.common
 
+import android.content.Context
+import android.os.SystemClock
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.compose.currentStateAsState
 import com.google.ar.core.TrackingFailureReason
 import io.github.sceneview.ar.ARMotionSensorHealth
 import io.github.sceneview.ar.ARMotionSensorSample
 import io.github.sceneview.ar.probeARMotionSensors
 import io.github.sceneview.demo.DemoSettings
-import io.github.sceneview.demo.telemetry.AnalyticsEvent
 import io.github.sceneview.demo.telemetry.ArFunnelLog
-import io.github.sceneview.demo.telemetry.Telemetry
 import kotlinx.coroutines.delay
 
 /**
@@ -70,9 +72,26 @@ enum class ArStartupMessage {
  */
 const val AR_NEVER_TRACKED_MS: Long = ArFunnelLog.TRACKING_STALL_MS
 
-/** Whether the motion sensors should be listened to now. Once per session, never while tracking works. */
-fun motionSensorProbeDue(startup: ArStartup, alreadyProbed: Boolean): Boolean =
-    startup.stalled && !alreadyProbed
+/**
+ * How many times one session listens to the motion sensors at most. A first measurement that
+ * says nothing — the sensor service refused the listener, or had not started delivering — is
+ * taken again [AR_NEVER_TRACKED_MS] later; after this many, the screen stays as it is.
+ */
+const val MOTION_SENSOR_MAX_PROBES = 3
+
+/**
+ * Whether this session still has a measurement to wait for: it never tracked and ARCore gives
+ * no reason, and either nothing was measured yet or the last measurement said nothing
+ * ([ARMotionSensorHealth.UNKNOWN]) and [MOTION_SENSOR_MAX_PROBES] is not reached. A verdict —
+ * silent or delivering — is final, and so is a phone with no gyroscope ([last] `null` after a
+ * measurement). Never while tracking works, nor once it has.
+ *
+ * @param probes how many times the sensors were listened to in this session.
+ * @param last the verdict of the latest measurement.
+ */
+fun motionSensorProbeDue(startup: ArStartup, probes: Int, last: ARMotionSensorHealth?): Boolean =
+    startup.neverStartedUnexplained && probes < MOTION_SENSOR_MAX_PROBES &&
+        (probes == 0 || last == ARMotionSensorHealth.UNKNOWN)
 
 /**
  * The one decision of #4522: the restart message only for a session that is [ArStartup.stalled]
@@ -91,26 +110,52 @@ fun arStartupMessage(startup: ArStartup, sensors: ARMotionSensorHealth?): ArStar
  * The last motion-sensor measurement of this process, for the bug report: the report says how
  * many events each sensor delivered instead of leaving a maintainer to ask for
  * `dumpsys sensorservice`. `null` until an AR session stalled and was checked.
+ *
+ * The measurement carries its age, and it is dropped as soon as an AR session tracks: a report
+ * filed later does not present an old count as the phone's present state.
  */
 object MotionSensorReport {
     @Volatile
-    var last: ARMotionSensorSample? = null
+    private var last: ARMotionSensorSample? = null
+
+    @Volatile
+    private var measuredAtMillis: Long = 0L
 
     /** The bug report's key for [line]. */
     const val KEY = "gyroscope"
 
-    /** `0 events in 1 s (accelerometer: 204)`, or `null` when nothing was measured. */
-    fun line(sample: ARMotionSensorSample? = last): String? {
-        sample ?: return null
+    /** Keeps [sample] (or forgets the previous one, on `null`) as measured at [nowMillis]. */
+    fun record(sample: ARMotionSensorSample?, nowMillis: Long = SystemClock.elapsedRealtime()) {
+        last = sample
+        measuredAtMillis = nowMillis
+    }
+
+    /** An AR session tracked: whatever was measured before no longer describes this phone. */
+    fun clear() {
+        last = null
+    }
+
+    /**
+     * `0 events in 1 s (accelerometer: 204), measured 12 s ago`, or `null` when nothing was
+     * measured since an AR session last tracked.
+     */
+    fun line(nowMillis: Long = SystemClock.elapsedRealtime()): String? {
+        val sample = last ?: return null
+        val age = ((nowMillis - measuredAtMillis) / 1_000).coerceAtLeast(0)
+        return "${line(sample)}, measured $age s ago"
+    }
+
+    /** `0 events in 1 s (accelerometer: 204)`; a sensor that was not listened to reads `not listened to`. */
+    fun line(sample: ARMotionSensorSample): String {
         val seconds = sample.windowMillis / 1_000.0
         val window = if (seconds % 1.0 == 0.0) seconds.toLong().toString() else seconds.toString()
-        return "${sample.gyroscopeEvents} events in $window s " +
-            "(accelerometer: ${sample.accelerometerEvents})"
+        return "${count(sample.gyroscopeEvents)} in $window s " +
+            "(accelerometer: ${count(sample.accelerometerEvents, unit = "")})"
     }
-}
 
-/** The `reason` of the `ar_session_failed` record a silent gyroscope leaves on the AR funnel. */
-const val MOTION_SENSOR_SILENT_REASON = "motion_sensor_silent"
+    private fun count(events: Int, unit: String = " events"): String =
+        if (events < 0) "not listened to" else "$events$unit"
+}
 
 /**
  * The `qa_state` id that pins an AR screen on the restart message, so the card can be captured
@@ -127,56 +172,61 @@ fun motionSensorSilentForced(): Boolean =
 /**
  * Watches one AR session's start and returns `true` once it is known that the phone's
  * gyroscope delivers nothing (#4522) — the session then shows a restart message instead of a
- * "Getting ready" card that would never leave.
+ * "Getting ready" card that would never leave. It returns `false` again, for good, the moment
+ * the session tracks.
  *
- * The sensors are listened to once, for one second, and only after the session has delivered
- * frames for [AR_NEVER_TRACKED_MS] in the foreground without tracking and without a reason from
+ * The sensors are listened to for one second, and only after the session has delivered frames
+ * for [AR_NEVER_TRACKED_MS] in the foreground without tracking and without a reason from
  * ARCore. A session that tracks — the normal case, within a second — never registers a sensor
- * listener. One `ar_session_failed` record with [MOTION_SENSOR_SILENT_REASON] is logged when
- * the verdict falls.
+ * listener, and tracking that starts during the wait or the measurement cancels it. Time in the
+ * background does not count: the wait starts over on return. A measurement that says nothing is
+ * taken again after the same wait, [MOTION_SENSOR_MAX_PROBES] times at most.
  *
  * @param framesArriving the session delivered a camera frame.
  * @param tracking the camera is tracking now.
  * @param failureReason ARCore's reason for not tracking, if it gave one.
- * @param sampleId the funnel's sample id for this screen.
+ * @param onSilent called when a measurement finds the gyroscope silent — the caller's funnel
+ *   records it ([ArFunnelLog.motionSensorSilent], once per session).
+ * @param probe the measurement itself; the tests replace it.
  */
 @Composable
 fun rememberMotionSensorSilent(
     framesArriving: Boolean,
     tracking: Boolean,
     failureReason: TrackingFailureReason?,
-    sampleId: String,
+    onSilent: () -> Unit,
+    probe: suspend (Context) -> ARMotionSensorSample? = { probeARMotionSensors(it) },
 ): Boolean {
     var everTracked by remember { mutableStateOf(false) }
     var waitedMillis by remember { mutableLongStateOf(0L) }
-    var probed by remember { mutableStateOf(false) }
+    var probes by remember { mutableIntStateOf(0) }
     var health by remember { mutableStateOf<ARMotionSensorHealth?>(null) }
-    SideEffect { if (tracking) everTracked = true }
+    SideEffect {
+        if (tracking && !everTracked) {
+            everTracked = true
+            MotionSensorReport.clear()
+        }
+    }
 
     val startup = ArStartup(framesArriving, everTracked || tracking, tracking, failureReason, waitedMillis)
     val context = LocalContext.current.applicationContext
-    val lifecycle = LocalLifecycleOwner.current.lifecycle
-    val waiting = startup.neverStartedUnexplained && !probed
-    LaunchedEffect(waiting, lifecycle) {
-        if (!waiting) return@LaunchedEffect
-        // Foreground time only, and from scratch after a trip to the background: the session
-        // itself pauses there, and a paused session is not a stalled one.
-        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-            waitedMillis = 0L
-            delay(AR_NEVER_TRACKED_MS)
-            waitedMillis = AR_NEVER_TRACKED_MS
-            val due = motionSensorProbeDue(startup.copy(waitedMillis = AR_NEVER_TRACKED_MS), probed)
-            if (!due) return@repeatOnLifecycle
-            val sample = probeARMotionSensors(context)
-            MotionSensorReport.last = sample
-            health = sample?.health
-            if (sample?.health == ARMotionSensorHealth.SILENT) {
-                Telemetry.analytics.log(
-                    AnalyticsEvent.ArSessionFailed(sampleId, MOTION_SENSOR_SILENT_REASON),
-                )
-            }
-            probed = true
-        }
+    val currentProbe by rememberUpdatedState(probe)
+    val currentOnSilent by rememberUpdatedState(onSilent)
+    // Foreground time only, and from scratch after a trip to the background: the session itself
+    // pauses there, and a paused session is not a stalled one.
+    val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateAsState()
+    val watching = motionSensorProbeDue(startup, probes, health) &&
+        lifecycleState.isAtLeast(Lifecycle.State.RESUMED)
+    LaunchedEffect(watching, probes) {
+        if (!watching) return@LaunchedEffect
+        delay(AR_NEVER_TRACKED_MS)
+        val sample = currentProbe(context)
+        MotionSensorReport.record(sample)
+        if (sample?.health == ARMotionSensorHealth.SILENT) currentOnSilent()
+        // Written last: a measurement that says nothing restarts this effect for the next one.
+        waitedMillis = AR_NEVER_TRACKED_MS
+        health = sample?.health
+        probes++
     }
     return motionSensorSilentForced() ||
         arStartupMessage(startup, health) == ArStartupMessage.RESTART_PHONE

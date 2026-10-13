@@ -344,8 +344,8 @@ enum class PlacementCard {
     CAMERA_ERROR,
 
     /**
-     * "Your phone's motion sensor isn't responding." — *Restart your phone.* No button: nothing
-     * the app can do starts a session whose gyroscope is silent (#4522).
+     * "Restart your phone" — "Its motion sensor isn't responding, and AR can't start without
+     * it." No button: nothing the app can do starts a session whose gyroscope is silent (#4522).
      */
     MOTION_SENSOR_SILENT,
 }

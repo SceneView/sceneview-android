@@ -1,5 +1,6 @@
 package io.github.sceneview.demo.common.placement
 
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.isSpecified
 
@@ -65,4 +66,19 @@ internal fun coachStackSlot(
     } else {
         above
     }
+}
+
+/**
+ * Where the stack stands inside the safe area for [slot] and the card it shows.
+ *
+ * Above the chrome it is centred on the chrome's top edge. Beside it, it sits in the bottom
+ * corner, level with the dock — a card's buttons belong within a thumb's reach. The one card
+ * with no button, [PlacementCard.MOTION_SENSOR_SILENT], is only read: it stands at the top of
+ * that corner instead, clear of the scrim the scaffold draws over the dock band, which would
+ * otherwise dim its last line (#4522).
+ */
+internal fun coachStackAlignment(slot: CoachStackSlot, card: PlacementCard?): Alignment = when {
+    !slot.besideChrome -> Alignment.BottomCenter
+    card == PlacementCard.MOTION_SENSOR_SILENT -> Alignment.TopEnd
+    else -> Alignment.BottomEnd
 }

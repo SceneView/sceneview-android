@@ -172,11 +172,6 @@ public final class io/github/sceneview/ar/ARMotionSensorHealth : java/lang/Enum 
 public final class io/github/sceneview/ar/ARMotionSensorSample {
 	public static final field $stable I
 	public fun <init> (IIJ)V
-	public final fun component1 ()I
-	public final fun component2 ()I
-	public final fun component3 ()J
-	public final fun copy (IIJ)Lio/github/sceneview/ar/ARMotionSensorSample;
-	public static synthetic fun copy$default (Lio/github/sceneview/ar/ARMotionSensorSample;IIJILjava/lang/Object;)Lio/github/sceneview/ar/ARMotionSensorSample;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getAccelerometerEvents ()I
 	public final fun getGyroscopeEvents ()I
@@ -187,9 +182,6 @@ public final class io/github/sceneview/ar/ARMotionSensorSample {
 }
 
 public final class io/github/sceneview/ar/ARMotionSensorsKt {
-	public static final field AR_MOTION_SENSOR_MIN_REFERENCE_EVENTS I
-	public static final field AR_MOTION_SENSOR_MIN_WINDOW_MS J
-	public static final field AR_MOTION_SENSOR_PROBE_WINDOW_MS J
 	public static final fun arMotionSensorHealth (IIJ)Lio/github/sceneview/ar/ARMotionSensorHealth;
 	public static final fun probeARMotionSensors (Landroid/content/Context;JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun probeARMotionSensors$default (Landroid/content/Context;JLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;

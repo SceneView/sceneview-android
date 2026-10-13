@@ -75,6 +75,7 @@ class TapToPlaceState internal constructor() {
         internal set
 
     var trackingFailureReason: TrackingFailureReason? by mutableStateOf(null)
+        internal set
 
     /**
      * The phone's gyroscope delivers nothing, so this session will never track (#4522): the
@@ -182,6 +183,8 @@ class TapToPlaceState internal constructor() {
         controller.dismiss()
         phase = controller.phase
         cameraReady = false
+        // The verdict belongs to the session that was measured, not to the next one (#4522).
+        motionSensorSilent = false
     }
 
     private fun detachPlacement() {

@@ -105,6 +105,18 @@ class ArFunnelLogTest {
     }
 
     @Test
+    fun `a silent gyroscope logs one session failure, however often it is reported`() {
+        // #4522: the screen that measured it can be recomposed, paused and resumed.
+        repeat(3) { funnel.motionSensorSilent() }
+        assertEquals(
+            listOf<AnalyticsEvent>(AnalyticsEvent.ArSessionFailed("ar-placement", "motion_sensor_silent")),
+            events,
+        )
+        assertEquals(emptyList<Throwable>(), nonFatals)
+        assertTrue(ArFunnelLog.MOTION_SENSOR_SILENT_REASON.matches(Regex("[a-z][a-z0-9_]*")))
+    }
+
+    @Test
     fun `every code fits GA4 - snake_case and at most 100 characters`() {
         val codes = listOf(
             ARSessionFailure.from(UnavailableDeviceNotCompatibleException()),
