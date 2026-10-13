@@ -15,7 +15,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.compose.currentStateAsState
+import androidx.lifecycle.repeatOnLifecycle
 import com.google.ar.core.TrackingFailureReason
 import io.github.sceneview.ar.ARMotionSensorHealth
 import io.github.sceneview.ar.ARMotionSensorSample
@@ -177,8 +177,9 @@ fun motionSensorSilentForced(): Boolean =
  *
  * The sensors are listened to for one second, and only after the session has delivered frames
  * for [AR_NEVER_TRACKED_MS] in the foreground without tracking and without a reason from
- * ARCore. A session that tracks — the normal case, within a second — never registers a sensor
- * listener, and tracking that starts during the wait or the measurement cancels it. Time in the
+ * ARCore. A session that tracks within those ten seconds — the normal case, within one —
+ * never registers a sensor listener, and tracking that starts during the measurement cancels it
+ * and unregisters. Time in the
  * background does not count: the wait starts over on return. A measurement that says nothing is
  * taken again after the same wait, [MOTION_SENSOR_MAX_PROBES] times at most.
  *
@@ -212,21 +213,24 @@ fun rememberMotionSensorSilent(
     val context = LocalContext.current.applicationContext
     val currentProbe by rememberUpdatedState(probe)
     val currentOnSilent by rememberUpdatedState(onSilent)
-    // Foreground time only, and from scratch after a trip to the background: the session itself
-    // pauses there, and a paused session is not a stalled one.
-    val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateAsState()
-    val watching = motionSensorProbeDue(startup, probes, health) &&
-        lifecycleState.isAtLeast(Lifecycle.State.RESUMED)
-    LaunchedEffect(watching, probes) {
-        if (!watching) return@LaunchedEffect
-        delay(AR_NEVER_TRACKED_MS)
-        val sample = currentProbe(context)
-        MotionSensorReport.record(sample)
-        if (sample?.health == ARMotionSensorHealth.SILENT) currentOnSilent()
-        // Written last: a measurement that says nothing restarts this effect for the next one.
-        waitedMillis = AR_NEVER_TRACKED_MS
-        health = sample?.health
-        probes++
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val due = motionSensorProbeDue(startup, probes, health)
+    LaunchedEffect(due, probes, lifecycle) {
+        if (!due) return@LaunchedEffect
+        // Foreground time only, and from scratch after a trip to the background: the session
+        // itself pauses there, and a paused session is not a stalled one. The pause cancels the
+        // wait and the measurement from the lifecycle callback itself, not from a recomposition
+        // that a paused screen may never draw: no listener is left registered in the background.
+        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            delay(AR_NEVER_TRACKED_MS)
+            val sample = currentProbe(context)
+            MotionSensorReport.record(sample)
+            if (sample?.health == ARMotionSensorHealth.SILENT) currentOnSilent()
+            // Written last: a measurement that says nothing restarts this effect for the next one.
+            waitedMillis = AR_NEVER_TRACKED_MS
+            health = sample?.health
+            probes++
+        }
     }
     return motionSensorSilentForced() ||
         arStartupMessage(startup, health) == ArStartupMessage.RESTART_PHONE

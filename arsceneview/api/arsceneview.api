@@ -182,7 +182,6 @@ public final class io/github/sceneview/ar/ARMotionSensorSample {
 }
 
 public final class io/github/sceneview/ar/ARMotionSensorsKt {
-	public static final fun arMotionSensorHealth (IIJ)Lio/github/sceneview/ar/ARMotionSensorHealth;
 	public static final fun probeARMotionSensors (Landroid/content/Context;JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun probeARMotionSensors$default (Landroid/content/Context;JLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 }

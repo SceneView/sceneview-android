@@ -3,6 +3,7 @@ package io.github.sceneview.demo.common
 import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorManager
+import android.os.Looper
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,6 +32,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowSensor
+import java.util.concurrent.TimeUnit
 
 /**
  * The stateful half of #4522, [rememberMotionSensorSilent], on the Compose test clock: when
@@ -261,6 +263,38 @@ class MotionSensorWatchTest {
         assertTrue("a sensor listener outlived the measurement", sensors.listeners.isEmpty())
     }
 
+    @Test
+    fun `a pause with no frame after it leaves no sensor listener behind`() {
+        val context: Context = RuntimeEnvironment.getApplication()
+        val sensors = shadowOf(context.getSystemService(Context.SENSOR_SERVICE) as SensorManager)
+        sensors.addSensor(ShadowSensor.newInstance(Sensor.TYPE_ACCELEROMETER))
+        sensors.addSensor(ShadowSensor.newInstance(Sensor.TYPE_GYROSCOPE))
+
+        watch(probe = null)
+        advance(10_500)
+        assertEquals("the measurement did not register its listener", 1, sensors.listeners.size)
+
+        // The pause, and then nothing: no frame, no recomposition, no tick of the Compose clock.
+        owner.registry.currentState = Lifecycle.State.STARTED
+        shadowOf(Looper.getMainLooper()).idle()
+        assertTrue("a sensor listener is still registered in the background", sensors.listeners.isEmpty())
+
+        owner.registry.currentState = Lifecycle.State.CREATED
+        shadowOf(Looper.getMainLooper()).idle()
+        assertTrue(sensors.listeners.isEmpty())
+    }
+
+    @Test
+    fun `a pause with no frame after it cancels the wait and the measurement`() {
+        watch(measuring(SILENT))
+        advance(10_500)
+        assertEquals(1, probeCalls)
+
+        owner.registry.currentState = Lifecycle.State.STARTED
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals("the measurement ran on in the background", 1, probesCancelled)
+    }
+
     // ── Harness ───────────────────────────────────────────────────────────────────────
 
     /** A measurement that takes its second on the test clock, then returns [samples] in turn. */
@@ -299,6 +333,10 @@ class MotionSensorWatchTest {
         // What the test wrote to `tracking` and its neighbours reaches the composition now, not
         // on a main-looper turn the paused clock never takes.
         Snapshot.sendApplyNotifications()
+        composeRule.mainClock.advanceTimeBy(0)
+        // The wait and the measurement run under repeatOnLifecycle, on the main looper's clock;
+        // the frames that carry their result to the screen run on Compose's.
+        shadowOf(Looper.getMainLooper()).idleFor(millis, TimeUnit.MILLISECONDS)
         composeRule.mainClock.advanceTimeBy(millis)
         composeRule.waitForIdle()
     }

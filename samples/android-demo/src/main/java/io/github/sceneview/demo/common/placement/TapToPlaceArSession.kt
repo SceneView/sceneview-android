@@ -528,8 +528,9 @@ fun BoxScope.TapToPlaceStatusOverlays(
         cardSlotHeld = shownCard != null
     }
     // And so does its kind: the card that is leaving decides where the stack stands.
-    var slotCard by remember { mutableStateOf<PlacementCard?>(null) }
-    if (shownCard != null) slotCard = shownCard
+    var lastShownCard by remember { mutableStateOf<PlacementCard?>(null) }
+    SideEffect { if (shownCard != null) lastShownCard = shownCard }
+    val slotCard = shownCard ?: lastShownCard
 
     BoxWithConstraints(
         modifier = Modifier

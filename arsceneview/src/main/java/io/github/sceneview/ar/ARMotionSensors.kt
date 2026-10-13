@@ -53,7 +53,14 @@ class ARMotionSensorSample(
     val accelerometerEvents: Int,
     val windowMillis: Long,
 ) {
-    /** The verdict for this sample — see [arMotionSensorHealth]. */
+    /**
+     * The verdict for this sample:
+     *
+     * - any gyroscope event → [ARMotionSensorHealth.DELIVERING];
+     * - no gyroscope event while the accelerometer delivered at least 5 over a window of at
+     *   least 500 ms → [ARMotionSensorHealth.SILENT];
+     * - anything else — a negative count included — → [ARMotionSensorHealth.UNKNOWN].
+     */
     val health: ARMotionSensorHealth
         get() = arMotionSensorHealth(gyroscopeEvents, accelerometerEvents, windowMillis)
 
@@ -71,8 +78,8 @@ class ARMotionSensorSample(
 }
 
 /**
- * The verdict over two event counts and the window they were counted in. Pure: no Android
- * object is read.
+ * The verdict behind [ARMotionSensorSample.health], over two event counts and the window they
+ * were counted in. Pure: no Android object is read.
  *
  * - any gyroscope event → [ARMotionSensorHealth.DELIVERING];
  * - no gyroscope event while the accelerometer delivered at least 5 over a window of at least
@@ -85,7 +92,7 @@ class ARMotionSensorSample(
  * have delivered too. A phone lying still on a desk is not a silent gyroscope — a resting
  * gyroscope still reports its (near-zero) rotation rate at the requested rate.
  */
-fun arMotionSensorHealth(
+internal fun arMotionSensorHealth(
     gyroscopeEvents: Int,
     accelerometerEvents: Int,
     windowMillis: Long,
