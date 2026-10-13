@@ -33,12 +33,13 @@ import io.github.sceneview.collision.Vector3
 import io.github.sceneview.createEnvironment
 import io.github.sceneview.demo.LocalDemoSceneRestingCover
 import io.github.sceneview.demo.demoContentPadding
-import io.github.sceneview.demo.demos.internal.ArDebugFraming
 import io.github.sceneview.demo.demos.internal.ArDebugGeometry
 import io.github.sceneview.demo.demos.internal.ArDebugOrbitCamera
 import io.github.sceneview.demo.demos.internal.DebugLayer
 import io.github.sceneview.demo.demos.internal.DebugMesh
 import io.github.sceneview.demo.demos.internal.DenseSurfels
+import io.github.sceneview.demo.demos.internal.DollhouseFraming
+import io.github.sceneview.demo.demos.internal.DollhouseOpening
 import io.github.sceneview.demo.demos.internal.DollhouseRoom
 import io.github.sceneview.demo.demos.internal.FramingInsets
 import io.github.sceneview.demo.demos.internal.PlaneLayering
@@ -366,7 +367,13 @@ internal fun DollhousePreview(
     val fit = room.fit
     // The room as it stands here: centred on the origin, on its plinth, the plinth's foot at 0.
     val bounds = remember(fit) { RoomDollhouse.previewBounds(fit) }
-    val frames = remember { IntArray(2) }
+    val framing = remember(bounds, orbit) {
+        DollhouseFraming(bounds, PREVIEW_ELEVATION, orbit.verticalFovDegrees)
+    }
+    // One opening per room and per camera: another room is veiled until its own framing is drawn.
+    val opening = remember(bounds, orbit) { DollhouseOpening() }
+    // Before the first frame, not on it: the tone mapping is part of the first picture.
+    remember(view, colorGrading) { view.configureForDebug(colorGrading) }
     BoxWithConstraints(modifier.background(chrome.ground)) {
         // What the chrome leaves of this view at rest — under the recording's chip, above the dock
         // and the sheet's peek, between the window's safe sides — less a gutter: the room opens
@@ -390,14 +397,22 @@ internal fun DollhousePreview(
             )
         }
         val gutter = SceneViewTokens.Space.md
-        val insets = rememberUpdatedState(
-            FramingInsets(
-                left = (cover.calculateLeftPadding(direction) + gutter) / maxWidth,
-                top = (cover.calculateTopPadding() + gutter) / maxHeight,
-                right = (cover.calculateRightPadding(direction) + gutter) / maxWidth,
-                bottom = (cover.calculateBottomPadding() + gutter) / maxHeight,
-            )
+        val insets = FramingInsets(
+            left = (cover.calculateLeftPadding(direction) + gutter) / maxWidth,
+            top = (cover.calculateTopPadding() + gutter) / maxHeight,
+            right = (cover.calculateRightPadding(direction) + gutter) / maxWidth,
+            bottom = (cover.calculateBottomPadding() + gutter) / maxHeight,
         )
+        // The view's shape from its constraints, not from the camera's viewport: the surface
+        // reports its size after the composition, and the first frame is aimed from here.
+        val aspect = constraints.maxWidth.toFloat() / constraints.maxHeight.coerceAtLeast(1)
+        val home = rememberUpdatedState {
+            framing.home(orbit.home.azimuthDegrees, aspect, insets)
+        }
+        // SceneView draws with the pose the camera holds, then calls onFrame: the camera is put on
+        // the room's framing here, before the first frame and whenever the chrome moves, and again
+        // after each frame for the next one (DollhouseOpening).
+        SideEffect { opening.aim(orbit, home.value()) }
         SceneView(
             modifier = Modifier.matchParentSize(),
             surfaceType = SurfaceType.TextureSurface,
@@ -412,27 +427,10 @@ internal fun DollhousePreview(
             environment = environment,
             cameraManipulator = orbit,
             onFrame = {
-                if (frames[0] == 0) view.configureForDebug(colorGrading)
-                val home = ArDebugFraming.fit(
-                    bounds = bounds,
-                    azimuthDegrees = orbit.home.azimuthDegrees,
-                    elevationDegrees = PREVIEW_ELEVATION,
-                    verticalFovDegrees = orbit.verticalFovDegrees,
-                    aspect = orbit.aspect,
-                    insets = insets.value,
-                )
-                if (orbit.following) orbit.home = home
-                // Until the view is shown the camera is put on the framing, not eased to it: the
-                // viewport and the chrome are measured over the first frames, and an ease from a
-                // framing made for a size the view never had would be the first thing seen.
-                val opening = frames[0] < SHOWN_AFTER_FRAMES && orbit.following
-                if (!orbit.hasFramedContent || opening) {
-                    orbit.hasFramedContent = true
-                    orbit.snapTo(home)
-                }
-                frames[0]++
-                // A few frames on screen: the photos are uploaded, nothing is half drawn.
-                if (frames[0] == SHOWN_AFTER_FRAMES) shown.value()
+                // The frame just drawn was aimed before it: shown once it was on the framing.
+                val framed = home.value()
+                if (opening.drawn(orbit, framed)) shown.value()
+                opening.aim(orbit, framed)
             },
         ) {
             DollhouseModel(
@@ -453,4 +451,3 @@ internal fun DollhousePreview(
 
 /** A little higher than the replay's three-quarter view: a dollhouse is looked into from above. */
 private const val PREVIEW_ELEVATION = 40f
-private const val SHOWN_AFTER_FRAMES = 3

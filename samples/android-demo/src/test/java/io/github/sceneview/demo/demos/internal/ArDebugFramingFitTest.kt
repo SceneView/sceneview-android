@@ -133,6 +133,24 @@ class ArDebugFramingFitTest {
     }
 
     @Test
+    fun `a band at the bottom lifts the room, a band at the top lowers it`() {
+        // Top and bottom swapped anywhere between the chrome and the lens would pass a symmetric
+        // check: here one band only, and the room must move away from it. Up is +y on screen.
+        val bounds = box(rooms[0])
+        for (aspect in aspects) {
+            val dock = FramingInsets(bottom = 0.4f)
+            val lifted = projected(bounds, ArDebugFraming.fit(bounds, 35f, 40f, fov, aspect, dock), aspect)
+            assertTrue("aspect $aspect: under the dock (${lifted[1]})", lifted[1] >= -0.2f - 2e-3f)
+            assertTrue("aspect $aspect: not lifted", (lifted[1] + lifted[3]) / 2f > 0.15f)
+
+            val chip = FramingInsets(top = 0.4f)
+            val lowered = projected(bounds, ArDebugFraming.fit(bounds, 35f, 40f, fov, aspect, chip), aspect)
+            assertTrue("aspect $aspect: under the chip (${lowered[3]})", lowered[3] <= 0.2f + 2e-3f)
+            assertTrue("aspect $aspect: not lowered", (lowered[1] + lowered[3]) / 2f < -0.15f)
+        }
+    }
+
+    @Test
     fun `insets never take the whole view`() {
         val greedy = FramingInsets(left = 0.6f, top = 0.9f, right = 0.6f, bottom = 0.3f).bounded()
         assertEquals(1f - FramingInsets.MIN_FREE, greedy.left + greedy.right, 1e-5f)

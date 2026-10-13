@@ -8,6 +8,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -1490,7 +1491,8 @@ private val DOCK_CAPTION_GAP = 2.dp
  * Covers the 3D viewport until the SceneView presents its first Filament frame
  * (#1022): the stage colour, a progress indicator and the demo's own
  * [loadingLabel]. Cross-fades out over `motion-handover` (150 ms) once
- * [firstFrameRendered] flips, never the reverse.
+ * [firstFrameRendered] flips. When it flips back — the demo opened another view that has not
+ * drawn yet — the cover returns at once, with a timeout of its own.
  *
  * **The cover is not what makes a demo slow to open (#4160).** Traced on the
  * emulator, it lifts ~30 ms after Filament finishes executing frame 1 (second
@@ -1521,17 +1523,25 @@ private val DOCK_CAPTION_GAP = 2.dp
  * signal has to be the honest one.
  */
 @Composable
-private fun BoxScope.FirstFrameCover(
+internal fun BoxScope.FirstFrameCover(
     firstFrameRendered: androidx.compose.runtime.State<Boolean>,
     loadingLabel: String?,
     onRetry: (() -> Unit)?,
 ) {
-    var timedOut by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(FIRST_FRAME_SCRIM_TIMEOUT_MS)
-        timedOut = true
-    }
     val rendered = firstFrameRendered.value
+    var timedOut by remember { mutableStateOf(false) }
+    // One timeout per wait, not one per screen (#4492). A scene that opens a second view — the
+    // dollhouse's 3D view, another recorded room — waits for a frame again; the single timer of
+    // the screen had long run out by then, so that wait had no cover at all: the stalled card
+    // flashed at once and the new view's first frames were shown as they came.
+    LaunchedEffect(rendered) {
+        if (rendered) {
+            timedOut = false
+        } else {
+            kotlinx.coroutines.delay(FIRST_FRAME_SCRIM_TIMEOUT_MS)
+            timedOut = true
+        }
+    }
     val dismissed = rendered || timedOut
     // The cover's accessibility name. TalkBack announces it, and it is also the handle the
     // device-QA flow waits on: `SceneView(onFrame = …)` fires only for a frame that reached the
@@ -1539,14 +1549,23 @@ private fun BoxScope.FirstFrameCover(
     // statement that the viewport has real pixels — the thing `.maestro/android/flows/demo.yaml`
     // asserts before it captures a demo's screenshot.
     val loadingContentDescription = stringResource(R.string.demo_loading_scene_cd)
-    val alpha by animateFloatAsState(
+    val fade by animateFloatAsState(
         targetValue = if (dismissed) 0f else 1f,
-        animationSpec = tween(
-            durationMillis = SceneViewTokens.Duration.handoverMillis,
-            easing = FastOutSlowInEasing,
-        ),
+        // It hands over to the scene with a fade, and comes back at once: a cover that faded in
+        // would show the frames it is there to hide.
+        animationSpec = if (dismissed) {
+            tween(
+                durationMillis = SceneViewTokens.Duration.handoverMillis,
+                easing = FastOutSlowInEasing,
+            )
+        } else {
+            snap()
+        },
         label = "first-frame-cover",
     )
+    // Opaque in the very composition that starts a wait — the one the unrendered view is composed
+    // in — not a frame later, when the animation has taken its new target.
+    val alpha = if (dismissed) fade else 1f
     if (alpha > 0f) {
         Box(
             modifier = Modifier
@@ -1624,7 +1643,7 @@ private fun BoxScope.FirstFrameCover(
     }
 }
 
-private const val FIRST_FRAME_SCRIM_TIMEOUT_MS = 12_000L
+internal const val FIRST_FRAME_SCRIM_TIMEOUT_MS = 12_000L
 
 /**
  * Stable test tags consumed by `DemoInteractionTest`, the band tests and any
