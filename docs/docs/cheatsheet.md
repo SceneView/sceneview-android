@@ -412,8 +412,12 @@ bridge.requestSaveAndShare { result ->
 Drop the saved `.rrd` onto **<https://sceneview.github.io/rerun/>** to scrub
 the AR session frame-by-frame in any browser — no install required, no
 re-hosting needed for local inspection. To share with a remote teammate,
-re-host the file (R2, GitHub release, gist) and send them
-**`https://sceneview.github.io/rerun/?url=<encoded-public-url>`**.
+host the file at an https address that ends in `.rrd` and send them
+**`https://sceneview.github.io/rerun/?url=<encoded-public-url>`**. The host
+has to allow cross-origin requests (CORS): a public GitHub repository's
+`raw.githubusercontent.com` link and GitHub Pages do, an R2 or S3 bucket does
+with a CORS rule that allows `https://sceneview.github.io`, a GitHub release
+asset does not.
 
 ---
 

@@ -522,9 +522,11 @@ concept by concept (`ArFragment` → `ARSceneView { }`, `ModelRenderable` →
   at your desk with `ARSceneView(playbackDataset = file)`. See
   [`docs/docs/ar-recording.md`](docs/docs/ar-recording.md) and the
   [Record & Playback demo](samples/android-demo/RECORDING_PLAYBACK.md).
-- **Hosted Rerun viewer** — tap **Save & Share** in the AR Rerun demo, host the `.rrd` file on
-  any public URL, and open `https://sceneview.github.io/rerun/?url=<encoded-url>` to scrub the
-  session frame by frame in a browser, with no local install. Architecture and the Kotlin API
+- **Hosted Rerun viewer** — tap **Save & Share** in the AR Rerun demo, host the `.rrd` file at
+  an https address, and open `https://sceneview.github.io/rerun/?url=<encoded-url>` to scrub the
+  session frame by frame in a browser, with no local install. The host has to allow cross-origin
+  requests (CORS): a public GitHub repository's `raw.githubusercontent.com` link does, an R2 or
+  S3 bucket does with a CORS rule, a GitHub release asset does not. Architecture and the Kotlin API
   (`RerunBridge.requestSaveAndShare`) are in the *AR Debug — Rerun.io* section of
   [`llms.txt`](./llms.txt).
 

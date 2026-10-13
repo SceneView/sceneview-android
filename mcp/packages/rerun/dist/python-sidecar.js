@@ -48,9 +48,11 @@ Then on your device:
     Android: adb reverse tcp:${port} tcp:${port}
     iOS:     point the bridge at this machine's LAN IP
 
-Drop the resulting .rrd onto a public URL (R2, GitHub release, S3, gist) and
-share via:
+Host the resulting .rrd at a public https address and share via:
     ${shareBaseUrl}?url=<encoded-public-url>
+The host has to allow cross-origin requests (CORS): a public GitHub
+repository's raw.githubusercontent.com link does, an R2 or S3 bucket does with
+a CORS rule, a GitHub release asset does not.
 """
 from __future__ import annotations
 
