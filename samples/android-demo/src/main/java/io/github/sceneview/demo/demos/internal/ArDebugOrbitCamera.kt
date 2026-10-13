@@ -493,6 +493,13 @@ object ArDebugFraming {
      * Each of [insets] is one way round the chrome — under a card in a corner, or beside it —
      * and the one that moves the camera least wins. [lift] is [ArDebugOrbitCamera.lift]: the
      * picture is drawn that share of the view's height above where the pose alone would put it.
+     *
+     * The bands are taken as they are, down to [REVEAL_MIN_FREE] of the view: [fit]'s floor of
+     * [FramingInsets.MIN_FREE] cut back any pair covering more than four fifths of the height,
+     * which on a small phone is the way under the card — the box was then found "clear" of bands
+     * thinner than the chrome, and left behind it. A way round that leaves less than the floor is
+     * not taken while another does; through a thin band the camera steps back until the box is
+     * small enough to be whole in it.
      */
     fun reveal(
         pose: OrbitPose,
@@ -505,8 +512,9 @@ object ArDebugFraming {
         if (corners.isEmpty()) return pose
         var best = pose
         var bestCost = Float.MAX_VALUE
-        for (free in insets) {
-            val view = Framed(corners, pose, verticalFovDegrees, aspect, free)
+        val open = insets.filter { it.leaves(REVEAL_MIN_FREE) }.ifEmpty { insets }
+        for (free in open) {
+            val view = Framed(corners, pose, verticalFovDegrees, aspect, free, REVEAL_MIN_FREE)
             val distance = clamp(pose.copy(distance = max(pose.distance, view.distance()))).distance
             val across = view.horizontal.nudge(distance, raised = 0f)
             val upward = view.vertical.nudge(distance, raised = lift * 2f * view.tanVertical * distance)
@@ -533,6 +541,7 @@ object ArDebugFraming {
         verticalFovDegrees: Double,
         aspect: Float,
         insets: FramingInsets,
+        minFree: Float = FramingInsets.MIN_FREE,
     ) {
         val right: Float3
         val up: Float3
@@ -556,7 +565,7 @@ object ArDebugFraming {
             val upward = FloatArray(points.size) { dot(points[it] - from.target, up) }
             val away = FloatArray(points.size) { dot(points[it] - from.target, forward) }
             val tanHorizontal = tanVertical * aspect.coerceIn(0.2f, 5f)
-            val free = insets.bounded()
+            val free = insets.bounded(minFree)
             horizontal = FitAxis(across, away, tanHorizontal, -1f + 2f * free.left, 1f - 2f * free.right)
             vertical = FitAxis(upward, away, tanVertical, -1f + 2f * free.bottom, 1f - 2f * free.top)
             // Never closer than the nearest point: every one stays in front of the lens.
@@ -642,6 +651,9 @@ object ArDebugFraming {
     private const val BOX_CORNERS = 8
     private const val CENTRING_STEPS = 24
 
+    /** The thinnest band of a view [reveal] brings a box into: a few rows, stepped back for. */
+    const val REVEAL_MIN_FREE = 0.04f
+
     /**
      * One frame of the ease from [pose] to [home]: an exponential approach, which is frame-rate
      * independent and retargets smoothly — home moves every time the trail grows.
@@ -671,20 +683,23 @@ data class FramingInsets(
     val bottom: Float = 0f,
 ) {
     /**
-     * These insets, never negative, and leaving at least [MIN_FREE] of each axis free: two bands
+     * These insets, never negative, and leaving at least [minFree] of each axis free: two bands
      * that add up to more than that are cut back in proportion.
      */
-    fun bounded(): FramingInsets {
-        val (boundedLeft, boundedRight) = boundedPair(left, right)
-        val (boundedTop, boundedBottom) = boundedPair(top, bottom)
+    fun bounded(minFree: Float = MIN_FREE): FramingInsets {
+        val (boundedLeft, boundedRight) = boundedPair(left, right, minFree)
+        val (boundedTop, boundedBottom) = boundedPair(top, bottom, minFree)
         return FramingInsets(boundedLeft, boundedTop, boundedRight, boundedBottom)
     }
 
-    private fun boundedPair(first: Float, second: Float): Pair<Float, Float> {
+    /** Whether these insets leave [minFree] of each axis free as they are, with nothing cut back. */
+    fun leaves(minFree: Float): Boolean = bounded(minFree) == bounded(0f)
+
+    private fun boundedPair(first: Float, second: Float, minFree: Float): Pair<Float, Float> {
         val a = first.takeIf { it.isFinite() }?.coerceAtLeast(0f) ?: 0f
         val b = second.takeIf { it.isFinite() }?.coerceAtLeast(0f) ?: 0f
         val covered = a + b
-        val most = 1f - MIN_FREE
+        val most = 1f - minFree
         return if (covered <= most) a to b else a * most / covered to b * most / covered
     }
 

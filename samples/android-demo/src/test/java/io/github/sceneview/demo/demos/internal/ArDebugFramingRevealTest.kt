@@ -190,6 +190,128 @@ class ArDebugFramingRevealTest {
         assertEquals("the box's top, where the chrome ends", CHROME.top * HEIGHT, born.second, PIXELS)
     }
 
+    @Test
+    fun `on a small screen every corner of the box ends off the cards, the pill and the dock`() {
+        val free = PHONE.free(WIDTH, HEIGHT, LABEL)
+        // The way under the card is a band a few rows tall there; the one beside it is the room.
+        assertFalse("under the card: no room", free.last().leaves(ArDebugFraming.REVEAL_MIN_FREE))
+        assertTrue("beside the card: room", free.first().leaves(ArDebugFraming.REVEAL_MIN_FREE))
+
+        var hidden = 0
+        val drawnAt = ACROSS.flatMap { x -> DOWN.map { y -> x to y } }
+        for (pose in poses()) for ((x, y) in drawnAt) {
+            val box = boxDrawnAt(pose, x * WIDTH, y * HEIGHT)
+            if (!offChrome(pose, box)) hidden++
+            val revealed = reveal(pose, box, free)
+            val at = "from $pose, drawn at $x × $y"
+            assertTrue("a corner behind the chrome $at", offChrome(revealed, box))
+            assertTrue("no closer $at", revealed.distance >= pose.distance)
+            assertEquals(pose.azimuthDegrees, revealed.azimuthDegrees, 0f)
+            assertEquals(pose.elevationDegrees, revealed.elevationDegrees, 0f)
+        }
+        assertTrue("$hidden of the boxes began behind the chrome", hidden > AZIMUTHS.size)
+    }
+
+    /** The room seen from all round, low and high, close and far. */
+    private fun poses(): List<OrbitPose> = AZIMUTHS.flatMap { azimuth ->
+        ELEVATIONS.flatMap { elevation ->
+            DISTANCES.map { distance -> OrbitPose(Position(0f, 0.4f, 0f), azimuth, elevation, distance) }
+        }
+    }
+
+    @Test
+    fun `a box too large for the room beside the card is stepped back for, never left under it`() {
+        val close = OrbitPose(Position(0f, 0.5f, 0f), azimuthDegrees = 20f, elevationDegrees = 30f, distance = 1.2f)
+        val long = ScanBox(centerX = 0f, centerZ = 0f, baseY = 0f, yaw = 0.6f, length = 2f, depth = 1f, height = 0.9f)
+        assertFalse(offChrome(close, long))
+        val revealed = reveal(close, long, PHONE.free(WIDTH, HEIGHT, LABEL))
+        assertTrue("stepped back", revealed.distance > close.distance)
+        assertTrue("smaller, and whole", offChrome(revealed, long))
+    }
+
+    @Test
+    fun `a box a two-finger pan pushed behind the dock is brought back when the fingers let go`() {
+        val free = PHONE.free(WIDTH, HEIGHT, LABEL)
+        val box = ScanBox(0f, 0f, baseY = 0f, yaw = 0.3f, length = 0.5f, depth = 0.4f, height = 0.45f)
+        val start = reveal(OrbitPose(Position(0f, 0.4f, 0f), 35f, 32f, distance = 6f), box, free)
+        assertTrue("clear to begin with", offChrome(start, box))
+        val orbit = orbit(start).apply { hold() }
+        val reveal = ScanReveal().apply { settled() }
+
+        orbit.grabBegin(WIDTH / 2, HEIGHT / 2, true)
+        repeat(PAN_STEPS) { step ->
+            orbit.grabUpdate(WIDTH / 2, HEIGHT / 2 + DRAG_PIXELS * (step + 1))
+            orbit.update(FRAME)
+            assertFalse("not under the fingers", reveal.due(labelMeasured = true, moving = orbit.moving))
+        }
+        orbit.grabEnd()
+        val left = letGo(orbit, reveal)
+        assertFalse("pushed behind the bottom cards", offChrome(left, box))
+
+        orbit.glideTo(reveal(left, box, free))
+        repeat(GLIDE_FRAMES) { orbit.update(FRAME) }
+        assertTrue("whole and clear again", offChrome(orbit.pose, box))
+        assertEquals("no closer, no further", left.distance, orbit.pose.distance, 1e-4f)
+    }
+
+    @Test
+    fun `a box pinched in on as far as the camera goes is stepped back for when the fingers let go`() {
+        val free = PHONE.free(WIDTH, HEIGHT, LABEL)
+        val box = ScanBox(0f, 0f, baseY = 0f, yaw = 0.3f, length = 0.5f, depth = 0.4f, height = 0.45f)
+        val start = reveal(OrbitPose(Position(0f, 0.2f, 0f), 35f, 32f, distance = 6f), box, free)
+        val orbit = orbit(start).apply { hold() }
+        val reveal = ScanReveal().apply { settled() }
+
+        var separation = 100f
+        orbit.scrollBegin(WIDTH / 2, HEIGHT / 2, separation)
+        repeat(PINCH_STEPS) {
+            orbit.scrollUpdate(WIDTH / 2, HEIGHT / 2, separation, separation * PINCH_RATIO)
+            separation *= PINCH_RATIO
+            orbit.update(FRAME)
+            assertFalse("not under the fingers", reveal.due(labelMeasured = true, moving = orbit.moving))
+        }
+        // The gesture detector ends a pinch as it ends a drag.
+        orbit.grabEnd()
+        val left = letGo(orbit, reveal)
+        assertEquals("as close as the camera goes", ArDebugFraming.MIN_DISTANCE, left.distance, 1e-4f)
+        assertFalse("larger than the view", offChrome(left, box))
+
+        orbit.glideTo(reveal(left, box, free))
+        repeat(GLIDE_FRAMES) { orbit.update(FRAME) }
+        assertTrue("stepped back", orbit.pose.distance > left.distance)
+        assertTrue("whole and clear again", offChrome(orbit.pose, box))
+    }
+
+    /** The pose the fingers left [orbit] at, once [reveal] says the camera is to be slid. */
+    private fun letGo(orbit: ArDebugOrbitCamera, reveal: ScanReveal): OrbitPose {
+        var frames = 0
+        while (!reveal.due(labelMeasured = true, moving = orbit.moving)) {
+            assertTrue("the camera comes to rest", ++frames < SPIN_FRAMES)
+            orbit.update(FRAME)
+        }
+        return orbit.pose
+    }
+
+    /**
+     * Whether [box] is drawn from [pose] whole in the view and off what [PHONE] draws over it:
+     * each of its eight corners, and the rectangle around them, clear of the cards across the
+     * top, of the card in the corner and of everything from the pill down.
+     */
+    private fun offChrome(pose: OrbitPose, box: ScanBox): Boolean {
+        val camera = camera(pose)
+        val drawn = corners(box).map { camera.project(it) ?: return false }
+        val left = drawn.minOf { it.first }
+        val right = drawn.maxOf { it.first }
+        val top = drawn.minOf { it.second }
+        val bottom = drawn.maxOf { it.second }
+        val card = PHONE.card!!
+        val inView = left >= 0f && right <= WIDTH && top >= 0f && bottom <= HEIGHT
+        val underCards = top < PHONE.top - card.height
+        val underCorner = top < PHONE.top && right > WIDTH - card.width
+        val underBottom = bottom > HEIGHT - PHONE.bottom
+        return inView && !underCards && !underCorner && !underBottom
+    }
+
     private fun reveal(pose: OrbitPose, box: ScanBox, insets: List<FramingInsets>): OrbitPose {
         val orbit = orbit(pose)
         val corners = box.corners().map { Position(it.x, it.y, it.z) }
@@ -245,5 +367,23 @@ class ArDebugFramingRevealTest {
         /** The 3D view's two ways round its Camera card, which hangs under the stats card. */
         val BESIDE_CARD = CHROME.copy(right = 0.4f)
         val UNDER_CARD = CHROME.copy(top = 0.42f)
+
+        /**
+         * A small phone's replay, in pixels of [WIDTH] × [HEIGHT]: the cards and the Camera card
+         * hanging under them reach half way down, the pill, the filmstrip and the dock take the
+         * last two fifths — a few rows are left between the card and the pill.
+         */
+        val PHONE = ScanChrome(top = 1190, bottom = 900, card = ScanCard(396, 511), margin = 44, gap = 22)
+        const val LABEL = 140
+
+        val AZIMUTHS = floatArrayOf(-140f, -60f, 20f, 100f, 170f)
+        val ELEVATIONS = floatArrayOf(20f, 32f, 60f)
+        val DISTANCES = floatArrayOf(2.5f, 5f, 9f)
+        val ACROSS = floatArrayOf(0.25f, 0.5f, 0.8f)
+        val DOWN = floatArrayOf(0.45f, 0.55f, 0.68f)
+
+        const val PAN_STEPS = 30
+        const val PINCH_STEPS = 60
+        const val PINCH_RATIO = 1.2f
     }
 }
