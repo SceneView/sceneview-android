@@ -2,6 +2,11 @@
 <html lang="en">
 <head>
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://www.googletagmanager.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' blob: https:; frame-src https://app.rerun.io; worker-src 'self' blob:; base-uri 'self'; object-src 'none'">
+  <!-- This page's address can hold a recording's link (`?url=`), possibly a signed one. A page
+       of this site opened from here would otherwise receive that address as its referrer, and
+       report it to the site's analytics. Other hosts already got the origin alone; with this,
+       every request and every link from this page does. -->
+  <meta name="referrer" content="strict-origin">
   <script>
     (function() {
       try {
@@ -661,7 +666,14 @@
         return { refused: 'That is not a link this page can read. A link to a recording looks like https://example.com/session.rrd.' };
       }
       const onThisSite = url.protocol === 'http:' && url.origin === location.origin; // a local preview
-      if (url.protocol === 'https:' || onThisSite) return { href: url.href };
+      if (url.protocol === 'https:' || onThisSite) {
+        // `https://name:password@host/…`: a browser refuses to fetch such an address, before any
+        // request leaves. The message does not repeat the link: a password stays off the screen.
+        if (url.username || url.password) {
+          return { refused: `This link carries a user name or a password (the part before the "@"), and a browser does not open such a link from a page. A link to share must not hold credentials: host the recording at a public https address, or download it and drop it on ${START_PAGE}.` };
+        }
+        return { href: url.href };
+      }
       if (url.protocol === 'file:') {
         // What the capture sidecar hands back for a file it saved on the computer: `?url=file://…`.
         return { refused: `That is a file on a computer, and a web page cannot open it from a link. Drop the file on ${START_PAGE} instead.` };
@@ -909,7 +921,8 @@
 
     // The viewer stays on an empty screen when it cannot read the recording, and tells the page
     // nothing. Ask for the start of the file first, so a link that cannot open ends on the
-    // page's error, with the likely cause.
+    // page's error, with the cause when the browser lets the page know it and the possible
+    // causes when it does not.
     async function checkReachable(url) {
       if (url.startsWith('blob:')) return; // a file picked on this device
       const host = new URL(url).host;
@@ -927,12 +940,14 @@
             // Left to a link that redirects off https: `connect-src` holds on every hop.
             throw new Error(`The link sends the browser to an address this page may not load: only https addresses are allowed. Download the file, then drop it on ${START_PAGE} instead.`);
           }
-          // A browser reports a host that forbids the read and a host that is not there with the
-          // same error. A request that asks to read nothing back tells them apart.
+          // A browser reports an answer the page may not read and no answer at all with the same
+          // error. A request that asks to read nothing back tells those two apart — and no more:
+          // it hides the status, so a host that forbids the read and a host that answered 404 or
+          // 403 without a CORS header look the same from here. The message names both.
           const hostAnswers = await fetch(url, { mode: 'no-cors', signal: request.signal }).then(() => true, () => false);
           throw new Error(hostAnswers
-            ? `${host} answered, but does not let other websites read the file: it sends no cross-origin (CORS) permission. Host the recording where cross-origin requests are allowed, or download it and drop it on ${START_PAGE}.`
-            : `${host} could not be reached. Check the link and your connection.`);
+            ? `The browser could not read the answer from ${host}. Either ${host} does not let other websites read the file (it sends no cross-origin, or CORS, permission), or the link is wrong, private or expired. Check the link. If it is right, host the recording where cross-origin requests are allowed, or download it and drop it on ${START_PAGE}.`
+            : `The browser got no answer from ${host}. The address may be wrong, this device may be offline, a content blocker may have stopped the request, or the secure connection (TLS) to ${host} may have failed.`);
         }
         if (!response.ok) {
           throw new Error(response.status === 404
@@ -1030,9 +1045,17 @@
         const a = document.createElement('a');
         a.href = rrdUrl;
         a.download = (metadata?.title || 'sceneview-session') + '.rrd';
-        document.body.appendChild(a);
+        // A browser ignores `download` for a file on another host and follows the link instead:
+        // in a new tab then, so the viewer stays open, and without handing that host this
+        // window or this page's address.
+        if (new URL(rrdUrl).origin !== location.origin) {
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+        }
+        // The link is never added to the page: its click then reaches no listener of the
+        // document, and the site's analytics, which records clicks on links to other hosts
+        // with the link's address, does not see the recording's link.
         a.click();
-        a.remove();
       });
 
       const embed = $('btn-embed');

@@ -67,15 +67,24 @@
     return 'website';
   }
 
-  gtag('js', new Date());
-  gtag('config', MEASUREMENT_ID, {
+  var config = {
     page_title: document.title,
     content_group: contentGroup(),
     // First-party measurement only — no Google Signals, no ad personalisation. This is
     // what lets privacy.html say "no advertising features are enabled".
     allow_google_signals: false,
     allow_ad_personalization_signals: false
-  });
+  };
+  // The AR session page takes the recording's link in its own address
+  // (`/rerun/?url=<link>`), and that link can be a signed one. On that page only, report
+  // the address without its query string and its fragment, so the link stays in the
+  // browser. Every other page reports its address as before.
+  if (window.location.pathname.indexOf('/rerun/') === 0) {
+    config.page_location = window.location.origin + window.location.pathname;
+  }
+
+  gtag('js', new Date());
+  gtag('config', MEASUREMENT_ID, config);
 
   function onReady(fn) {
     if (document.readyState === 'loading') {

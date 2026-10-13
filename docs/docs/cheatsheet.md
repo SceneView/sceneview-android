@@ -415,9 +415,9 @@ re-hosting needed for local inspection. To share with a remote teammate,
 host the file at an https address that ends in `.rrd` and send them
 **`https://sceneview.github.io/rerun/?url=<encoded-public-url>`**. The host
 has to allow cross-origin requests (CORS): a public GitHub repository's
-`raw.githubusercontent.com` link and GitHub Pages do, an R2 or S3 bucket does
-with a CORS rule that allows `https://sceneview.github.io`, a GitHub release
-asset does not.
+`raw.githubusercontent.com` link and GitHub Pages do, a GitHub release asset
+does not (checked 2026-10-13); an R2 or S3 bucket does with a CORS rule that
+allows `https://sceneview.github.io`.
 
 ---
 
