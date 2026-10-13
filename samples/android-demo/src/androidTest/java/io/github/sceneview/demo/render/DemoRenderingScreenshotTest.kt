@@ -6,6 +6,8 @@ import android.graphics.Color
 import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
+import androidx.test.runner.lifecycle.Stage
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
@@ -14,6 +16,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.After
+import org.junit.AfterClass
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -751,6 +754,49 @@ class DemoRenderingScreenshotTest {
     }
 
     private companion object {
+        /**
+         * Leaves the demo before the instrumentation ends (#4448).
+         *
+         * The cases never close the demo activity — each one re-targets it with `am start` —
+         * so the suite used to end with a live Filament viewport on screen, and the framework
+         * then killed the process under it ("Force stopping … finished inst"). On the CI
+         * renderer (`-gpu swangle_indirect`) the emulator itself went down with it, within
+         * three seconds of that kill, in every nightly read for #4448: `adb: device offline`
+         * at Gradle's uninstall, no final `adb pull`, and so no capture of whatever the last
+         * cases wrote after the harvest loop's last pass. Finishing the activity here lets the
+         * scene release its engine and its GL contexts the ordinary way first.
+         */
+        @JvmStatic
+        @AfterClass
+        fun leaveTheDemo() {
+            val instrumentation = InstrumentationRegistry.getInstrumentation()
+            val monitor = ActivityLifecycleMonitorRegistry.getInstance()
+            // The monitor is main-thread only.
+            fun finishLiveActivities(): Int {
+                var live = 0
+                instrumentation.runOnMainSync {
+                    Stage.values()
+                        .filter { it != Stage.DESTROYED }
+                        .flatMap { monitor.getActivitiesInStage(it) }
+                        .forEach { activity ->
+                            live++
+                            if (!activity.isFinishing) activity.finish()
+                        }
+                }
+                return live
+            }
+            val deadline = System.currentTimeMillis() + LEAVE_DEMO_TIMEOUT_MS
+            while (finishLiveActivities() > 0 && System.currentTimeMillis() < deadline) {
+                Thread.sleep(LEAVE_DEMO_POLL_MS)
+            }
+            instrumentation.waitForIdleSync()
+            Log.i(LOG_TAG, "leaveTheDemo: live activities left = ${finishLiveActivities()}")
+        }
+
+        /** How long [leaveTheDemo] waits for the demo activity to be destroyed. */
+        const val LEAVE_DEMO_TIMEOUT_MS = 10_000L
+        const val LEAVE_DEMO_POLL_MS = 200L
+
         // Max time we'll keep retrying after the per-test minimum settle, waiting for
         // the SceneView centre to show non-flat pixels. Covers slow first-time CDN
         // model downloads (~10s on emulator) plus Filament Engine init drift.
