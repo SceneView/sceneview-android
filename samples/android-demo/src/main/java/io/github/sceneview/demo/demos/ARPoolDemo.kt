@@ -137,9 +137,9 @@ internal const val POOL_PREVIEW_QA_STATE = "pool_preview"
  * ## Night
  * Night darkens the garden and switches on two lamps under the water. ARCore sets the scene's
  * light from the camera on every frame, so the demo cannot simply turn it down: the pool's
- * materials take a `daylight` factor instead ([NIGHT_DIMMING]) and their lamps are emission,
- * which no light estimate touches. The real garden is the camera image, darkened by a
- * transparent black veil drawn over it and under the pool ([NightVeil]).
+ * materials take a `daylight` factor instead ([NIGHT_LIGHT]) and their lamps are emission,
+ * which no light estimate touches. The real garden is the camera image, darkened by the same
+ * factor by a transparent black veil drawn over it and under the pool ([NightVeil]).
  */
 @Composable
 fun ARPoolDemo(onBack: () -> Unit) {
@@ -616,7 +616,7 @@ private class PoolMaterials(
         this.veilAtNight = veilAtNight
         // The lamps come on as the light goes.
         val lights = night
-        val daylight = 1f - NIGHT_DIMMING * night
+        val daylight = 1f - (1f - NIGHT_LIGHT) * night
         liner.setParameter("linerColor", finish.red, finish.green, finish.blue)
         liner.setParameter("waterY", -PoolGeometry.WATER_DROP)
         liner.setParameter("halfWidth", spec.halfWidth)
@@ -672,9 +672,10 @@ private const val MINIATURE_SCALE = 1f / 6f
 
 /**
  * QA preview viewpoint: eyes 1.5 m up, 1.6 m back from the coping and a little to the right,
- * looking down the pool's length so the Roman steps in the far left corner face the lens.
+ * looking down the pool's length so the Roman steps in the far left corner face the lens and
+ * both lamps, three quarters of the way down the side walls, stay in frame.
  */
-private val PREVIEW_EYE = Position(x = 0.6f, y = 1.5f, z = 1.6f)
+private val PREVIEW_EYE = Position(x = 0.2f, y = 1.5f, z = 1.6f)
 private val PREVIEW_TARGET = Position(x = 0f, y = -1.5f, z = -4.4f)
 
 /** About 67° of vertical view: a phone's main camera held upright. */
@@ -698,25 +699,26 @@ private const val WATER_GREEN = 0.80f
 private const val WATER_BLUE = 0.85f
 
 /**
- * Share of the scene's light the pool loses at night: its surfaces keep `1 - NIGHT_DIMMING` of
- * it (the materials' `daylight`). What is left is the glow of a garden after dusk; the lamps,
- * being emission, keep all of theirs.
+ * Share of the scene's light the garden and the pool keep at night. The pool's surfaces take
+ * it as the materials' `daylight`, the camera image through the veil ([NIGHT_VEIL_AR]), both in
+ * the scene's linear light, so stone and lawn darken alike; the lamps, being emission, keep all
+ * of theirs.
  */
-private const val NIGHT_DIMMING = 0.85f
+private const val NIGHT_LIGHT = 0.06f
 
 /**
- * How much of the camera image the veil hides at night, in AR. The veil blends in the scene's
- * linear light, before tone mapping, where the camera image has been un-tone-mapped
- * (`camera_stream_flat.mat`). Through that curve 94 % turns grass at sRGB 0.45 into 0.03 and a
- * pale wall at 0.9 into 0.25, while a clipped sky or window keeps most of its light, as it does
- * at dusk.
+ * How much of the camera image the veil hides at night, in AR: all but [NIGHT_LIGHT]. The veil
+ * blends in the scene's linear light, before tone mapping, where the camera image has been
+ * un-tone-mapped (`camera_stream_flat.mat`). Through that curve 94 % turns grass at sRGB 0.45
+ * into 0.03 and a pale wall at 0.9 into 0.25, while a clipped sky or window keeps most of its
+ * light, as it does at dusk.
  */
-private const val NIGHT_VEIL_AR = 0.94f
+private const val NIGHT_VEIL_AR = 1f - NIGHT_LIGHT
 
 /**
  * How much of the backdrop photo the veil hides at night, in the QA preview. There the
- * translucent scene is laid over the photo after tone mapping, in display colours, so the same
- * night takes less.
+ * translucent scene is laid over the photo after tone mapping, in display colours, where hiding
+ * 85 % of a mid-tone leaves what the Filmic curve makes of [NIGHT_LIGHT] of its light.
  */
 private const val NIGHT_VEIL_PREVIEW = 0.85f
 

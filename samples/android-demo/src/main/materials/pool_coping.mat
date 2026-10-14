@@ -11,7 +11,8 @@
 //   stone        — float3, linear RGB of the stone.
 //   lights       — float [0,1], the two underwater lamps of pool_liner.mat: 0 off, 1 fully on.
 //   daylight     — float [0,1], the share of the scene's light the stone receives, as in
-//                  pool_liner.mat: 1 by day, less at night. It never dims the lamps' glow.
+//                  pool_liner.mat: 1 by day, 6 % at night, daylight² on the specular light.
+//                  It never dims the lamps' glow.
 //   opacity      — float [0,1], the placement fade-in; 1 once the pool has landed.
 // Fade blending with depth writes, so the coping fades in with the pool and still draws like an
 // opaque surface once it has landed; transparent shadows keep it casting its shadow into the
@@ -96,17 +97,21 @@ fragment {
         float daylight = materialParams.daylight;
         material.baseColor = float4(color * (opacity * daylight), opacity);
         material.roughness = mix(0.78, 0.9, coarse);
-        // √daylight scales the specular light by daylight (F0 = 0.16 × reflectance²).
-        material.reflectance = 0.4 * sqrt(daylight);
+        material.reflectance = 0.4;
+        // The specular light goes by daylight², as on the liner (pool_liner.mat).
+        material.specularFactor = daylight * daylight;
+        material.specularColorFactor = float3(1.0);
 
-        // The lamps, half a metre under the water in the side walls, catch the inner edge only
-        // above and around them; the rest of the stone keeps whatever light the scene has.
+        // The lamps, 40 cm under the water in the side walls three quarters of the way to the
+        // shallow end, catch the inner edge only above and around them; the rest of the stone
+        // keeps whatever light the scene has.
         if (materialParams.lights > 0.0) {
+            float zLamp = mix(materialParams.zNear, materialParams.zFar, 0.75);
             float rim = 1.0 - smoothstep(-0.025, 0.01, max(dx, dz));
             float near = 0.0;
             for (int i = 0; i < 2; i++) {
                 float side = i == 0 ? -1.0 : 1.0;
-                highp float3 toLamp = float3(side * materialParams.halfWidth, -0.55, zMid) - p;
+                highp float3 toLamp = float3(side * materialParams.halfWidth, -0.55, zLamp) - p;
                 near += exp(-dot(toLamp, toLamp) / 1.2);
             }
             float3 glow = float3(0.05, 0.35, 0.45) * (0.4 * rim * near * materialParams.lights);

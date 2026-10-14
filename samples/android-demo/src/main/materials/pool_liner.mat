@@ -16,10 +16,11 @@
 //   shallowDepth — float, floor depth at the shallow end (m, positive).
 //   lights       — float [0,1], the two underwater lamps: 0 off, 1 fully on.
 //   daylight     — float [0,1], the share of the scene's light the liner receives: 1 by day,
-//                  less at night (ARPoolDemo's NIGHT_DIMMING). ARCore owns the light in AR and
+//                  6 % at night (ARPoolDemo's NIGHT_LIGHT). ARCore owns the light in AR and
 //                  sets it again every frame, so night is made here, on the surfaces: the base
-//                  colour scales the diffuse light and the square root of the reflectance the
-//                  specular one, by the same factor. The lamps are emission, never dimmed.
+//                  colour scales the diffuse light by daylight, specularFactor the specular
+//                  light by daylight², so the glare of the day is the first thing night takes.
+//                  The lamps are emission, never dimmed.
 //   opacity      — float [0,1], the placement fade-in; 1 once the pool has landed.
 // Fade blending with depth writes: the colour is premultiplied by the opacity, and at opacity 1
 // the liner draws like an opaque surface, in the blended pass.
@@ -211,24 +212,27 @@ fragment {
         float daylight = materialParams.daylight;
         material.baseColor = float4(underwater * (opacity * daylight), opacity);
         material.roughness = 0.7;
-        // F0 = 0.16 × reflectance² and stays well under 1: √daylight scales the specular light
-        // by daylight, as the base colour does the diffuse.
-        material.reflectance = 0.3 * sqrt(daylight);
+        material.reflectance = 0.3;
+        // All of the specular light — the glare of the sky at grazing angles included, which no
+        // reflectance reaches, since Filament's image-based light takes f90 = 1 — goes by
+        // daylight², faster than the diffuse light, and is all but gone at night.
+        material.specularFactor = daylight * daylight;
+        material.specularColorFactor = float3(1.0);
         material.ambientOcclusion = cornerOcclusion(p, n);
 
-        // Two lamps half a metre under the water, mid-way along the side walls (pool_water.mat
-        // and pool_coping.mat put them at the same spot). Their light loses red on its way to
-        // the liner and again on the way up to the eye, so the pool turns from white-blue at
-        // the lamps to deep blue at the far ends. The constant is what the liner bounces into
-        // every corner.
+        // Two lamps 40 cm under the water in the side walls, three quarters of the way from the
+        // deep end to the shallow end, clear of the steps (pool_water.mat and pool_coping.mat
+        // put them at the same spot). Their light loses red on its way to the liner and again
+        // on the way up to the eye, so the pool turns from white-blue at the lamps to deep blue
+        // at the far ends. The constant is what the liner bounces into every corner.
         if (lights > 0.0) {
             float3 lampColor = float3(0.55, 0.85, 1.0);
-            float zMid = 0.5 * (materialParams.zNear + materialParams.zFar);
+            float zLamp = mix(materialParams.zNear, materialParams.zFar, 0.75);
             float3 lit = float3(0.0);
             float lens = 0.0;
             for (int i = 0; i < 2; i++) {
                 float side = i == 0 ? -1.0 : 1.0;
-                highp float3 toLamp = float3(side * materialParams.halfWidth, -0.55, zMid) - p;
+                highp float3 toLamp = float3(side * materialParams.halfWidth, -0.55, zLamp) - p;
                 float d2 = dot(toLamp, toLamp);
                 float d = sqrt(d2);
                 float3 l = toLamp / max(d, 0.01);

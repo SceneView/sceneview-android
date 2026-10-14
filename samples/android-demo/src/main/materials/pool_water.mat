@@ -10,8 +10,8 @@
 //   opacity      — float [0,1], the placement fade-in; 1 once the pool has landed.
 //   lights       — float [0,1], the two underwater lamps of pool_liner.mat: 0 off, 1 fully on.
 //   daylight     — float [0,1], the share of the scene's light the water receives, as in
-//                  pool_liner.mat: it dims the tint, the reflections and the painted sky, never
-//                  the lamp halos.
+//                  pool_liner.mat: it dims the tint by daylight, the reflections and the painted
+//                  sky by daylight², never the lamp halos.
 //   tint         — float3, linear RGB of the water's own faint colour.
 //   halfWidth    — float, half the inner width; the lamps sit in the side walls at ±halfWidth.
 //   zNear, zFar  — float, z of the deep-end wall and of the shallow-end wall (zFar < zNear).
@@ -80,17 +80,18 @@ fragment {
 
         float NoV = clamp(dot(getWorldNormalVector(), getWorldViewVector()), 0.0, 1.0);
         float fresnel = pow(1.0 - NoV, 5.0);
-        float3 sky = float3(0.55, 0.68, 0.85) * (fresnel * 0.35 * daylight);
+        // Specular light, like the reflections below: it goes by daylight².
+        float3 sky = float3(0.55, 0.68, 0.85) * (fresnel * 0.35 * daylight * daylight);
 
         // The water lights up over each lamp and fades within a metre or so of it, never as a
         // sheet over the whole pool: the rest of the glow is the liner, seen through the water.
         float3 glow = float3(0.0);
         if (lights > 0.0) {
-            float zMid = 0.5 * (materialParams.zNear + materialParams.zFar);
+            float zLamp = mix(materialParams.zNear, materialParams.zFar, 0.75);
             float near = 0.0;
             for (int i = 0; i < 2; i++) {
                 float side = i == 0 ? -1.0 : 1.0;
-                highp float3 toLamp = float3(side * materialParams.halfWidth, -0.55, zMid)
+                highp float3 toLamp = float3(side * materialParams.halfWidth, -0.55, zLamp)
                         - variable_objectPosition.xyz;
                 near += exp(-dot(toLamp, toLamp) / 0.45);
             }
@@ -101,9 +102,14 @@ fragment {
         material.baseColor = float4(materialParams.tint * (alpha * daylight), alpha);
         material.metallic = 0.0;
         material.roughness = 0.04;
-        // Water's F0 is ~0.02; fades in with the pool so the glints do not pop, and dims with
-        // the daylight like pool_liner.mat's.
-        material.reflectance = 0.35 * opacity * sqrt(daylight);
+        // Water's F0 is ~0.02.
+        material.reflectance = 0.35;
+        // All of the specular light — the glare at grazing angles included, which no reflectance
+        // reaches, since Filament's image-based light takes f90 = 1 — fades in with the pool so
+        // the glints do not pop (transparent blending never fades it by alpha), and goes by
+        // daylight², like pool_liner.mat's: no glare of the day is left on the water at night.
+        material.specularFactor = opacity * daylight * daylight;
+        material.specularColorFactor = float3(1.0);
         // This blending mode scales emission by alpha, the sheet times the fade: stated per unit
         // of sheet, the sky and the halos land at the strength written above, times the fade.
         // The halos stay local: `near` is ~0 a metre away from either lamp.
