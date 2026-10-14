@@ -470,6 +470,24 @@ NON_CATALOG_BUNDLED = {
         "sourceUrl": "https://github.com/google/filament/tree/main/third_party/environments",
         "note": "Prefiltered KTX environment shipped with Filament, used by the web demo as its default lighting",
     },
+    "studio_showroom_dark_2k.hdr": {
+        "name": "Studio showroom, dark (synthetic photo studio)",
+        "author": "SceneView project",
+        "license": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sourceUrl": "https://github.com/sceneview/sceneview/tree/main/tools/scenes/studio",
+        "note": "Generated deterministically by `tools/scenes/studio/build-hdr.mjs` (variant `dark`): "
+        "a charcoal room with an overhead softbox and strip lights, no photographic source",
+    },
+    "studio_showroom_light_2k.hdr": {
+        "name": "Studio showroom, light (synthetic photo studio)",
+        "author": "SceneView project",
+        "license": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sourceUrl": "https://github.com/sceneview/sceneview/tree/main/tools/scenes/studio",
+        "note": "Generated deterministically by `tools/scenes/studio/build-hdr.mjs` (variant `light`): "
+        "a white cyclorama with an overhead softbox and strip lights, no photographic source",
+    },
 }
 
 # ─── Blanket source licenses ──────────────────────────────────────────────────

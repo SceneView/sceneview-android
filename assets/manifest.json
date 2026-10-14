@@ -129,6 +129,24 @@
       "author": "Poly Haven"
     },
     {
+      "path": "samples/android-demo/src/main/assets/environments/studio_showroom_dark_2k.hdr",
+      "scope": "android",
+      "sha256": "d6b108d9f84ef466bf1e84e3d4d06ca2496886c2b2da07c4828bbf368542ec0c",
+      "size": 240316,
+      "source": "https://github.com/sceneview/sceneview/tree/main/tools/scenes",
+      "license": "CC0-1.0",
+      "author": "SceneView project"
+    },
+    {
+      "path": "samples/android-demo/src/main/assets/environments/studio_showroom_light_2k.hdr",
+      "scope": "android",
+      "sha256": "d5e9a345199bfa77ab627632211949c91f164b749a9539036838dc9036cb4739",
+      "size": 239601,
+      "source": "https://github.com/sceneview/sceneview/tree/main/tools/scenes",
+      "license": "CC0-1.0",
+      "author": "SceneView project"
+    },
+    {
       "path": "samples/android-demo/src/main/assets/environments/studio_warm_2k.hdr",
       "scope": "android",
       "sha256": "5a7c640c089dbb2c5b4bc731214cbc57eae28ea1c8063990a4f4659a1d7d091c",
