@@ -62,7 +62,9 @@ class LightCuesTest {
 
     @Test
     fun blinkIsLitForItsDuty() {
-        val levels = samples(0f, 10f, 10_000).map { LightCues.blink(it, periodSeconds = 1f, duty = 0.25f, softness = 0f) }
+        val levels = samples(0f, 10f, 10_000).map {
+            LightCues.blink(it, periodSeconds = 1f, duty = 0.25f, softness = 0f)
+        }
         val lit = levels.count { it > 0.5f } / levels.size.toFloat()
         assertEquals(0.25f, lit, 0.01f)
         assertEquals(1f, LightCues.blink(0.1f, 1f, 0.25f, 0f), epsilon)
