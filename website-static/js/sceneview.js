@@ -1061,14 +1061,28 @@
     // ---------------------------------------------------------------
 
     /**
-     * Set rendering quality level.
+     * Set rendering quality level: a preset, or the two switches it sets.
      *
-     * @param {string} level - 'low', 'medium', or 'high' (default: 'medium')
+     * 'low' is no ambient occlusion and no anti-aliasing, 'medium' and 'high' enable both
+     * at two sizes. The object form picks them apart — `{ ambientOcclusion: false,
+     * antiAliasing: true }` keeps FXAA on a night scene whose SSAO nobody can see — and
+     * takes 'low' / 'high' for `ambientOcclusion` to choose its size.
+     *
+     * @param {string|Object} level - 'low', 'medium', or 'high' (default: 'medium'), or
+     *   `{ ambientOcclusion: boolean|'low'|'high', antiAliasing: boolean }`
      * @returns {SceneViewInstance} this (for chaining)
      */
     setQuality(level) {
       try {
-        if (level === 'low') {
+        if (level && typeof level === 'object') {
+          var ao = level.ambientOcclusion;
+          if (ao === false) this._view.setAmbientOcclusionOptions({ enabled: false });
+          else if (ao === 'high') this._view.setAmbientOcclusionOptions({ enabled: true, radius: 0.4, bias: 0.0003, intensity: 1.2, quality: 2 });
+          else if (ao) this._view.setAmbientOcclusionOptions({ enabled: true, radius: 0.3, bias: 0.0005, intensity: 1.0, quality: 1 });
+          if (level.antiAliasing !== undefined) {
+            this._view.setAntiAliasing(level.antiAliasing ? Filament.View$AntiAliasing.FXAA : Filament.View$AntiAliasing.NONE);
+          }
+        } else if (level === 'low') {
           this._view.setAmbientOcclusionOptions({ enabled: false });
           this._view.setAntiAliasing(Filament.View$AntiAliasing.NONE);
         } else if (level === 'high') {
@@ -1112,6 +1126,174 @@
     }
 
     /**
+     * Screen-space reflections: glossy surfaces (a wet road, a polished floor, car paint)
+     * mirror what is on screen, on top of the environment reflections. Costs roughly one
+     * extra pass; turn it off on slow GPUs.
+     *
+     * @param {Object|boolean} options - true for defaults, false to disable, or
+     *   { thickness, bias, maxDistance, stride }: `thickness` (default 0.1) is how thick
+     *   on-screen objects are assumed to be, `bias` (0.01) avoids self-reflection,
+     *   `maxDistance` (3, world units) is how far a reflected ray travels, `stride` (2)
+     *   trades precision for speed.
+     * @returns {SceneViewInstance} this (for chaining)
+     */
+    setScreenSpaceReflections(options) {
+      try {
+        if (options === false) {
+          this._view.setScreenSpaceReflectionsOptions({ enabled: false });
+        } else {
+          var o = (options === true || options === undefined) ? {} : options;
+          this._view.setScreenSpaceReflectionsOptions({
+            enabled: true,
+            thickness: o.thickness !== undefined ? o.thickness : 0.1,
+            bias: o.bias !== undefined ? o.bias : 0.01,
+            maxDistance: o.maxDistance !== undefined ? o.maxDistance : 3,
+            stride: o.stride !== undefined ? o.stride : 2
+          });
+        }
+      } catch (e) { console.warn('SceneView: setScreenSpaceReflections not supported', e); }
+      return this.requestRender();
+    }
+
+    /**
+     * Distance fog (atmospheric haze). Applies to opaque geometry up to `cutOffDistance`,
+     * so a sky dome placed farther than that keeps its own colours.
+     *
+     * @param {Object|boolean} options - true for defaults, false to disable, or
+     *   { color, density, distance, height, heightFalloff, maximumOpacity, cutOffDistance,
+     *     inScatteringStart, inScatteringSize }: `color` is linear RGB [0-1], `distance`
+     *   (world units) is where the fog starts, `density` (default 0.1) its thickness,
+     *   `heightFalloff` (1) how fast it thins with altitude above `height` (0).
+     * @returns {SceneViewInstance} this (for chaining)
+     */
+    setFog(options) {
+      try {
+        if (options === false) {
+          this._view.setFogOptions({ enabled: false });
+        } else {
+          var o = (options === true || options === undefined) ? {} : options;
+          var fog = { enabled: true };
+          ['color', 'density', 'distance', 'height', 'heightFalloff', 'maximumOpacity',
+            'cutOffDistance', 'inScatteringStart', 'inScatteringSize'].forEach(function(k) {
+            if (o[k] !== undefined) fog[k] = o[k];
+          });
+          this._view.setFogOptions(fog);
+        }
+      } catch (e) { console.warn('SceneView: setFog not supported', e); }
+      return this.requestRender();
+    }
+
+    /**
+     * Vignette: darken the corners of the picture, as a camera lens does.
+     *
+     * @param {Object|boolean} options - true for defaults, false to disable, or
+     *   { midPoint, roundness, feather, color }: `midPoint` (default 0.5) is where the
+     *   darkening starts, `feather` (0.5) how soft its edge is, `color` linear RGBA.
+     * @returns {SceneViewInstance} this (for chaining)
+     */
+    setVignette(options) {
+      try {
+        if (options === false) {
+          this._view.setVignetteOptions({ enabled: false });
+        } else {
+          var o = (options === true || options === undefined) ? {} : options;
+          this._view.setVignetteOptions({
+            enabled: true,
+            midPoint: o.midPoint !== undefined ? o.midPoint : 0.5,
+            roundness: o.roundness !== undefined ? o.roundness : 0.5,
+            feather: o.feather !== undefined ? o.feather : 0.5,
+            color: o.color || [0, 0, 0, 1]
+          });
+        }
+      } catch (e) { console.warn('SceneView: setVignette not supported', e); }
+      return this.requestRender();
+    }
+
+    /**
+     * Cap the canvas resolution. The drawing buffer is `clientSize * min(devicePixelRatio,
+     * ratio)`; the default cap is 2. Lower it (1.5, 1.25, 1) when a full-screen scene
+     * with heavy effects drops frames: the picture gets softer, the frame rate goes up.
+     *
+     * @param {number} ratio - maximum device-pixel ratio, clamped to [0.5, 3]
+     * @returns {SceneViewInstance} this (for chaining)
+     */
+    setPixelRatio(ratio) {
+      if (!Number.isFinite(ratio)) return this;
+      this._maxPixelRatio = Math.max(0.5, Math.min(3, ratio));
+      this._resizeCanvas();
+      return this.requestRender();
+    }
+
+    /**
+     * Limit how far the visitor can move the orbit camera, so a drag cannot take it
+     * under the floor of a scene or a wheel turn through a wall. Every field is optional;
+     * `null` removes a limit. Heights are absolute world Y, like setCameraOrbit.
+     *
+     * @param {Object} limits
+     * @param {number|null} [limits.minHeight] - lowest eye height
+     * @param {number|null} [limits.maxHeight] - highest eye height
+     * @param {number} [limits.minRadius] - closest zoom
+     * @param {number} [limits.maxRadius] - farthest zoom
+     * @returns {SceneViewInstance} this (for chaining)
+     */
+    setOrbitLimits(limits) {
+      var l = limits || {};
+      if (l.minHeight === null || Number.isFinite(l.minHeight)) this._minHeight = l.minHeight;
+      if (l.maxHeight === null || Number.isFinite(l.maxHeight)) this._maxHeight = l.maxHeight;
+      if (Number.isFinite(l.minRadius) && l.minRadius > 0) this._minRadius = l.minRadius;
+      if (Number.isFinite(l.maxRadius) && l.maxRadius > 0) { this._maxRadius = l.maxRadius; this._applyProjection(); }
+      return this.requestRender();
+    }
+
+    /** Keep the orbit inside setOrbitLimits(). @private */
+    _clampOrbit() {
+      if (typeof this._minHeight === 'number' && this._orbitHeight < this._minHeight) {
+        this._orbitHeight = this._minHeight; this._velocityHeight = 0;
+      }
+      if (typeof this._maxHeight === 'number' && this._orbitHeight > this._maxHeight) {
+        this._orbitHeight = this._maxHeight; this._velocityHeight = 0;
+      }
+    }
+
+    /**
+     * Cap the drawing buffer at a number of pixels, whatever the canvas size and the
+     * display density. A full-bleed canvas on a 2x display is 4 to 6 megapixels; with
+     * shadows, ambient occlusion and bloom every one of them costs, and when the GPU
+     * falls behind Filament skips frames in steps (60 → 40 → 30 per second). Under a
+     * budget the device-pixel ratio scales down (never up, never under 0.5) so the
+     * buffer stays within it: the picture gets a little softer, the frame rate holds.
+     * Combine with setPixelRatio(): the lower of the two wins. `null` removes the cap.
+     *
+     * @param {number|null} pixels - largest drawing buffer, in pixels (e.g. 1.2e6)
+     * @returns {SceneViewInstance} this (for chaining)
+     */
+    setPixelBudget(pixels) {
+      this._pixelBudget = (Number.isFinite(pixels) && pixels > 0) ? pixels : null;
+      this._resizeCanvas();
+      return this.requestRender();
+    }
+
+    /** Size the drawing buffer from the CSS size and the pixel-ratio cap. @private */
+    _resizeCanvas() {
+      var canvas = this._canvas;
+      var dpr = Math.min(devicePixelRatio, this._maxPixelRatio || 2);
+      if (this._pixelBudget) {
+        var px = canvas.clientWidth * canvas.clientHeight * dpr * dpr;
+        if (px > this._pixelBudget) dpr = Math.max(0.5, dpr * Math.sqrt(this._pixelBudget / px));
+      }
+      var w = Math.max(1, Math.round(canvas.clientWidth * dpr));
+      var h = Math.max(1, Math.round(canvas.clientHeight * dpr));
+      if (canvas.width === w && canvas.height === h) return;
+      canvas.width = w;
+      canvas.height = h;
+      this._view.setViewport([0, 0, w, h]);
+      this._applyProjection();
+      // Resizing clears the drawing buffer: redraw now if the loop is parked
+      // (off-screen, or idle in 'onDemand' mode), synchronously to avoid a blank flash.
+      this._primeFrame();
+    }
+
+    /**
      * Add a custom light to the scene.
      *
      * @param {Object} options
@@ -1121,6 +1303,10 @@
      * @param {number[]} [options.direction=[0,-1,0]] - Direction for directional/spot lights
      * @param {number[]} [options.position=[0,2,0]] - Position for point/spot lights
      * @param {number} [options.falloff=10] - Falloff radius for point/spot lights
+     * @param {boolean} [options.castShadows=false] - Cast shadows (directional and spot
+     *   lights; each shadow-casting light costs one extra depth pass)
+     * @param {number} [options.innerCone] - Spot only: inner cone half-angle, radians
+     * @param {number} [options.outerCone] - Spot only: outer cone half-angle, radians
      * @returns {Object} Filament Entity handle (pass it to removeLight or removeNode to delete)
      */
     addLight(options) {
@@ -1149,6 +1335,13 @@
         .direction(direction);
 
       if (type === 'point' || type === 'spot') builder.falloff(falloff);
+      if (type === 'spot' && Number.isFinite(options.outerCone)) {
+        builder.spotLightCone(
+          Number.isFinite(options.innerCone) ? options.innerCone : options.outerCone * 0.6,
+          options.outerCone
+        );
+      }
+      if (options.castShadows === true && type !== 'point') builder.castShadows(true);
       builder.build(this._engine, entity);
 
       if (type === 'point' || type === 'spot') {
@@ -1172,6 +1365,136 @@
       this._lightEntities.add(entity);
       this.requestRender();
       return entity;
+    }
+
+    /**
+     * Change a light after addLight(): the same fields, every one optional, only what
+     * you pass is touched. Cheap enough to call every frame, which is how a light gets
+     * animated — a headlight flashing, a beacon blinking, a lamp warming up:
+     *
+     *     sv.setLight(headlight, { intensity: 3e7 });
+     *     sv.setLight(beacon, { color: [1, 0.05, 0.02], intensity: on ? 2e6 : 0 });
+     *
+     * Shadow casting cannot change after creation: remove the light and add it again.
+     *
+     * @param {Object} entity - the handle addLight() returned
+     * @param {Object} options - color, intensity, direction, position, falloff,
+     *   innerCone, outerCone, as in addLight()
+     * @returns {SceneViewInstance} this (for chaining)
+     */
+    setLight(entity, options) {
+      options = options || {};
+      var lm = this._engine.getLightManager();
+      if (!lm.hasComponent(entity)) return this;
+      var li = lm.getInstance(entity);
+      if (options.color) lm.setColor(li, options.color);
+      if (Number.isFinite(options.intensity)) lm.setIntensity(li, options.intensity);
+      if (options.direction) lm.setDirection(li, options.direction);
+      if (Number.isFinite(options.falloff)) lm.setFalloff(li, options.falloff);
+      if (Number.isFinite(options.outerCone)) {
+        lm.setSpotLightCone(li,
+          Number.isFinite(options.innerCone) ? options.innerCone : options.outerCone * 0.6,
+          options.outerCone);
+      }
+      if (options.position) {
+        var tm = this._engine.getTransformManager();
+        if (!tm.hasComponent(entity)) tm.create(entity);
+        var p = options.position;
+        tm.setTransform(tm.getInstance(entity), [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, p[0], p[1], p[2], 1]);
+      }
+      return this.requestRender();
+    }
+
+    /**
+     * The material names of the loaded model, as authored in the glTF (what
+     * setMaterial() matches). Empty until loadModel() resolves.
+     *
+     * @returns {string[]} names, in the order the model lists them
+     */
+    getMaterialNames() {
+      return Object.keys(this._materialIndex());
+    }
+
+    /**
+     * Change a material of the loaded model at run time: its colour, emission,
+     * roughness or metalness, on every primitive that uses it. The name is the glTF
+     * material name, or a RegExp over it. Only the fields you pass change, so a call a
+     * frame animates a material — a start light turning red, a neon flickering, a
+     * screen fading in:
+     *
+     *     sv.setMaterial('Light startRed', { emissiveStrength: on ? 22 : 0 });
+     *     sv.setMaterial(/^Light /, { emissive: [1, 0.7, 0.4], emissiveStrength: 6 });
+     *
+     * Emission is `emissive` (linear RGB, 0-1) times `emissiveStrength` (1 = display
+     * white, above it blooms); the glTF's own KHR_materials_emissive_strength is the
+     * starting value. A material that has no such parameter (an unlit one, for
+     * instance) is skipped for that field.
+     *
+     * @param {string|RegExp} name - glTF material name, or a pattern over it
+     * @param {Object} props
+     * @param {number[]} [props.emissive] - emissive colour [r, g, b], linear
+     * @param {number} [props.emissiveStrength] - emissive multiplier
+     * @param {number[]} [props.baseColor] - base colour [r, g, b] or [r, g, b, a], linear
+     * @param {number} [props.roughness] - 0 (mirror) to 1 (matte)
+     * @param {number} [props.metallic] - 0 (dielectric) to 1 (metal)
+     * @returns {SceneViewInstance} this (for chaining)
+     */
+    setMaterial(name, props) {
+      props = props || {};
+      var index = this._materialIndex(), keys = Object.keys(index), hits = [];
+      for (var i = 0; i < keys.length; i++) {
+        if (name instanceof RegExp ? name.test(keys[i]) : keys[i] === name) hits = hits.concat(index[keys[i]]);
+      }
+      if (hits.length === 0) return this;
+      var set = function(mi, kind, param, value) {
+        try {
+          if (kind === 'f') mi.setFloatParameter(param, value);
+          else if (kind === 'f3') mi.setFloat3Parameter(param, value);
+          else mi.setFloat4Parameter(param, value);
+        } catch (e) { /* the material has no such parameter (e.g. unlit) */ }
+      };
+      hits.forEach(function(mi) {
+        if (props.emissive) set(mi, 'f3', 'emissiveFactor', props.emissive);
+        if (Number.isFinite(props.emissiveStrength)) set(mi, 'f', 'emissiveStrength', props.emissiveStrength);
+        if (props.baseColor) {
+          var c = props.baseColor;
+          set(mi, 'f4', 'baseColorFactor', [c[0], c[1], c[2], Number.isFinite(c[3]) ? c[3] : 1]);
+        }
+        if (Number.isFinite(props.roughness)) set(mi, 'f', 'roughnessFactor', props.roughness);
+        if (Number.isFinite(props.metallic)) set(mi, 'f', 'metallicFactor', props.metallic);
+      });
+      return this.requestRender();
+    }
+
+    /**
+     * Material instances of the loaded model, by glTF material name. Built once per
+     * asset from the RenderableManager (the gltfio asset exposes no list of its own
+     * in the JS binding) and dropped with the asset.
+     * @private
+     */
+    _materialIndex() {
+      var asset = this._asset;
+      if (this._materials && this._materialsAsset === asset) return this._materials;
+      var index = {};
+      if (asset) {
+        try {
+          var rm = this._engine.getRenderableManager();
+          var ents = asset.getRenderableEntities();
+          var n = ents.size ? ents.size() : ents.length;
+          for (var i = 0; i < n; i++) {
+            var e = ents.get ? ents.get(i) : ents[i];
+            if (!rm.hasComponent(e)) continue;
+            var inst = rm.getInstance(e), count = rm.getPrimitiveCount(inst);
+            for (var p = 0; p < count; p++) {
+              var mi = rm.getMaterialInstanceAt(inst, p), key = mi.getName();
+              (index[key] = index[key] || []).push(mi);
+            }
+          }
+        } catch (e) { /* no renderables yet */ }
+      }
+      this._materials = index;
+      this._materialsAsset = asset;
+      return index;
     }
 
     // ---------------------------------------------------------------
@@ -2011,6 +2334,29 @@
       job.loader.delete();
       job.stb.delete();
       job.ktx2.delete();
+      if (this._resourceLoads.size === 0 && this._readyWaiters) {
+        var waiters = this._readyWaiters;
+        this._readyWaiters = null;
+        waiters.forEach(function(done) { done(); });
+      }
+    }
+
+    /**
+     * Resolves once the picture is complete: every texture of the models loaded so far
+     * is decoded and the environment given at creation (`iblUrl`) is in.
+     * `loadModel()` resolves as soon as the geometry is on screen; gltfio decodes the
+     * textures after that, one per 30 ms tick, and the environment has its own download,
+     * so the first frames show the model partly dressed and unlit by its surroundings.
+     * Await this before revealing the canvas (a poster hand-off, a screenshot).
+     * Resolves at once when nothing is loading, and on dispose().
+     * @returns {Promise<SceneViewInstance>}
+     */
+    whenReady() {
+      var self = this;
+      var textures = (this._disposed || this._resourceLoads.size === 0) ? Promise.resolve() :
+        new Promise(function(resolve) { (self._readyWaiters = self._readyWaiters || []).push(resolve); });
+      return Promise.all([textures, this._environmentReady || Promise.resolve()])
+        .then(function() { return self; });
     }
 
     /**
@@ -2154,7 +2500,8 @@
      */
     _loadDefaultEnvironment(url, intensity) {
       var self = this;
-      this._fetch(url)
+      // Kept for whenReady(): settles (never rejects) once the environment is applied.
+      this._environmentReady = this._fetch(url)
         .then(function(r) {
           if (!r.ok) throw new Error('HTTP ' + r.status);
           return r.arrayBuffer().then(function(ab) { return new Uint8Array(ab); });
@@ -2527,15 +2874,8 @@
     _setupResizeObserver() {
       var self = this;
       this._resizeObserver = new ResizeObserver(function() {
-        var canvas = self._canvas;
-        var dpr = Math.min(devicePixelRatio, 2); // Cap at 2x for performance
-        canvas.width = canvas.clientWidth * dpr;
-        canvas.height = canvas.clientHeight * dpr;
-        self._view.setViewport([0, 0, canvas.width, canvas.height]);
-        self._applyProjection();
-        // Resizing clears the drawing buffer: redraw now if the loop is parked
-        // (off-screen, or idle in 'onDemand' mode), synchronously to avoid a blank flash.
-        self._primeFrame();
+        // Capped at 2x for performance, or at setPixelRatio()'s value.
+        self._resizeCanvas();
       });
       this._resizeObserver.observe(this._canvas);
     }
@@ -2594,6 +2934,7 @@
      */
     _drawFrame() {
       var self = this;
+      self._clampOrbit();
       var t = self._orbitTarget;
       var r = self._orbitRadius;
       var h = self._orbitHeight;
@@ -2830,12 +3171,15 @@
      * rig installed at engine creation). Useful when you want a truly custom
      * lighting setup with addLight().
      *
-     * Note: the IBL / environment is not affected — use loadEnvironment(null)
-     * or re-init the engine to clear indirect lighting.
+     * By default the IBL / environment goes too, so the lights you add are the
+     * only ones left. Pass `{ keepEnvironment: true }` to keep the environment
+     * given at creation (`iblUrl`) — the reflections stay, the studio rig goes.
      *
+     * @param {Object} [options]
+     * @param {boolean} [options.keepEnvironment=false] - Keep the IBL / environment
      * @returns {SceneViewInstance} this (for chaining)
      */
-    clearLights() {
+    clearLights(options) {
       if (this._baseLights && this._baseLights.length > 0) {
         var self = this;
         this._baseLights.forEach(function(entity) {
@@ -2844,7 +3188,9 @@
         this._baseLights = [];
       }
       // Also drop IBL so the user-provided lights dominate
-      try { this._setIndirectLight(null); } catch (e) { /* ignore */ }
+      if (!(options && options.keepEnvironment)) {
+        try { this._setIndirectLight(null); } catch (e) { /* ignore */ }
+      }
       return this.requestRender();
     }
 

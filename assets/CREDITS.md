@@ -12,7 +12,7 @@ Source of truth: [`assets/catalog.json`](catalog.json). This file is generated
 by [`.claude/scripts/generate-credits.py`](../.claude/scripts/generate-credits.py).
 Re-run the script after any catalog edit to keep both files in sync.
 
-Total models: **142** (plus 6 pending metadata, 8 pending license review).
+Total models: **143** (plus 6 pending metadata, 8 pending license review).
 
 ---
 
@@ -135,6 +135,7 @@ Total models: **142** (plus 6 pending metadata, 8 pending license review).
 - **[Iridescent Dish with Olives](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/IridescentDishWithOlives)** by Wayfair, LLC (Eric Chadwick) — [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/)
 - **[Lantern](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/Lantern)** by Microsoft — [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/)
 - **[Materials Variants Shoe](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/MaterialsVariantsShoe)** by Shopify — [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/)
+- **[Night Circuit (Car Concept on a start grid)](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/CarConcept)** by Darmstadt Graphics Group GmbH (Eric Chadwick); set by SceneView — [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/)
 - **[Sheen Chair](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/SheenChair)** by Wayfair, LLC (Eric Chadwick) — [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/)
 - **[Sheen Chair (web demo)](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/SheenChair)** by Wayfair, LLC (Eric Chadwick) — [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/)
 - **[Sunglasses](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/SunglassesKhronos)** by Darmstadt Graphics Group GmbH (Eric Chadwick) — [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/)

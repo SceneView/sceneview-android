@@ -301,6 +301,38 @@ code, pre, kbd { font-family: var(--font-mono); font-size: .875em; }
 .hero__specs b { font-size: clamp(1.75rem, 1.2rem + 1.4vw, 2.5rem); line-height: 1.1; letter-spacing: var(--tracking-head); font-weight: 600; }
 .hero__specs code { font-size: .8125rem; color: var(--stage-fg-2); }
 
+/* ── Hero, scene variant (.hero--scene) ───────────────────────
+ * The stage is a whole picture rendered by SceneView Web (assets/scenes/), not an
+ * object in the CSS studio: no wall, no CSS shadow, no reflection. It is a night
+ * picture in both themes, so the hero carries .night (tokens.css): in the light theme
+ * it ends on a clean edge.
+ * Phone: a square picture under the header that fades into the copy below it.
+ * Desktop: the picture is the whole pinned screen and the copy sits on its left,
+ * over a veil; scrolling turns the camera (site.js) instead of moving the box. */
+.hero--scene::after { z-index: 2; }
+.hero--scene .stage__box { width: 100%; aspect-ratio: 1; }
+.hero--scene .stage__box::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 30%; background: linear-gradient(to bottom, var(--media-veil-0), var(--stage-bg)); pointer-events: none; }
+.hero--scene .stage__frame { transform: none; -webkit-box-reflect: none; }
+.hero--scene .stage__poster { object-fit: cover; object-position: 100% 50%; }
+/* The canvas is opaque: the poster stays under it, so the hand-off never dips to the background. */
+.hero--scene .hero__stage.is-live .stage__poster { opacity: 1; }
+/* Phone: the credit is a caption at the foot of the picture, where it has faded to the night colour. */
+.hero--scene .hero__stage .stage__credit { top: auto; bottom: 0; right: var(--gutter); }
+.hero--scene .stage__credit a { pointer-events: auto; color: var(--stage-fg); text-decoration: underline; text-underline-offset: 2px; }
+.hero--scene .hero__copy { padding-top: var(--s-4); }
+@media (min-width: 600px) { .hero--scene .stage__box { aspect-ratio: 16 / 10; } }
+@media (min-width: 960px) and (min-height: 600px) {
+  .hero--scene .hero__stage { inset: 0; width: auto; }
+  .hero.hero--scene .hero__stage .stage__box { height: 100%; aspect-ratio: auto; transform: none; }
+  .hero--scene .stage__box::after { top: 0; height: auto; background: linear-gradient(90deg, var(--media-veil) 0%, var(--media-veil) 16%, color-mix(in srgb, var(--media-veil) 74%, transparent) 35%, color-mix(in srgb, var(--media-veil) 34%, transparent) 48%, var(--media-veil-0) 62%); }
+  .hero--scene .stage__controls { top: calc(var(--header-h) + 12px); left: auto; right: var(--R); }
+  /* On the full-screen picture the credit can lie on a bright patch: it takes the controls' glass chip. */
+  .hero--scene .hero__stage .stage__credit { left: auto; bottom: 28px; right: var(--R); padding: 6px 12px; border-radius: var(--r-full); background: var(--stage-chip); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+  .hero--scene .hero__copy { width: min(560px, 44vw); padding-top: 0; }
+  .hero--scene .lead { max-width: 30rem; }
+}
+.hero--scene.has-scroll-fx .hero__stage { transform: none; }
+
 /* ── Sections ─────────────────────────────────────────────── */
 .section { padding-block: var(--section-y); position: relative; }
 .section__head { display: grid; gap: var(--s-4); margin-bottom: var(--s-7); max-width: 46rem; }
@@ -485,16 +517,8 @@ code, pre, kbd { font-family: var(--font-mono); font-size: .875em; }
 .numbers dd { order: 1; margin: 0; font-size: clamp(2.25rem, 1.6rem + 2.4vw, 3.5rem); font-weight: 600; letter-spacing: -0.04em; line-height: 1; font-variant-numeric: tabular-nums; }
 .numbers dd a { text-decoration: underline; text-decoration-color: var(--hairline); text-decoration-thickness: 2px; text-underline-offset: 6px; }
 .numbers dd a:hover { text-decoration-color: var(--accent); }
-.orgs { margin-top: var(--s-7); }
-.orgs__list { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
-.orgs__list a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border-radius: var(--r-full); border: 1px solid var(--outline); background: var(--surface-1); font-weight: 600; font-size: .9375rem; color: var(--text); }
-.orgs__list a:hover { border-color: var(--text-2); }
+.numbers__source { margin-top: var(--s-6); }
 .numbers__lead { grid-column: 1 / -1; }
-.orgs__list .adoption-org__link { gap: 8px; }
-.adoption-org__what { font-weight: 400; font-size: .8125rem; color: var(--text-2); }
-.orgs__more { margin: 12px 0 0; }
-.orgs__more a { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-weight: 600; font-size: .9375rem; color: var(--text); }
-.orgs__more a:hover { color: var(--accent); }
 @media (min-width: 720px) { .numbers { grid-template-columns: repeat(6, minmax(0, 1fr)); } .numbers__lead { grid-column: span 2; } }
 
 /* ── Compare + FAQ ────────────────────────────────────────── */

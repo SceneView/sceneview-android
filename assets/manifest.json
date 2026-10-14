@@ -785,6 +785,15 @@
       "author": "Loïc Norgeot"
     },
     {
+      "path": "website-static/models/platforms/NightCircuit.glb",
+      "scope": "web",
+      "sha256": "e36f8a9a5ea6fd2957e49422fd104e739c192ac37b27e5057a7ffe6312982609",
+      "size": 4244656,
+      "source": "https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/CarConcept",
+      "license": "CC-BY-4.0",
+      "author": "Darmstadt Graphics Group GmbH (Eric Chadwick); set by SceneView"
+    },
+    {
       "path": "website-static/models/platforms/NightCity.glb",
       "scope": "web",
       "sha256": "0f484f70c311cd85b6f22876372d668d67f98fbe608173dcb0fe8541c7e8c6ff",
