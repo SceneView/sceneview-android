@@ -1,0 +1,93 @@
+// pool_coping.mat — see CONTRIBUTING.md "Filament runtime ↔ .filamat ABI invariant"
+//
+// Purpose:    The light stone coping around the in-ground pool AR demo: 50 cm slabs with
+//             mitred corners and thin joints, each slab a touch lighter or darker than the
+//             next, a fine weathered grain, and at night the glow the pool lamps throw on the
+//             bullnose.
+// Used by:    samples/android-demo ARPoolDemo — nothing in the SDK.
+// Parameters:
+//   halfWidth    — float, half the inner width of the pool; the side walls stand at ±halfWidth.
+//   zNear, zFar  — float, z of the deep-end wall and of the shallow-end wall (zFar < zNear).
+//   stone        — float3, linear RGB of the stone.
+//   night        — float [0,1], 1 lights the inner edge from the pool.
+// matc profile: mobile-only, OpenGL + Vulkan — demo APK asset, not an AAR asset.
+material {
+    "name" : "Pool Coping",
+    "parameters" : [
+        { "type" : "float",  "name" : "halfWidth" },
+        { "type" : "float",  "name" : "zNear" },
+        { "type" : "float",  "name" : "zFar" },
+        { "type" : "float3", "name" : "stone" },
+        { "type" : "float",  "name" : "night" }
+    ],
+    "requires" : [ "position" ],
+    "variables" : [ { "name" : "objectPosition", "precision" : "high" } ],
+    "shadingModel" : "lit",
+    "blending" : "opaque",
+    "specularAntiAliasing" : true
+}
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        material.objectPosition = float4(getPosition().xyz, 0.0);
+    }
+}
+fragment {
+    highp float stoneHash(highp float3 p) {
+        p = fract(p * 0.3183099 + 0.1);
+        p *= 17.0;
+        return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+    }
+
+    float stoneNoise(highp float3 x) {
+        highp float3 i = floor(x);
+        highp float3 f = fract(x);
+        f = f * f * (3.0 - 2.0 * f);
+        return mix(
+                mix(mix(stoneHash(i), stoneHash(i + float3(1.0, 0.0, 0.0)), f.x),
+                        mix(stoneHash(i + float3(0.0, 1.0, 0.0)), stoneHash(i + float3(1.0, 1.0, 0.0)), f.x),
+                        f.y),
+                mix(mix(stoneHash(i + float3(0.0, 0.0, 1.0)), stoneHash(i + float3(1.0, 0.0, 1.0)), f.x),
+                        mix(stoneHash(i + float3(0.0, 1.0, 1.0)), stoneHash(i + float3(1.0, 1.0, 1.0)), f.x),
+                        f.y),
+                f.z);
+    }
+
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+
+        highp float3 p = variable_objectPosition.xyz;
+        float zMid = 0.5 * (materialParams.zNear + materialParams.zFar);
+        float halfLength = 0.5 * (materialParams.zNear - materialParams.zFar);
+        // How far outside the water's edge, across the side runs and across the end runs.
+        float dx = abs(p.x) - materialParams.halfWidth;
+        float dz = abs(p.z - zMid) - halfLength;
+        bool sideRun = dx > dz;
+
+        // Slabs every 50 cm along each run, mitred at the four corners.
+        highp float along = sideRun ? p.z - zMid : p.x;
+        highp float u = along / 0.5;
+        highp float slab = floor(u + 0.5);
+        float jointDistance = abs(u - slab) * 0.5;
+        if (dx > -0.03 && dz > -0.03) {
+            jointDistance = min(jointDistance, abs(dx - dz) * 0.7071);
+        }
+        float joint = 1.0 - smoothstep(0.002, 0.004, jointDistance);
+        float run = sideRun ? (p.x > 0.0 ? 100.0 : 200.0) : (p.z > zMid ? 300.0 : 400.0);
+        float3 color = materialParams.stone * (0.92 + 0.16 * stoneHash(float3(slab + run, 7.0, 3.0)));
+
+        // Weathered grain; the fine octave fades out before it can shimmer.
+        float coarse = stoneNoise(p * 40.0);
+        float fine = stoneNoise(p * 160.0);
+        float fineFade = 1.0 - smoothstep(0.4, 1.0, length(fwidth(p * 160.0)));
+        color *= 0.9 + 0.12 * coarse + 0.06 * fine * fineFade;
+        color *= mix(1.0, 0.55, joint);
+
+        material.baseColor = float4(color, 1.0);
+        material.roughness = mix(0.78, 0.9, coarse);
+        material.reflectance = 0.4;
+
+        float edge = max(dx, dz);
+        float glow = 1.0 - smoothstep(-0.025, 0.01, edge);
+        material.emissive = float4(float3(0.05, 0.35, 0.45) * (0.5 * glow * materialParams.night), 0.0);
+    }
+}

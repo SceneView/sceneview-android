@@ -1,0 +1,82 @@
+// pool_water.mat — see CONTRIBUTING.md "Filament runtime ↔ .filamat ABI invariant"
+//
+// Purpose:    The surface of the in-ground pool AR demo: a clear sheet of water with moving
+//             ripples, the sky mirrored at grazing angles and, at night, the glow of the
+//             underwater lights. Everything seen *through* it — the colour depth gives the
+//             liner, the caustics, the wobble — is drawn by pool_liner.mat, so the surface
+//             stays a thin, cheap transparent layer over an opaque pool.
+// Used by:    samples/android-demo ARPoolDemo — nothing in the SDK.
+// Parameters:
+//   opacity — float [0,1], the placement fade-in; 1 once the pool has landed.
+//   night   — float [0,1], 1 lights the pool from inside and drops the sky reflection.
+//   tint    — float3, linear RGB of the water's own faint colour.
+// matc profile: mobile-only, OpenGL + Vulkan — demo APK asset, not an AAR asset.
+//
+// The ripples are five directional sine waves summed in the pool's own (model) space, so they
+// stay put on the water while the pool is moved, and scale with it. Each wave turns with
+// getUserTimeMod() over its own period, so no phase ever jumps. pool_liner.mat sums the very
+// same waves to bend what lies underneath: keep the two lists identical.
+material {
+    "name" : "Pool Water",
+    "parameters" : [
+        { "type" : "float",  "name" : "opacity" },
+        { "type" : "float",  "name" : "night" },
+        { "type" : "float3", "name" : "tint" }
+    ],
+    "requires" : [ "position" ],
+    "variables" : [ { "name" : "objectPosition", "precision" : "high" } ],
+    "shadingModel" : "lit",
+    "blending" : "transparent",
+    "specularAntiAliasing" : true,
+    "doubleSided" : false
+}
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        material.objectPosition = float4(getPosition().xyz, 0.0);
+    }
+}
+fragment {
+    // Slope (dh/dx, dh/dz) of one wave. Deep-water dispersion, slowed for a still garden pool.
+    highp float2 poolWave(highp float2 p, highp float2 direction, highp float wavelength,
+            highp float steepness) {
+        highp float k = 6.2831853 / wavelength;
+        highp float omega = sqrt(9.81 * k) * 0.45;
+        highp float phase = dot(direction, p) * k - getUserTimeMod(6.2831853 / omega) * omega;
+        return direction * (steepness * cos(phase));
+    }
+
+    highp float2 poolSlope(highp float2 p) {
+        highp float2 s = poolWave(p, float2(0.940, 0.342), 0.90, 0.026);
+        s += poolWave(p, float2(0.819, -0.574), 0.55, 0.020);
+        s += poolWave(p, float2(0.259, 0.966), 0.31, 0.015);
+        s += poolWave(p, float2(-0.819, 0.574), 0.19, 0.012);
+        s += poolWave(p, float2(-0.342, -0.940), 0.13, 0.008);
+        return s;
+    }
+
+    void material(inout MaterialInputs material) {
+        highp float2 slope = poolSlope(variable_objectPosition.xz);
+        // Tangent frame of the up-facing quad: T = +X, B = -Z, N = +Y.
+        material.normal = normalize(float3(-slope.x, slope.y, 1.0));
+        prepareMaterial(material);
+
+        float opacity = materialParams.opacity;
+        float night = materialParams.night;
+        float alpha = 0.10 * opacity;
+
+        float NoV = clamp(dot(getWorldNormalVector(), getWorldViewVector()), 0.0, 1.0);
+        float fresnel = pow(1.0 - NoV, 5.0);
+        float3 sky = float3(0.55, 0.68, 0.85) * (fresnel * 0.35 * (1.0 - night));
+        float3 glow = float3(0.05, 0.35, 0.45) * (night * 0.6);
+
+        // Transparent blending takes a premultiplied colour.
+        material.baseColor = float4(materialParams.tint * alpha, alpha);
+        material.metallic = 0.0;
+        material.roughness = 0.04;
+        // Water's F0 is ~0.02; fades in with the pool so the glints do not pop.
+        material.reflectance = 0.35 * opacity;
+        // Emission is scaled by alpha in this blending mode: divide it back out so the sky and
+        // the night glow land at their own strength, times the fade.
+        material.emissive = float4((sky + glow) / 0.10, 0.0);
+    }
+}
