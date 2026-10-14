@@ -48,6 +48,10 @@ for (const t of tex) {
   else if (bytes > 90000 && t.getMimeType() === 'image/png') reencode(t, ['-q:v', '2'], 'image/jpeg');
 }
 
+// The car's own nodes, before the set joins them in the scene (the contact shadow below
+// is baked from their geometry).
+const carNodes = scene.listChildren().slice();
+
 // ── Set geometry, merged per material ──
 class Geo {
   constructor() { this.p = []; this.n = []; this.uv = []; this.i = []; }
@@ -130,7 +134,10 @@ for (const [name, geo] of Object.entries(lit)) {
   water.quad([-X, y, Z], [X, y, Z], [X, y, -Z], [-X, y, -Z], [[-X / T, Z / T], [X / T, Z / T], [X / T, -Z / T], [-X / T, -Z / T]]);
   addMesh('Water', water, doc.createMaterial('Standing water')
     .setBaseColorTexture(t('puddles.png', 'image/png')).setAlphaMode('MASK').setAlphaCutoff(0.5)
-    .setRoughnessFactor(0.03).setMetallicFactor(0));
+    // 0.16, not a mirror: without SSR the water only reflects the 256-px environment map,
+    // and at 0.03 each of its texels came out as a blurred block of floodlight on the road
+    // near the camera. 0.16 samples a rougher mip and reads as wet asphalt, not squares.
+    .setRoughnessFactor(0.16).setMetallicFactor(0));
 }
 
 // ── Sky dome: unlit, vertex colours from the same sky() the environment map uses ──
@@ -210,6 +217,87 @@ const fadeMaterial = (name, rgba) => {
   cone([0.72, 0.66, 2.35], [0.06, -0.05, 1], 7.5, 0.1, 1.25, 18);
   cone([-0.72, 0.66, 2.35], [-0.06, -0.05, 1], 7.5, 0.1, 1.25, 18);
   addMesh('Beams', geo, fadeMaterial('Beam', [0.72, 0.85, 1, 0.045]));
+}
+
+// ── Contact shadow: the ground under the car, darkened by what hangs over it. Without SSR
+//    nothing in the frame occludes the wet ground's reflection of the sky under the body, and
+//    the tyres stood on a bright mirror: the car floated. Baked from the car's geometry: a
+//    top-down height field (lowest surface over each 2 cm cell), turned into ambient
+//    occlusion at three scales (tyre contact patches, the underbody, a wide soft skirt), and
+//    laid on the ground as one unlit blended black quad whose alpha is that occlusion —
+//    over the asphalt and the standing water, so it dims their reflections too. ──
+{
+  const X0 = -2.6, X1 = 2.6, Z0 = -3.5, Z1 = 4.0, W = 256, H = 384, cw = (X1 - X0) / W, ch = (Z1 - Z0) / H;
+  const low = new Float32Array(W * H).fill(Infinity);
+  const v = [0, 0, 0], tri = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+  const world = (M, p, o) => { o[0] = M[0] * p[0] + M[4] * p[1] + M[8] * p[2] + M[12]; o[1] = M[1] * p[0] + M[5] * p[1] + M[9] * p[2] + M[13]; o[2] = M[2] * p[0] + M[6] * p[1] + M[10] * p[2] + M[14]; };
+  for (const top of carNodes) top.traverse((node) => {
+    const mesh = node.getMesh(); if (!mesh) return;
+    const M = node.getWorldMatrix();
+    for (const prim of mesh.listPrimitives()) {
+      const pos = prim.getAttribute('POSITION'), idx = prim.getIndices(), n = idx ? idx.getCount() : pos.getCount();
+      for (let k = 0; k + 2 < n; k += 3) {
+        for (let j = 0; j < 3; j++) { pos.getElement(idx ? idx.getScalar(k + j) : k + j, v); world(M, v, tri[j]); }
+        const [a, b, c] = tri;
+        if (Math.min(a[1], b[1], c[1]) > 0.8) continue;                    // roof and glass shade nothing more than the body under them
+        const ix0 = Math.max(0, Math.floor((Math.min(a[0], b[0], c[0]) - X0) / cw)), ix1 = Math.min(W - 1, Math.floor((Math.max(a[0], b[0], c[0]) - X0) / cw));
+        const iz0 = Math.max(0, Math.floor((Math.min(a[2], b[2], c[2]) - Z0) / ch)), iz1 = Math.min(H - 1, Math.floor((Math.max(a[2], b[2], c[2]) - Z0) / ch));
+        const d = (b[0] - a[0]) * (c[2] - a[2]) - (c[0] - a[0]) * (b[2] - a[2]);
+        if (Math.abs(d) < 1e-12) {                                          // seen edge-on from above: keep its vertices
+          for (const p of tri) { const ix = Math.floor((p[0] - X0) / cw), iz = Math.floor((p[2] - Z0) / ch); if (ix >= 0 && ix < W && iz >= 0 && iz < H) low[iz * W + ix] = Math.min(low[iz * W + ix], p[1]); }
+          continue;
+        }
+        for (let iz = iz0; iz <= iz1; iz++) for (let ix = ix0; ix <= ix1; ix++) {
+          const px = X0 + (ix + 0.5) * cw, pz = Z0 + (iz + 0.5) * ch;
+          const u = ((b[0] - px) * (c[2] - pz) - (c[0] - px) * (b[2] - pz)) / d, w = ((c[0] - px) * (a[2] - pz) - (a[0] - px) * (c[2] - pz)) / d, t = 1 - u - w;
+          if (u < -1e-6 || w < -1e-6 || t < -1e-6) continue;
+          const y = u * a[1] + w * b[1] + t * c[1];
+          if (y < low[iz * W + ix]) low[iz * W + ix] = y;
+        }
+      }
+    }
+  });
+  // Separable Gaussian blur of a W x H field, sigma in metres.
+  const blur = (src, sigma) => {
+    const out = new Float32Array(src.length), tmp = new Float32Array(src.length);
+    const pass = (from, to, len, stride, count, step, cell) => {
+      const s = sigma / cell, r = Math.ceil(s * 3), k = []; let sum = 0;
+      for (let i = -r; i <= r; i++) { const e = Math.exp(-(i * i) / (2 * s * s)); k.push(e); sum += e; }
+      for (let line = 0; line < count; line++) for (let i = 0; i < len; i++) {
+        let acc = 0;
+        for (let j = -r; j <= r; j++) { const q = i + j; if (q >= 0 && q < len) acc += from[line * step + q * stride] * k[j + r]; }
+        to[line * step + i * stride] = acc / sum;
+      }
+    };
+    pass(src, tmp, W, 1, H, W, cw); pass(tmp, out, H, W, W, 1, ch);
+    return out;
+  };
+  const field = (f) => { const o = new Float32Array(W * H); for (let i = 0; i < o.length; i++) o[i] = f(low[i]); return o; };
+  const contact = blur(field((y) => (y < 0.05 ? 1 : 0)), 0.035);          // where the tyres meet the ground
+  const under = blur(field((y) => (y < 0.8 ? Math.exp(-Math.max(0, y - 0.08) / 0.35) : 0)), 0.16);  // the underbody, the lower the darker
+  const skirt = blur(field((y) => (y < 0.8 ? 1 : 0)), 0.45);               // the whole car, the sky it hides
+  const rgba = Buffer.alloc(W * H * 4);
+  let edge = 0;
+  for (let iz = 0; iz < H; iz++) for (let ix = 0; ix < W; ix++) {
+    const i = iz * W + ix;
+    const ao = 1 - (1 - Math.min(1, contact[i] * 2.2)) * (1 - 0.86 * Math.min(1, under[i] * 1.25)) * (1 - 0.6 * skirt[i]);
+    const a = Math.min(0.94, ao);
+    // The image's rows run with uv v, which runs with -z on the quad below (row 0 = Z1).
+    const o = ((H - 1 - iz) * W + ix) * 4; rgba[o + 3] = Math.round(a * 255);
+    if (ix === 0 || ix === W - 1 || iz === 0 || iz === H - 1) edge = Math.max(edge, a);
+  }
+  if (edge > 0.02) throw new Error('contact shadow clipped at its border: ' + edge.toFixed(3));
+  const raw = path.join(texDir, 'contact.rgba'); fs.writeFileSync(raw, rgba);
+  execFileSync('ffmpeg', ['-loglevel', 'error', '-y', '-f', 'rawvideo', '-pix_fmt', 'rgba', '-s', W + 'x' + H, '-i', raw, path.join(texDir, 'contact.png')]);
+  fs.unlinkSync(raw);
+  // 12 mm over the asphalt, 6 mm over the standing water: no depth fight at the camera's distances.
+  const y = 0.012, geo = new Geo();
+  geo.quad([X0, y, Z1], [X1, y, Z1], [X1, y, Z0], [X0, y, Z0], [[0, 0], [1, 0], [1, 1], [0, 1]]);
+  const m = doc.createMaterial('Contact shadow').setBaseColorFactor([0, 0, 0, 1])
+    .setBaseColorTexture(doc.createTexture('contact').setImage(read('contact.png')).setMimeType('image/png'))
+    .setAlphaMode('BLEND').setExtension('KHR_materials_unlit', unlit.createUnlit());
+  m.getBaseColorTextureInfo().setWrapS(TextureInfo.WrapMode.CLAMP_TO_EDGE).setWrapT(TextureInfo.WrapMode.CLAMP_TO_EDGE);
+  addMesh('ContactShadow', geo, m);
 }
 
 // Materials stay out of dedup: the five start-light columns and the two unlit blended

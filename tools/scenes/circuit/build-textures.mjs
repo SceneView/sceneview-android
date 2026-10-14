@@ -73,9 +73,18 @@ const sstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a)
   save('asphalt_orm.jpg', M, M, orm, ['-q:v', '3']);
   save('asphalt_color.jpg', M, M, col, ['-q:v', '4']);
 
+  // The car's grid box stays clear of standing water: a mirror next to a tyre shows the sky
+  // where the car's own reflection belongs (no SSR on the default tiers), and the car floats.
+  // The tile repeats every 16 m, so the box's distant copies are just dry patches.
+  // uv = (x, z) / 16 on the water layer; the car's footprint is |x| < 1.12, |z - 0.25| < 2.17.
+  const dryness = (u, v) => {
+    const wx = ((u * 16 + 8) % 16 + 16) % 16 - 8, wz = ((v * 16 + 8) % 16 + 16) % 16 - 8;
+    const dx = Math.max(0, Math.abs(wx) - 1.12), dz = Math.max(0, Math.abs(wz - 0.25) - 2.17);
+    return sstep(1.5, 3.5, Math.hypot(dx, dz));
+  };
   const P = 512, pud = fbm(4, 5, 2, 11), rgba = Buffer.alloc(P * P * 4);
   for (let y = 0; y < P; y++) for (let x = 0; x < P; x++) {
-    const i = (y * P + x) * 4, a = sstep(0.5, 0.64, pud(x / P, y / P));   // cut at 0.5 by the material
+    const i = (y * P + x) * 4, a = sstep(0.5, 0.64, pud(x / P, y / P)) * dryness((x + 0.5) / P, (y + 0.5) / P);   // cut at 0.5 by the material
     rgba[i] = rgba[i + 1] = 20; rgba[i + 2] = 22; rgba[i + 3] = Math.round(a * 255);
   }
   const raw = path.join(out, 'puddles.rgba'); fs.writeFileSync(raw, rgba);

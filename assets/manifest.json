@@ -787,8 +787,8 @@
     {
       "path": "website-static/models/platforms/NightCircuit.glb",
       "scope": "web",
-      "sha256": "467ebeb5b2a75984d84c578dc45c95f3809ca96e0964699257502386f1f47a16",
-      "size": 4240988,
+      "sha256": "e36f8a9a5ea6fd2957e49422fd104e739c192ac37b27e5057a7ffe6312982609",
+      "size": 4244656,
       "source": "https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/CarConcept",
       "license": "CC-BY-4.0",
       "author": "Darmstadt Graphics Group GmbH (Eric Chadwick); set by SceneView"
