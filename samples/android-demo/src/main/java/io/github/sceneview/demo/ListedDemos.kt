@@ -21,15 +21,24 @@ internal val XR_ONLY_DEMO_IDS: Set<String> = setOf("ar-xr")
 fun isXrDevice(context: Context): Boolean =
     XrFeatures.isAvailable(context) && XR_SYSTEM_FEATURES.any(context.packageManager::hasSystemFeature)
 
-/** The catalogue's view of [all]: [XR_ONLY_DEMO_IDS] are dropped unless [xrDevice]. */
-fun listedDemos(all: List<DemoEntry>, xrDevice: Boolean): List<DemoEntry> =
-    if (xrDevice) all else all.filterNot { it.id in XR_ONLY_DEMO_IDS }
+/**
+ * Prototypes listed only in a debug build. Like [XR_ONLY_DEMO_IDS] they stay in [ALL_DEMOS],
+ * routable by deep link, but the Play build's catalogue never shows them.
+ */
+internal val DEBUG_ONLY_DEMO_IDS: Set<String> = setOf("ai-scene")
 
-/** [listedDemos] of [ALL_DEMOS] for this device, resolved once. */
+/**
+ * The catalogue's view of [all]: [XR_ONLY_DEMO_IDS] are dropped unless [xrDevice], and
+ * [DEBUG_ONLY_DEMO_IDS] unless [debugBuild].
+ */
+fun listedDemos(all: List<DemoEntry>, xrDevice: Boolean, debugBuild: Boolean = false): List<DemoEntry> =
+    all.filterNot { (!xrDevice && it.id in XR_ONLY_DEMO_IDS) || (!debugBuild && it.id in DEBUG_ONLY_DEMO_IDS) }
+
+/** [listedDemos] of [ALL_DEMOS] for this device and build, resolved once. */
 @Composable
 fun rememberListedDemos(): List<DemoEntry> {
     val context = LocalContext.current
-    return remember { listedDemos(ALL_DEMOS, isXrDevice(context)) }
+    return remember { listedDemos(ALL_DEMOS, isXrDevice(context), debugBuild = BuildConfig.DEBUG) }
 }
 
 /** Android XR platform features (`PackageManager.FEATURE_XR_API_*`). */

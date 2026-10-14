@@ -482,7 +482,9 @@ class DeepLinkRouterTest {
             )
             assertNull("'$retired' is retired", ALL_DEMOS.find { it.id == retired })
         }
-        assertEquals("Android ships 43 cards after step 0", 43, ALL_DEMOS.size)
+        // Debug-only prototypes are routable but never in the Play catalogue.
+        val shipped = ALL_DEMOS.count { it.id !in DEBUG_ONLY_DEMO_IDS }
+        assertEquals("Android ships 43 cards after step 0", 43, shipped)
     }
 
     @Test

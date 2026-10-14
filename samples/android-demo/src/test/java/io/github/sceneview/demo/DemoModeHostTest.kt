@@ -91,7 +91,13 @@ class DemoModeHostTest {
     fun `the XR card is listed only on an XR device`() {
         val listed = listedDemos(ALL_DEMOS, xrDevice = false).map { it.id }
         assertFalse("ar-xr" in listed)
-        assertEquals(ALL_DEMOS.size - XR_ONLY_DEMO_IDS.size, listed.size)
+        assertEquals(ALL_DEMOS.size - XR_ONLY_DEMO_IDS.size - DEBUG_ONLY_DEMO_IDS.size, listed.size)
         assertTrue("ar-xr" in listedDemos(ALL_DEMOS, xrDevice = true).map { it.id })
+    }
+
+    @Test
+    fun `a prototype is listed only in a debug build`() {
+        assertFalse("ai-scene" in listedDemos(ALL_DEMOS, xrDevice = false).map { it.id })
+        assertTrue("ai-scene" in listedDemos(ALL_DEMOS, xrDevice = false, debugBuild = true).map { it.id })
     }
 }

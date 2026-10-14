@@ -70,6 +70,7 @@ import com.google.ar.core.TrackingState
 import dev.romainguy.kotlin.math.Quaternion
 import io.github.sceneview.DEFAULT_IBL_INTENSITY
 import io.github.sceneview.FrameRatePolicy
+import io.github.sceneview.SceneScope
 import io.github.sceneview.SceneView
 import io.github.sceneview.SurfaceType
 import io.github.sceneview.createEnvironment
@@ -602,6 +603,11 @@ internal fun ArDebugSceneView(
     compact: Boolean = false,
     replay: RerunReplayMedia? = null,
     onShown: (() -> Unit)? = null,
+    // The replay's own room measure (outline and lengths). A screen that draws its own room
+    // model over the cloud turns it off so the two do not overlap.
+    roomMeasure: Boolean = !compact,
+    // Extra nodes drawn in the same scene as the debug layers, after them.
+    content: @Composable SceneScope.() -> Unit = {},
 ) {
     val context = LocalContext.current
     val shown by rememberUpdatedState(onShown)
@@ -737,7 +743,7 @@ internal fun ArDebugSceneView(
                         points = session.isVisible(DebugGroup.Points),
                         anchors = session.isVisible(DebugGroup.Anchors),
                         trail = session.isVisible(DebugGroup.Trail),
-                        measure = !compact,
+                        measure = roomMeasure,
                     ),
                     eye = CameraRig.eye(orbit.pose).let { Vec3(it.x, it.y, it.z) },
                 )
@@ -787,6 +793,7 @@ internal fun ArDebugSceneView(
                     }
                 }
             }
+            content()
         }
     }
 }
