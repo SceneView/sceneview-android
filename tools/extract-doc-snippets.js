@@ -430,7 +430,7 @@ const CONTEXT_PRELUDE = [
   ["occlusionAvailable", "var occlusionAvailable = true"],
   ["context", "val context = LocalContext.current"],
   ["contentRoot", "val contentRoot = Node(engine)"],
-  // The open-topped occlusion mesh of "Mesh occlusion": the caller's own geometry.
+  // The open-topped hull of "Occluder meshes": the caller's own geometry.
   ["hull", "val hull: io.github.sceneview.geometries.Geometry = TODO()"],
 ];
 

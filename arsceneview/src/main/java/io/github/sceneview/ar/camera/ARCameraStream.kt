@@ -456,28 +456,30 @@ open class ARCameraStream(
         }
 
     /**
-     * ### Let occlusion meshes cut into the camera feed
+     * ### Let occluder meshes cut into the camera feed
      *
      * Draws the camera feed **first** instead of last, so a mesh using
      * [io.github.sceneview.loaders.MaterialLoader.createOcclusionInstance] shows the camera
      * through it instead of a black hole.
      *
-     * An occlusion mesh writes depth and no colour. By default the flat camera feed is drawn
-     * after everything else, at the far plane, so wherever an occlusion mesh wrote depth the
+     * An occluder mesh is geometry you model yourself (a pool's hull, the frame of a hole in
+     * a wall) — not the mesh ARKit reconstructs from the real world for its occlusion. It
+     * writes depth and no colour. By default the flat camera feed is drawn
+     * after everything else, at the far plane, so wherever an occluder mesh wrote depth the
      * feed fails the depth test and the pixel keeps the clear colour. With this flag on, the
-     * feed is already on screen when the occlusion mesh is drawn, and the mesh only hides the
+     * feed is already on screen when the occluder mesh is drawn, and the mesh only hides the
      * virtual content behind it: a pool dug into the lawn, a hole cut into a wall, a crate
      * half-sunk into the floor.
      *
-     * The occlusion mesh itself needs:
+     * The occluder mesh itself needs:
      *  - `setPriority(ARCameraStream.OCCLUDER_PRIORITY)` — drawn after the camera feed and
-     *    before the content it hides (default priority 4). Content drawn before an occlusion
+     *    before the content it hides (default priority 4). Content drawn before an occluder
      *    mesh is not hidden by it;
      *  - `isTouchable = false`, so taps reach the ground behind it.
      *
      * ```kotlin
      * val cameraStream = rememberARCameraStream(materialLoader) {
-     *     createARCameraStream(materialLoader).apply { isMeshOcclusionEnabled = true }
+     *     createARCameraStream(materialLoader).apply { isOccluderMeshEnabled = true }
      * }
      * MeshNode(
      *     primitiveType = RenderableManager.PrimitiveType.TRIANGLES,
@@ -492,7 +494,7 @@ open class ARCameraStream(
      * first, so this flag changes nothing while either is on. Cost: the feed is no longer
      * skipped where virtual content covers it (one full-screen overdraw).
      */
-    var isMeshOcclusionEnabled = false
+    var isOccluderMeshEnabled = false
         set(value) {
             if (field != value) {
                 field = value
@@ -536,14 +538,14 @@ open class ARCameraStream(
      *    had already passed its depth test against an empty buffer, so nothing
      *    was ever occluded — the user-visible symptom in #1617.
      *
-     *  - **Occlusion meshes** ([isMeshOcclusionEnabled]): the flat material again, drawn
-     *    **first** so it is already in the colour buffer when an occlusion mesh writes
+     *  - **Occluder meshes** ([isOccluderMeshEnabled]): the flat material again, drawn
+     *    **first** so it is already in the colour buffer when an occluder mesh writes
      *    depth over it.
      *
      * Filament's `RenderableManager` priority runs 0 (drawn first) … 7 (drawn
      * last); this is a JNI call so it must run on the main thread, which is
      * guaranteed because [isDepthOcclusionEnabled] / [isPersonOcclusionEnabled] /
-     * [isMeshOcclusionEnabled] are only ever set from the composable / main-thread
+     * [isOccluderMeshEnabled] are only ever set from the composable / main-thread
      * setup path.
      */
     private fun applyCameraStreamPriority() {
@@ -551,7 +553,7 @@ open class ARCameraStream(
             cameraStreamPriority(
                 depthOcclusion = isDepthOcclusionEnabled,
                 personOcclusion = isPersonOcclusionEnabled,
-                meshOcclusion = isMeshOcclusionEnabled,
+                occluderMesh = isOccluderMeshEnabled,
             )
         )
     }
@@ -897,7 +899,7 @@ open class ARCameraStream(
         const val CAMERA_PRIORITY_DEPTH_PRIME = 0
 
         /**
-         * Draw priority for an occlusion mesh in an AR scene — see [isMeshOcclusionEnabled].
+         * Draw priority for an occluder mesh in an AR scene — see [isOccluderMeshEnabled].
          *
          * One step after the camera feed ([CAMERA_PRIORITY_DEPTH_PRIME]) and before the
          * default priority of everything else (4), so the mesh writes its depth over the feed
@@ -919,6 +921,7 @@ open class ARCameraStream(
         private const val FLOAT_SIZE_IN_BYTES = java.lang.Float.SIZE / 8
     }
 }
+
 /**
  * Draw priority of the camera feed for the given occlusion flags.
  *
@@ -930,8 +933,8 @@ open class ARCameraStream(
 internal fun cameraStreamPriority(
     depthOcclusion: Boolean,
     personOcclusion: Boolean,
-    meshOcclusion: Boolean,
-): Int = if (depthOcclusion || personOcclusion || meshOcclusion) {
+    occluderMesh: Boolean,
+): Int = if (depthOcclusion || personOcclusion || occluderMesh) {
     ARCameraStream.CAMERA_PRIORITY_DEPTH_PRIME
 } else {
     ARCameraStream.CAMERA_PRIORITY_BACKGROUND

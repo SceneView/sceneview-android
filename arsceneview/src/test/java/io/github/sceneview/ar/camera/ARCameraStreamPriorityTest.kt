@@ -21,8 +21,8 @@ import org.junit.Test
  * after every virtual object had already passed its depth test against an
  * empty buffer, so nothing was ever occluded.
  *
- * Occlusion meshes (`MaterialLoader.createOcclusionInstance`, enabled through
- * `ARCameraStream.isMeshOcclusionEnabled`) need the same ordering for the
+ * Occluder meshes (`MaterialLoader.createOcclusionInstance`, enabled through
+ * `ARCameraStream.isOccluderMeshEnabled`) need the same ordering for the
  * opposite reason: the mesh writes depth and no colour, so a feed drawn after
  * it fails the depth test there and leaves a black hole.
  *
@@ -59,7 +59,7 @@ class ARCameraStreamPriorityTest {
         assertEquals(
             "depth-on must use the lowest priority so it draws first",
             0,
-            cameraStreamPriority(depthOcclusion = true, personOcclusion = false, meshOcclusion = false)
+            cameraStreamPriority(depthOcclusion = true, personOcclusion = false, occluderMesh = false)
         )
     }
 
@@ -67,16 +67,16 @@ class ARCameraStreamPriorityTest {
     fun `people occlusion ON draws the camera quad first`() {
         assertEquals(
             0,
-            cameraStreamPriority(depthOcclusion = false, personOcclusion = true, meshOcclusion = false)
+            cameraStreamPriority(depthOcclusion = false, personOcclusion = true, occluderMesh = false)
         )
     }
 
     @Test
-    fun `mesh occlusion ON draws the camera quad first so occluders cut into the feed`() {
+    fun `occluder mesh ON draws the camera quad first so occluders cut into the feed`() {
         assertEquals(
-            "an occlusion mesh drawn over an already-drawn feed shows the feed, not a hole",
+            "an occluder mesh drawn over an already-drawn feed shows the feed, not a hole",
             0,
-            cameraStreamPriority(depthOcclusion = false, personOcclusion = false, meshOcclusion = true)
+            cameraStreamPriority(depthOcclusion = false, personOcclusion = false, occluderMesh = true)
         )
     }
 
@@ -87,18 +87,19 @@ class ARCameraStreamPriorityTest {
         assertEquals(
             "occlusion-off must use the highest priority so it draws last",
             7,
-            cameraStreamPriority(depthOcclusion = false, personOcclusion = false, meshOcclusion = false)
+            cameraStreamPriority(depthOcclusion = false, personOcclusion = false, occluderMesh = false)
         )
     }
 
     @Test
     fun `any combination with an occlusion mode ON draws the camera quad first`() {
-        for (depth in listOf(false, true)) for (person in listOf(false, true)) for (mesh in listOf(false, true)) {
-            if (!depth && !person && !mesh) continue
+        val flags = listOf(false, true)
+        for (depth in flags) for (person in flags) for (occluder in flags) {
+            if (!depth && !person && !occluder) continue
             assertEquals(
-                "depth=$depth person=$person mesh=$mesh",
+                "depth=$depth person=$person occluder=$occluder",
                 ARCameraStream.CAMERA_PRIORITY_DEPTH_PRIME,
-                cameraStreamPriority(depth, person, mesh)
+                cameraStreamPriority(depth, person, occluder)
             )
         }
     }

@@ -103,7 +103,7 @@ class AutoPlacementState {
      * `ar-scale="fixed"`.
      *
      * ```kotlin
-     * val state = rememberAutoPlacementState().apply { allowsScaling = false }
+     * val state = remember { AutoPlacementState().apply { allowsScaling = false } }
      * ```
      */
     var allowsScaling: Boolean by mutableStateOf(true)

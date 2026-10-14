@@ -26,6 +26,8 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
@@ -55,7 +57,6 @@ import io.github.sceneview.ar.camera.ARCameraStream
 import io.github.sceneview.ar.createARCameraStream
 import io.github.sceneview.ar.rememberARCameraStream
 import io.github.sceneview.ar.rememberArGuidanceState
-import io.github.sceneview.ar.rememberAutoPlacementState
 import io.github.sceneview.demo.ARCameraInitScrim
 import io.github.sceneview.demo.AR_CAMERA_INIT_SCRIM_TIMEOUT_MS
 import io.github.sceneview.demo.DemoScaffold
@@ -102,8 +103,8 @@ internal const val POOL_MINIATURE_QA_STATE = "pool_miniature"
  * `qa_state` value that shows the placed pool without an AR session: an ordinary 3D scene seen
  * from where a person would stand, drawn over the QA backdrop photo. The emulator cannot run
  * ARCore (#2754), so this is the only way to look at the pool there. It checks the pool's own
- * look (liner, water, coping, night lights, and the hull keeping the background on screen
- * around the opening), never the AR: no session, no plane, no anchor. Honoured only in QA mode.
+ * look (liner, water, coping, night, and the hull keeping the background on screen around the
+ * opening), never the AR: no session, no plane, no anchor. Honoured only in QA mode.
  */
 internal const val POOL_PREVIEW_QA_STATE = "pool_preview"
 
@@ -117,7 +118,7 @@ internal const val POOL_PREVIEW_QA_STATE = "pool_preview"
  * ## How it looks dug in
  * Content modelled below the ground would float *in front of* the lawn, because the camera
  * image is only a background. Three pieces turn it into a hole:
- * 1. `ARCameraStream.isMeshOcclusionEnabled = true` draws the camera image first.
+ * 1. `ARCameraStream.isOccluderMeshEnabled = true` draws the camera image first.
  * 2. The hull, an open-topped box 5 cm outside the liner, uses
  *    `MaterialLoader.createOcclusionInstance()` at [ARCameraStream.OCCLUDER_PRIORITY]: it
  *    writes depth and no colour. Any line of sight that enters the ground outside the
@@ -132,6 +133,13 @@ internal const val POOL_PREVIEW_QA_STATE = "pool_preview"
  * Real size is locked with `AutoPlacementState.allowsScaling = false`: drag and twist move
  * and turn the pool, pinch and double-tap never resize it. Placement, coaching and recovery
  * are the shared automatic-placement flow of the other AR demos.
+ *
+ * ## Night
+ * Night darkens the garden and switches on two lamps under the water. ARCore sets the scene's
+ * light from the camera on every frame, so the demo cannot simply turn it down: the pool's
+ * materials take a `daylight` factor instead ([NIGHT_DIMMING]) and their lamps are emission,
+ * which no light estimate touches. The real garden is the camera image, darkened by a
+ * transparent black veil drawn over it and under the pool ([NightVeil]).
  */
 @Composable
 fun ARPoolDemo(onBack: () -> Unit) {
@@ -172,10 +180,12 @@ private fun PoolSession(choices: PoolChoices, onBack: () -> Unit, onRestart: () 
     val materialLoader = rememberMaterialLoader(engine)
     // The camera image goes down first, so the hull can keep the real lawn on screen.
     val stream = rememberARCameraStream(materialLoader) {
-        createARCameraStream(materialLoader).apply { isMeshOcclusionEnabled = true }
+        createARCameraStream(materialLoader).apply { isOccluderMeshEnabled = true }
     }
-    val state = rememberAutoPlacementState().apply { allowsScaling = false }
+    val state = remember { AutoPlacementState().apply { allowsScaling = false } }
     val materials = rememberPoolMaterials(materialLoader)
+    // Hoisted as a State: only the few composables that read it recompose while night falls.
+    val night = animateFloatAsState(if (choices.night) 1f else 0f, motionFade(), label = "pool-night")
     val haptic = rememberHapticFeedback()
     val playback = rememberArPlaybackDataset()
     var availability by remember { mutableStateOf<ARCoreAvailability?>(null) }
@@ -192,7 +202,10 @@ private fun PoolSession(choices: PoolChoices, onBack: () -> Unit, onRestart: () 
     val qaState = DemoSettings.qaDemoState.takeIf { qaStateOverridesAllowed() }
     val preview = qaState == POOL_PREVIEW_QA_STATE
     val poolScale = if (qaState == POOL_MINIATURE_QA_STATE) MINIATURE_SCALE else 1f
-    PoolMaterialSync(materials, spec, choices.liner, choices.night)
+    PoolMaterialSync(
+        materials, spec, choices.liner, night,
+        veilAtNight = if (preview) NIGHT_VEIL_PREVIEW else NIGHT_VEIL_AR,
+    )
 
     ARHapticFeedback(state, haptic)
     LaunchedEffect(state.hasPlacement) {
@@ -281,7 +294,7 @@ private fun PoolSession(choices: PoolChoices, onBack: () -> Unit, onRestart: () 
         },
     ) {
         if (preview) {
-            PoolPreviewScene(engine, modelLoader, materialLoader, spec, materials)
+            PoolPreviewScene(engine, modelLoader, materialLoader, spec, materials, night)
             return@DemoScaffold
         }
         FeaturePlacementScene(
@@ -303,7 +316,7 @@ private fun PoolSession(choices: PoolChoices, onBack: () -> Unit, onRestart: () 
         ) { placement ->
             placement?.let { result ->
                 AutoPlacementNode(result, state, onInvalidMove = { invalidMove = it }) { opacity ->
-                    PoolNodes(spec, materials, opacity, poolScale)
+                    PoolNodes(spec, materials, night, opacity, poolScale)
                 }
             }
         }
@@ -326,6 +339,9 @@ private fun PoolSession(choices: PoolChoices, onBack: () -> Unit, onRestart: () 
  * over the QA backdrop photo. The scene is translucent and the photo is drawn beneath it, so
  * the hull's depth-only pass keeps the photo on screen around the opening exactly as it keeps
  * the camera image in AR. The lens matches a phone camera held upright.
+ *
+ * Night goes through the very path it takes in AR: the materials' `daylight` and the
+ * [NightVeil] over the photo. The scene's own lights are left alone, as ARCore's are.
  */
 @Composable
 private fun PoolPreviewScene(
@@ -334,6 +350,7 @@ private fun PoolPreviewScene(
     materialLoader: MaterialLoader,
     spec: PoolSpec,
     materials: PoolMaterials,
+    night: State<Float>,
 ) {
     val camera = rememberCameraNode(engine) {
         position = PREVIEW_EYE
@@ -355,11 +372,11 @@ private fun PoolPreviewScene(
         cameraManipulator = null,
         onGestureListener = null,
     ) {
-        Node { PoolNodes(spec, materials, opacity = 1f, scale = 1f) }
+        Node { PoolNodes(spec, materials, night, opacity = 1f, scale = 1f) }
     }
 }
 
-/** The sheet: size, liner, night lights, and the accessible move / turn buttons. No resize. */
+/** The sheet: size, liner, night, and the accessible move / turn buttons. No resize. */
 @Composable
 private fun PoolControls(choices: PoolChoices, state: AutoPlacementState) {
     Text(
@@ -467,10 +484,22 @@ private fun PoolSizePill(preset: PoolPreset, onSelect: (PoolPreset) -> Unit) {
  *
  * Only the coping and the water take touches: the liner and the hull reach 1.5 m under the
  * lawn, and their bounds would otherwise catch a drag that starts on the grass in front.
+ *
+ * Liner, coping and water all fade in, so all three draw in Filament's blended pass, after
+ * every opaque surface — the camera image and the hull among them. In that pass the veil goes
+ * first ([VEIL_PRIORITY]), the liner and the coping next (default priority 4), the water last
+ * ([WATER_PRIORITY]), whatever their distance to the camera.
  */
 @Composable
-private fun NodeScope.PoolNodes(spec: PoolSpec, materials: PoolMaterials, opacity: Float, scale: Float) {
-    SideEffect { materials.water.setParameter("opacity", opacity) }
+private fun NodeScope.PoolNodes(
+    spec: PoolSpec,
+    materials: PoolMaterials,
+    night: State<Float>,
+    opacity: Float,
+    scale: Float,
+) {
+    SideEffect { materials.fade(opacity) }
+    NightVeil(materials, night)
     Node(scale = Scale(scale)) {
         // The pool moves and turns as one: only the placement pivot takes the gestures.
         val fixedChild: MeshNodeImpl.() -> Unit = {
@@ -499,9 +528,31 @@ private fun NodeScope.PoolNodes(spec: PoolSpec, materials: PoolMaterials, opacit
         }
         PoolMeshNode(remember(spec) { PoolGeometry.water(spec) }, materials.water) {
             fixedChild()
+            setPriority(WATER_PRIORITY)
             isShadowCaster = false
             isShadowReceiver = false
         }
+    }
+}
+
+/**
+ * Night over the real garden: one triangle that covers the screen, in device coordinates
+ * ([PoolGeometry.screen]), drawn in transparent black before the pool. In AR it darkens the
+ * camera image, in the QA preview the photo; the pool, drawn after it, keeps its own light.
+ * Composed only once night starts to fall, so daytime pays no full-screen pass.
+ */
+@Composable
+private fun SceneScope.NightVeil(materials: PoolMaterials, night: State<Float>) {
+    val falling by remember(night) { derivedStateOf { night.value > 0f } }
+    if (!falling) return
+    PoolMeshNode(remember { PoolGeometry.screen() }, materials.veil) {
+        setPriority(VEIL_PRIORITY)
+        // Device coordinates ignore the node and the camera: there is nothing to cull.
+        setCulling(false)
+        isShadowCaster = false
+        isShadowReceiver = false
+        isTouchable = false
+        isHittable = false
     }
 }
 
@@ -511,9 +562,15 @@ private fun NodeScope.PoolNodes(spec: PoolSpec, materials: PoolMaterials, opacit
  * `SideEffect`, it would be written once at its first value and never again.
  */
 @Composable
-private fun PoolMaterialSync(materials: PoolMaterials, spec: PoolSpec, liner: PoolLiner, night: Boolean) {
-    val level = animateFloatAsState(if (night) 1f else 0f, motionFade(), label = "pool-night").value
-    SideEffect { materials.update(spec, liner, level) }
+private fun PoolMaterialSync(
+    materials: PoolMaterials,
+    spec: PoolSpec,
+    liner: PoolLiner,
+    night: State<Float>,
+    veilAtNight: Float,
+) {
+    val level = night.value
+    SideEffect { materials.update(spec, liner, level, veilAtNight) }
 }
 
 /** Uploads one [PoolMesh] and frees its buffers when the size changes or the demo leaves. */
@@ -533,15 +590,33 @@ private fun SceneScope.PoolMeshNode(mesh: PoolMesh, material: MaterialInstance, 
     )
 }
 
-/** The pool's four materials; the loader destroys them with the session. */
+/**
+ * The pool's five materials; the loader destroys them with the session. Main thread only, like
+ * every Filament call.
+ */
 private class PoolMaterials(
     val liner: MaterialInstance,
     val water: MaterialInstance,
     val coping: MaterialInstance,
     val hull: MaterialInstance,
+    val veil: MaterialInstance,
 ) {
-    /** Every parameter, every time: a uniform never written is not guaranteed to read zero. */
-    fun update(spec: PoolSpec, finish: PoolLiner, night: Float) {
+    private var night = 0f
+    private var opacity = 0f
+    private var veilAtNight = 0f
+
+    /**
+     * Every parameter, every time: a uniform never written is not guaranteed to read zero.
+     *
+     * @param night       0 by day, 1 at night; in between while it falls.
+     * @param veilAtNight How much of the garden the veil hides once night has fallen.
+     */
+    fun update(spec: PoolSpec, finish: PoolLiner, night: Float, veilAtNight: Float) {
+        this.night = night
+        this.veilAtNight = veilAtNight
+        // The lamps come on as the light goes.
+        val lights = night
+        val daylight = 1f - NIGHT_DIMMING * night
         liner.setParameter("linerColor", finish.red, finish.green, finish.blue)
         liner.setParameter("waterY", -PoolGeometry.WATER_DROP)
         liner.setParameter("halfWidth", spec.halfWidth)
@@ -549,15 +624,34 @@ private class PoolMaterials(
         liner.setParameter("zFar", spec.zFar)
         liner.setParameter("deepDepth", spec.deepDepth)
         liner.setParameter("shallowDepth", spec.shallowDepth)
-        liner.setParameter("night", night)
+        liner.setParameter("lights", lights)
+        liner.setParameter("daylight", daylight)
         coping.setParameter("halfWidth", spec.halfWidth)
         coping.setParameter("zNear", spec.zNear)
         coping.setParameter("zFar", spec.zFar)
         coping.setParameter("stone", STONE_RED, STONE_GREEN, STONE_BLUE)
-        coping.setParameter("night", night)
-        water.setParameter("night", night)
+        coping.setParameter("lights", lights)
+        coping.setParameter("daylight", daylight)
+        water.setParameter("lights", lights)
+        water.setParameter("daylight", daylight)
         water.setParameter("tint", WATER_RED, WATER_GREEN, WATER_BLUE)
+        water.setParameter("halfWidth", spec.halfWidth)
+        water.setParameter("zNear", spec.zNear)
+        water.setParameter("zFar", spec.zFar)
+        applyVeil()
     }
+
+    /** The placement fade-in: 0 when the pool appears, 1 once it has landed. */
+    fun fade(opacity: Float) {
+        this.opacity = opacity
+        liner.setParameter("opacity", opacity)
+        coping.setParameter("opacity", opacity)
+        water.setParameter("opacity", opacity)
+        applyVeil()
+    }
+
+    /** The garden darkens with the night, and with the pool as it appears. */
+    private fun applyVeil() = veil.setParameter("strength", veilAtNight * night * opacity)
 }
 
 /** Main thread only: Filament material creation is a JNI call. */
@@ -569,7 +663,8 @@ private fun rememberPoolMaterials(materialLoader: MaterialLoader): PoolMaterials
         water = custom("pool_water"),
         coping = custom("pool_coping"),
         hull = materialLoader.createOcclusionInstance(),
-    ).also { it.water.setParameter("opacity", 0f) }
+        veil = custom("pool_night_veil"),
+    ).also { it.fade(0f) }
 }
 
 /** QA miniature: an 8 × 4 m pool becomes 1.3 × 0.7 m, small enough for an indoor recording. */
@@ -601,3 +696,32 @@ private const val STONE_BLUE = 0.58f
 private const val WATER_RED = 0.55f
 private const val WATER_GREEN = 0.80f
 private const val WATER_BLUE = 0.85f
+
+/**
+ * Share of the scene's light the pool loses at night: its surfaces keep `1 - NIGHT_DIMMING` of
+ * it (the materials' `daylight`). What is left is the glow of a garden after dusk; the lamps,
+ * being emission, keep all of theirs.
+ */
+private const val NIGHT_DIMMING = 0.85f
+
+/**
+ * How much of the camera image the veil hides at night, in AR. The veil blends in the scene's
+ * linear light, before tone mapping, where the camera image has been un-tone-mapped
+ * (`camera_stream_flat.mat`). Through that curve 94 % turns grass at sRGB 0.45 into 0.03 and a
+ * pale wall at 0.9 into 0.25, while a clipped sky or window keeps most of its light, as it does
+ * at dusk.
+ */
+private const val NIGHT_VEIL_AR = 0.94f
+
+/**
+ * How much of the backdrop photo the veil hides at night, in the QA preview. There the
+ * translucent scene is laid over the photo after tone mapping, in display colours, so the same
+ * night takes less.
+ */
+private const val NIGHT_VEIL_PREVIEW = 0.85f
+
+/** Draw priority of the night veil: first in the blended pass, before the liner and the coping. */
+private const val VEIL_PRIORITY = 2
+
+/** Draw priority of the water: last in the blended pass, over the liner it lets through. */
+private const val WATER_PRIORITY = 5

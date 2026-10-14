@@ -241,6 +241,24 @@ class PoolGeometryTest {
     }
 
     @Test
+    fun `the night veil covers the whole screen at mid-depth`() {
+        val screen = PoolGeometry.screen()
+        assertEquals(3, screen.vertices.size)
+        assertEquals(listOf(0, 1, 2), screen.indices)
+        // Its material is unlit in the device domain: it reads the position and nothing else.
+        assertTrue(screen.vertices.all { it.normal == null && it.color == null && it.uvCoordinate == null })
+        // Filament's clip space runs from 0 at the far plane to 1 at the near one.
+        assertTrue(screen.vertices.all { it.position.z > 0f && it.position.z < 1f })
+        val triangle = screen.vertices.map { it.position }.let { Triple(it[0], it[1], it[2]) }
+        for (x in listOf(-1f, 0f, 1f)) {
+            for (y in listOf(-1f, 0f, 1f)) {
+                val p = Position(x, y, 0f)
+                assertTrue("screen point $p is not under the veil", triangle.covers(p) { it.y })
+            }
+        }
+    }
+
+    @Test
     fun `the presets are real pool sizes`() {
         assertEquals(listOf(6f to 3f, 8f to 4f, 10f to 5f), PoolPreset.entries.map { it.length to it.width })
         for (preset in PoolPreset.entries) {
@@ -270,8 +288,11 @@ class PoolGeometryTest {
     }
 
     /** Whether [p] falls inside this triangle seen from above (x/z only). */
-    private fun Triple<Position, Position, Position>.covers(p: Position): Boolean {
-        fun side(a: Position, b: Position) = (b.x - a.x) * (p.z - a.z) - (b.z - a.z) * (p.x - a.x)
+    private fun Triple<Position, Position, Position>.covers(p: Position) = covers(p) { it.z }
+
+    /** Whether [p] falls inside this triangle projected on x and [axis], edges included. */
+    private fun Triple<Position, Position, Position>.covers(p: Position, axis: (Position) -> Float): Boolean {
+        fun side(a: Position, b: Position) = (b.x - a.x) * (axis(p) - axis(a)) - (axis(b) - axis(a)) * (p.x - a.x)
         val s1 = side(first, second)
         val s2 = side(second, third)
         val s3 = side(third, first)

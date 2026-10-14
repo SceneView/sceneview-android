@@ -3,9 +3,9 @@
 // Purpose:    The inside of the in-ground pool AR demo — floor, walls and Roman steps — as it
 //             looks *through* the water: the liner colour fading to blue-green with depth and
 //             viewing angle, moving sun caustics bent by the ripples, a glass-mosaic waterline
-//             band, dark safety nosing on the steps, contact shadow in the corners and, at
-//             night, two underwater lamps. The water surface itself (pool_water.mat) is only a
-//             thin glossy sheet; all the depth cues live here.
+//             band, dark safety nosing on the steps, contact shadow in the corners and two
+//             underwater lamps that can be switched on. The water surface itself (pool_water.mat)
+//             is only a thin glossy sheet; all the depth cues live here.
 // Used by:    samples/android-demo ARPoolDemo — nothing in the SDK.
 // Parameters:
 //   linerColor   — float3, linear RGB of the dry liner (white, sand, light grey, blue).
@@ -14,7 +14,15 @@
 //   zNear, zFar  — float, z of the deep-end wall and of the shallow-end wall (zFar < zNear).
 //   deepDepth    — float, floor depth at the deep end (m, positive).
 //   shallowDepth — float, floor depth at the shallow end (m, positive).
-//   night        — float [0,1], 1 turns the sun caustics off and the lamps on.
+//   lights       — float [0,1], the two underwater lamps: 0 off, 1 fully on.
+//   daylight     — float [0,1], the share of the scene's light the liner receives: 1 by day,
+//                  less at night (ARPoolDemo's NIGHT_DIMMING). ARCore owns the light in AR and
+//                  sets it again every frame, so night is made here, on the surfaces: the base
+//                  colour scales the diffuse light and the square root of the reflectance the
+//                  specular one, by the same factor. The lamps are emission, never dimmed.
+//   opacity      — float [0,1], the placement fade-in; 1 once the pool has landed.
+// Fade blending with depth writes: the colour is premultiplied by the opacity, and at opacity 1
+// the liner draws like an opaque surface, in the blended pass.
 // Vertex colour: rgb = the model-space normal packed as n * 0.5 + 0.5, a = 1 on step nosing.
 //   Shading needs the normal in the pool's own frame (tiles, caustics, lamps), which the
 //   world-space normals Filament hands the fragment stage do not give once the pool turns.
@@ -29,12 +37,15 @@ material {
         { "type" : "float",  "name" : "zFar" },
         { "type" : "float",  "name" : "deepDepth" },
         { "type" : "float",  "name" : "shallowDepth" },
-        { "type" : "float",  "name" : "night" }
+        { "type" : "float",  "name" : "lights" },
+        { "type" : "float",  "name" : "daylight" },
+        { "type" : "float",  "name" : "opacity" }
     ],
     "requires" : [ "position", "color" ],
     "variables" : [ { "name" : "objectPosition", "precision" : "high" } ],
     "shadingModel" : "lit",
-    "blending" : "opaque",
+    "blending" : "fade",
+    "depthWrite" : true,
     "specularAntiAliasing" : true
 }
 vertex {
@@ -174,50 +185,62 @@ fragment {
         float4 packed = getColor();
         float3 n = normalize(packed.rgb * 2.0 - 1.0);
         float nosing = packed.a;
-        float night = materialParams.night;
+        float lights = materialParams.lights;
         float depth = max(materialParams.waterY - p.y, 0.0);
 
-        float3 color = materialParams.linerColor;
-        color = waterlineBand(p, n, color);
-        color = mix(color, float3(0.06, 0.08, 0.10), nosing);
+        float3 surface = waterlineBand(p, n, materialParams.linerColor);
+        surface = mix(surface, float3(0.06, 0.08, 0.10), nosing);
 
         // Sun caustics, bent the way the surface above them is: stronger on the floor than on
-        // the walls, softer as the water deepens, gone in the dry band and at night.
+        // the walls, softer as the water deepens, gone in the dry band.
         highp float2 shift = poolSlope(p.xz) * depth * 1.5;
-        float strength = smoothstep(0.0, 0.25, depth) * (1.0 - night) * mix(1.0, 0.6, depth / 1.5);
+        float strength = smoothstep(0.0, 0.25, depth) * mix(1.0, 0.6, depth / 1.5);
         strength *= abs(n.y) > 0.5 ? 1.0 : 0.6;
-        color *= 0.85 + 0.6 * caustics(p, n, shift) * strength;
+        float3 color = surface * (0.85 + 0.6 * caustics(p, n, shift) * strength);
 
         // Water: sunlight comes down `depth`, the view ray goes back up, refracted, and both
         // lose red first. What is lost is replaced by the colour the water scatters.
+        const float3 absorption = float3(0.45, 0.09, 0.05);
         float vy = abs(getWorldViewVector().y);
         float cosRefracted = sqrt(max(1.0 - (1.0 - vy * vy) / 1.7689, 0.05));
-        float path = depth * (1.0 + 1.0 / cosRefracted);
-        float3 transmitted = exp(-float3(0.45, 0.09, 0.05) * path);
+        float3 seen = exp(-absorption * (depth / cosRefracted));
+        float3 transmitted = exp(-absorption * depth) * seen;
         float3 underwater = color * transmitted + float3(0.04, 0.32, 0.38) * (1.0 - transmitted);
 
-        material.baseColor = float4(underwater * mix(1.0, 0.35, night), 1.0);
+        float opacity = materialParams.opacity;
+        float daylight = materialParams.daylight;
+        material.baseColor = float4(underwater * (opacity * daylight), opacity);
         material.roughness = 0.7;
-        material.reflectance = 0.3;
+        // F0 = 0.16 × reflectance² and stays well under 1: √daylight scales the specular light
+        // by daylight, as the base colour does the diffuse.
+        material.reflectance = 0.3 * sqrt(daylight);
         material.ambientOcclusion = cornerOcclusion(p, n);
 
-        // Night: two lamps half a metre under the water, mid-way along the side walls.
-        if (night > 0.0) {
+        // Two lamps half a metre under the water, mid-way along the side walls (pool_water.mat
+        // and pool_coping.mat put them at the same spot). Their light loses red on its way to
+        // the liner and again on the way up to the eye, so the pool turns from white-blue at
+        // the lamps to deep blue at the far ends. The constant is what the liner bounces into
+        // every corner.
+        if (lights > 0.0) {
             float3 lampColor = float3(0.55, 0.85, 1.0);
             float zMid = 0.5 * (materialParams.zNear + materialParams.zFar);
-            float lit = 0.0;
+            float3 lit = float3(0.0);
             float lens = 0.0;
             for (int i = 0; i < 2; i++) {
                 float side = i == 0 ? -1.0 : 1.0;
                 highp float3 toLamp = float3(side * materialParams.halfWidth, -0.55, zMid) - p;
                 float d2 = dot(toLamp, toLamp);
-                float3 l = toLamp * inversesqrt(max(d2, 1e-4));
-                lit += max(dot(n, l), 0.0) / (1.0 + 2.0 * d2) + exp(-d2 / 0.08) * 0.6;
-                lens += (1.0 - smoothstep(0.08, 0.09, sqrt(d2))) * step(0.5, abs(n.x));
+                float d = sqrt(d2);
+                float3 l = toLamp / max(d, 0.01);
+                float reach = max(dot(n, l), 0.0) / (1.0 + 2.0 * d2) + exp(-d2 / 0.08) * 0.6 + 0.06;
+                lit += reach * exp(-absorption * d);
+                lens += 1.0 - smoothstep(0.08, 0.09, d);
             }
-            float3 glow = lit * lampColor * materialParams.linerColor * transmitted
-                    + min(lens, 1.0) * float3(1.6, 1.9, 2.0);
-            material.emissive = float4(glow * night, 0.0);
+            lens *= step(0.5, abs(n.x));
+            // The lamp glass replaces the lit liner and stays under 1: a bright lamp, never a
+            // white hole burnt into the picture.
+            float3 glow = mix(lit * lampColor * surface, float3(0.70, 0.88, 0.95), min(lens, 1.0));
+            material.emissive = float4(glow * seen * lights, 0.0);
         }
     }
 }

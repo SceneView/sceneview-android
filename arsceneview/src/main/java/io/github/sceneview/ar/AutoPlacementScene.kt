@@ -827,6 +827,9 @@ private fun ARSceneScope.AutomaticPlacementPivot(
              */
             var pinching = false
 
+            /** This twist opened an adjustment — same rule as [pinching]. */
+            var rotating = false
+
             /** Visual scale the double-tap animation started from, `null` when none runs. */
             private var tweenFrom: Float? = null
             private var tweenStartNanos = 0L
@@ -880,7 +883,10 @@ private fun ARSceneScope.AutomaticPlacementPivot(
 
             override fun onRotateEnd(detector: RotateGestureDetector, e: MotionEvent) {
                 super.onRotateEnd(detector, e)
-                state.endAdjustment()
+                if (rotating) {
+                    rotating = false
+                    state.endAdjustment()
+                }
             }
             override fun onScaleEnd(detector: ScaleGestureDetector, e: MotionEvent) {
                 super.onScaleEnd(detector, e)
@@ -893,7 +899,10 @@ private fun ARSceneScope.AutomaticPlacementPivot(
             isEditable = true
             isPositionEditable = false
             editableScaleRange = ScaleSnap.MIN..ScaleSnap.MAX
-            onRotateBegin = { _, _ -> state.beginAdjustment() }
+            onRotateBegin = { _, _ ->
+                rotating = state.beginAdjustment()
+                rotating
+            }
             // The pinch is measured against the moment two fingers landed — the scale then,
             // times the span ratio since — never accumulated event by event: 1:1 with the
             // fingers (Scene Viewer / Quick Look / the iOS controller), path-independent, and
@@ -914,9 +923,10 @@ private fun ARSceneScope.AutomaticPlacementPivot(
                     pinching
                 }
             }
-            onRotate = { _, _, _ -> state.isAdjusting }
+            onRotate = { _, _, _ -> rotating && state.isAdjusting }
             onScale = { detector, _, _ ->
-                if (pinching && state.isAdjusting) {
+                // Locking real size mid-pinch stops it at once, not at the next pinch.
+                if (pinching && state.allowsScaling && state.isAdjusting) {
                     val previous = logicalScale
                     val rawScale = ScaleSnap.pinchRaw(pinchStartScale, pinchStartSpan, detector.currentSpan)
                         .coerceIn(ScaleSnap.MIN, ScaleSnap.MAX)

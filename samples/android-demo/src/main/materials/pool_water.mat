@@ -1,15 +1,22 @@
 // pool_water.mat — see CONTRIBUTING.md "Filament runtime ↔ .filamat ABI invariant"
 //
 // Purpose:    The surface of the in-ground pool AR demo: a clear sheet of water with moving
-//             ripples, the sky mirrored at grazing angles and, at night, the glow of the
-//             underwater lights. Everything seen *through* it — the colour depth gives the
-//             liner, the caustics, the wobble — is drawn by pool_liner.mat, so the surface
-//             stays a thin, cheap transparent layer over an opaque pool.
+//             ripples, the sky mirrored at grazing angles and, with the pool lights on, a halo
+//             over each underwater lamp. Everything seen *through* it — the colour depth gives
+//             the liner, the caustics, the wobble — is drawn by pool_liner.mat, so the surface
+//             stays a thin, cheap transparent layer over the pool.
 // Used by:    samples/android-demo ARPoolDemo — nothing in the SDK.
 // Parameters:
-//   opacity — float [0,1], the placement fade-in; 1 once the pool has landed.
-//   night   — float [0,1], 1 lights the pool from inside and drops the sky reflection.
-//   tint    — float3, linear RGB of the water's own faint colour.
+//   opacity      — float [0,1], the placement fade-in; 1 once the pool has landed.
+//   lights       — float [0,1], the two underwater lamps of pool_liner.mat: 0 off, 1 fully on.
+//   daylight     — float [0,1], the share of the scene's light the water receives, as in
+//                  pool_liner.mat: it dims the tint, the reflections and the painted sky, never
+//                  the lamp halos.
+//   tint         — float3, linear RGB of the water's own faint colour.
+//   halfWidth    — float, half the inner width; the lamps sit in the side walls at ±halfWidth.
+//   zNear, zFar  — float, z of the deep-end wall and of the shallow-end wall (zFar < zNear).
+// The painted sky is a stand-in for the environment the QA preview lacks; in AR the real sky
+// also arrives through ARCore's HDR reflections.
 // matc profile: mobile-only, OpenGL + Vulkan — demo APK asset, not an AAR asset.
 //
 // The ripples are five directional sine waves summed in the pool's own (model) space, so they
@@ -20,8 +27,12 @@ material {
     "name" : "Pool Water",
     "parameters" : [
         { "type" : "float",  "name" : "opacity" },
-        { "type" : "float",  "name" : "night" },
-        { "type" : "float3", "name" : "tint" }
+        { "type" : "float",  "name" : "lights" },
+        { "type" : "float",  "name" : "daylight" },
+        { "type" : "float3", "name" : "tint" },
+        { "type" : "float",  "name" : "halfWidth" },
+        { "type" : "float",  "name" : "zNear" },
+        { "type" : "float",  "name" : "zFar" }
     ],
     "requires" : [ "position" ],
     "variables" : [ { "name" : "objectPosition", "precision" : "high" } ],
@@ -61,22 +72,41 @@ fragment {
         prepareMaterial(material);
 
         float opacity = materialParams.opacity;
-        float night = materialParams.night;
-        float alpha = 0.10 * opacity;
+        float lights = materialParams.lights;
+        float daylight = materialParams.daylight;
+        // How much of its own colour the water shows: a clear sheet.
+        const float sheet = 0.10;
+        float alpha = sheet * opacity;
 
         float NoV = clamp(dot(getWorldNormalVector(), getWorldViewVector()), 0.0, 1.0);
         float fresnel = pow(1.0 - NoV, 5.0);
-        float3 sky = float3(0.55, 0.68, 0.85) * (fresnel * 0.35 * (1.0 - night));
-        float3 glow = float3(0.05, 0.35, 0.45) * (night * 0.6);
+        float3 sky = float3(0.55, 0.68, 0.85) * (fresnel * 0.35 * daylight);
+
+        // The water lights up over each lamp and fades within a metre or so of it, never as a
+        // sheet over the whole pool: the rest of the glow is the liner, seen through the water.
+        float3 glow = float3(0.0);
+        if (lights > 0.0) {
+            float zMid = 0.5 * (materialParams.zNear + materialParams.zFar);
+            float near = 0.0;
+            for (int i = 0; i < 2; i++) {
+                float side = i == 0 ? -1.0 : 1.0;
+                highp float3 toLamp = float3(side * materialParams.halfWidth, -0.55, zMid)
+                        - variable_objectPosition.xyz;
+                near += exp(-dot(toLamp, toLamp) / 0.45);
+            }
+            glow = float3(0.05, 0.35, 0.45) * (0.5 * near * lights);
+        }
 
         // Transparent blending takes a premultiplied colour.
-        material.baseColor = float4(materialParams.tint * alpha, alpha);
+        material.baseColor = float4(materialParams.tint * (alpha * daylight), alpha);
         material.metallic = 0.0;
         material.roughness = 0.04;
-        // Water's F0 is ~0.02; fades in with the pool so the glints do not pop.
-        material.reflectance = 0.35 * opacity;
-        // Emission is scaled by alpha in this blending mode: divide it back out so the sky and
-        // the night glow land at their own strength, times the fade.
-        material.emissive = float4((sky + glow) / 0.10, 0.0);
+        // Water's F0 is ~0.02; fades in with the pool so the glints do not pop, and dims with
+        // the daylight like pool_liner.mat's.
+        material.reflectance = 0.35 * opacity * sqrt(daylight);
+        // This blending mode scales emission by alpha, the sheet times the fade: stated per unit
+        // of sheet, the sky and the halos land at the strength written above, times the fade.
+        // The halos stay local: `near` is ~0 a metre away from either lamp.
+        material.emissive = float4((sky + glow) / sheet, 0.0);
     }
 }

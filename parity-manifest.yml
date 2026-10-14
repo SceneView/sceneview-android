@@ -1285,8 +1285,8 @@ demos:
     androidStatus: InReview
     iosStatus: android-only
     reason: >-
-      No iOS screen. Added to Android on 2026-10-14 with the mesh-occlusion
-      seam (`ARCameraStream.isMeshOcclusionEnabled`) it is built on; not
+      No iOS screen. Added to Android on 2026-10-14 with the occluder-mesh
+      seam (`ARCameraStream.isOccluderMeshEnabled`) it is built on; not
       ported (#2798).
     category: PLACE_AR
     android: samples/android-demo/src/main/java/io/github/sceneview/demo/demos/ARPoolDemo.kt
@@ -1299,8 +1299,10 @@ demos:
       so the walls, Roman steps and floor show only through it, under a stone
       coping. Transparent water with ripples, caustics, sky reflection and
       depth tint; 6 x 3, 8 x 4 and 10 x 5 m presets, 1.2-1.5 m deep; white,
-      sand, light grey or blue liner; optional night mode with underwater
-      lights. Drag and twist; pinch never resizes it (real size is locked).
+      sand, light grey or blue liner; optional night mode: a transparent
+      black veil over the camera image darkens the garden, the pool's own
+      surfaces dim with it, and two underwater lamps light the water around
+      them. Drag and twist; pinch never resizes it (real size is locked).
     parity: missing
     evidence: >-
       No iOS scene; ARPoolDemo.kt. RealityKit's OcclusionMaterial on a mesh

@@ -2,14 +2,20 @@
 //
 // Purpose:    The light stone coping around the in-ground pool AR demo: 50 cm slabs with
 //             mitred corners and thin joints, each slab a touch lighter or darker than the
-//             next, a fine weathered grain, and at night the glow the pool lamps throw on the
-//             bullnose.
+//             next, a fine weathered grain, and, with the pool lights on, the glow the lamps
+//             throw on the bullnose near them.
 // Used by:    samples/android-demo ARPoolDemo — nothing in the SDK.
 // Parameters:
 //   halfWidth    — float, half the inner width of the pool; the side walls stand at ±halfWidth.
 //   zNear, zFar  — float, z of the deep-end wall and of the shallow-end wall (zFar < zNear).
 //   stone        — float3, linear RGB of the stone.
-//   night        — float [0,1], 1 lights the inner edge from the pool.
+//   lights       — float [0,1], the two underwater lamps of pool_liner.mat: 0 off, 1 fully on.
+//   daylight     — float [0,1], the share of the scene's light the stone receives, as in
+//                  pool_liner.mat: 1 by day, less at night. It never dims the lamps' glow.
+//   opacity      — float [0,1], the placement fade-in; 1 once the pool has landed.
+// Fade blending with depth writes, so the coping fades in with the pool and still draws like an
+// opaque surface once it has landed; transparent shadows keep it casting its shadow into the
+// pool, at the strength of its opacity.
 // matc profile: mobile-only, OpenGL + Vulkan — demo APK asset, not an AAR asset.
 material {
     "name" : "Pool Coping",
@@ -18,12 +24,16 @@ material {
         { "type" : "float",  "name" : "zNear" },
         { "type" : "float",  "name" : "zFar" },
         { "type" : "float3", "name" : "stone" },
-        { "type" : "float",  "name" : "night" }
+        { "type" : "float",  "name" : "lights" },
+        { "type" : "float",  "name" : "daylight" },
+        { "type" : "float",  "name" : "opacity" }
     ],
     "requires" : [ "position" ],
     "variables" : [ { "name" : "objectPosition", "precision" : "high" } ],
     "shadingModel" : "lit",
-    "blending" : "opaque",
+    "blending" : "fade",
+    "depthWrite" : true,
+    "transparentShadow" : true,
     "specularAntiAliasing" : true
 }
 vertex {
@@ -82,12 +92,25 @@ fragment {
         color *= 0.9 + 0.12 * coarse + 0.06 * fine * fineFade;
         color *= mix(1.0, 0.55, joint);
 
-        material.baseColor = float4(color, 1.0);
+        float opacity = materialParams.opacity;
+        float daylight = materialParams.daylight;
+        material.baseColor = float4(color * (opacity * daylight), opacity);
         material.roughness = mix(0.78, 0.9, coarse);
-        material.reflectance = 0.4;
+        // √daylight scales the specular light by daylight (F0 = 0.16 × reflectance²).
+        material.reflectance = 0.4 * sqrt(daylight);
 
-        float edge = max(dx, dz);
-        float glow = 1.0 - smoothstep(-0.025, 0.01, edge);
-        material.emissive = float4(float3(0.05, 0.35, 0.45) * (0.5 * glow * materialParams.night), 0.0);
+        // The lamps, half a metre under the water in the side walls, catch the inner edge only
+        // above and around them; the rest of the stone keeps whatever light the scene has.
+        if (materialParams.lights > 0.0) {
+            float rim = 1.0 - smoothstep(-0.025, 0.01, max(dx, dz));
+            float near = 0.0;
+            for (int i = 0; i < 2; i++) {
+                float side = i == 0 ? -1.0 : 1.0;
+                highp float3 toLamp = float3(side * materialParams.halfWidth, -0.55, zMid) - p;
+                near += exp(-dot(toLamp, toLamp) / 1.2);
+            }
+            float3 glow = float3(0.05, 0.35, 0.45) * (0.4 * rim * near * materialParams.lights);
+            material.emissive = float4(glow, 0.0);
+        }
     }
 }

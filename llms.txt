@@ -1447,7 +1447,7 @@ while rotating/scaling, and constrains dragging to supported plane geometry. Its
 0.3 m longest-dimension default is **Preview size**; `scaleToUnits = null` retains
 trustworthy authored units (**Actual size**). Scale limits are 25–400% of that base.
 For content that must stay at real size (furniture, a pool, a shed), set
-`placement.allowsScaling = false` — `rememberAutoPlacementState().apply { allowsScaling = false }`:
+`placement.allowsScaling = false` — `remember { AutoPlacementState().apply { allowsScaling = false } }`:
 the pinch, the double-tap and `scaleTo` stop resizing it, drag and twist still move and turn
 it, and an object already resized animates back to 100 % (Quick Look's
 `allowsContentScaling = false`, Scene Viewer's `resizable=false`).
@@ -2888,10 +2888,11 @@ instead.
 Sample: `ARPeopleOcclusionDemo` (Android demo registry id `ar-people-occlusion`) — place a
 model, walk a person in front of it; a HUD shows the live `PERSON`-pixel fraction.
 
-### Mesh occlusion — content dug into the real ground or cut into a wall
+### Occluder meshes — content dug into the real ground or cut into a wall
 
-An occlusion mesh (`materialLoader.createOcclusionInstance()`) writes depth and no colour. In
-AR, set `ARCameraStream.isMeshOcclusionEnabled = true` so the camera feed is drawn **first**:
+An occluder mesh is geometry you model yourself with `materialLoader.createOcclusionInstance()`
+— not the real-world mesh ARKit reconstructs for its occlusion. It writes depth and no colour.
+In AR, set `ARCameraStream.isOccluderMeshEnabled = true` so the camera feed is drawn **first**:
 the mesh then shows the camera image through it and hides only the virtual content behind it.
 Without the flag the feed is drawn last, at the far plane, and the mesh leaves a black hole.
 
@@ -2904,7 +2905,7 @@ shows.
 import io.github.sceneview.ar.camera.ARCameraStream
 
 val cameraStream = rememberARCameraStream(materialLoader) {
-    createARCameraStream(materialLoader).apply { isMeshOcclusionEnabled = true }
+    createARCameraStream(materialLoader).apply { isOccluderMeshEnabled = true }
 }
 val occluder = remember(materialLoader) { materialLoader.createOcclusionInstance() }
 // In the ARSceneView content, under the same anchor as the dug-in content:

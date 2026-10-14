@@ -99,7 +99,8 @@ internal data class PoolSpec(
 internal class PoolMesh(val vertices: List<Geometry.Vertex>, val indices: List<Int>)
 
 /**
- * The procedural meshes of the in-ground pool demo. Four meshes, one material each:
+ * The procedural meshes of the in-ground pool demo. Four meshes, one material each, plus the
+ * [screen] triangle the night veil is drawn with:
  *
  * - [liner] — walls, sloped floor and Roman steps, normals facing **into** the pool. Its vertex
  *   colour carries the object-space normal (`rgb = n × 0.5 + 0.5`, rotation-proof for the
@@ -159,6 +160,7 @@ internal object PoolGeometry {
     private const val NOSE_SEGMENTS = 4
     private const val STAIR_RADIUS_MAX = 1.6f
     private const val STAIR_RADIUS_OF_WIDTH = 0.45f
+    private const val SCREEN_DEPTH = 0.5f
 
     private val UP = Direction(y = 1f)
     private val DOWN = Direction(y = -1f)
@@ -231,6 +233,23 @@ internal object PoolGeometry {
         face(lft, lnt, lnb, lfb, MINUS_X)
         face(rnt, rft, rfb, rnb, PLUS_X)
         face(lnb, rnb, rfb, lfb, DOWN)
+        return mesh.build()
+    }
+
+    /**
+     * One triangle over the whole screen, in device coordinates — x and y in [-1, 1] across the
+     * screen — for the night veil, drawn with a `vertexDomain: device` material. Its corners
+     * overshoot to (-1, -3) and (3, 1), the way the AR camera image is drawn, so the screen is
+     * covered without a diagonal seam. Mid-depth, where no clip plane can catch it.
+     */
+    fun screen(): PoolMesh {
+        val mesh = MeshBuilder()
+        val corners = listOf(
+            Position(-1f, 1f, SCREEN_DEPTH),
+            Position(-1f, -3f, SCREEN_DEPTH),
+            Position(3f, 1f, SCREEN_DEPTH),
+        ).map { mesh.vertex(it) }
+        mesh.triangle(corners[0], corners[1], corners[2], facing = PLUS_Z)
         return mesh.build()
     }
 

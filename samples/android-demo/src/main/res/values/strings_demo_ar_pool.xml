@@ -29,9 +29,10 @@
     <!-- Accessible name of the dock button that cycles the liner color. -->
     <string name="ar_pool_liner_label">Liner color: %1$s</string>
 
-    <!-- Dock caption (one word) and accessible name of the night toggle. -->
+    <!-- Dock caption (one word) and accessible name of the night toggle: the garden goes
+         dark and the two underwater lamps light the pool. -->
     <string name="ar_pool_night">Night</string>
-    <string name="ar_pool_night_label">Night lights</string>
-    <string name="ar_pool_night_switch">Underwater lights</string>
+    <string name="ar_pool_night_label">Night, pool lights on</string>
+    <string name="ar_pool_night_switch">Night, with the pool lights on</string>
 
 </resources>

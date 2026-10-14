@@ -1561,7 +1561,7 @@ public class io/github/sceneview/ar/camera/ARCameraStream : io/github/sceneview/
 	public fun getRenderableManager ()Lcom/google/android/filament/RenderableManager;
 	public final fun getStandardMaterial ()Lcom/google/android/filament/Material;
 	public final fun isDepthOcclusionEnabled ()Z
-	public final fun isMeshOcclusionEnabled ()Z
+	public final fun isOccluderMeshEnabled ()Z
 	public final fun isPersonOcclusionEnabled ()Z
 	public fun isShadowCaster ()Z
 	public fun isShadowReceiver ()Z
@@ -1589,8 +1589,8 @@ public class io/github/sceneview/ar/camera/ARCameraStream : io/github/sceneview/
 	public fun setMaterialInstanceAt (ILcom/google/android/filament/MaterialInstance;)V
 	public fun setMaterialInstances (Lcom/google/android/filament/MaterialInstance;)V
 	public fun setMaterialInstances (Ljava/util/List;)V
-	public final fun setMeshOcclusionEnabled (Z)V
 	public fun setMorphWeights ([FI)V
+	public final fun setOccluderMeshEnabled (Z)V
 	public final fun setPersonOcclusionEnabled (Z)V
 	public final fun setPersonOcclusionMaterial (Lcom/google/android/filament/Material;)V
 	public fun setPriority (I)V
