@@ -27,6 +27,7 @@ import io.github.sceneview.ar.ARCoreAvailabilityOverlay
 import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.rememberARCameraStream
 import io.github.sceneview.demo.DemoScaffold
+import io.github.sceneview.demo.rememberArPlaybackDataset
 import io.github.sceneview.demo.common.ArDemoPermissionGate
 import io.github.sceneview.demo.common.QaCameraBackdrop
 import io.github.sceneview.demo.common.qaCameraBackdropEnabled
@@ -197,6 +198,9 @@ private fun LiveScanScreen(
         },
     ) {
         val cameraStream = rememberARCameraStream(materialLoader)
+        // Replays a recorded ARCore dataset when the device-QA harness deep-links the demo with
+        // `--es ar_playback_file <path>` (#1576); `null`, so live AR, for every normal launch.
+        val playbackDataset = rememberArPlaybackDataset()
         // QA camera backdrop (#3308): the emulator delivers no camera frame.
         val qaBackdrop = rememberQaCameraBackdropActive(cameraReady)
         Box(modifier = Modifier.fillMaxSize()) {
@@ -209,6 +213,7 @@ private fun LiveScanScreen(
                 isOpaque = !qaCameraBackdropEnabled(),
                 surfaceType = qaCameraBackdropSurfaceType(),
                 cameraStream = if (qaBackdrop) null else cameraStream,
+                playbackDataset = playbackDataset,
                 planeRenderer = true,
                 sessionConfiguration = { session: Session, config: Config ->
                     config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL

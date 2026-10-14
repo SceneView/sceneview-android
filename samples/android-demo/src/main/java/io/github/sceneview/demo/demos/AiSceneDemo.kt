@@ -1,7 +1,9 @@
 package io.github.sceneview.demo.demos
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.speech.RecognizerIntent
 import android.util.Base64
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -73,6 +75,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import io.github.sceneview.demo.DemoScaffold
 import io.github.sceneview.demo.DemoSettings
@@ -100,6 +103,10 @@ import io.github.sceneview.demo.demos.internal.ArDebugOrbitCamera
 import io.github.sceneview.demo.demos.internal.ArDebugSession
 import io.github.sceneview.demo.demos.internal.CameraRig
 import io.github.sceneview.demo.demos.internal.DebugGroup
+import io.github.sceneview.demo.demos.internal.ReplayManifest
+import io.github.sceneview.demo.demos.internal.RerunReplayAssets
+import io.github.sceneview.demo.demos.internal.ScanDevice
+import io.github.sceneview.demo.demos.internal.parseArDebugLog
 import io.github.sceneview.demo.theme.LocalStageChrome
 import io.github.sceneview.demo.theme.SceneViewTokens
 import io.github.sceneview.demo.theme.SceneViewTokens.ArOverlay
@@ -177,6 +184,11 @@ fun AiSceneDemo(onBack: () -> Unit) {
     val recorded = remember { RecordedAiProvider() }
     val claude = remember(keyStore) { ClaudeAiProvider(key = { keyStore.load() }) }
     val provider: AiProvider = if (useClaude) claude else recorded
+    // The recording knows the sample room only: on the user's own scan it answers nothing, and
+    // the screen says what rebuilds it instead — Claude with the user's key.
+    val ownScan = liveMedia != null
+    val needsKey = ownScan && (!useClaude || keyHint == null)
+    val canAsk = agent != null && !state.busy && !needsKey
 
     // The stage: the whole recorded session, without the anchors (the rebuilt room says more).
     val session = remember {
@@ -256,9 +268,14 @@ fun AiSceneDemo(onBack: () -> Unit) {
             }
         }
     }
+    // QA: a scan of the user's own, without a key — the live scan's file, from part of the sample.
+    LaunchedEffect(qaState) {
+        if (qaState == QA_OWN_SCAN) liveMedia = qaOwnScan(context)
+    }
 
     fun ask(prompt: String) {
         val a = agent ?: return
+        if (needsKey) return
         scope.launch { a.ask(provider, prompt) }
     }
 
@@ -333,10 +350,11 @@ fun AiSceneDemo(onBack: () -> Unit) {
                 ) {
                     ChatCard(
                         state = state,
-                        liveScan = liveMedia != null,
+                        keyMissing = if (needsKey) keyHint == null else null,
                         onScanRoom = { scanning = true }.takeIf { agent != null && !state.busy },
+                        onSampleScan = { liveMedia = null },
                     )
-                    PromptField(enabled = agent != null && !state.busy, onSend = ::ask)
+                    PromptField(enabled = canAsk, onSend = ::ask)
                 }
             }
         },
@@ -376,7 +394,7 @@ fun AiSceneDemo(onBack: () -> Unit) {
             label = nextPrompt,
             caption = if (nextPrompt == RecordedAiProvider.REBUILD_PROMPT) "Rebuild" else "Furnish",
             onClick = { ask(nextPrompt) },
-            enabled = agent != null && !state.busy,
+            enabled = canAsk,
         ),
     ) {
         val m = media
@@ -460,8 +478,9 @@ private fun StatusCard(
                     .background(chrome.track, RoundedCornerShape(SceneViewTokens.Radius.full))
                     .padding(horizontal = Space.sm, vertical = Space.xs / 2),
             )
-            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.width(Space.sm))
             if (spatial != null) {
+                // Never cut: on a narrow phone it takes a second line, right-aligned.
                 Text(
                     text = (if (liveScan) "Your scan · " else "") + "${String.format(
                         Locale.US,
@@ -469,15 +488,14 @@ private fun StatusCard(
                         spatial.pointCount,
                     )} points · ${spatial.keyframes.size} keyframes",
                     style = muted,
-                    maxLines = 1,
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.weight(1f),
                 )
             }
         }
         Text(
             text = modelSummary(state.model),
             style = SceneViewTokens.Type.caption.copy(color = chrome.onCard),
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
         )
         if (useClaude && state.inputTokens > 0) {
             Text(text = "${state.inputTokens} tokens in · ${state.outputTokens} out", style = muted)
@@ -536,9 +554,18 @@ private fun Figure(label: String, value: String, chrome: StageChrome, modifier: 
  * Once a takeoff is asked for and the model is done, the takeoff takes the tool lines' place: it
  * sits under the room, not over the window it measures. [onScanRoom], while nothing is asked
  * yet, opens a live scan of the room the phone is in.
+ *
+ * [keyMissing] is set on the user's own scan when no Claude with a key runs it: `true` without a
+ * saved key, `false` with one but the recorded demo picked. The card then says how to rebuild the
+ * scan, and [onSampleScan] goes back to the sample room the recording knows.
  */
 @Composable
-private fun ChatCard(state: AgentState, liveScan: Boolean, onScanRoom: (() -> Unit)?) {
+private fun ChatCard(
+    state: AgentState,
+    keyMissing: Boolean?,
+    onScanRoom: (() -> Unit)?,
+    onSampleScan: () -> Unit,
+) {
     val chrome = LocalStageChrome.current
     val shape = RoundedCornerShape(SceneViewTokens.Radius.lg)
     Column(
@@ -558,15 +585,21 @@ private fun ChatCard(state: AgentState, liveScan: Boolean, onScanRoom: (() -> Un
         } else {
             state.lines.takeLast(CHAT_LINES)
         }
-        if (lines.isEmpty()) {
+        if (keyMissing != null) {
             Text(
-                text = if (liveScan) {
-                    "Your scan is in. The recorded demo only knows the sample room: pick Claude with " +
-                        "your key in the settings to rebuild this one."
-                } else {
-                    "Ask the AI to rebuild this scanned room. It reads the real scan — planes, points, " +
-                        "the camera's path — and the code computes every number."
-                },
+                text = if (keyMissing) OWN_SCAN_ADD_KEY else OWN_SCAN_PICK_CLAUDE,
+                style = SceneViewTokens.Type.caption.copy(color = chrome.onCard, fontWeight = FontWeight.SemiBold),
+            )
+            Text(
+                text = "The recorded demo only replays the sample room. Rebuild and Furnish wait for Claude " +
+                    "to read this one.",
+                style = SceneViewTokens.Type.caption.copy(color = chrome.onCardMuted),
+            )
+            TextButton(onClick = onSampleScan) { Text(SAMPLE_SCAN) }
+        } else if (lines.isEmpty()) {
+            Text(
+                text = "Ask the AI to rebuild this scanned room. It reads the real scan — planes, points, " +
+                    "the camera's path — and the code computes every number.",
                 style = SceneViewTokens.Type.caption.copy(color = chrome.onCardMuted),
             )
             if (onScanRoom != null) {
@@ -822,6 +855,23 @@ private fun keyframesFor(media: RerunReplayMedia, spatial: SpatialSession): List
 }
 
 /**
+ * QA only: a scan of the user's own, as "Scan this room" hands it over — the recorder's file,
+ * built from the first part of the sample's journal and read back by [loadRerunSession]. The
+ * emulator runs no ARCore; this is how a capture reaches the screen a real scan leads to.
+ */
+private suspend fun qaOwnScan(context: Context): RerunReplayMedia? = runCatching {
+    val (manifest, events) = withContext(Dispatchers.IO) {
+        val assets = context.assets
+        val manifest = assets.open(RerunReplayAssets.MANIFEST).bufferedReader().use { it.readText() }
+            .let(ReplayManifest::parse) ?: return@withContext null
+        manifest to assets.open(RerunReplayAssets.LOG).bufferedReader().useLines { parseArDebugLog(it) }
+    } ?: return@runCatching null
+    val part = events.take((events.size * QA_OWN_SCAN_SHARE).roundToInt())
+    val device = ScanDevice("android", Build.MODEL, ScanDevice.TIER_SPARSE, ScanDevice.SOURCE_FEATURE_POINTS)
+    loadRerunSession(RerunCaptureBuilder.build(part, manifest.lens, emptyList(), device))
+}.getOrNull()
+
+/**
  * QA only: [inner], held for good once [holdAt] assistant turns of the current request have run,
  * so a capture shows the model mid-work — its rays and probes still on screen.
  */
@@ -843,6 +893,9 @@ private val SCAN_LAYERS = listOf(DebugGroup.Points, DebugGroup.Planes, DebugGrou
 private val FADED_FIRST = listOf(DebugGroup.Planes, DebugGroup.Trail)
 
 private const val SCAN_ROOM = "Scan this room"
+private const val SAMPLE_SCAN = "Back to the sample scan"
+private const val OWN_SCAN_ADD_KEY = "Add your Claude key in Settings to rebuild your own scan."
+private const val OWN_SCAN_PICK_CLAUDE = "Pick \"Claude, your key\" in Settings to rebuild your own scan."
 private const val CLOUD_FADE_MS = 1400
 
 // The points shrink in a few steps, as each new size rebuilds their meshes.
@@ -853,6 +906,10 @@ private const val QA_LOOKING = "looking"
 private const val QA_BUILDING = "building"
 private const val QA_REBUILT = "rebuilt"
 private const val QA_CORNER = "corner"
+private const val QA_OWN_SCAN = "own_scan"
+
+// The QA stand-in for a scan of the user's own: the first part of the sample's journal.
+private const val QA_OWN_SCAN_SHARE = 0.4f
 
 private const val TOOL_PACE_MS = 600L
 private const val QA_TOOL_PACE_MS = 250L
