@@ -764,13 +764,13 @@ internal fun ArDebugSceneView(
                 }
             },
         ) {
-            // The layer nodes hang off one plain node, and are destroyed with it.
-            Node(
-                apply = {
-                    layers.nodes.values.forEach { addChildNode(it) }
-                    replayLayers?.nodes?.forEach { addChildNode(it) }
-                },
-            )
+            // The layer nodes hang off a plain node, and are destroyed with it. Keyed on their
+            // layers: a new palette (a theme switch on a themed stage) or a new replay rebuilds
+            // them, and the old nodes must leave the scene before their materials and textures
+            // are released — Compose forgets this group before the effects above. One node held
+            // the first set for good, drawing freed textures: "Invalid texture still bound".
+            key(layers) { Node(apply = { layers.nodes.values.forEach { addChildNode(it) } }) }
+            key(replayLayers) { Node(apply = { replayLayers?.nodes?.forEach { addChildNode(it) } }) }
             if (session.isVisible(DebugGroup.Anchors)) {
                 anchors.forEach { anchor ->
                     // One instance per anchor: a Filament model instance can only hang off one node.
