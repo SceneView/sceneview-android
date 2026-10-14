@@ -16,7 +16,8 @@
         ".glb",
         ".hdr",
         ".spz",
-        ".ply"
+        ".ply",
+        ".ktx"
       ]
     },
     "ios": {
@@ -72,6 +73,15 @@
       "source": "https://polyhaven.com/a/chinese_garden",
       "license": "CC0-1.0",
       "author": "Sergej Majboroda"
+    },
+    {
+      "path": "samples/android-demo/src/main/assets/environments/circuit_ibl.ktx",
+      "scope": "android",
+      "sha256": "d9366d1d9240806bf045126588b5910a8a53ce272e8643147eec2612fc4540ea",
+      "size": 2095484,
+      "source": "https://github.com/sceneview/sceneview/blob/main/LICENSE",
+      "license": "Apache-2.0",
+      "author": "SceneView project"
     },
     {
       "path": "samples/android-demo/src/main/assets/environments/night_sky_2k.hdr",
@@ -198,6 +208,15 @@
       "source": "https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/ToyCar",
       "license": "CC0-1.0",
       "author": "Guido Odendahl (model); Eric Chadwick (extensions and scene composition)"
+    },
+    {
+      "path": "samples/android-demo/src/main/assets/models/night_circuit.glb",
+      "scope": "android",
+      "sha256": "e36f8a9a5ea6fd2957e49422fd104e739c192ac37b27e5057a7ffe6312982609",
+      "size": 4244656,
+      "source": "https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/CarConcept",
+      "license": "CC-BY-4.0",
+      "author": "Darmstadt Graphics Group GmbH (Eric Chadwick); set by SceneView"
     },
     {
       "path": "samples/android-demo/src/main/assets/models/shiba.glb",

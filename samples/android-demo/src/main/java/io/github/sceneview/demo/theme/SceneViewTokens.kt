@@ -270,16 +270,16 @@ object SceneViewTokens {
         val heroFieldEmbeddedDark = Color(0xFF232A39)
 
         /**
-         * `hero-sky-*` — the dusk Compose paints behind the transparent home stage
-         * (#3948), top to bottom. The 3D flight is rendered over this gradient with no
-         * skybox of its own, so the sky is one gradient in both themes: [heroSkyTop] is
-         * the `stage-background` value, [heroSkyHorizon] is also the scene's fog colour,
-         * which is what lets the far ridges dissolve into it.
+         * `hero-sky-*` — the night Compose paints behind the transparent home stage
+         * (#3948), top to bottom: what shows until the night circuit's own sky dome has
+         * landed, and on a device that shows the still. One gradient in both themes:
+         * [heroSkyTop] is the `stage-background` value, [heroSkyHorizon] is the scene's
+         * haze (its fog colour, in sRGB), so the dome lands on the colour already there.
          */
         val heroSkyTop = Color(0xFF0B0F16)
-        val heroSkyDusk = Color(0xFF3B1D46)
-        val heroSkyHorizon = Color(0xFFE2734F)
-        val heroSkyGround = Color(0xFF2A1220)
+        val heroSkyDusk = Color(0xFF161C2C)
+        val heroSkyHorizon = Color(0xFF3F4D65)
+        val heroSkyGround = Color(0xFF1D2230)
 
         val chipBackgroundLight = Color(0xFFF1F3F5)
         /**

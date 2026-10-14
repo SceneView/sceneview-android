@@ -4646,6 +4646,20 @@ millisToSeconds(millis: Long): Float
 frameCount(durationSeconds: Float, frameRate: Int): Int
 ```
 
+Light cues — brightness curves for animated lights and emissive surfaces. Each is a pure
+function of time returning a level, `0` (dark) to `1` (full): multiply a light's intensity or a
+material's `emissiveStrength` by it in `SceneView(onFrame = …)`. No state, no allocation, so a
+paused clock holds the picture and a test can assert any frame:
+
+```kotlin notest API-shape listing — function-signature reference notation, not statements
+LightCues.ignition(seconds: Float, startSeconds: Float = 0f, durationSeconds: Float = 0.8f, seed: Int = 0): Float  // neon striking: 0, flickers, then 1
+LightCues.fadeIn(seconds: Float, startSeconds: Float = 0f, durationSeconds: Float = 0.6f, easing: (Float) -> Float = Easing.EaseOut): Float
+LightCues.breathe(seconds: Float, periodSeconds: Float = 3f, floor: Float = 0.6f): Float  // slow pulse between floor and 1
+LightCues.blink(seconds: Float, periodSeconds: Float = 1f, duty: Float = 0.5f, softness: Float = 0.06f): Float  // beacon, hazard light
+LightCues.flash(seconds: Float, periodSeconds: Float, offsetSeconds: Float = 0f, attackSeconds: Float = 0.05f, releaseSeconds: Float = 0.35f): Float  // 0 except a brief flash; add it to a base level
+LightCues.glitch(seconds: Float, everySeconds: Float = 6f, lengthSeconds: Float = 0.22f, depth: Float = 0.15f, seed: Int = 0): Float  // 1 except a short stutter
+```
+
 ### Geometry generators
 
 `io.github.sceneview.geometries` — pure functions returning `GeometryData(vertices, indices)`:
