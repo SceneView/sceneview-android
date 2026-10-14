@@ -150,6 +150,22 @@
   // Minimal GLB generator — creates a 1x1 textured quad in memory
   // ---------------------------------------------------------------
 
+  // Minimal 2x2 white PNG (RGBA): the placeholder base texture of generated meshes,
+  // replaced at runtime once gltfio has bound it.
+  var _WHITE_PNG_2X2 = new Uint8Array([
+    0x89,0x50,0x4E,0x47,0x0D,0x0A,0x1A,0x0A, // PNG signature
+    0x00,0x00,0x00,0x0D,0x49,0x48,0x44,0x52, // IHDR chunk
+    0x00,0x00,0x00,0x02,0x00,0x00,0x00,0x02, // 2x2
+    0x08,0x06,0x00,0x00,0x00,0x72,0xD1,0x0D, // 8-bit RGBA
+    0x5F,
+    0x00,0x00,0x00,0x1C,0x49,0x44,0x41,0x54, // IDAT chunk
+    0x78,0x9C,0x62,0xF8,0x0F,0x00,0x01,0x01, // zlib compressed
+    0x00,0x05,0x18,0xD8,0x4A,0x00,0x06,0x00,
+    0x00,0x22,0x00,0x01,0xE7,0x40,0xA3,0x6E,
+    0x00,0x00,0x00,0x00,0x49,0x45,0x4E,0x44, // IEND chunk
+    0xAE,0x42,0x60,0x82
+  ]);
+
   /**
    * Generate a minimal glTF-binary (GLB) containing a 1x1 unit quad plane
    * with an unlit material and a 2x2 white base texture.
@@ -234,21 +250,7 @@
     // Indices: 6 uint16 = 12 bytes
     var indices = new Uint16Array([0, 1, 2, 0, 2, 3]);
 
-    // Minimal 2x2 white PNG (RGBA)
-    // This is a valid PNG: 2x2 pixels, all white with full alpha
-    var pngBytes = new Uint8Array([
-      0x89,0x50,0x4E,0x47,0x0D,0x0A,0x1A,0x0A, // PNG signature
-      0x00,0x00,0x00,0x0D,0x49,0x48,0x44,0x52, // IHDR chunk
-      0x00,0x00,0x00,0x02,0x00,0x00,0x00,0x02, // 2x2
-      0x08,0x06,0x00,0x00,0x00,0x72,0xD1,0x0D, // 8-bit RGBA
-      0x5F,
-      0x00,0x00,0x00,0x1C,0x49,0x44,0x41,0x54, // IDAT chunk
-      0x78,0x9C,0x62,0xF8,0x0F,0x00,0x01,0x01, // zlib compressed
-      0x00,0x05,0x18,0xD8,0x4A,0x00,0x06,0x00,
-      0x00,0x22,0x00,0x01,0xE7,0x40,0xA3,0x6E,
-      0x00,0x00,0x00,0x00,0x49,0x45,0x4E,0x44, // IEND chunk
-      0xAE,0x42,0x60,0x82
-    ]);
+    var pngBytes = _WHITE_PNG_2X2;
 
     var geomSize = 48 + 32 + 12; // 92 bytes for positions + uvs + indices
     var binLength = geomSize + pngBytes.length;
@@ -500,6 +502,749 @@
   }
 
   // ---------------------------------------------------------------
+  // Studio showroom (setStudio)
+  // ---------------------------------------------------------------
+  //
+  // A seamless photo studio around the model: a cyclorama dome whose colour runs from the
+  // horizon up to the ceiling, a floor that fades into it with no visible horizon line, a
+  // contact shadow and ambient occlusion baked from the model's own triangles, and a soft
+  // planar reflection drawn by a second view. Every studio surface is unlit vertex colour
+  // through gltfio's ubershader, the floor's times one shadow texture: no extra material
+  // ships.
+
+  // Theme defaults: the DESIGN.md `stage-studio-*` tokens, sRGB as displayed. From the
+  // model outwards the studio only ever gets darker: pool, floor, horizon, then the wall
+  // up to `top`. `vignette` is the corner multiplier, not a colour.
+  var _STUDIO_THEMES = {
+    light: {
+      top: '#CDD3DB', horizon: '#E7EAEF', floor: '#F2F4F7', pool: '#FDFDFE',
+      shadow: 0.85, reflection: 0.14, bloom: 0, vignette: 0.8,
+      environment: '/environments/studio_showroom_light_ibl.ktx'
+    },
+    dark: {
+      top: '#0B0E13', horizon: '#222833', floor: '#2B323E', pool: '#3A4250',
+      shadow: 0.9, reflection: 0.26, bloom: 0.12, vignette: 0.6,
+      environment: '/environments/studio_showroom_dark_ibl.ktx'
+    }
+  };
+  var _STUDIO_IBL_INTENSITY = 40000;
+  var _STUDIO_FOV = 30;            // a moderate telephoto: less perspective distortion
+  var _STUDIO_REVEAL_MS = 1600;
+  var _STUDIO_TURN_RATE = 0.2618;  // radians per second: 15 degrees, a turn in 24 s
+  var _STUDIO_DOME_RAMP = 0.35;   // radians over which the wall turns from horizon to top
+  // Cover values (the `u` field of _studioBakeShadow) over which the reflection gives way
+  // under the body: from its outline to about 4 % of the model's size inside it.
+  var _STUDIO_UNDERBODY = [0.45, 0.9];
+  // Drawing-buffer pixel budget per quality tier (0 = lowest). See _studioApplyTier().
+  var _STUDIO_BUDGETS = [0.5e6, 0.8e6, 1.2e6, 2.0e6];
+
+  function _hexToRgb(hex) {
+    var h = String(hex).replace('#', '');
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    var n = parseInt(h, 16);
+    return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+  }
+
+  /** '#RRGGBB', '#RGB' or [r, g, b] in 0-1 -> [r, g, b], or `fallback`. */
+  function _studioColor(c, fallback) {
+    function unit(v) { return Math.min(1, Math.max(0, +v || 0)); }
+    if (Array.isArray(c) && c.length >= 3) return [unit(c[0]), unit(c[1]), unit(c[2])];
+    if (typeof c === 'string' && /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.test(c)) return _hexToRgb(c);
+    return fallback;
+  }
+
+  function _smoothstep(e0, e1, x) {
+    var t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0)));
+    return t * t * (3 - 2 * t);
+  }
+
+  function _mixRgb(a, b, t) {
+    return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+  }
+
+  /** The linear HDR value an unlit surface needs to show the display colour `c`. */
+  function _hdrOf(c) {
+    var v = _clearColorFor([c[0], c[1], c[2], 1], false);
+    return [v[0], v[1], v[2]];
+  }
+
+  /** The sRGB encoding of one linear channel in 0-1. */
+  function _linearToSrgb(y) {
+    y = Math.min(1, Math.max(0, y));
+    return y <= 0.0031308 ? 12.92 * y : 1.055 * Math.pow(y, 1 / 2.4) - 0.055;
+  }
+
+  function _isLikelyMobile() {
+    try {
+      if (typeof navigator !== 'undefined' && /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent || '')) return true;
+      return typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+    } catch (_e) { return false; }
+  }
+
+  function _prefersReducedMotion() {
+    try {
+      return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch (_e) { return false; }
+  }
+
+  /** setStudio() argument -> the full studio description, or null to turn it off. */
+  function _studioConfig(options) {
+    if (options === false || options === null) return null;
+    var o = (options && typeof options === 'object') ? options : {};
+    var name = typeof options === 'string' ? options : o.theme;
+    var theme = name === 'dark' ? 'dark' : 'light';
+    var base = _STUDIO_THEMES[theme];
+    function unit(v, fallback, max) { return Number.isFinite(v) ? Math.min(max, Math.max(0, v)) : fallback; }
+    return {
+      theme: theme,
+      top: _studioColor(o.top, _hexToRgb(base.top)),
+      horizon: _studioColor(o.horizon, _hexToRgb(base.horizon)),
+      floor: _studioColor(o.floor, _hexToRgb(base.floor)),
+      pool: _studioColor(o.pool, _hexToRgb(base.pool)),
+      shadow: unit(o.shadow, base.shadow, 1),
+      reflection: unit(o.reflection, base.reflection, 0.6),
+      bloom: base.bloom,
+      vignette: base.vignette,
+      environment: (typeof o.environment === 'string' && o.environment) ? o.environment : base.environment
+    };
+  }
+
+  /**
+   * Studio layout for a model's bounding box: the floor height and footprint, a low
+   * three-quarter camera (9 degrees above the horizon for a car, 14 for a sofa, 22 for
+   * a shoe or a watch) that keeps the swept bounding cylinder inside 78 % of the view
+   * (up to 90 % of a portrait view's width, where the height is to spare), the dome
+   * radius and how far from the footprint the reflection fades out.
+   */
+  function _studioLayoutFor(bbox, aspect) {
+    var min = bbox.min, max = bbox.max;
+    var dx = max[0] - min[0], dy = max[1] - min[1], dz = max[2] - min[2];
+    var L = Math.max(dx, dy, dz);
+    if (!(L > 0)) return null;
+    var cx = (min[0] + max[0]) / 2, cy = (min[1] + max[1]) / 2, cz = (min[2] + max[2]) / 2;
+    var elev = (L >= 3 ? 9 : L >= 0.6 ? 14 : 22) * Math.PI / 180;
+    var c = Math.cos(elev), s = Math.sin(elev);
+    var yt = cy - 0.1 * dy;
+    var T = 0.78 * Math.tan(_STUDIO_FOV * Math.PI / 360);
+    var sweep = 0.5 * Math.hypot(dx, dz);
+    var R = 0;
+    [-sweep, sweep].forEach(function(u) {
+      [min[1] - yt, max[1] - yt].forEach(function(v) {
+        R = Math.max(R, u * c + v * s + Math.abs(v * c - u * s) / T);
+      });
+    });
+    var fillW = 0.78 + 0.12 * Math.min(1, Math.max(0, (1.2 - aspect) / 0.5));
+    var tw = (T / 0.78) * fillW * Math.max(0.1, aspect);
+    R = Math.max(R, sweep * Math.sqrt(1 + 1 / (tw * tw)) / c);
+    var eyeAboveFloor = yt + R * s - min[1];
+    var hf = 0.4 * dy;  // the reflection shows the lower 40 % of the model
+    return {
+      L: L, cx: cx, cz: cz, y: min[1], hx: dx / 2, hz: dz / 2,
+      target: [cx, yt, cz], radius: R * c, height: yt + R * s, distance: R,
+      domeRadius: Math.max(10 * L, 6 * R),
+      fade: Math.max(0.05 * L, (R * c * hf) / (eyeAboveFloor + hf))
+    };
+  }
+
+  /** Pack a glTF JSON object and its binary buffer into GLB bytes. */
+  function _packGLB(gltf, bin) {
+    var json = JSON.stringify(gltf);
+    while (json.length % 4) json += ' ';
+    var binLen = bin.byteLength + ((4 - bin.byteLength % 4) % 4);
+    var total = 12 + 8 + json.length + 8 + binLen;
+    var ab = new ArrayBuffer(total), dv = new DataView(ab), o = 0, i;
+    dv.setUint32(o, 0x46546C67, true); o += 4;
+    dv.setUint32(o, 2, true); o += 4;
+    dv.setUint32(o, total, true); o += 4;
+    dv.setUint32(o, json.length, true); o += 4;
+    dv.setUint32(o, 0x4E4F534A, true); o += 4;
+    for (i = 0; i < json.length; i++) dv.setUint8(o++, json.charCodeAt(i));
+    dv.setUint32(o, binLen, true); o += 4;
+    dv.setUint32(o, 0x004E4942, true); o += 4;
+    new Uint8Array(ab, o, bin.byteLength).set(bin);
+    return new Uint8Array(ab);
+  }
+
+  /**
+   * An unlit, double-sided triangle mesh with linear RGBA vertex colours (HDR values
+   * above 1 are kept). For BLEND, colours are premultiplied by their alpha. With `uv`,
+   * it also gets TEXCOORD_0 and a white placeholder base colour texture, which gltfio
+   * multiplies with the vertex colour and the caller swaps for its own.
+   */
+  function _buildColoredMeshGLB(pos, col, idx, blend, uv) {
+    var n = pos.length / 3, i;
+    var min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
+    for (i = 0; i < pos.length; i++) {
+      var k = i % 3;
+      if (pos[i] < min[k]) min[k] = pos[i];
+      if (pos[i] > max[k]) max[k] = pos[i];
+    }
+    var wide = n > 65535;
+    var P = new Float32Array(pos), C = new Float32Array(col), U = new Float32Array(uv || []);
+    var I = wide ? new Uint32Array(idx) : new Uint16Array(idx);
+    var png = uv ? _WHITE_PNG_2X2 : new Uint8Array(0);
+    var oU = P.byteLength + C.byteLength, oI = oU + U.byteLength;
+    var oPng = oI + I.byteLength + ((4 - I.byteLength % 4) % 4);
+    var bin = new Uint8Array(oPng + png.byteLength);
+    bin.set(new Uint8Array(P.buffer), 0);
+    bin.set(new Uint8Array(C.buffer), P.byteLength);
+    bin.set(new Uint8Array(U.buffer), oU);
+    bin.set(new Uint8Array(I.buffer), oI);
+    bin.set(png, oPng);
+    var gltf = {
+      asset: { version: '2.0' }, scene: 0, scenes: [{ nodes: [0] }], nodes: [{ mesh: 0 }],
+      meshes: [{ primitives: [{ attributes: { POSITION: 0, COLOR_0: 1 }, indices: 2, material: 0, mode: 4 }] }],
+      materials: [{
+        pbrMetallicRoughness: { baseColorFactor: [1, 1, 1, 1], metallicFactor: 0, roughnessFactor: 1 },
+        alphaMode: blend ? 'BLEND' : 'OPAQUE', doubleSided: true,
+        extensions: { KHR_materials_unlit: {} }
+      }],
+      extensionsUsed: ['KHR_materials_unlit'],
+      accessors: [
+        { bufferView: 0, componentType: 5126, count: n, type: 'VEC3', min: min, max: max },
+        { bufferView: 1, componentType: 5126, count: n, type: 'VEC4' },
+        { bufferView: 2, componentType: wide ? 5125 : 5123, count: I.length, type: 'SCALAR' }
+      ],
+      bufferViews: [
+        { buffer: 0, byteOffset: 0, byteLength: P.byteLength },
+        { buffer: 0, byteOffset: P.byteLength, byteLength: C.byteLength },
+        { buffer: 0, byteOffset: oI, byteLength: I.byteLength }
+      ],
+      buffers: [{ byteLength: bin.byteLength }]
+    };
+    if (uv) {
+      gltf.meshes[0].primitives[0].attributes.TEXCOORD_0 = 3;
+      gltf.accessors.push({ bufferView: 3, componentType: 5126, count: n, type: 'VEC2' });
+      gltf.bufferViews.push({ buffer: 0, byteOffset: oU, byteLength: U.byteLength },
+        { buffer: 0, byteOffset: oPng, byteLength: png.byteLength });
+      gltf.materials[0].pbrMetallicRoughness.baseColorTexture = { index: 0 };
+      gltf.textures = [{ source: 0, sampler: 0 }];
+      gltf.images = [{ bufferView: 4, mimeType: 'image/png' }];
+      gltf.samplers = [{ magFilter: 9729, minFilter: 9729, wrapS: 33071, wrapT: 33071 }];
+    }
+    return _packGLB(gltf, bin);
+  }
+
+  /**
+   * The cyclorama: an upper hemisphere standing on the floor, rings packed near the
+   * horizon where the colour turns from `horizon` to `top`. No part of it goes below
+   * the floor, so the floor's own alpha decides what shows under it.
+   */
+  function _studioDomeGLB(lay, conf) {
+    var NA = 64, NR = 24, R = lay.domeRadius, pos = [], col = [], idx = [], i, j;
+    for (i = 0; i <= NR; i++) {
+      var th = (Math.PI / 2) * Math.pow(i / NR, 1.6);
+      var rgb = _hdrOf(_mixRgb(conf.horizon, conf.top, _smoothstep(0, _STUDIO_DOME_RAMP, th)));
+      var rr = Math.cos(th) * R, y = lay.y + Math.sin(th) * R;
+      for (j = 0; j < NA; j++) {
+        var a = (j / NA) * Math.PI * 2;
+        pos.push(lay.cx + Math.cos(a) * rr, y, lay.cz + Math.sin(a) * rr);
+        col.push(rgb[0], rgb[1], rgb[2], 1);
+      }
+    }
+    for (i = 0; i < NR; i++) {
+      for (j = 0; j < NA; j++) {
+        var a0 = i * NA + j, b0 = i * NA + (j + 1) % NA;
+        var c0 = (i + 1) * NA + j, d0 = (i + 1) * NA + (j + 1) % NA;
+        idx.push(a0, b0, d0, a0, d0, c0);
+      }
+    }
+    return _buildColoredMeshGLB(pos, col, idx, false);
+  }
+
+  /** One rounded-rectangle ring at distance `d` around a (hx, hz) half-extent footprint. */
+  function _studioRing(hx, hz, d, K, M) {
+    var pts = [], sx = [1, -1, -1, 1], sz = [1, 1, -1, -1], ci, k, m;
+    for (ci = 0; ci < 4; ci++) {
+      var a0 = ci * Math.PI / 2;
+      for (k = 0; k <= K; k++) {
+        var a = a0 + (k / K) * Math.PI / 2;
+        pts.push([sx[ci] * hx + d * Math.cos(a), sz[ci] * hz + d * Math.sin(a)]);
+      }
+      var cn = (ci + 1) % 4, an = cn * Math.PI / 2;
+      var p0 = pts[pts.length - 1];
+      var p1 = [sx[cn] * hx + d * Math.cos(an), sz[cn] * hz + d * Math.sin(an)];
+      for (m = 1; m <= M; m++) {
+        var t = m / (M + 1);
+        pts.push([p0[0] + (p1[0] - p0[0]) * t, p0[1] + (p1[1] - p0[1]) * t]);
+      }
+    }
+    return pts;
+  }
+
+  /**
+   * The floor's colour by distance `d` from the model's footprint: `t`, the colour on
+   * screen, runs pool -> floor -> horizon and never turns lighter again further out;
+   * `rho`, how much of the reflection shows through, fades out with `lay.fade`; `hdr` is
+   * the straight unlit colour that, over an empty reflection (the horizon colour), still
+   * shows `t`, so only the reflected model changes the floor.
+   */
+  function _studioFloorShade(lay, conf, mirror) {
+    var L = lay.L, rho0 = mirror ? conf.reflection : 0;
+    return function(d) {
+      var t = _mixRgb(_mixRgb(conf.pool, conf.floor, _smoothstep(0, 1.1 * L, d)),
+        conf.horizon, _smoothstep(1.1 * L, 3.5 * L, d));
+      var rho = rho0 > 0 ? rho0 * Math.pow(1 - Math.min(1, d / lay.fade), 2) : 0;
+      var under = t;
+      if (rho > 0) {
+        under = [];
+        for (var k = 0; k < 3; k++) under.push(Math.min(1, Math.max(0, (t[k] - rho * conf.horizon[k]) / (1 - rho))));
+      }
+      return { t: t, rho: rho, hdr: _hdrOf(under) };
+    };
+  }
+
+  /**
+   * The floor: rounded-rectangle rings around the footprint, dense near the model, out
+   * to a circle just past the dome wall, coloured by _studioFloorShade() so it melts into
+   * the wall with no visible line. Its vertices are opaque: the texture over the shadow
+   * field `sh` (_studioShadowTexels), which spans the whole reach of the reflection,
+   * carries the shadow and how much of the reflection shows, and clamps to white past it.
+   */
+  function _studioFloorGLB(lay, conf, mirror, sh) {
+    var K = 8, M = 6, NV = 4 * (K + 1 + M);
+    var L = lay.L, Rd = lay.domeRadius, diag = Math.hypot(lay.hx, lay.hz);
+    var shade = _studioFloorShade(lay, conf, mirror);
+    var su = 1 / (sh.w * sh.ts), sv = 1 / (sh.h * sh.ts);
+    var steps = [0, 0.03, 0.06, 0.1, 0.15, 0.2, 0.27, 0.35, 0.45, 0.55, 0.7, 0.85, 1,
+      1.2, 1.45, 1.75, 2.1, 2.5, 3, 3.6, 4.3, 5.2, 6.3, 7.6, 9.2, 11, 13];
+    var pos = [], col = [], uv = [], idx = [], starts = [], ring = null, u = 0, i, j;
+    function vertex(x, z, d) {
+      var p = shade(d);
+      pos.push(x, lay.y, z);
+      col.push(p.hdr[0], p.hdr[1], p.hdr[2], 1);
+      uv.push((x - sh.x0) * su, (z - sh.z0) * sv);
+    }
+    vertex(lay.cx, lay.cz, 0);
+    for (i = 0; ; i++) {
+      u = i < steps.length ? steps[i] : u * 1.2;
+      var d = u * L;
+      if (d + diag >= Rd) break;
+      starts.push(pos.length / 3);
+      ring = _studioRing(lay.hx, lay.hz, d, K, M);
+      for (j = 0; j < NV; j++) vertex(lay.cx + ring[j][0], lay.cz + ring[j][1], d);
+    }
+    starts.push(pos.length / 3);
+    for (j = 0; j < NV; j++) {
+      var ang = Math.atan2(ring[j][1], ring[j][0]);
+      vertex(lay.cx + Math.cos(ang) * 1.02 * Rd, lay.cz + Math.sin(ang) * 1.02 * Rd, 1.02 * Rd - diag);
+    }
+    for (j = 0; j < NV; j++) idx.push(0, starts[0] + j, starts[0] + (j + 1) % NV);
+    for (i = 0; i + 1 < starts.length; i++) {
+      var a0 = starts[i], b0 = starts[i + 1];
+      for (j = 0; j < NV; j++) {
+        var j1 = (j + 1) % NV;
+        idx.push(a0 + j, a0 + j1, b0 + j1, a0 + j, b0 + j1, b0 + j);
+      }
+    }
+    return _buildColoredMeshGLB(pos, col, idx, true, uv);
+  }
+
+  /** The JSON and BIN chunks of GLB bytes, or null (a .gltf, or not glTF at all). */
+  function _glbChunks(bytes) {
+    if (!bytes || bytes.byteLength < 20) return null;
+    var dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    if (dv.getUint32(0, true) !== 0x46546C67) return null;
+    var json = null, bin = null, o = 12;
+    while (o + 8 <= bytes.byteLength) {
+      var len = dv.getUint32(o, true), type = dv.getUint32(o + 4, true), start = o + 8;
+      if (start + len > bytes.byteLength) break;
+      if (type === 0x4E4F534A && !json) json = JSON.parse(new TextDecoder().decode(bytes.subarray(start, start + len)));
+      else if (type === 0x004E4942 && !bin) bin = bytes.subarray(start, start + len);
+      o = start + len;
+    }
+    return json ? { json: json, bin: bin } : null;
+  }
+
+  /** Column-major 4x4 product A * B. */
+  function _mat4Mul(A, B) {
+    var C = new Array(16);
+    for (var col = 0; col < 4; col++) {
+      for (var row = 0; row < 4; row++) {
+        C[col * 4 + row] = A[row] * B[col * 4] + A[4 + row] * B[col * 4 + 1] +
+          A[8 + row] * B[col * 4 + 2] + A[12 + row] * B[col * 4 + 3];
+      }
+    }
+    return C;
+  }
+
+  /** A glTF node's local matrix: `matrix`, or translation * rotation * scale. */
+  function _nodeMatrix(node) {
+    if (node.matrix && node.matrix.length === 16) return node.matrix;
+    var t = node.translation || [0, 0, 0], q = node.rotation || [0, 0, 0, 1], s = node.scale || [1, 1, 1];
+    var x = q[0], y = q[1], z = q[2], w = q[3];
+    var xx = x * x, yy = y * y, zz = z * z, xy = x * y, xz = x * z, yz = y * z, wx = w * x, wy = w * y, wz = w * z;
+    return [
+      (1 - 2 * (yy + zz)) * s[0], 2 * (xy + wz) * s[0], 2 * (xz - wy) * s[0], 0,
+      2 * (xy - wz) * s[1], (1 - 2 * (xx + zz)) * s[1], 2 * (yz + wx) * s[1], 0,
+      2 * (xz + wy) * s[2], 2 * (yz - wx) * s[2], (1 - 2 * (xx + yy)) * s[2], 0,
+      t[0], t[1], t[2], 1
+    ];
+  }
+
+  /**
+   * The mesh nodes of a glTF's scene with their world matrices, as [{ mesh, m, skin }].
+   * At most four visits per node, so a cyclic file still ends.
+   */
+  function _glbMeshNodes(json) {
+    var scene = json.scenes && json.scenes[json.scene || 0];
+    var roots = scene && scene.nodes;
+    if (!roots) {
+      var isChild = {};
+      json.nodes.forEach(function(n) { (n.children || []).forEach(function(c) { isChild[c] = true; }); });
+      roots = json.nodes.map(function(_n, i) { return i; }).filter(function(i) { return !isChild[i]; });
+    }
+    var identity = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+    var stack = roots.map(function(i) { return { i: i, m: identity }; }), out = [];
+    var budget = json.nodes.length * 4 + 16;
+    while (stack.length && budget-- > 0) {
+      var item = stack.pop(), node = json.nodes[item.i];
+      if (!node) continue;
+      var M = _mat4Mul(item.m, _nodeMatrix(node));
+      if (node.mesh !== undefined && json.meshes[node.mesh]) {
+        out.push({ mesh: json.meshes[node.mesh], m: M, skin: node.skin !== undefined });
+      }
+      (node.children || []).forEach(function(c) { stack.push({ i: c, m: M }); });
+    }
+    return out;
+  }
+
+  /**
+   * A model's bounds from its vertices, in the space of getBoundingBox(), or null when
+   * some of them cannot be read (compressed, external, skinned). gltfio's box is the
+   * union of each primitive's accessor box once moved by its node, which a rotated node
+   * inflates: a floor at its bottom can sit under the model (9 mm under a 7 cm watch).
+   */
+  function _studioTightBounds(bytes) {
+    var g = _glbChunks(bytes);
+    if (!g || !g.bin || !g.json.meshes || !g.json.nodes || !g.json.accessors) return null;
+    var json = g.json, bin = g.bin;
+    if (json.buffers && json.buffers[0] && json.buffers[0].uri) return null;
+    var min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity], ok = true;
+    _glbMeshNodes(json).forEach(function(e) {
+      if (e.skin) { ok = false; return; }
+      var M = e.m;
+      (e.mesh.primitives || []).forEach(function(prim) {
+        var P = !prim.attributes || (prim.extensions && prim.extensions.KHR_draco_mesh_compression) ||
+          (prim.targets && prim.targets.length) ? null : _readPositions(json, bin, prim.attributes.POSITION);
+        if (!P) { ok = false; return; }
+        for (var i = 0; i < P.length; i += 3) {
+          var x = P[i], y = P[i + 1], z = P[i + 2];
+          for (var k = 0; k < 3; k++) {
+            var v = M[k] * x + M[4 + k] * y + M[8 + k] * z + M[12 + k];
+            if (v < min[k]) min[k] = v;
+            if (v > max[k]) max[k] = v;
+          }
+        }
+      });
+    });
+    return ok && min[0] <= max[0] ? { min: min, max: max } : null;
+  }
+
+  /** The bufferView behind a plain (not sparse, not compressed, embedded) accessor. */
+  function _glbPlainView(json, acc) {
+    if (!acc || acc.sparse || acc.bufferView === undefined) return null;
+    var bv = json.bufferViews && json.bufferViews[acc.bufferView];
+    if (!bv || (bv.buffer || 0) !== 0) return null;
+    if (bv.extensions && (bv.extensions.EXT_meshopt_compression || bv.extensions.KHR_meshopt_compression)) return null;
+    return bv;
+  }
+
+  /** Float VEC3 positions of an accessor, or null when they cannot be read as such. */
+  function _readPositions(json, bin, ai) {
+    var acc = json.accessors && json.accessors[ai];
+    if (!acc || acc.type !== 'VEC3' || acc.componentType !== 5126 || acc.normalized) return null;
+    var bv = _glbPlainView(json, acc);
+    if (!bv) return null;
+    var n = acc.count, stride = bv.byteStride || 12, base = (bv.byteOffset || 0) + (acc.byteOffset || 0);
+    if (!(n > 0) || base + (n - 1) * stride + 12 > bin.byteLength) return null;
+    var out = new Float32Array(n * 3), i;
+    if ((bin.byteOffset + base) % 4 === 0 && stride % 4 === 0) {
+      var f = new Float32Array(bin.buffer, bin.byteOffset + base, ((n - 1) * stride + 12) / 4), s4 = stride / 4;
+      for (i = 0; i < n; i++) { out[i * 3] = f[i * s4]; out[i * 3 + 1] = f[i * s4 + 1]; out[i * 3 + 2] = f[i * s4 + 2]; }
+    } else {
+      var dv = new DataView(bin.buffer, bin.byteOffset, bin.byteLength);
+      for (i = 0; i < n; i++) {
+        var o = base + i * stride;
+        out[i * 3] = dv.getFloat32(o, true); out[i * 3 + 1] = dv.getFloat32(o + 4, true); out[i * 3 + 2] = dv.getFloat32(o + 8, true);
+      }
+    }
+    return out;
+  }
+
+  /** Triangle-list indices of a primitive (0..n-1 when it has none), or null. */
+  function _readIndices(json, bin, ai, nVerts) {
+    var i;
+    if (ai === undefined) {
+      var seq = new Uint32Array(nVerts);
+      for (i = 0; i < nVerts; i++) seq[i] = i;
+      return seq;
+    }
+    var acc = json.accessors && json.accessors[ai];
+    if (!acc || acc.type !== 'SCALAR') return null;
+    var bv = _glbPlainView(json, acc);
+    if (!bv) return null;
+    var size = acc.componentType === 5125 ? 4 : acc.componentType === 5123 ? 2 : acc.componentType === 5121 ? 1 : 0;
+    var n = acc.count, base = (bv.byteOffset || 0) + (acc.byteOffset || 0);
+    if (!size || base + n * size > bin.byteLength) return null;
+    var abs = bin.byteOffset + base;
+    if (abs % size === 0) {
+      return size === 4 ? new Uint32Array(bin.buffer, abs, n)
+        : size === 2 ? new Uint16Array(bin.buffer, abs, n) : new Uint8Array(bin.buffer, abs, n);
+    }
+    var dv = new DataView(bin.buffer, bin.byteOffset, bin.byteLength), out = new Uint32Array(n);
+    for (i = 0; i < n; i++) {
+      out[i] = size === 4 ? dv.getUint32(base + i * 4, true) : size === 2 ? dv.getUint16(base + i * 2, true) : dv.getUint8(base + i);
+    }
+    return out;
+  }
+
+  /**
+   * The floor texel grid of a model's shadow: about 256 texels along its long side, and
+   * at least `margin` (the reflection's reach) around the footprint.
+   */
+  function _studioShadowGrid(bbox, margin) {
+    var dx = bbox.max[0] - bbox.min[0], dy = bbox.max[1] - bbox.min[1], dz = bbox.max[2] - bbox.min[2];
+    var L = Math.max(dx, dy, dz), m = Math.max(0.35 * L, margin || 0);
+    var ts = Math.max(dx + 2 * m, dz + 2 * m) / 256;
+    var w = Math.max(8, Math.ceil((dx + 2 * m) / ts)), h = Math.max(8, Math.ceil((dz + 2 * m) / ts));
+    var cx = (bbox.min[0] + bbox.max[0]) / 2, cz = (bbox.min[2] + bbox.max[2]) / 2;
+    return { L: L, ts: ts, w: w, h: h, x0: cx - (w * ts) / 2, z0: cz - (h * ts) / 2, margin: m };
+  }
+
+  /** In-place separable Gaussian blur of a w x h field, zero outside. */
+  function _blurField(a, w, h, sigma) {
+    if (!(sigma > 0.3)) return a;
+    var r = Math.ceil(3 * sigma), k = new Float32Array(2 * r + 1), sum = 0, i, x, y, j, acc;
+    for (i = -r; i <= r; i++) { k[i + r] = Math.exp(-(i * i) / (2 * sigma * sigma)); sum += k[i + r]; }
+    for (i = 0; i < k.length; i++) k[i] /= sum;
+    var tmp = new Float32Array(w * h);
+    for (y = 0; y < h; y++) {
+      var row = y * w;
+      for (x = 0; x < w; x++) {
+        acc = 0;
+        for (j = Math.max(-r, -x); j <= Math.min(r, w - 1 - x); j++) acc += a[row + x + j] * k[j + r];
+        tmp[row + x] = acc;
+      }
+    }
+    for (x = 0; x < w; x++) {
+      for (y = 0; y < h; y++) {
+        acc = 0;
+        for (j = Math.max(-r, -y); j <= Math.min(r, h - 1 - y); j++) acc += tmp[(y + j) * w + x] * k[j + r];
+        a[y * w + x] = acc;
+      }
+    }
+    return a;
+  }
+
+  /** _blurField() into a new field, run on a grid coarse enough to keep a wide blur cheap. */
+  function _blurFieldCoarse(a, w, h, sigma) {
+    var f = Math.max(1, Math.floor(sigma / 3)), x, y;
+    var cw = Math.ceil(w / f), ch = Math.ceil(h / f), c = new Float32Array(cw * ch);
+    for (y = 0; y < h; y++) {
+      for (x = 0; x < w; x++) c[Math.floor(y / f) * cw + Math.floor(x / f)] += a[y * w + x];
+    }
+    for (y = 0; y < ch; y++) {
+      for (x = 0; x < cw; x++) c[y * cw + x] /= Math.min(f, w - x * f) * Math.min(f, h - y * f);
+    }
+    _blurField(c, cw, ch, sigma / f);
+    var out = new Float32Array(w * h);
+    for (y = 0; y < h; y++) {
+      var gy = Math.min(ch - 1, Math.max(0, (y + 0.5) / f - 0.5)), y0 = Math.floor(gy);
+      var y1 = Math.min(ch - 1, y0 + 1), ty = gy - y0;
+      for (x = 0; x < w; x++) {
+        var gx = Math.min(cw - 1, Math.max(0, (x + 0.5) / f - 0.5)), x0 = Math.floor(gx);
+        var x1 = Math.min(cw - 1, x0 + 1), tx = gx - x0;
+        out[y * w + x] = (c[y0 * cw + x0] * (1 - tx) + c[y0 * cw + x1] * tx) * (1 - ty) +
+          (c[y1 * cw + x0] * (1 - tx) + c[y1 * cw + x1] * tx) * ty;
+      }
+    }
+    return out;
+  }
+
+  /**
+   * Bake the model's floor shadow from its own triangles. For every floor texel, the
+   * height of the lowest surface above it; then a sharp contact term (surfaces within
+   * 1.5 % of the model size, the tyres of a car) and an ambient-occlusion term: how low
+   * a surface covers the texel (within a quarter of the model's size, the underbody),
+   * blurred at two scales, the wider one for the open floor the body still hides sky
+   * from. Returns the grid with `s`, the shadow in 0-1 per texel, and `u`, how covered
+   * it is (under the body), or null when the triangles cannot be read (Draco, meshopt,
+   * external buffers): the caller falls back to a soft ellipse.
+   */
+  function _studioBakeShadow(bytes, bbox, margin) {
+    var g = _glbChunks(bytes);
+    if (!g || !g.bin || !g.json.meshes || !g.json.nodes) return null;
+    var json = g.json, bin = g.bin;
+    if (json.buffers && json.buffers[0] && json.buffers[0].uri) return null;
+    var grid = _studioShadowGrid(bbox, margin);
+    var w = grid.w, h = grid.h, ts = grid.ts, L = grid.L, yf = bbox.min[1];
+    var hmax = 0.25 * L;
+    var H = new Float32Array(w * h).fill(hmax);
+    var found = 0;
+
+    function put(iu, iv, hv) {
+      if (iu < 0 || iv < 0 || iu >= w || iv >= h) return;
+      var k = iv * w + iu;
+      if (hv < H[k]) H[k] = hv;
+    }
+
+    function drawEdge(u0, v0, h0, u1, v1, h1) {
+      var n = Math.ceil(2 * Math.max(Math.abs(u1 - u0), Math.abs(v1 - v0))) + 1;
+      for (var q = 0; q <= n; q++) {
+        var t = q / n;
+        put(Math.floor(u0 + (u1 - u0) * t), Math.floor(v0 + (v1 - v0) * t), h0 + (h1 - h0) * t);
+      }
+    }
+
+    function drawMesh(mesh, M) {
+      (mesh.primitives || []).forEach(function(prim) {
+        if ((prim.mode !== undefined && prim.mode !== 4) || !prim.attributes) return;
+        if (prim.extensions && prim.extensions.KHR_draco_mesh_compression) return;
+        var P = _readPositions(json, bin, prim.attributes.POSITION);
+        if (!P) return;
+        var nv = P.length / 3;
+        var I = _readIndices(json, bin, prim.indices, nv);
+        if (!I) return;
+        var U = new Float32Array(nv), V = new Float32Array(nv), Y = new Float32Array(nv), i;
+        for (i = 0; i < nv; i++) {
+          var x = P[i * 3], y = P[i * 3 + 1], z = P[i * 3 + 2];
+          U[i] = (M[0] * x + M[4] * y + M[8] * z + M[12] - grid.x0) / ts;
+          Y[i] = Math.max(0, M[1] * x + M[5] * y + M[9] * z + M[13] - yf);
+          V[i] = (M[2] * x + M[6] * y + M[10] * z + M[14] - grid.z0) / ts;
+        }
+        for (var f = 0; f + 2 < I.length; f += 3) {
+          var a = I[f], b = I[f + 1], c = I[f + 2];
+          if (a >= nv || b >= nv || c >= nv) continue;
+          var ha = Y[a], hb = Y[b], hc = Y[c];
+          var hlo = Math.min(ha, hb, hc);
+          if (hlo >= hmax) continue;
+          found++;
+          var ua = U[a], ub = U[b], uc = U[c], va = V[a], vb = V[b], vc = V[c];
+          var iu0 = Math.max(0, Math.floor(Math.min(ua, ub, uc))), iu1 = Math.min(w - 1, Math.floor(Math.max(ua, ub, uc)));
+          var iv0 = Math.max(0, Math.floor(Math.min(va, vb, vc))), iv1 = Math.min(h - 1, Math.floor(Math.max(va, vb, vc)));
+          if (iu0 > iu1 || iv0 > iv1) continue;
+          var iu, iv;
+          if ((iu1 - iu0 + 1) * (iv1 - iv0 + 1) <= 4) {
+            for (iv = iv0; iv <= iv1; iv++) for (iu = iu0; iu <= iu1; iu++) put(iu, iv, hlo);
+            continue;
+          }
+          var area = (ub - ua) * (vc - va) - (uc - ua) * (vb - va);
+          if (area < 0) {  // make the winding counter-clockwise
+            var tu = ub, tv = vb, th = hb;
+            ub = uc; vb = vc; hb = hc; uc = tu; vc = tv; hc = th; area = -area;
+          }
+          var lab = Math.hypot(ub - ua, vb - va), lbc = Math.hypot(uc - ub, vc - vb), lca = Math.hypot(ua - uc, va - vc);
+          var longest = Math.max(lab, lbc, lca);
+          if (!(area > 0) || area / longest < 0.5) {  // a sliver: walk its edges
+            drawEdge(ua, va, ha, ub, vb, hb);
+            drawEdge(ub, vb, hb, uc, vc, hc);
+            drawEdge(uc, vc, hc, ua, va, ha);
+            continue;
+          }
+          var hhi = Math.max(ha, hb, hc);
+          for (iv = iv0; iv <= iv1; iv++) {
+            var pv = iv + 0.5;
+            for (iu = iu0; iu <= iu1; iu++) {
+              var pu = iu + 0.5;
+              var eab = (ub - ua) * (pv - va) - (vb - va) * (pu - ua);
+              var ebc = (uc - ub) * (pv - vb) - (vc - vb) * (pu - ub);
+              var eca = (ua - uc) * (pv - vc) - (va - vc) * (pu - uc);
+              // Conservative: a texel the triangle grazes counts as covered.
+              if (eab < -0.7 * lab || ebc < -0.7 * lbc || eca < -0.7 * lca) continue;
+              var hv = (ebc * ha + eca * hb + eab * hc) / area;
+              put(iu, iv, Math.min(hhi, Math.max(hlo, hv)));
+            }
+          }
+        }
+      });
+    }
+
+    _glbMeshNodes(json).forEach(function(e) { drawMesh(e.mesh, e.m); });
+    if (!found) return null;
+
+    var n = w * h, contact = new Float32Array(n), cover = new Float32Array(n), i;
+    var cT = 0.015 * L;
+    for (i = 0; i < n; i++) {
+      contact[i] = H[i] < cT ? 1 : 0;
+      var q = H[i] / hmax;
+      cover[i] = q >= 1 ? 0 : 1 - q * q;
+    }
+    _blurField(contact, w, h, (0.01 * L) / ts);
+    var wide = _blurFieldCoarse(cover, w, h, (0.16 * L) / ts);
+    _blurField(cover, w, h, (0.05 * L) / ts);
+    var s = new Float32Array(n);
+    for (i = 0; i < n; i++) {
+      s[i] = 1 - (1 - 0.95 * contact[i]) * (1 - 0.9 * (0.55 * cover[i] + 0.45 * wide[i]));
+    }
+    grid.s = _studioFadeEdges(s, w, h);
+    grid.u = cover;
+    return grid;
+  }
+
+  /** Fallback shadow: a soft ellipse under the footprint. */
+  function _studioEllipseShadow(bbox, margin) {
+    var g = _studioShadowGrid(bbox, margin), w = g.w, h = g.h, s = new Float32Array(w * h);
+    var hx = (bbox.max[0] - bbox.min[0]) / 2 + 0.05 * g.L, hz = (bbox.max[2] - bbox.min[2]) / 2 + 0.05 * g.L;
+    var cx = (bbox.min[0] + bbox.max[0]) / 2, cz = (bbox.min[2] + bbox.max[2]) / 2;
+    for (var iv = 0; iv < h; iv++) {
+      for (var iu = 0; iu < w; iu++) {
+        var x = g.x0 + (iu + 0.5) * g.ts, z = g.z0 + (iv + 0.5) * g.ts;
+        s[iv * w + iu] = 0.7 * (1 - _smoothstep(0.55, 1.25, Math.hypot((x - cx) / hx, (z - cz) / hz)));
+      }
+    }
+    g.s = _studioFadeEdges(s, w, h);
+    g.u = s.map(function(v) { return v / 0.7; });
+    return g;
+  }
+
+  /** Take a shadow field to zero over its last texels, so the floor never shows its edge. */
+  function _studioFadeEdges(s, w, h) {
+    var band = 6;
+    for (var iv = 0; iv < h; iv++) {
+      for (var iu = 0; iu < w; iu++) {
+        var e = Math.min(iu, iv, w - 1 - iu, h - 1 - iv);
+        if (e < band) s[iv * w + iu] *= _smoothstep(0, band, e);
+      }
+    }
+    return s;
+  }
+
+  /**
+   * The floor's base colour texture over the shadow field (RGBA bytes for SRGB8_A8).
+   * Alpha is how much of the reflection shows: 1 - rho, and none under the body, where
+   * a real floor would mirror the unlit underbody (the reflection view lights it from
+   * below and draws its gaps as empty floor). RGB is the factor the floor's colour is
+   * multiplied by so that it shows t * (1 - s * shadow) on screen, through the tone
+   * mapper and over an empty reflection. White past the field, where the texture clamps
+   * to its edge: the field spans the whole reach of the reflection, so rho is 0 there.
+   */
+  function _studioShadowTexels(lay, conf, mirror, sh) {
+    var w = sh.w, h = sh.h, ts = sh.ts, px = new Uint8Array(w * h * 4).fill(255);
+    var shade = _studioFloorShade(lay, conf, mirror), H = conf.horizon, iu, iv, c;
+    for (iv = 0; iv < h; iv++) {
+      var dz = Math.max(0, Math.abs(sh.z0 + (iv + 0.5) * ts - lay.cz) - lay.hz);
+      for (iu = 0; iu < w; iu++) {
+        var i = iv * w + iu, raw = Math.min(1, Math.max(0, sh.s[i])), s = raw * conf.shadow;
+        var dx = Math.max(0, Math.abs(sh.x0 + (iu + 0.5) * ts - lay.cx) - lay.hx);
+        var d = Math.hypot(dx, dz);
+        if (!(s > 0) && !(mirror && d < lay.fade)) continue;
+        var p = shade(d);
+        var rho = p.rho * (1 - _smoothstep(_STUDIO_UNDERBODY[0], _STUDIO_UNDERBODY[1], sh.u[i]));
+        px[i * 4 + 3] = Math.round(255 * (1 - rho));
+        if (!(s > 0) && rho === p.rho) continue;
+        for (c = 0; c < 3; c++) {
+          if (!(p.hdr[c] > 0)) continue;
+          var shown = Math.min(1, Math.max(0, (p.t[c] * (1 - s) - rho * H[c]) / (1 - rho)));
+          var f = (_inverseFilmic(_srgbToLinear(shown)) || 0) / p.hdr[c];
+          px[i * 4 + c] = Math.round(255 * _linearToSrgb(f));
+        }
+      }
+    }
+    return px;
+  }
+
+  // ---------------------------------------------------------------
   // Chroma key processing (green screen removal on CPU)
   // ---------------------------------------------------------------
 
@@ -561,6 +1306,7 @@
       this._loadingVideos = new Map();  // <video> still loading (createVideo) -> its reject()
       this._angle = 0.785; // Start at ~45° like model-viewer
       this._autoRotate = true;
+      this._lastTickAt = null;          // the render loop's previous rAF time (studio turntable)
       this._orbitRadius = 3.5;
       this._orbitHeight = 0.8;
       this._orbitTarget = [0, 0, 0];
@@ -626,6 +1372,28 @@
       this._animationDone = false; // a non-looping animation reached its last frame
       this._frameCallbacks = new Set(); // onFrame() listeners
       this._renderRequested = false; // requestRender() landed while the loop was live
+
+      // Studio showroom (setStudio): null while off
+      this._studio = null;            // resolved theme and colours
+      this._studioParts = {};         // dome, floor: gltfio assets owned by the studio
+      this._studioLayout = null;      // floor, camera and dome sizes for the current model
+      this._studioShadow = null;      // baked shadow field for the current model
+      this._studioBox = null;         // the current model's bounds from its vertices
+      this._studioTexture = null;     // that shadow on the floor, as its base colour texture
+      this._studioSaved = null;       // camera settings to restore when the studio turns off
+      this._studioTier = 3;           // quality tier, 3 (all effects) down to 0
+      this._studioBudget = null;      // drawing-buffer pixel budget of that tier
+      this._studioPerf = null;        // frame-time window that drops the tier when slow
+      this._mirrorView = null;        // second view that draws the floor reflection
+      this._mirrorCamera = null;
+      this._mirrorCameraEntity = null;
+      this._modelBytes = null;        // WeakRef to the loaded GLB, read once for the shadow bake
+      this._reveal = null;            // camera move-in after a load, { start }
+      this._dragHeightScale = 1;      // vertical drag speed, proportional to the camera distance
+      this._envSerial = 0;            // the last _loadDefaultEnvironment() call wins
+      this._pageBackground = null;    // setBackgroundColor() value, restored without the studio
+      this._defaultIblUrl = null;
+      this._defaultIblIntensity = null;
 
       this._setupControls();
       this._setupResizeObserver();
@@ -751,6 +1519,13 @@
 
       // Auto-frame the model (default fill, unchanged since #3690)
       this._frameAsset(asset);
+
+      // The studio reads the triangles once, for the shadow bake; a weak reference so
+      // the bytes are never kept alive for it.
+      this._modelBytes = typeof WeakRef === 'function' ? new WeakRef(data) : null;
+      if (this._studio) {
+        try { this._studioRebuild(true); } catch (e) { console.warn('SceneView: studio staging failed', e); }
+      }
       this.requestRender();
     }
 
@@ -831,6 +1606,13 @@
         this._fov || 45, canvas.width / canvas.height, this._nearPlane || 0.1, far,
         Filament.Camera$Fov.VERTICAL
       );
+      // The studio's reflection camera mirrors the main one: same lens.
+      if (this._mirrorCamera) {
+        this._mirrorCamera.setProjectionFov(
+          this._fov || 45, canvas.width / canvas.height, this._nearPlane || 0.1, far,
+          Filament.Camera$Fov.VERTICAL
+        );
+      }
     }
 
     setAutoRotate(enabled) {
@@ -873,6 +1655,7 @@
      */
     setCameraOrbit(orbit) {
       const o = orbit || {};
+      this._reveal = null;  // an explicit pose ends the studio's move-in
       if (Number.isFinite(o.angle)) this._angle = o.angle;
       if (Number.isFinite(o.height)) this._orbitHeight = o.height;
       if (Number.isFinite(o.radius) && o.radius > 0) this._orbitRadius = o.radius;
@@ -902,7 +1685,15 @@
      */
     frameModel(options) {
       const fill = options && Number.isFinite(options.fill) ? options.fill : undefined;
-      if (this._asset) this._frameAsset(this._asset, fill);
+      this._reveal = null;
+      if (this._asset) {
+        // In the studio, the on-load framing is the studio's low three-quarter view.
+        if (this._studio && this._studioLayout && fill === undefined) this._studioFrame(false);
+        else {
+          this._frameAsset(this._asset, fill);
+          if (this._studio) this._studioClampLimits();
+        }
+      }
       this._velocityAngle = 0;
       this._velocityHeight = 0;
       return this.requestRender();
@@ -975,7 +1766,7 @@
     }
 
     _isIdle() {
-      if (this._autoRotate || this._isDragging) return false;
+      if (this._autoRotate || this._isDragging || this._reveal) return false;
       if (this._velocityAngle !== 0 || this._velocityHeight !== 0) return false;
       if (this._pendingLoads > 0) return false;
       // Video quads are not listed: each new video frame wakes the loop itself.
@@ -1010,6 +1801,7 @@
      */
     loadEnvironment(url, intensity) {
       var self = this;
+      this._envSerial++;  // a default or studio environment still on its way is dropped
       return this._fetch(url)
         .then(function(r) {
           if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -1035,6 +1827,7 @@
      * @returns {SceneViewInstance} this (for chaining)
      */
     setEnvironmentSH(bands, intensity) {
+      this._envSerial++;  // a default or studio environment still on its way is dropped
       try {
         if (this._disposed) throw _disposedError();
         this._setShEnvironment(bands, intensity || 45000);
@@ -1049,11 +1842,519 @@
      * `setBackgroundColor(0xEE / 255, 0xF0 / 255, 0xF3 / 255)` shows `#EEF0F3`.
      */
     setBackgroundColor(r, g, b, a) {
+      this._pageBackground = [r, g, b, a !== undefined ? a : 1];
+      // In the studio the clear colour is its horizon: this one waits for setStudio(false).
+      if (this._studio) return this.requestRender();
       this._renderer.setClearOptions({
-        clearColor: _clearColorFor([r, g, b, a !== undefined ? a : 1], this._transparent),
+        clearColor: _clearColorFor(this._pageBackground, this._transparent),
         clear: true
       });
       return this.requestRender();
+    }
+
+    // ---------------------------------------------------------------
+    // Studio showroom
+    // ---------------------------------------------------------------
+
+    /**
+     * Stage the model in a lit photo studio: a seamless wall that curves into the floor
+     * with no visible horizon, a contact shadow and ambient occlusion baked from the
+     * model's own triangles, a faint floor reflection, and a studio environment of
+     * softbox highlights with no sun (a sun's sharp glints read as stray reflections on
+     * car paint). The camera moves to a low three-quarter view through a 30-degree lens
+     * and eases in once the model is dressed, unless the visitor prefers reduced motion;
+     * auto-rotate becomes a slow turntable, 15 degrees a second. The effects step down on
+     * their own when frames come in slowly. Scales from a watch to a car. Pass it to
+     * create() as `studio` to have it from the first frame; setBackgroundColor() takes
+     * effect again once it is off.
+     *
+     * @example viewer.setStudio('dark');
+     * @example viewer.setStudio({ theme: 'light', reflection: 0.2 });
+     * @example viewer.setStudio(false);   // the plain background again
+     *
+     * @param {string|boolean|Object} [options] - 'light' (the default, also `true`),
+     *   'dark', `false` or `null` to leave the studio, or
+     *   `{ theme, reflection, shadow, environment, top, horizon, floor, pool }`:
+     *   `reflection` 0-0.6, `shadow` 0-1, `environment` a KTX1 IBL URL, and the four
+     *   colours '#RRGGBB' or [r, g, b] in 0-1, as displayed
+     * @returns {SceneViewInstance} this (for chaining)
+     */
+    setStudio(options) {
+      if (this._disposed) return this;
+      var conf = _studioConfig(options);
+      if (!conf) {
+        if (this._studio) this._studioOff();
+        return this.requestRender();
+      }
+      var entering = !this._studio;
+      var envChanged = entering || this._studio.environment !== conf.environment;
+      if (entering) this._studioEnter();
+      this._studio = conf;
+      if (envChanged) this._loadDefaultEnvironment(conf.environment, _STUDIO_IBL_INTENSITY);
+      try {
+        this._studioRebuild(entering);
+      } catch (e) {
+        console.warn('SceneView: studio staging failed', e);
+      }
+      return this.requestRender();
+    }
+
+    /** Keep what the studio changes, and take the sun and fill lights off. @private */
+    _studioEnter() {
+      this._studioSaved = {
+        fov: this._fov, nearPlane: this._nearPlane, minRadius: this._minRadius,
+        maxRadius: this._maxRadius, minHeight: this._minHeight, maxHeight: this._maxHeight
+      };
+      this._studioTier = _isLikelyMobile() ? 2 : 3;
+      this._studioPerf = { frames: 0, start: 0, last: 0, warm: 0, dropping: false };
+      // The studio environment does all the lighting: a sun's sharp highlight reads as a
+      // stray reflection on glossy paint.
+      var scene = this._scene;
+      this._baseLights.forEach(function(e) {
+        try { scene.remove(e); } catch (_e) { /* already gone */ }
+      });
+    }
+
+    /** Back to the plain background, lights, environment and framing. @private */
+    _studioOff() {
+      this._studio = null;
+      this._reveal = null;
+      this._studioDestroyParts();
+      this._studioSetMirror(false);
+      this._studioLayout = null;
+      this._studioBudget = null;
+      this._studioPerf = null;
+      this._dragHeightScale = 1;
+      var scene = this._scene;
+      this._baseLights.forEach(function(e) {
+        try { scene.addEntity(e); } catch (_e) { /* destroyed by clearLights() */ }
+      });
+      this._studioRestorePost();
+      var saved = this._studioSaved || {};
+      this._studioSaved = null;
+      this._fov = saved.fov || 45;
+      this._nearPlane = saved.nearPlane;
+      this._minRadius = saved.minRadius;
+      this._maxRadius = saved.maxRadius;
+      this._minHeight = saved.minHeight;
+      this._maxHeight = saved.maxHeight;
+      this._loadDefaultEnvironment(this._defaultIblUrl || '/environments/neutral_ibl.ktx',
+        this._defaultIblIntensity || 40000);
+      var bg = this._pageBackground || (this._transparent ? [0, 0, 0, 0] : _DEFAULT_BACKGROUND);
+      this._renderer.setClearOptions({ clearColor: _clearColorFor(bg, this._transparent), clear: true });
+      if (!this._asset || !this._frameAsset(this._asset)) this._applyProjection();
+      this._resizeCanvas();
+    }
+
+    /**
+     * Rebuild the studio around the current model: its layout (once per model), the
+     * quality tier's effects, the wall, the floor with the model's shadow, and with
+     * `reframe`, the low three-quarter camera.
+     * @private
+     */
+    _studioRebuild(reframe) {
+      var conf = this._studio, asset = this._asset;
+      if (!this._transparent) {
+        this._renderer.setClearOptions({
+          clearColor: _clearColorFor([conf.horizon[0], conf.horizon[1], conf.horizon[2], 1], false),
+          clear: true
+        });
+      }
+      if (asset && (!this._studioLayout || this._studioLayout.asset !== asset)) {
+        var c = this._canvas, aspect = c && c.clientHeight > 0 ? c.clientWidth / c.clientHeight : 1;
+        this._studioLayout = _studioLayoutFor(this._studioBounds(asset), aspect);
+        if (this._studioLayout) this._studioLayout.asset = asset;
+        reframe = true;
+      }
+      if (!asset) this._studioLayout = null;
+      this._studioApplyTier();
+      if (!this._studioLayout) {
+        this._studioDestroyParts();
+        return;
+      }
+      this._studioBuildBackdrop();
+      if (reframe) this._studioFrame(true);
+    }
+
+    /**
+     * The model's bounds for the studio: from its vertices when they can be read (once
+     * per model) and lie inside gltfio's box, so the floor touches the model; gltfio's
+     * box otherwise.
+     * @private
+     */
+    _studioBounds(asset) {
+      var bb = asset.getBoundingBox(), sb = this._studioBox;
+      if (!sb || sb.asset !== asset) {
+        var bytes = this._modelBytes && this._modelBytes.deref ? this._modelBytes.deref() : null, box = null;
+        try {
+          box = bytes ? _studioTightBounds(bytes) : null;
+        } catch (e) {
+          console.warn('SceneView: model bounds not read, using its bounding box', e);
+        }
+        var tol = 1e-3 * Math.max(bb.max[0] - bb.min[0], bb.max[1] - bb.min[1], bb.max[2] - bb.min[2]);
+        for (var k = 0; box && k < 3; k++) {
+          if (!(box.min[k] >= bb.min[k] - tol && box.max[k] <= bb.max[k] + tol)) box = null;
+        }
+        sb = this._studioBox = { asset: asset, box: box };
+      }
+      return sb.box || { min: [bb.min[0], bb.min[1], bb.min[2]], max: [bb.max[0], bb.max[1], bb.max[2]] };
+    }
+
+    /** The studio's camera: low three-quarter view, 30-degree lens, limits inside the room. @private */
+    _studioFrame(withReveal) {
+      var lay = this._studioLayout;
+      if (!lay) return;
+      this._fov = _STUDIO_FOV;
+      this._orbitTarget = lay.target.slice();
+      this._orbitRadius = lay.radius;
+      this._orbitHeight = lay.height;
+      this._nearPlane = Math.min(0.1, lay.distance / 100);
+      // Never inside the model's footprint.
+      this._minRadius = Math.max(0.05 * lay.L, 1.05 * Math.hypot(lay.hx, lay.hz));
+      // A vertical drag moves the eye in proportion to its distance: as fast on a watch as on a car.
+      this._dragHeightScale = Math.min(10, Math.max(0.05, lay.distance / 3.5));
+      this._velocityAngle = 0;
+      this._velocityHeight = 0;
+      this._reveal = withReveal && !_prefersReducedMotion() ? { start: null } : null;
+      this._studioClampLimits();
+    }
+
+    /** Keep the eye above the floor and inside the wall. @private */
+    _studioClampLimits() {
+      var lay = this._studioLayout;
+      if (!lay) return;
+      this._maxRadius = Math.min(Math.max(50, this._orbitRadius * 5), 0.55 * lay.domeRadius);
+      this._orbitRadius = Math.min(this._orbitRadius, this._maxRadius);
+      this._minHeight = lay.y + 0.02 * lay.L;
+      this._maxHeight = lay.y + 0.5 * lay.domeRadius;
+      this._applyProjection();
+    }
+
+    /**
+     * Quality tiers, 3 down to 0. Tier 3 is MSAA, ambient occlusion, bloom (dark theme),
+     * the reflection at half resolution and a 2-megapixel buffer; each tier below drops
+     * the costliest of them and shrinks the buffer. A phone starts at 2.
+     * @private
+     */
+    _studioApplyTier() {
+      var tier = this._studioTier;
+      this._studioBudget = _STUDIO_BUDGETS[tier];
+      this._studioSetMirror(tier >= 2 && this._studio.reflection > 0 && !this._transparent &&
+        !!this._studioLayout, tier >= 3 ? 0.5 : 0.4);
+      this._studioApplyPost();
+      this._resizeCanvas();
+    }
+
+    /** @private */
+    _studioApplyPost() {
+      var view = this._view, tier = this._studioTier, conf = this._studio, lay = this._studioLayout;
+      var L = lay ? lay.L : 1;
+      try {
+        view.setAmbientOcclusionOptions(tier >= 2 ? {
+          enabled: true, intensity: 1, quality: tier >= 3 ? 1 : 0,
+          radius: Math.min(0.5, Math.max(0.005, 0.08 * L)),
+          bias: Math.min(5e-4, Math.max(1e-5, 2e-4 * L))
+        } : { enabled: false });
+      } catch (_e) { /* older Filament */ }
+      try { view.setAntiAliasing(Filament.View$AntiAliasing.FXAA); } catch (_e) { /* older Filament */ }
+      try { view.setMultiSampleAntiAliasingOptions({ enabled: tier >= 3, sampleCount: 4 }); } catch (_e) { /* older Filament */ }
+      try {
+        view.setBloomOptions(conf.bloom > 0 && tier >= 3
+          ? { enabled: true, strength: conf.bloom, resolution: 360, threshold: true, levels: 6 }
+          : { enabled: false });
+      } catch (_e) { /* older Filament */ }
+      try {
+        // Filament multiplies the corners by `color` before tone mapping: a grey takes
+        // them down a step, where black would crush them.
+        var v = conf.vignette;
+        view.setVignetteOptions(tier >= 1 ? {
+          enabled: true, midPoint: conf.theme === 'dark' ? 0.6 : 0.75,
+          roundness: 0.6, feather: 0.8, color: [v, v, v, 1]
+        } : { enabled: false });
+      } catch (_e) { /* older Filament */ }
+      try {
+        view.setBlendMode(this._mirrorView || this._transparent
+          ? Filament.View$BlendMode.TRANSLUCENT : Filament.View$BlendMode.OPAQUE);
+      } catch (_e) { /* older Filament */ }
+    }
+
+    /** The post-processing _createEngine() sets up. @private */
+    _studioRestorePost() {
+      var view = this._view;
+      try { view.setAmbientOcclusionOptions({ enabled: true, radius: 0.3, bias: 0.0005, intensity: 1.0, quality: 1 }); } catch (_e) { /* */ }
+      try { view.setBloomOptions({ enabled: false }); } catch (_e) { /* */ }
+      try { view.setVignetteOptions({ enabled: false }); } catch (_e) { /* */ }
+      try { view.setMultiSampleAntiAliasingOptions({ enabled: false }); } catch (_e) { /* */ }
+      try { view.setAntiAliasing(Filament.View$AntiAliasing.FXAA); } catch (_e) { /* */ }
+      try {
+        view.setBlendMode(this._transparent ? Filament.View$BlendMode.TRANSLUCENT : Filament.View$BlendMode.OPAQUE);
+      } catch (_e) { /* */ }
+    }
+
+    /**
+     * The floor reflection: a second view of the model alone (layer 2), seen by the main
+     * camera mirrored in the floor plane, drawn first at reduced resolution, which also
+     * softens it. The main view is blended over it, and the floor's alpha decides how
+     * much of it shows.
+     * @private
+     */
+    _studioSetMirror(on, scale) {
+      if (!on) {
+        if (this._mirrorView) {
+          this._destroyMirrorView();
+          this._studioMarkModelLayers(0x1);
+        }
+        return;
+      }
+      if (!this._mirrorView) {
+        var engine = this._engine, ent = Filament.EntityManager.get().create();
+        var cam = engine.createCamera(ent), mv = engine.createView();
+        mv.setScene(this._scene);
+        mv.setCamera(cam);
+        if (this._colorGrading) mv.setColorGrading(this._colorGrading);
+        try { mv.setFrontFaceWindingInverted(true); } catch (_e) { /* */ }
+        try { mv.setVisibleLayers(0xff, 0x2); } catch (_e) { /* */ }
+        try { mv.setAmbientOcclusionOptions({ enabled: false }); } catch (_e) { /* */ }
+        try { mv.setBloomOptions({ enabled: false }); } catch (_e) { /* */ }
+        try { mv.setVignetteOptions({ enabled: false }); } catch (_e) { /* */ }
+        // Smooths the low-resolution edges before they are scaled up.
+        try { mv.setAntiAliasing(Filament.View$AntiAliasing.FXAA); } catch (_e) { /* */ }
+        try { mv.setDithering(Filament.View$Dithering.NONE); } catch (_e) { /* */ }
+        try { mv.setShadowingEnabled(false); } catch (_e) { /* */ }
+        this._mirrorView = mv;
+        this._mirrorCamera = cam;
+        this._mirrorCameraEntity = ent;
+      }
+      var s = scale || 0.5, view = this._mirrorView;
+      try {
+        view.setDynamicResolutionOptions(view.setDynamicResolutionOptionsDefaults({
+          enabled: true, minScale: [s, s], maxScale: [s, s], homogeneousScaling: true
+        }));
+      } catch (_e) { /* full resolution then */ }
+      view.setViewport([0, 0, this._canvas.width, this._canvas.height]);
+      // Every time: a new model needs its layers too.
+      this._studioMarkModelLayers(0x3);
+      this._applyProjection();
+    }
+
+    /** Put the model on the main view's layer (1) and/or the reflection's (2). @private */
+    _studioMarkModelLayers(layers) {
+      if (!this._asset) return;
+      var rm = this._engine.getRenderableManager();
+      this._asset.getRenderableEntities().forEach(function(e) {
+        try { rm.setLayerMask(rm.getInstance(e), 0xff, layers); } catch (_e) { /* older Filament */ }
+      });
+    }
+
+    /** @private */
+    _destroyMirrorView() {
+      var mv = this._mirrorView, ent = this._mirrorCameraEntity, engine = this._engine;
+      this._mirrorView = null;
+      this._mirrorCamera = null;
+      this._mirrorCameraEntity = null;
+      if (!mv || !engine) return;
+      try { mv.setColorGrading(null); } catch (_e) { /* */ }
+      try { engine.destroyView(mv); } catch (_e) { /* */ }
+      try {
+        engine.destroyCameraComponent(ent);
+        Filament.EntityManager.get().destroy(ent);
+      } catch (_e) { /* */ }
+    }
+
+    /**
+     * Add one studio surface as a gltfio asset, drawn in `channel` (0 the wall, 1 the
+     * floor, both before the model in the default channel 2), casting and receiving no
+     * shadow. Replaces the part of the same name.
+     * @private
+     */
+    _studioAddPart(name, glb, channel, priority, onLoaded) {
+      var old = this._studioParts[name];
+      if (old) {
+        this._studioParts[name] = null;
+        this._destroyAsset(old);
+      }
+      var asset = this._createAsset(glb, onLoaded);
+      if (!asset) return null;
+      var rm = this._engine.getRenderableManager(), scene = this._scene;
+      scene.addEntity(asset.getRoot());
+      asset.getRenderableEntities().forEach(function(e) {
+        try {
+          var ri = rm.getInstance(e);
+          rm.setChannel(ri, channel);
+          if (priority !== undefined) rm.setPriority(ri, priority);
+          rm.setCastShadows(ri, false);
+          rm.setReceiveShadows(ri, false);
+        } catch (_e) { /* older Filament: default order */ }
+        scene.addEntity(e);
+      });
+      this._studioParts[name] = asset;
+      return asset;
+    }
+
+    /** @private */
+    _studioBuildBackdrop() {
+      this._studioAddPart('dome', _studioDomeGLB(this._studioLayout, this._studio), 0);
+      this._studioBuildFloor();
+    }
+
+    /**
+     * The model's shadow field, baked once per model from its triangles (a soft ellipse
+     * when they cannot be read).
+     * @private
+     */
+    _studioShadowField() {
+      var asset = this._asset, sh = this._studioShadow, lay = this._studioLayout;
+      // Past the reflection's reach, so the texture can carry it.
+      var margin = 1.05 * lay.fade + 0.02 * lay.L;
+      if (sh && sh.asset === asset && sh.margin >= margin) return sh;
+      var bytes = this._modelBytes && this._modelBytes.deref ? this._modelBytes.deref() : null;
+      var bbox = this._studioBounds(asset), t0 = performance.now(), baked = null;
+      try {
+        baked = bytes ? _studioBakeShadow(bytes, bbox, margin) : null;
+      } catch (e) {
+        console.warn('SceneView: contact shadow bake failed, using a soft ellipse', e);
+      }
+      sh = baked || _studioEllipseShadow(bbox, margin);
+      sh.asset = asset;
+      sh.baked = !!baked;
+      sh.bakeMs = Math.round(performance.now() - t0);
+      this._studioShadow = sh;
+      return sh;
+    }
+
+    /**
+     * The floor, with the model's shadow as its base colour texture: the texture follows
+     * the floor's colours and reflection, so both are rebuilt together.
+     * @private
+     */
+    _studioBuildFloor() {
+      var lay = this._studioLayout, conf = this._studio, engine = this._engine, mirror = !!this._mirrorView;
+      var sh = this._studioShadowField();
+      var old = this._studioParts.floor;
+      if (old) {
+        this._studioParts.floor = null;
+        this._destroyAsset(old);
+      }
+      var tx = this._studioTexture;
+      if (tx && (tx.w !== sh.w || tx.h !== sh.h)) {
+        this._studioDestroyTexture();
+        tx = null;
+      }
+      if (!tx) {
+        var tex = Filament.Texture.Builder()
+          .width(sh.w).height(sh.h).levels(1)
+          .sampler(Filament.Texture$Sampler.SAMPLER_2D)
+          .format(Filament.Texture$InternalFormat.SRGB8_A8)
+          .build(engine);
+        tx = this._studioTexture = { tex: tex, w: sh.w, h: sh.h };
+      }
+      tx.tex.setImage(engine, 0, Filament.PixelBuffer(_studioShadowTexels(lay, conf, mirror, sh),
+        Filament.PixelDataFormat.RGBA, Filament.PixelDataType.UBYTE));
+      var self = this, texture = tx, floor = null;
+      // Bound now and again once gltfio has decoded the floor's placeholder PNG, which it
+      // binds to the same parameter when it is done.
+      var bind = function() {
+        if (self._disposed || !floor || self._studioParts.floor !== floor || self._studioTexture !== texture) return;
+        try {
+          var rm = self._engine.getRenderableManager();
+          var mi = rm.getMaterialInstanceAt(rm.getInstance(floor.getRenderableEntities()[0]), 0);
+          mi.setTextureParameter('baseColorMap', texture.tex, new Filament.TextureSampler(
+            Filament.MinFilter.LINEAR, Filament.MagFilter.LINEAR, Filament.WrapMode.CLAMP_TO_EDGE));
+        } catch (e) {
+          console.warn('SceneView: floor shadow texture not bound', e);
+        }
+        self.requestRender();
+      };
+      floor = this._studioAddPart('floor', _studioFloorGLB(lay, conf, mirror, sh), 1, 3, bind);
+      bind();
+    }
+
+    /** Only once no floor uses it. @private */
+    _studioDestroyTexture() {
+      if (this._studioTexture) {
+        try { this._engine.destroyTexture(this._studioTexture.tex); } catch (_e) { /* engine gone */ }
+        this._studioTexture = null;
+      }
+    }
+
+    /** @private */
+    _studioDestroyParts() {
+      var parts = this._studioParts, self = this;
+      ['dome', 'floor'].forEach(function(k) {
+        var a = parts[k];
+        if (a) {
+          parts[k] = null;
+          self._destroyAsset(a);
+        }
+      });
+      this._studioDestroyTexture();
+    }
+
+    /** dispose(): the parts went with every other asset; the texture and the view remain. @private */
+    _destroyStudioNative() {
+      this._studioParts = {};
+      this._studioDestroyTexture();
+      this._destroyMirrorView();
+      this._studio = null;
+      this._studioLayout = null;
+      this._studioShadow = null;
+      this._studioBox = null;
+      this._reveal = null;
+    }
+
+    /**
+     * Count one drawn frame. Once the move-in and the loads are over, 60 frames taking
+     * longer than 1.25 s (under 48 per second) drop one quality tier. Never back up: a
+     * tier that recovers would flicker between the two.
+     * @private
+     */
+    _studioTrackFrame(now) {
+      var p = this._studioPerf;
+      if (!p) return;
+      var gap = p.last ? now - p.last : 0;
+      p.last = now;
+      if (this._reveal || this._studioTier <= 0 || this._resourceLoads.size > 0 || gap > 250) {
+        p.frames = 0;
+        p.warm = 0;
+        return;
+      }
+      if (p.warm < 45) { p.warm++; return; }
+      if (p.frames === 0) p.start = now;
+      if (++p.frames < 60) return;
+      var elapsed = now - p.start;
+      p.frames = 0;
+      if (elapsed > 1250 && !p.dropping) {
+        p.warm = 0;
+        p.dropping = true;
+        var self = this;
+        // Out of the draw: the drop resizes the canvas, which can draw synchronously.
+        setTimeout(function() {
+          p.dropping = false;
+          if (!self._disposed && self._studio && self._studioPerf === p) self._studioDropTier();
+        }, 0);
+      }
+    }
+
+    /** @private */
+    _studioDropTier() {
+      var had = !!this._mirrorView;
+      this._studioTier = Math.max(0, this._studioTier - 1);
+      this._studioApplyTier();
+      // Without the reflection the floor is opaque again, and its shadow texture changes.
+      if (had !== !!this._mirrorView && this._studioLayout) this._studioBuildFloor();
+      this.requestRender();
+    }
+
+    /** Fold the move-in into the camera, so a drag starts from what is on screen. @private */
+    _finishReveal() {
+      var rv = this._reveal;
+      if (!rv) return;
+      var k = rv.start === null ? 0 : Math.min(1, (performance.now() - rv.start) / _STUDIO_REVEAL_MS);
+      var back = Math.pow(1 - k, 3), t1 = this._orbitTarget[1];
+      this._orbitRadius *= 1 + 0.12 * back;
+      this._orbitHeight = t1 + (this._orbitHeight - t1) * (1 + 0.12 * back);
+      this._angle -= 0.436 * back;
+      this._reveal = null;
     }
 
     // ---------------------------------------------------------------
@@ -1277,9 +2578,12 @@
     _resizeCanvas() {
       var canvas = this._canvas;
       var dpr = Math.min(devicePixelRatio, this._maxPixelRatio || 2);
-      if (this._pixelBudget) {
+      // The studio's quality tier caps the buffer too (see _studioApplyTier).
+      var budget = this._pixelBudget;
+      if (this._studio && this._studioBudget) budget = budget ? Math.min(budget, this._studioBudget) : this._studioBudget;
+      if (budget) {
         var px = canvas.clientWidth * canvas.clientHeight * dpr * dpr;
-        if (px > this._pixelBudget) dpr = Math.max(0.5, dpr * Math.sqrt(this._pixelBudget / px));
+        if (px > budget) dpr = Math.max(0.5, dpr * Math.sqrt(budget / px));
       }
       var w = Math.max(1, Math.round(canvas.clientWidth * dpr));
       var h = Math.max(1, Math.round(canvas.clientHeight * dpr));
@@ -1287,6 +2591,7 @@
       canvas.width = w;
       canvas.height = h;
       this._view.setViewport([0, 0, w, h]);
+      if (this._mirrorView) this._mirrorView.setViewport([0, 0, w, h]);
       this._applyProjection();
       // Resizing clears the drawing buffer: redraw now if the loop is parked
       // (off-screen, or idle in 'onDemand' mode), synchronously to avoid a blank flash.
@@ -1474,7 +2779,8 @@
      */
     _materialIndex() {
       var asset = this._asset;
-      if (this._materials && this._materialsAsset === asset) return this._materials;
+      // Its own field: `_materials` is the gltfio material provider dispose() frees.
+      if (this._materialCache && this._materialCacheAsset === asset) return this._materialCache;
       var index = {};
       if (asset) {
         try {
@@ -1492,8 +2798,8 @@
           }
         } catch (e) { /* no renderables yet */ }
       }
-      this._materials = index;
-      this._materialsAsset = asset;
+      this._materialCache = index;
+      this._materialCacheAsset = asset;
       return index;
     }
 
@@ -2500,6 +3806,8 @@
      */
     _loadDefaultEnvironment(url, intensity) {
       var self = this;
+      // Requests can overlap (setStudio() switching themes): the last one wins.
+      var serial = ++this._envSerial;
       // Kept for whenReady(): settles (never rejects) once the environment is applied.
       this._environmentReady = this._fetch(url)
         .then(function(r) {
@@ -2508,7 +3816,7 @@
         })
         .then(function(buffer) {
           // Disposed while the IBL was on its way: the engine is gone, drop it (#4366).
-          if (self._disposed) return;
+          if (self._disposed || serial !== self._envSerial) return;
           try {
             self._setKtxEnvironment(buffer, intensity);
             _log('SceneView: KTX IBL loaded (' + Math.round(buffer.length / 1024) + 'KB)');
@@ -2519,7 +3827,7 @@
           self.requestRender();
         })
         .catch(function() {
-          if (self._disposed) return;
+          if (self._disposed || serial !== self._envSerial) return;
           _applySyntheticIBL(self, intensity);
           self.requestRender();
         });
@@ -2624,6 +3932,7 @@
           self._releaseMediaNode(entity);
         });
         Array.from(this._assets).forEach(function(asset) { self._destroyAsset(asset); });
+        this._destroyStudioNative();
         this._asset = null;
         this._animator = null;
         this._primitiveAssets = [];
@@ -2701,6 +4010,7 @@
       var self = this;
 
       this._addListener(canvas, 'mousedown', function(e) {
+        self._finishReveal();
         self._isDragging = true;
         self._lastMouse = { x: e.clientX, y: e.clientY };
         self._autoRotate = false;
@@ -2712,7 +4022,7 @@
       this._addListener(canvas, 'mousemove', function(e) {
         if (!self._isDragging) return;
         var dx = (e.clientX - self._lastMouse.x) * 0.005;
-        var dy = (e.clientY - self._lastMouse.y) * 0.01;
+        var dy = (e.clientY - self._lastMouse.y) * 0.01 * self._dragHeightScale;
         self._velocityAngle = -dx;
         self._velocityHeight = dy;
         self._angle -= dx;
@@ -2741,6 +4051,7 @@
 
       this._addListener(canvas, 'wheel', function(e) {
         e.preventDefault();
+        self._finishReveal();
         self._orbitRadius *= (1 + e.deltaY * 0.001);
         self._orbitRadius = Math.max(self._minRadius || 0.5, Math.min(self._maxRadius || 50, self._orbitRadius));
         self.requestRender();
@@ -2758,6 +4069,7 @@
         return action.split(' ').indexOf('pan-y') !== -1;
       }
       function beginTouchDrag(touch) {
+        self._finishReveal();
         self._isDragging = true;
         self._lastMouse = { x: touch.clientX, y: touch.clientY };
         self._autoRotate = false;
@@ -2812,7 +4124,7 @@
           return;
         }
         var dx = (touch.clientX - self._lastMouse.x) * 0.005;
-        var dy = (touch.clientY - self._lastMouse.y) * 0.01;
+        var dy = (touch.clientY - self._lastMouse.y) * 0.01 * self._dragHeightScale;
         self._velocityAngle = -dx;
         self._velocityHeight = dy;
         self._angle -= dx;
@@ -2884,7 +4196,7 @@
       var self = this;
       // Guard against a double-start (e.g. _maybeResume racing the initial call).
       if (self._rafId !== null) return;
-      function render() {
+      function render(now) {
         // Suspend the loop when disposed, off-screen, or the tab is hidden
         // (#2508). Clearing _rafId and returning (without re-arming) stops all
         // GPU/CPU work; _maybeResume() restarts it when visibility returns.
@@ -2893,8 +4205,14 @@
           return;
         }
 
-        // Auto-rotate: 30°/sec ÷ 60fps (matches model-viewer)
-        if (self._autoRotate) self._angle += 0.00873;
+        // Auto-rotate: 30°/sec ÷ 60fps (matches model-viewer). The studio is a slower
+        // turntable, timed so a 120 Hz screen or a dropped frame does not change its pace.
+        var lastTick = self._lastTickAt;
+        self._lastTickAt = now;
+        if (self._autoRotate) {
+          self._angle += !self._studio ? 0.00873
+            : _STUDIO_TURN_RATE * (lastTick ? Math.min(0.1, Math.max(0, now - lastTick) / 1000) : 1 / 60);
+        }
 
         // Inertia damping after drag release
         if (!self._isDragging) {
@@ -2960,18 +4278,43 @@
         self._camera.lookAt(eye, center, self._up);
       } else {
         // Default orbit
-        eye[0] = t[0] + Math.sin(self._angle) * r;
+        var angle = self._angle;
+        if (self._reveal) {
+          // The studio's move-in: starts 12 % farther out and 25 degrees around, then
+          // eases onto the framed pose. Its clock starts once the textures are on.
+          var reveal = self._reveal;
+          if (reveal.start === null && self._resourceLoads.size === 0) reveal.start = performance.now();
+          var k = reveal.start === null ? 0 : Math.min(1, (performance.now() - reveal.start) / _STUDIO_REVEAL_MS);
+          var back = Math.pow(1 - k, 3);
+          r *= 1 + 0.12 * back;
+          h = t[1] + (h - t[1]) * (1 + 0.12 * back);
+          angle -= 0.436 * back;
+          if (k >= 1) self._reveal = null;
+        }
+        eye[0] = t[0] + Math.sin(angle) * r;
         eye[1] = h;
-        eye[2] = t[2] + Math.cos(self._angle) * r;
+        eye[2] = t[2] + Math.cos(angle) * r;
         center[0] = t[0]; center[1] = t[1]; center[2] = t[2];
         self._camera.lookAt(eye, center, self._up);
+      }
+
+      // The studio floor's reflection: the same camera mirrored in the floor plane.
+      if (self._mirrorView && self._studioLayout) {
+        var mm = self._camera.getModelMatrix();
+        mm[1] = -mm[1]; mm[5] = -mm[5]; mm[9] = -mm[9];
+        mm[13] = 2 * self._studioLayout.y - mm[13];
+        self._mirrorCamera.setModelMatrix(mm);
       }
 
       self._engine.execute();
       try {
         if (self._renderer.beginFrame(self._swapChain)) {
+          if (self._mirrorView) self._renderer.renderView(self._mirrorView);
           self._renderer.renderView(self._view);
           self._renderer.endFrame();
+          // The studio steps its quality down when frames come slowly. Drawn frames only:
+          // beginFrame() skips frames when the GPU is behind, while rAF keeps ticking.
+          if (self._studio) self._studioTrackFrame(performance.now());
           self._emitFrame();
           return true;
         }
@@ -3069,6 +4412,12 @@
         Array.from(this._mediaNodes.keys()).forEach(function(entity) {
           self._releaseMediaNode(entity);
         });
+      }
+      // The studio's wall, floor and shadow were sized for that model: rebuild without it.
+      this._studioShadow = null;
+      this._studioBox = null;
+      if (this._studio) {
+        try { this._studioRebuild(false); } catch (e) { console.warn('SceneView: studio staging failed', e); }
       }
       this.requestRender();
     }
@@ -3622,10 +4971,13 @@
     // Owned by the instance: dispose() destroys it before the engine.
     instance._colorGrading = colorGrading;
     instance._transparent = transparent;
+    instance._pageBackground = bg;
+    instance._defaultIblUrl = options.iblUrl || '/environments/neutral_ibl.ktx';
+    instance._defaultIblIntensity = options.iblIntensity || 40000;
 
-    // --- IBL: load real KTX if available, fallback to synthetic SH ---
-    instance._loadDefaultEnvironment(
-      options.iblUrl || '/environments/neutral_ibl.ktx', options.iblIntensity || 40000);
+    // --- IBL: a studio brings its own; otherwise the KTX, synthetic SH as the fallback ---
+    if (options.studio) instance.setStudio(options.studio);
+    else instance._loadDefaultEnvironment(instance._defaultIblUrl, instance._defaultIblIntensity);
 
     if (options.autoRotate === false) instance.setAutoRotate(false);
     if (options.renderMode !== undefined) instance.setRenderMode(options.renderMode);
@@ -3671,6 +5023,8 @@
    * @param {number} [options.iblIntensity=40000]
    * @param {number} [options.lightIntensity=110000] - key (sun) light
    * @param {number} [options.initTimeoutMs=15000] - engine-init watchdog, <= 0 disables it
+   * @param {string|boolean|Object} [options.studio] - stage the model in a lit photo
+   *   studio from the first frame: 'light', 'dark', or setStudio() options
    * @returns {Promise<SceneViewInstance>}
    */
   function create(canvasOrId, options) {
