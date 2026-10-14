@@ -83,9 +83,12 @@
   --live-halo-0: rgba(47, 191, 122, 0);
 }
 
-/* ── Dark (reference) ────────────────────────────────────── */
+/* ── Dark (reference) ──────────────────────────────────────
+ * .night: a block that is a night picture in both themes (the home hero, and the
+ * header while it sits over it) takes the dark set whatever the page's theme. */
 :root,
-:root[data-theme="dark"] {
+:root[data-theme="dark"],
+.night {
   color-scheme: dark;
   --bg: #07090D;
   --surface-1: #1C2230;   /* card            1.25:1 vs bg */

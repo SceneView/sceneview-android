@@ -8,7 +8,10 @@
  *
  * The 3D stages only use the public SceneView Web API (js/sceneview.js):
  * create({ transparent, renderMode: 'onDemand' }), getCameraOrbit(),
- * setCameraOrbit(), setAutoRotate(), requestRender(), dispose().
+ * setCameraOrbit(), setAutoRotate(), requestRender(), whenReady(), dispose().
+ * A stage with data-scene is a whole picture instead of one model in the CSS
+ * studio: its lights, lens and camera move live in assets/scenes/<name>.js,
+ * loaded on demand, and this file only frames it and drives play / pause.
  * No version string lives in this file: install lines are in the HTML, where
  * .claude/scripts/sync-versions.sh keeps them in step with each release. */
 (function () {
@@ -132,14 +135,33 @@
 
   function setPlaying(stage, playing) {
     var b = $('.stage__pause', stage.closest('[data-stage-wrap]') || stage);
+    var what = stage.dataset.scene ? 'camera move' : 'rotation';
     if (b) {
       b.setAttribute('aria-pressed', String(!playing));
-      b.setAttribute('aria-label', playing ? 'Pause the rotation' : 'Resume the rotation');
+      b.setAttribute('aria-label', (playing ? 'Pause the ' : 'Resume the ') + what);
     }
-    if (stage._sv) { stage._sv.setAutoRotate(playing); stage._sv.requestRender(); }
+    if (stage._scene) { if (playing) stage._scene.play(); else stage._scene.pause(); }
+    else if (stage._sv) { stage._sv.setAutoRotate(playing); stage._sv.requestRender(); }
+  }
+
+  /* ── Scene stages (data-scene) ── */
+  function loadScene(name) {
+    var have = function () { return window.SVScenes && window.SVScenes[name]; };
+    return have() ? Promise.resolve(have()) : loadScript('/assets/scenes/' + name + '.js').then(have);
+  }
+  // Where the subject sits in the picture, from the box's shape. A wide box leaves its
+  // left to the page's copy: the subject keeps the same share of the width, right of
+  // centre. A square box centres it. The posters are rendered with the same two framings.
+  function frameScene(stage) {
+    var scene = stage._scene, r = $('.stage__box', stage).getBoundingClientRect();
+    if (!scene || !r.height) return;
+    var aspect = r.width / r.height;
+    if (aspect < 1.2) scene.setFrame(0, clamp(1.55 / aspect, 1.2, 1.9));
+    else scene.setFrame(1.375, clamp(2.08 / aspect, 1, 1.7));
   }
 
   function park(entry) {
+    if (entry.stage._scene) { entry.stage._scene.dispose(); entry.stage._scene = null; }
     try { entry.sv.dispose(); } catch (e) {}
     clearTimeout(entry.stage._idle);
     entry.stage.classList.remove('is-live', 'is-loading');
@@ -154,8 +176,12 @@
     if (!hasWebGL2()) { stage.classList.add('no-webgl'); return Promise.resolve(); }
     while (live.length >= caps.maxLive) park(live.shift());
     stage.classList.add('is-loading');
-    var canvas = $('canvas', stage), signal = ac.signal;
+    var canvas = $('canvas', stage), signal = ac.signal, def = null;
     return loadRuntime().then(function () {
+      return stage.dataset.scene ? loadScene(stage.dataset.scene) : null;
+    }).then(function (d) {
+      def = d;
+      if (def) return window.SceneView.create(canvas, Object.assign({ initTimeoutMs: 20000 }, def.create));
       return window.SceneView.create(canvas, {
         transparent: true,
         renderMode: 'onDemand',           // no frames while nothing moves
@@ -169,6 +195,27 @@
     }).then(function (sv) {
       if (signal.aborted) { sv.dispose(); return; }
       stage._sv = sv; live.push({ stage: stage, sv: sv });
+      if (def) return sv.loadModel(def.model).then(function () {
+        var scene = stage._scene = def.setup(sv, {
+          canvas: canvas, mobile: caps.mobile,
+          // A hand on the picture ends the camera move: the button shows it can resume.
+          onGrab: function () { clearTimeout(stage._idle); setPlaying(stage, false); }
+        });
+        frameScene(stage);
+        scene.setTurn(stage._turn || 0);
+        scene.hold(0);                    // the poster's pose, until the picture is complete
+        return sv.whenReady();            // textures decoded, environment in
+      }).then(function () {
+        if (stage._sv !== sv) return;
+        sv.requestRender();
+        setTimeout(function () {
+          if (stage._sv !== sv) return;
+          stage.classList.remove('is-loading'); stage.classList.add('is-live');
+          setPlaying(stage, !caps.reduced);
+          // Motion stops by itself after 20 s (WCAG 2.2.2); the pause button stops it sooner.
+          if (!caps.reduced) stage._idle = setTimeout(function () { setPlaying(stage, false); }, 20000);
+        }, 400);
+      });
       return sv.loadModel(stage.dataset.src).then(function () {
         applyFit(stage, sv);
         if (stage.dataset.anim && stage._animate !== false) sv.playAnimation(parseInt(stage.dataset.anim, 10), true);
@@ -455,7 +502,10 @@
       if (nav) {
         var h = nav.offsetHeight;
         nav.classList.toggle('is-scrolled', scrollY > 8);
-        if (hero) nav.classList.toggle('is-over-stage', hero.getBoundingClientRect().bottom > h);
+        var over = !!hero && hero.getBoundingClientRect().bottom > h;
+        if (hero) nav.classList.toggle('is-over-stage', over);
+        // Over a night picture the header takes the dark set, whatever the theme.
+        nav.classList.toggle('night', over && hero.classList.contains('night'));
       }
       if (!hero) return;
       var r = hero.getBoundingClientRect(), p;
@@ -464,14 +514,18 @@
       hero.style.setProperty('--p', p.toFixed(4));
       hero.classList.toggle('is-copy-out', scrollFx && p >= 0.25);
       specs.forEach(function (li, i) { li.classList.toggle('is-on', p > 0.28 + i * 0.16); });
-      // Live: the scroll turns the model (about 1.6 rad over the pin).
-      if (scrollFx && heroStage && heroStage._sv && p !== lastP) { var hsv = heroStage._sv; hsv.setCameraOrbit({ angle: hsv.getCameraOrbit().angle + (p - lastP) * 1.6 }); }
+      // Live: the scroll turns the model (about 1.6 rad over the pin); a scene turns its camera.
+      if (heroStage && heroStage.dataset.scene) {
+        var turn = scrollFx ? p * 1.2 : 0;
+        if (turn !== heroStage._turn) { heroStage._turn = turn; if (heroStage._scene) heroStage._scene.setTurn(turn); }
+      } else if (scrollFx && heroStage && heroStage._sv && p !== lastP) { var hsv = heroStage._sv; hsv.setCameraOrbit({ angle: hsv.getCameraOrbit().angle + (p - lastP) * 1.6 }); }
       lastP = p;
     }
     on(window, 'scroll', function () { if (!ticking) { ticking = true; requestAnimationFrame(frame); } }, { passive: true });
     on(window, 'resize', function () {
       var want = !!hero && mqFx.matches;
       if (hero && want !== scrollFx) { scrollFx = want; hero.classList.toggle('has-scroll-fx', want); }
+      $$('[data-scene]').forEach(frameScene);
       frame();
     });
     frame();

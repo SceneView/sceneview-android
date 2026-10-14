@@ -281,6 +281,14 @@ themes** because their ground does not change with the theme — the code card a
 command boxes stay dark, the media tiles are photographs, and the sheet scrim sits
 over whatever page is behind it.
 
+**`.night`** (`tokens.css`): a block that is a night picture in both themes — the home
+hero's circuit scene and the header while it sits over it — carries the class and takes the
+**whole dark token set** (`--bg`, `--text`, `--accent`, the stage tokens…) whatever
+`data-theme` says, with `color-scheme: dark` so native controls follow. The light theme
+therefore does not re-light the scene: the picture ends on a clean edge and the page's
+light surfaces start under it. Inside a `.night` block, use the ordinary tokens; never
+reach for a dark literal to "force" the night.
+
 | Token | Value | Usage |
 |---|---|---|
 | `--code-strong` | #F3F5F9 | Selected code tab, hovered copy button — 17.5:1 on `--code-bg` (#0C1017) |
