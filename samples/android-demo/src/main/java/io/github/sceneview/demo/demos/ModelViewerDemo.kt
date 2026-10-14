@@ -1,5 +1,6 @@
 package io.github.sceneview.demo.demos
 
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -111,6 +112,7 @@ import io.github.sceneview.demo.common.rememberModelDemoEnvironment
 import io.github.sceneview.demo.theme.SceneViewTokens
 import io.github.sceneview.demo.ui.GlassActionPill
 import io.github.sceneview.demo.ui.viewer.BundledViewerModel
+import io.github.sceneview.demo.ui.viewer.CatalogueShelf
 import io.github.sceneview.demo.ui.viewer.AnimationBar
 import io.github.sceneview.demo.ui.viewer.EnvironmentSheet
 import io.github.sceneview.demo.ui.viewer.ModelPickerSheet
@@ -277,6 +279,26 @@ private val BUNDLED_VIEWER_MODELS = listOf(
 )
 
 /**
+ * A model that only exists in the HD pack: no bundled file, its card render as thumbnail
+ * (`model_thumb_hd_<id with underscores>`) until the download lands.
+ *
+ * Catalogue products open three-quarter, as their cards show them, like the mammoth: the
+ * framing then fits the footprint of the TURNED box. Head-on, a 4.69 m car was framed on its
+ * 1.9 m width and its length ran off both screen edges as soon as it turned.
+ */
+private fun hdOnly(id: String, title: String, @StringRes description: Int) = BundledViewerModel(
+    assetPath = null,
+    displayName = title,
+    description = description,
+    frontYaw = CATALOGUE_FRONT_YAW,
+    hdAssetId = id,
+    thumbnailStem = "hd_" + id.replace('-', '_'),
+)
+
+/** The catalogue's opening turn, the mammoth's and the rover's (see [hdOnly]). */
+private const val CATALOGUE_FRONT_YAW = -30f
+
+/**
  * The Models sheet's "Museum & Space" shelf (2026-09-29): museum scans from the HD pack,
  * downloaded after install, shown at their real size. Names and ids are shared with the iOS demo.
  *
@@ -319,10 +341,276 @@ private val MUSEUM_VIEWER_MODELS = listOf(
         thumbnailStem = "hd_perseverance",
         autoplayAnimations = false,
     ),
+    // Real-product catalogue (#4560): museum pieces and one sci-fi drone, at real size.
+        hdOnly(
+            "bell-x1", "Bell X-1 (1947)",
+            R.string.demo_model_desc_hd_bell_x1,
+        ),
+        hdOnly(
+            "triceratops-skeleton", "Triceratops skeleton",
+            R.string.demo_model_desc_hd_triceratops_skeleton,
+        ),
+        hdOnly(
+            "fangyi-bronze", "Fangyi bronze vessel",
+            R.string.demo_model_desc_hd_fangyi_bronze,
+        ),
+        hdOnly(
+            "canon-at1", "Canon AT-1 (1977)",
+            R.string.demo_model_desc_hd_canon_at1,
+        ),
+        hdOnly(
+            "citroen-h-van", "Citroën H-style van",
+            R.string.demo_model_desc_hd_citroen_h_van,
+        ),
+        hdOnly(
+            "mech-drone", "Mech drone (sci-fi)",
+            R.string.demo_model_desc_hd_mech_drone,
+        ),
 )
 
-/** Every entry of the Models sheet, bundled and Museum & Space. */
-private val ALL_VIEWER_MODELS = BUNDLED_VIEWER_MODELS + MUSEUM_VIEWER_MODELS
+/**
+ * The Models sheet's real-product shelves (#4560): everyday objects people actually own —
+ * furniture, cars, bikes, appliances, tech, sneakers — each at its real size, one shelf per
+ * category, everyday first. Like Museum & Space they come from the HD pack, one download per
+ * model on its pill's tap: 60 files and ~230 MB is not something the APK can carry. The same
+ * GLBs back the website's catalogue on `/view` (`assets/catalog.json`).
+ */
+private val CATALOGUE_SHELVES = listOf(
+    CatalogueShelf(R.string.demo_model_picker_cat_furniture, listOf(
+        hdOnly(
+            "ikea-nockeby-sofa", "IKEA NOCKEBY sofa",
+            R.string.demo_model_desc_hd_ikea_nockeby_sofa,
+        ),
+        hdOnly(
+            "ikea-kallax-shelf", "IKEA KALLAX shelf",
+            R.string.demo_model_desc_hd_ikea_kallax_shelf,
+        ),
+        hdOnly(
+            "ikea-linnmon-alex-desk", "IKEA LINNMON / ALEX desk",
+            R.string.demo_model_desc_hd_ikea_linnmon_alex_desk,
+        ),
+        hdOnly(
+            "ikea-trensum-mirror", "IKEA TRENSUM mirror",
+            R.string.demo_model_desc_hd_ikea_trensum_mirror,
+        ),
+        hdOnly(
+            "rivet-sloane-sofa", "Rivet Sloane sofa",
+            R.string.demo_model_desc_hd_rivet_sloane_sofa,
+        ),
+        hdOnly(
+            "stone-beam-dalton-sofa", "Stone & Beam Dalton sofa",
+            R.string.demo_model_desc_hd_stone_beam_dalton_sofa,
+        ),
+        hdOnly(
+            "rivet-aiden-armchair", "Rivet Aiden armchair",
+            R.string.demo_model_desc_hd_rivet_aiden_armchair,
+        ),
+        hdOnly(
+            "wishbone-chair", "Wishbone dining chair",
+            R.string.demo_model_desc_hd_wishbone_chair,
+        ),
+        hdOnly(
+            "rivet-arc-floor-lamp", "Rivet arc floor lamp",
+            R.string.demo_model_desc_hd_rivet_arc_floor_lamp,
+        ),
+        hdOnly(
+            "rivet-anne-desk", "Rivet Anne desk",
+            R.string.demo_model_desc_hd_rivet_anne_desk,
+        ),
+        hdOnly(
+            "rivet-media-console", "Rivet media console",
+            R.string.demo_model_desc_hd_rivet_media_console,
+        ),
+    )),
+    CatalogueShelf(R.string.demo_model_picker_cat_cars, listOf(
+        hdOnly(
+            "tesla-model-3", "Tesla Model 3",
+            R.string.demo_model_desc_hd_tesla_model_3,
+        ),
+        hdOnly(
+            "peugeot-2008", "Peugeot 2008",
+            R.string.demo_model_desc_hd_peugeot_2008,
+        ),
+        hdOnly(
+            "mini-cooper-s", "MINI Cooper S",
+            R.string.demo_model_desc_hd_mini_cooper_s,
+        ),
+        hdOnly(
+            "fiat-500-classic", "Fiat 500 (classic)",
+            R.string.demo_model_desc_hd_fiat_500_classic,
+        ),
+    )),
+    CatalogueShelf(R.string.demo_model_picker_cat_bikes, listOf(
+        hdOnly(
+            "mongoose-tyax-mtb", "Mongoose Tyax mountain bike",
+            R.string.demo_model_desc_hd_mongoose_tyax_mtb,
+        ),
+        hdOnly(
+            "tier-escooter", "TIER e-scooter",
+            R.string.demo_model_desc_hd_tier_escooter,
+        ),
+        hdOnly(
+            "vespa-et3", "Vespa Primavera ET3",
+            R.string.demo_model_desc_hd_vespa_et3,
+        ),
+        hdOnly(
+            "city-bike", "City bike",
+            R.string.demo_model_desc_hd_city_bike,
+        ),
+    )),
+    CatalogueShelf(R.string.demo_model_picker_cat_home, listOf(
+        hdOnly(
+            "kitchenaid-stand-mixer", "KitchenAid stand mixer",
+            R.string.demo_model_desc_hd_kitchenaid_stand_mixer,
+        ),
+        hdOnly(
+            "smeg-toaster", "SMEG toaster",
+            R.string.demo_model_desc_hd_smeg_toaster,
+        ),
+        hdOnly(
+            "dyson-hot-cool-fan", "Dyson Hot+Cool fan",
+            R.string.demo_model_desc_hd_dyson_hot_cool_fan,
+        ),
+        hdOnly(
+            "amazonbasics-portable-ac", "AmazonBasics portable AC",
+            R.string.demo_model_desc_hd_amazonbasics_portable_ac,
+        ),
+        hdOnly(
+            "glass-kettle", "Glass kettle",
+            R.string.demo_model_desc_hd_glass_kettle,
+        ),
+        hdOnly(
+            "glass-door-fridge", "Glass-door fridge",
+            R.string.demo_model_desc_hd_glass_door_fridge,
+        ),
+    )),
+    CatalogueShelf(R.string.demo_model_picker_cat_tech, listOf(
+        hdOnly(
+            "iphone-13-pro-max", "iPhone 13 Pro Max",
+            R.string.demo_model_desc_hd_iphone_13_pro_max,
+        ),
+        hdOnly(
+            "galaxy-s21-ultra", "Samsung Galaxy S21 Ultra",
+            R.string.demo_model_desc_hd_galaxy_s21_ultra,
+        ),
+        hdOnly(
+            "macbook-pro-13", "MacBook Pro 13\"",
+            R.string.demo_model_desc_hd_macbook_pro_13,
+        ),
+        hdOnly(
+            "ipad-mini-6", "iPad mini 6",
+            R.string.demo_model_desc_hd_ipad_mini_6,
+        ),
+        hdOnly(
+            "apple-watch-series-7", "Apple Watch Series 7",
+            R.string.demo_model_desc_hd_apple_watch_series_7,
+        ),
+        hdOnly(
+            "airpods-pro", "AirPods Pro",
+            R.string.demo_model_desc_hd_airpods_pro,
+        ),
+        hdOnly(
+            "nintendo-switch-oled", "Nintendo Switch OLED",
+            R.string.demo_model_desc_hd_nintendo_switch_oled,
+        ),
+        hdOnly(
+            "xbox-wireless-controller", "Xbox Wireless Controller",
+            R.string.demo_model_desc_hd_xbox_wireless_controller,
+        ),
+        hdOnly(
+            "sony-mdr-7506", "Sony MDR-7506 headphones",
+            R.string.demo_model_desc_hd_sony_mdr_7506,
+        ),
+        hdOnly(
+            "skullcandy-crusher", "Skullcandy Crusher headphones",
+            R.string.demo_model_desc_hd_skullcandy_crusher,
+        ),
+        hdOnly(
+            "jbl-tour-one-m3-v2", "JBL Tour One M3 headphones",
+            R.string.demo_model_desc_hd_jbl_tour_one_m3_v2,
+        ),
+        hdOnly(
+            "jbl-charge-speaker", "JBL Charge speaker",
+            R.string.demo_model_desc_hd_jbl_charge_speaker,
+        ),
+        hdOnly(
+            "ue-boom-speaker", "Ultimate Ears BOOM speaker",
+            R.string.demo_model_desc_hd_ue_boom_speaker,
+        ),
+        hdOnly(
+            "gopro-hero-8", "GoPro HERO8",
+            R.string.demo_model_desc_hd_gopro_hero_8,
+        ),
+        hdOnly(
+            "canon-eos-rp-v2", "Canon EOS RP camera",
+            R.string.demo_model_desc_hd_canon_eos_rp_v2,
+        ),
+        hdOnly(
+            "instax-mini-8", "Instax Mini 8 camera",
+            R.string.demo_model_desc_hd_instax_mini_8,
+        ),
+        hdOnly(
+            "dji-mavic-3-v2", "DJI Mavic 3 drone",
+            R.string.demo_model_desc_hd_dji_mavic_3_v2,
+        ),
+        hdOnly(
+            "desktop-3d-printer", "Desktop 3D printer",
+            R.string.demo_model_desc_hd_desktop_3d_printer,
+        ),
+    )),
+    CatalogueShelf(R.string.demo_model_picker_cat_fashion, listOf(
+        hdOnly(
+            "air-jordan-1", "Nike Air Jordan 1",
+            R.string.demo_model_desc_hd_air_jordan_1,
+        ),
+        hdOnly(
+            "nike-pegasus-36", "Nike Air Zoom Pegasus 36",
+            R.string.demo_model_desc_hd_nike_pegasus_36,
+        ),
+        hdOnly(
+            "converse-chuck-taylor", "Converse Chuck Taylor",
+            R.string.demo_model_desc_hd_converse_chuck_taylor,
+        ),
+        hdOnly(
+            "adidas-high-top", "adidas high-top sneaker",
+            R.string.demo_model_desc_hd_adidas_high_top,
+        ),
+        hdOnly(
+            "reebok-fueltrain", "Reebok FUELTRAIN",
+            R.string.demo_model_desc_hd_reebok_fueltrain,
+        ),
+        hdOnly(
+            "ugg-classic-tall", "UGG Classic Tall boot",
+            R.string.demo_model_desc_hd_ugg_classic_tall,
+        ),
+        hdOnly(
+            "jansport-backpack", "JanSport backpack",
+            R.string.demo_model_desc_hd_jansport_backpack,
+        ),
+        hdOnly(
+            "rolex-watch-v2", "Rolex watch",
+            R.string.demo_model_desc_hd_rolex_watch_v2,
+        ),
+        hdOnly(
+            "moto-helmet-v2", "Motorcycle helmet",
+            R.string.demo_model_desc_hd_moto_helmet_v2,
+        ),
+        hdOnly(
+            "tennis-racket", "Tennis racket",
+            R.string.demo_model_desc_hd_tennis_racket,
+        ),
+        hdOnly(
+            "photorealistic-guitar-v2", "Electric guitar",
+            R.string.demo_model_desc_hd_photorealistic_guitar_v2,
+        ),
+    )),
+)
+
+/** Every HD entry that opens under the Studio softbox: the product shelves and Museum & Space. */
+private val HD_STUDIO_MODELS = CATALOGUE_SHELVES.flatMap { it.models } + MUSEUM_VIEWER_MODELS
+
+/** Every entry of the Models sheet: bundled, the product shelves and Museum & Space. */
+private val ALL_VIEWER_MODELS = BUNDLED_VIEWER_MODELS + HD_STUDIO_MODELS
 
 /** The lighting a Museum & Space model opens under: the viewer's "Studio" softbox. */
 private const val MUSEUM_ENVIRONMENT = "environments/studio_warm_2k.hdr"
@@ -741,7 +1029,7 @@ private fun SingleModelSection(
     val stageIsMuseumScan: Boolean? = when {
         activeModelInstance == null -> null
         streamedModelInstance != null -> false
-        else -> hdAssetOnStage?.id?.let { id -> MUSEUM_VIEWER_MODELS.any { it.hdAssetId == id } } ?: false
+        else -> hdAssetOnStage?.id?.let { id -> HD_STUDIO_MODELS.any { it.hdAssetId == id } } ?: false
     }
     // Plain holder, not state: its value is a pure function of what is on stage, so a discarded
     // composition that wrote it leaves nothing wrong behind.
@@ -1594,6 +1882,7 @@ private fun SingleModelSection(
         },
         onScene = { cancelSurprise(); modelSheetOpen = false; onModeChange(it.mode()) },
         onDismiss = { modelSheetOpen = false },
+        catalogueShelves = CATALOGUE_SHELVES.takeIf { hdStore != null }.orEmpty(),
         museumModels = MUSEUM_VIEWER_MODELS.takeIf { hdStore != null }.orEmpty(),
     )
     if (hdDialogOpen && hdStore != null) {
@@ -2356,6 +2645,7 @@ private fun MultiModelSection(
         onSelect = { modelSheetOpen = false; onOpenModel(it) },
         onScene = { modelSheetOpen = false; onModeChange(it.mode()) },
         onDismiss = { modelSheetOpen = false },
+        catalogueShelves = CATALOGUE_SHELVES.takeIf { rememberHdPackStore() != null }.orEmpty(),
         museumModels = MUSEUM_VIEWER_MODELS.takeIf { rememberHdPackStore() != null }.orEmpty(),
     )
 }
