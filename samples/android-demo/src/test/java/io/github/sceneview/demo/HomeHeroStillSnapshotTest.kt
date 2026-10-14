@@ -21,8 +21,8 @@ import org.robolectric.annotation.GraphicsMode
 /**
  * What the home hero stage shows where the flight cannot run (#4411): the bundled picture.
  * Two stages, at the heights `HomeScreen` gives them (status bar + header + band + bleed):
- * the phone's shows it whole, the tablet's wide one crops it and must keep the sun, the
- * horizon and the helmet.
+ * the phone's shows it whole, the tablet's wide one crops it and must keep the car and
+ * the lit pit wall over it.
  *
  * The home goldens (`HomeScreenSnapshotTest`) do not cover it: they run in inspection mode,
  * where the stage paints the sky alone. The hero is the same in light and dark (DESIGN.md,

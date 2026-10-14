@@ -670,20 +670,20 @@ private const val HERO_ITEM_KEY = "hero"
 private const val WHATS_NEW_ITEM_KEY = "whats-new"
 
 /**
- * The layer under the grid that carries the sky and the live flight (#3948).
+ * The layer under the grid that carries the sky and the night circuit (#3948).
  *
  * Geometry: [height] tall from `-topInset` — the Scaffold pads the status bar and this
  * undoes it, so the sky reaches the top of the display and the status bar rides on it
  * ([HomeHeader] flips its icons to light meanwhile). At rest the featured band's grid
  * item sits at [restTop] below the content's top edge; as the grid scrolls, the stage
  * follows that item one-for-one, read in `graphicsLayer` at draw time so the scroll
- * costs no recomposition. Inside, the sky and the flight lag the band by a fraction
+ * costs no recomposition. Inside, the sky and the circuit lag the band by a fraction
  * ([HERO_PARALLAX]), which reads as depth; the stage clips its bounds so the lag never
  * leaks below the band, where the grid is transparent over the page. When the item has
  * left the viewport the layer is fully transparent and [active] is false, so the loop
  * is parked on its last frame — the frame that shows again, unchanged, on the way back.
  *
- * In inspection mode (goldens) the sky is painted and the flight is not: Roborazzi has
+ * In inspection mode (goldens) the sky is painted and the circuit is not: Roborazzi has
  * no GPU, and a still of a rendered frame would tie the goldens to a driver.
  */
 @Composable
@@ -708,6 +708,7 @@ private fun HomeHeroStage(
     val bandTop = topInset + restTop
     val bandHeight = height - bandTop - home.heroStageBleed
     val bandFraction = bandHeight.value / (bandHeight + home.heroStageBleed).value
+    val bandHeightPx = with(density) { bandHeight.toPx() }.coerceAtLeast(1f)
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -735,23 +736,24 @@ private fun HomeHeroStage(
                         home.heroSkyHorizon + 0.1f to colors.heroSkyGround,
                         1f to colors.heroSkyTop,
                     ),
-                )
-                // The sun's glow, where the disc sits in the flight: the sky is warmest
-                // around it, as a sky is.
-                .drawBehind {
-                    drawRect(
-                        Brush.radialGradient(
-                            0f to colors.heroSkyHorizon.copy(alpha = 0.7f),
-                            0.45f to colors.heroSkyHorizon.copy(alpha = 0.25f),
-                            1f to Color.Transparent,
-                            center = Offset(size.width * HERO_SUN_X, size.height * home.heroSkyHorizon * 0.82f),
-                            radius = size.width * 0.6f,
-                        ),
-                    )
-                },
+                ),
         ) {
             if (!inspectionMode) {
-                HomeHeroScene(active = active, modifier = Modifier.fillMaxSize())
+                HomeHeroScene(
+                    active = active,
+                    modifier = Modifier.fillMaxSize(),
+                    // The scroll is the camera's: as the band leaves, the camera turns
+                    // further round the car and pushes in.
+                    scroll = {
+                        val travel = -(heroTravel() ?: 0f)
+                        (travel / bandHeightPx).coerceIn(0f, 1f)
+                    },
+                    // The car is framed between the header and the band's copy.
+                    contentPadding = PaddingValues(
+                        top = bandTop,
+                        bottom = home.heroStageBleed + bandHeight * (1f - home.heroScrimStart) * HERO_COPY_SHARE,
+                    ),
+                )
             }
         }
         // The legibility scrim under the band's copy — the hero's usual gradient, painted
@@ -783,8 +785,11 @@ private fun HomeHeroStage(
     }
 }
 
-/** Where the sun sits across the stage, as a fraction of its width — see `DuskFlight`. */
-private const val HERO_SUN_X = 0.31f
+/**
+ * How much of the scrimmed lower part of the band the camera treats as covered by the copy:
+ * the car may sit a little into the scrim, where it is still well lit.
+ */
+private const val HERO_COPY_SHARE = 0.8f
 
 /** Fraction of the band's scroll travel the stage's content lags behind. */
 private const val HERO_PARALLAX = 0.35f

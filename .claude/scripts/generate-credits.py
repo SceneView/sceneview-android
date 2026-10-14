@@ -325,13 +325,6 @@ NON_CATALOG_BUNDLED = {
         "sourceUrl": "https://github.com/sceneview/sceneview/blob/main/LICENSE",
         "note": "Compiled from `samples/android-demo/src/main/materials/studio_pbr.mat`",
     },
-    "hero_terrain.filamat": {
-        "name": "hero_terrain.filamat",
-        "author": "SceneView project",
-        "license": "Apache-2.0",
-        "sourceUrl": "https://github.com/sceneview/sceneview/blob/main/LICENSE",
-        "note": "Compiled from `samples/android-demo/src/main/materials/hero_terrain.mat` (#3948)",
-    },
     "cosmos_sprite.filamat": {
         "name": "cosmos_sprite.filamat",
         "author": "SceneView project",
@@ -425,6 +418,22 @@ NON_CATALOG_BUNDLED = {
         "license": "Apache-2.0",
         "sourceUrl": "https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker",
         "note": "On-device pose model bundle used by `ARBodyTrackerDemo`",
+    },
+    "night_circuit.glb": {
+        "name": "Night circuit (Khronos Car Concept on a SceneView set)",
+        "author": "Darmstadt Graphics Group GmbH (Eric Chadwick); set by SceneView",
+        "license": "CC-BY-4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+        "sourceUrl": "https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/CarConcept",
+        "note": "The Car Concept on the night circuit built by `tools/scenes/circuit/build.sh`, "
+        "the android-demo home hero (#3948)",
+    },
+    "circuit_ibl.ktx": {
+        "name": "Night circuit environment",
+        "author": "SceneView project",
+        "license": "Apache-2.0",
+        "sourceUrl": "https://github.com/sceneview/sceneview/blob/main/LICENSE",
+        "note": "Rendered from the night circuit's set description and prefiltered with cmgen",
     },
     "neutral_ibl.ktx": {
         "name": "Neutral IBL (Filament default environment)",

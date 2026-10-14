@@ -15,7 +15,7 @@ Re-run that script after adding, removing or re-compressing a bundled asset;
 `ci.yml` → `build` (step "Check asset credits") fails if this file and the
 assets disagree.
 
-Assets bundled: **38**.
+Assets bundled: **39**.
 
 > **Optimization note (#934, #2305).** The bundled GLBs and HDRs are compressed
 > for a lean APK while preserving on-device visual quality:
@@ -41,6 +41,8 @@ Assets bundled: **38**.
 - `models/khronos_lantern.glb` — **[Lantern](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/Lantern)** by Microsoft — [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/) (9.0 MB)
 - `models/khronos_sheen_chair.glb` — **[Sheen Chair](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/SheenChair)** by Wayfair, LLC (Eric Chadwick) — [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/) (4.1 MB)
 - `models/khronos_toy_car.glb` — **[Toy Car](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/ToyCar)** by Guido Odendahl (model); Eric Chadwick (extensions and scene composition) — [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/) (2.2 MB)
+- `models/night_circuit.glb` — **[Night circuit (Khronos Car Concept on a SceneView set)](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/CarConcept)** by Darmstadt Graphics Group GmbH (Eric Chadwick); set by SceneView — [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/) (4.2 MB)  
+  The Car Concept on the night circuit built by `tools/scenes/circuit/build.sh`, the android-demo home hero (#3948)
 - `models/shiba.glb` — **[Shiba](https://sketchfab.com/3d-models/shiba-faef9fe5ace445e7b2989d1c1ece361c)** by zixisun51 — [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/) (669 KB)
 - `models/threejs_soldier.glb` — **[Soldier](https://github.com/mrdoob/three.js/blob/dev/examples/models/gltf/Soldier.glb)** by Tomás Laulhé (modified by Don McCurdy) — [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/) (2.3 MB)
 - `splats/rainbow_sphere.ply` — **[rainbow_sphere.ply](https://github.com/sceneview/sceneview/blob/main/LICENSE)** by SceneView project — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) (448 KB)  
@@ -49,6 +51,8 @@ Assets bundled: **38**.
 ## HDR environments
 
 - `environments/chinese_garden_2k.hdr` — **[Chinese Garden](https://polyhaven.com/a/chinese_garden)** by Sergej Majboroda — [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/) (1.8 MB)
+- `environments/circuit_ibl.ktx` — **[Night circuit environment](https://github.com/sceneview/sceneview/blob/main/LICENSE)** by SceneView project — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) (2.1 MB)  
+  Rendered from the night circuit's set description and prefiltered with cmgen
 - `environments/night_sky_2k.hdr` — **[Night Sky (Dikhololo Night)](https://polyhaven.com/a/dikhololo_night)** by Greg Zaal — [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/) (1.7 MB)
 - `environments/rooftop_night_2k.hdr` — **[Rooftop Night](https://polyhaven.com/a/rooftop_night)** by Greg Zaal — [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/) (1.6 MB)  
   Verified 2026-10-10 against the Poly Haven download: a 1024x512 downsample of rooftop_night_2k.hdr (median pixel difference 0.3%) (#4453)
@@ -79,8 +83,6 @@ Assets bundled: **38**.
   Compiled from `samples/android-demo/src/main/materials/cosmos_spacetime.mat` (Cosmos Spacetime view)
 - `materials/cosmos_sprite.filamat` — **[cosmos_sprite.filamat](https://github.com/sceneview/sceneview/blob/main/LICENSE)** by SceneView project — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) (43 KB)  
   Compiled from `samples/android-demo/src/main/materials/cosmos_sprite.mat` (Cosmos demo, #4152)
-- `materials/hero_terrain.filamat` — **[hero_terrain.filamat](https://github.com/sceneview/sceneview/blob/main/LICENSE)** by SceneView project — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) (567 KB)  
-  Compiled from `samples/android-demo/src/main/materials/hero_terrain.mat` (#3948)
 - `materials/studio_glass.filamat` — **[studio_glass.filamat](https://github.com/sceneview/sceneview/blob/main/LICENSE)** by SceneView project — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) (536 KB)  
   Compiled from `samples/android-demo/src/main/materials/studio_glass.mat`
 - `materials/studio_pbr.filamat` — **[studio_pbr.filamat](https://github.com/sceneview/sceneview/blob/main/LICENSE)** by SceneView project — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) (676 KB)  

@@ -167,7 +167,6 @@ MATS=(
     "sceneview:view_texture_unlit:sceneview/src/main/materials/view_texture_unlit.mat:sceneview/src/main/assets/materials/view_texture_unlit.filamat:-p all -a all"
     "android-demo:studio_pbr:samples/android-demo/src/main/materials/studio_pbr.mat:samples/android-demo/src/main/assets/materials/studio_pbr.filamat:--optimize-size -p mobile -a opengl -a vulkan"
     "android-demo:studio_glass:samples/android-demo/src/main/materials/studio_glass.mat:samples/android-demo/src/main/assets/materials/studio_glass.filamat:--optimize-size -p mobile -a opengl -a vulkan"
-    "android-demo:hero_terrain:samples/android-demo/src/main/materials/hero_terrain.mat:samples/android-demo/src/main/assets/materials/hero_terrain.filamat:--optimize-size -p mobile -a opengl -a vulkan"
     "android-demo:cosmos_sprite:samples/android-demo/src/main/materials/cosmos_sprite.mat:samples/android-demo/src/main/assets/materials/cosmos_sprite.filamat:--optimize-size -p mobile -a opengl -a vulkan"
     "android-demo:cosmos_ribbon:samples/android-demo/src/main/materials/cosmos_ribbon.mat:samples/android-demo/src/main/assets/materials/cosmos_ribbon.filamat:--optimize-size -p mobile -a opengl -a vulkan"
     "android-demo:cosmos_plasma:samples/android-demo/src/main/materials/cosmos_plasma.mat:samples/android-demo/src/main/assets/materials/cosmos_plasma.filamat:--optimize-size -p mobile -a opengl -a vulkan"
