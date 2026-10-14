@@ -212,8 +212,8 @@
     {
       "path": "samples/android-demo/src/main/assets/models/night_circuit.glb",
       "scope": "android",
-      "sha256": "e2eb4d05f3a8e7ef9f13f1403243152f9d3529a0005eaf97afa98fab60fb2657",
-      "size": 4247700,
+      "sha256": "e36f8a9a5ea6fd2957e49422fd104e739c192ac37b27e5057a7ffe6312982609",
+      "size": 4244656,
       "source": "https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/CarConcept",
       "license": "CC-BY-4.0",
       "author": "Darmstadt Graphics Group GmbH (Eric Chadwick); set by SceneView"

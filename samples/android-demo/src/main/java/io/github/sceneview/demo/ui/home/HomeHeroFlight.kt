@@ -499,6 +499,15 @@ private fun bump(t: Float, at: Float, length: Float): Float {
 internal fun nightLap(film: Float): Float =
     film - floor(film / NightFilm.LOOP_SECONDS) * NightFilm.LOOP_SECONDS
 
+/** The warm neon's flicker once a lap, a different stutter each lap; 1 outside the window. */
+private fun neonStruggle(film: Float, lap: Float): Float {
+    val end = NightCues.NEON_STRUGGLE + NightCues.NEON_STRUGGLE_LENGTH
+    if (lap < NightCues.NEON_STRUGGLE || lap >= end) return 1f
+    val lapIndex = floor(film / NightFilm.LOOP_SECONDS).toInt()
+    return LightCues.ignition(lap, NightCues.NEON_STRUGGLE, NightCues.NEON_STRUGGLE_LENGTH, seed = 40 + lapIndex)
+        .coerceAtLeast(0.15f)
+}
+
 /**
  * Every lamp at [film] seconds, written into [into] (one per stage, so a frame allocates
  * nothing). Under reduced motion ([motion] false) every lamp is simply on, as authored.
@@ -524,14 +533,7 @@ internal fun nightCueLevels(
     city = ignite(NightCues.CITY)
     seats = ignite(NightCues.SEATS)
     led = ignite(NightCues.LED)
-    val struggle = if (lap >= NightCues.NEON_STRUGGLE && lap < NightCues.NEON_STRUGGLE + NightCues.NEON_STRUGGLE_LENGTH) {
-        val lapIndex = floor(t / NightFilm.LOOP_SECONDS).toInt()
-        LightCues.ignition(lap, NightCues.NEON_STRUGGLE, NightCues.NEON_STRUGGLE_LENGTH, seed = 40 + lapIndex)
-            .coerceAtLeast(0.15f)
-    } else {
-        1f
-    }
-    ledWarm = ignite(NightCues.LED_WARM) * struggle
+    ledWarm = ignite(NightCues.LED_WARM) * neonStruggle(t, lap)
     screens = ignite(NightCues.SCREENS) *
         LightCues.glitch(t, everySeconds = NightCues.SCREEN_GLITCH_EVERY, seed = NightCues.SCREENS.third)
     flood = ignite(NightCues.FLOOD)

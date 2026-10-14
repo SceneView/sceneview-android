@@ -475,7 +475,7 @@ private fun HomeHeroStage(
                     autoAnimate = false,
                     apply = {
                         modelNode[0] = this
-                        configureNightShadows(instance)
+                        configureNightSet(instance)
                     },
                 )
             }
@@ -560,9 +560,10 @@ private fun HomeHeroStage(
         // Raw Filament writes on the View, declared after the SceneView so they run after
         // its own `applyRenderQuality` effect and are never undone by it (#1078). Each
         // write asks for a frame: a parked loop would otherwise keep the old look.
-        LaunchedEffect(view, tier) {
+        LaunchedEffect(view, tier, modelInstance) {
             applyNightLook(view, tier)
             lights.key?.isShadowCaster = tier.shadows
+            modelInstance?.let { showStandingWater(it, visible = tier.reflections) }
             renderInvalidator.requestRender()
         }
     }
@@ -574,18 +575,18 @@ private fun HomeHeroStage(
  * version: a new build, with its own shaders and set, is judged afresh.
  */
 private fun settledHeroTier(context: Context): HeroTier? {
-    val name = heroPrefs(context).getString(settledTierKey(context), null) ?: return null
+    val name = heroPrefs(context).getString(settledTierKey(), null) ?: return null
     return HeroTier.entries.firstOrNull { it.name == name }
 }
 
 private fun rememberSettledHeroTier(context: Context, tier: HeroTier) {
-    heroPrefs(context).edit().putString(settledTierKey(context), tier.name).apply()
+    heroPrefs(context).edit().putString(settledTierKey(), tier.name).apply()
 }
 
 private fun heroPrefs(context: Context) =
     context.getSharedPreferences("home_hero", Context.MODE_PRIVATE)
 
-private fun settledTierKey(context: Context) = "tier@${BuildConfig.VERSION_CODE}"
+private fun settledTierKey() = "tier@${BuildConfig.VERSION_CODE}"
 
 /** Up to 60 presented frames a second: the rain and the flashes need every one. */
 private const val HERO_MAX_FPS = 60
@@ -797,21 +798,82 @@ private fun ModelInstance.primitiveMaterials(): List<Pair<Int, MaterialInstance>
 /** Materials that are light, not matter: the haze, the rain and the sky dome. */
 private val SHADOWLESS_MATERIALS = setOf("Beam", "Rain", "Sky")
 
+/** The set's own materials that are not `Set …` or `Light …`: the ground, the water, the sky, the cones. */
+private val SET_MATERIALS = setOf("Wet asphalt", STANDING_WATER, "Sky", "Beam", "Contact shadow")
+
+private const val STANDING_WATER = "Standing water"
+
+/** Filament's default render channel: the set, the headlight cones and the contact shadow. */
+private const val SET_CHANNEL = 2
+
+/** Drawn after [SET_CHANNEL]: the car, then the rain over it. */
+private const val CAR_CHANNEL = 3
+
+private fun isSetMaterial(name: String?): Boolean =
+    name != null && (name in SET_MATERIALS || name.startsWith("Set ") || name.startsWith("Light "))
+
 /**
+ * Shadows and draw order of the set.
+ *
  * Everything on the set receives the floods' shadow; everything solid casts it. The cones,
  * the rain and the sky must not throw a shadow on the grid.
+ *
+ * The headlight cones are blended and write no depth, so wherever the camera looks at the
+ * car's nose through a cone — every front three-quarter shot — they washed a pale wedge over
+ * the paint and the car read as half transparent. The car and the rain are drawn in a later
+ * channel than the set: the cones still glow over the asphalt and in the haze, and the car's
+ * body covers them, the way a beam starting at the lamp never veils the car that throws it.
  */
-private fun configureNightShadows(instance: ModelInstance) {
+private fun configureNightSet(instance: ModelInstance) {
     val renderables = instance.renderableManager
-    val shadowless = instance.primitiveMaterials()
+    val primitives = instance.primitiveMaterials()
+    val shadowless = primitives
         .filter { (_, material) -> material.name in SHADOWLESS_MATERIALS }
+        .mapTo(HashSet()) { it.first }
+    val set = primitives
+        .filter { (_, material) -> isSetMaterial(material.name) }
         .mapTo(HashSet()) { it.first }
     for (renderable in instance.renderableInstances) {
         val matter = renderable !in shadowless
         renderables.setCastShadows(renderable, matter)
         renderables.setReceiveShadows(renderable, matter)
+        renderables.setChannel(renderable, if (renderable in set) SET_CHANNEL else CAR_CHANNEL)
+    }
+    primitives.map { it.second }.distinct()
+        .filter { it.name == TRIM_PAINT && it.material.hasParameter(BASE_COLOR) }
+        .forEach { it.setParameter(BASE_COLOR, TRIM_F0, TRIM_F0, TRIM_F0, 1f) }
+}
+
+/**
+ * The car's black lower trim: side skirts, splitter and diffuser.
+ *
+ * It is a metal whose base colour is its reflectance at normal incidence, 0.038. Filament
+ * lifts the grazing reflectance of any surface brighter than 0.02 to a full mirror, so the
+ * skirts, seen edge-on from a camera at the car's height, mirrored the bright lower half of
+ * the circuit's environment map instead of the dark wet grid an inch below them. Between the
+ * wheels that pale strip read as daylight under the car, and the car floated. At 0.006 the
+ * grazing mirror falls under a third and the trim stays the black it is.
+ */
+private const val TRIM_PAINT = "Paint 2 Carmine"
+private const val BASE_COLOR = "baseColorFactor"
+private const val TRIM_F0 = 0.006f
+
+/**
+ * The standing water, only where screen-space reflections run. Without them a puddle mirrors
+ * the environment map alone — a black sky, which never holds the car nor the floods — and
+ * each one read as a dark shadow lying metres away from the car on the side shots. The wet
+ * asphalt keeps its own gloss and the floods' streaks on every rung.
+ */
+private fun showStandingWater(instance: ModelInstance, visible: Boolean) {
+    val renderables = instance.renderableManager
+    for ((renderable, material) in instance.primitiveMaterials()) {
+        if (material.name == STANDING_WATER) {
+            renderables.setLayerMask(renderable, ALL_LAYERS, if (visible) ALL_LAYERS else 0)
+        }
     }
 }
+
+private const val ALL_LAYERS = 0xff
 
 /** Whether the screen hosting the stage is the resumed destination, as state. */
 @Composable
