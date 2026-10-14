@@ -62,7 +62,6 @@
   <link rel="stylesheet" href="assets/site.css">
   <script src="assets/fit.js" defer></script>
   <script src="assets/site.js" defer></script>
-  <script src="assets/adoption-orgs.js" defer></script>
 
   <!-- Structured data. "softwareVersion" is kept in step by .claude/scripts/sync-versions.sh. -->
   <script type="application/ld+json">
@@ -487,7 +486,8 @@
       </div>
       <!-- The data-metric="stars|contributors|releases|web-downloads" anchors are rewritten weekly by
            .claude/scripts/update-site-metrics.sh: keep each one exactly once, on a text-only element.
-           The team names come from assets/adoption-orgs.js, the one place to edit that list. -->
+           No company names here: an Apache 2.0 user has not endorsed SceneView, and Play SDK Console
+           usage figures are Google confidential (SDK Console Terms of Service, section 5.3). -->
       <dl class="numbers reveal">
         <div class="numbers__lead"><dt>public repositories declare SceneView or its Sceneform predecessor</dt><dd><a href="/companies.html">700+</a></dd></div>
         <div><dt>stars on GitHub</dt><dd><a href="https://github.com/sceneview/sceneview" data-metric="stars">1.3K</a></dd></div>
@@ -495,13 +495,7 @@
         <div><dt>releases</dt><dd><a href="https://github.com/sceneview/sceneview/releases" data-metric="releases">159</a></dd></div>
         <div><dt>npm downloads, web, 30&nbsp;days</dt><dd><a href="https://www.npmjs.com/package/sceneview-web" data-metric="web-downloads">3.1K</a></dd></div>
       </dl>
-      <div class="orgs reveal">
-        <p class="small muted" style="margin:0">Found in public code and posts from teams at</p>
-        <ul class="orgs__list" data-adoption-orgs></ul>
-        <noscript><p class="footnote">This list is filled in by a script. With JavaScript off, the names and the evidence for each are in <a href="/assets/adoption-orgs.js">adoption-orgs.js</a>.</p></noscript>
-        <p class="orgs__more"><a href="/companies.html">All teams and their evidence <svg width="16" height="16"><use href="#i-arrow"/></svg></a></p>
-        <p class="footnote">Each name links to that team’s own public code or post; a name here is not an endorsement. Repository count from GitHub code search, owners sceneview and ThomasGorisse excluded, checked on September 26, 2026. Stars, contributors, releases and web downloads are refreshed weekly by an automated job.</p>
-      </div>
+      <p class="footnote numbers__source reveal">Repository count from GitHub code search, owners sceneview and ThomasGorisse excluded, checked on September 26, 2026. Stars, contributors, releases and web downloads are refreshed weekly by an automated job.</p>
     </div>
   </section>
 
