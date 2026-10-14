@@ -281,7 +281,12 @@
       display: block;
       touch-action: none;
       cursor: grab;
+      /* The stage's backdrop shows until the studio has drawn the model: an unpainted
+         WebGL buffer is black, and must never show through the veil as it lifts. */
+      opacity: 0;
+      transition: opacity var(--duration-medium) var(--ease-expressive);
     }
+    #vp-canvas.is-drawn { opacity: 1; }
     #vp-canvas:active { cursor: grabbing; }
     .vp-overlay {
       position: absolute;
@@ -602,7 +607,7 @@
               <img src="/models/platforms/thumbnails/tesla_model_3.webp" alt="" width="256" height="256" loading="lazy"><span>Tesla Model 3<small>4.69 m</small></span></a></li>
             <li><a class="vp-sample" data-sample="peugeot_2008.glb" href="?url=https%3A%2F%2Fsceneview.github.io%2Fmodels%2Fplatforms%2Fpeugeot_2008.glb">
               <img src="/models/platforms/thumbnails/peugeot_2008.webp" alt="" width="256" height="256" loading="lazy"><span>Peugeot 2008<small>4.30 m</small></span></a></li>
-            <li><a class="vp-sample" data-sample="mini_cooper_s.glb" href="?url=https%3A%2F%2Fsceneview.github.io%2Fmodels%2Fplatforms%2Fmini_cooper_s.glb">
+            <li><a class="vp-sample" data-sample="mini_cooper_s.glb" data-front-yaw="180" href="?url=https%3A%2F%2Fsceneview.github.io%2Fmodels%2Fplatforms%2Fmini_cooper_s.glb">
               <img src="/models/platforms/thumbnails/mini_cooper_s.webp" alt="" width="256" height="256" loading="lazy"><span>MINI Cooper S<small>3.63 m</small></span></a></li>
             <li><a class="vp-sample" data-sample="fiat_500_classic.glb" href="?url=https%3A%2F%2Fsceneview.github.io%2Fmodels%2Fplatforms%2Ffiat_500_classic.glb">
               <img src="/models/platforms/thumbnails/fiat_500_classic.webp" alt="" width="256" height="256" loading="lazy"><span>Fiat 500 (classic)<small>2.97 m</small></span></a></li>
@@ -641,13 +646,13 @@
         <section class="vp-cat" data-cat="tech" aria-labelledby="vp-cat-tech">
           <h3 id="vp-cat-tech" class="vp-cat-title">Tech <span>18</span></h3>
           <ul class="vp-samples">
-            <li><a class="vp-sample" data-sample="iphone_13_pro_max.glb" href="?url=https%3A%2F%2Fsceneview.github.io%2Fmodels%2Fplatforms%2Fiphone_13_pro_max.glb">
+            <li><a class="vp-sample" data-sample="iphone_13_pro_max.glb" data-front-yaw="180" href="?url=https%3A%2F%2Fsceneview.github.io%2Fmodels%2Fplatforms%2Fiphone_13_pro_max.glb">
               <img src="/models/platforms/thumbnails/iphone_13_pro_max.webp" alt="" width="256" height="256" loading="lazy"><span>iPhone 13 Pro Max<small>16 cm</small></span></a></li>
-            <li><a class="vp-sample" data-sample="galaxy_s21_ultra.glb" href="?url=https%3A%2F%2Fsceneview.github.io%2Fmodels%2Fplatforms%2Fgalaxy_s21_ultra.glb">
+            <li><a class="vp-sample" data-sample="galaxy_s21_ultra.glb" data-front-yaw="180" href="?url=https%3A%2F%2Fsceneview.github.io%2Fmodels%2Fplatforms%2Fgalaxy_s21_ultra.glb">
               <img src="/models/platforms/thumbnails/galaxy_s21_ultra.webp" alt="" width="256" height="256" loading="lazy"><span>Samsung Galaxy S21 Ultra<small>17 cm</small></span></a></li>
             <li><a class="vp-sample" data-sample="macbook_pro_13.glb" href="?url=https%3A%2F%2Fsceneview.github.io%2Fmodels%2Fplatforms%2Fmacbook_pro_13.glb">
               <img src="/models/platforms/thumbnails/macbook_pro_13.webp" alt="" width="256" height="256" loading="lazy"><span>MacBook Pro 13&quot;<small>30 cm</small></span></a></li>
-            <li><a class="vp-sample" data-sample="ipad_mini_6.glb" href="?url=https%3A%2F%2Fsceneview.github.io%2Fmodels%2Fplatforms%2Fipad_mini_6.glb">
+            <li><a class="vp-sample" data-sample="ipad_mini_6.glb" data-front-yaw="180" href="?url=https%3A%2F%2Fsceneview.github.io%2Fmodels%2Fplatforms%2Fipad_mini_6.glb">
               <img src="/models/platforms/thumbnails/ipad_mini_6.webp" alt="" width="256" height="256" loading="lazy"><span>iPad mini 6<small>20 cm</small></span></a></li>
             <li><a class="vp-sample" data-sample="apple_watch_series_7.glb" href="?url=https%3A%2F%2Fsceneview.github.io%2Fmodels%2Fplatforms%2Fapple_watch_series_7.glb">
               <img src="/models/platforms/thumbnails/apple_watch_series_7.webp" alt="" width="256" height="256" loading="lazy"><span>Apple Watch Series 7<small>4.5 cm</small></span></a></li>
@@ -719,7 +724,7 @@
               <img src="/models/platforms/thumbnails/fangyi_bronze.webp" alt="" width="256" height="256" loading="lazy"><span>Fangyi bronze vessel<small>35 cm</small></span></a></li>
             <li><a class="vp-sample" data-sample="canon_at1.glb" href="?url=https%3A%2F%2Fsceneview.github.io%2Fmodels%2Fplatforms%2Fcanon_at1.glb">
               <img src="/models/platforms/thumbnails/canon_at1.webp" alt="" width="256" height="256" loading="lazy"><span>Canon AT-1 (1977)<small>14 cm</small></span></a></li>
-            <li><a class="vp-sample" data-sample="citroen_h_van.glb" href="?url=https%3A%2F%2Fsceneview.github.io%2Fmodels%2Fplatforms%2Fcitroen_h_van.glb">
+            <li><a class="vp-sample" data-sample="citroen_h_van.glb" data-front-yaw="180" href="?url=https%3A%2F%2Fsceneview.github.io%2Fmodels%2Fplatforms%2Fcitroen_h_van.glb">
               <img src="/models/platforms/thumbnails/citroen_h_van.webp" alt="" width="256" height="256" loading="lazy"><span>Citroën H-style van<small>4.30 m</small></span></a></li>
             <li><a class="vp-sample" data-sample="mech_drone.glb" href="?url=https%3A%2F%2Fsceneview.github.io%2Fmodels%2Fplatforms%2Fmech_drone.glb">
               <img src="/models/platforms/thumbnails/mech_drone.webp" alt="" width="256" height="256" loading="lazy"><span>Mech drone (sci-fi)<small>60 cm</small></span></a></li>
@@ -1278,7 +1283,11 @@
       })
       .then(function (viewable) {
         return engineReady.then(function (viewer) {
-          return viewer.loadModel(viewable).catch(function () { throw fail('parse'); });
+          // Catalogue files modelled facing away from glTF's +Z say so on their tile, so
+          // the camera opens on their front three-quarter (a cached script ignores it).
+          var frontYaw = catalogueFrontYaw(modelUrl);
+          return viewer.loadModel(viewable, frontYaw ? { frontYaw: frontYaw } : undefined)
+            .catch(function () { throw fail('parse'); });
         });
       })
       .then(function (viewer) {
@@ -1290,6 +1299,11 @@
         return Promise.race([dressed || Promise.resolve(), cap]).then(function () { return viewer; });
       })
       .then(function (viewer) {
+        // Two presented frames, so the canvas fades in over a drawn studio, never a blank buffer.
+        return framesDrawn(viewer, 2).then(function () { return viewer; });
+      })
+      .then(function (viewer) {
+        $('vp-canvas').classList.add('is-drawn');
         hideLoading();
         onLoaded(viewer);
       })
@@ -1297,6 +1311,25 @@
         console.warn('view: could not open the model', err);
         showError(err, fileName, modelUrl.href);
       });
+
+    function framesDrawn(viewer, count) {
+      if (typeof viewer.onFrame !== 'function') return Promise.resolve();
+      return new Promise(function (resolve) {
+        var seen = 0, off = null, done = function () { if (off) off(); resolve(); };
+        off = viewer.onFrame(function () { if (++seen >= count) done(); });
+        if (typeof viewer.requestRender === 'function') viewer.requestRender();
+        setTimeout(done, 1000);  // a hidden tab presents no frame: never hold the veil on it
+      });
+    }
+
+    // The front yaw a catalogue tile declares for its own file, or 0.
+    function catalogueFrontYaw(url) {
+      var m = url.hostname === 'sceneview.github.io' && /^\/models\/platforms\/([\w.-]+\.glb)$/.exec(url.pathname);
+      if (!m) return 0;
+      var tile = document.querySelector('.vp-sample[data-sample="' + m[1] + '"]');
+      var yaw = tile ? parseFloat(tile.getAttribute('data-front-yaw')) : NaN;
+      return isFinite(yaw) ? yaw : 0;
+    }
 
     function hideLoading() {
       var veil = $('vp-loading');

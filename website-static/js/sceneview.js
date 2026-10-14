@@ -1414,9 +1414,14 @@
     /**
      * Load a glTF/GLB model from URL. The model it replaces is destroyed.
      * Rejects with an `AbortError` when the viewer is disposed before the model arrives.
+     *
+     * `options.frontYaw`: where the model's front faces, in degrees about the vertical
+     * axis from glTF's +Z (0, the default). A file modelled facing -Z takes 180. The
+     * camera then opens on the model's front three-quarter instead of its back.
      */
-    loadModel(url) {
+    loadModel(url, options) {
       var self = this;
+      var frontYaw = options && Number.isFinite(options.frontYaw) ? options.frontYaw * Math.PI / 180 : null;
       return new Promise(function(resolve, reject) {
         // On any failure (network/404, fetch error, GLB parse/decode failure),
         // paint a graceful in-canvas fallback before rejecting (#2509). The
@@ -1437,7 +1442,7 @@
             // Disposed while the bytes were on their way: drop them (#4366).
             if (self._disposed) throw _disposedError();
             try {
-              self._showModel(url, new Uint8Array(buffer));
+              self._showModel(url, new Uint8Array(buffer), frontYaw);
               self._hideLoadFallback();  // clear any prior-failure placeholder
               resolve(self);
             } catch (e) {
@@ -1468,7 +1473,10 @@
       this._fallbackEl = null;
     }
 
-    _showModel(url, data) {
+    _showModel(url, data, frontYaw) {
+      // Where the new model's front faces (radians from +Z): the studio opens on it.
+      this._modelFrontYaw = frontYaw || 0;
+      if (frontYaw != null && !this._studio) this._angle = 0.785 + frontYaw;
       // Destroy the previous model. Taking it off the scene alone kept its buffers,
       // textures and material instances alive for the life of the engine (#4366).
       if (this._asset) {
@@ -2072,6 +2080,9 @@
       this._velocityAngle = 0;
       this._velocityHeight = 0;
       this._reveal = withReveal && !_prefersReducedMotion() ? { start: null } : null;
+      // A new framing opens on the model's front three-quarter, whatever the turntable
+      // did while the file was downloading.
+      if (withReveal) this._angle = 0.785 + (this._modelFrontYaw || 0);
       this._studioFramedAt = performance.now();
       this._studioClampLimits();
     }
@@ -4296,7 +4307,8 @@
         // turntable, timed so a 120 Hz screen or a dropped frame does not change its pace.
         var lastTick = self._lastTickAt;
         self._lastTickAt = now;
-        if (self._autoRotate) {
+        // The studio's turntable waits for the move-in, so it starts from the opening pose.
+        if (self._autoRotate && !(self._reveal && self._reveal.start === null)) {
           self._angle += !self._studio ? 0.00873
             : _STUDIO_TURN_RATE * (lastTick ? Math.min(0.1, Math.max(0, now - lastTick) / 1000) : 1 / 60);
         }
