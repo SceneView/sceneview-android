@@ -87,6 +87,13 @@ Glassmorphism adds depth and layering to surfaces that float over content (nav, 
 | `stage-pip-floor` | #E2E6EB | #161B22 | Floor of the iOS Secondary Camera (PiP) stage (iOS `Stage.pipFloor`; dark is Android's `StageSky.floor`). Light is a step under `surface-container-highest` so the ground reads against the backdrop (1.13:1 on `stage-pip-backdrop`, enough for a fill; the grid carries the edge) |
 | `stage-pip-grid` | #7A8494 | #5C6780 | Grid lines on `stage-pip-floor` (iOS `Stage.pipGrid`): 3.0:1 on the floor in both themes, where Android's `outline` / `outline-subtle` measured 1.18:1 / 2.18:1 |
 | `stage-pip-backdrop` | #F1F3F5 | #0B0F16 | Flat backdrop of the Secondary Camera stage (iOS `Stage.pipBackdrop`, = `surface-container-high` light / `stage-background` dark). The floor texture fades into exactly this colour at its rim, so no camera angle shows the floor's edge |
+| `stage-studio-top` | #CDD3DB | #0B0E13 | Top of the photo-studio wall behind a product on `/view` (`--vp-studio-top`, SceneView web `setStudio` `top`): the wall darkens upwards from the horizon, so the model stays the brightest thing in the frame |
+| `stage-studio-horizon` | #E7EAEF | #222833 | Where the studio wall meets the floor, with no line (`--vp-studio-horizon`, `setStudio` `horizon`). Also the canvas clear colour, so the stage does not change tone when the 3D takes over |
+| `stage-studio-floor` | #F2F4F7 | #2B323E | Studio floor away from the model (`--vp-studio-floor`, `setStudio` `floor`) |
+| `stage-studio-pool` | #FDFDFE | #3A4250 | Pool of light the model stands in (`--vp-studio-pool`, `setStudio` `pool`). The studio only darkens outwards: pool, floor, horizon, top |
+| `stage-studio-glass` | rgba(255,255,255,0.72) | rgba(255,255,255,0.14) | Pills and buttons over the studio picture (`--vp-studio-glass`). Their text is `on-surface`: at least 11.4:1 (light) / 6.1:1 (dark) over any of the four studio colours. `on-surface-variant` falls to 4.3:1 on the dark glass over the pool, so it stays off the glass |
+| `stage-studio-glass-ring` | rgba(30,50,86,0.14) | rgba(255,255,255,0.24) | Hairline of those pills, and the loading spinner's track (`--vp-studio-glass-ring`) |
+| `stage-studio-vignette` | 0.8 | 0.6 | Not a colour: the grey the studio's corners are multiplied by before tone mapping (`_STUDIO_THEMES` in `sceneview.js`) |
 | `ar-scrim` | rgba(0,0,0,0.94) | rgba(0,0,0,0.88) | AR coaching overlay ground, over the camera feed |
 | `ar-scrim-border` | 1px rgba(255,255,255,0.16) | 1px rgba(255,255,255,0.10) | AR coaching overlay hairline |
 

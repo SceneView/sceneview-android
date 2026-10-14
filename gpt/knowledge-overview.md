@@ -974,6 +974,31 @@ sv.setPixelBudget(1.4e6);                                         // never rende
 - `setLight(handle, options)` takes what `addLight` returned and the same options; `removeLight(handle)` drops it.
 - `setPixelBudget(px)` lowers the device pixel ratio (never below 0.5) when the canvas would exceed `px` rendered pixels; `setPixelRatio` stays the cap. `setQuality('low' | 'medium' | 'high')` keeps working; the object form sets each pass by itself.
 
+#### A product in a photo studio (the `/view` page)
+
+`setStudio()` stages one model the way a product page shows it: a seamless lit wall that
+curves into the floor with no horizon line, a contact shadow baked from the model's own
+triangles, a faint blurred floor reflection, a softbox environment with no sun, and a low
+three-quarter camera through a 30-degree lens. One call scales from a watch to a car.
+
+```js
+const sv = await SceneView.create('viewer', { studio: 'light' });  // or 'dark': a charcoal showroom with a pool of light
+await sv.loadModel('/models/platforms/peugeot_2008.glb');
+await sv.whenReady();                         // the studio environment is in and the model dressed: reveal the canvas now
+
+sv.setStudio('dark');                         // follow the page theme
+sv.setStudio({ theme: 'light', reflection: 0.2, shadow: 1 });
+sv.setStudio({ theme: 'dark', pool: '#3A4250', environment: '/environments/studio_showroom_dark_ibl.ktx' });
+sv.setStudio(false);                          // the plain background, lights and framing again
+```
+
+- Defaults: light `shadow` 0.85 and `reflection` 0.14, dark 0.9 and 0.26. `reflection` is 0-0.6, `shadow` 0-1. `top`, `horizon`, `floor` and `pool` take '#RRGGBB' or [r, g, b] in 0-1, as displayed. The studio only darkens outwards (pool, floor, horizon, top), and `horizon` is also the canvas clear colour.
+- While it is on, the default sun and fill lights are off the scene and `setBackgroundColor()` waits for `setStudio(false)`. Lights added with `addLight` stay. `setStudio(false)` brings back the environment from before it (a `loadEnvironment()` URL, `setEnvironmentSH()` bands or the default), unless one was set while it was on. The last environment call wins, and a `loadEnvironment()` that fails keeps the one in place.
+- The model stands on its lowest vertex, not on gltfio's bounding box, which rotated nodes inflate. Draco, meshopt and skinned meshes cannot be read that way: they get the bounding box and a soft ellipse for a shadow.
+- The reflection is a second, lower-resolution view of the model; a `transparent: true` canvas skips it.
+- Quality steps down by itself, through four tiers: a phone starts one lower. Each window of 60 render-loop ticks is measured against the cadence the browser delivers, so a 120 Hz screen or a 30 Hz battery saver keeps its tier. More than 15 late ticks (skipped because the GPU is behind, or longer than 1.5 times that cadence), or a cadence under 28 per second, drop one tier (MSAA and bloom first, then the reflection and SSAO, then the vignette), with a smaller pixel budget each time. It never climbs back, so it cannot flicker.
+- Auto-rotate becomes a turntable at 15 degrees a second, timed so a 120 Hz screen turns at the same pace. On load the camera eases in once the model is dressed, waiting 4 s at most for its textures; reduced motion skips that, and `setCameraOrbit` or the map and freelook cameras cancel it. `/view` also passes `autoRotate: false` when the visitor prefers reduced motion.
+
 ---
 
 ## Platform Coverage Summary
