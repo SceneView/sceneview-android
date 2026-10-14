@@ -1,5 +1,6 @@
 package io.github.sceneview.demo.demos
 
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -278,6 +279,18 @@ private val BUNDLED_VIEWER_MODELS = listOf(
 )
 
 /**
+ * A model that only exists in the HD pack: no bundled file, its card render as thumbnail
+ * (`model_thumb_hd_<id with underscores>`) until the download lands.
+ */
+private fun hdOnly(id: String, title: String, @StringRes description: Int) = BundledViewerModel(
+    assetPath = null,
+    displayName = title,
+    description = description,
+    hdAssetId = id,
+    thumbnailStem = "hd_" + id.replace('-', '_'),
+)
+
+/**
  * The Models sheet's "Museum & Space" shelf (2026-09-29): museum scans from the HD pack,
  * downloaded after install, shown at their real size. Names and ids are shared with the iOS demo.
  *
@@ -321,12 +334,30 @@ private val MUSEUM_VIEWER_MODELS = listOf(
         autoplayAnimations = false,
     ),
     // Real-product catalogue (#4560): museum pieces and one sci-fi drone, at real size.
-        BundledViewerModel(null, "Bell X-1 (1947)", R.string.demo_model_desc_hd_bell_x1, hdAssetId = "bell-x1", thumbnailStem = "hd_bell_x1"),
-        BundledViewerModel(null, "Triceratops skeleton", R.string.demo_model_desc_hd_triceratops_skeleton, hdAssetId = "triceratops-skeleton", thumbnailStem = "hd_triceratops_skeleton"),
-        BundledViewerModel(null, "Fangyi bronze vessel", R.string.demo_model_desc_hd_fangyi_bronze, hdAssetId = "fangyi-bronze", thumbnailStem = "hd_fangyi_bronze"),
-        BundledViewerModel(null, "Canon AT-1 (1977)", R.string.demo_model_desc_hd_canon_at1, hdAssetId = "canon-at1", thumbnailStem = "hd_canon_at1"),
-        BundledViewerModel(null, "Citroën H-style van", R.string.demo_model_desc_hd_citroen_h_van, hdAssetId = "citroen-h-van", thumbnailStem = "hd_citroen_h_van"),
-        BundledViewerModel(null, "Mech drone (sci-fi)", R.string.demo_model_desc_hd_mech_drone, hdAssetId = "mech-drone", thumbnailStem = "hd_mech_drone"),
+        hdOnly(
+            "bell-x1", "Bell X-1 (1947)",
+            R.string.demo_model_desc_hd_bell_x1,
+        ),
+        hdOnly(
+            "triceratops-skeleton", "Triceratops skeleton",
+            R.string.demo_model_desc_hd_triceratops_skeleton,
+        ),
+        hdOnly(
+            "fangyi-bronze", "Fangyi bronze vessel",
+            R.string.demo_model_desc_hd_fangyi_bronze,
+        ),
+        hdOnly(
+            "canon-at1", "Canon AT-1 (1977)",
+            R.string.demo_model_desc_hd_canon_at1,
+        ),
+        hdOnly(
+            "citroen-h-van", "Citroën H-style van",
+            R.string.demo_model_desc_hd_citroen_h_van,
+        ),
+        hdOnly(
+            "mech-drone", "Mech drone (sci-fi)",
+            R.string.demo_model_desc_hd_mech_drone,
+        ),
 )
 
 /**
@@ -338,70 +369,232 @@ private val MUSEUM_VIEWER_MODELS = listOf(
  */
 private val CATALOGUE_SHELVES = listOf(
     CatalogueShelf(R.string.demo_model_picker_cat_furniture, listOf(
-        BundledViewerModel(null, "IKEA NOCKEBY sofa", R.string.demo_model_desc_hd_ikea_nockeby_sofa, hdAssetId = "ikea-nockeby-sofa", thumbnailStem = "hd_ikea_nockeby_sofa"),
-        BundledViewerModel(null, "IKEA KALLAX shelf", R.string.demo_model_desc_hd_ikea_kallax_shelf, hdAssetId = "ikea-kallax-shelf", thumbnailStem = "hd_ikea_kallax_shelf"),
-        BundledViewerModel(null, "IKEA LINNMON / ALEX desk", R.string.demo_model_desc_hd_ikea_linnmon_alex_desk, hdAssetId = "ikea-linnmon-alex-desk", thumbnailStem = "hd_ikea_linnmon_alex_desk"),
-        BundledViewerModel(null, "IKEA TRENSUM mirror", R.string.demo_model_desc_hd_ikea_trensum_mirror, hdAssetId = "ikea-trensum-mirror", thumbnailStem = "hd_ikea_trensum_mirror"),
-        BundledViewerModel(null, "Rivet Sloane sofa", R.string.demo_model_desc_hd_rivet_sloane_sofa, hdAssetId = "rivet-sloane-sofa", thumbnailStem = "hd_rivet_sloane_sofa"),
-        BundledViewerModel(null, "Stone & Beam Dalton sofa", R.string.demo_model_desc_hd_stone_beam_dalton_sofa, hdAssetId = "stone-beam-dalton-sofa", thumbnailStem = "hd_stone_beam_dalton_sofa"),
-        BundledViewerModel(null, "Rivet Aiden armchair", R.string.demo_model_desc_hd_rivet_aiden_armchair, hdAssetId = "rivet-aiden-armchair", thumbnailStem = "hd_rivet_aiden_armchair"),
-        BundledViewerModel(null, "Wishbone dining chair", R.string.demo_model_desc_hd_wishbone_chair, hdAssetId = "wishbone-chair", thumbnailStem = "hd_wishbone_chair"),
-        BundledViewerModel(null, "Rivet arc floor lamp", R.string.demo_model_desc_hd_rivet_arc_floor_lamp, hdAssetId = "rivet-arc-floor-lamp", thumbnailStem = "hd_rivet_arc_floor_lamp"),
-        BundledViewerModel(null, "Rivet Anne desk", R.string.demo_model_desc_hd_rivet_anne_desk, hdAssetId = "rivet-anne-desk", thumbnailStem = "hd_rivet_anne_desk"),
-        BundledViewerModel(null, "Rivet media console", R.string.demo_model_desc_hd_rivet_media_console, hdAssetId = "rivet-media-console", thumbnailStem = "hd_rivet_media_console"),
+        hdOnly(
+            "ikea-nockeby-sofa", "IKEA NOCKEBY sofa",
+            R.string.demo_model_desc_hd_ikea_nockeby_sofa,
+        ),
+        hdOnly(
+            "ikea-kallax-shelf", "IKEA KALLAX shelf",
+            R.string.demo_model_desc_hd_ikea_kallax_shelf,
+        ),
+        hdOnly(
+            "ikea-linnmon-alex-desk", "IKEA LINNMON / ALEX desk",
+            R.string.demo_model_desc_hd_ikea_linnmon_alex_desk,
+        ),
+        hdOnly(
+            "ikea-trensum-mirror", "IKEA TRENSUM mirror",
+            R.string.demo_model_desc_hd_ikea_trensum_mirror,
+        ),
+        hdOnly(
+            "rivet-sloane-sofa", "Rivet Sloane sofa",
+            R.string.demo_model_desc_hd_rivet_sloane_sofa,
+        ),
+        hdOnly(
+            "stone-beam-dalton-sofa", "Stone & Beam Dalton sofa",
+            R.string.demo_model_desc_hd_stone_beam_dalton_sofa,
+        ),
+        hdOnly(
+            "rivet-aiden-armchair", "Rivet Aiden armchair",
+            R.string.demo_model_desc_hd_rivet_aiden_armchair,
+        ),
+        hdOnly(
+            "wishbone-chair", "Wishbone dining chair",
+            R.string.demo_model_desc_hd_wishbone_chair,
+        ),
+        hdOnly(
+            "rivet-arc-floor-lamp", "Rivet arc floor lamp",
+            R.string.demo_model_desc_hd_rivet_arc_floor_lamp,
+        ),
+        hdOnly(
+            "rivet-anne-desk", "Rivet Anne desk",
+            R.string.demo_model_desc_hd_rivet_anne_desk,
+        ),
+        hdOnly(
+            "rivet-media-console", "Rivet media console",
+            R.string.demo_model_desc_hd_rivet_media_console,
+        ),
     )),
     CatalogueShelf(R.string.demo_model_picker_cat_cars, listOf(
-        BundledViewerModel(null, "Tesla Model 3", R.string.demo_model_desc_hd_tesla_model_3, hdAssetId = "tesla-model-3", thumbnailStem = "hd_tesla_model_3"),
-        BundledViewerModel(null, "Peugeot 2008", R.string.demo_model_desc_hd_peugeot_2008, hdAssetId = "peugeot-2008", thumbnailStem = "hd_peugeot_2008"),
-        BundledViewerModel(null, "MINI Cooper S", R.string.demo_model_desc_hd_mini_cooper_s, hdAssetId = "mini-cooper-s", thumbnailStem = "hd_mini_cooper_s"),
-        BundledViewerModel(null, "Fiat 500 (classic)", R.string.demo_model_desc_hd_fiat_500_classic, hdAssetId = "fiat-500-classic", thumbnailStem = "hd_fiat_500_classic"),
+        hdOnly(
+            "tesla-model-3", "Tesla Model 3",
+            R.string.demo_model_desc_hd_tesla_model_3,
+        ),
+        hdOnly(
+            "peugeot-2008", "Peugeot 2008",
+            R.string.demo_model_desc_hd_peugeot_2008,
+        ),
+        hdOnly(
+            "mini-cooper-s", "MINI Cooper S",
+            R.string.demo_model_desc_hd_mini_cooper_s,
+        ),
+        hdOnly(
+            "fiat-500-classic", "Fiat 500 (classic)",
+            R.string.demo_model_desc_hd_fiat_500_classic,
+        ),
     )),
     CatalogueShelf(R.string.demo_model_picker_cat_bikes, listOf(
-        BundledViewerModel(null, "Mongoose Tyax mountain bike", R.string.demo_model_desc_hd_mongoose_tyax_mtb, hdAssetId = "mongoose-tyax-mtb", thumbnailStem = "hd_mongoose_tyax_mtb"),
-        BundledViewerModel(null, "TIER e-scooter", R.string.demo_model_desc_hd_tier_escooter, hdAssetId = "tier-escooter", thumbnailStem = "hd_tier_escooter"),
-        BundledViewerModel(null, "Vespa Primavera ET3", R.string.demo_model_desc_hd_vespa_et3, hdAssetId = "vespa-et3", thumbnailStem = "hd_vespa_et3"),
-        BundledViewerModel(null, "City bike", R.string.demo_model_desc_hd_city_bike, hdAssetId = "city-bike", thumbnailStem = "hd_city_bike"),
+        hdOnly(
+            "mongoose-tyax-mtb", "Mongoose Tyax mountain bike",
+            R.string.demo_model_desc_hd_mongoose_tyax_mtb,
+        ),
+        hdOnly(
+            "tier-escooter", "TIER e-scooter",
+            R.string.demo_model_desc_hd_tier_escooter,
+        ),
+        hdOnly(
+            "vespa-et3", "Vespa Primavera ET3",
+            R.string.demo_model_desc_hd_vespa_et3,
+        ),
+        hdOnly(
+            "city-bike", "City bike",
+            R.string.demo_model_desc_hd_city_bike,
+        ),
     )),
     CatalogueShelf(R.string.demo_model_picker_cat_home, listOf(
-        BundledViewerModel(null, "KitchenAid stand mixer", R.string.demo_model_desc_hd_kitchenaid_stand_mixer, hdAssetId = "kitchenaid-stand-mixer", thumbnailStem = "hd_kitchenaid_stand_mixer"),
-        BundledViewerModel(null, "SMEG toaster", R.string.demo_model_desc_hd_smeg_toaster, hdAssetId = "smeg-toaster", thumbnailStem = "hd_smeg_toaster"),
-        BundledViewerModel(null, "Dyson Hot+Cool fan", R.string.demo_model_desc_hd_dyson_hot_cool_fan, hdAssetId = "dyson-hot-cool-fan", thumbnailStem = "hd_dyson_hot_cool_fan"),
-        BundledViewerModel(null, "AmazonBasics portable AC", R.string.demo_model_desc_hd_amazonbasics_portable_ac, hdAssetId = "amazonbasics-portable-ac", thumbnailStem = "hd_amazonbasics_portable_ac"),
-        BundledViewerModel(null, "Glass kettle", R.string.demo_model_desc_hd_glass_kettle, hdAssetId = "glass-kettle", thumbnailStem = "hd_glass_kettle"),
-        BundledViewerModel(null, "Glass-door fridge", R.string.demo_model_desc_hd_glass_door_fridge, hdAssetId = "glass-door-fridge", thumbnailStem = "hd_glass_door_fridge"),
+        hdOnly(
+            "kitchenaid-stand-mixer", "KitchenAid stand mixer",
+            R.string.demo_model_desc_hd_kitchenaid_stand_mixer,
+        ),
+        hdOnly(
+            "smeg-toaster", "SMEG toaster",
+            R.string.demo_model_desc_hd_smeg_toaster,
+        ),
+        hdOnly(
+            "dyson-hot-cool-fan", "Dyson Hot+Cool fan",
+            R.string.demo_model_desc_hd_dyson_hot_cool_fan,
+        ),
+        hdOnly(
+            "amazonbasics-portable-ac", "AmazonBasics portable AC",
+            R.string.demo_model_desc_hd_amazonbasics_portable_ac,
+        ),
+        hdOnly(
+            "glass-kettle", "Glass kettle",
+            R.string.demo_model_desc_hd_glass_kettle,
+        ),
+        hdOnly(
+            "glass-door-fridge", "Glass-door fridge",
+            R.string.demo_model_desc_hd_glass_door_fridge,
+        ),
     )),
     CatalogueShelf(R.string.demo_model_picker_cat_tech, listOf(
-        BundledViewerModel(null, "iPhone 13 Pro Max", R.string.demo_model_desc_hd_iphone_13_pro_max, hdAssetId = "iphone-13-pro-max", thumbnailStem = "hd_iphone_13_pro_max"),
-        BundledViewerModel(null, "Samsung Galaxy S21 Ultra", R.string.demo_model_desc_hd_galaxy_s21_ultra, hdAssetId = "galaxy-s21-ultra", thumbnailStem = "hd_galaxy_s21_ultra"),
-        BundledViewerModel(null, "MacBook Pro 13\"", R.string.demo_model_desc_hd_macbook_pro_13, hdAssetId = "macbook-pro-13", thumbnailStem = "hd_macbook_pro_13"),
-        BundledViewerModel(null, "iPad mini 6", R.string.demo_model_desc_hd_ipad_mini_6, hdAssetId = "ipad-mini-6", thumbnailStem = "hd_ipad_mini_6"),
-        BundledViewerModel(null, "Apple Watch Series 7", R.string.demo_model_desc_hd_apple_watch_series_7, hdAssetId = "apple-watch-series-7", thumbnailStem = "hd_apple_watch_series_7"),
-        BundledViewerModel(null, "AirPods Pro", R.string.demo_model_desc_hd_airpods_pro, hdAssetId = "airpods-pro", thumbnailStem = "hd_airpods_pro"),
-        BundledViewerModel(null, "Nintendo Switch OLED", R.string.demo_model_desc_hd_nintendo_switch_oled, hdAssetId = "nintendo-switch-oled", thumbnailStem = "hd_nintendo_switch_oled"),
-        BundledViewerModel(null, "Xbox Wireless Controller", R.string.demo_model_desc_hd_xbox_wireless_controller, hdAssetId = "xbox-wireless-controller", thumbnailStem = "hd_xbox_wireless_controller"),
-        BundledViewerModel(null, "Sony MDR-7506 headphones", R.string.demo_model_desc_hd_sony_mdr_7506, hdAssetId = "sony-mdr-7506", thumbnailStem = "hd_sony_mdr_7506"),
-        BundledViewerModel(null, "Skullcandy Crusher headphones", R.string.demo_model_desc_hd_skullcandy_crusher, hdAssetId = "skullcandy-crusher", thumbnailStem = "hd_skullcandy_crusher"),
-        BundledViewerModel(null, "JBL Tour One M3 headphones", R.string.demo_model_desc_hd_jbl_tour_one_m3_v2, hdAssetId = "jbl-tour-one-m3-v2", thumbnailStem = "hd_jbl_tour_one_m3_v2"),
-        BundledViewerModel(null, "JBL Charge speaker", R.string.demo_model_desc_hd_jbl_charge_speaker, hdAssetId = "jbl-charge-speaker", thumbnailStem = "hd_jbl_charge_speaker"),
-        BundledViewerModel(null, "Ultimate Ears BOOM speaker", R.string.demo_model_desc_hd_ue_boom_speaker, hdAssetId = "ue-boom-speaker", thumbnailStem = "hd_ue_boom_speaker"),
-        BundledViewerModel(null, "GoPro HERO8", R.string.demo_model_desc_hd_gopro_hero_8, hdAssetId = "gopro-hero-8", thumbnailStem = "hd_gopro_hero_8"),
-        BundledViewerModel(null, "Canon EOS RP camera", R.string.demo_model_desc_hd_canon_eos_rp_v2, hdAssetId = "canon-eos-rp-v2", thumbnailStem = "hd_canon_eos_rp_v2"),
-        BundledViewerModel(null, "Instax Mini 8 camera", R.string.demo_model_desc_hd_instax_mini_8, hdAssetId = "instax-mini-8", thumbnailStem = "hd_instax_mini_8"),
-        BundledViewerModel(null, "DJI Mavic 3 drone", R.string.demo_model_desc_hd_dji_mavic_3_v2, hdAssetId = "dji-mavic-3-v2", thumbnailStem = "hd_dji_mavic_3_v2"),
-        BundledViewerModel(null, "Desktop 3D printer", R.string.demo_model_desc_hd_desktop_3d_printer, hdAssetId = "desktop-3d-printer", thumbnailStem = "hd_desktop_3d_printer"),
+        hdOnly(
+            "iphone-13-pro-max", "iPhone 13 Pro Max",
+            R.string.demo_model_desc_hd_iphone_13_pro_max,
+        ),
+        hdOnly(
+            "galaxy-s21-ultra", "Samsung Galaxy S21 Ultra",
+            R.string.demo_model_desc_hd_galaxy_s21_ultra,
+        ),
+        hdOnly(
+            "macbook-pro-13", "MacBook Pro 13\"",
+            R.string.demo_model_desc_hd_macbook_pro_13,
+        ),
+        hdOnly(
+            "ipad-mini-6", "iPad mini 6",
+            R.string.demo_model_desc_hd_ipad_mini_6,
+        ),
+        hdOnly(
+            "apple-watch-series-7", "Apple Watch Series 7",
+            R.string.demo_model_desc_hd_apple_watch_series_7,
+        ),
+        hdOnly(
+            "airpods-pro", "AirPods Pro",
+            R.string.demo_model_desc_hd_airpods_pro,
+        ),
+        hdOnly(
+            "nintendo-switch-oled", "Nintendo Switch OLED",
+            R.string.demo_model_desc_hd_nintendo_switch_oled,
+        ),
+        hdOnly(
+            "xbox-wireless-controller", "Xbox Wireless Controller",
+            R.string.demo_model_desc_hd_xbox_wireless_controller,
+        ),
+        hdOnly(
+            "sony-mdr-7506", "Sony MDR-7506 headphones",
+            R.string.demo_model_desc_hd_sony_mdr_7506,
+        ),
+        hdOnly(
+            "skullcandy-crusher", "Skullcandy Crusher headphones",
+            R.string.demo_model_desc_hd_skullcandy_crusher,
+        ),
+        hdOnly(
+            "jbl-tour-one-m3-v2", "JBL Tour One M3 headphones",
+            R.string.demo_model_desc_hd_jbl_tour_one_m3_v2,
+        ),
+        hdOnly(
+            "jbl-charge-speaker", "JBL Charge speaker",
+            R.string.demo_model_desc_hd_jbl_charge_speaker,
+        ),
+        hdOnly(
+            "ue-boom-speaker", "Ultimate Ears BOOM speaker",
+            R.string.demo_model_desc_hd_ue_boom_speaker,
+        ),
+        hdOnly(
+            "gopro-hero-8", "GoPro HERO8",
+            R.string.demo_model_desc_hd_gopro_hero_8,
+        ),
+        hdOnly(
+            "canon-eos-rp-v2", "Canon EOS RP camera",
+            R.string.demo_model_desc_hd_canon_eos_rp_v2,
+        ),
+        hdOnly(
+            "instax-mini-8", "Instax Mini 8 camera",
+            R.string.demo_model_desc_hd_instax_mini_8,
+        ),
+        hdOnly(
+            "dji-mavic-3-v2", "DJI Mavic 3 drone",
+            R.string.demo_model_desc_hd_dji_mavic_3_v2,
+        ),
+        hdOnly(
+            "desktop-3d-printer", "Desktop 3D printer",
+            R.string.demo_model_desc_hd_desktop_3d_printer,
+        ),
     )),
     CatalogueShelf(R.string.demo_model_picker_cat_fashion, listOf(
-        BundledViewerModel(null, "Nike Air Jordan 1", R.string.demo_model_desc_hd_air_jordan_1, hdAssetId = "air-jordan-1", thumbnailStem = "hd_air_jordan_1"),
-        BundledViewerModel(null, "Nike Air Zoom Pegasus 36", R.string.demo_model_desc_hd_nike_pegasus_36, hdAssetId = "nike-pegasus-36", thumbnailStem = "hd_nike_pegasus_36"),
-        BundledViewerModel(null, "Converse Chuck Taylor", R.string.demo_model_desc_hd_converse_chuck_taylor, hdAssetId = "converse-chuck-taylor", thumbnailStem = "hd_converse_chuck_taylor"),
-        BundledViewerModel(null, "adidas high-top sneaker", R.string.demo_model_desc_hd_adidas_high_top, hdAssetId = "adidas-high-top", thumbnailStem = "hd_adidas_high_top"),
-        BundledViewerModel(null, "Reebok FUELTRAIN", R.string.demo_model_desc_hd_reebok_fueltrain, hdAssetId = "reebok-fueltrain", thumbnailStem = "hd_reebok_fueltrain"),
-        BundledViewerModel(null, "UGG Classic Tall boot", R.string.demo_model_desc_hd_ugg_classic_tall, hdAssetId = "ugg-classic-tall", thumbnailStem = "hd_ugg_classic_tall"),
-        BundledViewerModel(null, "JanSport backpack", R.string.demo_model_desc_hd_jansport_backpack, hdAssetId = "jansport-backpack", thumbnailStem = "hd_jansport_backpack"),
-        BundledViewerModel(null, "Rolex watch", R.string.demo_model_desc_hd_rolex_watch_v2, hdAssetId = "rolex-watch-v2", thumbnailStem = "hd_rolex_watch_v2"),
-        BundledViewerModel(null, "Motorcycle helmet", R.string.demo_model_desc_hd_moto_helmet_v2, hdAssetId = "moto-helmet-v2", thumbnailStem = "hd_moto_helmet_v2"),
-        BundledViewerModel(null, "Tennis racket", R.string.demo_model_desc_hd_tennis_racket, hdAssetId = "tennis-racket", thumbnailStem = "hd_tennis_racket"),
-        BundledViewerModel(null, "Electric guitar", R.string.demo_model_desc_hd_photorealistic_guitar_v2, hdAssetId = "photorealistic-guitar-v2", thumbnailStem = "hd_photorealistic_guitar_v2"),
+        hdOnly(
+            "air-jordan-1", "Nike Air Jordan 1",
+            R.string.demo_model_desc_hd_air_jordan_1,
+        ),
+        hdOnly(
+            "nike-pegasus-36", "Nike Air Zoom Pegasus 36",
+            R.string.demo_model_desc_hd_nike_pegasus_36,
+        ),
+        hdOnly(
+            "converse-chuck-taylor", "Converse Chuck Taylor",
+            R.string.demo_model_desc_hd_converse_chuck_taylor,
+        ),
+        hdOnly(
+            "adidas-high-top", "adidas high-top sneaker",
+            R.string.demo_model_desc_hd_adidas_high_top,
+        ),
+        hdOnly(
+            "reebok-fueltrain", "Reebok FUELTRAIN",
+            R.string.demo_model_desc_hd_reebok_fueltrain,
+        ),
+        hdOnly(
+            "ugg-classic-tall", "UGG Classic Tall boot",
+            R.string.demo_model_desc_hd_ugg_classic_tall,
+        ),
+        hdOnly(
+            "jansport-backpack", "JanSport backpack",
+            R.string.demo_model_desc_hd_jansport_backpack,
+        ),
+        hdOnly(
+            "rolex-watch-v2", "Rolex watch",
+            R.string.demo_model_desc_hd_rolex_watch_v2,
+        ),
+        hdOnly(
+            "moto-helmet-v2", "Motorcycle helmet",
+            R.string.demo_model_desc_hd_moto_helmet_v2,
+        ),
+        hdOnly(
+            "tennis-racket", "Tennis racket",
+            R.string.demo_model_desc_hd_tennis_racket,
+        ),
+        hdOnly(
+            "photorealistic-guitar-v2", "Electric guitar",
+            R.string.demo_model_desc_hd_photorealistic_guitar_v2,
+        ),
     )),
 )
 
