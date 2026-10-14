@@ -60,9 +60,9 @@ Assets bundled: **41**.
   Poly Haven 1k HDR, rolled so the sunset sits behind the viewer's model and scaled to 0.45x radiance so the sky keeps its colour under the viewer's exposure
 - `environments/studio_2k.hdr` — **[Studio](https://polyhaven.com/a/christmas_photo_studio_07)** by Sergej Majboroda — [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/) (1.7 MB)  
   Verified 2026-10-10 against the Poly Haven download: pixel-identical to christmas_photo_studio_07_1k.hdr (#4453)
-- `environments/studio_showroom_dark_2k.hdr` — **[Studio showroom, dark (synthetic photo studio)](https://github.com/sceneview/sceneview/tree/main/tools/scenes)** by SceneView project — [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/) (240 KB)  
+- `environments/studio_showroom_dark_2k.hdr` — **[Studio showroom, dark (synthetic photo studio)](https://github.com/sceneview/sceneview/tree/main/tools/scenes/studio)** by SceneView project — [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/) (240 KB)  
   Generated deterministically by `tools/scenes/studio/build-hdr.mjs` (variant `dark`): a charcoal room with an overhead softbox and strip lights, no photographic source
-- `environments/studio_showroom_light_2k.hdr` — **[Studio showroom, light (synthetic photo studio)](https://github.com/sceneview/sceneview/tree/main/tools/scenes)** by SceneView project — [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/) (240 KB)  
+- `environments/studio_showroom_light_2k.hdr` — **[Studio showroom, light (synthetic photo studio)](https://github.com/sceneview/sceneview/tree/main/tools/scenes/studio)** by SceneView project — [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/) (240 KB)  
   Generated deterministically by `tools/scenes/studio/build-hdr.mjs` (variant `light`): a white cyclorama with an overhead softbox and strip lights, no photographic source
 - `environments/studio_warm_2k.hdr` — **[Studio Warm](https://polyhaven.com/a/studio_small_08)** by Sergej Majboroda — [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/) (1.5 MB)  
   Verified 2026-10-10 against the Poly Haven download: pixel-identical to studio_small_08_1k.hdr (#4453)

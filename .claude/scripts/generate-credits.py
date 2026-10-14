@@ -447,7 +447,7 @@ NON_CATALOG_BUNDLED = {
         "author": "SceneView project",
         "license": "CC0-1.0",
         "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
-        "sourceUrl": "https://github.com/sceneview/sceneview/tree/main/tools/scenes",
+        "sourceUrl": "https://github.com/sceneview/sceneview/tree/main/tools/scenes/studio",
         "note": "Generated deterministically by `tools/scenes/studio/build-hdr.mjs` (variant `dark`): "
         "a charcoal room with an overhead softbox and strip lights, no photographic source",
     },
@@ -456,7 +456,7 @@ NON_CATALOG_BUNDLED = {
         "author": "SceneView project",
         "license": "CC0-1.0",
         "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
-        "sourceUrl": "https://github.com/sceneview/sceneview/tree/main/tools/scenes",
+        "sourceUrl": "https://github.com/sceneview/sceneview/tree/main/tools/scenes/studio",
         "note": "Generated deterministically by `tools/scenes/studio/build-hdr.mjs` (variant `light`): "
         "a white cyclorama with an overhead softbox and strip lights, no photographic source",
     },

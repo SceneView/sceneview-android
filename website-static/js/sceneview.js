@@ -530,6 +530,9 @@
   var _STUDIO_IBL_INTENSITY = 40000;
   var _STUDIO_FOV = 30;            // a moderate telephoto: less perspective distortion
   var _STUDIO_REVEAL_MS = 1600;
+  // The longest the move-in and the quality tiers wait for the model's textures: one
+  // that never arrives must not hold them forever.
+  var _STUDIO_DRESS_WAIT_MS = 4000;
   var _STUDIO_TURN_RATE = 0.2618;  // radians per second: 15 degrees, a turn in 24 s
   var _STUDIO_DOME_RAMP = 0.35;   // radians over which the wall turns from horizon to top
   // Cover values (the `u` field of _studioBakeShadow) over which the reflection gives way
@@ -1383,14 +1386,17 @@
       this._studioSaved = null;       // camera settings to restore when the studio turns off
       this._studioTier = 3;           // quality tier, 3 (all effects) down to 0
       this._studioBudget = null;      // drawing-buffer pixel budget of that tier
-      this._studioPerf = null;        // frame-time window that drops the tier when slow
+      this._studioPerf = null;        // render-loop ticks that drop the tier when the GPU is short
+      this._studioFramedAt = 0;       // when the studio last framed a model (performance.now())
       this._mirrorView = null;        // second view that draws the floor reflection
       this._mirrorCamera = null;
       this._mirrorCameraEntity = null;
       this._modelBytes = null;        // WeakRef to the loaded GLB, read once for the shadow bake
       this._reveal = null;            // camera move-in after a load, { start }
       this._dragHeightScale = 1;      // vertical drag speed, proportional to the camera distance
-      this._envSerial = 0;            // the last _loadDefaultEnvironment() call wins
+      this._envSerial = 0;            // bumped by every environment change: the last one wins
+      this._envSource = null;         // the environment: { url, intensity, studio } or { bands, intensity }
+      this._envLoading = null;        // that source while its KTX is on its way
       this._pageBackground = null;    // setBackgroundColor() value, restored without the studio
       this._defaultIblUrl = null;
       this._defaultIblIntensity = null;
@@ -1601,7 +1607,16 @@
       // The far plane only ever widens: 1000 up to a framed radius of ~133, then it
       // follows the zoom-out limit. A model authored in millimetres is framed
       // thousands of units away and was culled whole by a fixed 1000 (#3742).
-      const far = Math.max(1000, (this._maxRadius || 50) * 1.5);
+      let far = Math.max(1000, (this._maxRadius || 50) * 1.5);
+      const lay = this._studio && this._studioLayout;
+      if (lay) {
+        // The studio's wall stays whole from the farthest the eye can go, the move-in's
+        // extra 12 % included: the far plane reaches past the dome's far side.
+        const top = typeof this._maxHeight === 'number' ? this._maxHeight : lay.y + lay.domeRadius;
+        const reach = 1.12 * Math.hypot(Math.max(this._maxRadius || 0, this._orbitRadius || 0),
+          Math.max(top, this._orbitHeight || 0) - lay.y);
+        far = Math.max(far, reach + 1.05 * lay.domeRadius);
+      }
       this._camera.setProjectionFov(
         this._fov || 45, canvas.width / canvas.height, this._nearPlane || 0.1, far,
         Filament.Camera$Fov.VERTICAL
@@ -1792,7 +1807,8 @@
     }
 
     /**
-     * Load a KTX IBL environment for PBR lighting.
+     * Load a KTX IBL environment for PBR lighting. The last environment call wins; when
+     * this one fails, the environment that was in place (or on its way) stays.
      *
      * @param {string} url - URL to a KTX IBL file
      * @param {number} [intensity=40000] - Light intensity
@@ -1801,7 +1817,23 @@
      */
     loadEnvironment(url, intensity) {
       var self = this;
-      this._envSerial++;  // a default or studio environment still on its way is dropped
+      // The last environment call wins: a default or studio environment still on its way
+      // is dropped, and comes back if this one fails.
+      var serial = ++this._envSerial;
+      var before = this._envSource, dropped = this._envLoading;
+      this._envSource = { url: url, intensity: intensity || 40000 };
+      this._envLoading = null;
+      function fallBack() {
+        if (self._disposed || serial !== self._envSerial) return;
+        self._envSource = before;
+        if (before && before.studio && !self._studio) {
+          // The studio closed while this one was on its way: the default, as outside it.
+          self._loadDefaultEnvironment(self._defaultIblUrl || '/environments/neutral_ibl.ktx',
+            self._defaultIblIntensity || 40000);
+        } else if (dropped) {
+          self._loadDefaultEnvironment(dropped.url, dropped.intensity, dropped.studio);
+        }
+      }
       return this._fetch(url)
         .then(function(r) {
           if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -1809,13 +1841,18 @@
         })
         .then(function(buffer) {
           if (self._disposed) throw _disposedError();
+          if (serial !== self._envSerial) return self;  // a later environment call won
           try {
             self._setKtxEnvironment(buffer, intensity || 40000);
             _log('SceneView: Environment loaded (' + Math.round(buffer.length / 1024) + 'KB)');
           } catch (e) {
             console.warn('SceneView: loadEnvironment failed', e);
+            fallBack();
           }
           return self.requestRender();
+        }, function(err) {
+          fallBack();
+          throw err;
         });
     }
 
@@ -1827,12 +1864,20 @@
      * @returns {SceneViewInstance} this (for chaining)
      */
     setEnvironmentSH(bands, intensity) {
-      this._envSerial++;  // a default or studio environment still on its way is dropped
+      // A default or studio environment still on its way is dropped, and comes back if
+      // these bands fail.
+      var dropped = this._envLoading;
+      this._envSerial++;
+      this._envLoading = null;
       try {
         if (this._disposed) throw _disposedError();
         this._setShEnvironment(bands, intensity || 45000);
+        this._envSource = { bands: Array.prototype.slice.call(bands), intensity: intensity || 45000 };
       } catch (e) {
         console.warn('SceneView: setEnvironmentSH failed', e);
+        if (dropped && !this._disposed) {
+          this._loadDefaultEnvironment(dropped.url, dropped.intensity, dropped.studio);
+        }
       }
       return this.requestRender();
     }
@@ -1864,9 +1909,10 @@
      * car paint). The camera moves to a low three-quarter view through a 30-degree lens
      * and eases in once the model is dressed, unless the visitor prefers reduced motion;
      * auto-rotate becomes a slow turntable, 15 degrees a second. The effects step down on
-     * their own when frames come in slowly. Scales from a watch to a car. Pass it to
-     * create() as `studio` to have it from the first frame; setBackgroundColor() takes
-     * effect again once it is off.
+     * their own when the GPU falls behind the browser's frame rate (a 30 Hz battery saver
+     * is not mistaken for it). Scales from a watch to a car. Pass it to create() as
+     * `studio` to have it from the first frame; setBackgroundColor() takes effect again
+     * once it is off, and so does the environment that was in place before it.
      *
      * @example viewer.setStudio('dark');
      * @example viewer.setStudio({ theme: 'light', reflection: 0.2 });
@@ -1890,7 +1936,7 @@
       var envChanged = entering || this._studio.environment !== conf.environment;
       if (entering) this._studioEnter();
       this._studio = conf;
-      if (envChanged) this._loadDefaultEnvironment(conf.environment, _STUDIO_IBL_INTENSITY);
+      if (envChanged) this._loadDefaultEnvironment(conf.environment, _STUDIO_IBL_INTENSITY, true);
       try {
         this._studioRebuild(entering);
       } catch (e) {
@@ -1903,10 +1949,11 @@
     _studioEnter() {
       this._studioSaved = {
         fov: this._fov, nearPlane: this._nearPlane, minRadius: this._minRadius,
-        maxRadius: this._maxRadius, minHeight: this._minHeight, maxHeight: this._maxHeight
+        maxRadius: this._maxRadius, minHeight: this._minHeight, maxHeight: this._maxHeight,
+        env: this._envSource
       };
       this._studioTier = _isLikelyMobile() ? 2 : 3;
-      this._studioPerf = { frames: 0, start: 0, last: 0, warm: 0, dropping: false };
+      this._studioPerf = { gaps: [], skips: 0, last: 0, warm: 0, dropping: false };
       // The studio environment does all the lighting: a sun's sharp highlight reads as a
       // stray reflection on glossy paint.
       var scene = this._scene;
@@ -1938,8 +1985,17 @@
       this._maxRadius = saved.maxRadius;
       this._minHeight = saved.minHeight;
       this._maxHeight = saved.maxHeight;
-      this._loadDefaultEnvironment(this._defaultIblUrl || '/environments/neutral_ibl.ktx',
-        this._defaultIblIntensity || 40000);
+      // The environment from before the studio, unless one was set while it was on.
+      var env = this._envSource;
+      if (!env || env.studio) {
+        // The studio's environment, in place or on its way, never comes back once it is off.
+        this._envLoading = null;
+        env = saved.env;
+        if (env && env.bands) this.setEnvironmentSH(env.bands, env.intensity);
+        else if (env && env.url && !env.studio) this._loadDefaultEnvironment(env.url, env.intensity);
+        else this._loadDefaultEnvironment(this._defaultIblUrl || '/environments/neutral_ibl.ktx',
+          this._defaultIblIntensity || 40000);
+      }
       var bg = this._pageBackground || (this._transparent ? [0, 0, 0, 0] : _DEFAULT_BACKGROUND);
       this._renderer.setClearOptions({ clearColor: _clearColorFor(bg, this._transparent), clear: true });
       if (!this._asset || !this._frameAsset(this._asset)) this._applyProjection();
@@ -2016,7 +2072,18 @@
       this._velocityAngle = 0;
       this._velocityHeight = 0;
       this._reveal = withReveal && !_prefersReducedMotion() ? { start: null } : null;
+      this._studioFramedAt = performance.now();
       this._studioClampLimits();
+    }
+
+    /**
+     * True while the framed model's textures are still decoding, for 4 s at most: a
+     * texture that never arrives must not hold the move-in or the quality tiers forever.
+     * @private
+     */
+    _studioDressing() {
+      return this._resourceLoads.size > 0
+        && performance.now() - this._studioFramedAt < _STUDIO_DRESS_WAIT_MS;
     }
 
     /** Keep the eye above the floor and inside the wall. @private */
@@ -2303,31 +2370,45 @@
     }
 
     /**
-     * Count one drawn frame. Once the move-in and the loads are over, 60 frames taking
-     * longer than 1.25 s (under 48 per second) drop one quality tier. Never back up: a
-     * tier that recovers would flicker between the two.
+     * Count one tick of the render loop, drawn or skipped by beginFrame() while the GPU
+     * is behind, against the cadence the browser actually delivers: a 120 Hz screen, or
+     * a battery saver that caps animation frames at 30 Hz, keeps its own pace and is not
+     * read as a slow GPU. A tick is late when it was skipped, or when it took longer than
+     * one and a half of that cadence (1/48 s at the least). Once the move-in and the
+     * loads are over, a window of 60 ticks drops one quality tier when more than a
+     * quarter of them came late, or when even the steady cadence is under 28 per second.
+     * Never back up: a tier that recovers would flicker between the two.
      * @private
      */
-    _studioTrackFrame(now) {
+    _studioTrackFrame(now, drawn) {
       var p = this._studioPerf;
       if (!p) return;
       var gap = p.last ? now - p.last : 0;
       p.last = now;
-      if (this._reveal || this._studioTier <= 0 || this._resourceLoads.size > 0 || gap > 250) {
-        p.frames = 0;
+      if (this._reveal || this._studioTier <= 0 || this._studioDressing() || !(gap > 0) || gap > 250) {
+        p.gaps.length = 0;
+        p.skips = 0;
         p.warm = 0;
         return;
       }
       if (p.warm < 45) { p.warm++; return; }
-      if (p.frames === 0) p.start = now;
-      if (++p.frames < 60) return;
-      var elapsed = now - p.start;
-      p.frames = 0;
-      if (elapsed > 1250 && !p.dropping) {
+      p.gaps.push(gap);
+      if (!drawn) p.skips++;
+      if (p.gaps.length < 60) return;
+      // The cadence: the 10th percentile of the window, what a tick takes when on time.
+      var cadence = p.gaps.slice().sort(function(a, b) { return a - b; })[5];
+      var lateAfter = Math.max(1.5 * cadence, 1000 / 48);
+      var late = p.skips;
+      for (var i = 0; i < p.gaps.length; i++) {
+        if (p.gaps[i] > lateAfter) late++;
+      }
+      p.gaps.length = 0;
+      p.skips = 0;
+      if ((late > 15 || cadence > 1000 / 28) && !p.dropping) {
         p.warm = 0;
         p.dropping = true;
         var self = this;
-        // Out of the draw: the drop resizes the canvas, which can draw synchronously.
+        // Outside the loop's tick: the drop resizes the canvas, which can draw synchronously.
         setTimeout(function() {
           p.dropping = false;
           if (!self._disposed && self._studio && self._studioPerf === p) self._studioDropTier();
@@ -3804,10 +3885,15 @@
      * Initial environment: the KTX IBL when it can be fetched, synthetic SH otherwise.
      * @private
      */
-    _loadDefaultEnvironment(url, intensity) {
+    _loadDefaultEnvironment(url, intensity, studio) {
       var self = this;
       // Requests can overlap (setStudio() switching themes): the last one wins.
       var serial = ++this._envSerial;
+      // What is (or will be) in place, kept for setStudio(false) and a failed loadEnvironment().
+      var source = this._envSource = this._envLoading = { url: url, intensity: intensity, studio: !!studio };
+      function settled() {
+        if (self._envLoading === source) self._envLoading = null;
+      }
       // Kept for whenReady(): settles (never rejects) once the environment is applied.
       this._environmentReady = this._fetch(url)
         .then(function(r) {
@@ -3830,7 +3916,8 @@
           if (self._disposed || serial !== self._envSerial) return;
           _applySyntheticIBL(self, intensity);
           self.requestRender();
-        });
+        })
+        .then(settled);
     }
 
     // ---------------------------------------------------------------
@@ -4235,7 +4322,11 @@
         // made during the draw itself, from an onFrame callback, keeps it going one
         // more frame: the flag is cleared here and re-read once the frame is out.
         self._renderRequested = false;
-        if (self._drawFrame() && self._renderMode === 'onDemand' && self._isIdle()
+        var drawn = self._drawFrame();
+        // The studio steps its quality down when the GPU falls behind. Every tick counts,
+        // drawn or skipped: their timestamps carry the browser's own cadence.
+        if (self._studio) self._studioTrackFrame(now, drawn);
+        if (drawn && self._renderMode === 'onDemand' && self._isIdle()
             && !self._renderRequested) {
           self._rafId = null;
           return;
@@ -4262,6 +4353,8 @@
       // synchronously, so reuse is safe.
       var eye = self._eye;
       var center = self._center;
+      // The studio's move-in is an orbit move: another mode drops it, or the loop never idles.
+      if ((mode === 'map' || mode === 'freelook') && self._reveal) self._reveal = null;
       if (mode === 'map') {
         // Top-down: camera above target, looking straight down
         eye[0] = t[0]; eye[1] = t[1] + r * 2; eye[2] = t[2];
@@ -4281,9 +4374,10 @@
         var angle = self._angle;
         if (self._reveal) {
           // The studio's move-in: starts 12 % farther out and 25 degrees around, then
-          // eases onto the framed pose. Its clock starts once the textures are on.
+          // eases onto the framed pose. Its clock starts once the textures are on, or
+          // after 4 s without them.
           var reveal = self._reveal;
-          if (reveal.start === null && self._resourceLoads.size === 0) reveal.start = performance.now();
+          if (reveal.start === null && !self._studioDressing()) reveal.start = performance.now();
           var k = reveal.start === null ? 0 : Math.min(1, (performance.now() - reveal.start) / _STUDIO_REVEAL_MS);
           var back = Math.pow(1 - k, 3);
           r *= 1 + 0.12 * back;
@@ -4312,9 +4406,6 @@
           if (self._mirrorView) self._renderer.renderView(self._mirrorView);
           self._renderer.renderView(self._view);
           self._renderer.endFrame();
-          // The studio steps its quality down when frames come slowly. Drawn frames only:
-          // beginFrame() skips frames when the GPU is behind, while rAF keeps ticking.
-          if (self._studio) self._studioTrackFrame(performance.now());
           self._emitFrame();
           return true;
         }

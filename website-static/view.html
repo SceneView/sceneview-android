@@ -1248,8 +1248,11 @@
       .then(function () {
         // `studio` stages the model in a lit photo studio from the first frame; a cached
         // script that predates it ignores the option and keeps the flat clear colour.
+        // A turntable is motion: a visitor who asks for less gets a still model to drag.
+        var still = typeof matchMedia === 'function'
+          && matchMedia('(prefers-reduced-motion: reduce)').matches;
         return SceneView.create('vp-canvas', {
-          autoRotate: true, backgroundColor: stageClearColor(), studio: stageStudio()
+          autoRotate: !still, backgroundColor: stageClearColor(), studio: stageStudio()
         });
       })
       .then(function (viewer) { followTheme(viewer); return viewer; })
