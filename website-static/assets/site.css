@@ -485,16 +485,8 @@ code, pre, kbd { font-family: var(--font-mono); font-size: .875em; }
 .numbers dd { order: 1; margin: 0; font-size: clamp(2.25rem, 1.6rem + 2.4vw, 3.5rem); font-weight: 600; letter-spacing: -0.04em; line-height: 1; font-variant-numeric: tabular-nums; }
 .numbers dd a { text-decoration: underline; text-decoration-color: var(--hairline); text-decoration-thickness: 2px; text-underline-offset: 6px; }
 .numbers dd a:hover { text-decoration-color: var(--accent); }
-.orgs { margin-top: var(--s-7); }
-.orgs__list { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
-.orgs__list a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border-radius: var(--r-full); border: 1px solid var(--outline); background: var(--surface-1); font-weight: 600; font-size: .9375rem; color: var(--text); }
-.orgs__list a:hover { border-color: var(--text-2); }
+.numbers__source { margin-top: var(--s-6); }
 .numbers__lead { grid-column: 1 / -1; }
-.orgs__list .adoption-org__link { gap: 8px; }
-.adoption-org__what { font-weight: 400; font-size: .8125rem; color: var(--text-2); }
-.orgs__more { margin: 12px 0 0; }
-.orgs__more a { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-weight: 600; font-size: .9375rem; color: var(--text); }
-.orgs__more a:hover { color: var(--accent); }
 @media (min-width: 720px) { .numbers { grid-template-columns: repeat(6, minmax(0, 1fr)); } .numbers__lead { grid-column: span 2; } }
 
 /* ── Compare + FAQ ────────────────────────────────────────── */
