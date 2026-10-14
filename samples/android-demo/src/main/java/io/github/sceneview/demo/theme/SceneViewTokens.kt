@@ -24,14 +24,49 @@ import androidx.compose.ui.unit.sp
  * the translation it is.
  *
  * An immutable object fits these application-wide constants better than a
- * CompositionLocal: none of the source tokens varies with theme or composition.
+ * CompositionLocal: none of the source tokens varies with composition. The few that differ
+ * between light and dark ([Showroom], [DebugView]) are pairs of constants, and the screen
+ * that draws them picks one from the theme it is in.
  */
 @Immutable
 object SceneViewTokens {
-    /** Model-viewer stage, deliberately identical in light and dark themes. */
+    /**
+     * `stage-background`: the clear colour of a full-screen 3D stage, deliberately identical in
+     * light and dark themes. The Model Viewer draws a themed [Showroom] instead.
+     */
     object Stage {
         val background = Color(0xFF0B0F16)
     }
+
+    /**
+     * `DESIGN.md` — the studio showroom (`stage-studio-*`), shared with the web viewer's `/view`
+     * studio: the room the Model Viewer stands every model in. A seamless cyclorama — the pool of
+     * light under the subject, the floor carried into the horizon by the distance, the wall
+     * darkening towards the top — so the subject is the only thing with an edge.
+     *
+     * [Light] is a white photo studio (Apple product pages, Sketchfab's light scenes); [Dark]
+     * is a charcoal car showroom. The studio's lighting map (`studio_showroom_{light,dark}_2k.hdr`,
+     * the web viewer's too) is the same room, so what the subject reflects is what the viewer
+     * sees around it.
+     */
+    object Showroom {
+        /** White studio: a near-white pool, the wall a step greyer towards the top. */
+        val Light = ShowroomPalette(
+            top = Color(0xFFCDD3DB),
+            horizon = Color(0xFFE7EAEF),
+            floor = Color(0xFFF2F4F7),
+            pool = Color(0xFFFDFDFE),
+        )
+
+        /** Charcoal showroom: a blue-grey pool of light, the room falling to near-black above. */
+        val Dark = ShowroomPalette(
+            top = Color(0xFF0B0E13),
+            horizon = Color(0xFF222833),
+            floor = Color(0xFF2B323E),
+            pool = Color(0xFF3A4250),
+        )
+    }
+
     /** `DESIGN.md` — Spatial Gallery overlay colours. */
     object SpatialGalleryColor {
         val stageScrimStart = Color.Transparent
