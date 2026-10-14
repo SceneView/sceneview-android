@@ -49,6 +49,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -119,7 +120,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
-import androidx.compose.runtime.DisposableEffect
+import kotlin.math.roundToInt
 
 /**
  * AI Scene (prototype, debug builds only): an AI rebuilds a room from a real AR recording, then
@@ -145,9 +146,13 @@ fun AiSceneDemo(onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
     val qaState = remember { DemoSettings.qaDemoState?.takeIf { qaStateOverridesAllowed() } }
 
-    val media by produceState<RerunReplayMedia?>(null) {
+    val recordedMedia by produceState<RerunReplayMedia?>(null) {
         value = runCatching { loadRerunReplay(context) }.getOrNull()
     }
+    // "Scan this room": a live ARCore scan, read by the same tools as the recording once stopped.
+    var scanning by rememberSaveable { mutableStateOf(false) }
+    var liveMedia by remember { mutableStateOf<RerunReplayMedia?>(null) }
+    val media = liveMedia ?: recordedMedia
     val spatial by produceState<SpatialSession?>(null, media) {
         val m = media ?: return@produceState
         value = withContext(Dispatchers.Default) { SpatialSession.of(m.trace, m.manifest.lens, m.manifest.floorY) }
@@ -189,12 +194,35 @@ fun AiSceneDemo(onBack: () -> Unit) {
         session.trace = m.trace
         session.scrubTo(m.trace.duration)
     }
-    var revealed by remember(media) { mutableStateOf(false) }
+    // Not keyed on the media: a live scan replaces the recording on a stage already shown.
+    var revealed by remember { mutableStateOf(false) }
     val readyState = rememberUpdatedState(media != null && revealed)
     val hudIn = rememberReveal(revealed, delayMillis = REVEAL_STAGGER_MS)
     val chatIn = rememberReveal(revealed, delayMillis = REVEAL_STAGGER_MS * 2)
     var cloudShown by remember { mutableStateOf(true) }
     var modelShown by remember { mutableStateOf(true) }
+    // Cloud to room: once a request has rebuilt walls, the points shrink away and the planes and
+    // the path leave with them; the dock's Scan brings them back.
+    fun showCloud(shown: Boolean) {
+        cloudShown = shown
+        if (shown) SCAN_LAYERS.filterNot(session::isVisible).forEach(session::toggle)
+        else FADED_FIRST.filter(session::isVisible).forEach(session::toggle)
+    }
+    val pointScale by animateFloatAsState(
+        targetValue = if (cloudShown) 1f else 0f,
+        animationSpec = tween(CLOUD_FADE_MS),
+        label = "ai-scene-cloud",
+        finishedListener = { if (it == 0f && session.isVisible(DebugGroup.Points)) session.toggle(DebugGroup.Points) },
+    )
+    val roomStands = state.model.walls.isNotEmpty() && !state.busy
+    LaunchedEffect(roomStands) {
+        if (roomStands) {
+            delay(CLOUD_FADE_DELAY_MS)
+            showCloud(false)
+        } else if (state.model.walls.isEmpty()) {
+            showCloud(true)
+        }
+    }
 
     // The looks (rays, probes, tried walls) stay while the model works, then fade out.
     var looksShown by remember { mutableStateOf(false) }
@@ -232,6 +260,20 @@ fun AiSceneDemo(onBack: () -> Unit) {
         scope.launch { a.ask(provider, prompt) }
     }
 
+    if (scanning) {
+        AiSceneLiveScan(
+            onBack = { scanning = false },
+            onScanned = { scanned ->
+                liveMedia = scanned
+                scanning = false
+            },
+            engine = engine,
+            modelLoader = modelLoader,
+            materialLoader = materialLoader,
+        )
+        return
+    }
+
     val nextPrompt = if (state.model.walls.isEmpty()) RecordedAiProvider.REBUILD_PROMPT
         else RecordedAiProvider.READING_CORNER_PROMPT
     DemoScaffold(
@@ -256,6 +298,7 @@ fun AiSceneDemo(onBack: () -> Unit) {
                         keyHint = null
                     }
                 },
+                onScanRoom = { scanning = true },
             )
         },
         firstFrameRendered = readyState,
@@ -267,6 +310,7 @@ fun AiSceneDemo(onBack: () -> Unit) {
                     state = state,
                     useClaude = useClaude,
                     spatial = spatial,
+                    liveScan = liveMedia != null,
                     modifier = Modifier
                         .padding(horizontal = Space.md)
                         .widthIn(max = ArOverlay.maxWidth)
@@ -285,7 +329,11 @@ fun AiSceneDemo(onBack: () -> Unit) {
                         .reveal(chatIn, rise = Space.lg),
                     verticalArrangement = Arrangement.spacedBy(Space.sm),
                 ) {
-                    ChatCard(state = state)
+                    ChatCard(
+                        state = state,
+                        liveScan = liveMedia != null,
+                        onScanRoom = { scanning = true }.takeIf { agent != null && !state.busy },
+                    )
                     PromptField(enabled = agent != null && !state.busy, onSend = ::ask)
                 }
             }
@@ -295,10 +343,7 @@ fun AiSceneDemo(onBack: () -> Unit) {
                 icon = Icons.Rounded.Grain,
                 label = "Show the scan",
                 caption = "Scan",
-                onClick = {
-                    cloudShown = !cloudShown
-                    SCAN_LAYERS.filter { session.isVisible(it) != cloudShown }.forEach(session::toggle)
-                },
+                onClick = { showCloud(!cloudShown) },
                 selected = cloudShown,
             ),
             DockItem(
@@ -344,6 +389,8 @@ fun AiSceneDemo(onBack: () -> Unit) {
             DisposableEffect(inks) {
                 onDispose { inks.all.forEach { materialLoader.destroyMaterialInstance(it) } }
             }
+            val finish = rememberRoomFinish(materialLoader)
+            val products = rememberRoomProductFiles(wanted = !state.model.isEmpty)
             val label = remember(chrome) { LabelInk(chrome.onCard.toArgb(), chrome.card.toArgb()) }
             val floorY = spatial?.floorY ?: 0f
             ArDebugSceneView(
@@ -356,7 +403,12 @@ fun AiSceneDemo(onBack: () -> Unit) {
                 replay = m,
                 onShown = { revealed = true },
                 roomMeasure = false,
+                pointScale = { (pointScale * CLOUD_FADE_STEPS).roundToInt() / CLOUD_FADE_STEPS },
+                // The room's own studio: a soft key light with shadows, ambient occlusion.
+                configureView = { it.configureForRoom() },
+                mainLightNode = null,
             ) {
+                RoomKeyLight(state.model)
                 AiRoomLayer(
                     model = state.model,
                     looks = state.looks,
@@ -364,6 +416,8 @@ fun AiSceneDemo(onBack: () -> Unit) {
                     showModel = modelShown,
                     floorY = floorY,
                     inks = inks,
+                    finish = finish,
+                    products = products,
                     label = label,
                     eye = { CameraRig.eye(orbit.pose) },
                 )
@@ -374,7 +428,13 @@ fun AiSceneDemo(onBack: () -> Unit) {
 
 /** The card under the header: which AI, what scan it reads, what it has built so far. */
 @Composable
-private fun StatusCard(state: AgentState, useClaude: Boolean, spatial: SpatialSession?, modifier: Modifier) {
+private fun StatusCard(
+    state: AgentState,
+    useClaude: Boolean,
+    spatial: SpatialSession?,
+    liveScan: Boolean,
+    modifier: Modifier,
+) {
     val chrome = LocalStageChrome.current
     val shape = RoundedCornerShape(SceneViewTokens.Radius.lg)
     val muted = SceneViewTokens.Type.caption.copy(color = chrome.onCardMuted, fontFeatureSettings = "tnum")
@@ -401,7 +461,7 @@ private fun StatusCard(state: AgentState, useClaude: Boolean, spatial: SpatialSe
             Spacer(Modifier.weight(1f))
             if (spatial != null) {
                 Text(
-                    text = "${String.format(
+                    text = (if (liveScan) "Your scan · " else "") + "${String.format(
                         Locale.US,
                         "%,d",
                         spatial.pointCount,
@@ -419,9 +479,6 @@ private fun StatusCard(state: AgentState, useClaude: Boolean, spatial: SpatialSe
         )
         if (useClaude && state.inputTokens > 0) {
             Text(text = "${state.inputTokens} tokens in · ${state.outputTokens} out", style = muted)
-        }
-        if (state.takeoffShown && !state.model.isEmpty) {
-            TakeoffSection(Takeoff.of(state.model), chrome)
         }
     }
 }
@@ -441,7 +498,6 @@ private fun StatusDot(busy: Boolean, chrome: StageChrome) {
 
 @Composable
 private fun TakeoffSection(takeoff: Takeoff, chrome: StageChrome) {
-    Spacer(Modifier.height(Space.xs))
     Text(
         text = "Takeoff",
         style = SceneViewTokens.Type.caption.copy(color = chrome.onCardMuted, fontWeight = FontWeight.SemiBold),
@@ -473,9 +529,14 @@ private fun Figure(label: String, value: String, chrome: StageChrome, modifier: 
     }
 }
 
-/** The last lines of the conversation: what was asked, what the model said, each tool's verdict. */
+/**
+ * The last lines of the conversation: what was asked, what the model said, each tool's verdict.
+ * Once a takeoff is asked for and the model is done, the takeoff takes the tool lines' place: it
+ * sits under the room, not over the window it measures. [onScanRoom], while nothing is asked
+ * yet, opens a live scan of the room the phone is in.
+ */
 @Composable
-private fun ChatCard(state: AgentState) {
+private fun ChatCard(state: AgentState, liveScan: Boolean, onScanRoom: (() -> Unit)?) {
     val chrome = LocalStageChrome.current
     val shape = RoundedCornerShape(SceneViewTokens.Radius.lg)
     Column(
@@ -489,15 +550,29 @@ private fun ChatCard(state: AgentState) {
             .animateContentSize(),
         verticalArrangement = Arrangement.spacedBy(Space.xs),
     ) {
-        val lines = state.lines.takeLast(CHAT_LINES)
+        val takeoff = state.takeoffShown && !state.model.isEmpty && !state.busy
+        val lines = if (takeoff) {
+            state.lines.filter { it.kind == ChatLine.Kind.Assistant }.takeLast(1)
+        } else {
+            state.lines.takeLast(CHAT_LINES)
+        }
         if (lines.isEmpty()) {
             Text(
-                text = "Ask the AI to rebuild this scanned room. It reads the real scan — planes, points, " +
-                    "the camera's path — and the code computes every number.",
+                text = if (liveScan) {
+                    "Your scan is in. The recorded demo only knows the sample room: pick Claude with " +
+                        "your key in the settings to rebuild this one."
+                } else {
+                    "Ask the AI to rebuild this scanned room. It reads the real scan — planes, points, " +
+                        "the camera's path — and the code computes every number."
+                },
                 style = SceneViewTokens.Type.caption.copy(color = chrome.onCardMuted),
             )
+            if (onScanRoom != null) {
+                TextButton(onClick = onScanRoom) { Text(SCAN_ROOM) }
+            }
         }
         lines.forEach { line -> ChatRow(line, chrome) }
+        if (takeoff) TakeoffSection(Takeoff.of(state.model), chrome)
         if (state.busy) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 StatusDot(busy = true, chrome = chrome)
@@ -627,6 +702,7 @@ private fun ColumnScope.AiSceneSheet(
     keyHint: String?,
     onSaveKey: (String) -> Unit,
     onClearKey: () -> Unit,
+    onScanRoom: () -> Unit,
 ) {
     val body = MaterialTheme.typography.bodyMedium
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
@@ -686,6 +762,15 @@ private fun ColumnScope.AiSceneSheet(
         style = MaterialTheme.typography.bodySmall,
         color = muted,
     )
+    Spacer(Modifier.height(Space.md))
+    Text(text = "Your room", style = MaterialTheme.typography.titleSmall)
+    Text(
+        text = "Scan the room you are in with ARCore: the same planes, points, path and photos as the " +
+            "sample. The AI then reads your scan instead. Needs a phone with Google Play Services for AR.",
+        style = body,
+        color = muted,
+    )
+    TextButton(onClick = onScanRoom) { Text(SCAN_ROOM) }
 }
 
 @Composable
@@ -751,6 +836,16 @@ private class HeldProvider(private val inner: AiProvider, private val holdAt: In
 }
 
 private val SCAN_LAYERS = listOf(DebugGroup.Points, DebugGroup.Planes, DebugGroup.Trail)
+
+// The layers that leave as soon as the room stands; the points shrink away after them.
+private val FADED_FIRST = listOf(DebugGroup.Planes, DebugGroup.Trail)
+
+private const val SCAN_ROOM = "Scan this room"
+private const val CLOUD_FADE_MS = 1400
+
+// The points shrink in a few steps, as each new size rebuilds their meshes.
+private const val CLOUD_FADE_STEPS = 6f
+private const val CLOUD_FADE_DELAY_MS = 600L
 
 private const val QA_LOOKING = "looking"
 private const val QA_BUILDING = "building"
