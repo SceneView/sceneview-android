@@ -56,7 +56,8 @@
 
   <!-- Geist and JetBrains Mono are self-hosted (OFL). Only the latin Geist file is needed for the first paint. -->
   <link rel="preload" href="/assets/fonts/geist/geist-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" as="image" href="assets/home/hero-car-1600.webp" imagesrcset="assets/home/hero-car-800.webp 800w, assets/home/hero-car-1200.webp 1200w, assets/home/hero-car-1600.webp 1600w" imagesizes="(min-width: 960px) 742px, 100vw" fetchpriority="high">
+  <link rel="preload" as="image" media="(min-width: 600px)" href="assets/home/hero-circuit-1920.webp" imagesrcset="assets/home/hero-circuit-1280.webp 1280w, assets/home/hero-circuit-1920.webp 1920w, assets/home/hero-circuit-2560.webp 2560w" imagesizes="100vw" fetchpriority="high">
+  <link rel="preload" as="image" media="(max-width: 599px)" href="assets/home/hero-circuit-sq-960.webp" imagesrcset="assets/home/hero-circuit-sq-640.webp 640w, assets/home/hero-circuit-sq-960.webp 960w" imagesizes="100vw" fetchpriority="high">
   <link rel="stylesheet" href="assets/fonts/site-fonts.css">
   <link rel="stylesheet" href="assets/tokens.css">
   <link rel="stylesheet" href="assets/site.css">
@@ -130,7 +131,7 @@
   <symbol id="i-discord" viewBox="0 0 24 24"><path fill="currentColor" d="M19.6 5.3A16.6 16.6 0 0 0 15.5 4l-.5 1a15.3 15.3 0 0 0-6 0l-.5-1a16.6 16.6 0 0 0-4.1 1.3C1.8 9.2 1.1 13 1.4 16.7a16.7 16.7 0 0 0 5 2.5l1.1-1.7a10.8 10.8 0 0 1-1.7-.8l.4-.3a11.9 11.9 0 0 0 11.6 0l.4.3c-.5.3-1.1.6-1.7.8l1.1 1.7a16.7 16.7 0 0 0 5-2.5c.4-4.3-.7-8-2.9-11.4ZM8.5 14.5c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2Zm7 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2Z"/></symbol>
 </svg>
 
-<header class="nav is-over-stage">
+<header class="nav is-over-stage night">
   <div class="container nav__inner">
     <a class="brand" href="/" aria-label="SceneView home"><svg class="brand__mark"><use href="#i-logo"/></svg>SceneView</a>
     <nav class="nav__links" aria-label="Primary">
@@ -169,31 +170,33 @@
 
 <main id="main">
 
-  <!-- 1 · HERO — a studio that follows the theme: wall, floor, contact shadow, reflection.
-       Phone: full-bleed model, poster first, live 3D on tap. Desktop ≥ 960 (no reduced motion):
-       the hero is pinned for one extra screen; scrolling turns the car and walks through what it shows. -->
-  <section class="hero" aria-labelledby="hero-title">
+  <!-- 1 · HERO — a showpiece scene rendered live by SceneView Web: a car on the wet start grid
+       of a circuit at night. A night picture in both themes (.night). Poster first; a desktop
+       goes live when idle, a phone on tap. Desktop ≥ 960 (no reduced motion): the hero is pinned
+       for one extra screen; scrolling turns the camera and walks through what the scene shows.
+       The scene itself (lights, lens, camera move) is assets/scenes/circuit.js. -->
+  <section class="hero hero--scene night" aria-labelledby="hero-title">
     <div class="hero__pin">
-      <div class="stage hero__stage" id="hero-stage" data-stage data-src="/models/platforms/ToyCar.glb" data-bbox="-0.035,-0.0162,-0.037,0.0384,0.0126,0.037"
-           data-autoload="idle" data-mobile="tap" data-elev="0.38" data-angle="0.75" data-fill="0.86" data-top="0.7" data-hull="ellipse">
+      <div class="stage hero__stage" id="hero-stage" data-stage data-scene="circuit" data-autoload="idle" data-mobile="tap">
         <div class="stage__controls">
           <span class="badge"><span class="dot"></span><span class="when-poster">Still</span><b class="when-live">Live</b> · SceneView Web</span>
           <span class="stage__actions">
-            <button class="stage__load" type="button"><svg><use href="#i-cube"/></svg>View in 3D <small>6.6&nbsp;MB</small></button>
-            <button class="stage__pause" type="button" aria-pressed="false" aria-label="Pause the rotation"><svg class="i-pause"><use href="#i-pause"/></svg><svg class="i-play"><use href="#i-play"/></svg></button>
+            <button class="stage__load" type="button"><svg><use href="#i-cube"/></svg>View in 3D <small>6&nbsp;MB</small></button>
+            <button class="stage__pause" type="button" aria-pressed="false" aria-label="Pause the camera move"><svg class="i-pause"><use href="#i-pause"/></svg><svg class="i-play"><use href="#i-play"/></svg></button>
           </span>
         </div>
-        <div class="stage__box" style="--sx:.5;--sy:.6971;--sw:.7003;--sh:.4269">
-          <div class="studio" aria-hidden="true"><div class="studio__back"></div><div class="studio__floor"></div><div class="studio__grid"></div><div class="studio__pool"></div></div>
-          <div class="stage__shadow" aria-hidden="true"></div>
+        <div class="stage__box">
           <div class="stage__frame">
-            <img class="stage__poster" src="assets/home/hero-car-1600.webp" srcset="assets/home/hero-car-800.webp 800w, assets/home/hero-car-1200.webp 1200w, assets/home/hero-car-1600.webp 1600w"
-                 sizes="(min-width: 960px) 742px, 100vw" width="1600" height="1280" fetchpriority="high"
-                 alt="A toy car rendered by SceneView, on a draped red cloth: clear-coated paint, glass windows and fabric seats.">
-            <canvas class="stage__canvas" role="img" aria-label="Interactive 3D toy car. Drag sideways to turn it."></canvas>
+            <picture>
+              <source media="(max-width: 599px)" srcset="assets/home/hero-circuit-sq-640.webp 640w, assets/home/hero-circuit-sq-960.webp 960w" sizes="100vw" width="960" height="960">
+              <img class="stage__poster" src="assets/home/hero-circuit-1920.webp" srcset="assets/home/hero-circuit-1280.webp 1280w, assets/home/hero-circuit-1920.webp 1920w, assets/home/hero-circuit-2560.webp 2560w"
+                   sizes="100vw" width="1920" height="1200" fetchpriority="high"
+                   alt="A red sports car on the wet start grid of a circuit at night, in the rain under floodlights, rendered by SceneView Web.">
+            </picture>
+            <canvas class="stage__canvas" role="img" aria-label="Interactive 3D scene: a sports car on the wet start grid of a circuit at night, in the rain. Drag to move the camera."></canvas>
           </div>
         </div>
-        <p class="stage__credit credit">Toy Car · Guido Odendahl · CC0</p>
+        <p class="stage__credit credit"><a href="https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/CarConcept">Car Concept</a> · Eric Chadwick, Darmstadt Graphics Group · CC BY 4.0, adapted</p>
       </div>
 
       <div class="container hero__inner">
@@ -226,10 +229,10 @@
           </div>
         </div>
 
-        <ol class="hero__specs" aria-label="What the toy car shows">
+        <ol class="hero__specs" aria-label="What the scene shows">
           <li><b>Clear-coat paint</b><code>KHR_materials_clearcoat</code></li>
-          <li><b>Glass</b><code>KHR_materials_transmission</code></li>
-          <li><b>Fabric seats</b><code>KHR_materials_sheen</code></li>
+          <li><b>Reflections on a wet track</b><code>setScreenSpaceReflections()</code></li>
+          <li><b>Floodlights, bloom and fog</b><code>addLight() · setBloom() · setFog()</code></li>
         </ol>
       </div>
     </div>
@@ -590,7 +593,7 @@
         <li><a href="https://github.com/sceneview/sceneview/discussions">Discussions</a></li>
         <li><a href="/docs/contributing/">Contributing</a></li><li><a href="https://opencollective.com/sceneview">Donate</a></li><li><a href="/sponsors.html">Sponsors</a></li></ul></div>
     </div>
-    <p class="footer__credits">3D models from <a href="https://github.com/KhronosGroup/glTF-Sample-Assets">Khronos glTF-Sample-Assets</a>: Toy Car by Guido Odendahl, materials by Eric Chadwick (CC0). Sheen Chair © 2020 Wayfair LLC, by Eric Chadwick (CC0). Fox: mesh by PixelMannen (CC0); rigging and animation by tomkranis, glTF conversion by AsoboStudio and scurest (<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>). Galaxy: rendered by the SceneView iOS demo.</p>
+    <p class="footer__credits">3D models from <a href="https://github.com/KhronosGroup/glTF-Sample-Assets">Khronos glTF-Sample-Assets</a>: <a href="https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/CarConcept">Car Concept</a> by Eric Chadwick, © 2024 Darmstadt Graphics Group GmbH (<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>), from the CC0 Free Concept Car 004 by Unity Fan; adapted for the night circuit: logos replaced, textures resized, set, lighting and rain added. Toy Car by Guido Odendahl, materials by Eric Chadwick (CC0). Sheen Chair © 2020 Wayfair LLC, by Eric Chadwick (CC0). Fox: mesh by PixelMannen (CC0); rigging and animation by tomkranis, glTF conversion by AsoboStudio and scurest (<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>). Galaxy: rendered by the SceneView iOS demo.</p>
     <div class="footer__legal">
       <span>© 2026 SceneView contributors</span>
       <span class="footer__legal-links"><a href="/privacy.html">Privacy</a><a href="/credits.html">Credits</a></span>
