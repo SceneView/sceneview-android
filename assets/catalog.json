@@ -3409,6 +3409,7 @@
       "_comment": "Real-product catalogue (#4560): website gallery (view.html) and Android HD pack, real-world scale, base at the origin.",
       "source": "sketchfab",
       "sourceId": "93efd164d3374295a8ac04c36e329429",
+      "note": "Modified derivative (CC-BY-4.0 indicate-changes): the source body and roof sampled a baked rainbow stripe texture; the hosted copy drops that texture on the Bianca_White and 2020_Peugeot_e-2008_black materials and sets plain Vertigo Blue (#1E4C9A, metallic 0.6, roughness 0.32) and gloss black base-colour factors. Geometry and every other material are untouched.",
       "sourceUrl": "https://sketchfab.com/3d-models/2020-peugeot-2008-93efd164d3374295a8ac04c36e329429",
       "author": "David_Holiday",
       "license": "CC-BY-4.0",

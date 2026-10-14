@@ -190,9 +190,9 @@
     {
       "id": "peugeot-2008",
       "title": "Peugeot 2008",
-      "file": "97a345b772de724a345ea8b24869aa4e982a7434f37f10bf3fa0e0df3ce8545f.glb",
-      "sha256": "97a345b772de724a345ea8b24869aa4e982a7434f37f10bf3fa0e0df3ce8545f",
-      "bytes": 10128864,
+      "file": "53d4e2e3455103746a07e2f366d5616fe26bab292ed74ef1fa41b8e92e935025.glb",
+      "sha256": "53d4e2e3455103746a07e2f366d5616fe26bab292ed74ef1fa41b8e92e935025",
+      "bytes": 10128808,
       "scale": 1.0,
       "license": "CC-BY-4.0",
       "author": "David_Holiday",

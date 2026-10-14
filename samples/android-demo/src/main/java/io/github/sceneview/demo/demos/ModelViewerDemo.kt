@@ -281,14 +281,22 @@ private val BUNDLED_VIEWER_MODELS = listOf(
 /**
  * A model that only exists in the HD pack: no bundled file, its card render as thumbnail
  * (`model_thumb_hd_<id with underscores>`) until the download lands.
+ *
+ * Catalogue products open three-quarter, as their cards show them, like the mammoth: the
+ * framing then fits the footprint of the TURNED box. Head-on, a 4.69 m car was framed on its
+ * 1.9 m width and its length ran off both screen edges as soon as it turned.
  */
 private fun hdOnly(id: String, title: String, @StringRes description: Int) = BundledViewerModel(
     assetPath = null,
     displayName = title,
     description = description,
+    frontYaw = CATALOGUE_FRONT_YAW,
     hdAssetId = id,
     thumbnailStem = "hd_" + id.replace('-', '_'),
 )
+
+/** The catalogue's opening turn, the mammoth's and the rover's (see [hdOnly]). */
+private const val CATALOGUE_FRONT_YAW = -30f
 
 /**
  * The Models sheet's "Museum & Space" shelf (2026-09-29): museum scans from the HD pack,
