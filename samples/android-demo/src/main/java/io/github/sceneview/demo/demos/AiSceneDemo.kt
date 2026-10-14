@@ -205,6 +205,8 @@ fun AiSceneDemo(onBack: () -> Unit) {
     // the path leave with them; the dock's Scan brings them back.
     fun showCloud(shown: Boolean) {
         cloudShown = shown
+        // The scan's grid and axes leave with it: the room lays its own floor.
+        session.showStage(shown)
         if (shown) SCAN_LAYERS.filterNot(session::isVisible).forEach(session::toggle)
         else FADED_FIRST.filter(session::isVisible).forEach(session::toggle)
     }

@@ -67,6 +67,14 @@ class ArDebugSession(initial: ArDebugTrace = ArDebugTrace()) {
         visibleGroups = if (group in visibleGroups) visibleGroups - group else visibleGroups + group
     }
 
+    /**
+     * Shows or hides the floor grid and axes. The legend never does — the grid is the scan's
+     * ground — but a host that lays its own floor over the scan (AI Scene's rebuilt room) does.
+     */
+    fun showStage(shown: Boolean) {
+        visibleGroups = if (shown) visibleGroups + DebugGroup.Stage else visibleGroups - DebugGroup.Stage
+    }
+
     /** Scrubbing pauses on the frame the finger is on. */
     fun scrubTo(seconds: Float) {
         live = false

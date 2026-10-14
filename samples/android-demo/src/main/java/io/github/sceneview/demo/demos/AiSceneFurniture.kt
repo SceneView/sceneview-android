@@ -193,8 +193,7 @@ private fun SceneScope.ArcLamp(
     instance: ModelInstance,
     box: OrientedBox,
     floorY: Float,
-    toward: Pair<Float,
-    Float>,
+    toward: Pair<Float, Float>,
     g: Float,
 ) {
     val halfExtent = remember(instance) { instance.model.boundingBox.halfExtent }

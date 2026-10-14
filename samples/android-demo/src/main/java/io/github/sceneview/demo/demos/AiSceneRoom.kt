@@ -197,12 +197,13 @@ private fun MaterialInstance.setSrgb(name: String, color: Color) =
     setParameter(name, Colors.RgbType.SRGB, color.red, color.green, color.blue)
 
 /**
- * The rebuilt room's light: shadows on, soft (DPCF), and ambient occlusion in the corners. Called
- * once the debug view is configured, which turns both off for the bare cloud.
+ * The rebuilt room's light: shadows on (PCF: DPCF cuts flat lids into triangles), and ambient
+ * occlusion in the corners. Called once the debug view is configured, which turns both off for
+ * the bare cloud.
  */
 internal fun View.configureForRoom() {
     setShadowingEnabled(true)
-    setShadowType(View.ShadowType.DPCF)
+    setShadowType(View.ShadowType.PCF)
     ambientOcclusionOptions = ambientOcclusionOptions.apply {
         enabled = true
         intensity = AO_INTENSITY
@@ -374,6 +375,10 @@ internal fun SceneScope.RoomKeyLight(model: RoomModel) {
                 LightManager.ShadowOptions().apply {
                     mapSize = SHADOW_MAP_SIZE
                     stable = true
+                    // Flat lids and duvets lit at a grazing angle self-shadow in triangles
+                    // without a little more bias than the default.
+                    constantBias = SHADOW_CONSTANT_BIAS
+                    normalBias = SHADOW_NORMAL_BIAS
                 },
             )
         },
@@ -573,7 +578,9 @@ private fun SceneScope.Dimension(
         DimensionKind.Clearance -> "Clearance ${SceneToolExecutor.fmt(value)} m"
         else -> "${SceneToolExecutor.fmt(value)} m"
     }
-    Label(text, Position(mid.x, mid.y + DIMENSION_LABEL_LIFT_M, mid.z), label, eye, g)
+    // A clearance runs at floor level between two pieces: its label floats above them to stay seen.
+    val lift = if (kind == DimensionKind.Clearance) CLEARANCE_LABEL_LIFT_M else DIMENSION_LABEL_LIFT_M
+    Label(text, Position(mid.x, mid.y + lift, mid.z), label, eye, g)
 }
 
 /** What the model looked at: a ray (and its hit), a probed box, a tried wall. */
@@ -760,6 +767,8 @@ private const val KEY_LIGHT_LUX = 9_000f
 private const val KEY_ACROSS = 0.5f
 private const val KEY_ALONG = 0.55f
 private const val SHADOW_MAP_SIZE = 2048
+private const val SHADOW_CONSTANT_BIAS = 0.005f
+private const val SHADOW_NORMAL_BIAS = 2.5f
 private const val AO_INTENSITY = 1f
 private const val AO_RADIUS_M = 0.4f
 
@@ -770,4 +779,5 @@ private const val LABEL_CHAR_EM = 0.58f
 private const val LABEL_MAX_FONT_PX = 76f
 private const val WALL_LABEL_LIFT_M = 0.18f
 private const val DIMENSION_LABEL_LIFT_M = 0.14f
+private const val CLEARANCE_LABEL_LIFT_M = 1.15f
 private const val REJECTED_LABEL_LIFT_M = 0.2f

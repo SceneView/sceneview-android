@@ -4,6 +4,7 @@ import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -37,6 +38,7 @@ import io.github.sceneview.demo.demos.internal.ArDebugSession
 import io.github.sceneview.demo.demos.internal.ArDebugTrace
 import io.github.sceneview.demo.demos.internal.ScanCopy
 import io.github.sceneview.demo.demos.internal.ScanFigures
+import io.github.sceneview.demo.theme.SceneViewTokens
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
 import kotlinx.coroutines.delay
@@ -167,7 +169,11 @@ private fun LiveScanScreen(
                 availability != null -> OverlayCard(testTag = LIVE_SCAN_UNAVAILABLE_TAG) {
                     Text(text = LIVE_SCAN_UNAVAILABLE_TITLE, style = OnScrimTitle)
                     Text(text = LIVE_SCAN_UNAVAILABLE_BODY, style = OnScrimBody)
-                    TextButton(onClick = onBack) { Text(LIVE_SCAN_BACK_TO_SAMPLE) }
+                    // The card is a scrim over the camera in both themes: the action reads white on it.
+                    TextButton(
+                        onClick = onBack,
+                        colors = ButtonDefaults.textButtonColors(contentColor = SceneViewTokens.ArOverlay.onScrim),
+                    ) { Text(LIVE_SCAN_BACK_TO_SAMPLE) }
                 }
                 else -> {
                     val hint = when {
