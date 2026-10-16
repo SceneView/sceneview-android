@@ -70,6 +70,7 @@ import dev.romainguy.kotlin.math.Quaternion
 import io.github.sceneview.DEFAULT_IBL_INTENSITY
 import io.github.sceneview.EngineDestroyQueue
 import io.github.sceneview.FrameRatePolicy
+import io.github.sceneview.SceneScope
 import io.github.sceneview.SceneView
 import io.github.sceneview.SurfaceType
 import io.github.sceneview.demo.demos.internal.ArDebugFormat
@@ -111,7 +112,10 @@ import io.github.sceneview.math.colorOf
 import io.github.sceneview.math.toLinearSpace
 import io.github.sceneview.model.Model
 import io.github.sceneview.model.ModelInstance
+import io.github.sceneview.node.LightNode
 import io.github.sceneview.node.MeshNode
+import io.github.sceneview.rememberEnvironment
+import io.github.sceneview.rememberMainLightNode
 import io.github.sceneview.rememberModelInstance
 import io.github.sceneview.rememberRenderer
 import io.github.sceneview.rememberView
@@ -681,6 +685,20 @@ internal fun ArDebugSceneView(
     surface: ReplaySurface? = null,
     onShown: (() -> Unit)? = null,
     glass: Boolean = false,
+    // The replay's own room measure (outline and lengths). A screen that draws its own room
+    // model over the cloud turns it off so the two do not overlap.
+    roomMeasure: Boolean = !compact,
+    // Scales the cloud's points (1 = their normal size), read every frame: a screen that builds
+    // a room out of the cloud thins it out as the walls rise. Callers step it, as every change
+    // of size rebuilds the point meshes.
+    pointScale: () -> Float = { 1f },
+    // Runs once on the view after the debug set-up: a screen with lit, shadowed content turns
+    // shadows and ambient occlusion back on here.
+    configureView: (com.google.android.filament.View) -> Unit = {},
+    // The scene's key light. The default is SceneView's own.
+    mainLightNode: LightNode? = rememberMainLightNode(engine),
+    // Extra nodes drawn in the same scene as the debug layers, after them.
+    content: @Composable SceneScope.() -> Unit = {},
 ) {
     val shown by rememberUpdatedState(onShown)
     // The room's surface, when it is the one shown: it stands in for the points and the photos.
@@ -739,11 +757,13 @@ internal fun ArDebugSceneView(
             autoCenterContent = false,
             environment = environment,
             cameraManipulator = orbit,
+            mainLightNode = mainLightNode,
             onFrame = { frameTimeNanos ->
                 val dt = clock.tick(frameTimeNanos)
                 if (!clock.configured) {
                     clock.configured = true
                     view.configureForDebug(colorGrading)
+                    configureView(view)
                 }
                 session.tick(dt)
 
@@ -834,7 +854,8 @@ internal fun ArDebugSceneView(
                 val style = ArDebugStyle.forOrbit(orbit.pose.distance, orbit.verticalFovDegrees, orbit.viewportHeight)
                 // The picture-in-picture packs the room into a few hundred pixels: full-size points
                 // would read as noise there, so they shrink while lines keep their weight.
-                val pointStyle = if (compact) ArDebugStyle(style.metresPerPixel * PIP_POINT_SCALE) else style
+                val pointScaling = (if (compact) PIP_POINT_SCALE else 1f) * pointScale()
+                val pointStyle = if (pointScaling == 1f) style else ArDebugStyle(style.metresPerPixel * pointScaling)
                 val visible = { group: DebugGroup -> session.isVisible(group) && ReplaySurface.keeps(solid, group) }
                 layers.sync(frame, style, pointStyle, stageBoundsOf(bounds), floorY, visible, replayLayers)
                 replayLayers?.sync(
@@ -844,7 +865,7 @@ internal fun ArDebugSceneView(
                         points = visible(DebugGroup.Points),
                         anchors = visible(DebugGroup.Anchors),
                         trail = visible(DebugGroup.Trail),
-                        measure = !compact && solid == null,
+                        measure = roomMeasure && solid == null,
                         measureOnTop = orbit.overhead,
                     ),
                     eye = CameraRig.eye(orbit.pose).let { Vec3(it.x, it.y, it.z) },
@@ -912,6 +933,7 @@ internal fun ArDebugSceneView(
                     }
                 }
             }
+            content()
         }
     }
 }

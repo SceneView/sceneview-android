@@ -84,6 +84,23 @@ Glassmorphism adds depth and layering to surfaces that float over content (nav, 
 | `stage-tray-steel` | #D7DCE3 | #D7DCE3 | Chrome ball of the Rolling Balls demo (Android `TrayStage.STEEL_COLOR`, metallic, roughness 0.06): near-neutral so it mirrors the studio. Fixed in both themes |
 | `stage-tray-glass` | #BFE6EA | #BFE6EA | Glass marble of the Rolling Balls demo (Android `TrayStage.GLASS_COLOR`, full transmission, IOR 1.5): the aqua tint the light picks up through it, and its chip swatch. Fixed in both themes |
 | `stage-tray-rubber-1`…`-5` | #F2654B · #2E86F0 · #F5B029 · #2FBF8F · #9B5DE5 | same | Rubber balls of the Rolling Balls demo, in turn (Android `TrayStage.RUBBER_COLORS`, clear-coated): coral, azure, amber, mint, orchid — each holds on the maple and on the walnut. Fixed in both themes |
+| `stage-room-plaster` | #ECE7DF | #ECE7DF | Matt plaster of the walls the AI Scene demo rebuilds from a scan (Android `RoomStage.PLASTER`, roughness 0.92): warm white, so the room reads as a room and not as grey boxes. Fixed in both themes — the room is an object on the stage |
+| `stage-room-skirting` | #F6F3EE | #F6F3EE | Painted skirting board along the foot of each rebuilt wall (Android `RoomStage.SKIRTING`). Fixed in both themes |
+| `stage-room-oak-early` | #C9A57A | #C9A57A | Oak floor planks of the rebuilt room, between the rings (Android `RoomStage.OAK_EARLY`, procedural `tray_wood` grain, satin varnish). Fixed in both themes |
+| `stage-room-oak-late` | #8E6440 | #8E6440 | Rings of the oak planks (Android `RoomStage.OAK_LATE`). Fixed in both themes |
+| `stage-room-slab` | #8C8780 | #8C8780 | Screed under the oak planks, seen on the floor's cut edge (Android `RoomStage.SLAB`). Fixed in both themes |
+| `stage-room-frame` | #2F3437 | #2F3437 | Anthracite aluminium frame and mullion of a rebuilt window (Android `RoomStage.FRAME`). Fixed in both themes |
+| `stage-room-glass` | #DDEEEC | #DDEEEC | Glazing of a rebuilt window (Android `RoomStage.GLASS`, full transmission, IOR 1.5): the faint green of float glass. Fixed in both themes |
+| `stage-room-linen` | #F1EEE8 | #F1EEE8 | Duvet of the bed the scan recognised, drawn when no catalogue model stands in (Android `RoomStage.LINEN`, sheen). Fixed in both themes |
+| `stage-room-pillow` | #FAF8F4 | #FAF8F4 | Pillows of the recognised bed (Android `RoomStage.PILLOW`). Fixed in both themes |
+| `stage-room-throw` | #5E7186 | #5E7186 | Throw across the foot of the recognised bed (Android `RoomStage.THROW`): the one colour that tells the bed's foot from its head. Fixed in both themes |
+| `stage-room-headboard` | #6B6359 | #6B6359 | Upholstered headboard and base of the recognised bed (Android `RoomStage.HEADBOARD`). Fixed in both themes |
+| `stage-room-radiator` | #F4F4F2 | #F4F4F2 | White enamel panel radiator the scan recognised under the window (Android `RoomStage.RADIATOR`). Fixed in both themes |
+| `stage-room-pot` | #B8664A | #B8664A | Terracotta pot of the recognised plant (Android `RoomStage.POT`). Fixed in both themes |
+| `stage-room-leaf` | #2F6B3A | #2F6B3A | Dark leaves of the recognised plant (Android `RoomStage.LEAF`). Fixed in both themes |
+| `stage-room-leaf-light` | #4E8F4A | #4E8F4A | Young, lighter leaves of the recognised plant (Android `RoomStage.LEAF_LIGHT`). Fixed in both themes |
+| `stage-room-brass` | #C9A55C | #C9A55C | Brass stem of the stand-in floor lamp, used until the catalogue lamp has downloaded (Android `RoomStage.BRASS`, metallic). Fixed in both themes |
+| `stage-room-shade` | #F3EBDD | #F3EBDD | Linen shade of the stand-in floor lamp (Android `RoomStage.SHADE`). Fixed in both themes |
 | `stage-pip-floor` | #E2E6EB | #161B22 | Floor of the iOS Secondary Camera (PiP) stage (iOS `Stage.pipFloor`; dark is Android's `StageSky.floor`). Light is a step under `surface-container-highest` so the ground reads against the backdrop (1.13:1 on `stage-pip-backdrop`, enough for a fill; the grid carries the edge) |
 | `stage-pip-grid` | #7A8494 | #5C6780 | Grid lines on `stage-pip-floor` (iOS `Stage.pipGrid`): 3.0:1 on the floor in both themes, where Android's `outline` / `outline-subtle` measured 1.18:1 / 2.18:1 |
 | `stage-pip-backdrop` | #F1F3F5 | #0B0F16 | Flat backdrop of the Secondary Camera stage (iOS `Stage.pipBackdrop`, = `surface-container-high` light / `stage-background` dark). The floor texture fades into exactly this colour at its rim, so no camera angle shows the floor's edge |

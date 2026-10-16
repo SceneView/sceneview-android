@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Strings for the `ai-scene` demo (registered by `AiSceneFragment.kt`). -->
+<resources>
+    <string name="demo_ai_scene_title">AI Scene</string>
+    <string name="demo_ai_scene_subtitle">An AI rebuilds a scanned room, then furnishes it</string>
+</resources>

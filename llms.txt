@@ -6349,6 +6349,7 @@ by `samples/android-demo/scripts/collate-demos.sh` — never edit between the ma
 ### Developer tools
 
 - `ar-rerun` — Room Scan. Scan your room, then replay it in 3D.
+- `ai-scene` — AI Scene. An AI rebuilds a scanned room, then furnishes it.
 - `debug-overlay` — Debug Overlay. Find the node budget for smooth 3D rendering on your device.
 
 ### Place in AR
