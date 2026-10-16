@@ -40,7 +40,6 @@ import io.github.sceneview.demo.demos.internal.ArDebugTrace
 import io.github.sceneview.demo.demos.internal.ScanCopy
 import io.github.sceneview.demo.demos.internal.OrbitBand
 import io.github.sceneview.demo.demos.internal.ScanFigures
-import io.github.sceneview.demo.demos.internal.ScanLimits
 import io.github.sceneview.demo.theme.SceneViewTokens
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
@@ -145,16 +144,7 @@ private fun LiveScanScreen(
                         value = SystemClock.elapsedRealtimeNanos()
                     }
                 }
-                val depthScan = scan?.rawDepth == true
-                ScanHud(
-                    seconds = scan?.elapsedSeconds(now) ?: stats.duration,
-                    figures = ScanFigures(
-                        points = if (depthScan) scan?.denseCount ?: 0 else stats.mapPoints,
-                        pointBudget = ScanLimits.pointBudget(depthScan),
-                        surfaceMetres2 = stats.surfaceMetres2,
-                        photos = debugSession.trace.imageCount,
-                    ),
-                )
+                ScanHud(seconds = scan?.elapsedSeconds(now) ?: stats.duration, percent = null)
                 ScanStage(
                     session = debugSession,
                     orbit = scanOrbit,
