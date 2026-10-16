@@ -38,7 +38,9 @@ import io.github.sceneview.demo.demos.internal.ArDebugOrbitCamera
 import io.github.sceneview.demo.demos.internal.ArDebugSession
 import io.github.sceneview.demo.demos.internal.ArDebugTrace
 import io.github.sceneview.demo.demos.internal.ScanCopy
+import io.github.sceneview.demo.demos.internal.OrbitBand
 import io.github.sceneview.demo.demos.internal.ScanFigures
+import io.github.sceneview.demo.demos.internal.ScanLimits
 import io.github.sceneview.demo.theme.SceneViewTokens
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
@@ -94,7 +96,7 @@ private fun LiveScanScreen(
     var trackingFailure by remember { mutableStateOf<TrackingFailureReason?>(null) }
     var caughtNothing by remember { mutableStateOf(false) }
     val scanMedia = scan?.live
-    val scanOrbit = remember(scanMedia) { ArDebugOrbitCamera(drift = false, lift = LIVE_SCAN_STAGE_LIFT) }
+    val scanOrbit = remember(scanMedia) { ArDebugOrbitCamera(drift = false, band = OrbitBand.STAGE_PORTRAIT.copy(lift = LIVE_SCAN_STAGE_LIFT)) }
 
     val onStart = start@{
         val frame = latestFrame ?: return@start
@@ -143,16 +145,15 @@ private fun LiveScanScreen(
                         value = SystemClock.elapsedRealtimeNanos()
                     }
                 }
+                val depthScan = scan?.rawDepth == true
                 ScanHud(
-                    figures = ScanFigures(
-                        points = stats.mapPoints,
-                        surfaces = stats.planes,
-                        photos = debugSession.trace.imageCount,
-                        dense = scan?.denseCount ?: 0,
-                    ),
-                    depthScan = scan?.rawDepth == true,
                     seconds = scan?.elapsedSeconds(now) ?: stats.duration,
-                    photoLimitReached = scan?.isPhotoLimitReached == true,
+                    figures = ScanFigures(
+                        points = if (depthScan) scan?.denseCount ?: 0 else stats.mapPoints,
+                        pointBudget = ScanLimits.pointBudget(depthScan),
+                        surfaceMetres2 = stats.surfaceMetres2,
+                        photos = debugSession.trace.imageCount,
+                    ),
                 )
                 ScanStage(
                     session = debugSession,

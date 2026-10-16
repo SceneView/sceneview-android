@@ -199,7 +199,7 @@ fun AiSceneDemo(onBack: () -> Unit) {
         ArDebugOrbitCamera(
             initialPose = ArDebugFraming.DEFAULT_POSE.copy(azimuthDegrees = STAGE_AZIMUTH),
             drift = qaState == null,
-            lift = STAGE_LIFT,
+            band = io.github.sceneview.demo.demos.internal.OrbitBand.STAGE_PORTRAIT.copy(lift = STAGE_LIFT),
         )
     }
     LaunchedEffect(media) {
