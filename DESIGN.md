@@ -74,7 +74,7 @@ Glassmorphism adds depth and layering to surfaces that float over content (nav, 
 | `stage-scrim-end` | rgba(0,0,0,0.90) | rgba(0,0,0,0.90) | Spatial Gallery media scrim end |
 | `glass-surface` | rgba(255,255,255,0.72) | rgba(255,255,255,0.05) | Floating Spatial Gallery controls |
 | `glass-border` | 1px rgba(255,255,255,0.08) | 1px rgba(255,255,255,0.08) | Floating control outline |
-| `stage-background` | #0B0F16 | #0B0F16 | **Full-screen** 3D stage clear colour — the 3D fills the screen with no page around it, so the value is identical in both themes |
+| `stage-background` | #0B0F16 | #0B0F16 | **Full-screen** 3D stage clear colour — the 3D fills the screen with no page around it, so the value is identical in both themes. The Model Viewer draws the themed studio (`stage-studio-*`) instead |
 | `stage-background-embedded` | #0B0F16 | #22293E | A 3D stage **embedded in a card** (home hero, card thumbnails). In dark it takes the elevated container value so the card keeps a visible background against the page; #0B0F16 there sits at 1.01:1 on `surface` and the card disappears |
 | `stage-lighting-floor` | #2A3346 | #2A3346 | Floor of the Lighting demo stage (Android `LightingStage.FLOOR_COLOR`, iOS `Stage.lightingFloor`): a blue-grey slate dark enough for a contact shadow, light enough to catch the key light. Fixed in both themes, like the stage |
 | `stage-tray-maple-early` | #E6CDA3 | #E6CDA3 | Pale earlywood of the Rolling Balls playing field (Android `TrayStage.MAPLE_EARLY`, procedural `tray_wood` grain): the lit ground every ball reads on. Fixed in both themes — the board is an object on the stage |
@@ -1081,6 +1081,38 @@ the camera mode keeps `ARSceneView`'s own plane renderer).
   is still pinned dark (#3907). Streaming to a computer is an
   advanced option in the sheet, under its own heading; its status card shows only once
   connected.
+
+### Model Viewer Showroom (Android demo)
+
+Every model opens in a studio showroom (2026-10-14) instead of on the flat
+`stage-background`, where a car mirrored a grey softbox studio nobody could see over a
+black void. References: a **car configurator** (a car on a polished floor in a dark
+showroom), **Apple product pages** (an object on a white seamless) and **Sketchfab**'s
+studio scenes.
+
+- **A seamless cyclorama: the subject is the only edge.** The floor runs from
+  `stage-showroom-floor-center` under the subject to `-floor-rim` away from it, then height
+  fog in `stage-showroom-horizon` carries it into the backdrop, which darkens to
+  `stage-showroom-zenith` above. No horizon line at any orbit elevation, no clear colour.
+- **Two rooms, one per theme.** Light is a white photo studio, dark a charcoal showroom with
+  a pool of light under the subject. The glass chrome follows the theme too
+  (`themedStage`).
+- **The subject reflects the room it stands in.** The lighting map is the same studio
+  (`studio_showroom_{light,dark}_2k.hdr`, shared with the web viewer), so paint and glass
+  mirror the softboxes and the cove the user sees around them.
+- **Grounded.** A contact shadow under the footprint and SSAO; the polished zone under it
+  catches the studio's sheen (the web viewer's mirror image of the subject is not on
+  Android yet — screen-space reflections cost ~360 ms a frame on a Pixel 4a). Away from
+  it the floor turns satin, so a low camera never sees the studio's light strips mirrored
+  across the bottom of the frame.
+- **Colours are the tokens.** PBR Neutral tone mapping (no hue shift: a red car stays its
+  red), and every stage colour is drawn pre-inverted through it. Picking another map in
+  the Lighting sheet shows that map with the previous look; "Showroom" is the sheet's first
+  entry and Reset lighting returns to it.
+- **Framed like a product shot.** A 40 mm lens; the pitch follows the subject's size, from
+  about 6.5° for a car (a low three-quarter) to 14.5° for a watch (tabletop); a light
+  vignette and a subtle bloom. The model settles onto the floor as it fades in; turntable
+  and gestures are unchanged.
 
 ### Tabs
 - Padding: 10px 20px
