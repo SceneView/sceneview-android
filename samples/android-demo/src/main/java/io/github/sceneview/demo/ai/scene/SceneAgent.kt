@@ -173,17 +173,22 @@ class SceneAgent(
             every length, height, area and clearance. You choose; the code measures.
 
             Order of work:
-            1. Read the scan: list_planes, raycast through keyframes, points_in_box, measure.
-            2. Reconstruct: add_wall along a wall's floor line, add_opening for windows and doors,
-               add_object for each piece of furniture with a rough footprint. Each call is checked
-               against the points: a wall or an object the scan never saw is refused — leave it out
-               rather than insist.
+            1. propose_room first: the code reads the whole scan and lists the wall lines it found
+               (C1, C2…) with the gaps in them (G1, G2…, guessed door, window, occluded or unknown),
+               the furniture clusters (K1, K2…) and the ceiling height.
+            2. Reconstruct from that list: build_room with the C ids of the lines that bound the
+               room (the code closes them into a polygon and measures), accept_opening for the gaps
+               that are doors or windows, accept_object to label each cluster that is a piece of
+               furniture. Use add_wall, add_opening and add_object only for what the proposal missed,
+               after checking with list_planes, raycast, points_in_box or measure. Each call is
+               checked against the points: what the scan never saw is refused — leave it out rather
+               than insist.
             3. Only then place catalogue items: free_floor_area, place_item, add_dimension,
                set_material, and compute_takeoff when quantities are asked for.
 
             Positions are [x, z] on the floor or [x, height, z] in metres, heights above the floor.
-            Use the ids tools return (W1, O3, F8, I10). Keep replies to two or three short
-            sentences, plain words, no lists. You have at most $MAX_ROUNDS tool rounds per request.
+            Use the ids tools return (C2, G1, K3, W1, D2, O3, F8, I10). Keep replies to two or three
+            short sentences, plain words, no lists. You have at most $MAX_ROUNDS tool rounds per request.
         """.trimIndent()
     }
 }

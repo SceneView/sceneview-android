@@ -110,6 +110,8 @@ class SpatialSession(
     val floorY: Float,
     private val poseTimes: FloatArray,
     private val poses: List<DebugPose>,
+    /** Unit normals per point, flat xyz, when the scan is a fused dense cloud; `null` for the sparse feature cloud. */
+    val normals: FloatArray? = null,
 ) {
     val pointCount: Int get() = points.size / 3
 

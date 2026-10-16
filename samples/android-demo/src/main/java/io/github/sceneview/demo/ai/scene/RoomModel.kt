@@ -87,6 +87,19 @@ data class Rejection(val what: String, val from: FloorPoint, val to: FloorPoint,
  * The room as the model has rebuilt and furnished it so far. Immutable: every tool call returns
  * a new one, and the previous one is the undo step.
  */
+/**
+ * The measured floor plan: the corners the built walls meet at (empty when they do not close),
+ * the area — only when closed, never a guessed number — the perimeter and the ceiling height
+ * when the scan saw it. Every value is computed from the walls, none is typed by the model.
+ */
+data class RoomPlan(
+    val corners: List<FloorPoint>,
+    val area: Float?,
+    val perimeter: Float,
+    val ceilingHeight: Float?,
+    val closed: Boolean,
+)
+
 data class RoomModel(
     val walls: List<RoomWall> = emptyList(),
     val openings: List<RoomOpening> = emptyList(),
@@ -95,6 +108,8 @@ data class RoomModel(
     val items: List<PlacedItem> = emptyList(),
     val dimensions: List<RoomDimension> = emptyList(),
     val rejections: List<Rejection> = emptyList(),
+    /** The floor plan `build_room` measured — corners, area, perimeter — or `null` before it ran. */
+    val plan: RoomPlan? = null,
     private val counter: Int = 0,
 ) {
     val isEmpty: Boolean get() = walls.isEmpty() && objects.isEmpty() && items.isEmpty()
@@ -112,6 +127,7 @@ data class RoomModel(
         walls.any { it.id == id } -> copy(
             walls = walls.filterNot { it.id == id },
             openings = openings.filterNot { it.wallId == id },
+            plan = null,
         )
         openings.any { it.id == id } -> copy(openings = openings.filterNot { it.id == id })
         objects.any { it.id == id } -> copy(objects = objects.filterNot { it.id == id })

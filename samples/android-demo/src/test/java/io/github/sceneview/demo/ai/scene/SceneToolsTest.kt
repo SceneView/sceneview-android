@@ -127,7 +127,7 @@ class SceneToolsTest {
 
     @Test
     fun `every tool spec is strict, every property required and nothing else allowed`() {
-        assertEquals(14, SceneToolExecutor.SPECS.size)
+        assertEquals(18, SceneToolExecutor.SPECS.size)
         for (spec in SceneToolExecutor.SPECS) {
             val schema = spec.inputSchema
             assertEquals(spec.name, "object", schema.getValue("type").jsonPrimitive.content)

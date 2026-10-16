@@ -68,6 +68,12 @@ class SceneToolExecutor(private val session: SpatialSession) {
 
     private val floorY = session.floorY
 
+    /** The reconstruction tools (propose_room, build_room, accept_opening, accept_object) and their cached proposal. */
+    private val reconstruction = RoomReconstructionTools(session)
+
+    /** The code's reading of the scan — the candidates `propose_room` lists, computed once. */
+    val proposal: RoomProposal get() = reconstruction.proposal
+
     /** The last free-floor grid, one row per line: '.' free, '#' points, '?' unseen or kept clear. */
     internal var lastFreeMap: String = ""
 
@@ -87,6 +93,10 @@ class SceneToolExecutor(private val session: SpatialSession) {
             SET_MATERIAL -> setMaterial(model, input)
             REMOVE_NODE -> removeNode(model, input)
             COMPUTE_TAKEOFF -> computeTakeoff(model)
+            PROPOSE_ROOM -> reconstruction.propose(model)
+            BUILD_ROOM -> reconstruction.build(model, input)
+            ACCEPT_OPENING -> reconstruction.acceptOpening(model, input)
+            ACCEPT_OBJECT -> reconstruction.acceptObject(model, input)
             else -> fail(model, "unknown tool '$name'", "Unknown tool $name")
         }
     } catch (e: ToolInputException) {
@@ -904,6 +914,10 @@ class SceneToolExecutor(private val session: SpatialSession) {
         const val SET_MATERIAL = "set_material"
         const val REMOVE_NODE = "remove_node"
         const val COMPUTE_TAKEOFF = "compute_takeoff"
+        const val PROPOSE_ROOM = "propose_room"
+        const val BUILD_ROOM = "build_room"
+        const val ACCEPT_OPENING = "accept_opening"
+        const val ACCEPT_OBJECT = "accept_object"
 
         val OBJECT_CATEGORIES = listOf(
             "bed", "sofa", "desk", "table", "chair", "office_chair", "plant", "radiator", "shelf", "cabinet", "other",
@@ -1047,6 +1061,31 @@ class SceneToolExecutor(private val session: SpatialSession) {
             spec(
                 COMPUTE_TAKEOFF,
                 "Compute the quantities: wall areas net of openings, openings, objects, placed items.",
+            ),
+            spec(
+                PROPOSE_ROOM,
+                "Read the whole scan and list what the code found: wall lines (C1, C2…) with their floor segment, " +
+                    "height, point support and the gaps in them (G1, G2… guessed door, window, occluded or " +
+                    "unknown), furniture clusters (K1, K2…) as boxes, and the ceiling height. Call it first; " +
+                    "nothing is built yet.",
+            ),
+            spec(
+                BUILD_ROOM,
+                "Build the room from the proposed wall lines that bound it (their C ids). Code closes them into " +
+                    "a polygon when they meet, measures every wall, the area, the perimeter; replaces earlier walls.",
+                "wall_ids" to AiSchemas.strings(""),
+            ),
+            spec(
+                ACCEPT_OPENING,
+                "Turn a proposed gap (its G id) into a door or window in the built wall under it. A gap hidden " +
+                    "behind furniture is refused.",
+                "gap_id" to string(), "kind" to enumOf(OpeningKind.entries.map { it.wire }),
+            ),
+            spec(
+                ACCEPT_OBJECT,
+                "Label a proposed furniture cluster (its K id) with a category; its box, size and height come from " +
+                    "the points. Calling it again on the same cluster relabels it.",
+                "cluster_id" to string(), "category" to enumOf(OBJECT_CATEGORIES),
             ),
         )
 
