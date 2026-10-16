@@ -87,9 +87,13 @@ import io.github.sceneview.demo.sources.rememberModelSources
 import io.github.sceneview.demo.ui.explore.components.FeaturedModelCard
 import io.github.sceneview.demo.ui.explore.components.SpatialHero
 import io.github.sceneview.demo.ui.home.DemoMediaCard
+import io.github.sceneview.demo.telemetry.SearchSurface
+import io.github.sceneview.demo.telemetry.SearchTerm
+import io.github.sceneview.demo.telemetry.Telemetry
 import io.github.sceneview.demo.theme.SceneViewTokens
 import io.github.sceneview.demo.ui.ConnectedChoiceRow
 import io.github.sceneview.demo.ui.demoToggleButtonColors
+import kotlinx.coroutines.delay
 
 /**
  * Curated 3D-model discovery feed — the demo app's Spatial Gallery home: a
@@ -225,6 +229,16 @@ fun ExploreTabScreen(
         }
     }
 
+    // The `search` event for the query on screen: `null` results (failed) log as `error`.
+    // [Telemetry.search] drops the repeat when a tap follows the settle.
+    fun logModelSearch() {
+        Telemetry.search.settled(
+            SearchSurface.Models,
+            activeSearchQuery,
+            searchResults?.size?.takeUnless { searchFailed },
+        )
+    }
+
     // Execute search when activeSearchQuery changes (#1239). `null` results
     // means "in flight"; an empty list means "0 hits"; non-empty means we
     // have results to render. CancellationException is re-thrown so the
@@ -235,7 +249,10 @@ fun ExploreTabScreen(
     // the animated chip has no effect on search results. Re-keys on the source
     // id so switching catalogs re-runs the query against the new one.
     LaunchedEffect(activeSearchQuery, selectedSource.id, searchRetryTick) {
-        if (activeSearchQuery.isBlank()) return@LaunchedEffect
+        if (activeSearchQuery.isBlank()) {
+            Telemetry.search.cleared(SearchSurface.Models)
+            return@LaunchedEffect
+        }
         searchResults = null  // signal loading
         searchFailed = false
         // Bounded by EXPLORE_FEED_TIMEOUT_MS like the feeds (#3993): a search that
@@ -254,6 +271,10 @@ fun ExploreTabScreen(
         }
         searchFailed = result !is FeedResult.Loaded
         searchResults = result.modelsOrEmpty
+        // `search`: counted once its results have stayed on screen for SETTLE_MS (or a result
+        // is opened), so the fragments a live search fires mid-typing never count.
+        delay(SearchTerm.SETTLE_MS)
+        logModelSearch()
     }
 
     val body = @Composable {
@@ -295,7 +316,10 @@ fun ExploreTabScreen(
             onRetryFeeds = { refreshTick++ },
             searchFailed = searchFailed,
             onRetrySearch = { searchRetryTick++ },
-            onModelClick = { selectedModel = it },
+            onModelClick = {
+                if (activeSearchQuery.isNotBlank() && searchResults != null) logModelSearch()
+                selectedModel = it
+            },
         )
     }
 

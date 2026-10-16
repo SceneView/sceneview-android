@@ -155,6 +155,8 @@ class DemoAnalyticsTest {
                 ("push_opened" to mapOf("campaign" to "launch", "sample_id" to "cosmos")),
             AnalyticsEvent.SettingsChanged("analytics", "false") to
                 ("settings_changed" to mapOf("key" to "analytics", "value" to "false")),
+            AnalyticsEvent.Search("damaged helmet", SearchSurface.Models, "2-5") to
+                ("search" to mapOf("search_term" to "damaged helmet", "surface" to "models", "result_bucket" to "2-5")),
         )
         cases.forEach { (event, expected) ->
             assertEquals(expected.first, event.name)

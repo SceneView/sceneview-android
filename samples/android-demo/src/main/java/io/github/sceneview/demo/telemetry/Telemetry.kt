@@ -89,6 +89,9 @@ object Telemetry {
         isEnabled = { collecting },
     )
 
+    /** Home and Explore searches, deduplicated, into [analytics] as `search` events. */
+    val search: SearchLogger = SearchLogger { analytics.log(it) }
+
     /** How the next sample was reached; read (and reset) by the demo route when it opens. */
     var nextOpenSource: OpenSource = OpenSource.Other
 

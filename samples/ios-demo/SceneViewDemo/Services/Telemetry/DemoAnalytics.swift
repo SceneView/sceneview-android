@@ -14,6 +14,54 @@ import SceneViewSwift
 // event or a parameter here without renaming it there: the two apps report into the
 // same Firebase project and the dashboards join them on these strings.
 // `sample_open`: sample_id + received entry_id + category slug + source, and mode only for umbrellas.
+//
+// No event carries a model file, a pose, a camera frame or anything else that could
+// identify a person. The one piece of typed text is `search.search_term`, and only after
+// `SearchTerm.normalize` has lowercased it, cut it to 50 characters and redacted anything
+// that looks like an email address, a link or a long number.
+
+/// Which field a search was typed in — `search.surface`.
+enum SearchSurface: String, Sendable {
+    /// The Home grid's demo filter — local, instant.
+    case samples
+    /// The Explore tab's online model catalogs.
+    case models
+}
+
+/// What a search field may send as `search_term`: the only typed text the taxonomy
+/// carries. Shared rule for rule with Android (`SearchTelemetry.kt`, `SearchTerm`).
+enum SearchTerm {
+    static let minimumLength = 2
+    static let maximumLength = 50
+    static let redacted = "(redacted)"
+    /// How long a field must stay still before its query counts as a search.
+    static let settleDelay: Duration = .milliseconds(1_500)
+
+    /// The term to send for `raw`: trimmed, whitespace collapsed, lowercased, cut to
+    /// `maximumLength`; `nil` below `minimumLength`; `redacted` when it looks like an
+    /// email address, a link or a long number.
+    static func normalize(_ raw: String) -> String? {
+        let term = raw.lowercased().split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        guard term.count >= minimumLength else { return nil }
+        if term.contains("@") || term.contains("http") || term.contains("www.")
+            || term.range(of: "[0-9]{5,}", options: .regularExpression) != nil {
+            return redacted
+        }
+        return String(term.prefix(maximumLength)).trimmingCharacters(in: .whitespaces)
+    }
+
+    /// `search.result_bucket` for `count` results, `error` when the search never answered.
+    static func resultBucket(_ count: Int?) -> String {
+        guard let count else { return "error" }
+        switch count {
+        case ...0: return "0"
+        case 1: return "1"
+        case 2...5: return "2-5"
+        case 6...20: return "6-20"
+        default: return "21+"
+        }
+    }
+}
 
 /// One analytics parameter value. Firebase accepts strings and numbers; the taxonomy
 /// only needs strings and integers.
@@ -141,6 +189,17 @@ extension AnalyticsEvent {
         AnalyticsEvent(name: "settings_changed", params: ["key": .string(key), "value": .string(value)])
     }
 
+    /// GA4's recommended `search` event, so the term lands in the built-in "Search term"
+    /// dimension. `term` comes out of `SearchTerm.normalize` — screens go through
+    /// `DemoAnalytics.searchSettled`, never through this factory.
+    static func search(term: String, surface: SearchSurface, resultBucket: String) -> AnalyticsEvent {
+        AnalyticsEvent(name: "search", params: [
+            "search_term": .string(clip(term)),
+            "surface": .string(surface.rawValue),
+            "result_bucket": .string(resultBucket),
+        ])
+    }
+
     /// Firebase truncates parameter values at 100 characters; clip first so an error
     /// description never loses its head.
     static let maxParamValueLength = 100
@@ -191,6 +250,8 @@ final class DemoAnalytics: @unchecked Sendable {
     private let consent: ConsentStore
     /// Open samples, keyed by id, with their start time (for `sample_close.duration_s`).
     private var openSamples: [String: Date] = [:]
+    /// The last search logged, so the same search settling twice counts once.
+    private var lastSearch: (surface: SearchSurface, term: String)?
     private let now: @Sendable () -> Date
 
     /// Without `consent`, a store on `defaults` outside the consent zone: collection on
@@ -278,6 +339,30 @@ final class DemoAnalytics: @unchecked Sendable {
 
     func interaction(_ sampleId: String, _ control: String) {
         log(.sampleInteraction(sampleId: sampleId, control: control))
+    }
+
+    // MARK: Search
+
+    /// Logs `raw` as a `search` on `surface` that found `resultCount` results (`nil`:
+    /// the search failed). A repeat of the last search — a re-run, a result tapped
+    /// right after the settle — is dropped; a new term or the other field counts again.
+    @discardableResult
+    func searchSettled(_ raw: String, surface: SearchSurface, resultCount: Int?) -> Bool {
+        guard let term = SearchTerm.normalize(raw) else { return false }
+        lock.lock()
+        let repeated = lastSearch?.surface == surface && lastSearch?.term == term
+        if !repeated { lastSearch = (surface, term) }
+        lock.unlock()
+        guard !repeated else { return false }
+        log(.search(term: term, surface: surface, resultBucket: SearchTerm.resultBucket(resultCount)))
+        return true
+    }
+
+    /// The field on `surface` was emptied: its next search counts, even if it repeats.
+    func searchCleared(_ surface: SearchSurface) {
+        lock.lock()
+        if lastSearch?.surface == surface { lastSearch = nil }
+        lock.unlock()
     }
 
     static func modeControl(_ mode: String) -> String { "mode_\(mode)" }
