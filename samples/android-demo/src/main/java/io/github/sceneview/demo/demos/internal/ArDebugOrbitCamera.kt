@@ -59,6 +59,11 @@ class ArDebugOrbitCamera(
      * the camera its new band and the framing follows.
      */
     var band: OrbitBand = band
+        set(value) {
+            if (field == value) return
+            field = value
+            refit()
+        }
 
     /**
      * How far above the view's centre the pivot is drawn, as a fraction of the view's height: the
@@ -198,8 +203,10 @@ class ArDebugOrbitCamera(
     }
 
     override fun setViewport(width: Int, height: Int) {
+        val before = aspect
         viewportWidth = width.coerceAtLeast(1)
         viewportHeight = height.coerceAtLeast(1)
+        if (aspect != before) refit()
     }
 
     override fun getTransform(): Transform {
@@ -313,6 +320,21 @@ class ArDebugOrbitCamera(
     /** [candidate] kept inside [limits]: what every gesture's result goes through. */
     private fun bounded(candidate: OrbitPose): OrbitPose =
         ArDebugFraming.clamp(candidate, limits, lift, verticalFovDegrees)
+
+    /**
+     * The stage changed under a camera a finger had left — the card grew, the phone turned, the
+     * chrome moved: the room is framed again for it, from the side the finger left it on. Without
+     * it, the pose fitted to the old stage stayed, the room cut or lost in the new one.
+     */
+    private fun refit() {
+        if (following || grabbing) return
+        following = true
+        followSeconds = 0f
+        azimuthVelocity = 0f
+        elevationVelocity = 0f
+        heading = pose.azimuthDegrees
+        home = home.copy(azimuthDegrees = heading)
+    }
 
     private fun takeOver() {
         following = false
