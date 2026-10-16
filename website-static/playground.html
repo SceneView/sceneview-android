@@ -2412,7 +2412,7 @@
         },
         web: {
           file: 'multi-model.js', lang: 'JavaScript',
-          code: '// Multi-model scene with SceneView Web\nconst scene = await SceneView.create("canvas");\n\nawait scene.loadEnvironment("envs/studio.ktx");\n\n// Load multiple models concurrently\nconst [table, lamp, vase] = await Promise.all([\n    scene.loadModel("models/table.glb"),\n    scene.loadModel("models/lamp.glb"),\n    scene.loadModel("models/vase.glb")\n]);\n\n// Position each model\nlamp.setPosition(-0.5, 0.8, 0);\nlamp.setScale(0.5, 0.5, 0.5);\n\nvase.setPosition(0.5, 0.8, 0.2);\nvase.setScale(0.3, 0.3, 0.3);\n\n// Add key light\nscene.addLight({\n    type: "directional",\n    direction: [-1, -1, -1],\n    intensity: 100000,\n    castShadows: true\n});\n\nscene.enableCameraControls({\n    distance: 6, target: [0, 1, 0]\n});'
+          code: '// Several models with SceneView Web: one viewer per model.\n// A viewer shows one model at a time: a second loadModel()\n// call on the same viewer replaces the first.\nconst models = {\n    table: "models/table.glb",\n    lamp: "models/lamp.glb",\n    vase: "models/vase.glb"\n};\n\n// One <canvas> per model: id="table", id="lamp", id="vase"\nconst viewers = await Promise.all(\n    Object.entries(models).map(async ([id, file]) => {\n        const viewer = await SceneView.create(id);\n        await viewer.loadEnvironment("envs/studio.ktx");\n        await viewer.loadModel(file);\n        viewer.addLight({\n            type: "directional",\n            direction: [-1, -1, -1],\n            intensity: 100000,\n            castShadows: true\n        });\n        return viewer;\n    })\n);'
         }
       },
       'post-processing': {

@@ -1164,8 +1164,11 @@
    * are left alone. A model with no WebP comes back as the same bytes, after a look at
    * its JSON text only. Never rejects: what cannot be rewritten goes to gltfio as it came.
    * PNG keeps alpha, but a 2D canvas premultiplies it: partly transparent texels round.
+   * `stale()`, when given, is asked before each decode: once it returns an error (the
+   * load was replaced or the viewer disposed), no further image is decoded and the
+   * bytes come back as they came, for the caller to drop.
    */
-  function _transcodeWebP(bytes) {
+  function _transcodeWebP(bytes, stale) {
     var parts, text, json;
     try {
       parts = _glbParts(bytes);
@@ -1201,8 +1204,10 @@
 
     // Four decodes at a time; the PNGs are appended in image order, so the layout is fixed.
     var pngs = new Array(budget.length), next = 0;
+    function dropped() { return !!(stale && stale()); }
     function worker() {
-      if (next >= budget.length) return Promise.resolve();
+      // A replaced load stops decoding: a 30-texture model no longer runs to its end.
+      if (next >= budget.length || dropped()) return Promise.resolve();
       var k = next++, src = embedded(images[budget[k]]);
       return (src ? _webpToPng(src) : Promise.resolve(null))
         .then(function(png) { pngs[k] = png; return worker(); });
@@ -1211,6 +1216,7 @@
     for (var w = 0; w < Math.min(4, budget.length); w++) workers.push(worker());
 
     return Promise.all(workers).then(function() {
+      if (dropped()) return bytes;
       var sink = binBacked ? _binSink(bin) : null, converted = {}, count = 0;
       budget.forEach(function(ii, k) {
         var im = images[ii], png = pngs[k];
@@ -1887,7 +1893,9 @@
             if (abort) throw abort;
             // What Filament.js cannot draw as shipped is rewritten first (#4566): WebP
             // textures to PNG, skins over 256 joints split per mesh.
-            return _transcodeWebP(new Uint8Array(buffer)).then(function(bytes) {
+            return _transcodeWebP(new Uint8Array(buffer), stale).then(function(bytes) {
+              var abort = stale();
+              if (abort) throw abort;
               try {
                 return _splitOversizedSkins(bytes);
               } catch (e) {
@@ -2115,18 +2123,24 @@
       asset.getRenderableEntities().forEach(function(e) {
         var ri = rm.getInstance(e), box = rm.getAxisAlignedBoundingBox(ri);
         var c = [box.center[0], box.center[1], box.center[2]], h = [box.halfExtent[0], box.halfExtent[1], box.halfExtent[2]];
+        // Meshes stored with the same raw box (to the tolerance) are told apart by nothing
+        // gltfio keeps: this renderable takes the first one's real box and accounts for all
+        // of them, or each one after the first would be counted as missed.
+        var hit = null;
         for (var f = 0; f < fixes.length; f++) {
-          var raw = fixes[f].raw, real = fixes[f].real, same = true;
+          var raw = fixes[f].raw, same = true;
           for (var k = 0; k < 3; k++) same = same && close(c[k] - h[k], raw.min[k]) && close(c[k] + h[k], raw.max[k]);
           if (!same) continue;
+          matched[f] = true;
+          if (!hit) hit = fixes[f].real;
+        }
+        if (hit) {
           for (k = 0; k < 3; k++) {
-            c[k] = (real.min[k] + real.max[k]) / 2;
-            h[k] = (real.max[k] - real.min[k]) / 2;
+            c[k] = (hit.min[k] + hit.max[k]) / 2;
+            h[k] = (hit.max[k] - hit.min[k]) / 2;
           }
           rm.setAxisAlignedBoundingBox(ri, { center: c, halfExtent: h });
-          matched[f] = true;
           fixed++;
-          break;
         }
         var M = tm.getWorldTransform(tm.getInstance(e));
         for (var corner = 0; corner < 8; corner++) {

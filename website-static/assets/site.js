@@ -171,6 +171,19 @@
     setScale(entry.stage, entry.stage._scale || 1);
   }
 
+  // sceneview.js rejects a loadModel() that a later call replaced with an AbortError
+  // (#4566): the later call owns the stage, so the older one has nothing to undo.
+  function superseded(e) { return !!e && e.name === 'AbortError'; }
+
+  // The canvas takes over from the poster once the model is in, and the motion starts.
+  function showModel(stage, sv) {
+    setTimeout(function () { if (stage._sv !== sv) return; stage.classList.remove('is-loading'); stage.classList.add('is-live'); }, 400);
+    setPlaying(stage, !caps.reduced);
+    // Motion stops by itself after 20 s (WCAG 2.2.2); the pause button stops it sooner.
+    clearTimeout(stage._idle);
+    if (!caps.reduced) stage._idle = setTimeout(function () { setPlaying(stage, false); }, 20000);
+  }
+
   function goLive(stage) {
     if (stage._sv || stage.classList.contains('is-loading')) return Promise.resolve();
     if (!hasWebGL2()) { stage.classList.add('no-webgl'); return Promise.resolve(); }
@@ -219,12 +232,11 @@
       return sv.loadModel(stage.dataset.src).then(function () {
         applyFit(stage, sv);
         if (stage.dataset.anim && stage._animate !== false) sv.playAnimation(parseInt(stage.dataset.anim, 10), true);
-        setTimeout(function () { if (stage._sv !== sv) return; stage.classList.remove('is-loading'); stage.classList.add('is-live'); }, 400);
-        setPlaying(stage, !caps.reduced);
-        // Motion stops by itself after 20 s (WCAG 2.2.2); the pause button stops it sooner.
-        if (!caps.reduced) stage._idle = setTimeout(function () { setPlaying(stage, false); }, 20000);
+        showModel(stage, sv);
       });
     }).catch(function (e) {
+      // A model chip tapped during this first load replaced it: swapModel() shows that one.
+      if (superseded(e)) return;
       console.warn('[site] live 3D unavailable, keeping the poster:', e && e.message);
       // A viewer whose model never arrived is torn down: the poster stays and the next tap starts clean.
       for (var i = live.length; i--;) if (live[i].stage === stage) park(live.splice(i, 1)[0]);
@@ -246,11 +258,19 @@
       stage.classList.add('is-loading');
       var sv = stage._sv;
       sv.loadModel(stage.dataset.src).then(function () {
+        if (stage._sv !== sv) return;
         applyFit(stage, sv);
         if (stage.dataset.anim && stage._animate !== false) sv.playAnimation(parseInt(stage.dataset.anim, 10), true);
-        stage.classList.remove('is-loading');
+        // Tapped before the first model was shown: this model is the stage's first.
+        if (stage.classList.contains('is-live')) stage.classList.remove('is-loading');
+        else showModel(stage, sv);
       }).catch(function (e) {
+        if (superseded(e)) return;      // a later tap replaced this one and owns the stage
         console.warn('[site] model swap failed:', e && e.message);
+        // No model was ever shown: tear the viewer down, as a failed first load does.
+        if (!stage.classList.contains('is-live')) {
+          for (var i = live.length; i--;) if (live[i].stage === stage) park(live.splice(i, 1)[0]);
+        }
         stage.classList.remove('is-loading');
       });
     }
