@@ -506,14 +506,23 @@ internal object DeepLinkRouter {
      *
      * One extra carries every demo's vocabulary — Cloud Anchors resolves its ids with
      * `cloudAnchorScenarioOf`, Point & Ask with `askStepForQaOverride` — and this is the
-     * single place the gate lives: the id is returned **only when [qaMode] is on**. A
-     * pinned state makes a screen claim something that never happened (a hosted anchor
-     * code, a streamed answer), so unlike `qa_backdrop`, which only changes what is behind
-     * the scene, an intent extra alone must never be enough to reach it. Blank ids are
-     * dropped so a demo never has to distinguish `""` from absent. Never throws.
+     * single place the gate lives: the id is returned **only in a debug build with [qaMode]
+     * on**. A pinned state makes a screen claim something that never happened (a hosted
+     * anchor code, a streamed answer), so unlike `qa_backdrop`, which only changes what is
+     * behind the scene, an intent extra alone must never be enough to reach it — and
+     * `qa_mode` is itself an intent extra any app on the phone can send to the exported
+     * launcher activity, so on the store build the id is dropped whatever `qa_mode` says
+     * (#4555). Blank ids are dropped so a demo never has to distinguish `""` from absent.
+     * Never throws.
+     *
+     * @param debugBuild `BuildConfig.DEBUG`; a parameter so the release answer is tested.
      */
-    fun resolveQaState(qaMode: Boolean, raw: String?): String? {
-        if (!qaMode) return null
+    fun resolveQaState(
+        qaMode: Boolean,
+        raw: String?,
+        debugBuild: Boolean = BuildConfig.DEBUG,
+    ): String? {
+        if (!debugBuild || !qaMode) return null
         return raw?.trim()?.takeIf { it.isNotBlank() }
     }
 

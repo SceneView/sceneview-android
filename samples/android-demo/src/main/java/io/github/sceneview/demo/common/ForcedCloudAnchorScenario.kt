@@ -17,6 +17,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
+import io.github.sceneview.demo.BuildConfig
 import io.github.sceneview.demo.DemoSettings
 import io.github.sceneview.demo.demos.internal.CloudAnchorScenario
 import io.github.sceneview.demo.theme.SceneViewTokens
@@ -46,13 +47,21 @@ object ForcedCloudAnchorScenario {
 }
 
 /**
- * `true` when a QA state override may be honoured at all.
+ * `true` when a QA state override may be honoured at all: a debug build with QA mode on.
  *
  * Both ingresses go through this. A forced state makes the screen *lie* — it shows a code
  * that was never hosted — so it is gated on QA mode exactly like the rest of the debug
- * surface, and an intent extra alone is never enough.
+ * surface, and an intent extra alone is never enough. QA mode is not enough on its own
+ * either: `--ez qa_mode true` reaches the store build too (it only freezes animations
+ * there), so a release build never honours an override (#4555).
+ *
+ * @param qaMode [DemoSettings.qaMode].
+ * @param debugBuild `BuildConfig.DEBUG`; a parameter so the release answer is tested.
  */
-fun qaStateOverridesAllowed(): Boolean = DemoSettings.qaMode
+fun qaStateOverridesAllowed(
+    qaMode: Boolean = DemoSettings.qaMode,
+    debugBuild: Boolean = BuildConfig.DEBUG,
+): Boolean = debugBuild && qaMode
 
 /**
  * The QA radio list that pins [ForcedCloudAnchorScenario.override].
