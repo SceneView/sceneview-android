@@ -119,13 +119,22 @@ internal class ShowroomReflection(private val engine: Engine, private val mainVi
         val pose = pose ?: return false
         val material = material ?: return false
         val eye = mainView.camera ?: return false
+        if (!prepareTarget(material)) return false
+        return renderMirror(pose, material, eye)
+    }
+
+    /** Points the mirror view at the main view's scene and sizes its target; `false` before layout. */
+    private fun prepareTarget(material: MaterialInstance): Boolean {
         val viewport = mainView.viewport
         if (viewport.width <= 0 || viewport.height <= 0) return false
         val scene = mainView.scene ?: return false
         // The same scene as the main view: the layer mask keeps only the subject.
         if (view.scene !== scene) view.scene = scene
         ensureTarget(viewport.width, viewport.height, material)
+        return true
+    }
 
+    private fun renderMirror(pose: Pose, material: MaterialInstance, eye: Camera): Boolean {
         eye.getModelMatrix(eyeModel)
         val moved = !lit || pose != lastPose || !eyeModel.contentEquals(lastEye)
         if (!moved) return false

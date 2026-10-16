@@ -1860,8 +1860,9 @@ private fun SingleModelSection(
                 context.getSystemService(android.app.ActivityManager::class.java)?.isLowRamDevice != true
             }
             val settleLift = fitRadius * 0.02f * (1f - fitProgress.value).coerceAtLeast(0f)
+            val reflectionOn = reflectionAllowed && showroomStaged
             SideEffect {
-                val pose = if (reflectionAllowed && showroomStaged && bounds != null && footprint != null) {
+                val pose = if (reflectionOn && bounds != null && footprint != null) {
                     ShowroomReflection.Pose(
                         center = modelCenter,
                         floorY = stageFloorY - ShowroomMath.FLOOR_DROP_RADII * stageRadius,
@@ -1878,7 +1879,13 @@ private fun SingleModelSection(
                 }
                 if (showroomReflection.set(showroom.floorMaterial, pose)) renderInvalidator.requestRender()
             }
-            val stageOnFrame: (Long) -> Unit = remember(onFrame, showroom, showroomReflection, cameraNode, renderInvalidator) {
+            val stageOnFrame: (Long) -> Unit = remember(
+                onFrame,
+                showroom,
+                showroomReflection,
+                cameraNode,
+                renderInvalidator,
+            ) {
                 { nanos ->
                     onFrame(nanos)
                     if (showroom.onFrame(cameraNode.worldPosition)) renderInvalidator.requestRender()
