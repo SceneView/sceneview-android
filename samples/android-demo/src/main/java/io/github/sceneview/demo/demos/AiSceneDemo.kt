@@ -841,7 +841,7 @@ private fun keyframesFor(media: RerunReplayMedia, spatial: SpatialSession): List
     val picks = (0 until KEYFRAMES_SENT).map { frames[it * (frames.size - 1) / (KEYFRAMES_SENT - 1)] }.distinct()
     return picks.flatMap { k ->
         val bytes = media.bytesOf(k.path) ?: return@flatMap emptyList()
-        val type = if (k.path.endsWith(".png", ignoreCase = true)) "image/png" else "image/jpeg"
+        val type = imageMediaType(bytes) ?: return@flatMap emptyList()
         listOf(
             AiContent.Text(
                 String.format(
@@ -852,6 +852,21 @@ private fun keyframesFor(media: RerunReplayMedia, spatial: SpatialSession): List
             ),
             AiContent.Image(type, Base64.encodeToString(bytes, Base64.NO_WRAP)),
         )
+    }
+}
+
+/**
+ * The media type Claude must be told for [bytes], read from their signature rather than the path —
+ * the sample's frames are WebP, a scan's are JPEG — or `null` for a format the API refuses.
+ */
+private fun imageMediaType(bytes: ByteArray): String? {
+    fun at(i: Int, vararg sig: Int) = bytes.size >= i + sig.size && sig.indices.all { bytes[i + it].toInt() and 0xFF == sig[it] }
+    return when {
+        at(0, 0xFF, 0xD8, 0xFF) -> "image/jpeg"
+        at(0, 0x89, 0x50, 0x4E, 0x47) -> "image/png"
+        at(0, 0x52, 0x49, 0x46, 0x46) && at(8, 0x57, 0x45, 0x42, 0x50) -> "image/webp"
+        at(0, 0x47, 0x49, 0x46, 0x38) -> "image/gif"
+        else -> null
     }
 }
 
