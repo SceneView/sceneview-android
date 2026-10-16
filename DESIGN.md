@@ -1101,8 +1101,10 @@ studio scenes.
   (`studio_showroom_{light,dark}_2k.hdr`, shared with the web viewer), so paint and glass
   mirror the softboxes and the cove the user sees around them.
 - **Grounded.** A contact shadow under the footprint and SSAO; the polished zone under it
-  catches the studio's sheen (the web viewer's mirror image of the subject is not on
-  Android yet — screen-space reflections cost ~360 ms a frame on a Pixel 4a). Away from
+  catches the studio's sheen and a faint planar mirror image of the subject's lower part,
+  as on the web viewer (Android: a second view at quarter resolution, refreshed every other
+  frame while the camera moves; off on low-RAM devices — screen-space reflections cost
+  ~360 ms a frame on a Pixel 4a). Away from
   it the floor turns satin, so a low camera never sees the studio's light strips mirrored
   across the bottom of the frame.
 - **Colours are the tokens.** PBR Neutral tone mapping (no hue shift: a red car stays its

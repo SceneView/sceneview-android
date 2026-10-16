@@ -129,7 +129,8 @@ class ShowroomMathTest {
         assertTrue(ShowroomMath.isShowroom(ShowroomMath.LIGHT_HDR))
         assertFalse(ShowroomMath.isShowroom("environments/studio_warm_2k.hdr"))
         assertFalse(ShowroomMath.isShowroom(null))
-        assertEquals(ShowroomMath.SHOWROOM_INTENSITY, ShowroomMath.baseIntensity(ShowroomMath.DARK_HDR), 0f)
+        assertEquals(ShowroomMath.DARK_SHOWROOM_INTENSITY, ShowroomMath.baseIntensity(ShowroomMath.DARK_HDR), 0f)
+        assertEquals(ShowroomMath.SHOWROOM_INTENSITY, ShowroomMath.baseIntensity(ShowroomMath.LIGHT_HDR), 0f)
         assertEquals(ShowroomMath.LEGACY_INTENSITY, ShowroomMath.baseIntensity("environments/studio_2k.hdr"), 0f)
         assertEquals(ShowroomMath.LEGACY_INTENSITY, ShowroomMath.baseIntensity(null), 0f)
     }
@@ -220,5 +221,30 @@ class ShowroomMathTest {
         assertEquals(0.005f, ShowroomMath.aoRadius(Float.NaN), 0f)
         assertEquals(0.5f, ShowroomMath.aoRadius(100f), 0f)
         assertEquals(0.05f, ShowroomMath.aoBilateralThreshold(10f), 0f)
+    }
+
+    @Test
+    fun `the reflection is fainter on the white studio and fades up the lower 40 percent`() {
+        assertEquals(0.26f, ShowroomMath.reflectionStrength(isDark = true), 0f)
+        assertEquals(0.14f, ShowroomMath.reflectionStrength(isDark = false), 0f)
+        assertEquals(0.6f, ShowroomMath.reflectionFadeHeight(1.5f), 1e-6f)
+        assertTrue(ShowroomMath.reflectionFadeHeight(0f) > 0f)
+        assertTrue(ShowroomMath.reflectionFadeHeight(Float.NaN) > 0f)
+    }
+
+    @Test
+    fun `the mirror eye is the eye reflected through the floor plane`() {
+        // An eye 3 m up at z = 10, looking down -Z, over a floor at y = 0.5.
+        val eye = DoubleArray(16).also {
+            it[0] = 1.0; it[5] = 1.0; it[10] = 1.0; it[15] = 1.0
+            it[12] = 0.0; it[13] = 3.0; it[14] = 10.0
+        }
+        val out = ShowroomMath.mirrorModelMatrix(eye, floorY = 0.5f, out = DoubleArray(16))
+        assertEquals(-2.0, out[13], 1e-9) // 0.5 - (3 - 0.5)
+        assertEquals(10.0, out[14], 1e-9)
+        assertEquals(-1.0, out[5], 1e-9) // the up axis flips
+        assertEquals(1.0, out[0], 1e-9)
+        assertEquals(1.0, out[10], 1e-9)
+        assertEquals(1.0, out[15], 1e-9)
     }
 }

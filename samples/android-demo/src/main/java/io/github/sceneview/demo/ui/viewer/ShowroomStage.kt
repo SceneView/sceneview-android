@@ -60,11 +60,23 @@ internal object ShowroomMath {
      */
     const val SHOWROOM_INTENSITY = 18_000f
 
+    /**
+     * IBL intensity of the dark showroom. Its map is mostly charcoal wall, so at
+     * [SHOWROOM_INTENSITY] chrome that faces the lens (a toaster's lettering, a car's grille)
+     * mirrored the dark wall behind the camera and read as black, where the web viewer shows it
+     * silver. The floor and the fog divide by it, so the studio's colours do not move.
+     */
+    const val DARK_SHOWROOM_INTENSITY = 32_000f
+
     /** IBL intensity the viewer has always given the Poly Haven maps. */
     const val LEGACY_INTENSITY = 30_000f
 
     /** The IBL intensity of the map at [path] before the user's slider. */
-    fun baseIntensity(path: String?): Float = if (isShowroom(path)) SHOWROOM_INTENSITY else LEGACY_INTENSITY
+    fun baseIntensity(path: String?): Float = when (path) {
+        DARK_HDR -> DARK_SHOWROOM_INTENSITY
+        LIGHT_HDR -> SHOWROOM_INTENSITY
+        else -> LEGACY_INTENSITY
+    }
 
     /**
      * Irradiance each bundled map sends onto an upward-facing surface, divided by π (what a white
@@ -213,8 +225,8 @@ internal object ShowroomMath {
     )
 
     /**
-     * Dark showroom: a polished charcoal floor. Its sheen is the studio's lights. The subject's
-     * own planar mirror image is not rendered yet: the material's `reflection` input stays off.
+     * Dark showroom: a polished charcoal floor. Its sheen is the studio's lights; the subject's
+     * own mirror image is [ShowroomReflection]'s, laid over it.
      */
     val DARK_GLOSS = Gloss(roughness = 0.3f, reflectance = 0.35f, radiusRadii = 1.6f, rimSpecular = 0.25f)
 
@@ -262,7 +274,91 @@ internal object ShowroomMath {
     const val VIGNETTE_ROUNDNESS = 0.6f
     const val VIGNETTE_FEATHER = 0.8f
 
+    /**
+     * How strongly the floor mirrors the subject ([ShowroomReflection]) — the web viewer's two
+     * values: a clear image on the polished charcoal, a faint one on the white satin, where a
+     * strong reflection reads as a puddle.
+     */
+    fun reflectionStrength(isDark: Boolean): Float = if (isDark) DARK_REFLECTION else LIGHT_REFLECTION
+
+    /** The height up a subject of [height] metres at which its reflection has faded out. */
+    fun reflectionFadeHeight(height: Float): Float =
+        (REFLECTION_FADE_HEIGHT * height).takeIf { it.isFinite() && it > 0f } ?: MIN_FADE_HEIGHT
+
+    /** How far inside the footprint the reflection gives way to the contact shadow, in metres. */
+    fun reflectionInset(halfWidth: Float, halfDepth: Float): Float =
+        REFLECTION_INSET * 2f * maxOf(halfWidth, halfDepth, 0f)
+
+    /**
+     * The lowest the orbit may take the eye, above the floor, in multiples of the subject's longest
+     * side — the web viewer's limit. Lower, the floor reads as a line and the backdrop's seam shows.
+     */
+    const val MIN_EYE_HEIGHT_EXTENTS = 0.02f
+
+    /** The mirror image's size, as a fraction of the view's. */
+    const val REFLECTION_SCALE = 0.25f
+
+    /**
+     * The model matrix of the eye mirrored in the floor plane `y = floorY`: `R · eye`, with
+     * `R = T(0, floorY, 0) · S(1, −1, 1) · T(0, −floorY, 0)`. Column-major, written into [out].
+     */
+    fun mirrorModelMatrix(eye: DoubleArray, floorY: Float, out: DoubleArray): DoubleArray {
+        val twiceFloor = 2.0 * floorY
+        for (column in 0 until 4) {
+            val base = column * 4
+            out[base] = eye[base]
+            out[base + 1] = twiceFloor * eye[base + 3] - eye[base + 1]
+            out[base + 2] = eye[base + 2]
+            out[base + 3] = eye[base + 3]
+        }
+        return out
+    }
+
+    /**
+     * The floor material's `reflectionMatrix`: floor model space (the unit quad, centred under
+     * [center] on [floorY] and scaled to [FLOOR_SIZE_RADII] radii) → the mirror render's clip
+     * space, `projection · view · floor`. Column-major, written into [out].
+     */
+    @Suppress("LongParameterList")
+    fun reflectionMatrix(
+        projection: DoubleArray,
+        view: DoubleArray,
+        center: Position,
+        floorY: Float,
+        radius: Float,
+        out: FloatArray,
+    ): FloatArray {
+        val side = (FLOOR_SIZE_RADII * radius).toDouble()
+        val floor = DoubleArray(16).also {
+            it[0] = side
+            it[5] = radius.toDouble()
+            it[10] = side
+            it[12] = center.x.toDouble()
+            it[13] = floorY.toDouble()
+            it[14] = center.z.toDouble()
+            it[15] = 1.0
+        }
+        val clip = multiply(projection, multiply(view, floor))
+        for (i in 0 until 16) out[i] = clip[i].toFloat()
+        return out
+    }
+
+    /** `a · b`, both column-major 4×4. */
+    fun multiply(a: DoubleArray, b: DoubleArray): DoubleArray = DoubleArray(16).also { out ->
+        for (column in 0 until 4) for (row in 0 until 4) {
+            var sum = 0.0
+            for (k in 0 until 4) sum += a[k * 4 + row] * b[column * 4 + k]
+            out[column * 4 + row] = sum
+        }
+    }
+
     private fun Float.clampFinite(min: Float, max: Float): Float = if (isNaN()) min else coerceIn(min, max)
+
+    private const val DARK_REFLECTION = 0.26f
+    private const val LIGHT_REFLECTION = 0.14f
+    private const val REFLECTION_FADE_HEIGHT = 0.4f
+    private const val REFLECTION_INSET = 0.04f
+    private const val MIN_FADE_HEIGHT = 1e-3f
 
     private const val EXPOSURE_CALIBRATION = 1.2f
     private const val BASE_ISO = 100f
@@ -301,8 +397,8 @@ internal object ShowroomMath {
  * Every colour is a `stage-studio-*` token pre-compensated for the tone mapper and the light, so
  * a capture reads the token back. [dress] applies a [Look] (composition), [onFrame] follows the
  * eye (render loop); both say whether they changed anything, and the caller asks for a frame.
- * The floor shows no planar mirror image of the subject yet — the material's `reflection` input
- * is wired but left off.
+ * The subject's mirror image in the floor is [ShowroomReflection]'s: it feeds the material's
+ * `reflection` input.
  */
 internal class ShowroomStage(
     private val view: View,
@@ -481,7 +577,7 @@ internal fun ShowroomToneMapping(engine: Engine, view: View, neutral: Boolean, r
  * compose it after the `SceneView` call. Ambient occlusion scales with the subject's [radius];
  * bloom stays off on the white studio, where it only hazes; a grey vignette
  * ([ShowroomMath.vignetteGrey]) lets the studio's corners fall away in both themes. No
- * screen-space reflections: the floor carries no mirror image of the subject yet.
+ * screen-space reflections: the floor's mirror image is a planar one ([ShowroomReflection]).
  */
 @Composable
 @Suppress("LongParameterList")

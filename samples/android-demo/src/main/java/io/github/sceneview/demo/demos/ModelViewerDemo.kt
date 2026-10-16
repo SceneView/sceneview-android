@@ -126,6 +126,8 @@ import io.github.sceneview.core.threemf.ModelUnitGuess
 import io.github.sceneview.core.threemf.ThreeMfUnit
 import io.github.sceneview.demo.ui.viewer.ViewerEnvironment
 import io.github.sceneview.demo.ui.viewer.ShowroomFloor
+import io.github.sceneview.demo.ui.viewer.ShowroomReflection
+import io.github.sceneview.demo.ui.viewer.rememberShowroomReflection
 import io.github.sceneview.demo.ui.viewer.ShowroomMath
 import io.github.sceneview.demo.ui.viewer.ShowroomStage
 import io.github.sceneview.demo.ui.viewer.ShowroomToneMapping
@@ -827,6 +829,7 @@ private fun SingleModelSection(
     val showroomDark = showroomIsDark()
     val showroomPalette = if (showroomDark) SceneViewTokens.Showroom.Dark else SceneViewTokens.Showroom.Light
     val showroom = rememberShowroomStage(engine, view, materialLoader)
+    val showroomReflection = rememberShowroomReflection(engine, view)
     var modelSheetOpen by remember { mutableStateOf(false) }
     var environmentSheetOpen by remember { mutableStateOf(false) }
     // Height the open Lighting sheet covers from the bottom edge, as it measures itself (#4053).
@@ -1751,6 +1754,11 @@ private fun SingleModelSection(
             // remembered or a state read, never this composition's `framing`.
             val aimFraming = { easedFraming.current(framingBlend.value) ?: liveFraming.value }
             val liveCenter = androidx.compose.runtime.rememberUpdatedState(modelCenter)
+            val liveEyeFloor = androidx.compose.runtime.rememberUpdatedState(
+                bounds?.takeIf { showroomStaged }?.halfExtent?.let {
+                    stageFloorY + ShowroomMath.MIN_EYE_HEIGHT_EXTENTS * 2f * maxOf(it.x, it.y, it.z)
+                },
+            )
             val livePivot = {
                 val f = aimFraming()
                 val c = liveCenter.value
@@ -1791,6 +1799,8 @@ private fun SingleModelSection(
                     // A pinch publishes its distance to the SAME state the slider writes, so the
                     // two controls agree and the readout follows the gesture.
                     onDistanceChange = { DemoSettings.cameraDistance = it },
+                    // The web viewer's floor: the eye stays 2 % of the subject's size above it.
+                    minEyeHeight = { liveEyeFloor.value },
                 )
             }
             // A new model on stage: what a rebuilt manipulator used to start from — no orbit, no
@@ -1842,10 +1852,38 @@ private fun SingleModelSection(
                 )
                 if (showroom.dress(look, cameraNode.worldPosition)) renderInvalidator.requestRender()
             }
-            val stageOnFrame: (Long) -> Unit = remember(onFrame, showroom, cameraNode, renderInvalidator) {
+            // The subject mirrored in the showroom floor, as on the web viewer's /view. Not on a
+            // low-RAM device, the bottom rung of the home hero's tiers: a second render of the
+            // subject every other frame while the eye moves costs the Pixel 4a about 7 % of its
+            // frames, a low-RAM GPU more than it has.
+            val reflectionAllowed = remember(context) {
+                context.getSystemService(android.app.ActivityManager::class.java)?.isLowRamDevice != true
+            }
+            val settleLift = fitRadius * 0.02f * (1f - fitProgress.value).coerceAtLeast(0f)
+            SideEffect {
+                val pose = if (reflectionAllowed && showroomStaged && bounds != null && footprint != null) {
+                    ShowroomReflection.Pose(
+                        center = modelCenter,
+                        floorY = stageFloorY - ShowroomMath.FLOOR_DROP_RADII * stageRadius,
+                        radius = stageRadius,
+                        halfWidth = footprint.x,
+                        halfDepth = footprint.z,
+                        height = 2f * bounds.halfExtent.y,
+                        yawDegrees = modelYaw + frontYaw,
+                        lift = settleLift,
+                        isDark = showroomDark,
+                    )
+                } else {
+                    null
+                }
+                if (showroomReflection.set(showroom.floorMaterial, pose)) renderInvalidator.requestRender()
+            }
+            val stageOnFrame: (Long) -> Unit = remember(onFrame, showroom, showroomReflection, cameraNode, renderInvalidator) {
                 { nanos ->
                     onFrame(nanos)
                     if (showroom.onFrame(cameraNode.worldPosition)) renderInvalidator.requestRender()
+                    // The floor's mirror image follows the eye one frame behind it.
+                    if (showroomReflection.onFrame()) renderInvalidator.requestRender()
                 }
             }
             SceneView(
@@ -1904,15 +1942,17 @@ private fun SingleModelSection(
                         // camera adapts to it (#1439). The settle spring sets the model down on
                         // the showroom floor from just above it — never through it, so the
                         // spring's overshoot is held at the floor.
-                        position = Position(
-                            modelCenter.x - rx,
-                            fitRadius * 0.02f * (1f - fitProgress.value).coerceAtLeast(0f),
-                            modelCenter.z - rz,
-                        ),
+                        position = Position(modelCenter.x - rx, settleLift, modelCenter.z - rz),
                         rotation = Rotation(y = yaw),
                         // Real-world size of an HD file authored in other units (Apollo 11: cm).
                         // `modelCenter` is already scaled, so the spin pivot stays put.
                         scale = Scale(modelScale),
+                        // The only renderables the floor's mirror view sees (ShowroomReflection).
+                        apply = {
+                            renderableNodes.forEach {
+                                it.setLayerMask(ShowroomReflection.MIRROR_LAYER, ShowroomReflection.MIRROR_LAYER)
+                            }
+                        },
                     )
                 }
             }
