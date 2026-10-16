@@ -315,7 +315,10 @@ private fun HomeHeroStage(
     val clock = remember { HeroClock() }
     val tilt = remember { HeroTilt() }
     val budget = remember { HeroFrameBudget() }
-    val levels = remember { NightCueLevels() }
+    // Seeded with the film's first frame, the venue still dark: a frame drawn before the loop
+    // first runs must not show the set at full power.
+    val levels = remember { nightCueLevels(film = 0f, motion = motionEnabled) }
+    val scrollFollow = remember { HeroScrollFollow() }
     val stageLifecycle = rememberHeroLifecycle(active, clock)
 
     val engine = rememberEngine()
@@ -333,6 +336,11 @@ private fun HomeHeroStage(
         null
     }
     val environment = nightEnvironment ?: fallbackEnvironment
+    // Same for the image-based light: it lands at the floods' level, not at full strength.
+    remember(nightEnvironment) {
+        nightEnvironment?.indirectLight?.intensity = NightSet.IBL_INTENSITY *
+            (NightSet.IBL_FLOOR + (1f - NightSet.IBL_FLOOR) * levels.flood)
+    }
     val cameraNode = rememberCameraNode(engine) {
         near = NightSet.CAMERA_NEAR
         far = NightSet.CAMERA_FAR
@@ -432,9 +440,16 @@ private fun HomeHeroStage(
                 // that is all there.
                 val film = (seconds - (filmStart[0] ?: seconds)).toFloat()
 
+                // The camera eases after the scroll rather than jumping with it; QA mode and
+                // reduced motion take the scroll as it is, so captures stay deterministic.
+                val followed = scrollFollow.follow(
+                    target = scroll(),
+                    nanos = nanos,
+                    snap = DemoSettings.qaMode || !motionEnabled,
+                )
                 val pose = nightCameraPose(
                     film = film,
-                    scroll = scroll(),
+                    scroll = followed,
                     aspect = cameraNode.getViewPortAspect().toFloat(),
                     tiltX = tilt.x,
                     tiltY = tilt.y,
@@ -447,7 +462,7 @@ private fun HomeHeroStage(
                 }
                 cameraNode.lookAt(pose)
 
-                nightCueLevels(film, motionEnabled, into = levels)
+                nightCueLevels(film, motionEnabled, into = levels, headOn = nightHeadOn(pose))
                 lamps?.apply(levels)
                 lamps?.rain(if (motionEnabled) film else 0f)
                 lights.apply(levels)
@@ -476,6 +491,8 @@ private fun HomeHeroStage(
                     apply = {
                         modelNode[0] = this
                         configureNightSet(instance)
+                        // The GLB is authored lit: dim it before its first frame, not after.
+                        lamps?.apply(levels)
                     },
                 )
             }

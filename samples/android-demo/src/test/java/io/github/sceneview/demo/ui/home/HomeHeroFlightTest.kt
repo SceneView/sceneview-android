@@ -392,4 +392,131 @@ class HomeHeroFlightTest {
         )
         renderers.forEach { assertEquals(it.renderer, HeroSurface.Live, HeroSurface.forRenderer(it)) }
     }
+
+    // ── Flashes ──────────────────────────────────────────────────────────────────────────
+
+    /** Opposing swings of [level] by more than [threshold] inside the 1 s window from [from], halved. */
+    private fun flashesPerSecond(from: Float, threshold: Float, level: (Float) -> Float): Int {
+        var swings = 0
+        var lastSign = 0
+        var previous = level(from)
+        var t = from
+        while (t < from + 1f) {
+            t += 1f / 120f
+            val current = level(t)
+            val delta = current - previous
+            if (abs(delta) > threshold) {
+                val sign = if (delta > 0f) 1 else -1
+                if (sign != lastSign) swings++
+                lastSign = sign
+                previous = current
+            }
+        }
+        return swings / 2
+    }
+
+    @Test
+    fun `no lamp of the set strobes more than three times a second`() {
+        // Every window of the first two laps, at 0.1 s steps; a swing is a 20 % change.
+        var start = 0f
+        while (start < 28f) {
+            val pairs = listOf<(NightCueLevels) -> Float>(
+                { it.screens }, { it.ledWarm }, { it.flood }, { it.garage }, { it.city },
+                { it.headlights }, { it.beams },
+            )
+            for (pick in pairs) {
+                val flashes = flashesPerSecond(start, 0.2f) { pick(levels(it)) }
+                assertTrue("$flashes flashes/s from $start s", flashes <= 3)
+            }
+            start += 0.1f
+        }
+    }
+
+    @Test
+    fun `the venue powers up without blacking out once a group has begun to rise`() {
+        // The floods drive the key light and the image-based light: the whole set.
+        var t = NightCues.FLOOD.first + 0.05f
+        var previous = levels(t).flood
+        while (t < NightCues.FLOOD.first + NightCues.FLOOD.second) {
+            t += 1f / 60f
+            val flood = levels(t).flood
+            assertTrue("flood fell from $previous to $flood at $t s", flood > previous * 0.6f)
+            previous = flood
+        }
+    }
+
+    @Test
+    fun `the high beams flash at most to the softened peak, and the cones fade head-on`() {
+        val peak = levels(7f + NightCues.FLASH_LENGTH / 2f)
+        assertTrue(peak.beams <= 2f && peak.headlightLamps <= 2f && peak.headlights <= 2f)
+        val headOn = nightCueLevels(5f, headOn = 1f)
+        assertEquals(NightCues.HEAD_ON_BEAMS, headOn.beams, 1e-4f)
+        assertEquals(NightCues.HEAD_ON_LAMPS, headOn.headlightLamps, 1e-4f)
+        assertEquals(1f, nightCueLevels(5f, headOn = 0f).beams, 0f)
+    }
+
+    @Test
+    fun `head-on is 1 in front of the nose and 0 from the side and the tail`() {
+        fun pose(angle: Float) = NightCameraPose(
+            eyeX = NightFilm.CAR_X + kotlin.math.sin(angle) * 7f,
+            eyeY = 1f,
+            eyeZ = NightFilm.CAR_Z + kotlin.math.cos(angle) * 7f,
+            targetX = 0f, targetY = 0f, targetZ = 0f, verticalFovDegrees = 30f,
+        )
+        assertEquals(1f, nightHeadOn(pose(0f)), 1e-4f)
+        assertEquals(0f, nightHeadOn(pose((Math.PI / 2).toFloat())), 1e-4f)
+        assertEquals(0f, nightHeadOn(pose(Math.PI.toFloat())), 1e-4f)
+    }
+
+    // ── Scroll inertia ───────────────────────────────────────────────────────────────────
+
+    @Test
+    fun `a fling back to the top eases the camera in instead of snapping it`() {
+        val follow = HeroScrollFollow()
+        follow.follow(1f, 0L)
+        // One 60 Hz frame after the scroll jumped to 0: still nearly all the way out.
+        val next = follow.follow(0f, second / 60)
+        assertTrue("moved to $next in one frame", next > 0.95f)
+        var t = second / 60
+        var previous = next
+        repeat(29) {
+            t += second / 60
+            val v = follow.follow(0f, t)
+            assertTrue("never overshoots: $v", v >= 0f && v <= previous)
+            assertTrue("never faster than its cap", previous - v <= 1.6f / 60f + 1e-4f)
+            previous = v
+        }
+        // Half a second on, well on its way; a second and a half on, there.
+        assertTrue("at 0.5 s: $previous", previous < 0.5f)
+        repeat(60) { t += second / 60; previous = follow.follow(0f, t) }
+        assertEquals(0f, previous, 0.02f)
+    }
+
+    @Test
+    fun `the follow curve is the same at 30 and at 60 fps`() {
+        val at60 = HeroScrollFollow().apply { follow(0f, 0L) }
+        val at30 = HeroScrollFollow().apply { follow(0f, 0L) }
+        var v60 = 0f
+        var v30 = 0f
+        for (frame in 1..36) v60 = at60.follow(0.4f, frame * second / 60)
+        for (frame in 1..18) v30 = at30.follow(0.4f, frame * second / 30)
+        assertEquals(v60, v30, 0.01f)
+    }
+
+    @Test
+    fun `a parked stage resumes from the frame it parked on`() {
+        val follow = HeroScrollFollow()
+        follow.follow(0.8f, 0L)
+        // Ten seconds off screen, then back at the top: the first frame holds 0.8.
+        assertEquals(0.8f, follow.follow(0f, 10 * second), 0f)
+        assertTrue(follow.follow(0f, 10 * second + second / 60) < 0.8f)
+    }
+
+    @Test
+    fun `snap follows the target exactly, for QA captures and reduced motion`() {
+        val follow = HeroScrollFollow()
+        follow.follow(1f, 0L)
+        assertEquals(0f, follow.follow(0f, second / 60, snap = true), 0f)
+        assertEquals(0.3f, follow.follow(0.3f, second / 30, snap = true), 0f)
+    }
 }

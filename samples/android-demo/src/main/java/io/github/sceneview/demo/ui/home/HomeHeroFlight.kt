@@ -206,6 +206,73 @@ internal class HeroClock(initialSeconds: Double = 0.0) {
 }
 
 /**
+ * The scroll as the camera feels it: the band's scroll fraction followed through a critically
+ * damped spring, so a fling eases the camera round the car instead of snapping it there.
+ *
+ * Before it, the camera read the raw fraction, and a fast fling back to the top turned it
+ * 0.9 rad between two frames; worse, a band coming back on screen showed its parked frame and
+ * jumped from it to the pose of the new scroll on the next one. Here every frame moves the
+ * followed value towards the target by the spring's exact step for its own elapsed time (any
+ * frame rate gives the same curve): it gets 63 % of the way in about [timeConstant] and
+ * settles in under three, never faster than [maxSpeed] fractions a second.
+ *
+ * A gap longer than [MAX_STEP_SECONDS] — the stage parked off screen, a background trip — is
+ * not a step: the first frame after it holds the value the parked frame was drawn with, and
+ * the spring carries on from there. [snap] (QA mode, reduced motion) follows the target
+ * exactly, so goldens and captures stay deterministic.
+ */
+internal class HeroScrollFollow(
+    private val timeConstant: Float = 0.3f,
+    private val maxSpeed: Float = 1.6f,
+) {
+    /** Critically damped: 1 − (1 + ωt)·e^(−ωt) reaches 0.63 at ωt ≈ 2.15. */
+    private val omega = 2.15f / timeConstant
+    private var previousNanos: Long? = null
+    private var velocity = 0f
+    private var primed = false
+
+    /** The followed scroll fraction, as last returned by [follow]. */
+    var value: Float = 0f
+        private set
+
+    /** The followed value for a frame presented at [nanos], heading for [target]. */
+    fun follow(target: Float, nanos: Long, snap: Boolean = false): Float {
+        val previous = previousNanos
+        previousNanos = nanos
+        if (snap || !primed) {
+            primed = true
+            value = target
+            velocity = 0f
+            return value
+        }
+        val dt = if (previous == null) 0f else (nanos - previous) / 1_000_000_000f
+        if (dt <= 0f || dt > MAX_STEP_SECONDS) {
+            velocity = 0f
+            return value
+        }
+        val offset = value - target
+        val decay = kotlin.math.exp(-omega * dt)
+        val drive = velocity + omega * offset
+        val nextOffset = (offset + drive * dt) * decay
+        velocity = ((velocity - omega * drive * dt) * decay).coerceIn(-maxSpeed, maxSpeed)
+        // The speed cap holds the step too: no frame moves further than maxSpeed allows.
+        val step = (target + nextOffset - value).coerceIn(-maxSpeed * dt, maxSpeed * dt)
+        value += step
+        return value
+    }
+
+    /** The next frame is the first of a run: it holds [value] rather than stepping. */
+    fun pause() {
+        previousNanos = null
+    }
+
+    companion object {
+        /** Longer than this between two frames is a pause, not a step. */
+        const val MAX_STEP_SECONDS = 0.25f
+    }
+}
+
+/**
  * One camera shot of the film: an orbit around the car ([NightFilm.CAR_X]…) at [t] seconds.
  * [angle] 0 puts the eye ahead of the car's nose (+Z); [height] is the eye's absolute world
  * Y; [fov] is vertical, degrees; [lift] raises the point looked at above the car's centre.
@@ -405,15 +472,37 @@ internal object NightCues {
     const val REDS_BACK_STEP = 0.3f
     const val REDS_BACK_RISE = 0.2f
 
-    /** A4 — two high-beam pulses at lights out, each a [FLASH_LENGTH] bump. */
+    /**
+     * A4 — two high-beam pulses at lights out, each a [FLASH_LENGTH] half sine: the second
+     * starts as the first ends, so the pair reads as one double flash, under 3 a second.
+     */
     const val FLASH_FIRST = 7.0f
     const val FLASH_SECOND = 7.45f
-    const val FLASH_LENGTH = 0.38f
+    const val FLASH_LENGTH = 0.45f
 
-    /** At a pulse's peak: the spots (1e7 → 2.4e7), the lamp glass, the cones in the haze. */
-    const val FLASH_LIGHT_PEAK = 2.4f
-    const val FLASH_LAMP_PEAK = 3.2f
-    const val FLASH_BEAM_PEAK = 3.5f
+    /**
+     * At a pulse's peak: the spots (1e7 → 1.6e7), the lamp glass, the cones in the haze. They
+     * were 2.4, 3.2 and 3.5: with bloom, the cones lit the whole haze and the frame washed out.
+     */
+    const val FLASH_LIGHT_PEAK = 1.6f
+    const val FLASH_LAMP_PEAK = 1.8f
+    const val FLASH_BEAM_PEAK = 1.8f
+
+    /**
+     * Head-on glare: how much of the cones, the lamp glass and the spots is left when the
+     * camera stands square in front of the nose ([nightHeadOn] 1). Seen end-on, the stacked
+     * cones filled the lower half of the frame with white haze on every lap.
+     */
+    const val HEAD_ON_BEAMS = 0.3f
+    const val HEAD_ON_LAMPS = 0.55f
+    const val HEAD_ON_LIGHTS = 0.6f
+
+    /**
+     * A0 — each venue group powers up through a smooth ramp with its stutter riding on top at
+     * [IGNITION_STUTTER] of the level: the floods, and the key and image-based light that
+     * follow them, no longer black out and relight the whole set between two frames.
+     */
+    const val IGNITION_STUTTER = 0.3f
 
     /** A5 — the brakes, held while the camera passes over the tail. */
     const val BRAKE_ON = 7.0f
@@ -430,12 +519,22 @@ internal object NightCues {
     const val BEACON_ON = 0.12f
     const val BEACON_FLOOR = 0.12f
 
-    /** A7 — the pit neon struggles a second time on every lap. */
+    /**
+     * A7 — the pit neon struggles a second time on every lap: ten 120 ms slots, never below
+     * [NEON_STRUGGLE_FLOOR]. It was ten 50 ms slots down to 0.15, a 10 Hz strobe.
+     */
     const val NEON_STRUGGLE = 9.0f
-    const val NEON_STRUGGLE_LENGTH = 0.5f
+    const val NEON_STRUGGLE_LENGTH = 1.2f
+    const val NEON_STRUGGLE_FLOOR = 0.6f
 
-    /** A6b — the SCENEVIEW screens stutter once in every this many seconds. */
+    /**
+     * A6b — the SCENEVIEW screens stutter once in every this many seconds: three dips to
+     * [SCREEN_GLITCH_DEPTH] over [SCREEN_GLITCH_LENGTH], 2.5 a second. They were three dips
+     * to 0.15 inside 0.22 s, a 13 Hz strobe on the logo.
+     */
     const val SCREEN_GLITCH_EVERY = 7f
+    const val SCREEN_GLITCH_LENGTH = 1.0f
+    const val SCREEN_GLITCH_DEPTH = 0.6f
 }
 
 /**
@@ -495,6 +594,22 @@ private fun bump(t: Float, at: Float, length: Float): Float {
     return if (u <= 0f || u >= 1f) 0f else sin(u * PI.toFloat())
 }
 
+/**
+ * How squarely the camera faces the car's nose, 0 (side, tail) → 1 (dead ahead): what the
+ * head-on glare dimming reads ([NightCues.HEAD_ON_BEAMS]).
+ */
+internal fun nightHeadOn(pose: NightCameraPose): Float {
+    val dx = pose.eyeX - NightFilm.CAR_X
+    val dz = pose.eyeZ - NightFilm.CAR_Z
+    val length = kotlin.math.sqrt(dx * dx + dz * dz)
+    if (length < 1e-3f) return 0f
+    return ramp(dz / length, from = HEAD_ON_FROM, length = HEAD_ON_SPAN)
+}
+
+/** The cosine (eye vs. nose) the glare dimming starts at, and the span it takes to reach 1. */
+private const val HEAD_ON_FROM = 0.35f
+private const val HEAD_ON_SPAN = 0.6f
+
 /** Seconds into the current lap of the film. */
 internal fun nightLap(film: Float): Float =
     film - floor(film / NightFilm.LOOP_SECONDS) * NightFilm.LOOP_SECONDS
@@ -504,47 +619,12 @@ private fun neonStruggle(film: Float, lap: Float): Float {
     val end = NightCues.NEON_STRUGGLE + NightCues.NEON_STRUGGLE_LENGTH
     if (lap < NightCues.NEON_STRUGGLE || lap >= end) return 1f
     val lapIndex = floor(film / NightFilm.LOOP_SECONDS).toInt()
-    return LightCues.ignition(lap, NightCues.NEON_STRUGGLE, NightCues.NEON_STRUGGLE_LENGTH, seed = 40 + lapIndex)
-        .coerceAtLeast(0.15f)
+    val flicker = LightCues.ignition(lap, NightCues.NEON_STRUGGLE, NightCues.NEON_STRUGGLE_LENGTH, seed = 40 + lapIndex)
+    return NightCues.NEON_STRUGGLE_FLOOR + (1f - NightCues.NEON_STRUGGLE_FLOOR) * flicker
 }
 
-/**
- * Every lamp at [film] seconds, written into [into] (one per stage, so a frame allocates
- * nothing). Under reduced motion ([motion] false) every lamp is simply on, as authored.
- */
-internal fun nightCueLevels(
-    film: Float,
-    motion: Boolean = true,
-    into: NightCueLevels = NightCueLevels(),
-): NightCueLevels = into.apply {
-    if (!motion) {
-        garage = 1f; windows = 1f; city = 1f; seats = 1f; led = 1f; ledWarm = 1f
-        screens = 1f; flood = 1f; beacon = 1f
-        startColumns.fill(1f)
-        startLight = 1f; headlights = 1f; headlightLamps = 1f; beams = 1f; signals = 1f
-        brake = 1f; brakeLamps = 1f
-        return@apply
-    }
-    val t = film
-    val lap = nightLap(t)
-    fun ignite(cue: Triple<Float, Float, Int>) = LightCues.ignition(t, cue.first, cue.second, cue.third)
-    garage = ignite(NightCues.GARAGE)
-    windows = ignite(NightCues.WINDOWS)
-    city = ignite(NightCues.CITY)
-    seats = ignite(NightCues.SEATS)
-    led = ignite(NightCues.LED)
-    ledWarm = ignite(NightCues.LED_WARM) * neonStruggle(t, lap)
-    screens = ignite(NightCues.SCREENS) *
-        LightCues.glitch(t, everySeconds = NightCues.SCREEN_GLITCH_EVERY, seed = NightCues.SCREENS.third)
-    flood = ignite(NightCues.FLOOD)
-    beacon = NightCues.BEACON_FLOOR + (1f - NightCues.BEACON_FLOOR) * LightCues.blink(
-        t,
-        periodSeconds = NightCues.BEACON_PERIOD,
-        duty = NightCues.BEACON_ON / NightCues.BEACON_PERIOD,
-        softness = 0.02f,
-    )
-
-    // The start procedure runs on the camera's lap.
+/** The start procedure, which runs on the camera's lap. */
+private fun NightCueLevels.writeStartLights(lap: Float) {
     var lit = 0f
     for (i in 0 until NightCues.COLUMNS) {
         val column = when {
@@ -558,15 +638,72 @@ internal fun nightCueLevels(
         lit += column
     }
     startLight = lit / NightCues.COLUMNS
+}
 
+/** The headlights: on, the lap's two high-beam flashes, and less glare seen head-on. */
+private fun NightCueLevels.writeHeadlights(t: Float, lap: Float, headOn: Float) {
     val on = LightCues.fadeIn(t, NightCues.HEADLIGHTS_ON, NightCues.HEADLIGHTS_FADE)
     val pulse = max(
         bump(lap, NightCues.FLASH_FIRST, NightCues.FLASH_LENGTH),
         bump(lap, NightCues.FLASH_SECOND, NightCues.FLASH_LENGTH),
     )
-    headlights = on * (1f + (NightCues.FLASH_LIGHT_PEAK - 1f) * pulse)
-    headlightLamps = on * (1f + (NightCues.FLASH_LAMP_PEAK - 1f) * pulse)
-    beams = on * (1f + (NightCues.FLASH_BEAM_PEAK - 1f) * pulse)
+    val glare = headOn.coerceIn(0f, 1f)
+    fun dim(left: Float) = 1f - (1f - left) * glare
+    headlights = on * (1f + (NightCues.FLASH_LIGHT_PEAK - 1f) * pulse) * dim(NightCues.HEAD_ON_LIGHTS)
+    headlightLamps = on * (1f + (NightCues.FLASH_LAMP_PEAK - 1f) * pulse) * dim(NightCues.HEAD_ON_LAMPS)
+    beams = on * (1f + (NightCues.FLASH_BEAM_PEAK - 1f) * pulse) * dim(NightCues.HEAD_ON_BEAMS)
+}
+
+/**
+ * Every lamp at [film] seconds, written into [into] (one per stage, so a frame allocates
+ * nothing). Under reduced motion ([motion] false) every lamp is simply on, as authored.
+ * [headOn] ([nightHeadOn]) dims the headlights' glare as the camera comes round the nose.
+ */
+internal fun nightCueLevels(
+    film: Float,
+    motion: Boolean = true,
+    into: NightCueLevels = NightCueLevels(),
+    headOn: Float = 0f,
+): NightCueLevels = into.apply {
+    if (!motion) {
+        garage = 1f; windows = 1f; city = 1f; seats = 1f; led = 1f; ledWarm = 1f
+        screens = 1f; flood = 1f; beacon = 1f
+        startColumns.fill(1f)
+        startLight = 1f; headlights = 1f; headlightLamps = 1f; beams = 1f; signals = 1f
+        brake = 1f; brakeLamps = 1f
+        return@apply
+    }
+    val t = film
+    val lap = nightLap(t)
+    fun ignite(cue: Triple<Float, Float, Int>): Float {
+        val rise = ramp(t, cue.first, cue.second)
+        val stutter = LightCues.ignition(t, cue.first, cue.second, cue.third)
+        return rise * (1f - NightCues.IGNITION_STUTTER + NightCues.IGNITION_STUTTER * stutter)
+    }
+    garage = ignite(NightCues.GARAGE)
+    windows = ignite(NightCues.WINDOWS)
+    city = ignite(NightCues.CITY)
+    seats = ignite(NightCues.SEATS)
+    led = ignite(NightCues.LED)
+    ledWarm = ignite(NightCues.LED_WARM) * neonStruggle(t, lap)
+    screens = ignite(NightCues.SCREENS) *
+        LightCues.glitch(
+            t,
+            everySeconds = NightCues.SCREEN_GLITCH_EVERY,
+            lengthSeconds = NightCues.SCREEN_GLITCH_LENGTH,
+            depth = NightCues.SCREEN_GLITCH_DEPTH,
+            seed = NightCues.SCREENS.third,
+        )
+    flood = ignite(NightCues.FLOOD)
+    beacon = NightCues.BEACON_FLOOR + (1f - NightCues.BEACON_FLOOR) * LightCues.blink(
+        t,
+        periodSeconds = NightCues.BEACON_PERIOD,
+        duty = NightCues.BEACON_ON / NightCues.BEACON_PERIOD,
+        softness = 0.02f,
+    )
+
+    writeStartLights(lap)
+    writeHeadlights(t, lap, headOn)
 
     val wakeEnd = NightCues.WAKE + NightCues.WAKE_BLINKS * NightCues.WAKE_BLINK_PERIOD
     signals = if (t >= NightCues.WAKE && t < wakeEnd) {
