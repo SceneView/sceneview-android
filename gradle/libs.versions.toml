@@ -83,8 +83,10 @@ filamentWeb = "1.52.3"
 # blobs in the same PR (the CONTRIBUTING.md invariant, applied to the site).
 filamentWebsite = "1.72.1"
 # Desktop Filament via filament-kmp on Maven. Independent of the three Filament
-# runtime pins above — this artifact vendors its own native Filament
-# (0.4.0 ships 1.75.0). Used only by sceneview-compose desktopMain.
+# runtime pins above — this artifact vendors its own native Filament and its own
+# built-in materials (0.7.3 ships Filament 1.77.3, MATERIAL_VERSION 77, same as 0.6.0).
+# Used only by sceneview-compose desktopMain, which loads no SceneView .filamat: a bump
+# that changes MATERIAL_VERSION needs no blob here, only a desktop-demo run.
 filamentKmp = "0.7.3"
 arCore = "1.56.0"
 
