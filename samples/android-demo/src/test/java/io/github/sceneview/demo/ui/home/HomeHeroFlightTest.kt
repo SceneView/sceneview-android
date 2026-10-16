@@ -504,6 +504,34 @@ class HomeHeroFlightTest {
     }
 
     @Test
+    fun `two frames at the same timestamp keep the curve and its speed`() {
+        val plain = HeroScrollFollow().apply { follow(1f, 0L) }
+        val doubled = HeroScrollFollow().apply { follow(1f, 0L) }
+        var vPlain = 0f
+        var vDoubled = 0f
+        for (frame in 1..30) {
+            val nanos = frame * second / 60
+            vPlain = plain.follow(0f, nanos)
+            vDoubled = doubled.follow(0f, nanos)
+            // A duplicate frame holds its value, then the run carries on as if it were not there.
+            if (frame == 6) assertEquals(vDoubled, doubled.follow(0f, nanos), 0f)
+        }
+        assertEquals(vPlain, vDoubled, 1e-5f)
+    }
+
+    @Test
+    fun `a paused follow resumes from rest at the frame it paused on`() {
+        val follow = HeroScrollFollow()
+        follow.follow(1f, 0L)
+        for (frame in 1..6) follow.follow(0f, frame * second / 60)
+        val held = follow.value
+        follow.pause()
+        assertEquals(held, follow.follow(0f, 10 * second), 0f)
+        val fresh = HeroScrollFollow().apply { follow(held, 0L) }
+        assertEquals(fresh.follow(0f, second / 60), follow.follow(0f, 10 * second + second / 60), 1e-5f)
+    }
+
+    @Test
     fun `a parked stage resumes from the frame it parked on`() {
         val follow = HeroScrollFollow()
         follow.follow(0.8f, 0L)

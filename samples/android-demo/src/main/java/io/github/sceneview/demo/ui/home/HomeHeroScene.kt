@@ -319,7 +319,7 @@ private fun HomeHeroStage(
     // first runs must not show the set at full power.
     val levels = remember { nightCueLevels(film = 0f, motion = motionEnabled) }
     val scrollFollow = remember { HeroScrollFollow() }
-    val stageLifecycle = rememberHeroLifecycle(active, clock)
+    val stageLifecycle = rememberHeroLifecycle(active, clock, scrollFollow)
 
     val engine = rememberEngine()
     val view = rememberView(engine)
@@ -337,7 +337,8 @@ private fun HomeHeroStage(
     }
     val environment = nightEnvironment ?: fallbackEnvironment
     // Same for the image-based light: it lands at the floods' level, not at full strength.
-    remember(nightEnvironment) {
+    // An effect, not composition: it runs once the environment has landed, before its frame.
+    LaunchedEffect(nightEnvironment) {
         nightEnvironment?.indirectLight?.intensity = NightSet.IBL_INTENSITY *
             (NightSet.IBL_FLOOR + (1f - NightSet.IBL_FLOOR) * levels.flood)
     }
@@ -392,6 +393,7 @@ private fun HomeHeroStage(
     }
     LaunchedEffect(moving) {
         clock.pause()
+        scrollFollow.pause()
         budget.reset()
         if (moving) renderInvalidator.requestRender()
     }
@@ -910,16 +912,24 @@ private class HeroLifecycleOwner : LifecycleOwner {
  *
  * SceneView stops submitting frames below RESUMED and never detaches the surface, so
  * the last frame stays on screen — which is exactly the state the band must come back
- * in (#3949). The clock pauses on the way down so the next frame gets no delta.
+ * in (#3949). The clock and the scroll follow pause on the way down so the next frame gets
+ * no delta.
  */
 @Composable
-private fun rememberHeroLifecycle(active: Boolean, clock: HeroClock): Lifecycle {
+private fun rememberHeroLifecycle(
+    active: Boolean,
+    clock: HeroClock,
+    scrollFollow: HeroScrollFollow,
+): Lifecycle {
     val parent = LocalLifecycleOwner.current.lifecycle
     val owner = remember { HeroLifecycleOwner() }
     DisposableEffect(parent, owner, active) {
         fun sync() {
             val resumed = active && parent.currentState.isAtLeast(Lifecycle.State.RESUMED)
-            if (!resumed) clock.pause()
+            if (!resumed) {
+                clock.pause()
+                scrollFollow.pause()
+            }
             owner.registry.currentState =
                 if (resumed) Lifecycle.State.RESUMED else Lifecycle.State.CREATED
         }

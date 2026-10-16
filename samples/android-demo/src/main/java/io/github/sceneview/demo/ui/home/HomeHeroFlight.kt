@@ -246,7 +246,9 @@ internal class HeroScrollFollow(
             return value
         }
         val dt = if (previous == null) 0f else (nanos - previous) / 1_000_000_000f
-        if (dt <= 0f || dt > MAX_STEP_SECONDS) {
+        // A frame at the same timestamp (or the first after a pause) holds, keeping the speed.
+        if (dt <= 0f) return value
+        if (dt > MAX_STEP_SECONDS) {
             velocity = 0f
             return value
         }
@@ -261,9 +263,10 @@ internal class HeroScrollFollow(
         return value
     }
 
-    /** The next frame is the first of a run: it holds [value] rather than stepping. */
+    /** The next frame is the first of a run: it holds [value] and resumes from rest. */
     fun pause() {
         previousNanos = null
+        velocity = 0f
     }
 
     companion object {
@@ -428,7 +431,9 @@ internal fun nightCameraPose(
 
 /**
  * When each lamp of the circuit does what, in film seconds. The start procedure (A2–A5)
- * follows the website's `circuit.js` to the frame and repeats on every
+ * keeps the timing of the website's `circuit.js` (gantry, lights out, brakes) but not its
+ * strength: the high-beam peaks, the flash length and the neon struggle were softened here
+ * (#4583) so nothing strobes, and the site still runs the original values. It repeats on every
  * [NightFilm.LOOP_SECONDS] lap of the camera; the venue's power-up and the car's wake-up
  * (A0, A0b) are this app's own and play once. Names follow the sound cue sheet
  * (`reperes-son.md`) and the website's porting notes.
