@@ -1,2 +1,2 @@
-<!-- category: Added -->
-- **Demo — Room Scan**: the scan guides itself. What the camera has really seen is painted on the room through the camera: sparse where it was swept past, filled in where the phone was held, bare where nothing was scanned. One calm line says when to slow down, hold still, step back, move closer or turn on a light, and when the room is covered. The scan's line shows the clock and "Room N% covered"; the counts moved to the settings sheet (#4590).
+<!-- category: Fixed -->
+- **Demo app: see which parts of a room need more scanning ([#4590](https://github.com/sceneview/sceneview/pull/4590)).** Room Scan now paints observed surfaces, shows a coverage percentage, and offers guidance such as moving slowly to capture more detail. Detailed point and photo counts remain in settings.

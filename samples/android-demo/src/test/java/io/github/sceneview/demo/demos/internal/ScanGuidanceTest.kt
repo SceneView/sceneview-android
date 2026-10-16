@@ -145,6 +145,26 @@ class ScanGuidanceTest {
     }
 
     @Test
+    fun `a fresh scan forgets the previous advice and motion pause`() {
+        val coach = ScanCoach()
+        val fast = ScanCoach.Reading(70f, 0f, covered = true)
+        coach.update(0L, fast)
+        assertEquals(ScanAdvice.SlowDown, coach.update(ms(300L), fast))
+        coach.reset()
+        assertNull(coach.shown)
+        assertFalse(coach.isTooFast)
+        assertNull(coach.update(ms(400L), ScanCoach.Reading(0f, 0f)))
+    }
+
+    @Test
+    fun `darkness takes priority over a covered room without ARCore failure flags`() {
+        val coach = ScanCoach()
+        val dark = ScanCoach.Reading(0f, 0f, luma = 0.05f, covered = true)
+        assertEquals(ScanAdvice.Covered, coach.update(0L, dark))
+        assertEquals(ScanAdvice.MoreLight, coach.update(ms(1_100L), dark))
+    }
+
+    @Test
     fun `light is the mean brightness of the image`() {
         val grey = YuvFrame(
             width = 16,
