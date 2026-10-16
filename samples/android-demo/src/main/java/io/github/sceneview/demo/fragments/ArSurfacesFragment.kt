@@ -23,7 +23,7 @@ object ArSurfacesFragment : DemoFragment {
         icon = Icons.Filled.Grain,
         order = 26,
         addedIn = "4.16.0",
-        updatedIn = "4.52.0",
+        updatedIn = "4.57.0",
         tags = setOf("ar", "plane", "surface", "wall", "floor", "renderer"),
     )
 
