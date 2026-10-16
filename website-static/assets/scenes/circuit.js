@@ -202,9 +202,23 @@
 
     var playing = false, raf = 0, clock = 0, last = 0, driftAngle = END.angle, userOwns = false, turn = 0, turned = 0;
     var spent = 0, frames = 0, settle = 0;
+    // Off screen, the film waits where it is. Every film frame moves the camera, and a
+    // viewer asked to redraw off screen still draws one frame to keep its canvas current:
+    // a film left running behind the page drew the whole circuit about 30 times a second
+    // for nobody and halved the frame rate of the stage the visitor scrolled to
+    // (measured 2026-10-16). The tab being hidden needs nothing: rAF stops there.
+    var inView = true, io = null;
+    if (canvas && typeof IntersectionObserver === 'function') {
+      io = new IntersectionObserver(function (entries) {
+        inView = entries[entries.length - 1].isIntersecting;
+        if (inView && playing && !raf && !disposed) { resume(); }
+      });
+      io.observe(canvas);
+    }
+    function resume() { last = performance.now(); settle = 0; frames = 0; spent = 0; raf = requestAnimationFrame(tick); }
     function tick(now) {
       raf = 0;
-      if (disposed || !playing) return;
+      if (disposed || !playing || !inView) return;
       var dt = Math.min(0.1, (now - last) / 1000); last = now;
       // Late frames: after a short settle, a second of film under 48 frames steps the ladder
       // down one rung. It never climbs back: a picture that changes twice is worse than one
@@ -229,9 +243,9 @@
         var o = sv.getCameraOrbit(); driftAngle = o.angle - turn; END = { t: 0, angle: o.angle - turn, height: o.height, radius: o.radius / zoom, fov: o.fov, lift: o.target[1] - CAR[1] };
         clock = Math.max(clock, FX.redsBack + 2); userOwns = false;   // the reds stay as they are
       }
-      playing = true; last = performance.now(); settle = 0; frames = 0; spent = 0;
+      playing = true;
       rain(true);
-      raf = requestAnimationFrame(tick);
+      resume();
     }
     function pause() { playing = false; if (raf) cancelAnimationFrame(raf); raf = 0; rain(false); }
     // A still: the pose the film ends on (reduced motion, or the poster capture).
@@ -259,6 +273,7 @@
       get tier() { return tier; }, get playing() { return playing; }, get clock() { return clock; }, duration: END.t,
       dispose: function () {
         disposed = true; pause();
+        if (io) io.disconnect();
         if (canvas) {
           canvas.removeEventListener('mousedown', grab); canvas.removeEventListener('touchstart', grab);
           canvas.removeEventListener('mousemove', moved); canvas.removeEventListener('touchmove', moved);
