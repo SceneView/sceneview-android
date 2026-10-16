@@ -16,6 +16,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,11 +28,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -43,6 +47,8 @@ import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Chair
+import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Grain
 import androidx.compose.material.icons.rounded.HomeWork
 import androidx.compose.material.icons.rounded.RestartAlt
@@ -74,6 +80,9 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -605,6 +614,15 @@ private fun ChatCard(
 ) {
     val chrome = LocalStageChrome.current
     val shape = RoundedCornerShape(SceneViewTokens.Radius.lg)
+    val request = state.lines.lastOrNull { it.kind == ChatLine.Kind.User }
+    // A new request gets its default again; a successful first placement also collapses
+    // the card, including the scripted QA path. Rebuild starts with the plan open.
+    var detailsExpanded by rememberSaveable(request, state.model.items.isNotEmpty()) {
+        mutableStateOf(state.model.items.isEmpty() || request?.text == RecordedAiProvider.REBUILD_PROMPT)
+    }
+    val takeoff = state.takeoffShown && !state.model.isEmpty && !state.busy
+    val showPlan = state.model.walls.isNotEmpty() && !state.busy && keyMissing == null
+    val collapsible = showPlan || takeoff
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -616,47 +634,80 @@ private fun ChatCard(
             .animateContentSize(),
         verticalArrangement = Arrangement.spacedBy(Space.xs),
     ) {
-        val takeoff = state.takeoffShown && !state.model.isEmpty && !state.busy
-        val showPlan = state.model.walls.isNotEmpty() && !state.busy && keyMissing == null
-        // Live prose may invent or round measurements. Only tool-derived captions and the
-        // measured model reach the card; offline replies are themselves written from results.
-        val visibleLines = state.lines.filter { showAssistantReplies || it.kind != ChatLine.Kind.Assistant }
-        val lines = if (takeoff || showPlan) {
-            visibleLines.filter {
-                if (showAssistantReplies) it.kind == ChatLine.Kind.Assistant else it.kind != ChatLine.Kind.User
-            }.takeLast(1)
-        } else {
-            visibleLines.takeLast(CHAT_LINES)
-        }
-        if (keyMissing != null) {
-            Text(
-                text = if (keyMissing) OWN_SCAN_ADD_KEY else OWN_SCAN_PICK_PROVIDER,
-                style = SceneViewTokens.Type.caption.copy(color = chrome.onCard, fontWeight = FontWeight.SemiBold),
-            )
-            Text(
-                text = "The recorded demo only replays the sample room. Choose Claude or Gemini with your key " +
-                    "to read this one.",
-                style = SceneViewTokens.Type.caption.copy(color = chrome.onCardMuted),
-            )
-            TextButton(onClick = onSampleScan) { Text(SAMPLE_SCAN) }
-        } else if (lines.isEmpty()) {
-            Text(
-                text = "Ask the AI to rebuild this scanned room. It reads the real scan — planes, points, " +
-                    "the camera's path — and the code computes every number.",
-                style = SceneViewTokens.Type.caption.copy(color = chrome.onCardMuted),
-            )
-            if (onScanRoom != null) {
-                TextButton(onClick = onScanRoom) { Text(SCAN_ROOM) }
+        if (collapsible) {
+            Row(
+                modifier = Modifier.fillMaxWidth().heightIn(min = Space.x2l)
+                    .semantics { stateDescription = if (detailsExpanded) "Expanded" else "Collapsed" }
+                    .clickable(role = Role.Button, onClickLabel = "Toggle plan and details") {
+                        detailsExpanded = !detailsExpanded
+                    },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Space.sm),
+            ) {
+                Text(
+                    text = "${count(state.model.walls.size, "wall")} · ${count(state.model.objects.size, "object")}" +
+                        if (state.model.items.isNotEmpty()) {
+                            " · ${count(state.model.items.size, "item")} placed"
+                        } else {
+                            " · Plan & details"
+                        },
+                    modifier = Modifier.weight(1f),
+                    style = SceneViewTokens.Type.caption.copy(color = chrome.onCard),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Icon(
+                    if (detailsExpanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+                    contentDescription = null,
+                    tint = chrome.onCard,
+                )
             }
         }
-        lines.forEach { line -> ChatRow(line, chrome) }
-        if (showPlan) AiRoomPlan(state.model)
-        if (takeoff) TakeoffSection(Takeoff.of(state.model), chrome)
-        if (state.busy) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                StatusDot(busy = true, chrome = chrome)
-                Spacer(Modifier.width(Space.sm))
-                Text(text = "Working…", style = SceneViewTokens.Type.caption.copy(color = chrome.onCardMuted))
+        if (collapsible && !detailsExpanded) return@Column
+        Column(
+            modifier = Modifier.heightIn(max = Space.x4l * 5).verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(Space.xs),
+        ) {
+            // Live prose may invent or round measurements. Only tool-derived captions and the
+            // measured model reach the card; offline replies are themselves written from results.
+            val visibleLines = state.lines.filter { showAssistantReplies || it.kind != ChatLine.Kind.Assistant }
+            val lines = if (takeoff || showPlan) {
+                visibleLines.filter {
+                    if (showAssistantReplies) it.kind == ChatLine.Kind.Assistant else it.kind != ChatLine.Kind.User
+                }.takeLast(1)
+            } else {
+                visibleLines.takeLast(CHAT_LINES)
+            }
+            if (keyMissing != null) {
+                Text(
+                    text = if (keyMissing) OWN_SCAN_ADD_KEY else OWN_SCAN_PICK_PROVIDER,
+                    style = SceneViewTokens.Type.caption.copy(color = chrome.onCard, fontWeight = FontWeight.SemiBold),
+                )
+                Text(
+                    text = "The recorded demo only replays the sample room. Choose Claude or Gemini with your key " +
+                        "to read this one.",
+                    style = SceneViewTokens.Type.caption.copy(color = chrome.onCardMuted),
+                )
+                TextButton(onClick = onSampleScan) { Text(SAMPLE_SCAN) }
+            } else if (lines.isEmpty()) {
+                Text(
+                    text = "Ask the AI to rebuild this scanned room. It reads the real scan — planes, points, " +
+                        "the camera's path — and the code computes every number.",
+                    style = SceneViewTokens.Type.caption.copy(color = chrome.onCardMuted),
+                )
+                if (onScanRoom != null) {
+                    TextButton(onClick = onScanRoom) { Text(SCAN_ROOM) }
+                }
+            }
+            lines.forEach { line -> ChatRow(line, chrome) }
+            if (showPlan) AiRoomPlan(state.model)
+            if (takeoff) TakeoffSection(Takeoff.of(state.model), chrome)
+            if (state.busy) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    StatusDot(busy = true, chrome = chrome)
+                    Spacer(Modifier.width(Space.sm))
+                    Text(text = "Working…", style = SceneViewTokens.Type.caption.copy(color = chrome.onCardMuted))
+                }
             }
         }
     }
@@ -679,20 +730,42 @@ private fun ChatRow(line: ChatLine, chrome: StageChrome) {
         ChatLine.Kind.Note -> null to base.copy(color = chrome.onCardMuted)
         ChatLine.Kind.Error -> ArOverlay.accentRecord to base.copy(color = chrome.onCard)
     }
-    Row(verticalAlignment = Alignment.Top) {
-        if (marker != null) {
-            Box(Modifier.padding(top = Space.xs + Space.xs / 2).size(Space.xs + Space.xs / 2).background(
-                marker,
-                CircleShape,
-            ))
-            Spacer(Modifier.width(Space.sm))
+    val assistant = line.kind == ChatLine.Kind.Assistant
+    var expanded by rememberSaveable(line.id) { mutableStateOf(false) }
+    Column {
+        Row(
+            modifier = if (assistant) {
+                Modifier.semantics { stateDescription = if (expanded) "Expanded" else "Collapsed" }
+                    .clickable(role = Role.Button, onClickLabel = "Toggle full reply") { expanded = !expanded }
+            } else {
+                Modifier
+            },
+            verticalAlignment = Alignment.Top,
+        ) {
+            if (marker != null) {
+                Box(Modifier.padding(top = Space.xs + Space.xs / 2).size(Space.xs + Space.xs / 2).background(
+                    marker,
+                    CircleShape,
+                ))
+                Spacer(Modifier.width(Space.sm))
+            }
+            Text(
+                text = if (line.kind == ChatLine.Kind.User) "You · ${line.text}" else line.text,
+                style = style,
+                maxLines = if (assistant && expanded) Int.MAX_VALUE else if (assistant) ASSISTANT_MAX_LINES else 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
-        Text(
-            text = if (line.kind == ChatLine.Kind.User) "You · ${line.text}" else line.text,
-            style = style,
-            maxLines = if (line.kind == ChatLine.Kind.Assistant) ASSISTANT_MAX_LINES else 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        if (assistant) {
+            TextButton(onClick = { expanded = !expanded }) {
+                Text(if (expanded) "Less" else "More", style = base.copy(color = chrome.accent))
+                Icon(
+                    if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+                    contentDescription = null,
+                    tint = chrome.accent,
+                )
+            }
+        }
     }
 }
 
