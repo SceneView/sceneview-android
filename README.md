@@ -558,7 +558,7 @@ sceneview-core (Kotlin Multiplatform)
 | `samples/android-tv-demo` | Android TV | `./gradlew :samples:android-tv-demo:assembleDebug` |
 | `samples/ios-demo` | iOS — 3D & AR | Open in Xcode |
 | `samples/web-demo` | Web | `./gradlew :samples:web-demo:jsBrowserRun` |
-| `samples/desktop-demo` | Desktop (JDK 22+) | `./gradlew :samples:desktop-demo:run` |
+| `samples/desktop-demo` | Desktop (JDK 21+) | `./gradlew :samples:desktop-demo:run` |
 | `samples/flutter-demo` | Flutter | `cd samples/flutter-demo && flutter run` |
 | `samples/react-native-demo` | React Native | See its README |
 

@@ -15,7 +15,7 @@
 | Android SDK (Filament + Compose) | **Stable** |
 | iOS / macOS / visionOS (RealityKit + SwiftUI) | Alpha |
 | Web (Filament.js + WebXR) | Alpha |
-| Desktop (Compose Desktop) | Alpha — `SceneViewer` renders through Filament via filament-kmp (JDK 22+) |
+| Desktop (Compose Desktop) | Alpha — `SceneViewer` renders through Filament via filament-kmp (JDK 21+) |
 | Android TV | Alpha |
 | Flutter bridge | Alpha ([`flutter_sceneview`](https://pub.dev/packages/flutter_sceneview) on pub.dev) |
 | React Native bridge | Alpha ([`@sceneview-sdk/react-native`](https://www.npmjs.com/package/@sceneview-sdk/react-native) on npm) |
