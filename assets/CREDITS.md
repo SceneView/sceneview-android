@@ -12,7 +12,7 @@ Source of truth: [`assets/catalog.json`](catalog.json). This file is generated
 by [`.claude/scripts/generate-credits.py`](../.claude/scripts/generate-credits.py).
 Re-run the script after any catalog edit to keep both files in sync.
 
-Total models: **143** (plus 6 pending metadata, 8 pending license review).
+Total models: **144** (plus 6 pending metadata, 8 pending license review).
 
 ---
 
@@ -171,6 +171,11 @@ Total models: **143** (plus 6 pending metadata, 8 pending license review).
 - **[Bell X-1 (1947)](http://n2t.net/ark:/65665/nv99a205dd3-3969-43d2-971c-d3d3e6c6b1f2)** by Smithsonian National Air and Space Museum — [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/)
 - **[Triceratops skeleton](http://n2t.net/ark:/65665/305d36697-5158-4947-8d0b-521db04bae9b)** by Smithsonian National Museum of Natural History — [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/)
 
+## Threejs
+
+- **[Expressive Robot](https://github.com/mrdoob/three.js/tree/dev/examples/models/gltf/RobotExpressive)** by Tomás Laulhé (Quaternius), modified by Don McCurdy — [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/)
+- **[Soldier](https://github.com/mrdoob/three.js/blob/dev/examples/models/gltf/Soldier.glb)** by Tomás Laulhé (modified by Don McCurdy) — [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/)
+
 ## Google-Scanned-Objects
 
 - **[JanSport backpack](https://app.gazebosim.org/GoogleResearch/fuel/models/Jansport_School_Backpack_Blue_Streak)** by Google LLC — [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/)
@@ -178,10 +183,6 @@ Total models: **143** (plus 6 pending metadata, 8 pending license review).
 - **[Reebok FUELTRAIN](https://app.gazebosim.org/GoogleResearch/fuel/models/Reebok_FUELTRAIN)** by Google LLC — [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/)
 - **[UGG Classic Tall boot](https://app.gazebosim.org/GoogleResearch/fuel/models/UGG_Classic_Tall_Womens_Boots_Chestnut_7)** by Google LLC — [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/)
 - **[Ultimate Ears BOOM speaker](https://app.gazebosim.org/GoogleResearch/fuel/models/Logitech_Ultimate_Ears_Boom_Wireless_Speaker_Night_Black)** by Google LLC — [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/)
-
-## Threejs
-
-- **[Soldier](https://github.com/mrdoob/three.js/blob/dev/examples/models/gltf/Soldier.glb)** by Tomás Laulhé (modified by Don McCurdy) — [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/)
 
 ---
 

@@ -1479,13 +1479,13 @@
       "author": "David_Holiday"
     },
     {
-      "path": "website-static/models/platforms/threejs_soldier.glb",
+      "path": "website-static/models/platforms/threejs_robot_expressive.glb",
       "scope": "web",
-      "sha256": "cdd26ddebc758a66e1317190571a5a8206689d0d4a658924e07ad370ad492fc6",
-      "size": 2338396,
-      "source": "https://github.com/mrdoob/three.js/blob/dev/examples/models/gltf/Soldier.glb",
+      "sha256": "047f5e5fb3bb6d378bd1df16ca6137f2a596c99b3a1b5690b4020c05aaf6f319",
+      "size": 463988,
+      "source": "https://github.com/mrdoob/three.js/tree/dev/examples/models/gltf/RobotExpressive",
       "license": "CC0-1.0",
-      "author": "Tomás Laulhé (modified by Don McCurdy)"
+      "author": "Tomás Laulhé (Quaternius), modified by Don McCurdy"
     },
     {
       "path": "website-static/models/platforms/tier_escooter.glb",

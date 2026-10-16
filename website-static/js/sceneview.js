@@ -454,6 +454,13 @@
     return e;
   }
 
+  /** The rejection of a loadModel() call that a later call replaced before it was shown. */
+  function _supersededError(url) {
+    var e = new Error('SceneView: loadModel(' + url + ') was replaced by a later loadModel() call');
+    e.name = 'AbortError';
+    return e;
+  }
+
   /** Stop a hidden <video> created by createVideo() and take it out of the page. */
   function _releaseVideo(video) {
     video.pause();
@@ -1303,13 +1310,22 @@
       list.forEach(function(j, k) { map[j] = k; });
       meshes[meshIds[m]] = { used: list, map: map };
     }
-    // Every skin a remapped mesh is drawn with must hold the joints it indexes.
+    // Every skin a remapped mesh is drawn with must hold the joints it indexes, and its
+    // inverse bind matrices must be readable: a subset skin without them would draw the
+    // mesh in its bind-space coordinates, so the split is given up instead.
+    var ibms = {};
     for (var ni = 0; ni < nodes.length; ni++) {
       var nd = nodes[ni], r = nd && Number.isInteger(nd.mesh) ? meshes[nd.mesh] : null;
       if (r && Number.isInteger(nd.skin)) {
         var sk = skins[nd.skin];
         if (!sk || !sk.joints || (r.used.length && r.used[r.used.length - 1] >= sk.joints.length)) {
           return cannot('a joint index is past the end of its skin');
+        }
+        var ia = sk.inverseBindMatrices;
+        if (ia !== undefined && ibms[ia] === undefined) {
+          var M = Number.isInteger(ia) ? _readAccessor(json, bin, ia) : null;
+          if (!M || M.comps !== 16 || M.count < sk.joints.length) return cannot('unreadable inverse bind matrices');
+          ibms[ia] = M;
         }
       }
     }
@@ -1336,7 +1352,6 @@
     // The skins that fit stay; each (mesh, oversized skin) pair gets its subset.
     var out = [], kept = {}, made = {};
     skins.forEach(function(s, i) { if (!big[i]) { kept[i] = out.length; out.push(s); } });
-    var ibms = {};
     nodes.forEach(function(n) {
       if (!n || !Number.isInteger(n.skin)) return;
       var r = Number.isInteger(n.mesh) ? meshes[n.mesh] : null;
@@ -1351,15 +1366,14 @@
         var s = skins[n.skin], skin = { joints: r.used.map(function(j) { return s.joints[j]; }) };
         if (s.skeleton !== undefined) skin.skeleton = s.skeleton;
         if (s.name) skin.name = s.name + '_mesh' + n.mesh;
-        if (Number.isInteger(s.inverseBindMatrices)) {
-          var M = ibms[s.inverseBindMatrices] || (ibms[s.inverseBindMatrices] = _readAccessor(json, bin, s.inverseBindMatrices));
-          if (M && M.comps === 16) {
-            var sub = new Float32Array(r.used.length * 16);
-            r.used.forEach(function(j, k) { sub.set(M.data.subarray(j * 16, j * 16 + 16), k * 16); });
-            var view = sink.appendView(json, new Uint8Array(sub.buffer));
-            json.accessors.push({ bufferView: view, componentType: 5126, count: r.used.length, type: 'MAT4' });
-            skin.inverseBindMatrices = json.accessors.length - 1;
-          }
+        if (s.inverseBindMatrices !== undefined) {
+          // Read and checked above: a skin whose matrices could not be read was never split.
+          var M = ibms[s.inverseBindMatrices];
+          var sub = new Float32Array(r.used.length * 16);
+          r.used.forEach(function(j, k) { sub.set(M.data.subarray(j * 16, j * 16 + 16), k * 16); });
+          var view = sink.appendView(json, new Uint8Array(sub.buffer));
+          json.accessors.push({ bufferView: view, componentType: 5126, count: r.used.length, type: 'MAT4' });
+          skin.inverseBindMatrices = json.accessors.length - 1;
         }
         made[id] = out.length;
         out.push(skin);
@@ -1829,7 +1843,9 @@
 
     /**
      * Load a glTF/GLB model from URL. The model it replaces is destroyed.
-     * Rejects with an `AbortError` when the viewer is disposed before the model arrives.
+     * Rejects with an `AbortError` when the viewer is disposed before the model arrives,
+     * or when a later `loadModel()` call starts before this one is shown: the newest
+     * call always wins, whichever file finishes downloading first.
      *
      * `options.frontYaw`: where the model's front faces, in degrees about the vertical
      * axis from glTF's +Z (0, the default). A file modelled facing -Z takes 180. The
@@ -1838,6 +1854,15 @@
     loadModel(url, options) {
       var self = this;
       var frontYaw = options && Number.isFinite(options.frontYaw) ? options.frontYaw * Math.PI / 180 : null;
+      // Each call takes a ticket; only the newest may touch the scene. Without it, a
+      // slow file (the WebP pass adds seconds) landed after a newer, faster one and
+      // replaced it: the playground's `?model=` showed the toy car it opened on (#4566).
+      var ticket = self._loadTicket = (self._loadTicket || 0) + 1;
+      function stale() {
+        if (self._disposed) return _disposedError();
+        if (ticket !== self._loadTicket) return _supersededError(url);
+        return null;
+      }
       return new Promise(function(resolve, reject) {
         // On any failure (network/404, fetch error, GLB parse/decode failure),
         // paint a graceful in-canvas fallback before rejecting (#2509). The
@@ -1845,9 +1870,11 @@
         // playground.html, web.html) keep their current behaviour — but bare
         // callers (the two showcase pages) no longer get a dead blank canvas.
         function fail(e) {
-          // A disposed viewer has no canvas to paint on: just report the abort.
-          if (!self._disposed) self._showLoadFallback(url);
-          reject(e);
+          // A disposed viewer has no canvas to paint on, and a superseded load must
+          // not paint over the model that replaced it: just report the abort.
+          var abort = stale();
+          if (!abort) self._showLoadFallback(url);
+          reject(abort || e);
         }
         self._fetch(url)
           .then(function(resp) {
@@ -1855,8 +1882,9 @@
             return resp.arrayBuffer();
           })
           .then(function(buffer) {
-            // Disposed while the bytes were on their way: drop them (#4366).
-            if (self._disposed) throw _disposedError();
+            // Disposed or superseded while the bytes were on their way: drop them (#4366).
+            var abort = stale();
+            if (abort) throw abort;
             // What Filament.js cannot draw as shipped is rewritten first (#4566): WebP
             // textures to PNG, skins over 256 joints split per mesh.
             return _transcodeWebP(new Uint8Array(buffer)).then(function(bytes) {
@@ -1869,7 +1897,8 @@
             });
           })
           .then(function(bytes) {
-            if (self._disposed) throw _disposedError();
+            var abort = stale();
+            if (abort) throw abort;
             try {
               self._showModel(url, bytes, frontYaw);
               self._hideLoadFallback();  // clear any prior-failure placeholder
@@ -1970,8 +1999,8 @@
         this._animator = null;
       }
       // gltfio leaves every bone at identity until the animator runs, so a skinned model
-      // shown still was drawn in its unskinned mesh pose: the Soldier's head thrown back,
-      // a character lying flat on its back (#4566). Pose the skin once from the rest
+      // shown still was drawn in its unskinned mesh pose: a head thrown back, a character
+      // lying flat on its back (#4566). Pose the skin once from the rest
       // transforms, as Android's ModelNode does on every frame.
       if (this._animator && this._animator.updateBoneMatrices) {
         try { this._animator.updateBoneMatrices(); } catch (e) { /* no skin to pose */ }
@@ -2081,6 +2110,7 @@
       if (!fixes.length) return null;
       var rm = this._engine.getRenderableManager(), tm = this._engine.getTransformManager();
       var min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity], fixed = 0;
+      var matched = fixes.map(function() { return false; });
       function close(a, b) { return Math.abs(a - b) <= 1e-3 * Math.max(1, Math.abs(a), Math.abs(b)); }
       asset.getRenderableEntities().forEach(function(e) {
         var ri = rm.getInstance(e), box = rm.getAxisAlignedBoundingBox(ri);
@@ -2094,6 +2124,7 @@
             h[k] = (real.max[k] - real.min[k]) / 2;
           }
           rm.setAxisAlignedBoundingBox(ri, { center: c, halfExtent: h });
+          matched[f] = true;
           fixed++;
           break;
         }
@@ -2107,6 +2138,13 @@
           }
         }
       });
+      // A quantized mesh no renderable was matched to keeps gltfio's raw box: its part of
+      // the model can be culled, shadowed and framed as if it were 32767 times its size.
+      var missed = matched.filter(function(m) { return !m; }).length;
+      if (missed) {
+        console.warn('SceneView: ' + missed + ' of ' + fixes.length + ' quantized meshes kept a wrong bounding box; '
+          + 'framing and culling may be off for this model');
+      }
       return fixed && min[0] <= max[0] ? { min: min, max: max } : null;
     }
 

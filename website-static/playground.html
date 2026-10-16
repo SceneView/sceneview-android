@@ -1948,7 +1948,7 @@
                 <optgroup label="Characters">
                   <option value="AnimatedAstronaut">Astronaut</option>
                   <option value="AnimatedTrex">T-Rex</option>
-                  <option value="threejs_soldier">Soldier</option>
+                  <option value="threejs_robot_expressive">Robot</option>
                 </optgroup>
                 <optgroup label="Animals">
                   <option value="Duck">Duck</option>
@@ -2914,7 +2914,7 @@
           });
           _previewLightEntities.push(key, fill);
           updatePreviewSettings();
-        }).catch(function(e) { console.warn(e); });
+        }).catch(warnLoadError);
       },
 
       // Auto-play the glTF animation baked in the model.
@@ -2922,7 +2922,7 @@
         sv.loadModel(getModelUrl('AnimatedAstronaut')).then(function() {
           sv.playAnimation(0, true);
           updatePreviewSettings();
-        }).catch(function(e) { console.warn(e); });
+        }).catch(warnLoadError);
       },
 
       // Spring-physics: load the Duck and play its glTF animation as a stand-in
@@ -2932,7 +2932,7 @@
         sv.loadModel(getModelUrl('Duck')).then(function() {
           sv.playAnimation(0, true);
           updatePreviewSettings();
-        }).catch(function(e) { console.warn(e); });
+        }).catch(warnLoadError);
       },
 
       // Post-processing: load the toy car with bloom forced ON so the user sees the
@@ -2942,7 +2942,7 @@
           if (sv.setBloom) {
             sv.setBloom({ strength: 0.25, resolution: 512 });
           }
-        }).catch(function(e) { console.warn(e); });
+        }).catch(warnLoadError);
       }
     };
 
@@ -2989,9 +2989,7 @@
           sv.stopAnimation && sv.stopAnimation();
           sv.loadModel(getModelUrl(ex.defaultModel)).then(function() {
             updatePreviewSettings();
-          }).catch(function(err) {
-            console.warn('loadModel error:', err);
-          });
+          }).catch(warnLoadError);
         });
       }
     }
@@ -3046,6 +3044,13 @@
       return MODEL_BASE + '/' + name + '.glb';
     }
 
+    // A pick made while the previous model was still loading replaces it: sceneview.js
+    // rejects the older load with an AbortError, which is not a failure.
+    function warnLoadError(e) {
+      if (e && e.name === 'AbortError') return;
+      console.warn('SceneView loadModel error:', e);
+    }
+
     function getBgColor() {
       var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
       // The colours as displayed (sRGB): #344351 / #E3E0DB, #74818F / #E6E2DB.
@@ -3080,9 +3085,7 @@
       if (sceneViewInstance) {
         return sceneViewInstance.loadModel(modelUrl).then(function() {
           updatePreviewSettings();
-        }).catch(function(e) {
-          console.warn('SceneView loadModel error:', e);
-        });
+        }).catch(warnLoadError);
       }
       // First init — create the viewer
       return SceneView.modelViewer('previewCanvas', modelUrl, {

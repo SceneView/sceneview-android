@@ -1119,7 +1119,9 @@
       // `samples/web-demo/site/models/` — `validate-demo-assets.sh` enforces
       // this. Kept lean (12 GLBs, ~60 MB) so the demo distribution stays
       // small; the network catalog sources (Icosa, Poly Haven, Sketchfab)
-      // cover the wider catalogs.
+      // cover the wider catalogs. A `frontYaw` (degrees from glTF's +Z, as on /view's
+      // tiles, #4575) opens the camera on the model's front three-quarter; without one,
+      // a pick keeps the angle the previous model's turntable had reached.
       var CDN_MODELS = [
         { name: 'Sheen Chair', file: 'sheen_chair.glb', category: 'Showcase' },
         { name: 'Toy Car', file: 'khronos_toy_car.glb', category: 'Showcase' },
@@ -1131,7 +1133,7 @@
         { name: 'Phoenix Bird', file: 'phoenix_bird.glb', category: 'Animated' },
         { name: 'Cyberpunk Character', file: 'cyberpunk_character.glb', category: 'Characters' },
         { name: 'Game Boy Classic', file: 'game_boy_classic.glb', category: 'Objects' },
-        { name: 'Nintendo Switch OLED', file: 'nintendo_switch_oled.glb', category: 'Objects' },
+        { name: 'Nintendo Switch OLED', file: 'nintendo_switch_oled.glb', category: 'Objects', frontYaw: 0 },
         { name: 'Retro Piano', file: 'retro_piano.glb', category: 'Objects' }
       ];
 
@@ -1277,16 +1279,27 @@
 
       // ---- Load model ----
 
+      /** The front yaw a curated model declares for its own file, or undefined. */
+      function curatedFrontYaw(url) {
+        for (var i = 0; i < CDN_MODELS.length; i++) {
+          if (MODEL_BASE + CDN_MODELS[i].file === url) return CDN_MODELS[i].frontYaw;
+        }
+        return undefined;
+      }
+
       function loadModel(url, name) {
         if (!sceneViewInstance) return;
         showChip('Loading ' + (name || 'model') + '...');
-        sceneViewInstance.loadModel(url)
+        var frontYaw = curatedFrontYaw(url);
+        sceneViewInstance.loadModel(url, frontYaw !== undefined ? { frontYaw: frontYaw } : undefined)
           .then(function() {
             hideChip();
             sceneViewInstance.setAutoRotate(autoRotate);
             console.log('Model loaded: ' + name);
           })
           .catch(function(err) {
+            // A newer pick replaced this load before it showed: that pick owns the chip.
+            if (err && err.name === 'AbortError') return;
             hideChip();
             showChip('Failed to load model');
             setTimeout(hideChip, 3000);
@@ -1954,6 +1967,7 @@
               status.textContent = 'Playing — clip 0' + (loop ? ' (looping)' : '');
             })
             .catch(function(err) {
+              if (err && err.name === 'AbortError') return;  // a newer load replaced it
               status.textContent = 'Failed to load model';
               console.error('Animation load error:', err);
             });

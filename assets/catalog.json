@@ -3057,10 +3057,33 @@
       "usedIn": [
         "android-demo",
         "android-tv-demo",
-        "ios-demo",
-        "website"
+        "ios-demo"
       ],
       "defaultScale": 0.3,
+      "cameraDistance": 2.5
+    },
+    {
+      "id": "threejs_robot_expressive",
+      "name": "Expressive Robot",
+      "_comment": "Website-only: served from website-static/models/platforms, no demo bundles it. Licence stated in the folder's README.md.",
+      "source": "threejs",
+      "sourceUrl": "https://github.com/mrdoob/three.js/tree/dev/examples/models/gltf/RobotExpressive",
+      "author": "Tomás Laulhé (Quaternius), modified by Don McCurdy",
+      "license": "CC0-1.0",
+      "shippedAs": [
+        "threejs_robot_expressive.glb"
+      ],
+      "formats": {},
+      "tags": [
+        "character",
+        "animated",
+        "robot",
+        "reference"
+      ],
+      "usedIn": [
+        "website"
+      ],
+      "defaultScale": 1.0,
       "cameraDistance": 2.5
     },
     {
