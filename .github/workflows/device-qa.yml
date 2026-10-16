@@ -48,8 +48,8 @@ name: Device QA
 #
 # Exception (#2343, #4149): when the store keys are injected, qa-keys.sh
 # deletes the keyless artifact and `qa-android-demos.sh` rebuilds a KEYED APK
-# on the emulator runner. Both emulator legs therefore run setup-gradle (JDK 22
-# for the `jvmToolchain(22)` modules) and budget 45 min for the rebuild.
+# on the emulator runner. Both emulator legs therefore run setup-gradle (the
+# JDK 21 every module's toolchain uses) and budget 45 min for the rebuild.
 #
 # RELEASE-GATE POLICY FOR continue-on-error LEGS (#1651)
 # ------------------------------------------------------
@@ -330,10 +330,10 @@ jobs:
       # The prebuilt artifact is keyless, so with the store secrets injected
       # below qa-keys.sh deletes it and qa-android-demos.sh rebuilds a KEYED
       # APK on this runner (#2343): this leg runs Gradle after all. Without
-      # this step the hosted runner has no JDK 22, and the `jvmToolchain(22)`
-      # of sceneview-compose / desktop-demo fails configuration before the
-      # first Maestro flow ("Cannot find a Java installation ...
-      # languageVersion=22", run 36486590219). Same setup as the `ar` leg.
+      # this step the hosted runner lacks the JDK the toolchains pin (22 then,
+      # 21 since #4423), and configuration failed before the first Maestro
+      # flow ("Cannot find a Java installation ... languageVersion=22", run
+      # 36486590219). Same setup as the `ar` leg.
       - uses: ./.github/actions/setup-gradle
 
       - uses: actions/setup-node@v7

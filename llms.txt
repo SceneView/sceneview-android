@@ -6865,7 +6865,7 @@ the host factory — it draws a visible "not available yet" notice until registe
 |---|---|---|
 | Android | Filament, delegates to `SceneView { }` | Implemented |
 | iOS | RealityKit via `SceneViewSwift` | Implemented — needs a one-time app registration, see below |
-| Desktop (JVM) | Filament via Maven filament-kmp (offscreen → Skia). JDK 22+ | Implemented |
+| Desktop (JVM) | Filament via Maven filament-kmp (offscreen → Skia). JDK 21+ | Implemented |
 
 **iOS requires one registration call.** A KMP module cannot depend on a Swift Package, so
 the app supplies the renderer:
