@@ -118,12 +118,17 @@ class OcclusionView private constructor(
             val col = ((x + 1f) / 2f * COLUMNS).toInt()
             val row = ((1f - y) / 2f * rows).toInt()
             val radius = ceil(SPLAT_SCALE * voxelM / 2f / (cellPerDepth * depth)).toInt().coerceIn(1, MAX_SPLAT)
-            if (col + radius < 0 || col - radius >= COLUMNS || row + radius < 0 || row - radius >= rows) continue
-            for (r in max(0, row - radius)..min(rows - 1, row + radius)) {
-                for (c in max(0, col - radius)..min(COLUMNS - 1, col + radius)) {
-                    val k = r * COLUMNS + c
-                    if (depth < pointDepth[k]) pointDepth[k] = depth
-                }
+            fill(col, row, radius, depth)
+        }
+    }
+
+    /** The cells within [radius] of ([col], [row]) that saw nothing nearer than [depth] now see it. */
+    private fun fill(col: Int, row: Int, radius: Int, depth: Float) {
+        // Empty ranges when the square falls outside the grid: nothing is drawn.
+        for (r in max(0, row - radius)..min(rows - 1, row + radius)) {
+            for (c in max(0, col - radius)..min(COLUMNS - 1, col + radius)) {
+                val k = r * COLUMNS + c
+                if (depth < pointDepth[k]) pointDepth[k] = depth
             }
         }
     }
