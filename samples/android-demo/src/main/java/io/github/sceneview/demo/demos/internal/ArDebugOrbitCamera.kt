@@ -172,10 +172,14 @@ class ArDebugOrbitCamera(
     /**
      * Hands the camera back to the automatic framing — the double-tap and the Recenter button. It
      * returns to the room's good side by the shortest way round: wherever a finger left the
-     * camera, one tap brings the room back.
+     * camera, one tap brings the room back. It ends an entrance still playing, or still held
+     * behind the loading cover: the crane would otherwise keep the camera on its own path, and the
+     * double-tap would do nothing until it lands.
      */
     fun recenter() {
         following = true
+        introFrom = null
+        introHeld = false
         followSeconds = 0f
         azimuthVelocity = 0f
         elevationVelocity = 0f
