@@ -33,6 +33,25 @@ class ScanCoverageTest {
     }
 
     @Test
+    fun `an empty scan has zero coverage and is not enough`() {
+        val summary = coverage().summary()
+        assertEquals(0, summary.percent)
+        assertTrue(summary.walls.all { it == 0f })
+        assertTrue(!summary.isEnough)
+    }
+
+    @Test
+    fun `revisiting a full room cannot push the HUD past one hundred percent`() {
+        val coverage = coverage()
+        val points = room().flat()
+        repeat(50) {
+            look(coverage, points)
+            assertTrue(coverage.summary().percent in 0..100)
+        }
+        assertEquals(100, coverage.summary().percent)
+    }
+
+    @Test
     fun `a patch seen once is thin, a camera held on it fills it in`() {
         val coverage = coverage()
         look(coverage)

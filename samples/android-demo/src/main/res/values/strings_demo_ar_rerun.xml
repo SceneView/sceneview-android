@@ -81,7 +81,7 @@
     <string name="demo_ar_rerun_scan_covered">Room %1$d%% covered</string>
     <!-- The coach over the shutter during a scan (#4590): one line at a time, the most urgent
          first. Words a user can act on: never "tracking", "plane", "points" or "features". -->
-    <string name="demo_ar_rerun_coach_slow_down">Slow down so the scan can fill in</string>
+    <string name="demo_ar_rerun_coach_slow_down">Move slowly to capture more detail</string>
     <string name="demo_ar_rerun_coach_more_light">Too dark — turn on more light</string>
     <string name="demo_ar_rerun_coach_step_back">Too close — step back a little</string>
     <string name="demo_ar_rerun_coach_move_closer">Too far — move closer</string>
