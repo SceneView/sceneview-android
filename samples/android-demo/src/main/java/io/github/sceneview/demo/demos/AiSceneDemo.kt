@@ -20,6 +20,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -45,6 +47,7 @@ import androidx.compose.material.icons.rounded.Grain
 import androidx.compose.material.icons.rounded.HomeWork
 import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material3.Icon
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -84,6 +87,7 @@ import io.github.sceneview.ai.AiMessage
 import io.github.sceneview.ai.AiProvider
 import io.github.sceneview.ai.AiTurn
 import io.github.sceneview.ai.claude.ClaudeAiProvider
+import io.github.sceneview.ai.gemini.GeminiAiProvider
 import io.github.sceneview.demo.DemoScaffold
 import io.github.sceneview.demo.DemoSettings
 import io.github.sceneview.demo.DockItem
@@ -95,6 +99,7 @@ import io.github.sceneview.demo.ai.scene.RecordedAiProvider
 import io.github.sceneview.demo.ai.scene.RoomModel
 import io.github.sceneview.demo.ai.scene.SceneAgent
 import io.github.sceneview.demo.ai.scene.SceneToolExecutor
+import io.github.sceneview.demo.ai.scene.ScriptedRebuildProvider
 import io.github.sceneview.demo.ai.scene.SpatialSession
 import io.github.sceneview.demo.ai.scene.Takeoff
 import io.github.sceneview.demo.common.putVoiceSilenceExtras
@@ -102,10 +107,15 @@ import io.github.sceneview.demo.common.qaStateOverridesAllowed
 import io.github.sceneview.demo.demos.internal.ArDebugFraming
 import io.github.sceneview.demo.demos.internal.ArDebugOrbitCamera
 import io.github.sceneview.demo.demos.internal.ArDebugSession
+import io.github.sceneview.demo.demos.internal.ArDebugEvent
 import io.github.sceneview.demo.demos.internal.CameraRig
 import io.github.sceneview.demo.demos.internal.DebugGroup
+import io.github.sceneview.demo.demos.internal.DenseFusion
+import io.github.sceneview.demo.demos.internal.DepthBackProjection
+import io.github.sceneview.demo.demos.internal.ReplayLens
 import io.github.sceneview.demo.demos.internal.ReplayManifest
 import io.github.sceneview.demo.demos.internal.RerunReplayAssets
+import io.github.sceneview.demo.demos.internal.RerunSyntheticRoom
 import io.github.sceneview.demo.demos.internal.ScanDevice
 import io.github.sceneview.demo.demos.internal.parseArDebugLog
 import io.github.sceneview.demo.theme.LocalStageChrome
@@ -140,8 +150,8 @@ import kotlin.math.roundToInt
  * places catalogue items in floor areas the code found free. It chooses; the code computes every
  * length, area and clearance. Each request is one undo step.
  *
- * Two providers: the recorded demo (default), which replays a real conversation whose tool calls
- * run live against the same data, and Claude with the user's own key, kept on the phone by the
+ * The recorded demo (default) replays a real conversation whose tool calls run live against the
+ * same data. Claude and Gemini use the user's own keys, kept on the phone by the
  * Android Keystore ([ApiKeyStore]).
  */
 @Composable
@@ -155,15 +165,20 @@ fun AiSceneDemo(onBack: () -> Unit) {
     val qaState = remember { DemoSettings.qaDemoState?.takeIf { qaStateOverridesAllowed() } }
 
     val recordedMedia by produceState<RerunReplayMedia?>(null) {
-        value = runCatching { loadRerunReplay(context) }.getOrNull()
+        value = runCatching {
+            if (qaState == QA_SYNTHETIC) qaSyntheticRoom() else loadRerunReplay(context)
+        }.getOrNull()
     }
     // "Scan this room": a live ARCore scan, read by the same tools as the recording once stopped.
     var scanning by rememberSaveable { mutableStateOf(false) }
     var liveMedia by remember { mutableStateOf<RerunReplayMedia?>(null) }
     val media = liveMedia ?: recordedMedia
+    val synthetic = qaState == QA_SYNTHETIC && liveMedia == null
     val spatial by produceState<SpatialSession?>(null, media) {
         val m = media ?: return@produceState
-        value = withContext(Dispatchers.Default) { SpatialSession.of(m.trace, m.manifest.lens, m.manifest.floorY) }
+        value = withContext(Dispatchers.Default) {
+            SpatialSession.of(m.trace, m.manifest.lens, m.manifest.floorY, dense = m.dense?.cloud)
+        }
     }
     val agent = remember(spatial) {
         val s = spatial ?: return@remember null
@@ -177,18 +192,28 @@ fun AiSceneDemo(onBack: () -> Unit) {
     val stateFlow = remember(agent) { agent?.state ?: MutableStateFlow(AgentState()) }
     val state by stateFlow.collectAsState()
 
-    // Providers: the recorded demo, or Claude with the key the user saved on this phone.
-    val keyStore = remember { ApiKeyStore(context.applicationContext) }
-    var keyHint by remember { mutableStateOf<String?>(null) }
+    // Separate aliases and preferences: saving or removing one vendor's key never changes the other.
+    var providerChoice by rememberSaveable { mutableStateOf(SceneProvider.Recorded) }
+    val claudeKeys = remember { ApiKeyStore(context.applicationContext) }
+    val geminiKeys = remember {
+        ApiKeyStore(context.applicationContext, alias = "ai_scene_gemini_key", prefsName = "ai_scene_gemini_key")
+    }
+    val keyStore = if (providerChoice == SceneProvider.Gemini) geminiKeys else claudeKeys
+    var keyHint by remember(keyStore) { mutableStateOf<String?>(null) }
     LaunchedEffect(keyStore) { keyHint = withContext(Dispatchers.Default) { keyStore.hint } }
-    var useClaude by rememberSaveable { mutableStateOf(false) }
     val recorded = remember { RecordedAiProvider() }
-    val claude = remember(keyStore) { ClaudeAiProvider(AiEndpoint.Vendor { keyStore.load() }) }
-    val provider: AiProvider = if (useClaude) claude else recorded
+    val scripted = remember { ScriptedRebuildProvider() }
+    val claude = remember(claudeKeys) { ClaudeAiProvider(AiEndpoint.Vendor { claudeKeys.load() }) }
+    val gemini = remember(geminiKeys) { GeminiAiProvider(AiEndpoint.Vendor { geminiKeys.load() }) }
+    val provider: AiProvider = if (synthetic) scripted else when (providerChoice) {
+        SceneProvider.Recorded -> recorded
+        SceneProvider.Claude -> claude
+        SceneProvider.Gemini -> gemini
+    }
     // The recording knows the sample room only: on the user's own scan it answers nothing, and
-    // the screen says what rebuilds it instead — Claude with the user's key.
+    // the screen says what rebuilds it instead — Claude or Gemini with the user's key.
     val ownScan = liveMedia != null
-    val needsKey = ownScan && (!useClaude || keyHint == null)
+    val needsKey = !synthetic && ownScan && (providerChoice == SceneProvider.Recorded || keyHint == null)
     val canAsk = agent != null && !state.busy && !needsKey
 
     // The stage: the whole recorded session, without the anchors (the rebuilt room says more).
@@ -263,6 +288,7 @@ fun AiSceneDemo(onBack: () -> Unit) {
             QA_LOOKING -> a.ask(HeldProvider(recorded, holdAt = 1), RecordedAiProvider.REBUILD_PROMPT)
             QA_BUILDING -> a.ask(HeldProvider(recorded, holdAt = 2), RecordedAiProvider.REBUILD_PROMPT)
             QA_REBUILT -> a.ask(recorded, RecordedAiProvider.REBUILD_PROMPT)
+            QA_SYNTHETIC -> if (synthetic) a.ask(scripted, RecordedAiProvider.REBUILD_PROMPT)
             QA_CORNER -> {
                 a.ask(recorded, RecordedAiProvider.REBUILD_PROMPT)
                 a.ask(recorded, RecordedAiProvider.READING_CORNER_PROMPT)
@@ -294,15 +320,21 @@ fun AiSceneDemo(onBack: () -> Unit) {
         return
     }
 
-    val nextPrompt = if (state.model.walls.isEmpty()) RecordedAiProvider.REBUILD_PROMPT
+    val nextPrompt = if (synthetic || state.model.walls.isEmpty()) RecordedAiProvider.REBUILD_PROMPT
         else RecordedAiProvider.READING_CORNER_PROMPT
     DemoScaffold(
         title = stringResource(R.string.demo_ai_scene_title),
         onBack = onBack,
         controls = {
             AiSceneSheet(
-                useClaude = useClaude,
-                onUseClaude = { useClaude = it },
+                provider = providerChoice,
+                providerEnabled = !state.busy && !synthetic,
+                onProvider = {
+                    if (providerChoice != it) {
+                        agent?.reset()
+                        providerChoice = it
+                    }
+                },
                 keyHint = keyHint,
                 onSaveKey = { key ->
                     scope.launch {
@@ -328,7 +360,8 @@ fun AiSceneDemo(onBack: () -> Unit) {
             if (media != null) {
                 StatusCard(
                     state = state,
-                    useClaude = useClaude,
+                    providerLabel = if (synthetic) "Scripted · synthetic room" else providerChoice.label,
+                    liveProvider = provider.capabilities.live,
                     spatial = spatial,
                     liveScan = liveMedia != null,
                     modifier = Modifier
@@ -351,6 +384,7 @@ fun AiSceneDemo(onBack: () -> Unit) {
                 ) {
                     ChatCard(
                         state = state,
+                        showAssistantReplies = !provider.capabilities.live,
                         keyMissing = if (needsKey) keyHint == null else null,
                         onScanRoom = { scanning = true }.takeIf { agent != null && !state.busy },
                         onSampleScan = { liveMedia = null },
@@ -451,7 +485,8 @@ fun AiSceneDemo(onBack: () -> Unit) {
 @Composable
 private fun StatusCard(
     state: AgentState,
-    useClaude: Boolean,
+    providerLabel: String,
+    liveProvider: Boolean,
     spatial: SpatialSession?,
     liveScan: Boolean,
     modifier: Modifier,
@@ -473,7 +508,7 @@ private fun StatusCard(
             StatusDot(busy = state.busy, chrome = chrome)
             Spacer(Modifier.width(Space.sm))
             Text(
-                text = if (useClaude) "Claude · your key" else "Recorded demo",
+                text = providerLabel,
                 style = SceneViewTokens.Type.caption.copy(color = chrome.onCard, fontWeight = FontWeight.SemiBold),
                 modifier = Modifier
                     .background(chrome.track, RoundedCornerShape(SceneViewTokens.Radius.full))
@@ -498,7 +533,7 @@ private fun StatusCard(
             text = modelSummary(state.model),
             style = SceneViewTokens.Type.caption.copy(color = chrome.onCard),
         )
-        if (useClaude && state.inputTokens > 0) {
+        if (liveProvider && state.inputTokens > 0) {
             Text(text = "${state.inputTokens} tokens in · ${state.outputTokens} out", style = muted)
         }
     }
@@ -556,13 +591,14 @@ private fun Figure(label: String, value: String, chrome: StageChrome, modifier: 
  * sits under the room, not over the window it measures. [onScanRoom], while nothing is asked
  * yet, opens a live scan of the room the phone is in.
  *
- * [keyMissing] is set on the user's own scan when no Claude with a key runs it: `true` without a
+ * [keyMissing] is set on the user's own scan when no live provider with a key runs it: `true` without a
  * saved key, `false` with one but the recorded demo picked. The card then says how to rebuild the
  * scan, and [onSampleScan] goes back to the sample room the recording knows.
  */
 @Composable
 private fun ChatCard(
     state: AgentState,
+    showAssistantReplies: Boolean,
     keyMissing: Boolean?,
     onScanRoom: (() -> Unit)?,
     onSampleScan: () -> Unit,
@@ -581,18 +617,24 @@ private fun ChatCard(
         verticalArrangement = Arrangement.spacedBy(Space.xs),
     ) {
         val takeoff = state.takeoffShown && !state.model.isEmpty && !state.busy
-        val lines = if (takeoff) {
-            state.lines.filter { it.kind == ChatLine.Kind.Assistant }.takeLast(1)
+        val showPlan = state.model.walls.isNotEmpty() && !state.busy && keyMissing == null
+        // Live prose may invent or round measurements. Only tool-derived captions and the
+        // measured model reach the card; offline replies are themselves written from results.
+        val visibleLines = state.lines.filter { showAssistantReplies || it.kind != ChatLine.Kind.Assistant }
+        val lines = if (takeoff || showPlan) {
+            visibleLines.filter {
+                if (showAssistantReplies) it.kind == ChatLine.Kind.Assistant else it.kind != ChatLine.Kind.User
+            }.takeLast(1)
         } else {
-            state.lines.takeLast(CHAT_LINES)
+            visibleLines.takeLast(CHAT_LINES)
         }
         if (keyMissing != null) {
             Text(
-                text = if (keyMissing) OWN_SCAN_ADD_KEY else OWN_SCAN_PICK_CLAUDE,
+                text = if (keyMissing) OWN_SCAN_ADD_KEY else OWN_SCAN_PICK_PROVIDER,
                 style = SceneViewTokens.Type.caption.copy(color = chrome.onCard, fontWeight = FontWeight.SemiBold),
             )
             Text(
-                text = "The recorded demo only replays the sample room. Rebuild and Furnish wait for Claude " +
+                text = "The recorded demo only replays the sample room. Choose Claude or Gemini with your key " +
                     "to read this one.",
                 style = SceneViewTokens.Type.caption.copy(color = chrome.onCardMuted),
             )
@@ -608,6 +650,7 @@ private fun ChatCard(
             }
         }
         lines.forEach { line -> ChatRow(line, chrome) }
+        if (showPlan) AiRoomPlan(state.model)
         if (takeoff) TakeoffSection(Takeoff.of(state.model), chrome)
         if (state.busy) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -730,11 +773,13 @@ private fun PromptField(enabled: Boolean, onSend: (String) -> Unit) {
     }
 }
 
-/** The settings sheet: what the demo does, which AI runs it, and the user's own Claude key. */
+/** The settings sheet: what the demo does, which AI runs it, and the selected provider's key. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ColumnScope.AiSceneSheet(
-    useClaude: Boolean,
-    onUseClaude: (Boolean) -> Unit,
+    provider: SceneProvider,
+    providerEnabled: Boolean,
+    onProvider: (SceneProvider) -> Unit,
     keyHint: String?,
     onSaveKey: (String) -> Unit,
     onClearKey: () -> Unit,
@@ -752,13 +797,19 @@ private fun ColumnScope.AiSceneSheet(
     )
     Spacer(Modifier.height(Space.md))
     Text(text = "AI", style = MaterialTheme.typography.titleSmall)
-    Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
-        ProviderChoice("Recorded demo", selected = !useClaude) { onUseClaude(false) }
-        ProviderChoice("Claude, your key", selected = useClaude) { onUseClaude(true) }
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(Space.sm),
+        verticalArrangement = Arrangement.spacedBy(Space.xs),
+    ) {
+        SceneProvider.entries.forEach { choice ->
+            ProviderChoice(choice.label, selected = provider == choice, enabled = providerEnabled) {
+                onProvider(choice)
+            }
+        }
     }
     Text(
-        text = if (useClaude) {
-            "Live: each request goes to the Claude API with your key. It receives the scan's summary, " +
+        text = if (provider != SceneProvider.Recorded) {
+            "Live: each request goes to the ${provider.vendor} API with your key. It receives the scan's summary, " +
                 "four keyframe photos with their camera positions, and the tool results."
         } else {
             "Replays a real conversation. Its tool calls run live against the recorded scan."
@@ -766,38 +817,42 @@ private fun ColumnScope.AiSceneSheet(
         style = body,
         color = muted,
     )
-    Spacer(Modifier.height(Space.md))
-    Text(text = "Claude API key", style = MaterialTheme.typography.titleSmall)
-    if (keyHint != null) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(text = "Saved key …$keyHint", style = body, modifier = Modifier.weight(1f))
-            TextButton(onClick = onClearKey) { Text("Remove") }
+    Text(text = "Switching AI starts a new reconstruction.", style = body, color = muted)
+    if (provider != SceneProvider.Recorded) {
+        Spacer(Modifier.height(Space.md))
+        Text(text = "${provider.vendor} API key", style = MaterialTheme.typography.titleSmall)
+        if (keyHint != null) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(text = "Saved key …$keyHint", style = body, modifier = Modifier.weight(1f))
+                TextButton(onClick = onClearKey) { Text("Remove") }
+            }
+        } else {
+            // Never saveable state: the key must not land in the saved instance state.
+            var draft by remember(provider) { mutableStateOf("") }
+            OutlinedTextField(
+                value = draft,
+                onValueChange = { draft = it },
+                singleLine = true,
+                label = { Text("Paste your key") },
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            TextButton(
+                onClick = {
+                    onSaveKey(draft)
+                    draft = ""
+                },
+                enabled = draft.isNotBlank(),
+            ) { Text("Save key") }
         }
-    } else {
-        // Never saveable state: the key must not land in the saved instance state.
-        var draft by remember { mutableStateOf("") }
-        OutlinedTextField(
-            value = draft,
-            onValueChange = { draft = it },
-            singleLine = true,
-            label = { Text("Paste your key") },
-            visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),
-            modifier = Modifier.fillMaxWidth(),
+        Text(
+            text = "Stays on this phone, encrypted with the Android Keystore. " +
+                "Never sent anywhere but the ${provider.vendor} API.",
+            style = MaterialTheme.typography.bodySmall,
+            color = muted,
         )
-        TextButton(
-            onClick = {
-                onSaveKey(draft)
-                draft = ""
-            },
-            enabled = draft.isNotBlank(),
-        ) { Text("Save key") }
     }
-    Text(
-        text = "Stays on this phone, encrypted with the Android Keystore. Never sent anywhere but the Claude API.",
-        style = MaterialTheme.typography.bodySmall,
-        color = muted,
-    )
     Spacer(Modifier.height(Space.md))
     Text(text = "Your room", style = MaterialTheme.typography.titleSmall)
     Text(
@@ -810,8 +865,14 @@ private fun ColumnScope.AiSceneSheet(
 }
 
 @Composable
-private fun ProviderChoice(label: String, selected: Boolean, onClick: () -> Unit) {
-    io.github.sceneview.demo.ui.GlassChip(label = label, selected = selected, toggle = false, onClick = onClick)
+private fun ProviderChoice(label: String, selected: Boolean, enabled: Boolean, onClick: () -> Unit) {
+    FilterChip(selected = selected, onClick = onClick, label = { Text(label) }, enabled = enabled)
+}
+
+private enum class SceneProvider(val vendor: String, val label: String) {
+    Recorded("", "Recorded demo"),
+    Claude("Claude", "Claude, your key"),
+    Gemini("Gemini", "Gemini, your key"),
 }
 
 private fun modelSummary(model: RoomModel): String {
@@ -833,7 +894,7 @@ private fun count(n: Int, noun: String) = if (n == 1) "1 $noun" else "$n ${noun}
 
 /**
  * Four keyframes spread over the session, each a line saying where the camera stood and the photo
- * it took — what Claude is shown of the room besides the tools.
+ * it took — what a live provider is shown of the room besides the tools.
  */
 private fun keyframesFor(media: RerunReplayMedia, spatial: SpatialSession): List<AiContent> {
     val frames = spatial.keyframes
@@ -872,6 +933,30 @@ private suspend fun qaOwnScan(context: Context): RerunReplayMedia? = runCatching
     loadRerunSession(RerunCaptureBuilder.build(part, manifest.lens, emptyList(), device))
 }.getOrNull()
 
+/** QA only: fuse depth, archive it as a capture and reopen it through the real scan loader. */
+private suspend fun qaSyntheticRoom(): RerunReplayMedia? = withContext(Dispatchers.Default) {
+    val fusion = DenseFusion()
+    val events = mutableListOf<ArDebugEvent>()
+    RerunSyntheticRoom.frames().forEachIndexed { index, frame ->
+        fusion.add(DepthBackProjection.project(frame))
+        events += ArDebugEvent.CameraPose(index * QA_SYNTHETIC_FRAME_NS, frame.pose)
+    }
+    val cloud = fusion.cloud(minViews = DenseFusion.MIN_VIEWS)
+    // The replay camera frames the trace. Give it real sampled surfels as well as the full
+    // dense archive, so it frames the room instead of only the camera's short walking path.
+    val count = minOf(cloud.count, QA_TRACE_POINTS)
+    val positions = FloatArray(count * 3) { i ->
+        cloud.positions[(i / 3 * cloud.count / count) * 3 + i % 3]
+    }
+    val colors = IntArray(count) { cloud.colors[it * cloud.count / count] }
+    events += ArDebugEvent.Points(events.last().nanos, positions, null, colors)
+    val device = ScanDevice("android", "Synthetic room", ScanDevice.TIER_DEPTH, ScanDevice.SOURCE_RAW_DEPTH)
+    loadRerunSession(RerunCaptureBuilder.build(
+        events, ReplayLens.Default, emptyList(), device,
+        dense = cloud,
+    ))
+}
+
 /**
  * QA only: [inner], held for good once [holdAt] assistant turns of the current request have run,
  * so a capture shows the model mid-work — its rays and probes still on screen.
@@ -895,8 +980,8 @@ private val FADED_FIRST = listOf(DebugGroup.Planes, DebugGroup.Trail)
 
 private const val SCAN_ROOM = "Scan this room"
 private const val SAMPLE_SCAN = "Back to the sample scan"
-private const val OWN_SCAN_ADD_KEY = "Add your Claude key in Settings to rebuild your own scan."
-private const val OWN_SCAN_PICK_CLAUDE = "Pick \"Claude, your key\" in Settings to rebuild your own scan."
+private const val OWN_SCAN_ADD_KEY = "Add your Claude or Gemini key in Settings to rebuild your own scan."
+private const val OWN_SCAN_PICK_PROVIDER = "Pick Claude or Gemini in Settings to rebuild your own scan."
 private const val CLOUD_FADE_MS = 1400
 
 // The points shrink in a few steps, as each new size rebuilds their meshes.
@@ -908,6 +993,9 @@ private const val QA_BUILDING = "building"
 private const val QA_REBUILT = "rebuilt"
 private const val QA_CORNER = "corner"
 private const val QA_OWN_SCAN = "own_scan"
+private const val QA_SYNTHETIC = "synthetic"
+private const val QA_SYNTHETIC_FRAME_NS = 100_000_000L
+private const val QA_TRACE_POINTS = 2_000
 
 // The QA stand-in for a scan of the user's own: the first part of the sample's journal.
 private const val QA_OWN_SCAN_SHARE = 0.4f

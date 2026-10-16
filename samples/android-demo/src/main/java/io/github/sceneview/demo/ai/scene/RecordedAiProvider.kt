@@ -139,7 +139,7 @@ class RecordedAiProvider(private val paceMillis: Long = DEFAULT_PACE_MS) : AiPro
         }
 
         /** Every tool call in [messages], paired with the result that answered it. */
-        private fun ran(messages: List<AiMessage>): List<Ran> {
+        internal fun ran(messages: List<AiMessage>): List<Ran> {
             val results = messages.flatMap { it.content }.filterIsInstance<AiContent.ToolResult>()
                 .associateBy { it.toolUseId }
             return messages.flatMap { it.content }.filterIsInstance<AiContent.ToolUse>().mapNotNull { use ->
@@ -154,7 +154,7 @@ class RecordedAiProvider(private val paceMillis: Long = DEFAULT_PACE_MS) : AiPro
 
         private val UNKNOWN = Step(
             "This recorded demo replays two requests on the bundled scan: \"$REBUILD_PROMPT\" and " +
-                "\"$READING_CORNER_PROMPT\". Add your own Claude key in the settings to ask anything else.",
+                "\"$READING_CORNER_PROMPT\". Add your own Claude or Gemini key in the settings to ask anything else.",
         )
 
         // ─── Rebuild ────────────────────────────────────────────────────────────────────────

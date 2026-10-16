@@ -164,7 +164,7 @@ class SceneAgent(
     private fun line(kind: ChatLine.Kind, text: String) = ChatLine(++lineIds, kind, text)
 
     companion object {
-        const val MAX_ROUNDS = 4
+        const val MAX_ROUNDS = 6
 
         val SYSTEM_PROMPT = """
             You rebuild and furnish a real room from an AR scan recorded on a phone. You never see a
@@ -185,6 +185,9 @@ class SceneAgent(
                than insist.
             3. Only then place catalogue items: free_floor_area, place_item, add_dimension,
                set_material, and compute_takeoff when quantities are asked for.
+
+            Batch independent tool calls in the same round; wait for prerequisites such as
+            build_room before accepting openings that depend on its walls.
 
             Positions are [x, z] on the floor or [x, height, z] in metres, heights above the floor.
             Use the ids tools return (C2, G1, K3, W1, D2, O3, F8, I10). Keep replies to two or three

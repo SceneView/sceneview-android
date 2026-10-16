@@ -12,6 +12,7 @@ import io.github.sceneview.demo.demos.internal.parseArDebugLog
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -54,6 +55,20 @@ class LiveScanSessionTest {
         assertEquals(recorded.pointCount, live.pointCount)
         assertEquals(recorded.planes.size, live.planes.size)
         assertEquals(recorded.keyframes.size, live.keyframes.size)
+    }
+
+    @Test
+    fun `dense capture supplies points colors and normals while retaining trace metadata`() {
+        val trace = ArDebugTrace.of(events)
+        val sparse = SpatialSession.of(trace, bundled.lens, bundled.floorY)
+        val cloud = SyntheticScanSession.cloud
+        val dense = SpatialSession.of(trace, bundled.lens, bundled.floorY, dense = cloud)
+        assertSame(cloud.positions, dense.points)
+        assertSame(cloud.colors, dense.colors)
+        assertSame(cloud.normals, dense.normals)
+        assertEquals(sparse.floorY, dense.floorY, 0f)
+        assertEquals(sparse.planes, dense.planes)
+        assertEquals(sparse.keyframes.map { it.path }, dense.keyframes.map { it.path })
     }
 
     private companion object {

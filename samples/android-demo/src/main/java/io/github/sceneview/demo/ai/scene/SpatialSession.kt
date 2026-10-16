@@ -4,6 +4,7 @@ import io.github.sceneview.demo.demos.internal.ArDebugTrace
 import io.github.sceneview.demo.demos.internal.DebugPlane
 import io.github.sceneview.demo.demos.internal.DebugPlaneKind
 import io.github.sceneview.demo.demos.internal.DebugPose
+import io.github.sceneview.demo.demos.internal.DenseCloud
 import io.github.sceneview.demo.demos.internal.ReplayLens
 import io.github.sceneview.demo.demos.internal.Vec3
 import kotlin.math.abs
@@ -259,7 +260,12 @@ class SpatialSession(
         private const val RAY_POINT_RADIUS_M = 0.04f
 
         /** The session behind a replay: the trace's final state, the camera's lens. */
-        fun of(trace: ArDebugTrace, lens: ReplayLens, floorY: Float? = null): SpatialSession {
+        fun of(
+            trace: ArDebugTrace,
+            lens: ReplayLens,
+            floorY: Float? = null,
+            dense: DenseCloud? = null,
+        ): SpatialSession {
             val last = trace.frameAt(trace.duration)
             val poseTimes = FloatArray(trace.poseCount) { trace.poseTime(it) }
             val poses = List(trace.poseCount) { trace.pose(it) }
@@ -269,14 +275,16 @@ class SpatialSession(
                 }
                 ?: 0f
             val provisional = SpatialSession(
-                last.mapPoints, last.mapPointColors, last.planes, emptyList(), lens, floor, poseTimes, poses,
+                dense?.positions ?: last.mapPoints, dense?.colors ?: last.mapPointColors,
+                last.planes, emptyList(), lens, floor, poseTimes, poses, normals = dense?.normals,
             )
             val keyframes = List(trace.imageCount) { i ->
                 val t = trace.imageTime(i)
                 SpatialKeyframe(i, t, provisional.cameraPoseAt(t), trace.imagePath(i))
             }
             return SpatialSession(
-                last.mapPoints, last.mapPointColors, last.planes, keyframes, lens, floor, poseTimes, poses,
+                provisional.points, provisional.colors, last.planes, keyframes, lens, floor, poseTimes, poses,
+                normals = dense?.normals,
             )
         }
 

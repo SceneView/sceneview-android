@@ -11,12 +11,12 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
 /**
- * The user's own Claude key, encrypted on the phone: AES-GCM under a key that lives in the
+ * The user's own provider key, encrypted on the phone: AES-GCM under a key that lives in the
  * Android Keystore and cannot be exported. Only the ciphertext and its IV reach the app's
  * preferences; the clear key exists in memory only while a request is built. Nothing here logs.
  */
-class ApiKeyStore(context: Context) {
-    private val prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+class ApiKeyStore(context: Context, private val alias: String = ALIAS, prefsName: String = PREFS) {
+    private val prefs = context.applicationContext.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
 
     /** Whether a key is saved. */
     val hasKey: Boolean get() = prefs.contains(CIPHERTEXT)
@@ -50,16 +50,16 @@ class ApiKeyStore(context: Context) {
 
     fun clear() {
         prefs.edit().remove(IV).remove(CIPHERTEXT).remove(HINT).apply()
-        runCatching { keyStore().deleteEntry(ALIAS) }
+        runCatching { keyStore().deleteEntry(alias) }
     }
 
     private fun keyStore(): KeyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
 
     private fun secret(): SecretKey {
-        (keyStore().getEntry(ALIAS, null) as? KeyStore.SecretKeyEntry)?.let { return it.secretKey }
+        (keyStore().getEntry(alias, null) as? KeyStore.SecretKeyEntry)?.let { return it.secretKey }
         val generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEYSTORE)
         generator.init(
-            KeyGenParameterSpec.Builder(ALIAS, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
+            KeyGenParameterSpec.Builder(alias, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
                 .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
                 .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
                 .setKeySize(KEY_BITS)

@@ -10,6 +10,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -74,6 +75,18 @@ class SceneToolsTest {
             refused.model,
         )
         assertEquals("O2", obj.model.objects.single().id)
+    }
+
+    @Test
+    fun `an additional measured wall invalidates a previous plan`() {
+        val previous = RoomModel(plan = RoomPlan(emptyList(), 14.4f, 15.2f, 2.6f, true))
+        val added = run(
+            SceneToolExecutor.ADD_WALL,
+            """{"from":[1.98,-2.52],"to":[2.84,-0.76],"height_m":2.4}""",
+            previous,
+        )
+        assertFalse(added.content, added.isError)
+        assertNull(added.model.plan)
     }
 
     @Test

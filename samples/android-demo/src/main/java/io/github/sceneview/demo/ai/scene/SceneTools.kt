@@ -486,7 +486,7 @@ class SceneToolExecutor(private val session: SpatialSession) {
             put("evidence", evidence)
         }.toString()
         return ToolOutcome(
-            content, false, next.copy(walls = next.walls + wall),
+            content, false, next.copy(walls = next.walls + wall, plan = null),
             looks = listOf(proposedLook),
             caption = "Wall $id kept — $evidence",
         )
