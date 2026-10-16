@@ -171,6 +171,15 @@
     setScale(entry.stage, entry.stage._scale || 1);
   }
 
+  function contextLost(stage) {
+    for (var i = live.length; i--;) {
+      if (live[i].stage !== stage) continue;
+      console.warn('[site] WebGL context lost, back to the poster');
+      clearTimeout(stage._idle);
+      park(live.splice(i, 1)[0]);
+    }
+  }
+
   function goLive(stage) {
     if (stage._sv || stage.classList.contains('is-loading')) return Promise.resolve();
     if (!hasWebGL2()) { stage.classList.add('no-webgl'); return Promise.resolve(); }
@@ -195,7 +204,13 @@
     }).then(function (sv) {
       if (signal.aborted) { sv.dispose(); return; }
       stage._sv = sv; live.push({ stage: stage, sv: sv });
+      // A GPU reset (a driver hang, Chrome restarting its GPU process) takes the page's
+      // WebGL contexts with it, and the engine on one cannot come back. The stage stayed
+      // "Live" on an empty canvas: it goes back to its poster and its load button instead.
+      // park() releasing the context itself fires this too; by then the stage let go of sv.
+      on(canvas, 'webglcontextlost', function () { if (stage._sv === sv) contextLost(stage); });
       if (def) return sv.loadModel(def.model).then(function () {
+        if (stage._sv !== sv) return;     // lost and parked while it loaded
         var scene = stage._scene = def.setup(sv, {
           canvas: canvas, mobile: caps.mobile,
           // A hand on the picture ends the camera move: the button shows it can resume.
@@ -217,6 +232,7 @@
         }, 400);
       });
       return sv.loadModel(stage.dataset.src).then(function () {
+        if (stage._sv !== sv) return;     // lost and parked while it loaded
         applyFit(stage, sv);
         if (stage.dataset.anim && stage._animate !== false) sv.playAnimation(parseInt(stage.dataset.anim, 10), true);
         setTimeout(function () { if (stage._sv !== sv) return; stage.classList.remove('is-loading'); stage.classList.add('is-live'); }, 400);
