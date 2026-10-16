@@ -26,11 +26,13 @@ object SearchTerm {
     fun normalize(raw: String): String? {
         val term = raw.trim().replace(whitespace, " ").lowercase(Locale.ROOT)
         if (term.length < MIN_LENGTH) return null
-        if ('@' in term || "http" in term || "www." in term || longNumber.containsMatchIn(term)) {
-            return REDACTED
-        }
+        if (looksPersonal(term)) return REDACTED
         return term.take(MAX_LENGTH).trimEnd()
     }
+
+    /** An email address, a link or a long number (a phone, an order id): never sent as typed. */
+    private fun looksPersonal(term: String): Boolean =
+        listOf("@", "http", "www.").any { it in term } || longNumber.containsMatchIn(term)
 
     /** `result_bucket` for [count] results, `error` when the search never answered (`null`). */
     fun resultBucket(count: Int?): String = when {
