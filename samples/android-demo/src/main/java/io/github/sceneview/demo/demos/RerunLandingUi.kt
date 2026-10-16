@@ -61,6 +61,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.github.sceneview.demo.LocalDemoBottomChromeCover
 import io.github.sceneview.demo.SETTINGS_FAB_RESERVED_SPACE
 import io.github.sceneview.demo.demos.internal.DollhouseCopy
 import io.github.sceneview.demo.demos.internal.ScanCopy
@@ -127,13 +128,19 @@ private fun LandingPage(state: RerunLandingState, actions: RerunLandingActions) 
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .windowInsetsPadding(WindowInsets.safeDrawing)
-                .padding(top = HeaderClearance, bottom = SETTINGS_FAB_RESERVED_SPACE)
+                // The list ends a gutter above everything the scaffold floats at the bottom —
+                // the mode pill and the settings button — so its last session scrolls clear.
+                .padding(
+                    top = RerunHeaderClearance,
+                    bottom = maxOf(SETTINGS_FAB_RESERVED_SPACE, LocalDemoBottomChromeCover.current) +
+                        Space.md,
+                )
                 .padding(horizontal = Space.md),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Column(
                 modifier = Modifier
-                    .widthIn(max = PageMaxWidth)
+                    .widthIn(max = RerunPageMaxWidth)
                     .fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(Space.md),
             ) {
@@ -453,8 +460,11 @@ private fun SessionCard(
 }
 
 /** The demo header's row — back button and title — which the page scrolls under. */
-private val HeaderClearance = SceneViewTokens.Layout.touchTarget + Space.md * 2
-private val PageMaxWidth = 560.dp
+/** What the header's pills take at the top of a Room Scan page: the landing's and the plan's. */
+internal val RerunHeaderClearance = SceneViewTokens.Layout.touchTarget + Space.md * 2
+
+/** The widest a Room Scan page of text is laid out: the landing's and the plan's. */
+internal val RerunPageMaxWidth = 560.dp
 private val RecordCardHeight = Space.x4l
 private val RecordWellSize = 56.dp
 private val GlassActionHeight = 56.dp

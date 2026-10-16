@@ -3,8 +3,76 @@
      `ArRerunFragment.kt`). Android's resource merger
      fans every `res/values/*.xml` file in, so `R.string.demo_ar_rerun_title` etc.
      remains globally resolvable. Adding a new demo never needs to touch
-     this file or `strings.xml` — see #1870. -->
+     this file or `strings.xml` — see #1870.
+
+     The name says what the user does — scan a room, then look at it again in 3D — not the
+     tool behind it (#4306). The demo id, the string keys, the `rerun` mode key and the
+     `sceneview://demo/ar-rerun` deep link keep their names: links and analytics stay valid. -->
 <resources>
-    <string name="demo_ar_rerun_title">Rerun AR Replay</string>
-    <string name="demo_ar_rerun_subtitle">Watch a real AR session rebuild itself in 3D</string>
+    <string name="demo_ar_rerun_title">Room Scan</string>
+    <string name="demo_ar_rerun_subtitle">Scan your room, then replay it in 3D</string>
+
+    <!-- Why the replay has no surface to show; the points stay on screen. One line each: the
+         timeline card's caption has room for one. -->
+    <!-- The scan gave nothing to mesh. -->
+    <string name="demo_ar_rerun_surface_poor_scan">No surface yet: scan slowly, 1–3 m from the walls.</string>
+    <!-- Building the mesh, or loading it into the 3D view, ran out of memory. -->
+    <string name="demo_ar_rerun_surface_out_of_memory">Not enough memory to build the surface.</string>
+    <!-- The build failed, or the 3D view could not load what it built. -->
+    <string name="demo_ar_rerun_surface_unavailable">The surface could not be shown.</string>
+
+    <!-- Back during a scan that already holds points: asked before the scan is dropped. The
+         scan keeps recording under the dialog. -->
+    <string name="demo_ar_rerun_discard_title">Discard this scan?</string>
+    <string name="demo_ar_rerun_discard_detail">What you have scanned so far will be lost.</string>
+    <string name="demo_ar_rerun_discard_confirm">Discard</string>
+    <string name="demo_ar_rerun_discard_dismiss">Keep scanning</string>
+
+    <!-- The Plan view of a scan (#4540): the room's survey and its dimensioned floor plan. -->
+    <string name="demo_ar_rerun_plan_dock_label">Floor plan</string>
+    <string name="demo_ar_rerun_plan_dock_caption">Plan</string>
+    <string name="demo_ar_rerun_plan_survey_title">Room survey</string>
+    <string name="demo_ar_rerun_plan_measuring">Measuring the room…</string>
+    <!-- %1$s the scan's title, %2$s its date. -->
+    <string name="demo_ar_rerun_plan_heading">%1$s · %2$s</string>
+    <string name="demo_ar_rerun_plan_area">Floor area</string>
+    <string name="demo_ar_rerun_plan_dimensions">Length × width</string>
+    <string name="demo_ar_rerun_plan_perimeter">Perimeter</string>
+    <string name="demo_ar_rerun_plan_height">Ceiling height</string>
+    <string name="demo_ar_rerun_plan_span">Between facing walls</string>
+    <string name="demo_ar_rerun_plan_walls">Walls</string>
+    <!-- %1$s the wall's letter on the plan. -->
+    <string name="demo_ar_rerun_plan_wall">Wall %1$s</string>
+    <string name="demo_ar_rerun_plan_not_seen">not seen</string>
+    <string name="demo_ar_rerun_plan_not_measured">not measured</string>
+    <string name="demo_ar_rerun_plan_estimated">estimated</string>
+    <string name="demo_ar_rerun_plan_estimate_note">≈ and dashed walls are estimates: the scan did not see all of what that figure needs.</string>
+    <string name="demo_ar_rerun_plan_spread_note">± is the scatter of the scan, not an accuracy.</string>
+    <string name="demo_ar_rerun_plan_notice">Indicative plan — not a certified measurement.</string>
+    <string name="demo_ar_rerun_plan_made_with">Made with SceneView.</string>
+    <!-- %1$s the scale bar's length in metres. -->
+    <string name="demo_ar_rerun_plan_scale_bar">%1$s m</string>
+    <string name="demo_ar_rerun_plan_empty_title">No plan for this scan yet</string>
+    <string name="demo_ar_rerun_plan_gap_no_depth">This scan has no depth: scan the room again on a phone with a depth sensor.</string>
+    <string name="demo_ar_rerun_plan_gap_no_walls">Scan the walls from the floor up to above your head.</string>
+    <string name="demo_ar_rerun_plan_gap_missing_wall">Scan the missing wall.</string>
+    <string name="demo_ar_rerun_plan_gap_oblique_wall">A wall of this room is not square to the others: the plan draws square corners only, so the area and the perimeter are estimates.</string>
+    <string name="demo_ar_rerun_plan_gap_ceiling">Raise the phone to the ceiling.</string>
+    <string name="demo_ar_rerun_plan_legend_seen">Wall seen by the scan</string>
+    <string name="demo_ar_rerun_plan_legend_unseen">Not seen — estimate</string>
+    <string name="demo_ar_rerun_plan_scroll_hint">Scroll to see the whole plan, or hold the phone upright.</string>
+    <string name="demo_ar_rerun_plan_share_pdf">Share PDF</string>
+    <string name="demo_ar_rerun_plan_share_text">Share text</string>
+    <string name="demo_ar_rerun_plan_share_failed">The plan could not be written.</string>
+    <!-- %1$s the scan's title. -->
+    <string name="demo_ar_rerun_plan_pdf_file">%1$s plan.pdf</string>
+    <string name="demo_ar_rerun_plan_pdf_title">Floor plan</string>
+    <!-- %1$d the scale's denominator: 50 for 1:50. -->
+    <string name="demo_ar_rerun_plan_pdf_scale">Scale 1:%1$d when printed at 100%% (A4) · dimensions in metres</string>
+    <!-- %1$d the page, %2$d how many there are. -->
+    <string name="demo_ar_rerun_plan_pdf_page">Page %1$d of %2$d</string>
+    <string name="demo_ar_rerun_plan_pdf_walls_continued">Walls (continued)</string>
+    <string name="demo_ar_rerun_plan_content_description">Floor plan of the room</string>
+    <!-- A scan's settings sheet: its files (.rrd, .glb, .ply), whatever view is on screen. -->
+    <string name="demo_ar_rerun_export_files">Export 3D files</string>
 </resources>
