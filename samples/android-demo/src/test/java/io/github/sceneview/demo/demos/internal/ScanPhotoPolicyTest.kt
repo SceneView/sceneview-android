@@ -207,7 +207,7 @@ class ScanPhotoPolicyTest {
             val opened = RerunScanFile.read(RerunScanFile.write(pack))!!.open()!!
             val scene = RerunExportAdapter.scene(pack, "Room")!!
             val chunks = RerunRrdWriter.chunks(scene, jpegCodec)
-                .filter { chunk -> chunk.components.any { it.archetype == "Pinhole" } }
+                .filter { chunk -> chunk.components.any { it.archetypeName == "rerun.archetypes.Pinhole" } }
             if (sizes.size == 1) assertNull(chunks.single().times)
             else assertEquals(
                 listOf(listOf(0L), listOf(1_000_000_000L), listOf(2_000_000_000L)),
