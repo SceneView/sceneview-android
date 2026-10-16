@@ -77,19 +77,20 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import io.github.sceneview.ai.AiContent
+import io.github.sceneview.ai.AiEndpoint
+import io.github.sceneview.ai.AiEvent
+import io.github.sceneview.ai.AiMessage
+import io.github.sceneview.ai.AiProvider
+import io.github.sceneview.ai.AiTurn
+import io.github.sceneview.ai.claude.ClaudeAiProvider
 import io.github.sceneview.demo.DemoScaffold
 import io.github.sceneview.demo.DemoSettings
 import io.github.sceneview.demo.DockItem
 import io.github.sceneview.demo.R
 import io.github.sceneview.demo.ai.scene.AgentState
-import io.github.sceneview.demo.ai.scene.AiContent
-import io.github.sceneview.demo.ai.scene.AiEvent
-import io.github.sceneview.demo.ai.scene.AiMessage
-import io.github.sceneview.demo.ai.scene.AiProvider
-import io.github.sceneview.demo.ai.scene.AiTurn
 import io.github.sceneview.demo.ai.scene.ApiKeyStore
 import io.github.sceneview.demo.ai.scene.ChatLine
-import io.github.sceneview.demo.ai.scene.ClaudeAiProvider
 import io.github.sceneview.demo.ai.scene.RecordedAiProvider
 import io.github.sceneview.demo.ai.scene.RoomModel
 import io.github.sceneview.demo.ai.scene.SceneAgent
@@ -182,7 +183,7 @@ fun AiSceneDemo(onBack: () -> Unit) {
     LaunchedEffect(keyStore) { keyHint = withContext(Dispatchers.Default) { keyStore.hint } }
     var useClaude by rememberSaveable { mutableStateOf(false) }
     val recorded = remember { RecordedAiProvider() }
-    val claude = remember(keyStore) { ClaudeAiProvider(key = { keyStore.load() }) }
+    val claude = remember(keyStore) { ClaudeAiProvider(AiEndpoint.Vendor { keyStore.load() }) }
     val provider: AiProvider = if (useClaude) claude else recorded
     // The recording knows the sample room only: on the user's own scan it answers nothing, and
     // the screen says what rebuilds it instead — Claude with the user's key.

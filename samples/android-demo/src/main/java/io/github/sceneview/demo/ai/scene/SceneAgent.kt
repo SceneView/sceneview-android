@@ -1,11 +1,15 @@
 package io.github.sceneview.demo.ai.scene
 
+import io.github.sceneview.ai.AiContent
+import io.github.sceneview.ai.AiConversation
+import io.github.sceneview.ai.AiEvent
+import io.github.sceneview.ai.AiProvider
+import io.github.sceneview.ai.AiUsageLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
@@ -47,7 +51,10 @@ class SceneAgent(
     private val mutableState = MutableStateFlow(AgentState())
     val state: StateFlow<AgentState> = mutableState.asStateFlow()
 
-    private val messages = ArrayList<AiMessage>()
+    /** Every request made to a provider since the last [reset]: tokens, latency, tools, errors. */
+    val usage = AiUsageLog()
+
+    private val conversation = AiConversation(SYSTEM_PROMPT, SceneToolExecutor.SPECS)
     private val undoStack = ArrayDeque<RoomModel>()
     private var pendingNote: String? = null
     private var lineIds = 0
@@ -57,7 +64,7 @@ class SceneAgent(
         if (state.value.busy || prompt.isBlank()) return
         val before = state.value.model
         val opening = buildList {
-            if (messages.isEmpty()) {
+            if (conversation.isEmpty) {
                 add(AiContent.Text("Session digest: ${executor.digest()}"))
                 if (provider.capabilities.images) addAll(keyframes())
             }
@@ -65,7 +72,7 @@ class SceneAgent(
             add(AiContent.Text(RecordedAiProvider.PROMPT_MARK + prompt.trim()))
         }
         pendingNote = null
-        appendUser(opening)
+        conversation.user(opening)
         apply { it.copy(busy = true, looks = emptyList(), lines = it.lines + line(ChatLine.Kind.User, prompt.trim())) }
         try {
             converse(provider)
@@ -77,51 +84,30 @@ class SceneAgent(
 
     private suspend fun converse(provider: AiProvider) {
         for (round in 1..MAX_ROUNDS) {
-            val turn = AiTurn(SYSTEM_PROMPT, messages.toList(), SceneToolExecutor.SPECS)
-            val calls = ArrayList<AiEvent.ToolCall>()
-            var transcript: List<AiContent> = emptyList()
-            var failed = false
-            val text = StringBuilder()
             val replyId = ++lineIds
-            provider.run(turn)
-                .catch { emit(AiEvent.Error(it.message ?: it.javaClass.simpleName)) }
-                .collect { event ->
-                    when (event) {
-                        is AiEvent.TextDelta -> {
-                            text.append(event.text)
-                            val reply = ChatLine(replyId, ChatLine.Kind.Assistant, text.toString().trim())
-                            apply { s -> s.copy(lines = s.lines.filterNot { it.id == replyId } + reply) }
-                        }
-                        is AiEvent.ToolCall -> calls += event
-                        is AiEvent.Usage -> apply {
-                            it.copy(
-                                inputTokens = it.inputTokens + event.inputTokens,
-                                outputTokens = it.outputTokens + event.outputTokens,
-                            )
-                        }
-                        is AiEvent.Done -> transcript = event.transcript
-                        is AiEvent.Error -> {
-                            failed = true
-                            apply { it.copy(lines = it.lines + line(ChatLine.Kind.Error, event.message)) }
-                        }
-                    }
+            val result = conversation.round(provider) { text ->
+                val reply = ChatLine(replyId, ChatLine.Kind.Assistant, text.trim())
+                apply { s -> s.copy(lines = s.lines.filterNot { it.id == replyId } + reply) }
+            }
+            usage.add(provider.id, provider.model, round, result)
+            result.usage?.let { tokens ->
+                apply {
+                    it.copy(
+                        inputTokens = it.inputTokens + tokens.inputTokens,
+                        outputTokens = it.outputTokens + tokens.outputTokens,
+                    )
                 }
-            if (failed) return
-            messages += AiMessage(
-                AiMessage.Role.Assistant,
-                transcript.ifEmpty {
-                    buildList {
-                        if (text.isNotBlank()) add(AiContent.Text(text.toString().trim()))
-                        calls.forEach { add(AiContent.ToolUse(it.id, it.name, it.input)) }
-                    }
-                },
-            )
-            if (calls.isEmpty()) return
-            val results = calls.map { call ->
+            }
+            result.error?.let { message ->
+                apply { it.copy(lines = it.lines + line(ChatLine.Kind.Error, message)) }
+                return
+            }
+            if (result.calls.isEmpty()) return
+            val results = result.calls.map { call ->
                 val outcome = runTool(call)
                 AiContent.ToolResult(call.id, outcome.content, outcome.isError)
             }
-            appendUser(results)
+            conversation.toolResults(results)
             if (round == MAX_ROUNDS) {
                 apply { it.copy(lines = it.lines + line(ChatLine.Kind.Note, "Stopped after $MAX_ROUNDS round trips.")) }
             }
@@ -164,20 +150,11 @@ class SceneAgent(
     /** An empty room and a new conversation. */
     fun reset() {
         if (state.value.busy) return
-        messages.clear()
+        conversation.clear()
+        usage.clear()
         undoStack.clear()
         pendingNote = null
         mutableState.value = AgentState()
-    }
-
-    private fun appendUser(content: List<AiContent>) {
-        val last = messages.lastOrNull()
-        // Consecutive user content stays one message, as the API wants roles to alternate.
-        if (last?.role == AiMessage.Role.User) {
-            messages[messages.lastIndex] = last.copy(content = last.content + content)
-        } else {
-            messages += AiMessage(AiMessage.Role.User, content)
-        }
     }
 
     private suspend fun apply(change: (AgentState) -> AgentState) {

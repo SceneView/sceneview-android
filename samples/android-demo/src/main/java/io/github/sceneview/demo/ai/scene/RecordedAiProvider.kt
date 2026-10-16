@@ -1,5 +1,12 @@
 package io.github.sceneview.demo.ai.scene
 
+import io.github.sceneview.ai.AiCapabilities
+import io.github.sceneview.ai.AiContent
+import io.github.sceneview.ai.AiEvent
+import io.github.sceneview.ai.AiMessage
+import io.github.sceneview.ai.AiProvider
+import io.github.sceneview.ai.AiStatus
+import io.github.sceneview.ai.AiTurn
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow

@@ -53,6 +53,9 @@ apiValidation {
         // Optional ML depth module — not published until the Pixel 4a gate of
         // the ML depth plan passes; it gets its own .api dump when it is.
         "arsceneview-depth-ml",
+        // Provider-agnostic AI layer (#4573) — not published until 5.0.0, so no
+        // .api dump yet; the demo consumes it as a project dependency.
+        "sceneview-ai",
     ]
 
     // Klib (Kotlin/Native + JS) ABI validation stays DISABLED (the default).

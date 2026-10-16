@@ -1,5 +1,7 @@
 package io.github.sceneview.demo.ai.scene
 
+import io.github.sceneview.ai.AiSchemas
+import io.github.sceneview.ai.AiToolSpec
 import io.github.sceneview.demo.demos.internal.DebugPlane
 import io.github.sceneview.demo.demos.internal.DebugPlaneKind
 import io.github.sceneview.demo.demos.internal.DebugPose
@@ -1048,28 +1050,15 @@ class SceneToolExecutor(private val session: SpatialSession) {
             ),
         )
 
-        private fun spec(name: String, description: String, vararg properties: Pair<String, JsonObject>) = AiToolSpec(
-            name,
-            description,
-            buildJsonObject {
-                put("type", "object")
-                putJsonObject("properties") { properties.forEach { (k, v) -> put(k, v) } }
-                putJsonArray("required") { properties.forEach { add(it.first) } }
-                put("additionalProperties", false)
-            },
-        )
+        // The strict schema every provider accepts, built by the shared layer (sceneview-ai).
+        private fun spec(name: String, description: String, vararg properties: Pair<String, JsonObject>) =
+            AiToolSpec(name, description, AiSchemas.objectSchema(*properties))
 
-        private fun number() = buildJsonObject { put("type", "number") }
-        private fun integer() = buildJsonObject { put("type", "integer") }
-        private fun string() = buildJsonObject { put("type", "string") }
-        private fun numbers() = buildJsonObject {
-            put("type", "array")
-            putJsonObject("items") { put("type", "number") }
-        }
-        private fun enumOf(values: List<String>) = buildJsonObject {
-            put("type", "string")
-            putJsonArray("enum") { values.forEach { add(it) } }
-        }
+        private fun number() = AiSchemas.number("")
+        private fun integer() = AiSchemas.integer("")
+        private fun string() = AiSchemas.string("")
+        private fun numbers() = AiSchemas.numbers("")
+        private fun enumOf(values: List<String>) = AiSchemas.enumOf(values, "")
 
         /** [deg] folded into -180..180. */
         fun normalise(deg: Float): Float = ((deg % 360f) + 540f) % 360f - 180f

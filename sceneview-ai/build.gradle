@@ -1,0 +1,43 @@
+// :sceneview-ai — the provider-agnostic SceneView AI layer (#4573).
+//
+// Pure Kotlin. `commonMain` holds what every platform shares: the provider interface and its
+// events, the strict tool schemas, the conversation loop, the usage log, and the codecs that turn
+// a turn into Claude's Messages API body or Gemini's generateContent body and back. The OkHttp
+// transports live in `androidMain` — the JVM target the Android demo consumes, named like
+// sceneview-core's so the Android modules depend on both the same way. No Android framework
+// anywhere: the same jar runs the live loop from a JVM test on a Mac.
+//
+// Not published: no `publish` plugin, no `.api` dump, no Maven coordinates. Major version 4 is
+// frozen; whether this becomes a published module is a `5.0.0` decision.
+plugins {
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.kotlin.serialization)
+}
+
+kotlin {
+    jvm("android")
+
+    applyDefaultHierarchyTemplate()
+
+    sourceSets {
+        commonMain.dependencies {
+            implementation(libs.kotlin.coroutines.core)
+            api(libs.kotlinx.serialization.json)
+        }
+
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+            implementation(libs.kotlin.coroutines.test)
+        }
+
+        androidMain.dependencies {
+            implementation(libs.okhttp)
+            // Call.executeAsync(): cancelling the coroutine aborts the request.
+            implementation(libs.okhttp.coroutines)
+        }
+
+        androidTest.dependencies {
+            implementation(libs.mockwebserver3)
+        }
+    }
+}
