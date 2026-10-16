@@ -3057,7 +3057,8 @@
       "usedIn": [
         "android-demo",
         "android-tv-demo",
-        "ios-demo"
+        "ios-demo",
+        "website"
       ],
       "defaultScale": 0.3,
       "cameraDistance": 2.5
@@ -3924,7 +3925,12 @@
       "shippedAs": [
         "nintendo_switch_oled.glb"
       ],
-      "formats": {},
+      "formats": {
+        "glb": {
+          "file": "models/glb/nintendo_switch_oled.glb",
+          "size": "2.5MB"
+        }
+      },
       "tags": [
         "electronics",
         "tech",
@@ -3933,7 +3939,8 @@
       ],
       "usedIn": [
         "website",
-        "android-demo"
+        "android-demo",
+        "web-demo"
       ],
       "defaultScale": 1.0
     },

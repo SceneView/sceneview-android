@@ -1479,6 +1479,15 @@
       "author": "David_Holiday"
     },
     {
+      "path": "website-static/models/platforms/threejs_soldier.glb",
+      "scope": "web",
+      "sha256": "cdd26ddebc758a66e1317190571a5a8206689d0d4a658924e07ad370ad492fc6",
+      "size": 2338396,
+      "source": "https://github.com/mrdoob/three.js/blob/dev/examples/models/gltf/Soldier.glb",
+      "license": "CC0-1.0",
+      "author": "Tomás Laulhé (modified by Don McCurdy)"
+    },
+    {
       "path": "website-static/models/platforms/tier_escooter.glb",
       "scope": "web",
       "sha256": "61ed64c3feaceaa9c2bc9e730262b2281d1ac0e72e0d72a52cb34fefe2f73f93",
