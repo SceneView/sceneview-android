@@ -811,23 +811,27 @@ class DeepLinkRouterTest {
     // ── `--es qa_state <id>` — the one QA state seam (#3421, #3455) ────────────────────
 
     /**
-     * Under `qa_mode` the extra is passed through verbatim (trimmed): the router does not
-     * know any demo's vocabulary, so both Cloud Anchor and Point & Ask ids must survive it
-     * unchanged for each demo's own resolver to recognise them.
+     * In a debug build under `qa_mode` the extra is passed through verbatim (trimmed): the
+     * router does not know any demo's vocabulary, so both Cloud Anchor and Point & Ask ids
+     * must survive it unchanged for each demo's own resolver to recognise them. `debugBuild`
+     * is explicit so this also holds under `testReleaseUnitTest`; the release answer is
+     * pinned by `QaStateReleaseGuardTest` (#4555).
      */
     @Test
     fun `qa_state is accepted when qa_mode is on`() {
-        assertEquals("placing", DeepLinkRouter.resolveQaState(qaMode = true, raw = "placing"))
-        assertEquals("resolve_not_found", DeepLinkRouter.resolveQaState(qaMode = true, raw = "resolve_not_found"))
-        assertEquals("failed-persistent", DeepLinkRouter.resolveQaState(qaMode = true, raw = "failed-persistent"))
-        assertEquals("ready", DeepLinkRouter.resolveQaState(qaMode = true, raw = "  ready "))
+        fun resolve(raw: String) = DeepLinkRouter.resolveQaState(qaMode = true, raw = raw, debugBuild = true)
+        assertEquals("placing", resolve("placing"))
+        assertEquals("resolve_not_found", resolve("resolve_not_found"))
+        assertEquals("failed-persistent", resolve("failed-persistent"))
+        assertEquals("ready", resolve("  ready "))
     }
 
     /**
      * Without `qa_mode` the extra is ignored outright — a pinned state makes a screen claim
      * something that never happened, so `adb shell am start --es qa_state hosted` against a
-     * production install must be a no-op. This is the path that keeps the seam out of
-     * release builds; a blank id is dropped on either path.
+     * install that did not opt into QA must be a no-op. On a release build the id is
+     * dropped even under `qa_mode` (`QaStateReleaseGuardTest`, #4555); a blank id is
+     * dropped on either path.
      */
     @Test
     fun `qa_state is ignored when qa_mode is off`() {
