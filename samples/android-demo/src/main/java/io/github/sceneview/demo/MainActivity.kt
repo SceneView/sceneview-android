@@ -190,8 +190,8 @@ class MainActivity : ComponentActivity() {
         DemoSettings.qaMode = intent?.getBooleanExtra("qa_mode", false) ?: false
         DemoSettings.qaBackdrop = resolveQaBackdrop(intent)
         // Optional id of a visual state a demo should pin itself to (#3421, #3455). One extra
-        // for every demo's vocabulary (Cloud Anchors, Point & Ask). Only honoured in QA mode
-        // — a forced state makes a demo show something that never happened.
+        // for every demo's vocabulary (Cloud Anchors, Point & Ask). Only honoured by a debug
+        // build in QA mode — a forced state makes a demo show something that never happened.
         DemoSettings.qaDemoState = resolveQaDemoState(intent)
         // Optional path to an ARCore playback fixture (.mp4). Confined to the app's own
         // external-files dir so a malicious deep link can't probe arbitrary device paths
@@ -258,11 +258,12 @@ class MainActivity : ComponentActivity() {
      * cloud project and a second device), Point & Ask cards (AICore). Each demo owns its
      * own ids; see [DemoSettings.qaDemoState].
      *
-     * Gated on `qa_mode` by [DeepLinkRouter.resolveQaState], deliberately: unlike the camera
-     * backdrop, which only changes what is *behind* the scene, this changes what the demo
-     * *claims*, so it must never be reachable from an ordinary launch. Reads
-     * [DemoSettings.qaMode] rather than the extra again so the gate and the flag it guards
-     * cannot disagree. Tracks the latest intent like the other QA extras.
+     * Gated on a debug build with `qa_mode` on by [DeepLinkRouter.resolveQaState],
+     * deliberately: unlike the camera backdrop, which only changes what is *behind* the
+     * scene, this changes what the demo *claims*, so it must never be reachable from an
+     * ordinary launch — nor from the store build, where any app can send `qa_mode` (#4555).
+     * Reads [DemoSettings.qaMode] rather than the extra again so the gate and the flag it
+     * guards cannot disagree. Tracks the latest intent like the other QA extras.
      */
     private fun resolveQaDemoState(intent: Intent?): String? =
         DeepLinkRouter.resolveQaState(DemoSettings.qaMode, intent?.getStringExtra("qa_state"))

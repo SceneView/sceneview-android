@@ -171,8 +171,18 @@
     setScale(entry.stage, entry.stage._scale || 1);
   }
 
-  // sceneview.js rejects a loadModel() that a later call replaced with an AbortError
-  // (#4566): the later call owns the stage, so the older one has nothing to undo.
+  function contextLost(stage) {
+    for (var i = live.length; i--;) {
+      if (live[i].stage !== stage) continue;
+      console.warn('[site] WebGL context lost, back to the poster');
+      clearTimeout(stage._idle);
+      park(live.splice(i, 1)[0]);
+    }
+  }
+
+  // sceneview.js rejects a loadModel() that a later call replaced, or that its viewer's
+  // dispose() cut short (a lost context, a park), with an AbortError (#4566). Whatever
+  // replaced or disposed it owns the stage now, so the older load has nothing to undo.
   function superseded(e) { return !!e && e.name === 'AbortError'; }
 
   // The canvas takes over from the poster once the model is in, and the motion starts.
@@ -208,7 +218,13 @@
     }).then(function (sv) {
       if (signal.aborted) { sv.dispose(); return; }
       stage._sv = sv; live.push({ stage: stage, sv: sv });
+      // A GPU reset (a driver hang, Chrome restarting its GPU process) takes the page's
+      // WebGL contexts with it, and the engine on one cannot come back. The stage stayed
+      // "Live" on an empty canvas: it goes back to its poster and its load button instead.
+      // park() releasing the context itself fires this too; by then the stage let go of sv.
+      on(canvas, 'webglcontextlost', function () { if (stage._sv === sv) contextLost(stage); });
       if (def) return sv.loadModel(def.model).then(function () {
+        if (stage._sv !== sv) return;     // lost and parked while it loaded
         var scene = stage._scene = def.setup(sv, {
           canvas: canvas, mobile: caps.mobile,
           // A hand on the picture ends the camera move: the button shows it can resume.
@@ -230,6 +246,7 @@
         }, 400);
       });
       return sv.loadModel(stage.dataset.src).then(function () {
+        if (stage._sv !== sv) return;     // lost and parked while it loaded
         applyFit(stage, sv);
         if (stage.dataset.anim && stage._animate !== false) sv.playAnimation(parseInt(stage.dataset.anim, 10), true);
         showModel(stage, sv);
