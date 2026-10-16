@@ -5,6 +5,7 @@ import io.github.sceneview.demo.DeepLinkRouter
 import io.github.sceneview.demo.DemoSettings
 import io.github.sceneview.demo.ai.ASK_QA_STATE_IDS
 import io.github.sceneview.demo.demos.internal.CloudAnchorScenario
+import io.github.sceneview.demo.demos.internal.cloudAnchorScenarioOf
 import io.github.sceneview.demo.ui.home.HERO_STILL_QA_STATE
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -28,9 +29,16 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 class QaStateReleaseGuardTest {
 
-    /** Every id of the three vocabularies the issue names: Cloud Anchors, Point & Ask, Home. */
+    /**
+     * The ids of the three vocabularies the issue names: Cloud Anchors (as Maestro sends them,
+     * `resolve_not_found`), Point & Ask, Home. The router knows no vocabulary, so the other
+     * demos' ids (Geospatial, Rerun, Record & Playback, motion sensor) take the same path.
+     */
     private val everyQaStateId: List<String> =
-        CloudAnchorScenario.entries.map { it.name } + ASK_QA_STATE_IDS + HERO_STILL_QA_STATE
+        CloudAnchorScenario.entries.map { it.name.toSnakeCase() } + ASK_QA_STATE_IDS + HERO_STILL_QA_STATE
+
+    private fun String.toSnakeCase(): String =
+        replace(Regex("([a-z])([A-Z])"), "$1_$2").lowercase()
 
     @After
     fun resetQaMode() {
@@ -62,6 +70,13 @@ class QaStateReleaseGuardTest {
         assertFalse(qaStateOverridesAllowed(qaMode = true, debugBuild = false))
         assertFalse(qaStateOverridesAllowed(qaMode = false, debugBuild = true))
         assertFalse(qaStateOverridesAllowed(qaMode = false, debugBuild = false))
+    }
+
+    @Test
+    fun `the snake_case ids still name their Cloud Anchors scenario`() {
+        for (scenario in CloudAnchorScenario.entries) {
+            assertEquals(scenario, cloudAnchorScenarioOf(scenario.name.toSnakeCase()))
+        }
     }
 
     @Test

@@ -27,8 +27,8 @@ import io.github.sceneview.demo.theme.SceneViewTokens
  *
  * Same shim as [ForcedTrackingFailure], for the same reason and with the same rules:
  * a `mutableStateOf`-backed singleton whose `null` is the normal case, read by the demo
- * with `?:`, and a menu that returns immediately unless [DemoSettings.qaMode] is on so no
- * end user ever meets it.
+ * with `?:`, and a menu that returns immediately unless [qaStateOverridesAllowed] (a debug
+ * build with [DemoSettings.qaMode] on) so no end user ever meets it.
  *
  * What it buys that a forced *tracking failure* does not: Cloud Anchor states cannot be
  * staged. "Hosting…", "Hosted", "No anchor for that code" each need a live Google Cloud
@@ -67,11 +67,12 @@ fun qaStateOverridesAllowed(
  * The QA radio list that pins [ForcedCloudAnchorScenario.override].
  *
  * Rendered from the demo's `controls` block, next to [ForceTrackingFailureMenu]. Hidden
- * entirely outside QA mode.
+ * entirely unless [qaStateOverridesAllowed]: on a release build in QA mode its choices would
+ * be filtered out anyway, so the store build never shows it (#4555).
  */
 @Composable
 fun ForceCloudAnchorScenarioMenu(modifier: Modifier = Modifier) {
-    if (!DemoSettings.qaMode) return
+    if (!qaStateOverridesAllowed()) return
 
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
