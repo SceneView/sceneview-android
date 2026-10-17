@@ -140,7 +140,7 @@ The guard lesson stands unchanged, and is the reason this paragraph exists: a
 green capture of this demo is never evidence. Judge the mosaic by eye.
 
 On Android the v2 ids resolve through `ALIAS_INITIAL_TAB` to distinct umbrella
-tabs (`dynamic-sky` → Lighting Lab, `multi-model` → the Multi-Model tab), so no
+tabs (`dynamic-sky` → the Sun rig of Lighting, `multi-model` → the Multi-Model tab), so no
 two slots collapse onto the same screen. The script forces a **dark appearance**
 and neutralises the status bar.
 
