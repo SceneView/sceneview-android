@@ -381,6 +381,13 @@ NON_CATALOG_BUNDLED = {
         "sourceUrl": "https://github.com/sceneview/sceneview/blob/main/LICENSE",
         "note": "Compiled from `samples/android-demo/src/main/materials/tray_wood.mat` (Rolling Balls board)",
     },
+    "showroom_floor.filamat": {
+        "name": "showroom_floor.filamat",
+        "author": "SceneView project",
+        "license": "Apache-2.0",
+        "sourceUrl": "https://github.com/sceneview/sceneview/blob/main/LICENSE",
+        "note": "Compiled from `samples/android-demo/src/main/materials/showroom_floor.mat` (Model Viewer showroom floor)",
+    },
     # Hand-authored 1 kB 3MF fixtures for the web /open page (#3512).
     "printed-icosahedron.3mf": {
         "name": "printed-icosahedron.3mf",

@@ -25,6 +25,9 @@
   },
   "overrides": {
     "underscore": "^1.13.8",
-    "fast-xml-parser": "^5.7.0"
+    "fast-xml-parser": "^5.7.0",
+    "js-yaml": {
+      "argparse": "^2.0.1"
+    }
   }
 }
