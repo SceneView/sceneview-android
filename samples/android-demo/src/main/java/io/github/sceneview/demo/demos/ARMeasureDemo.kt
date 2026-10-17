@@ -84,7 +84,6 @@ import io.github.sceneview.ar.rememberARCameraStream
 import io.github.sceneview.ar.rememberArGuidanceState
 import io.github.sceneview.ar.scene.PlaneRendererBase
 import io.github.sceneview.demo.ARCameraInitScrim
-import io.github.sceneview.demo.DemoBottomOverlayScope
 import io.github.sceneview.demo.DemoScaffold
 import io.github.sceneview.demo.DockItem
 import io.github.sceneview.demo.LocalDemoChromeBottomInset
@@ -179,7 +178,7 @@ private const val WALL_BOX_MARGIN = 0.5f
  * Where a measured point came from. Shown in the settings sheet's accuracy notice and kept
  * on each aim because the sources do not carry the same accuracy (`AR_MEASURE.md`).
  */
-private enum class MeasureHitSource { Plane, Floor, Depth, FeaturePoint }
+internal enum class MeasureHitSource { Plane, Floor, Depth, FeaturePoint }
 
 /**
  * What the reticle is on this frame. Only [MeasureAimView] reaches Compose state; this
@@ -192,7 +191,7 @@ private class MeasureAim(
 )
 
 /** The reticle as the screen draws it — compared with [AIM_EPSILON] before each state write. */
-private data class MeasureAimView(
+internal data class MeasureAimView(
     val snap: MeasureSnap,
     val closes: Boolean,
     val source: MeasureHitSource,
@@ -569,7 +568,7 @@ private fun measureHint(board: MeasureBoard<Anchor>, aim: MeasureAimView?): Stri
 }
 
 /** The readout card: one big number, what it is, and the figure's other numbers. */
-private data class MeasureReadout(val value: String, val label: String, val details: String?)
+internal data class MeasureReadout(val value: String, val label: String, val details: String?)
 
 @Composable
 private fun measureReadout(
@@ -668,7 +667,7 @@ private fun measureReadout(
 
 /** `DESIGN.md` AR Overlay Card: scrim ground, hairline, `radius-lg`, `space-md` padding. */
 @Composable
-private fun MeasureReadoutCard(readout: MeasureReadout) {
+internal fun MeasureReadoutCard(readout: MeasureReadout) {
     val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     val overlay = SceneViewTokens.ArOverlay
     Surface(
@@ -694,7 +693,7 @@ private fun MeasureReadoutCard(readout: MeasureReadout) {
 /** Distance · Wall · Room — the over-media mode pill of Cosmos and AR Depth. */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun DemoBottomOverlayScope.MeasureModePill(mode: MeasureMode, onSelect: (MeasureMode) -> Unit) {
+internal fun MeasureModePill(mode: MeasureMode, onSelect: (MeasureMode) -> Unit) {
     val pill = SceneViewTokens.ModePill
     val labels = mapOf(
         MeasureMode.Distance to stringResource(R.string.demo_ar_measure_mode_distance),
@@ -786,7 +785,7 @@ private fun MeasureSettings(
  * it locks onto something, turns amber on a guide, and a chip under it names the lock.
  */
 @Composable
-private fun MeasureReticle(aim: MeasureAimView?, raising: Boolean, modifier: Modifier = Modifier) {
+internal fun MeasureReticle(aim: MeasureAimView?, raising: Boolean, modifier: Modifier = Modifier) {
     val kind = aim?.snap?.kind ?: MeasureSnapKind.None
     val locked = aim != null && (kind != MeasureSnapKind.None || aim.closes)
     val guide = kind == MeasureSnapKind.Vertical || kind == MeasureSnapKind.Level || kind == MeasureSnapKind.Square
