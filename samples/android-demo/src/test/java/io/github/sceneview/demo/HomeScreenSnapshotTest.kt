@@ -24,7 +24,7 @@ import org.robolectric.annotation.GraphicsMode
  *
  * Each test runs with [LocalInspectionMode] forced on so the "What's new"
  * loader is skipped — the goldens pin the home chrome (pinned header, hero,
- * category chips, the grouped list rows in editorial order, status chips, the
+ * section chips, the grouped list rows in editorial order, status chips, the
  * "Browse online models" row, both palettes, `fontScale = 1.5` reflow and the
  * tablet column count of `homeListColumns`), not a release's version string.
  *
@@ -125,8 +125,6 @@ class HomeScreenSnapshotTest {
             Surface {
                 HomeScreen(
                     demos = PHONE_DEMOS,
-                    selectedCategory = null,
-                    onCategoryChange = {},
                     query = "",
                     onQueryChange = {},
                     onDemoClick = {},

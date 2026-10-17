@@ -280,7 +280,7 @@ val chrome = materialLoader.createColorInstance(Color.White, metallic = 1f, roug
 The showcase app bundles **51 demos** (20 non-AR + 31 AR). A representative selection
 (deep-linkable as `sceneview://demo/<id>` — full registry in `llms.txt § Sample app demos`):
 
-model-viewer, geometry, animation-physics, lighting, lighting-lab, fog,
+model-viewer, geometry, animation-physics, lighting, materials,
 lines-paths, two-d-in-three-d, camera-gestures, picking-collision,
 custom-geometry, spatial-audio, ar-placement, ar-image, ar-cloud-anchor, ar-point-cloud
 
