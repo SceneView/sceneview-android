@@ -125,6 +125,7 @@ import io.github.sceneview.demo.common.DemoSheetDefaults
 import io.github.sceneview.demo.common.RequestLightStatusBarIcons
 import io.github.sceneview.demo.recording.SceneRecorderState
 import io.github.sceneview.demo.recording.formatElapsed
+import io.github.sceneview.demo.labs.LabsFeedbackPrompt
 import io.github.sceneview.demo.telemetry.LocalSampleId
 import io.github.sceneview.demo.telemetry.logSampleInteraction
 import io.github.sceneview.demo.theme.LocalStageChrome
@@ -717,7 +718,13 @@ fun DemoScaffold(
             // outlives the composition that launched it.
             val hasExpandedDetent =
                 settingsContentPx > rootHeightPx * SceneViewTokens.Glass.sheetPeekFraction
-            if (restored == SheetValue.Expanded && hasExpandedDetent) {
+            // #4539: a sheet no taller than the peek (a demo with no `controls`: Send
+            // feedback and QA mode only) has ONE open detent. Material 3 drops the
+            // PartiallyExpanded anchor when the peek equals the sheet height and keeps
+            // Expanded, at the very same place — so `partialExpand()` targeted an anchor that
+            // did not exist and left the sheet parked under the window's bottom edge:
+            // Settings hid the dock and showed nothing (AR Surfaces, the AR View tab, AR Face…).
+            if (!hasExpandedDetent || restored == SheetValue.Expanded) {
                 settingsSheetState.expand()
             } else {
                 settingsSheetState.partialExpand()
@@ -2328,6 +2335,20 @@ private fun DemoSettingsSheet(
                 .navigationBarsPadding()
                 .padding(bottom = SceneViewTokens.Space.lg),
         ) {
+            // A Labs demo leads its sheet with the ask: testers are why it ships at all.
+            val labsDemo = LocalSampleId.current in LABS_DEMO_IDS
+            if (labsDemo) {
+                LabsFeedbackPrompt(
+                    onClick = {
+                        haptic.selection()
+                        io.github.sceneview.demo.feedback.FeedbackOpenRequest.request()
+                    },
+                    modifier = Modifier
+                        .padding(horizontal = SceneViewTokens.Space.md)
+                        .padding(bottom = SceneViewTokens.Space.md)
+                        .testTag(DemoScaffoldTestTags.FEEDBACK_ACTION),
+                )
+            }
             if (controlsContent != null) {
                 // A demo's controls grow and shrink on their own — a section expands,
                 // a slider appears only once its toggle is on. Without this the sheet
@@ -2374,7 +2395,7 @@ private fun DemoSettingsSheet(
                 )
             }
             val feedbackCd = stringResource(R.string.feedback_action_cd)
-            SheetActionRow(
+            if (!labsDemo) SheetActionRow(
                 icon = Icons.Outlined.Feedback,
                 label = feedbackCd,
                 contentDescription = feedbackCd,

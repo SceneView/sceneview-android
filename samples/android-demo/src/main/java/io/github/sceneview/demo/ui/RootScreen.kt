@@ -38,6 +38,7 @@ import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.PlayCircleOutline
+import androidx.compose.material.icons.outlined.Science
 import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -86,6 +87,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import io.github.sceneview.demo.ALL_DEMOS
+import io.github.sceneview.demo.rememberLabsDemos
 import io.github.sceneview.demo.rememberListedDemos
 import io.github.sceneview.demo.BuildConfig
 import io.github.sceneview.demo.DemoEntry
@@ -93,6 +95,11 @@ import io.github.sceneview.demo.R
 import io.github.sceneview.demo.hdpack.HdPackSettingsRow
 import io.github.sceneview.demo.hdpack.rememberHdPackStore
 import io.github.sceneview.demo.feedback.CurrentRootScreen
+import io.github.sceneview.demo.labs.Labs
+import io.github.sceneview.demo.labs.LabsAccess
+import io.github.sceneview.demo.labs.LabsHomeCard
+import io.github.sceneview.demo.labs.openLabsSupportLink
+import io.github.sceneview.demo.telemetry.SettingsSwitchRow
 import io.github.sceneview.demo.telemetry.AnalyticsEvent
 import io.github.sceneview.demo.telemetry.NotificationsSettingsRow
 import io.github.sceneview.demo.telemetry.OpenSource
@@ -335,6 +342,21 @@ fun RootScreen(
                         onBrowseOnlineClick = { galleryOpen = true },
                         hasUnseenWhatsNew = whatsNewSince.hasUnseen,
                         onWhatsNewSinceClick = { whatsNewSinceSheet.open() },
+                        labsCard = { cardModifier ->
+                            val labsContext = LocalContext.current
+                            LabsHomeCard(
+                                access = Labs.access,
+                                labsDemos = rememberLabsDemos(),
+                                onJoinClick = { FeedbackOpenRequest.request() },
+                                onEnabledChange = Labs::setEnabled,
+                                onDemoClick = { demo ->
+                                    Telemetry.nextOpenSource = OpenSource.Home
+                                    onDemoClick(demo.id)
+                                },
+                                onOpenCollectiveClick = { openLabsSupportLink(labsContext) },
+                                modifier = cardModifier,
+                            )
+                        },
                     )
                 }
                 RootTab.ArView -> ArViewTabContent(
@@ -508,6 +530,17 @@ private fun AboutTabContent() {
                 onClick = { FeedbackOpenRequest.request() },
             )
             AboutRowDivider()
+            // The place to turn Labs off, once joined: before that there is nothing to switch.
+            if (Labs.access != LabsAccess.NotJoined) {
+                SettingsSwitchRow(
+                    icon = Icons.Outlined.Science,
+                    title = stringResource(R.string.labs_title),
+                    supporting = stringResource(R.string.labs_about_supporting),
+                    checked = Labs.enabled,
+                    onCheckedChange = Labs::setEnabled,
+                )
+                AboutRowDivider()
+            }
             AboutActionRow(
                 icon = Icons.Outlined.History,
                 title = stringResource(R.string.about_release_notes),
