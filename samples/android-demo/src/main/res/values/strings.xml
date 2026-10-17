@@ -126,6 +126,10 @@
     <string name="ar_picker_no_model">No model</string>
     <string name="ar_picker_source_streamed">Streamed</string>
     <string name="ar_picker_source_streaming">Streaming…</string>
+    <!-- #4560: an HD pack product in the AR placement catalogue. %1$s is its real size ("2.30 m"). -->
+    <string name="ar_picker_caption_download">%1$s · download</string>
+    <string name="ar_picker_source_downloading">Downloading…</string>
+    <string name="ar_picker_downloading">Downloading %1$s…</string>
     <!-- Dock items of the placement screen. `*_label` is the accessible name, `*_caption`
          the one word drawn under the icon (DockItem). Both AR surfaces use these, so the
          demo and the AR View tab cannot word the same action differently. -->
