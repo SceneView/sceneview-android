@@ -4,6 +4,7 @@ import io.github.sceneview.math.Position
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Test
+import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
@@ -37,5 +38,21 @@ class OrbitEyeHeightClampTest {
     fun `a non-finite limit turns the clamp off`() {
         val eye = Position(0f, -1f, 5f)
         assertSame(eye, clampOrbitEyeHeight(eye, Position(0f, 0f, 0f), minY = Float.NaN))
+    }
+
+    @Test
+    fun `a minimum elevation lifts a grazing eye even above the height limit`() {
+        val target = Position(0f, 0.5f, 0f)
+        val eye = Position(0f, 0.6f, 10f) // far away, barely above the target
+        val clamped = clampOrbitEyeHeight(eye, target, minY = 0.05f, minElevationDegrees = 8f)
+        val radius = distance(eye, target)
+        assertEquals(radius, distance(clamped, target), 1e-4f)
+        assertEquals(sin(Math.toRadians(8.0)).toFloat(), (clamped.y - target.y) / radius, 1e-4f)
+    }
+
+    @Test
+    fun `an eye already above the minimum elevation is left alone`() {
+        val eye = Position(0f, 3f, 5f)
+        assertSame(eye, clampOrbitEyeHeight(eye, Position(0f, 0.5f, 0f), minY = 0.1f, minElevationDegrees = 8f))
     }
 }

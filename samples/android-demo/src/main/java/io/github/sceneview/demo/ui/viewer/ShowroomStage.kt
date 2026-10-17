@@ -235,6 +235,35 @@ internal object ShowroomMath {
 
     fun gloss(isDark: Boolean): Gloss = if (isDark) DARK_GLOSS else LIGHT_GLOSS
 
+    /**
+     * How much of the floor's sheen survives for an eye looking down at the subject from
+     * [eyeY], [eyeDistance] away from its centre at [centerY]: `1` up to [SHEEN_FULL_DEGREES]
+     * of elevation, `0` from [SHEEN_GONE_DEGREES]. Seen from above, a glossy floor mirrors the
+     * overhead softbox and washes out to grey; the web viewer's floor is unlit and keeps its
+     * colour there, so this one hands its sheen back as the eye climbs.
+     */
+    fun sheen(eyeY: Float, centerY: Float, eyeDistance: Float): Float {
+        if (!eyeDistance.isFinite() || eyeDistance <= 1e-6f) return 1f
+        val elevation = Math.toDegrees(
+            kotlin.math.asin(((eyeY - centerY) / eyeDistance).coerceIn(-1f, 1f).toDouble()),
+        ).toFloat()
+        val t = ((elevation - SHEEN_FULL_DEGREES) / (SHEEN_GONE_DEGREES - SHEEN_FULL_DEGREES)).coerceIn(0f, 1f)
+        return 1f - t * t * (3f - 2f * t)
+    }
+
+    /** Elevation up to which the floor keeps its whole sheen — every framing preset is below. */
+    const val SHEEN_FULL_DEGREES = 30f
+
+    /** Elevation from which the floor is matte: a plan view reads the tokens. */
+    const val SHEEN_GONE_DEGREES = 65f
+
+    /**
+     * The shallowest the orbit may look down at the subject, in degrees. The web viewer's floor
+     * and dome are unlit and meet at one colour, so its eye can graze the floor; this floor is
+     * lit and fogged, and under this angle the two read as a line across the frame.
+     */
+    const val MIN_EYE_ELEVATION_DEGREES = 8f
+
     /** The floor quad's side, in subject radii — its edge is far inside the fog. */
     const val FLOOR_SIZE_RADII = 120f
 
@@ -433,6 +462,7 @@ internal class ShowroomStage(
     private var look: Look? = null
     private var fog: ShowroomMath.Fog? = null
     private var fogOn = false
+    private var sheen = Float.NaN
 
     /** Applies [look]; `true` when anything changed. Main thread (Filament). */
     fun dress(look: Look, eye: Position): Boolean {
@@ -450,13 +480,14 @@ internal class ShowroomStage(
             // in its model space: every radius is handed over in floor widths.
             setParameter(PARAM_POOL_RADIUS, ShowroomMath.POOL_RADII / ShowroomMath.FLOOR_SIZE_RADII)
             setParameter(PARAM_ROUGHNESS, gloss.roughness)
-            setParameter(PARAM_REFLECTANCE, gloss.reflectance)
             setParameter(PARAM_GLOSS_RADIUS, gloss.radiusRadii / ShowroomMath.FLOOR_SIZE_RADII)
             setParameter(PARAM_RIM_SPECULAR, gloss.rimSpecular)
         }
         // The fog colour follows the look: write it whole now, so the first frame is fogged.
         fog = null
+        sheen = Float.NaN
         applyFog(eye)
+        applySheen(eye)
         return true
     }
 
@@ -465,7 +496,20 @@ internal class ShowroomStage(
      * each presented frame, so it settles within one more frame and then stays quiet — the loop
      * parks again.
      */
-    fun onFrame(eye: Position): Boolean = applyFog(eye)
+    fun onFrame(eye: Position): Boolean {
+        val fogMoved = applyFog(eye)
+        return applySheen(eye) || fogMoved
+    }
+
+    /** Fades the floor's specular with the eye's elevation ([ShowroomMath.sheen]). */
+    private fun applySheen(eye: Position): Boolean {
+        val look = look ?: return false
+        val next = ShowroomMath.sheen(eye.y, look.center.y, length(eye - look.center))
+        if (abs(next - sheen) < SHEEN_STEP) return false
+        sheen = next
+        floorMaterial.setParameter(PARAM_REFLECTANCE, ShowroomMath.gloss(look.isDark).reflectance * next)
+        return true
+    }
 
     private fun albedo(token: Color, look: Look): Float3 = ShowroomMath.floorAlbedo(
         token = token,
@@ -520,6 +564,9 @@ internal class ShowroomStage(
         const val PARAM_REFLECTANCE = "reflectance"
         const val PARAM_GLOSS_RADIUS = "glossRadius"
         const val PARAM_RIM_SPECULAR = "rimSpecular"
+
+        /** The sheen change under which the floor is left alone, so the render loop parks. */
+        const val SHEEN_STEP = 0.01f
     }
 }
 

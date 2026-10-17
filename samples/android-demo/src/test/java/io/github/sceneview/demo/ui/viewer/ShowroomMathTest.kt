@@ -247,4 +247,23 @@ class ShowroomMathTest {
         assertEquals(1.0, out[10], 1e-9)
         assertEquals(1.0, out[15], 1e-9)
     }
+
+    @Test
+    fun `the floor keeps its sheen at every framing and goes matte seen from above`() {
+        // Elevation e at distance 1: eye height sin(e) above the centre.
+        fun at(deg: Double) = ShowroomMath.sheen(sin(deg * PI / 180).toFloat(), 0f, 1f)
+        assertEquals(1f, at(22.0), 1e-6f)
+        assertEquals(1f, at(ShowroomMath.SHEEN_FULL_DEGREES.toDouble()), 1e-4f)
+        assertEquals(0f, at(ShowroomMath.SHEEN_GONE_DEGREES.toDouble()), 1e-4f)
+        assertEquals(0f, at(89.0), 1e-6f)
+        val mid = at(47.5)
+        assertTrue(mid > 0.2f && mid < 0.8f)
+        assertTrue(at(40.0) > at(50.0))
+    }
+
+    @Test
+    fun `a degenerate eye keeps the sheen`() {
+        assertEquals(1f, ShowroomMath.sheen(1f, 0f, 0f), 0f)
+        assertEquals(1f, ShowroomMath.sheen(1f, 0f, Float.NaN), 0f)
+    }
 }

@@ -1803,6 +1803,9 @@ private fun SingleModelSection(
                     onDistanceChange = { DemoSettings.cameraDistance = it },
                     // The web viewer's floor: the eye stays 2 % of the subject's size above it.
                     minEyeHeight = { liveEyeFloor.value },
+                    // ...and looks down at it by a few degrees at least: lower, the lit floor
+                    // and the backdrop meet in a line (the web's unlit floor does not).
+                    minEyeElevationDegrees = ShowroomMath.MIN_EYE_ELEVATION_DEGREES,
                 )
             }
             // A new model on stage: what a rebuilt manipulator used to start from — no orbit, no

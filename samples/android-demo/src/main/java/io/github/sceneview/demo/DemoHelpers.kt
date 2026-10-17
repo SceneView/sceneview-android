@@ -1670,18 +1670,29 @@ internal fun clampOrbitEyePitch(
 }
 
 /**
- * Lifts an orbit [eye] around [target] so it never sinks under [minY], keeping its distance to
- * the target and its azimuth — it slides up the orbit sphere. An eye already above [minY] is
+ * Lifts an orbit [eye] around [target] so it never sinks under [minY] — nor under
+ * [minElevationDegrees] of elevation above the target — keeping its distance to the target and
+ * its azimuth: it slides up the orbit sphere. An eye already above [minY] is
  * returned untouched; a sphere too small to reach [minY] puts the eye just under the pole.
  */
-internal fun clampOrbitEyeHeight(eye: Position, target: Position, minY: Float): Position {
-    if (!minY.isFinite() || eye.y >= minY) return eye
+internal fun clampOrbitEyeHeight(
+    eye: Position,
+    target: Position,
+    minY: Float,
+    minElevationDegrees: Float = 0f,
+): Position {
+    if (!minY.isFinite()) return eye
     val dx = eye.x - target.x
     val dy = eye.y - target.y
     val dz = eye.z - target.z
     val radius = sqrt(dx * dx + dy * dy + dz * dz)
     if (!radius.isFinite() || radius <= 1e-6f) return eye
-    val newDy = (minY - target.y).coerceIn(-radius, ORBIT_HEIGHT_POLE_FRACTION * radius)
+    // The elevation floor: the eye looks down at the target by at least this angle, whatever the
+    // zoom — at a fixed height a far eye still grazes the floor.
+    val angleFloor = target.y + radius * sin(Math.toRadians(minElevationDegrees.toDouble()).toFloat())
+    val limit = if (minElevationDegrees > 0f && angleFloor > minY) angleFloor else minY
+    if (eye.y >= limit) return eye
+    val newDy = (limit - target.y).coerceIn(-radius, ORBIT_HEIGHT_POLE_FRACTION * radius)
     val newHorizontal = sqrt((radius * radius - newDy * newDy).coerceAtLeast(0f))
     val horizontal = sqrt(dx * dx + dz * dz)
     val hx = if (horizontal <= 1e-6f) 0f else dx / horizontal
@@ -1798,6 +1809,8 @@ class EntranceCameraManipulator(
     private val startLiftFraction: Float = 0.22f,
     /** The lowest the eye may orbit to, in world Y — `null` = only the polar clamp. */
     private val minEyeHeight: () -> Float? = { null },
+    /** With [minEyeHeight]: the shallowest the eye may look down at the target, in degrees. */
+    private val minEyeElevationDegrees: Float = 0f,
 ) : io.github.sceneview.gesture.CameraGestureDetector.CameraManipulator {
     private var fallback: io.github.sceneview.gesture.CameraGestureDetector.DefaultCameraManipulator? =
         null
@@ -1938,7 +1951,10 @@ class EntranceCameraManipulator(
         // Never under the floor's horizon: a drag that dips the eye there showed the seam
         // between the floor and the backdrop.
         val floor = minEyeHeight()
-        return aimedAt(if (floor == null) zoomed else clampOrbitEyeHeight(zoomed, target(), floor))
+        return aimedAt(
+            if (floor == null) zoomed
+            else clampOrbitEyeHeight(zoomed, target(), floor, minEyeElevationDegrees),
+        )
     }
 
     override fun grabBegin(x: Int, y: Int, strafe: Boolean) {
