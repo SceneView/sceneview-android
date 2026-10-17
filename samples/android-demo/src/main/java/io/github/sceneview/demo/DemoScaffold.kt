@@ -125,6 +125,7 @@ import io.github.sceneview.demo.common.DemoSheetDefaults
 import io.github.sceneview.demo.common.RequestLightStatusBarIcons
 import io.github.sceneview.demo.recording.SceneRecorderState
 import io.github.sceneview.demo.recording.formatElapsed
+import io.github.sceneview.demo.labs.LabsFeedbackPrompt
 import io.github.sceneview.demo.telemetry.LocalSampleId
 import io.github.sceneview.demo.telemetry.logSampleInteraction
 import io.github.sceneview.demo.theme.LocalStageChrome
@@ -2328,6 +2329,20 @@ private fun DemoSettingsSheet(
                 .navigationBarsPadding()
                 .padding(bottom = SceneViewTokens.Space.lg),
         ) {
+            // A Labs demo leads its sheet with the ask: testers are why it ships at all.
+            val labsDemo = LocalSampleId.current in LABS_DEMO_IDS
+            if (labsDemo) {
+                LabsFeedbackPrompt(
+                    onClick = {
+                        haptic.selection()
+                        io.github.sceneview.demo.feedback.FeedbackOpenRequest.request()
+                    },
+                    modifier = Modifier
+                        .padding(horizontal = SceneViewTokens.Space.md)
+                        .padding(bottom = SceneViewTokens.Space.md)
+                        .testTag(DemoScaffoldTestTags.FEEDBACK_ACTION),
+                )
+            }
             if (controlsContent != null) {
                 // A demo's controls grow and shrink on their own — a section expands,
                 // a slider appears only once its toggle is on. Without this the sheet
@@ -2374,7 +2389,7 @@ private fun DemoSettingsSheet(
                 )
             }
             val feedbackCd = stringResource(R.string.feedback_action_cd)
-            SheetActionRow(
+            if (!labsDemo) SheetActionRow(
                 icon = Icons.Outlined.Feedback,
                 label = feedbackCd,
                 contentDescription = feedbackCd,
