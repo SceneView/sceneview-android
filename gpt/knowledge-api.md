@@ -2100,7 +2100,7 @@ On a phone where `Session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)` is `
 depth from a monocular network: it runs a `MonocularDepthEstimator` on the CPU camera image,
 off the render thread, and scales the network's relative inverse depth to metres with a
 robust fit `1/z = s·d + t` on ARCore's own plane samples and feature points. The runtime
-lives in a separate module, `arsceneview-depth-ml` (LiteRT 2.1.5, in the repo, not yet on
+lives in a separate module, `arsceneview-depth-ml` (LiteRT 2.3.0, in the repo, not yet on
 Maven Central): `DepthAnythingV2Estimator` runs Depth Anything V2 **Small** (Apache-2.0;
 Base/Large/Giant are CC-BY-NC — never ship them). `arsceneview` itself never depends on
 LiteRT. iOS has the same pipeline (`ARDepthFrame.Source.ml`, see the SceneViewSwift section).
@@ -2189,7 +2189,8 @@ it came from: unproject with `frame.cameraPose`, never the current pose.
 
 Cost: a one-time **27.7 MB** download into `noBackupFilesDir/sceneview-depth-ml/`, checked
 against its SHA-256 (concurrent loads share one download). LiteRT native code per ABI:
-arm64-v8a ≈ 8 MB, x86_64 ≈ 10.7 MB, armeabi-v7a 3.5 MB (CPU only); an AAB serves one ABI.
+arm64-v8a ≈ 9.4 MB, x86_64 ≈ 12.2 MB, armeabi-v7a ≈ 6.3 MB (GPU accelerator included);
+an AAB serves one ABI.
 The network input is **518×686** (H×W, the whole CPU image stretched), output 518×686
 inverse depth. Inference runs at ≤ 5 Hz on one worker thread, halves at thermal MODERATE,
 pauses at SEVERE and skips frames while the camera holds still; expect each map to be
