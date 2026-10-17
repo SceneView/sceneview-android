@@ -661,6 +661,15 @@ private val NoContentPadding = PaddingValues(0.dp)
 private const val MAX_FLIGHT_STEP_SECONDS = 1f / 20f
 
 /**
+ * The clip a model opens on: the one named "Idle" when the model has one (Blender exports often
+ * prefix the armature, `CharacterArmature|Idle`), otherwise the first.
+ */
+private fun defaultClipIndex(animator: com.google.android.filament.gltfio.Animator): Int =
+    (0 until animator.animationCount).firstOrNull {
+        animator.getAnimationName(it).substringAfterLast('|').equals("Idle", ignoreCase = true)
+    } ?: 0
+
+/**
  * Animates this value from where it is to `1f` over [durationMillis] of *frames*, eased by
  * [easing]. Unlike `animateTo(tween(...))`, which reads the wall clock, each frame advances by
  * at most [MAX_FLIGHT_STEP_SECONDS], so a stall pauses the flight instead of skipping it.
@@ -1063,7 +1072,7 @@ private fun SingleModelSection(
     LaunchedEffect(activeModelInstance, animationSelection) {
         if (!stageShowsSelection || lastAnimationReset == animationSelection) return@LaunchedEffect
         lastAnimationReset = animationSelection
-        selectedAnimation = 0
+        selectedAnimation = activeModelInstance?.animator?.let(::defaultClipIndex) ?: 0
         animationProgress = 0f
         animationPlaying = streamedModelInstance != null || selectedModel.autoplayAnimations
     }
@@ -1117,8 +1126,12 @@ private fun SingleModelSection(
         if (!animationPlaying) {
             animator.applyAnimation(selectedAnimation, animationProgress * duration)
             animator.updateBoneMatrices()
+            renderInvalidator.requestRender()
             return@LaunchedEffect
         }
+        // This loop is the only thing animating the model (the node no longer auto-plays every
+        // clip), and an animator write-back invalidates nothing under render-on-demand: each
+        // pose asks for the frame that shows it.
         var start = 0L
         while (animationPlaying) {
             withFrameNanos { now ->
@@ -1127,6 +1140,7 @@ private fun SingleModelSection(
                 animationProgress = (seconds % duration) / duration
                 animator.applyAnimation(selectedAnimation, animationProgress * duration)
                 animator.updateBoneMatrices()
+                renderInvalidator.requestRender()
             }
         }
     }
@@ -1597,6 +1611,7 @@ private fun SingleModelSection(
                         activeModelInstance?.animator?.takeIf { selectedAnimation in 0 until it.animationCount }?.let { animator ->
                             animator.applyAnimation(selectedAnimation, it * animator.getAnimationDuration(selectedAnimation))
                             animator.updateBoneMatrices()
+                            renderInvalidator.requestRender()
                         }
                     })
             }
@@ -1835,9 +1850,11 @@ private fun SingleModelSection(
                     val (rx, rz) = DemoMath.rotateAroundCentre(modelCenter.x, modelCenter.z, yaw)
                     ModelNode(
                         modelInstance = instance,
-                        // `autoAnimate` plays EVERY clip at once: a model that opens still
-                        // (Perseverance, 23 rig clips) must not start them behind the bar's back.
-                        autoAnimate = streamedModelInstance != null || selectedModel.autoplayAnimations,
+                        // `autoAnimate` plays EVERY clip at once (documented SDK behaviour): on a
+                        // character with Idle, Walk, Run… the clips blend into one broken pose,
+                        // fists clenched and arms half raised. The viewer plays exactly one clip,
+                        // the bar's, from its own loop above — so the node never auto-plays.
+                        autoAnimate = false,
                         // No `scaleToUnits` — the model renders at its true glTF size and the
                         // camera adapts to it (#1439). The settle spring drops the model in
                         // from slightly below its resting pose.
