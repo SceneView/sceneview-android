@@ -104,7 +104,7 @@ class RecordedSceneTest {
     @Test
     fun `an unknown prompt gets the recorded demo's explanation and no tool call`() = runTest {
         val agent = agent(UnconfinedTestDispatcher(testScheduler))
-        agent.ask(RecordedAiProvider(paceMillis = 0), "Paint the walls green")
+        agent.ask(RecordedAiProvider(paceMillis = 0), "Turn the room into a kitchen")
         val state = agent.state.value
         assertTrue(state.model.isEmpty)
         assertTrue(state.lines.last().text.contains(RecordedAiProvider.REBUILD_PROMPT))

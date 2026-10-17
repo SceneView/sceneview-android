@@ -110,6 +110,11 @@ data class RoomModel(
     val rejections: List<Rejection> = emptyList(),
     /** The floor plan `build_room` measured — corners, area, perimeter — or `null` before it ran. */
     val plan: RoomPlan? = null,
+    /**
+     * Finishes `set_material` gave to rebuilt elements, by target: a wall id, `floor`, an
+     * opening id, an object id. An element absent here keeps its default finish.
+     */
+    val finishes: Map<String, String> = emptyMap(),
     private val counter: Int = 0,
 ) {
     val isEmpty: Boolean get() = walls.isEmpty() && objects.isEmpty() && items.isEmpty()
@@ -118,6 +123,9 @@ data class RoomModel(
     fun nextId(prefix: String): Pair<String, RoomModel> = "$prefix${counter + 1}" to copy(counter = counter + 1)
 
     fun wall(id: String): RoomWall? = walls.firstOrNull { it.id == id }
+
+    /** The finish `set_material` gave [id], or `null` for its default one. */
+    fun finishOf(id: String): String? = finishes[id]
 
     /** The box of anything with a footprint: a fitted object, a placed item. */
     fun boxOf(id: String): OrientedBox? =

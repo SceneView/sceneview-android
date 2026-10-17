@@ -26,6 +26,7 @@ import io.github.sceneview.ar.ARCoreAvailability
 import io.github.sceneview.ar.ARCoreAvailabilityOverlay
 import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.rememberARCameraStream
+import io.github.sceneview.ar.scene.PlaneRendererBase
 import io.github.sceneview.demo.DemoScaffold
 import io.github.sceneview.demo.rememberArPlaybackDataset
 import io.github.sceneview.demo.common.ArDemoPermissionGate
@@ -215,6 +216,8 @@ private fun LiveScanScreen(
                 cameraStream = if (qaBackdrop) null else cameraStream,
                 playbackDataset = playbackDataset,
                 planeRenderer = true,
+                // Only the V2 plane renderer while scanning.
+                planeRendererVersion = PlaneRendererBase.Version.V2,
                 sessionConfiguration = { session: Session, config: Config ->
                     config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
                     config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR

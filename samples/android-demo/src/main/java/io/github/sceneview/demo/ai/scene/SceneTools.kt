@@ -63,7 +63,7 @@ data class CatalogueItem(val category: String, val label: String, val width: Flo
  * every length, height, area and clearance from the cloud and the catalogue.
  */
 // One private handler per tool plus its geometry helpers: splitting them would scatter the evidence rules.
-@Suppress("TooManyFunctions")
+@Suppress("TooManyFunctions", "LargeClass")
 class SceneToolExecutor(private val session: SpatialSession) {
 
     private val floorY = session.floorY
@@ -867,21 +867,59 @@ class SceneToolExecutor(private val session: SpatialSession) {
         return best
     }
 
+    /**
+     * Gives a rebuilt element a finish: a wall (or `walls`, every one), the `floor`, a door or
+     * window frame, a placed item. Products the app draws from a 3D file (desk, chair, armchair,
+     * lamp) keep their own finish: the refusal says so and lists what can change instead.
+     */
     private fun setMaterial(model: RoomModel, input: JsonObject): ToolOutcome {
-        val itemId = input.str("item_id")
-        val material = input.str("material")
-        if (material !in MATERIALS) throw ToolInputException("material must be one of $MATERIALS")
-        val item = model.items.firstOrNull { it.id == itemId } ?: return fail(
-            model,
-            "no placed item '$itemId'",
-            "Unknown item",
-        )
-        val next = model.copy(items = model.items.map { if (it.id == itemId) it.copy(material = material) else it })
+        val target = input.str("target_id").trim()
+        val finish = input.str("finish").trim().lowercase()
+        if (finish !in FINISHES) throw ToolInputException("finish must be one of $FINISHES")
+        val paintable = buildList {
+            if (model.walls.isNotEmpty()) add(ALL_WALLS)
+            addAll(model.walls.map { it.id })
+            if (model.walls.isNotEmpty()) add(FLOOR)
+            addAll(model.openings.map { it.id })
+            addAll(model.items.filter { it.category !in PRODUCT_ITEMS }.map { it.id })
+        }
+        if (model.walls.isEmpty() && model.items.isEmpty()) {
+            return fail(
+                model,
+                "nothing is rebuilt yet — rebuild the room first, then change its finishes",
+                "Nothing to paint yet: rebuild first",
+            )
+        }
+        val item = model.items.firstOrNull { it.id == target }
+        val next = when {
+            target == ALL_WALLS && model.walls.isNotEmpty() ->
+                model.copy(finishes = model.finishes + model.walls.associate { it.id to finish })
+            model.wall(target) != null || (target == FLOOR && model.walls.isNotEmpty()) ||
+                model.openings.any { it.id == target } -> model.copy(finishes = model.finishes + (target to finish))
+            item != null && item.category !in PRODUCT_ITEMS ->
+                model.copy(items = model.items.map { if (it.id == target) it.copy(material = finish) else it })
+            item != null || model.objects.any { it.id == target } -> return fail(
+                model,
+                "'$target' is a product drawn from its own 3D file, its finish cannot change; " +
+                    "what can change: ${paintable.joinToString()}",
+                "Finish fixed",
+            )
+            else -> return fail(
+                model,
+                "nothing called '$target' can take a finish; what can: ${paintable.joinToString()}",
+                "Unknown target",
+            )
+        }
+        val label = when (target) {
+            ALL_WALLS -> "Walls"
+            FLOOR -> "Floor"
+            else -> target
+        }
         return ToolOutcome(
-            """{"id":"${item.id}","material":"$material"}""",
+            """{"target_id":"$target","finish":"$finish"}""",
             false,
             next,
-            caption = "${item.id} in $material",
+            caption = "$label in $finish",
         )
     }
 
@@ -931,6 +969,19 @@ class SceneToolExecutor(private val session: SpatialSession) {
         )
         val SLOTS = listOf("center", "back_left", "back_right", "front_left", "front_right")
         val MATERIALS = listOf("oak", "walnut", "linen", "charcoal", "terracotta", "sage")
+
+        /** Plain paint colours, for walls, floor, frames and items alike. */
+        val PAINTS = listOf("white", "blue", "navy", "green", "yellow", "red", "pink", "grey", "black")
+
+        /** Everything `set_material` accepts as a finish. */
+        val FINISHES = MATERIALS + PAINTS
+
+        /** `set_material`'s target for every wall at once, and for the floor. */
+        const val ALL_WALLS = "walls"
+        const val FLOOR = "floor"
+
+        /** Items drawn from a product file: their finish is the product's own. */
+        private val PRODUCT_ITEMS = setOf("armchair", "floor_lamp")
         private val DEFAULT_MATERIAL = mapOf(
             "armchair" to "linen",
             "floor_lamp" to "charcoal",
@@ -1053,9 +1104,11 @@ class SceneToolExecutor(private val session: SpatialSession) {
             ),
             spec(
                 SET_MATERIAL,
-                "Change a placed item's finish.",
-                "item_id" to string(),
-                "material" to enumOf(MATERIALS),
+                "Change the colour or finish of a rebuilt element. target_id: a wall id, 'walls' for every " +
+                    "wall, 'floor', a door or window id (its frame), or a placed item id. Use it for any " +
+                    "'paint', 'colour', 'make it blue' request.",
+                "target_id" to string(),
+                "finish" to enumOf(FINISHES),
             ),
             spec(REMOVE_NODE, "Remove a wall, opening, object, item or dimension by id.", "id" to string()),
             spec(

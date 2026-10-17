@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
@@ -46,12 +47,14 @@ import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.rounded.AutoAwesome
-import androidx.compose.material.icons.rounded.Chair
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Grain
 import androidx.compose.material.icons.rounded.HomeWork
 import androidx.compose.material.icons.rounded.RestartAlt
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.IconButton
@@ -329,8 +332,7 @@ fun AiSceneDemo(onBack: () -> Unit) {
         return
     }
 
-    val nextPrompt = if (synthetic || state.model.walls.isEmpty()) RecordedAiProvider.REBUILD_PROMPT
-        else RecordedAiProvider.READING_CORNER_PROMPT
+    val rebuilt = !synthetic && state.model.walls.isNotEmpty()
     DemoScaffold(
         title = stringResource(R.string.demo_ai_scene_title),
         onBack = onBack,
@@ -395,9 +397,12 @@ fun AiSceneDemo(onBack: () -> Unit) {
                         state = state,
                         showAssistantReplies = !provider.capabilities.live,
                         keyMissing = if (needsKey) keyHint == null else null,
+                        sampleScan = liveMedia == null && !synthetic,
+                        step = if (rebuilt) 3 else 2,
                         onScanRoom = { scanning = true }.takeIf { agent != null && !state.busy },
                         onSampleScan = { liveMedia = null },
                     )
+                    AskRow(rebuilt = rebuilt, enabled = canAsk, onAsk = ::ask)
                     PromptField(enabled = canAsk, onSend = ::ask)
                 }
             }
@@ -431,14 +436,6 @@ fun AiSceneDemo(onBack: () -> Unit) {
                 onClick = { agent?.reset() },
                 enabled = !state.busy && (state.lines.isNotEmpty() || !state.model.isEmpty),
             ),
-        ),
-        dockAccent = DockItem(
-            icon = if (nextPrompt == RecordedAiProvider.REBUILD_PROMPT) Icons.Rounded.AutoAwesome
-                else Icons.Rounded.Chair,
-            label = nextPrompt,
-            caption = if (nextPrompt == RecordedAiProvider.REBUILD_PROMPT) "Rebuild" else "Furnish",
-            onClick = { ask(nextPrompt) },
-            enabled = canAsk,
         ),
     ) {
         val m = media
@@ -527,7 +524,7 @@ private fun StatusCard(
             if (spatial != null) {
                 // Never cut: on a narrow phone it takes a second line, right-aligned.
                 Text(
-                    text = (if (liveScan) "Your scan · " else "") + "${String.format(
+                    text = (if (liveScan) "Your scan · " else "Sample scan · ") + "${String.format(
                         Locale.US,
                         "%,d",
                         spatial.pointCount,
@@ -609,16 +606,20 @@ private fun ChatCard(
     state: AgentState,
     showAssistantReplies: Boolean,
     keyMissing: Boolean?,
+    sampleScan: Boolean,
+    step: Int,
     onScanRoom: (() -> Unit)?,
     onSampleScan: () -> Unit,
 ) {
     val chrome = LocalStageChrome.current
     val shape = RoundedCornerShape(SceneViewTokens.Radius.lg)
     val request = state.lines.lastOrNull { it.kind == ChatLine.Kind.User }
-    // A new request gets its default again; a successful first placement also collapses
-    // the card, including the scripted QA path. Rebuild starts with the plan open.
-    var detailsExpanded by rememberSaveable(request, state.model.items.isNotEmpty()) {
-        mutableStateOf(state.model.items.isEmpty() || request?.text == RecordedAiProvider.REBUILD_PROMPT)
+    // A request that changed the room itself — a rebuild — opens the plan; one that only dressed
+    // it (a colour, a placed item) or failed keeps it folded, its reply still on show.
+    var detailsExpanded by rememberSaveable(request, state.structureChanged, state.model.items.isNotEmpty()) {
+        mutableStateOf(
+            state.structureChanged && state.model.items.isEmpty() || request?.text == RecordedAiProvider.REBUILD_PROMPT,
+        )
     }
     val takeoff = state.takeoffShown && !state.model.isEmpty && !state.busy
     val showPlan = state.model.walls.isNotEmpty() && !state.busy && keyMissing == null
@@ -634,6 +635,7 @@ private fun ChatCard(
             .animateContentSize(),
         verticalArrangement = Arrangement.spacedBy(Space.xs),
     ) {
+        GuideSteps(current = step, chrome = chrome)
         if (collapsible) {
             Row(
                 modifier = Modifier.fillMaxWidth().heightIn(min = Space.x2l)
@@ -663,7 +665,7 @@ private fun ChatCard(
                 )
             }
         }
-        if (collapsible && !detailsExpanded) return@Column
+        val details = !collapsible || detailsExpanded
         Column(
             modifier = Modifier.heightIn(max = Space.x4l * 5).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(Space.xs),
@@ -690,9 +692,18 @@ private fun ChatCard(
                 )
                 TextButton(onClick = onSampleScan) { Text(SAMPLE_SCAN) }
             } else if (lines.isEmpty()) {
+                if (sampleScan) {
+                    Text(
+                        text = SAMPLE_SCAN_NOTE,
+                        style = SceneViewTokens.Type.caption.copy(
+                            color = chrome.onCard,
+                            fontWeight = FontWeight.SemiBold,
+                        ),
+                    )
+                }
                 Text(
-                    text = "Ask the AI to rebuild this scanned room. It reads the real scan — planes, points, " +
-                        "the camera's path — and the code computes every number.",
+                    text = "Rebuild the room: the AI reads the scan — planes, points, the camera's path — and " +
+                        "proposes walls, windows and furniture. The code measures every one.",
                     style = SceneViewTokens.Type.caption.copy(color = chrome.onCardMuted),
                 )
                 if (onScanRoom != null) {
@@ -700,8 +711,8 @@ private fun ChatCard(
                 }
             }
             lines.forEach { line -> ChatRow(line, chrome) }
-            if (showPlan) AiRoomPlan(state.model)
-            if (takeoff) TakeoffSection(Takeoff.of(state.model), chrome)
+            if (showPlan && details) AiRoomPlan(state.model)
+            if (takeoff && details) TakeoffSection(Takeoff.of(state.model), chrome)
             if (state.busy) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     StatusDot(busy = true, chrome = chrome)
@@ -769,7 +780,113 @@ private fun ChatRow(line: ChatLine, chrome: StageChrome) {
     }
 }
 
-/** A glass prompt field: type or say what to do; the dock's accent sends the next suggested step. */
+/**
+ * The three steps of the demo — scan (or take the sample), rebuild, ask for a change — with the
+ * done ones ticked and [current] in the accent, so where to go next is never a guess.
+ */
+@Composable
+private fun GuideSteps(current: Int, chrome: StageChrome) {
+    Row(
+        modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {},
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Space.sm),
+    ) {
+        GUIDE_STEPS.forEachIndexed { i, label ->
+            val n = i + 1
+            val done = n < current
+            val active = n == current
+            Box(
+                modifier = Modifier
+                    .size(Space.md + Space.xs)
+                    .background(
+                        when {
+                            active -> chrome.accent
+                            done -> ArOverlay.accentSuccess
+                            else -> chrome.track
+                        },
+                        CircleShape,
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (done) {
+                    Icon(
+                        Icons.Rounded.Check,
+                        contentDescription = "Done",
+                        tint = chrome.onAccent,
+                        modifier = Modifier.size(Space.md),
+                    )
+                } else {
+                    Text(
+                        text = "$n",
+                        style = SceneViewTokens.Type.caption.copy(
+                            color = if (active) chrome.onAccent else chrome.onCardMuted,
+                            fontWeight = FontWeight.SemiBold,
+                        ),
+                    )
+                }
+            }
+            Text(
+                text = label,
+                style = SceneViewTokens.Type.caption.copy(
+                    color = if (active) chrome.onCard else chrome.onCardMuted,
+                    fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
+                ),
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+/**
+ * What to do next, in words: before the room is rebuilt, one labelled primary button that
+ * rebuilds it; after, a row of example changes the user can tap or rephrase in the field below.
+ */
+@Composable
+private fun AskRow(rebuilt: Boolean, enabled: Boolean, onAsk: (String) -> Unit) {
+    val chrome = LocalStageChrome.current
+    if (!rebuilt) {
+        Button(
+            onClick = { onAsk(RecordedAiProvider.REBUILD_PROMPT) },
+            enabled = enabled,
+            modifier = Modifier.fillMaxWidth().heightIn(min = Space.x2l),
+            shape = RoundedCornerShape(SceneViewTokens.Radius.full),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = chrome.accent,
+                contentColor = chrome.onAccent,
+                disabledContainerColor = chrome.track,
+                disabledContentColor = chrome.onCardMuted,
+            ),
+        ) {
+            Icon(Icons.Rounded.AutoAwesome, contentDescription = null, modifier = Modifier.size(Space.lg))
+            Spacer(Modifier.width(Space.sm))
+            Text(text = REBUILD_LABEL, style = SceneViewTokens.Type.body.copy(fontWeight = FontWeight.SemiBold))
+        }
+        return
+    }
+    Row(
+        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(Space.sm),
+    ) {
+        CHANGE_PROMPTS.forEach { prompt ->
+            GlassSurface(shape = RoundedCornerShape(SceneViewTokens.Radius.full)) {
+                Text(
+                    text = prompt,
+                    style = SceneViewTokens.Type.caption.copy(
+                        color = if (enabled) chrome.onGlass else chrome.onGlassMuted,
+                        fontWeight = FontWeight.SemiBold,
+                    ),
+                    maxLines = 1,
+                    modifier = Modifier
+                        .clickable(enabled = enabled, role = Role.Button) { onAsk(prompt) }
+                        .heightIn(min = Space.x2l)
+                        .padding(horizontal = Space.md, vertical = Space.sm + Space.xs / 2),
+                )
+            }
+        }
+    }
+}
+
+/** A glass prompt field: type or say what to do; the row above it offers ready-made requests. */
 @Composable
 private fun PromptField(enabled: Boolean, onSend: (String) -> Unit) {
     val chrome = LocalStageChrome.current
@@ -994,7 +1111,8 @@ private fun keyframesFor(media: RerunReplayMedia, spatial: SpatialSession): List
  * the sample's frames are WebP, a scan's are JPEG — or `null` for a format the API refuses.
  */
 private fun imageMediaType(bytes: ByteArray): String? {
-    fun at(i: Int, vararg sig: Int) = bytes.size >= i + sig.size && sig.indices.all { bytes[i + it].toInt() and 0xFF == sig[it] }
+    fun at(i: Int, vararg sig: Int) =
+        bytes.size >= i + sig.size && sig.indices.all { bytes[i + it].toInt() and 0xFF == sig[it] }
     return when {
         at(0, 0xFF, 0xD8, 0xFF) -> "image/jpeg"
         at(0, 0x89, 0x50, 0x4E, 0x47) -> "image/png"
@@ -1066,7 +1184,16 @@ private val SCAN_LAYERS = listOf(DebugGroup.Points, DebugGroup.Planes, DebugGrou
 // The layers that leave as soon as the room stands; the points shrink away after them.
 private val FADED_FIRST = listOf(DebugGroup.Planes, DebugGroup.Trail)
 
-private const val SCAN_ROOM = "Scan this room"
+private const val SCAN_ROOM = "Scan your own room"
+private const val SAMPLE_SCAN_NOTE =
+    "Sample scan of a real bedroom, recorded on a phone — for anyone who can't scan right now."
+private val GUIDE_STEPS = listOf("Scan", "Rebuild", "Ask for a change")
+private const val REBUILD_LABEL = "Rebuild the room"
+private val CHANGE_PROMPTS = listOf(
+    RecordedAiProvider.PAINT_WALL_PROMPT,
+    RecordedAiProvider.READING_CORNER_PROMPT,
+    "Make the floor walnut",
+)
 private const val SAMPLE_SCAN = "Back to the sample scan"
 private const val OWN_SCAN_ADD_KEY = "Add your Claude or Gemini key in Settings to rebuild your own scan."
 private const val OWN_SCAN_PICK_PROVIDER = "Pick Claude or Gemini in Settings to rebuild your own scan."

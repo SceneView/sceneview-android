@@ -95,21 +95,28 @@ internal class RoomFinish(
     val leafLight: MaterialInstance,
     val brass: MaterialInstance,
     val shade: MaterialInstance,
+    /** `set_material`'s paints by name (`blue`, `navy`…), matt like the plaster. */
+    val paints: Map<String, MaterialInstance>,
 ) {
     val all: List<MaterialInstance>
-        get() = oak + listOf(
+        get() = oak + paints.values + listOf(
             plaster, skirting, walnut, slab, frame, glass, frosted, linen, pillow, throwFabric,
             headboard, radiator, pot, leaf, leafLight, brass, shade,
         )
 
-    /** The finish of a catalogue material name (`oak`, `walnut`, `linen`…). */
-    fun item(material: String): MaterialInstance = when (material) {
+    /** The finish of a catalogue material or paint name (`oak`, `walnut`, `blue`…). */
+    fun item(material: String): MaterialInstance = of(material) ?: oak.first()
+
+    /** The finish called [name] — a paint or a catalogue material — or `null` for none. */
+    fun of(name: String?): MaterialInstance? = when (name) {
+        null -> null
+        "oak" -> oak.first()
         "walnut" -> walnut
         "linen" -> linen
         "charcoal" -> frame
         "terracotta" -> pot
         "sage" -> leafLight
-        else -> oak.first()
+        else -> paints[name]
     }
 }
 
@@ -190,6 +197,7 @@ private fun createRoomFinish(loader: MaterialLoader): RoomFinish {
         leafLight = studio(RoomStage.LEAF_LIGHT, RoomStage.LEAF_ROUGHNESS),
         brass = studio(RoomStage.BRASS, RoomStage.BRASS_ROUGHNESS, metallic = 1f),
         shade = studio(RoomStage.SHADE, RoomStage.FABRIC_ROUGHNESS, sheen = RoomStage.PILLOW),
+        paints = RoomStage.PAINTS.mapValues { (_, color) -> studio(color, RoomStage.PLASTER_ROUGHNESS) },
     )
 }
 
@@ -307,13 +315,25 @@ internal fun SceneScope.AiRoomLayer(
     if (showModel) {
         // The floor is laid from the first wall the model kept: it is the room's reference side.
         model.walls.firstOrNull()?.let { wall ->
-            key("floor-${wall.id}") { OakFloor(wall, remember(wall, model) { roomFloor(wall, model) }, floorY, finish) }
+            key("floor-${wall.id}") {
+                val paint = finish.of(model.finishOf(SceneToolExecutor.FLOOR))
+                OakFloor(wall, remember(wall, model) { roomFloor(wall, model) }, floorY, finish, paint)
+            }
         }
         model.regions.forEach { region -> key("region-${region.id}") { FreeRegionSlab(region.box, floorY, inks) } }
         model.walls.forEach { wall ->
             key("wall-${wall.id}") {
                 val inward = remember(wall, model) { roomFloor(wall, model).inward }
-                RebuiltWall(wall, model.openings.filter { it.wallId == wall.id }, inward, floorY, finish, label, eye)
+                RebuiltWall(
+                    wall,
+                    model.openings.filter { it.wallId == wall.id },
+                    inward,
+                    floorY,
+                    finish,
+                    paint = { id -> finish.of(model.finishOf(id)) },
+                    label,
+                    eye,
+                )
             }
         }
         model.objects.forEach { obj ->
@@ -387,7 +407,13 @@ internal fun SceneScope.RoomKeyLight(model: RoomModel) {
 
 /** Oak planks along [wall], staggered, over a screed slab whose cut edge shows at the margin. */
 @Composable
-private fun SceneScope.OakFloor(wall: RoomWall, floor: RoomFloor, floorY: Float, finish: RoomFinish) {
+private fun SceneScope.OakFloor(
+    wall: RoomWall,
+    floor: RoomFloor,
+    floorY: Float,
+    finish: RoomFinish,
+    paint: MaterialInstance?,
+) {
     val g = rememberGrow()
     val planks = remember(floor) { plankLayout(floor) }
     // The floor rolls out from the wall's foot into the room.
@@ -410,7 +436,7 @@ private fun SceneScope.OakFloor(wall: RoomWall, floor: RoomFloor, floorY: Float,
                 CubeNode(
                     size = Size(p.x1 - p.x0 - PLANK_GAP_M, PLANK_M, p.z1 - p.z0 - PLANK_GAP_M),
                     center = Position((p.x0 + p.x1) / 2, -PLANK_M / 2, (p.z0 + p.z1) / 2),
-                    materialInstance = finish.oak[p.cut % finish.oak.size],
+                    materialInstance = paint ?: finish.oak[p.cut % finish.oak.size],
                 )
             }
         }
@@ -460,11 +486,14 @@ private fun SceneScope.RebuiltWall(
     inward: Float,
     floorY: Float,
     finish: RoomFinish,
+    /** The finish `set_material` gave an element by id — this wall, its openings — or `null`. */
+    paint: (String) -> MaterialInstance?,
     label: LabelInk,
     eye: () -> Position,
 ) {
     val g = rememberGrow()
     val pieces = remember(wall, openings) { wallPieces(wall, openings) }
+    val surface = paint(wall.id) ?: finish.plaster
     val length = wall.length
     val height = wall.height
     val back = -inward * WALL_THICKNESS_M / 2
@@ -478,7 +507,7 @@ private fun SceneScope.RebuiltWall(
                 Solid(
                     Size(p.x1 - p.x0, p.y1 - p.y0, WALL_THICKNESS_M),
                     Position((p.x0 + p.x1) / 2, (p.y0 + p.y1) / 2, back),
-                    finish.plaster,
+                    surface,
                 )
                 if (p.y0 == 0f) {
                     CubeNode(
@@ -489,7 +518,7 @@ private fun SceneScope.RebuiltWall(
                 }
             }
         }
-        openings.forEach { o -> key(o.id) { OpeningFrame(o, inward, finish) } }
+        openings.forEach { o -> key(o.id) { OpeningFrame(o, inward, finish, paint(o.id) ?: finish.frame) } }
     }
     // Labels in world space, outside the rotated node: a billboard faces the camera on its own.
     val mid = wall.at(length / 2)
@@ -524,19 +553,19 @@ private fun SceneScope.RebuiltWall(
 
 /** An opening's aluminium frame in the wall's thickness; a window adds its glass, mullion and sill. */
 @Composable
-private fun SceneScope.OpeningFrame(o: RoomOpening, inward: Float, finish: RoomFinish) {
+private fun SceneScope.OpeningFrame(o: RoomOpening, inward: Float, finish: RoomFinish, frame: MaterialInstance) {
     val z = -inward * WALL_THICKNESS_M * FRAME_SET_BACK
     val w = o.width
     val h = o.height
     val cx = (o.from + o.to) / 2
     val cy = (o.sill + o.head) / 2
     val bar = FRAME_PROFILE_M
-    Solid(Size(bar, h, FRAME_DEPTH_M), Position(o.from + bar / 2, cy, z), finish.frame)
-    Solid(Size(bar, h, FRAME_DEPTH_M), Position(o.to - bar / 2, cy, z), finish.frame)
-    Solid(Size(w, bar, FRAME_DEPTH_M), Position(cx, o.head - bar / 2, z), finish.frame)
+    Solid(Size(bar, h, FRAME_DEPTH_M), Position(o.from + bar / 2, cy, z), frame)
+    Solid(Size(bar, h, FRAME_DEPTH_M), Position(o.to - bar / 2, cy, z), frame)
+    Solid(Size(w, bar, FRAME_DEPTH_M), Position(cx, o.head - bar / 2, z), frame)
     if (o.kind != OpeningKind.Window) return
-    Solid(Size(w, bar, FRAME_DEPTH_M), Position(cx, o.sill + bar / 2, z), finish.frame)
-    if (w > MULLION_FROM_M) Solid(Size(bar * MULLION_SHARE, h, FRAME_DEPTH_M), Position(cx, cy, z), finish.frame)
+    Solid(Size(w, bar, FRAME_DEPTH_M), Position(cx, o.sill + bar / 2, z), frame)
+    if (w > MULLION_FROM_M) Solid(Size(bar * MULLION_SHARE, h, FRAME_DEPTH_M), Position(cx, cy, z), frame)
     CubeNode(size = Size(w - bar, h - bar, GLASS_M), center = Position(cx, cy, z), materialInstance = finish.glass)
     // The sill board: from the frame, across the reveal, a little proud of the plaster.
     val reveal = WALL_THICKNESS_M * FRAME_SET_BACK - FRAME_DEPTH_M / 2

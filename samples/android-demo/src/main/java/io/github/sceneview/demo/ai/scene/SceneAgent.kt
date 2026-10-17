@@ -29,6 +29,11 @@ data class AgentState(
     val canUndo: Boolean = false,
     /** Set once the model asked for the takeoff: the card shows [Takeoff.of] the current model. */
     val takeoffShown: Boolean = false,
+    /**
+     * Whether the last request changed the room's structure — walls, openings, objects, the
+     * plan. A finish or a placed item leaves it false, so the plan card stays folded.
+     */
+    val structureChanged: Boolean = false,
     val inputTokens: Int = 0,
     val outputTokens: Int = 0,
 )
@@ -78,7 +83,13 @@ class SceneAgent(
             converse(provider)
         } finally {
             if (state.value.model != before) undoStack.addLast(before)
-            apply { it.copy(busy = false, canUndo = undoStack.isNotEmpty()) }
+            apply {
+                it.copy(
+                    busy = false,
+                    canUndo = undoStack.isNotEmpty(),
+                    structureChanged = it.model.structureDiffers(before),
+                )
+            }
         }
     }
 
@@ -184,7 +195,16 @@ class SceneAgent(
                checked against the points: what the scan never saw is refused — leave it out rather
                than insist.
             3. Only then place catalogue items: free_floor_area, place_item, add_dimension,
-               set_material, and compute_takeoff when quantities are asked for.
+               and compute_takeoff when quantities are asked for.
+
+            Edits to what is already rebuilt: a colour, paint or finish request ("make the wall
+            blue", "walnut floor") is one set_material call — target_id 'walls' when the user says
+            "the wall" and several stand, a W id for a named one, 'floor', a door or window id, or
+            an item id. It never needs free_floor_area or place_item.
+
+            Call only the tools the request needs. When a tool refuses, say in one sentence what
+            failed and why, then offer the next step (for instance "rebuild the room first"). Never
+            do something else instead of what was asked.
 
             Batch independent tool calls in the same round; wait for prerequisites such as
             build_room before accepting openings that depend on its walls.
@@ -195,3 +215,7 @@ class SceneAgent(
         """.trimIndent()
     }
 }
+
+/** Whether walls, openings, objects or the plan differ from [other]'s: the room, not its dressing. */
+internal fun RoomModel.structureDiffers(other: RoomModel): Boolean =
+    walls != other.walls || openings != other.openings || objects != other.objects || plan != other.plan

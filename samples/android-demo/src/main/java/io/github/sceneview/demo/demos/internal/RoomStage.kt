@@ -64,4 +64,20 @@ object RoomStage {
     val BRASS: Color = Color(0xFFC9A55C)
     const val BRASS_ROUGHNESS: Float = 0.28f
     val SHADE: Color = Color(0xFFF3EBDD)
+
+    /**
+     * `stage-room-paint-*` — the matt paints `set_material` gives a rebuilt wall, the floor, a
+     * frame or an item ("make the wall blue"), by the finish name the tool takes.
+     */
+    val PAINTS: Map<String, Color> = mapOf(
+        "white" to Color(0xFFF2F0EB),
+        "blue" to Color(0xFF4F78A8),
+        "navy" to Color(0xFF263A5A),
+        "green" to Color(0xFF6E8B6A),
+        "yellow" to Color(0xFFE3C35A),
+        "red" to Color(0xFFB0463C),
+        "pink" to Color(0xFFE3A9A8),
+        "grey" to Color(0xFF9A9C9C),
+        "black" to Color(0xFF2B2B2D),
+    )
 }

@@ -86,6 +86,7 @@ class RecordedAiProvider(private val paceMillis: Long = DEFAULT_PACE_MS) : AiPro
         const val DEFAULT_PACE_MS = 28L
         const val REBUILD_PROMPT = "Rebuild this room"
         const val READING_CORNER_PROMPT = "Add a reading corner"
+        const val PAINT_WALL_PROMPT = "Make the wall blue"
 
         /** How the agent marks the user's own words inside a turn that also carries the digest. */
         const val PROMPT_MARK = "Request: "
@@ -110,9 +111,11 @@ class RecordedAiProvider(private val paceMillis: Long = DEFAULT_PACE_MS) : AiPro
             if (asked < 0) return UNKNOWN
             val prompt = (messages[asked].content.first(::isPrompt) as AiContent.Text)
                 .text.removePrefix(PROMPT_MARK).trim()
-            val request = Request.entries.firstOrNull { prompt.equals(it.prompt, ignoreCase = true) } ?: return UNKNOWN
+            val steps = Request.entries.firstOrNull { prompt.equals(it.prompt, ignoreCase = true) }?.steps
+                ?: paintSteps(prompt)
+                ?: return UNKNOWN
             val done = messages.drop(asked + 1).count { it.role == AiMessage.Role.Assistant }
-            val step = request.steps.getOrNull(done) ?: return Step("")
+            val step = steps.getOrNull(done) ?: return Step("")
             return step(Context(keyframesOf(messages), ran(messages), ran(messages.drop(asked + 1))))
         }
 
@@ -153,9 +156,75 @@ class RecordedAiProvider(private val paceMillis: Long = DEFAULT_PACE_MS) : AiPro
         }
 
         private val UNKNOWN = Step(
-            "This recorded demo replays two requests on the bundled scan: \"$REBUILD_PROMPT\" and " +
-                "\"$READING_CORNER_PROMPT\". Add your own Claude or Gemini key in the settings to ask anything else.",
+            "This recorded demo answers three kinds of request on the bundled scan: \"$REBUILD_PROMPT\", " +
+                "\"$READING_CORNER_PROMPT\" and a colour change such as \"$PAINT_WALL_PROMPT\". Add your own " +
+                "Claude or Gemini key in the settings to ask anything else.",
         )
+
+        // ─── Paint ──────────────────────────────────────────────────────────────────────────
+
+        /** Words naming a finish, English and French, matched as whole words; the more specific first. */
+        private val FINISH_WORDS = listOf(
+            "navy" to listOf("navy", "marine"),
+            "blue" to listOf("blue", "bleu", "bleue", "bleus"),
+            "green" to listOf("green", "vert", "verte", "verts"),
+            "yellow" to listOf("yellow", "jaune", "jaunes"),
+            "red" to listOf("red", "rouge", "rouges"),
+            "pink" to listOf("pink", "rose", "roses"),
+            "grey" to listOf("grey", "gray", "gris", "grise"),
+            "black" to listOf("black", "noir", "noire", "noirs"),
+            "white" to listOf("white", "blanc", "blanche", "blancs"),
+            "walnut" to listOf("walnut", "noyer"),
+            "oak" to listOf("oak", "chêne", "chene"),
+            "terracotta" to listOf("terracotta", "terre cuite"),
+            "sage" to listOf("sage"),
+        )
+
+        /**
+         * A colour change on the walls or the floor, read from free words ("Make the wall blue",
+         * "change le mur en bleu", "walnut floor"): one set_material call, then a summary of what
+         * the executor answered. `null` when the prompt names no target or no finish.
+         */
+        internal fun paintRequest(prompt: String): Pair<String, String>? {
+            val words = prompt.lowercase().split(Regex("[^\\p{L}]+")).filter { it.isNotEmpty() }
+            val text = words.joinToString(" ")
+            val target = when {
+                words.any { it in setOf("wall", "walls", "mur", "murs") } -> SceneToolExecutor.ALL_WALLS
+                words.any { it in setOf("floor", "sol", "parquet") } -> SceneToolExecutor.FLOOR
+                else -> return null
+            }
+            val finish = FINISH_WORDS.firstOrNull { (_, names) ->
+                names.any { name -> if (' ' in name) name in text else name in words }
+            }?.first ?: return null
+            return target to finish
+        }
+
+        private fun paintSteps(prompt: String): List<(Context) -> Step>? {
+            val (target, finish) = paintRequest(prompt) ?: return null
+            val what = if (target == SceneToolExecutor.FLOOR) "the floor" else "the walls"
+            return listOf(
+                { _ ->
+                    Step(
+                        "Painting $what $finish.",
+                        listOf(SceneToolExecutor.SET_MATERIAL to """{"target_id":"$target","finish":"$finish"}"""),
+                    )
+                },
+                { context -> paintSummary(context, what, finish) },
+            )
+        }
+
+        private fun paintSummary(context: Context, what: String, finish: String): Step {
+            val call = context.request.lastOrNull { it.name == SceneToolExecutor.SET_MATERIAL }
+            val verb = if (what == "the floor") "is" else "are"
+            return Step(
+                when {
+                    call == null -> "Nothing was painted: the change never ran."
+                    call.ok -> "Done: ${what.replaceFirstChar { it.uppercase() }} $verb now $finish. " +
+                        "Undo puts the previous finish back."
+                    else -> "I could not paint $what: ${call.error?.trimEnd('.')}."
+                },
+            )
+        }
 
         // ─── Rebuild ────────────────────────────────────────────────────────────────────────
 
