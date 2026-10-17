@@ -236,6 +236,8 @@ jobs:
               # a skipped job as passing, so a renderer type leaking into the
               # public API would merge green.
               - 'sceneview-compose/**'
+              # The AI layer the demo depends on (#4573): its unit tests and detekt.
+              - 'sceneview-ai/**'
               - 'samples/android-demo/**'
               - 'samples/android-tv-demo/**'
               - 'samples/common/**'
@@ -578,7 +580,7 @@ jobs:
       # cleanup PR, run `./gradlew :<module>:detektBaseline` locally and commit
       # the regenerated XML.
       - name: Detekt
-        run: ./gradlew :sceneview:detekt :arsceneview:detekt :sceneview-core:detekt :sceneview-compose:detekt :samples:android-demo:detekt --stacktrace
+        run: ./gradlew :sceneview:detekt :arsceneview:detekt :sceneview-core:detekt :sceneview-compose:detekt :sceneview-ai:detekt :samples:android-demo:detekt --stacktrace
 
       - name: Upload detekt reports
         if: always()
@@ -590,6 +592,7 @@ jobs:
             arsceneview/build/reports/detekt/
             sceneview-core/build/reports/detekt/
             sceneview-compose/build/reports/detekt/
+            sceneview-ai/build/reports/detekt/
             samples/android-demo/build/reports/detekt/
           if-no-files-found: ignore
 
@@ -708,6 +711,7 @@ jobs:
             :sceneview:testDebugUnitTest \
             :arsceneview:testDebugUnitTest \
             :sceneview-core:androidTest \
+            :sceneview-ai:androidTest \
             :samples:common:testDebugUnitTest \
             :samples:android-tv-demo:testDebugUnitTest \
             :samples:android-demo:verifyRoborazziDebug \

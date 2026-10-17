@@ -132,7 +132,7 @@ enum class DebugLayer(val group: DebugGroup) {
     }
 }
 
-/** What the legend toggles. [Stage] (grid, axes) is always on. */
+/** What the legend toggles. [Stage] (grid, axes) is not a legend toggle: see [ArDebugSession.showStage]. */
 enum class DebugGroup { Stage, Trail, Points, Planes, Anchors }
 
 /**

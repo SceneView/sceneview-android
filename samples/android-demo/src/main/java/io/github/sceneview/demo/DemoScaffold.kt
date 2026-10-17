@@ -731,7 +731,9 @@ fun DemoScaffold(
             }
         }
     }
-    BackHandler(enabled = settingsExpanded) { settingsExpanded = false }
+    // Keep Back and the underlying chrome suppressed until hide() reaches Hidden.
+    // The request flag clears before the sheet animation completes.
+    BackHandler(enabled = settingsSheetComposed) { settingsExpanded = false }
 
     // A phone held sideways has no band of scrim under the identity row nor under what a demo
     // stacks above the dock ([demoTopScrim], [demoBottomScrim]): each glass element then stands
@@ -1103,7 +1105,7 @@ fun DemoScaffold(
                             reservedBottom = dockClearance,
                             // Same rule as the dock (#3827): a floating pill seen through a glass
                             // sheet reads as a live button inside it (#3985).
-                            faded = settingsExpanded || dockHidden,
+                            faded = settingsSheetComposed || dockHidden,
                             onBandHeightChanged = { bottomOverlayBandPx = it },
                             status = peekHeader,
                             content = bottomOverlay,
@@ -1124,7 +1126,7 @@ fun DemoScaffold(
                         // An AR mode whose session failed still offers the way to the other mode.
                         DemoBottomOverlay(
                             reservedBottom = dockClearance,
-                            faded = settingsExpanded || dockHidden,
+                            faded = settingsSheetComposed || dockHidden,
                             onBandHeightChanged = { bottomOverlayBandPx = it },
                             status = null,
                             content = null,
@@ -1136,7 +1138,7 @@ fun DemoScaffold(
 
                     DemoChrome(
                         visible = chromeVisible,
-                        dockVisible = !settingsExpanded && !dockHidden,
+                        dockVisible = !settingsSheetComposed && !dockHidden,
                         title = title,
                         assetSource = assetSource,
                         onBack = onBack,

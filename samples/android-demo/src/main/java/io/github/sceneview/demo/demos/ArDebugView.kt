@@ -70,6 +70,7 @@ import com.google.ar.core.TrackingState
 import dev.romainguy.kotlin.math.Quaternion
 import io.github.sceneview.DEFAULT_IBL_INTENSITY
 import io.github.sceneview.FrameRatePolicy
+import io.github.sceneview.SceneScope
 import io.github.sceneview.SceneView
 import io.github.sceneview.SurfaceType
 import io.github.sceneview.createEnvironment
@@ -109,8 +110,10 @@ import io.github.sceneview.loaders.ModelLoader
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.colorOf
 import io.github.sceneview.math.toLinearSpace
+import io.github.sceneview.node.LightNode
 import io.github.sceneview.node.MeshNode
 import io.github.sceneview.rememberEnvironment
+import io.github.sceneview.rememberMainLightNode
 import io.github.sceneview.rememberModelInstance
 import io.github.sceneview.rememberRenderer
 import io.github.sceneview.rememberView
@@ -602,6 +605,20 @@ internal fun ArDebugSceneView(
     compact: Boolean = false,
     replay: RerunReplayMedia? = null,
     onShown: (() -> Unit)? = null,
+    // The replay's own room measure (outline and lengths). A screen that draws its own room
+    // model over the cloud turns it off so the two do not overlap.
+    roomMeasure: Boolean = !compact,
+    // Scales the cloud's points (1 = their normal size), read every frame: a screen that builds
+    // a room out of the cloud thins it out as the walls rise. Callers step it, as every change
+    // of size rebuilds the point meshes.
+    pointScale: () -> Float = { 1f },
+    // Runs once on the view after the debug set-up: a screen with lit, shadowed content turns
+    // shadows and ambient occlusion back on here.
+    configureView: (com.google.android.filament.View) -> Unit = {},
+    // The scene's key light. The default is SceneView's own.
+    mainLightNode: LightNode? = rememberMainLightNode(engine),
+    // Extra nodes drawn in the same scene as the debug layers, after them.
+    content: @Composable SceneScope.() -> Unit = {},
 ) {
     val context = LocalContext.current
     val shown by rememberUpdatedState(onShown)
@@ -673,11 +690,13 @@ internal fun ArDebugSceneView(
             autoCenterContent = false,
             environment = environment,
             cameraManipulator = orbit,
+            mainLightNode = mainLightNode,
             onFrame = { frameTimeNanos ->
                 val dt = clock.tick(frameTimeNanos)
                 if (!clock.configured) {
                     clock.configured = true
                     view.configureForDebug(colorGrading)
+                    configureView(view)
                 }
                 session.tick(dt)
 
@@ -728,7 +747,8 @@ internal fun ArDebugSceneView(
                 val floorY = (ArDebugGeometry.floorHeight(whole) * 100f).roundToInt() / 100f
                 // The picture-in-picture packs the room into a few hundred pixels: full-size points
                 // would read as noise there, so they shrink while lines keep their weight.
-                val pointStyle = if (compact) ArDebugStyle(style.metresPerPixel * PIP_POINT_SCALE) else style
+                val pointScaling = (if (compact) PIP_POINT_SCALE else 1f) * pointScale()
+                val pointStyle = if (pointScaling == 1f) style else ArDebugStyle(style.metresPerPixel * pointScaling)
                 layers.sync(frame, style, pointStyle, stageBoundsOf(whole), floorY, session::isVisible, replayLayers)
                 replayLayers?.sync(
                     frame, pointStyle, floorY,
@@ -737,7 +757,7 @@ internal fun ArDebugSceneView(
                         points = session.isVisible(DebugGroup.Points),
                         anchors = session.isVisible(DebugGroup.Anchors),
                         trail = session.isVisible(DebugGroup.Trail),
-                        measure = !compact,
+                        measure = roomMeasure,
                     ),
                     eye = CameraRig.eye(orbit.pose).let { Vec3(it.x, it.y, it.z) },
                 )
@@ -787,6 +807,7 @@ internal fun ArDebugSceneView(
                     }
                 }
             }
+            content()
         }
     }
 }

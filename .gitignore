@@ -79,6 +79,7 @@ mcp-interior/
 .cxx
 samples/*/build/
 sceneview-core/build/
+sceneview-ai/build/
 sceneview-web/build/
 sceneview-desktop/build/
 tools/snippets-check/build/

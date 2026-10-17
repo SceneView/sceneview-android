@@ -40,6 +40,10 @@ include ":sceneview-web"
 // Compose Multiplatform façade over the per-platform renderers (viewer subset).
 // See docs/docs/compose-multiplatform.md.
 include ":sceneview-compose"
+// Provider-agnostic AI layer (#4573): provider interface, strict tool schemas, Claude and Gemini
+// codecs, OkHttp transports. Consumed by the demo as a project dependency; publishing it is a
+// 5.0.0 decision.
+include ":sceneview-ai"
 
 // Doc-snippet compile guard (#2759) — generated sources only, never published.
 include ":snippets-check"
