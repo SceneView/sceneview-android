@@ -350,6 +350,16 @@ final class DemoAnalyticsTests: XCTestCase {
         XCTAssertEqual(SearchTerm.normalize(String(repeating: "x", count: 80))?.count, 50)
     }
 
+    func testSearchTermCutNeverSplitsAnEmoji() {
+        XCTAssertEqual(SearchTerm.normalize(String(repeating: "a", count: 49) + "🚗🚗"),
+                       String(repeating: "a", count: 49) + "🚗")
+        let family = "👩\u{200D}👧"
+        XCTAssertEqual(SearchTerm.normalize(String(repeating: "b", count: 49) + family + "zz"),
+                       String(repeating: "b", count: 49) + family)
+        XCTAssertNil(SearchTerm.normalize("🚗"))
+        XCTAssertEqual(SearchTerm.normalize("🚗🚗"), "🚗🚗")
+    }
+
     func testContactDetailsAreRedacted() {
         for raw in ["me@example.com", "https://example.com/model.glb", "www.example.com",
                     "call 0612345678", "order 12345"] {
@@ -357,6 +367,15 @@ final class DemoAnalyticsTests: XCTestCase {
         }
         XCTAssertEqual(SearchTerm.normalize("Porsche 911"), "porsche 911")
         XCTAssertEqual(SearchTerm.normalize("RTX 4090"), "rtx 4090")
+    }
+
+    func testPhoneNumberWithSeparatorsIsRedacted() {
+        for raw in ["06 12 34 56 78", "+33 6 12 34 56 78", "06.12.34.56.78", "06-12-34-56-78",
+                    "(06) 12 34 56 78", "call +33 (0)6 12 34", "123 456"] {
+            XCTAssertEqual(SearchTerm.normalize(raw), SearchTerm.redacted, raw)
+        }
+        XCTAssertEqual(SearchTerm.normalize("iPhone 15 Pro"), "iphone 15 pro")
+        XCTAssertEqual(SearchTerm.normalize("PS5 2020"), "ps5 2020")
     }
 
     func testSearchResultBucketsMatchAndroid() {
@@ -378,6 +397,24 @@ final class DemoAnalyticsTests: XCTestCase {
             "search_term": "cosmos", "surface": "samples", "result_bucket": "1",
         ]))
         XCTAssertEqual(backend.eventNames.filter { $0 == "search" }.count, 1)
+    }
+
+    func testGoingBackToAFieldDoesNotCountItsLastSearchAgain() {
+        analytics.install(backend)
+        analytics.searchSettled("helmet", surface: .models, resultCount: 24)
+        analytics.searchSettled("cosmos", surface: .samples, resultCount: 1)
+        XCTAssertFalse(analytics.searchSettled("helmet", surface: .models, resultCount: 24))
+        XCTAssertFalse(analytics.searchSettled("cosmos", surface: .samples, resultCount: 1))
+        XCTAssertEqual(backend.eventNames.filter { $0 == "search" }.count, 2)
+    }
+
+    func testRetryThatAnswersAfterAnErrorCounts() {
+        analytics.install(backend)
+        analytics.searchSettled("helmet", surface: .models, resultCount: nil)
+        XCTAssertFalse(analytics.searchSettled("helmet", surface: .models, resultCount: nil))
+        XCTAssertTrue(analytics.searchSettled("helmet", surface: .models, resultCount: 24))
+        XCTAssertFalse(analytics.searchSettled("helmet", surface: .models, resultCount: 24))
+        XCTAssertEqual(backend.eventNames.filter { $0 == "search" }.count, 2)
     }
 
     func testNewTermOtherFieldOrClearedFieldCountsAgain() {

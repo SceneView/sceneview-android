@@ -230,7 +230,8 @@ fun ExploreTabScreen(
     }
 
     // The `search` event for the query on screen: `null` results (failed) log as `error`.
-    // [Telemetry.search] drops the repeat when a tap follows the settle.
+    // [Telemetry.search] drops the repeat when a tap follows the settle, but never lets an
+    // `error` hide the results a Retry of the same term brings.
     fun logModelSearch() {
         Telemetry.search.settled(
             SearchSurface.Models,

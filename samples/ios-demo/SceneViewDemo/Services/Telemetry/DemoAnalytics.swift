@@ -38,16 +38,24 @@ enum SearchTerm {
     static let settleDelay: Duration = .milliseconds(1_500)
 
     /// The term to send for `raw`: trimmed, whitespace collapsed, lowercased, cut to
-    /// `maximumLength`; `nil` below `minimumLength`; `redacted` when it looks like an
-    /// email address, a link or a long number.
+    /// `maximumLength` characters (`Character`s, so never inside an emoji); `nil` below
+    /// `minimumLength`; `redacted` when it looks like an email address, a link, a long
+    /// number or a phone number written with separators.
     static func normalize(_ raw: String) -> String? {
         let term = raw.lowercased().split(whereSeparator: \.isWhitespace).joined(separator: " ")
         guard term.count >= minimumLength else { return nil }
-        if term.contains("@") || term.contains("http") || term.contains("www.")
-            || term.range(of: "[0-9]{5,}", options: .regularExpression) != nil {
-            return redacted
-        }
+        if looksPersonal(term) { return redacted }
         return String(term.prefix(maximumLength)).trimmingCharacters(in: .whitespaces)
+    }
+
+    /// An email address, a link, a long number (an order id) or a phone number — six
+    /// digits or more once the separators people type between them (`06 12…`, `+33 6…`,
+    /// `06.12…`, `(0)6-12…`) are dropped: never sent as typed.
+    private static func looksPersonal(_ term: String) -> Bool {
+        if term.contains("@") || term.contains("http") || term.contains("www.") { return true }
+        if term.range(of: "[0-9]{5,}", options: .regularExpression) != nil { return true }
+        let digits = term.replacingOccurrences(of: "[\\s.\\-+()]", with: "", options: .regularExpression)
+        return digits.range(of: "[0-9]{6,}", options: .regularExpression) != nil
     }
 
     /// `search.result_bucket` for `count` results, `error` when the search never answered.
@@ -250,8 +258,9 @@ final class DemoAnalytics: @unchecked Sendable {
     private let consent: ConsentStore
     /// Open samples, keyed by id, with their start time (for `sample_close.duration_s`).
     private var openSamples: [String: Date] = [:]
-    /// The last search logged, so the same search settling twice counts once.
-    private var lastSearch: (surface: SearchSurface, term: String)?
+    /// Per field, the last search logged and whether it failed, so the same search
+    /// settling twice counts once — Android's `SearchLogger`, rule for rule.
+    private var lastSearches: [SearchSurface: (term: String, failed: Bool)] = [:]
     private let now: @Sendable () -> Date
 
     /// Without `consent`, a store on `defaults` outside the consent zone: collection on
@@ -344,14 +353,17 @@ final class DemoAnalytics: @unchecked Sendable {
     // MARK: Search
 
     /// Logs `raw` as a `search` on `surface` that found `resultCount` results (`nil`:
-    /// the search failed). A repeat of the last search — a re-run, a result tapped
-    /// right after the settle — is dropped; a new term or the other field counts again.
+    /// the search failed). A repeat of that field's last search — a re-render, a result
+    /// tapped right after the settle, a return from the other field — is dropped; a new
+    /// term counts again, and so does the first answer a Retry brings after an `error`.
     @discardableResult
     func searchSettled(_ raw: String, surface: SearchSurface, resultCount: Int?) -> Bool {
         guard let term = SearchTerm.normalize(raw) else { return false }
+        let failed = resultCount == nil
         lock.lock()
-        let repeated = lastSearch?.surface == surface && lastSearch?.term == term
-        if !repeated { lastSearch = (surface, term) }
+        let last = lastSearches[surface]
+        let repeated = last?.term == term && last?.failed == failed
+        if !repeated { lastSearches[surface] = (term, failed) }
         lock.unlock()
         guard !repeated else { return false }
         log(.search(term: term, surface: surface, resultBucket: SearchTerm.resultBucket(resultCount)))
@@ -361,7 +373,7 @@ final class DemoAnalytics: @unchecked Sendable {
     /// The field on `surface` was emptied: its next search counts, even if it repeats.
     func searchCleared(_ surface: SearchSurface) {
         lock.lock()
-        if lastSearch?.surface == surface { lastSearch = nil }
+        lastSearches[surface] = nil
         lock.unlock()
     }
 
