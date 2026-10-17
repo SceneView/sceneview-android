@@ -372,6 +372,7 @@ fun PointAndAskDemo(onBack: () -> Unit) {
     val probeAvailability: () -> Unit = {
         availabilityJob?.cancel()
         availabilityJob = scope.launch {
+            Log.i(ASK_STATE_LOG_TAG, "probe: checking Gemini Nano availability")
             flow.onAvailability(AskAvailability.Checking)
             syncStep()
             val status = askEngine.status()
