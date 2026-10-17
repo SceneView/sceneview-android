@@ -576,7 +576,7 @@ themed surface — so it is theme-independent and uses the "Button glass" row.
 | `chrome-scrim` | rgba(0,0,0,0.60) → transparent | Ground under the chrome bands |
 | `glass-icon-button` | 44dp visual, 48dp touch target | Back |
 | `glass-pill` | 36dp high, 14dp horizontal padding | Identity pill |
-| `mode-pill-container` | #1A1F28, opaque | A segmented mode switch over the scene (Cosmos "Starlight \| Spacetime"), in the `bottomOverlay` band |
+| `mode-pill-container` | #1A1F28, opaque | A segmented mode switch over the scene (Cosmos scene switch "Galaxy \| Star \| Burst \| Flow", and "Starlight \| Spacetime"), in the `bottomOverlay` band |
 | `mode-pill-outline` | 1dp #D1D2D4, opaque | Its edge: the container clears 3:1 on grounds of L ≥ 0.14, the outline on L ≤ 0.18 — every ground is covered |
 | `mode-pill-selected` / `on-mode-pill-selected` | #FFFFFF / #0B0F16 | The checked segment and its label (19.2:1) |
 | `on-mode-pill` | #FFFFFF | Unchecked labels (16.5:1 on the container) |
