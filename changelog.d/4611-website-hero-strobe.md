@@ -1,0 +1,2 @@
+<!-- category: Fixed -->
+- **The website's home hero film no longer strobes ([#4587](https://github.com/sceneview/sceneview/issues/4587)).** The high-beam double flash is now two soft 0.45 s pulses instead of a ×3.5 burst. The headlights dim when the camera faces the car, so the glare no longer whitens the frame. The pit neon flickers ten times over 1.2 s, never below 60 %, where it used to toggle 28 times a second. The values match the Android demo's hero (#4583). A replay no longer jumps at 14 s.

@@ -161,9 +161,13 @@
   }
 
   function park(entry) {
+    // The context-loss listener goes first: it holds the viewer, and the canvas it sits
+    // on is swapped out below, so left on it, every pass kept a detached canvas and its
+    // engine alive. Removed before dispose(), it never sees the loss dispose() causes.
+    if (entry.off) entry.off();
     if (entry.stage._scene) { entry.stage._scene.dispose(); entry.stage._scene = null; }
     try { entry.sv.dispose(); } catch (e) {}
-    clearTimeout(entry.stage._idle);
+    stopIdle(entry.stage);
     entry.stage.classList.remove('is-live', 'is-loading');
     var old = $('canvas', entry.stage), fresh = old.cloneNode(false);
     old.replaceWith(fresh);             // a disposed canvas cannot be re-initialised
@@ -171,12 +175,55 @@
     setScale(entry.stage, entry.stage._scale || 1);
   }
 
+  function contextLost(sv) {
+    for (var i = live.length; i--;) {
+      if (live[i].sv !== sv) continue;
+      console.warn('[site] WebGL context lost, back to the poster');
+      park(live.splice(i, 1)[0]);
+    }
+  }
+
+  // sceneview.js rejects a loadModel() that a later call replaced, or that its viewer's
+  // dispose() cut short (a lost context, a park), with an AbortError (#4566). Whatever
+  // replaced or disposed it owns the stage now, so the older load has nothing to undo.
+  function superseded(e) { return !!e && e.name === 'AbortError'; }
+
+  // Motion stops by itself after 20 s on screen (WCAG 2.2.2); the pause button stops it
+  // sooner. Off screen the countdown waits, as the hero's film does: on wall time, a
+  // visitor who scrolled away 2 s into the film and came back 20 s later found it frozen
+  // where they had left it, on a Play button.
+  var MOTION_MS = 20000;
+  function startIdle(stage) {
+    stopIdle(stage);
+    if (caps.reduced) return;
+    stage._idleLeft = MOTION_MS;
+    if (stage._inView !== false) armIdle(stage);
+  }
+  function armIdle(stage) {
+    if (stage._idle || !(stage._idleLeft > 0)) return;
+    stage._idleAt = Date.now();
+    stage._idle = setTimeout(function () { stage._idle = 0; stage._idleLeft = 0; setPlaying(stage, false); }, stage._idleLeft);
+  }
+  function holdIdle(stage) {
+    if (!stage._idle) return;
+    clearTimeout(stage._idle); stage._idle = 0;
+    stage._idleLeft -= Date.now() - stage._idleAt;
+  }
+  function stopIdle(stage) { clearTimeout(stage._idle); stage._idle = 0; stage._idleLeft = 0; }
+
+  // The canvas takes over from the poster once the model is in, and the motion starts.
+  function showModel(stage, sv) {
+    setTimeout(function () { if (stage._sv !== sv) return; stage.classList.remove('is-loading'); stage.classList.add('is-live'); }, 400);
+    setPlaying(stage, !caps.reduced);
+    startIdle(stage);
+  }
+
   function goLive(stage) {
     if (stage._sv || stage.classList.contains('is-loading')) return Promise.resolve();
     if (!hasWebGL2()) { stage.classList.add('no-webgl'); return Promise.resolve(); }
     while (live.length >= caps.maxLive) park(live.shift());
     stage.classList.add('is-loading');
-    var canvas = $('canvas', stage), signal = ac.signal, def = null;
+    var canvas = $('canvas', stage), signal = ac.signal, def = null, mine = null;
     return loadRuntime().then(function () {
       return stage.dataset.scene ? loadScene(stage.dataset.scene) : null;
     }).then(function (d) {
@@ -194,12 +241,24 @@
       });
     }).then(function (sv) {
       if (signal.aborted) { sv.dispose(); return; }
-      stage._sv = sv; live.push({ stage: stage, sv: sv });
+      mine = sv;
+      // A GPU reset (a driver hang, Chrome restarting its GPU process) takes the page's
+      // WebGL contexts with it, and the engine on one cannot come back. The stage stayed
+      // "Live" on an empty canvas: it goes back to its poster and its load button instead.
+      // park() removes this listener (entry.off) before it disposes the viewer, unmount()
+      // included, so it is not tied to the page's mount signal: that signal is never
+      // aborted while the page lives, and would keep the canvas and the viewer reachable.
+      var entry = { stage: stage, sv: sv };
+      var lost = function () { if (stage._sv === sv) contextLost(sv); };
+      canvas.addEventListener('webglcontextlost', lost);
+      entry.off = function () { canvas.removeEventListener('webglcontextlost', lost); };
+      stage._sv = sv; live.push(entry);
       if (def) return sv.loadModel(def.model).then(function () {
+        if (stage._sv !== sv) return;     // lost and parked while it loaded
         var scene = stage._scene = def.setup(sv, {
           canvas: canvas, mobile: caps.mobile,
           // A hand on the picture ends the camera move: the button shows it can resume.
-          onGrab: function () { clearTimeout(stage._idle); setPlaying(stage, false); }
+          onGrab: function () { stopIdle(stage); setPlaying(stage, false); }
         });
         frameScene(stage);
         scene.setTurn(stage._turn || 0);
@@ -212,22 +271,23 @@
           if (stage._sv !== sv) return;
           stage.classList.remove('is-loading'); stage.classList.add('is-live');
           setPlaying(stage, !caps.reduced);
-          // Motion stops by itself after 20 s (WCAG 2.2.2); the pause button stops it sooner.
-          if (!caps.reduced) stage._idle = setTimeout(function () { setPlaying(stage, false); }, 20000);
+          startIdle(stage);
         }, 400);
       });
       return sv.loadModel(stage.dataset.src).then(function () {
+        if (stage._sv !== sv) return;     // lost and parked while it loaded
         applyFit(stage, sv);
         if (stage.dataset.anim && stage._animate !== false) sv.playAnimation(parseInt(stage.dataset.anim, 10), true);
-        setTimeout(function () { if (stage._sv !== sv) return; stage.classList.remove('is-loading'); stage.classList.add('is-live'); }, 400);
-        setPlaying(stage, !caps.reduced);
-        // Motion stops by itself after 20 s (WCAG 2.2.2); the pause button stops it sooner.
-        if (!caps.reduced) stage._idle = setTimeout(function () { setPlaying(stage, false); }, 20000);
+        showModel(stage, sv);
       });
     }).catch(function (e) {
+      // A model chip tapped during this first load replaced it (swapModel() shows that
+      // one), or a lost context parked its viewer: the stage is not this load's any more.
+      if (superseded(e)) return;
+      if (mine && stage._sv !== mine) return;   // parked, or relaunched by the visitor since
       console.warn('[site] live 3D unavailable, keeping the poster:', e && e.message);
       // A viewer whose model never arrived is torn down: the poster stays and the next tap starts clean.
-      for (var i = live.length; i--;) if (live[i].stage === stage) park(live.splice(i, 1)[0]);
+      for (var i = live.length; i--;) if (live[i].sv === mine) park(live.splice(i, 1)[0]);
       stage.classList.remove('is-loading');
     });
   }
@@ -246,11 +306,20 @@
       stage.classList.add('is-loading');
       var sv = stage._sv;
       sv.loadModel(stage.dataset.src).then(function () {
+        if (stage._sv !== sv) return;
         applyFit(stage, sv);
         if (stage.dataset.anim && stage._animate !== false) sv.playAnimation(parseInt(stage.dataset.anim, 10), true);
-        stage.classList.remove('is-loading');
+        // Tapped before the first model was shown: this model is the stage's first.
+        if (stage.classList.contains('is-live')) stage.classList.remove('is-loading');
+        else showModel(stage, sv);
       }).catch(function (e) {
+        // A later tap replaced this one, or the viewer was parked: someone else owns the stage.
+        if (superseded(e) || stage._sv !== sv) return;
         console.warn('[site] model swap failed:', e && e.message);
+        // No model was ever shown: tear the viewer down, as a failed first load does.
+        if (!stage.classList.contains('is-live')) {
+          for (var i = live.length; i--;) if (live[i].sv === sv) park(live.splice(i, 1)[0]);
+        }
         stage.classList.remove('is-loading');
       });
     }
@@ -411,7 +480,16 @@
       var btn = $('.stage__load', wrap), pause = $('.stage__pause', wrap);
       attach(stage);
       on(btn, 'click', function () { goLive(stage); });
-      on(pause, 'click', function () { clearTimeout(stage._idle); setPlaying(stage, pause.getAttribute('aria-pressed') === 'true'); });
+      on(pause, 'click', function () { stopIdle(stage); setPlaying(stage, pause.getAttribute('aria-pressed') === 'true'); });
+      // The 20 s motion countdown (startIdle) runs only while the stage is on screen.
+      if ('IntersectionObserver' in window) {
+        var so = new IntersectionObserver(function (es) {
+          stage._inView = es[es.length - 1].isIntersecting;
+          if (stage._inView) armIdle(stage); else holdIdle(stage);
+        });
+        so.observe(stage);
+        ac.signal.addEventListener('abort', function () { so.disconnect(); });
+      }
       var mode = stage.dataset.autoload || 'tap';
       if (caps.mobile && stage.dataset.mobile) mode = stage.dataset.mobile;
       if (!caps.auto || mode === 'tap') return;

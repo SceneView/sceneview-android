@@ -1479,6 +1479,15 @@
       "author": "David_Holiday"
     },
     {
+      "path": "website-static/models/platforms/threejs_robot_expressive.glb",
+      "scope": "web",
+      "sha256": "047f5e5fb3bb6d378bd1df16ca6137f2a596c99b3a1b5690b4020c05aaf6f319",
+      "size": 463988,
+      "source": "https://github.com/mrdoob/three.js/tree/dev/examples/models/gltf/RobotExpressive",
+      "license": "CC0-1.0",
+      "author": "Tomás Laulhé (Quaternius), modified by Don McCurdy"
+    },
+    {
       "path": "website-static/models/platforms/tier_escooter.glb",
       "scope": "web",
       "sha256": "61ed64c3feaceaa9c2bc9e730262b2281d1ac0e72e0d72a52cb34fefe2f73f93",

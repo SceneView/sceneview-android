@@ -1,2 +1,0 @@
-<!-- category: Fixed -->
-- **Android demo: the Rerun replay no longer crashes when you switch between light and dark theme ([#4574](https://github.com/sceneview/sceneview/pull/4574)).** Changing the theme while a replay played, or opening a new replay, rebuilt the 3D view's layers but left the old ones on screen, still drawing textures that had just been released, and the app closed. The old layers now leave the scene before their textures are released.
