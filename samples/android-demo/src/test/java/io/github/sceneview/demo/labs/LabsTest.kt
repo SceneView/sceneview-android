@@ -5,6 +5,8 @@ import io.github.sceneview.demo.LABS_DEMO_IDS
 import io.github.sceneview.demo.XR_ONLY_DEMO_IDS
 import io.github.sceneview.demo.labsDemos
 import io.github.sceneview.demo.listedDemos
+import io.github.sceneview.demo.ui.home.FEATURED_IDS
+import io.github.sceneview.demo.ui.home.FEATURED_PAGER_IDS
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -27,6 +29,14 @@ class LabsTest {
     @Test
     fun `the shipped Labs registry is empty`() {
         assertTrue(LABS_DEMO_IDS.isEmpty())
+    }
+
+    @Test
+    fun `no Labs demo is pushed by the hero pager or the Featured shelf`() {
+        // The pager and the shelf are built from the listed demos: a Labs id there would make
+        // the hero change page count when the switch flips, under a user mid-swipe.
+        val pushed = FEATURED_PAGER_IDS + FEATURED_IDS
+        assertTrue(LABS_DEMO_IDS.none { it in pushed })
     }
 
     @Test
