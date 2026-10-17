@@ -64,11 +64,12 @@
 # Do not enforce the correlation, and never "fix" a row to restore it.
 #
 # ─── CURRENT STATE — measured, not narrated ────────────────────────────────
-# Current ledger (2026-10-17, after AR catalogue clean-up wave 1): 38 rows, 28 working / 0 stub / 10 android-only.
-# (Wave 1, 42 -> 38 rows: four AR cards retired and DROPPED per the ledger rule.
+# Current ledger (2026-10-17, after AR catalogue clean-up wave 1): 39 rows, 28 working / 0 stub / 11 android-only.
+# (Wave 1, 42 -> 39 rows: three AR cards retired and DROPPED per the ledger rule.
 #  `ar-depth-collider` is the On your table mode of `rolling-balls`, `ar-scene-mesh`
-#  the colour switch of the Streetscape mode of `ar-geospatial-anchors`, `ar-fog`
-#  lands on `lighting` and `ar-ml-object-label` on `point-and-ask`. iOS keeps its
+#  the colour switch of the Streetscape mode of `ar-geospatial-anchors` and `ar-fog`
+#  lands on `lighting`. `ar-ml-object-label` lost its card but keeps its row: it stays
+#  registered as Point & Ask's on-device fallback (#2648). iOS keeps its
 #  `ar-depth-collider` and `ar-scene-mesh` screens: they are listed in the `ios:` of
 #  `rolling-balls` and `ar-geospatial-anchors`, the delete list of an iOS rewrite.)
 # (2026-10-02, iOS samples step 0: 49 -> 35 iOS cards, `secondary-camera` included. Every
@@ -1101,6 +1102,24 @@ demos:
     evidence: >-
       No iOS scene; ARKit raycast + scene reconstruction cover it.
       ARMeasureDemo.kt:108,479
+  - id: ar-ml-object-label
+    androidStatus: KnownIssue
+    iosStatus: android-only
+    reason: >-
+      No iOS screen — Vision/CoreML object labeling not ported (Phase 3,
+      #2798). Its coming-soon Scene stub was deleted in #3231. Android marked
+      KnownIssue in samples step 0: labels are unreliable on device. Since
+      wave 1 (#4608) it has no Android catalogue card either: it stays
+      registered as Point & Ask's on-device fallback on phones without AICore
+      (#2648), reached only from Point & Ask's "unavailable" card.
+    category: UNDERSTAND
+    android: samples/android-demo/src/main/java/io/github/sceneview/demo/demos/ARMLObjectLabelDemo.kt
+    ios: []
+    iosFiles: []
+    contract: >-
+      Detects real objects in the camera feed and pins a 3D billboard label
+      with the category name on each.
+    parity: missing
   - id: ar-plane-renderer-v2
     androidStatus: Working
     iosStatus: android-only

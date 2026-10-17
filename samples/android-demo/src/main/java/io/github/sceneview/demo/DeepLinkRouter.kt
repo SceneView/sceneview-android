@@ -208,10 +208,12 @@ internal object DeepLinkRouter {
         // opens Cosmos with the Record pill shown ([ALIAS_OPENS_RECORD]).
         "video-recording" to "cosmos",
         // AR catalogue clean-up, wave 1 (samples audit, 2026-10-17). Four AR cards left
-        // the catalogue; each old link opens the sample that now carries its subject.
-        // ML Kit Object Labels named five coarse categories and anchored them on the wall
-        // behind the object: Point & Ask answers the same "what is this?" with Gemini Nano.
-        "ar-ml-object-label" to "point-and-ask",
+        // the catalogue; three old links open the sample that now carries their subject.
+        // The fourth, `ar-ml-object-label`, is NOT an alias: it stays a registered id,
+        // hidden from the catalogue (`FALLBACK_ONLY_DEMO_IDS`), because it is Point & Ask's
+        // on-device fallback on phones without AICore (#2648). Aliasing it to
+        // `point-and-ask` would send that fallback straight back to the screen that just
+        // said it cannot run here.
         // AR Fog was a post-effect with no scene around it. `ARFogNode` stays in the SDK;
         // the fog the card showed is the Fog switch of `lighting` (density and colour).
         "ar-fog" to "lighting",
