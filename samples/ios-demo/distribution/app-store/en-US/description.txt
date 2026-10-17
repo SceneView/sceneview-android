@@ -14,7 +14,7 @@ WHAT THE SAMPLES SHOW
 - Real-world blending — real furniture and passing people stay in front of virtual objects, and the light around you lights the model.
 - Lighting and materials — swap HDR environments and watch reflections and shadows change in real time.
 - Scene mesh, depth, physics, geometry, spatial audio and more.
-- Your own files — open a USDZ, Reality, STL, OBJ, PLY or 3MF file and see how the SDK renders it.
+- Your own files — open a USDZ, Reality, STL, OBJ or PLY file and see how the SDK renders it.
 
 FOR DEVELOPERS
 
