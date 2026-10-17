@@ -74,7 +74,7 @@ Glassmorphism adds depth and layering to surfaces that float over content (nav, 
 | `stage-scrim-end` | rgba(0,0,0,0.90) | rgba(0,0,0,0.90) | Spatial Gallery media scrim end |
 | `glass-surface` | rgba(255,255,255,0.72) | rgba(255,255,255,0.05) | Floating Spatial Gallery controls |
 | `glass-border` | 1px rgba(255,255,255,0.08) | 1px rgba(255,255,255,0.08) | Floating control outline |
-| `stage-background` | #0B0F16 | #0B0F16 | **Full-screen** 3D stage clear colour — the 3D fills the screen with no page around it, so the value is identical in both themes |
+| `stage-background` | #0B0F16 | #0B0F16 | **Full-screen** 3D stage clear colour — the 3D fills the screen with no page around it, so the value is identical in both themes. The Model Viewer draws the themed studio (`stage-studio-*`) instead |
 | `stage-background-embedded` | #0B0F16 | #22293E | A 3D stage **embedded in a card** (home hero, card thumbnails). In dark it takes the elevated container value so the card keeps a visible background against the page; #0B0F16 there sits at 1.01:1 on `surface` and the card disappears |
 | `stage-lighting-floor` | #2A3346 | #2A3346 | Floor of the Lighting demo stage (Android `LightingStage.FLOOR_COLOR`, iOS `Stage.lightingFloor`): a blue-grey slate dark enough for a contact shadow, light enough to catch the key light. Fixed in both themes, like the stage |
 | `stage-tray-maple-early` | #E6CDA3 | #E6CDA3 | Pale earlywood of the Rolling Balls playing field (Android `TrayStage.MAPLE_EARLY`, procedural `tray_wood` grain): the lit ground every ball reads on. Fixed in both themes — the board is an object on the stage |
@@ -123,10 +123,10 @@ the surface ramp above, not the M3 tonal ramp.
 
 | Token | Light | Dark | Usage |
 |---|---|---|---|
-| `chip-bg` | #f1f3f5 (`surface-container-high`) | #2C3546 | Unselected category chip |
-| `chip-text` | #3d4654 (`on-surface-dim`) | #a4abb7 | Unselected chip label |
-| `chip-selected-bg` | #1a1a2e (`on-surface`) | #f3f4f6 | Selected category chip |
-| `chip-selected-text` | #ffffff (`surface`) | #0D1117 | Selected chip label |
+| `chip-bg` | #f1f3f5 (`surface-container-high`) | #2C3546 | Section chip (Android Home) |
+| `chip-text` | #3d4654 (`on-surface-dim`) | #a4abb7 | Section chip label |
+| `chip-selected-bg` | #1a1a2e (`on-surface`) | #f3f4f6 | Selected filter chip (iOS Home, until it moves to section chips) |
+| `chip-selected-text` | #ffffff (`surface`) | #0D1117 | Selected filter chip label (iOS Home) |
 | `hero-title` | #ffffff | #ffffff | Hero headline — the hero is an image card that stays dark in both themes |
 | `hero-sky-top` | #0B0F16 | #0B0F16 | Home stage sky, top stop — the night gradient Compose paints behind the transparent night circuit (#3948) until its own sky dome lands; one gradient in both themes, the hero stays dark |
 | `hero-sky-dusk` | #161C2C | #161C2C | Home stage sky, mid stop |
@@ -143,22 +143,25 @@ the surface ramp above, not the M3 tonal ramp.
 **Under the 3D header, the Home is a list of pictures.** The live header is the one
 showpiece; below it every demo is a card led by its own capture, and the capture is the
 card: no frame, no inset, no radius of its own. One vertical scroll, no carousel: the
-"Featured" banners, the "Browse online models" row, the category chips, then one group per
+"Featured" banners, the "Browse online models" row, the section chips, then one group per
 category.
 
 **Above the chips, a demo is pushed once.** The header pager, the "Featured" banners and
 the "What's new" row's picture are read in that order, and each only shows what the ones
 before it do not; a group left with nothing of its own is not drawn. The pager stays at two
 pages (Models, Cosmos) so the banners keep the other three featured demos: the banner is the
-card the Home is liked for. Under "All", a demo shown as a banner is not listed again in its
-category; a chip or a search is a query and lists every match. The "What's new" row
-opens the "What's new" sheet over the whole catalogue. It never selects the filter chip:
-a tap on a home row must not make the catalogue look smaller than it is.
+card the Home is liked for. In the catalogue, a demo shown as a banner is not listed again
+in its category; a search is a query and lists every match. The "What's new" row
+opens the "What's new" sheet over the whole catalogue: a tap on a home row must not make
+the catalogue look smaller than it is.
 
-**A chip filter always shows its way out.** The selected chip is its own off switch (a
-second tap goes back to "All"), Back clears the filter before it leaves the app, and a
-filtered list ends on a "Show all N samples" text button that names the size of the
-whole catalogue.
+**The chips are a table of contents, not a filter (2026-10-17).** One chip per section, in
+the order the sections appear, none ever selected: a tap scrolls the list so that
+section's header sits right under the pinned header, and every sample stays listed. The
+filter they replaced hid the rest of the catalogue — the "this app only has these
+samples" reading #4304 had to patch with an off switch, a Back step and a "Show all"
+button — while search and the "What's new" row already cover the other ways in. Hidden
+while searching. iOS still filters; its move is a parity item.
 
 A card's ground is **ambient**: the colour of its own picture, taken down to a fixed
 luminance (`home-row-ambient`), so in dark every card is a deep version of its scene and
@@ -173,7 +176,7 @@ Two shapes, one recipe:
   `home-row-text-start`, where the picture is down to a tenth of its opacity.
 
 The title is `type-card` (17, semibold, `on-surface`), the subtitle `type-caption` regular
-(`on-surface-variant`), the "New" / "Updated" / status chips on their own line above the title (`home-badge`: 3dp vertical padding, 12dp icon, accent text on `surface-container` at 92%, measured 6.3:1 light / 7.3:1 dark; the line collapses to zero height when no chip draws, so plain rows keep their rhythm). "New" covers a demo whose `addedIn` is within the last two minors of the build, "Updated" one whose `updatedIn` is, and both expire on their own; a "What's new" row under the hero and a "What's new" filter chip appear only while at least one demo carries a marker. Each card is
+(`on-surface-variant`), the "New" / "Updated" / status chips on their own line above the title (`home-badge`: 3dp vertical padding, 12dp icon, accent text on `surface-container` at 92%, measured 6.3:1 light / 7.3:1 dark; the line collapses to zero height when no chip draws, so plain rows keep their rhythm). "New" covers a demo whose `addedIn` is within the last two minors of the build, "Updated" one whose `updatedIn` is, and both expire on their own; a "What's new" row under the hero appears only while at least one demo carries a marker. Each card is
 its own `home-row-radius` tile, `home-row-gap` from the next. No shadow, no outline, in
 either theme — the ambient tone carries it. A demo without a capture shows its glyph at
 `home-row-glyph` in the category accent, over the accent's own ambient tint washed with
@@ -213,8 +216,12 @@ header that tints itself competes with the rows it introduces. Geometry:
 | `section-header-top-gap` | 24px (`space-lg`); 8px (`space-sm`) for the first one, right under the chips | Above a section header |
 | `section-header-bottom-gap` | 12px | Header to its group |
 
-A header is drawn only when more than one section is visible: with a single category
-filtered, the chip already names it.
+A header is drawn only when more than one section is visible: search results that all
+sit in one category get no lone header above them.
+
+**Back from anywhere lands where the list was.** Leaving the Home for a sample, the
+"Browse online models" gallery or another tab and coming back restores the list's scroll
+position: the tab host keeps each screen's saved state while another one is shown.
 
 **The picture card** (`DemoMediaCard`) is no longer on the Home; the Explore tab keeps it.
 A card is a square picture whose lower edge *melts* into a frosted caption: the caption's
@@ -576,7 +583,7 @@ themed surface — so it is theme-independent and uses the "Button glass" row.
 | `chrome-scrim` | rgba(0,0,0,0.60) → transparent | Ground under the chrome bands |
 | `glass-icon-button` | 44dp visual, 48dp touch target | Back |
 | `glass-pill` | 36dp high, 14dp horizontal padding | Identity pill |
-| `mode-pill-container` | #1A1F28, opaque | A segmented mode switch over the scene (Cosmos "Starlight \| Spacetime"), in the `bottomOverlay` band |
+| `mode-pill-container` | #1A1F28, opaque | A segmented mode switch over the scene (Cosmos scene switch "Galaxy \| Star \| Burst \| Flow", and "Starlight \| Spacetime"), in the `bottomOverlay` band |
 | `mode-pill-outline` | 1dp #D1D2D4, opaque | Its edge: the container clears 3:1 on grounds of L ≥ 0.14, the outline on L ≤ 0.18 — every ground is covered |
 | `mode-pill-selected` / `on-mode-pill-selected` | #FFFFFF / #0B0F16 | The checked segment and its label (19.2:1) |
 | `on-mode-pill` | #FFFFFF | Unchecked labels (16.5:1 on the container) |
@@ -1081,6 +1088,40 @@ the camera mode keeps `ARSceneView`'s own plane renderer).
   is still pinned dark (#3907). Streaming to a computer is an
   advanced option in the sheet, under its own heading; its status card shows only once
   connected.
+
+### Model Viewer Showroom (Android demo)
+
+Every model opens in a studio showroom (2026-10-14) instead of on the flat
+`stage-background`, where a car mirrored a grey softbox studio nobody could see over a
+black void. References: a **car configurator** (a car on a polished floor in a dark
+showroom), **Apple product pages** (an object on a white seamless) and **Sketchfab**'s
+studio scenes.
+
+- **A seamless cyclorama: the subject is the only edge.** The floor runs from
+  `stage-showroom-floor-center` under the subject to `-floor-rim` away from it, then height
+  fog in `stage-showroom-horizon` carries it into the backdrop, which darkens to
+  `stage-showroom-zenith` above. No horizon line at any orbit elevation, no clear colour.
+- **Two rooms, one per theme.** Light is a white photo studio, dark a charcoal showroom with
+  a pool of light under the subject. The glass chrome follows the theme too
+  (`themedStage`).
+- **The subject reflects the room it stands in.** The lighting map is the same studio
+  (`studio_showroom_{light,dark}_2k.hdr`, shared with the web viewer), so paint and glass
+  mirror the softboxes and the cove the user sees around them.
+- **Grounded.** A contact shadow under the footprint and SSAO; the polished zone under it
+  catches the studio's sheen and a faint planar mirror image of the subject's lower part,
+  as on the web viewer (Android: a second view at quarter resolution, refreshed every other
+  frame while the camera moves; off on low-RAM devices — screen-space reflections cost
+  ~360 ms a frame on a Pixel 4a). Away from
+  it the floor turns satin, so a low camera never sees the studio's light strips mirrored
+  across the bottom of the frame.
+- **Colours are the tokens.** PBR Neutral tone mapping (no hue shift: a red car stays its
+  red), and every stage colour is drawn pre-inverted through it. Picking another map in
+  the Lighting sheet shows that map with the previous look; "Showroom" is the sheet's first
+  entry and Reset lighting returns to it.
+- **Framed like a product shot.** A 40 mm lens; the pitch follows the subject's size, from
+  about 6.5° for a car (a low three-quarter) to 14.5° for a watch (tabletop); a light
+  vignette and a subtle bloom. The model settles onto the floor as it fades in; turntable
+  and gestures are unchanged.
 
 ### Tabs
 - Padding: 10px 20px

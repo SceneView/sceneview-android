@@ -62,6 +62,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -96,6 +97,7 @@ import io.github.sceneview.demo.telemetry.AnalyticsEvent
 import io.github.sceneview.demo.telemetry.NotificationsSettingsRow
 import io.github.sceneview.demo.telemetry.OpenSource
 import io.github.sceneview.demo.telemetry.SCREEN_CLASS_TAB
+import io.github.sceneview.demo.telemetry.SearchSurface
 import io.github.sceneview.demo.telemetry.Telemetry
 import io.github.sceneview.demo.telemetry.UsageStatisticsSettingsRow
 import io.github.sceneview.demo.telemetry.logOutboundLink
@@ -140,8 +142,6 @@ fun RootScreen(
     // change or process death should land the user back on the launcher
     // screen with the nav bar visible, not on an orphaned immersive shell.
     var arSessionActive by remember { mutableStateOf(false) }
-    // "" stands for "All" — a nullable String is not a Bundle-safe saveable.
-    var selectedCategory by rememberSaveable { mutableStateOf("") }
     var query by rememberSaveable { mutableStateOf("") }
     var galleryOpen by rememberSaveable { mutableStateOf(false) }
 
@@ -282,6 +282,12 @@ fun RootScreen(
                 .fillMaxSize()
                 .padding(padding),
         ) {
+            // AnimatedContent disposes the screen it leaves, and every `rememberSaveable`
+            // in it — the home list's scroll position among them: back from "Browse
+            // online models" or from another tab, the Home always reopened on its hero.
+            // Each tab (and the gallery) keeps its saved state here instead, for as long
+            // as the tab host lives, process death included.
+            val screenStates = rememberSaveableStateHolder()
             AnimatedContent(
                 targetState = selectedTab to galleryOpen,
                 transitionSpec = {
@@ -301,6 +307,7 @@ fun RootScreen(
                 },
                 label = "root-tab",
             ) { (tab, gallery) ->
+            screenStates.SaveableStateProvider("${tab.name}-$gallery") {
             when (tab) {
                 RootTab.Showcase -> if (gallery) {
                     ExploreTabScreen(
@@ -314,10 +321,12 @@ fun RootScreen(
                 } else {
                     HomeScreen(
                         demos = rememberListedDemos(),
-                        selectedCategory = selectedCategory.ifEmpty { null },
-                        onCategoryChange = { selectedCategory = it.orEmpty() },
                         query = query,
-                        onQueryChange = { query = it },
+                        onQueryChange = {
+                            if (it.isBlank()) Telemetry.search.cleared(SearchSurface.Samples)
+                            query = it
+                        },
+                        onSearchSettled = { q, count -> Telemetry.search.settled(SearchSurface.Samples, q, count) },
                         onDemoClick = { id ->
                             // `sample_open.source`: a tap in filtered results is a search.
                             Telemetry.nextOpenSource = if (query.isBlank()) OpenSource.Home else OpenSource.Search
@@ -336,6 +345,7 @@ fun RootScreen(
                     onSessionActiveChange = { arSessionActive = it },
                 )
                 RootTab.About -> AboutTabContent()
+            }
             }
             }
         }

@@ -6337,9 +6337,8 @@ by `samples/android-demo/scripts/collate-demos.sh` — never edit between the ma
 ### Create & record
 
 - `cosmos` — Cosmos. Watch a galaxy, a star and particle storms glow.
-- `lighting-lab` — Lighting Lab. See how light and reflections shape a model.
 - `materials` — Materials. Compare metal, glass, fabric and glow.
-- `lighting` — Lighting. Compare studio light, daylight and reflections.
+- `lighting` — Lighting. Studio light, daylight, reflections, fog and shading.
 - `custom-geometry` — Custom Geometry. A knot generated vertex by vertex.
 - `lines-paths` — Lines & Paths. Follow animated curves and paths.
 - `spatial-audio` — Spatial Audio. Positional sound that pans as you orbit.
