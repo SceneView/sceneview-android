@@ -329,6 +329,8 @@
   function mount() {
     ac = new AbortController();
     doc.classList.add('js-ready');
+    if (document.readyState === 'complete') doc.classList.add('is-loaded');
+    else on(window, 'load', function () { doc.classList.add('is-loaded'); });
 
     /* Theme */
     var mqLight = matchMedia('(prefers-color-scheme: light)');
@@ -474,7 +476,22 @@
       ac.signal.addEventListener('abort', function () { io.disconnect(); });
     }
 
-    /* Stages */
+    /* Stages. Starting an engine (WASM compile, a GLB, an environment) costs main-thread
+       time in 100 ms slices: an automatic start waits until the page has stopped scrolling,
+       so it never lands in the middle of a scroll. A tap on "View in 3D" starts at once. */
+    var lastScroll = 0;
+    on(window, 'scroll', function () { lastScroll = performance.now(); }, { passive: true });
+    function whenStill(fn) {
+      (function wait() {
+        if (ac.signal.aborted) return;
+        var quiet = performance.now() - lastScroll;
+        if (quiet < 300) { setTimeout(wait, 300 - quiet); return; }
+        (window.requestIdleCallback || setTimeout)(function () {
+          if (ac.signal.aborted) return;
+          if (performance.now() - lastScroll < 300) wait(); else fn();
+        }, { timeout: 1500 });
+      })();
+    }
     $$('[data-stage]').forEach(function (stage) {
       var wrap = stage.closest('[data-stage-wrap]') || stage;
       var btn = $('.stage__load', wrap), pause = $('.stage__pause', wrap);
@@ -494,11 +511,11 @@
       if (caps.mobile && stage.dataset.mobile) mode = stage.dataset.mobile;
       if (!caps.auto || mode === 'tap') return;
       if (mode === 'idle') {
-        var go = function () { (window.requestIdleCallback || setTimeout)(function () { if (!ac.signal.aborted) goLive(stage); }, { timeout: 1500 }); };
+        var go = function () { whenStill(function () { goLive(stage); }); };
         if (document.readyState === 'complete') go(); else on(window, 'load', go);
       } else if (mode === 'visible' && 'IntersectionObserver' in window) {
         var vo = new IntersectionObserver(function (es) {
-          if (es[0].isIntersecting) { vo.disconnect(); goLive(stage); }
+          if (es[0].isIntersecting) { vo.disconnect(); whenStill(function () { goLive(stage); }); }
         }, { rootMargin: '200px 0px' });
         vo.observe(stage);
         ac.signal.addEventListener('abort', function () { vo.disconnect(); });
@@ -574,35 +591,46 @@
     var scrollFx = !!hero && mqFx.matches;
     if (hero) hero.classList.toggle('has-scroll-fx', scrollFx);
     var specs = hero ? $$('.hero__specs li', hero) : [];
-    var lastP = 0, ticking = false;
+    // --p goes on the two blocks that read it, not on .hero: a custom property set on the
+    // hero restyled its whole subtree (canvas, chips, specs) on every scroll frame.
+    var pTargets = hero ? $$('.hero__copy, .hero__stage', hero) : [];
+    var lastP = -1, ticking = false;
     function frame() {
       ticking = false;
+      // Every read before any write: one layout per frame, never a forced one.
+      var y = scrollY, r = hero && hero.getBoundingClientRect(), navH = nav ? nav.offsetHeight : 0, p = 0;
       if (nav) {
-        var h = nav.offsetHeight;
-        nav.classList.toggle('is-scrolled', scrollY > 8);
-        var over = !!hero && hero.getBoundingClientRect().bottom > h;
-        if (hero) nav.classList.toggle('is-over-stage', over);
+        nav.classList.toggle('is-scrolled', y > 8);
+        // Night set while the picture still shows below the header. Once only its last
+        // strip is left under the header, the bar takes the page's set at once, but solid
+        // (is-stage-edge): a translucent bar there let that strip through as a two-tone band.
+        var over = !!r && r.bottom > navH;
+        if (hero) {
+          nav.classList.toggle('is-over-stage', over);
+          nav.classList.toggle('is-stage-edge', !over && r.bottom > 0);
+        }
         // Over a night picture the header takes the dark set, whatever the theme.
         nav.classList.toggle('night', over && hero.classList.contains('night'));
       }
       if (!hero) return;
-      var r = hero.getBoundingClientRect(), p;
       if (scrollFx) p = clamp(-r.top / Math.max(1, r.height - innerHeight), 0, 1);
       else p = clamp(-r.top / Math.max(1, r.height), 0, 1);
-      hero.style.setProperty('--p', p.toFixed(4));
+      if (p === lastP) return;            // past the hero: nothing left to move
+      var pv = p.toFixed(4);
+      pTargets.forEach(function (el) { el.style.setProperty('--p', pv); });
       hero.classList.toggle('is-copy-out', scrollFx && p >= 0.25);
       specs.forEach(function (li, i) { li.classList.toggle('is-on', p > 0.28 + i * 0.16); });
       // Live: the scroll turns the model (about 1.6 rad over the pin); a scene turns its camera.
       if (heroStage && heroStage.dataset.scene) {
         var turn = scrollFx ? p * 1.2 : 0;
         if (turn !== heroStage._turn) { heroStage._turn = turn; if (heroStage._scene) heroStage._scene.setTurn(turn); }
-      } else if (scrollFx && heroStage && heroStage._sv && p !== lastP) { var hsv = heroStage._sv; hsv.setCameraOrbit({ angle: hsv.getCameraOrbit().angle + (p - lastP) * 1.6 }); }
+      } else if (scrollFx && heroStage && heroStage._sv && lastP >= 0) { var hsv = heroStage._sv; hsv.setCameraOrbit({ angle: hsv.getCameraOrbit().angle + (p - lastP) * 1.6 }); }
       lastP = p;
     }
     on(window, 'scroll', function () { if (!ticking) { ticking = true; requestAnimationFrame(frame); } }, { passive: true });
     on(window, 'resize', function () {
       var want = !!hero && mqFx.matches;
-      if (hero && want !== scrollFx) { scrollFx = want; hero.classList.toggle('has-scroll-fx', want); }
+      if (hero && want !== scrollFx) { scrollFx = want; hero.classList.toggle('has-scroll-fx', want); lastP = -1; }
       $$('[data-scene]').forEach(frameScene);
       frame();
     });
