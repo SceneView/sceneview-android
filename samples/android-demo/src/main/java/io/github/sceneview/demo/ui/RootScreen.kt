@@ -96,6 +96,7 @@ import io.github.sceneview.demo.telemetry.AnalyticsEvent
 import io.github.sceneview.demo.telemetry.NotificationsSettingsRow
 import io.github.sceneview.demo.telemetry.OpenSource
 import io.github.sceneview.demo.telemetry.SCREEN_CLASS_TAB
+import io.github.sceneview.demo.telemetry.SearchSurface
 import io.github.sceneview.demo.telemetry.Telemetry
 import io.github.sceneview.demo.telemetry.UsageStatisticsSettingsRow
 import io.github.sceneview.demo.telemetry.logOutboundLink
@@ -317,7 +318,11 @@ fun RootScreen(
                         selectedCategory = selectedCategory.ifEmpty { null },
                         onCategoryChange = { selectedCategory = it.orEmpty() },
                         query = query,
-                        onQueryChange = { query = it },
+                        onQueryChange = {
+                            if (it.isBlank()) Telemetry.search.cleared(SearchSurface.Samples)
+                            query = it
+                        },
+                        onSearchSettled = { q, count -> Telemetry.search.settled(SearchSurface.Samples, q, count) },
                         onDemoClick = { id ->
                             // `sample_open.source`: a tap in filtered results is a search.
                             Telemetry.nextOpenSource = if (query.isBlank()) OpenSource.Home else OpenSource.Search

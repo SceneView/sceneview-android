@@ -71,6 +71,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -120,6 +121,7 @@ import io.github.sceneview.demo.categoryDisplayNameRes
 import io.github.sceneview.demo.freshDemos
 import io.github.sceneview.demo.freshness
 import io.github.sceneview.demo.freshnessWindowStart
+import io.github.sceneview.demo.telemetry.SearchTerm
 import io.github.sceneview.demo.theme.SceneViewTokens
 import io.github.sceneview.demo.theme.LocalMotionEnabled
 import io.github.sceneview.demo.theme.motionFade
@@ -131,6 +133,7 @@ import io.github.sceneview.demo.ui.cascadeIn
 import io.github.sceneview.demo.ui.pressScale
 import io.github.sceneview.demo.ui.rememberCascade
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 /** Test tags for the home screen. */
@@ -206,6 +209,12 @@ fun HomeScreen(
     hasUnseenWhatsNew: Boolean = false,
     onWhatsNewSinceClick: () -> Unit = {},
     /**
+     * A non-blank [query] the user settled on, with how many samples it shows — fired once the
+     * field has been still for [SearchTerm.SETTLE_MS], or straight away when a sample is tapped
+     * before that. Feeds the `search` event; defaulted so previews and snapshots ignore it.
+     */
+    onSearchSettled: (query: String, resultCount: Int) -> Unit = { _, _ -> },
+    /**
      * The version the freshness markers are measured against — `VERSION_NAME`
      * in the app, a pinned value in the snapshot tests.
      *
@@ -250,6 +259,18 @@ fun HomeScreen(
         filterDemos(searchEntries, activeCategory, query).mapNotNull { byId[it.id] }
     }
     val searching = query.isNotBlank()
+    val currentOnSearchSettled by rememberUpdatedState(onSearchSettled)
+    val currentVisibleCount by rememberUpdatedState(visible.size)
+    LaunchedEffect(query) {
+        if (query.isBlank()) return@LaunchedEffect
+        delay(SearchTerm.SETTLE_MS)
+        currentOnSearchSettled(query, currentVisibleCount)
+    }
+    // A sample tapped from a search counts that search even if the field never sat still.
+    val openDemo: (String) -> Unit = { id ->
+        if (searching) currentOnSearchSettled(query, visible.size)
+        onDemoClick(id)
+    }
     // A filter is a place the user went: Back leaves it for the whole catalogue before it
     // leaves the app (#4304).
     BackHandler(enabled = activeCategory != null) { onCategoryChange(null) }
@@ -445,7 +466,7 @@ fun HomeScreen(
                     HomeFeaturedPager(
                         pages = featuredPages,
                         height = heroHeight,
-                        onDemoClick = onDemoClick,
+                        onDemoClick = openDemo,
                         onWhatsNewClick = { whatsNewSheet.open() },
                         pagerState = featuredPagerState,
                         modifier = Modifier.testTag(HomeTestTags.HERO),
@@ -496,7 +517,7 @@ fun HomeScreen(
                         item(key = "featured-${demo.id}") {
                             DemoListRow(
                                 demo = demo,
-                                onClick = { onDemoClick(demo.id) },
+                                onClick = { openDemo(demo.id) },
                                 style = HomeRowStyle.Banner,
                                 freshness = freshnessById[demo.id] ?: DemoFreshness.None,
                                 modifier = Modifier
@@ -563,7 +584,7 @@ fun HomeScreen(
                     item(key = "demo-${demo.id}") {
                         DemoListRow(
                             demo = demo,
-                            onClick = { onDemoClick(demo.id) },
+                            onClick = { openDemo(demo.id) },
                             style = HomeRowStyle.Fused,
                             freshness = freshnessById[demo.id] ?: DemoFreshness.None,
                             modifier = Modifier
