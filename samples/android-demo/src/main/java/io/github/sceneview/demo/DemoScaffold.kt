@@ -717,7 +717,13 @@ fun DemoScaffold(
             // outlives the composition that launched it.
             val hasExpandedDetent =
                 settingsContentPx > rootHeightPx * SceneViewTokens.Glass.sheetPeekFraction
-            if (restored == SheetValue.Expanded && hasExpandedDetent) {
+            // #4539: a sheet no taller than the peek (a demo with no `controls`: Send
+            // feedback and QA mode only) has ONE open detent. Material 3 drops the
+            // PartiallyExpanded anchor when the peek equals the sheet height and keeps
+            // Expanded, at the very same place — so `partialExpand()` targeted an anchor that
+            // did not exist and left the sheet parked under the window's bottom edge:
+            // Settings hid the dock and showed nothing (AR Surfaces, the AR View tab, AR Face…).
+            if (!hasExpandedDetent || restored == SheetValue.Expanded) {
                 settingsSheetState.expand()
             } else {
                 settingsSheetState.partialExpand()
