@@ -598,13 +598,17 @@
     function frame() {
       ticking = false;
       // Every read before any write: one layout per frame, never a forced one.
-      var y = scrollY, r = hero && hero.getBoundingClientRect(), p = 0;
+      var y = scrollY, r = hero && hero.getBoundingClientRect(), navH = nav ? nav.offsetHeight : 0, p = 0;
       if (nav) {
         nav.classList.toggle('is-scrolled', y > 8);
-        // The header keeps the night set until the picture has left it entirely: switched
-        // earlier, its light glass blurred the dark picture still under it into a grey band.
-        var over = !!r && r.bottom > 0;
-        if (hero) nav.classList.toggle('is-over-stage', over);
+        // Night set while the picture still shows below the header. Once only its last
+        // strip is left under the header, the bar takes the page's set at once, but solid
+        // (is-stage-edge): a translucent bar there let that strip through as a two-tone band.
+        var over = !!r && r.bottom > navH;
+        if (hero) {
+          nav.classList.toggle('is-over-stage', over);
+          nav.classList.toggle('is-stage-edge', !over && r.bottom > 0);
+        }
         // Over a night picture the header takes the dark set, whatever the theme.
         nav.classList.toggle('night', over && hero.classList.contains('night'));
       }

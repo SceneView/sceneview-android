@@ -68,12 +68,18 @@ code, pre, kbd { font-family: var(--font-mono); font-size: .875em; }
   transition: background-color var(--d-slow) var(--ease-out), border-color var(--d-slow) var(--ease-out), color var(--d-slow) var(--ease-out);
 }
 .nav.is-scrolled { background: var(--header-glass); -webkit-backdrop-filter: saturate(160%) blur(16px); backdrop-filter: saturate(160%) blur(16px); border-bottom-color: var(--hairline); }
-/* Over the stage the header takes the stage's colours, whatever the theme. */
-.nav.is-over-stage { color: var(--stage-fg); background: linear-gradient(to bottom, color-mix(in srgb, var(--stage-bg) 72%, transparent), transparent); border-bottom-color: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; }
+/* Over the stage the header takes the stage's colours, whatever the theme. The gradient is
+   sized to the border box: sized to the padding box, it tiled again into the 1px border
+   and drew a dark line across the picture. */
+.nav.is-over-stage { color: var(--stage-fg); background: linear-gradient(to bottom, color-mix(in srgb, var(--stage-bg) 72%, transparent), transparent) border-box; border-bottom-color: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; }
 /* Scrolled over the film: a solid night bar, no backdrop blur. A blur there re-ran on
    every frame of the live canvas, and where the picture ends under the header it smeared
    the dark picture and the light page into a grey band. */
 .nav.is-over-stage.is-scrolled { background: var(--stage-bg); border-bottom-color: color-mix(in srgb, var(--stage-fg) 10%, transparent); }
+/* The film's last strip still under the header: the page's bar, solid, so that strip
+   cannot show through. No fade into it either: an anchor jump from the top faded the bar
+   in from transparent, and halfway through it was the same two-tone band. */
+.nav.is-stage-edge { background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none; transition: none; }
 .nav__inner { height: 100%; display: flex; align-items: center; gap: var(--s-5); }
 .brand { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; font-weight: 650; font-size: 1.0625rem; letter-spacing: -0.02em; }
 .brand__mark { width: 26px; height: 26px; }
