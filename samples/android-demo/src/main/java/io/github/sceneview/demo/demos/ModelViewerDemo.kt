@@ -1753,6 +1753,8 @@ private fun SingleModelSection(
             // the entrance effect has claimed it (see `entranceOwner`).
             val manipulatorContent = remember { java.util.concurrent.atomic.AtomicReference<Any?>(null) }
             val manipulatorInstance = remember { java.util.concurrent.atomic.AtomicReference<Any?>(null) }
+            // Whether any model has been on stage yet (see the zoom reset below).
+            val stageHadModel = remember { java.util.concurrent.atomic.AtomicBoolean(false) }
             val cameraManipulator = remember {
                 EntranceCameraManipulator(
                     eye = {
@@ -1777,6 +1779,14 @@ private fun SingleModelSection(
             // that draws the model is aimed for it.
             SideEffect {
                 if (manipulatorInstance.get() !== activeModelInstance) {
+                    // The zoom belongs to the model it was set on. `DemoSettings.cameraDistance` is
+                    // one absolute distance in metres: carried over, a pinch-out on 6 cm earbuds
+                    // left the next helmet a speck off to the side, and a pinch-in left it filling
+                    // the screen (QA pass 2026-10-16). The first model keeps it — that is the
+                    // `camera_distance` deep link, set before anything is on stage.
+                    if (stageHadModel.getAndSet(activeModelInstance != null || stageHadModel.get())) {
+                        DemoSettings.cameraDistance = null
+                    }
                     manipulatorInstance.set(activeModelInstance)
                     manipulatorContent.set(bounds)
                     cameraManipulator.startOver()
@@ -1879,6 +1889,11 @@ private fun SingleModelSection(
             HdPackPerfProbe.start(it.key)
             if (openedFile != null) openedFileLeavingInstance = LeavingStage(activeModelInstance)
             cancelSurprise(); onSelectModel(it); streamedFileUrl = null; modelSheetOpen = false
+            // A catalogue entry with no stand-in is only its card's still render until its file is
+            // in: nothing a pinch or "Spin scene" can move. Fetch it on Wi-Fi now, not on a pill
+            // tap the user has no reason to look for (see HdPack.fetchOnWifi).
+            val hdId = it.hdAssetId
+            if (it.assetPath == null && hdId != null) HdPack.fetchOnWifi(context, hdId)
         },
         onScene = { cancelSurprise(); modelSheetOpen = false; onModeChange(it.mode()) },
         onDismiss = { modelSheetOpen = false },
@@ -1889,7 +1904,15 @@ private fun SingleModelSection(
         HdPackDownloadDialog(
             // This model's own file: a Museum pill never downloads the rest of the pack.
             totalBytes = hdAsset?.bytes ?: hdStore.manifest.missingBytes(hdReadyIds),
-            onConfirm = { hdDialogOpen = false; HdPack.downloadNow(context, assetId = hdAsset?.id) },
+            onConfirm = {
+                hdDialogOpen = false
+                HdPack.downloadNow(
+                    context,
+                    assetId = hdAsset?.id,
+                    // A pick's Wi-Fi fetch parked on mobile data gives way to "now, any network".
+                    replaceWifiWait = hdAssetStatus == HdPackStatus.WaitingForWifi,
+                )
+            },
             onDismiss = { hdDialogOpen = false },
         )
     }
