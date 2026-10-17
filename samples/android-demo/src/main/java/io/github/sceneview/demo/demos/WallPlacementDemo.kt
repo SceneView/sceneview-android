@@ -200,8 +200,11 @@ private val TV_SCREEN = Size(1.20f, 0.68f, 0.01f)
 /** The screen's centre, proud of the body's front face (z = 0.04) by half its own depth. */
 private const val TV_SCREEN_CENTER_Z = 0.045f
 
-/** Brings the authored 1.26 m TV to the demo's 0.3 m preview size, not a 55-inch claim. */
-private const val WALL_TV_SCALE = 0.3f / 1.26f
+/**
+ * The TV is drawn at its real size: the authored body is a 55-inch TV, 1.26 m by 0.74 m (#4560).
+ * It used to be shrunk to a 0.3 m preview, which read as a toy rather than a TV on the wall.
+ */
+private const val WALL_TV_SCALE = 1f
 
 /** The TV as drawn: width, height and depth in metres, screen included. */
 internal val wallTvExtent: Size = Size(
@@ -235,7 +238,7 @@ internal fun WallTvPreviewSheet(
 }
 
 /**
- * Same authored geometry/materials as iOS; the base size is a 0.3 m preview, not a 55-inch claim.
+ * Same authored geometry/materials as iOS, drawn at the real size of a 55-inch TV (#4560).
  *
  * [selectable] routes a touch on the TV to the placement: in AR its parts are editable so a drag
  * on them reaches `AutoPlacementNode`'s pivot. SceneView never hands a touch on an editable node
