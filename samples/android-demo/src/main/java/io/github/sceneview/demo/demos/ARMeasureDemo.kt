@@ -53,13 +53,12 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntSize
-import androidx.core.os.ConfigurationCompat
 import com.google.android.filament.Box as FilamentBox
 import com.google.android.filament.Material
 import com.google.android.filament.MaterialInstance
@@ -230,7 +229,7 @@ fun ARMeasureDemo(onBack: () -> Unit) {
     val arPlaybackDataset = rememberArPlaybackDataset()
     val haptic = rememberHapticFeedback()
     val context = LocalContext.current
-    val locale: Locale = ConfigurationCompat.getLocales(LocalConfiguration.current)[0] ?: Locale.getDefault()
+    val locale: Locale = LocalLocale.current.platformLocale
 
     var board by remember { mutableStateOf(MeasureBoard<Anchor>()) }
     // World positions of every anchor on the board, refreshed only when one actually moves
