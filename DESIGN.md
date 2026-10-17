@@ -74,7 +74,7 @@ Glassmorphism adds depth and layering to surfaces that float over content (nav, 
 | `stage-scrim-end` | rgba(0,0,0,0.90) | rgba(0,0,0,0.90) | Spatial Gallery media scrim end |
 | `glass-surface` | rgba(255,255,255,0.72) | rgba(255,255,255,0.05) | Floating Spatial Gallery controls |
 | `glass-border` | 1px rgba(255,255,255,0.08) | 1px rgba(255,255,255,0.08) | Floating control outline |
-| `stage-background` | #0B0F16 | #0B0F16 | **Full-screen** 3D stage clear colour — the 3D fills the screen with no page around it, so the value is identical in both themes |
+| `stage-background` | #0B0F16 | #0B0F16 | **Full-screen** 3D stage clear colour — the 3D fills the screen with no page around it, so the value is identical in both themes. The Model Viewer draws the themed studio (`stage-studio-*`) instead |
 | `stage-background-embedded` | #0B0F16 | #22293E | A 3D stage **embedded in a card** (home hero, card thumbnails). In dark it takes the elevated container value so the card keeps a visible background against the page; #0B0F16 there sits at 1.01:1 on `surface` and the card disappears |
 | `stage-lighting-floor` | #2A3346 | #2A3346 | Floor of the Lighting demo stage (Android `LightingStage.FLOOR_COLOR`, iOS `Stage.lightingFloor`): a blue-grey slate dark enough for a contact shadow, light enough to catch the key light. Fixed in both themes, like the stage |
 | `stage-tray-maple-early` | #E6CDA3 | #E6CDA3 | Pale earlywood of the Rolling Balls playing field (Android `TrayStage.MAPLE_EARLY`, procedural `tray_wood` grain): the lit ground every ball reads on. Fixed in both themes — the board is an object on the stage |
@@ -583,7 +583,7 @@ themed surface — so it is theme-independent and uses the "Button glass" row.
 | `chrome-scrim` | rgba(0,0,0,0.60) → transparent | Ground under the chrome bands |
 | `glass-icon-button` | 44dp visual, 48dp touch target | Back |
 | `glass-pill` | 36dp high, 14dp horizontal padding | Identity pill |
-| `mode-pill-container` | #1A1F28, opaque | A segmented mode switch over the scene (Cosmos "Starlight \| Spacetime"), in the `bottomOverlay` band |
+| `mode-pill-container` | #1A1F28, opaque | A segmented mode switch over the scene (Cosmos scene switch "Galaxy \| Star \| Burst \| Flow", and "Starlight \| Spacetime"), in the `bottomOverlay` band |
 | `mode-pill-outline` | 1dp #D1D2D4, opaque | Its edge: the container clears 3:1 on grounds of L ≥ 0.14, the outline on L ≤ 0.18 — every ground is covered |
 | `mode-pill-selected` / `on-mode-pill-selected` | #FFFFFF / #0B0F16 | The checked segment and its label (19.2:1) |
 | `on-mode-pill` | #FFFFFF | Unchecked labels (16.5:1 on the container) |
@@ -731,6 +731,18 @@ with `motion-fade`.
   under centred text (`SceneActionBar`).
 - **The caption is not the accessible name.** The content description stays the full
   phrase ("Demo settings"); only the visible caption is shortened ("Settings").
+
+#### Full screen (Android demo, #4558)
+
+Every scene screen built on `DemoScaffold` carries a full-screen control: a
+`glass-icon-button` (`Fullscreen` glyph, "Full screen") at the trailing end of the
+identity row, so it sits where the back button's mirror would be on every demo. One tap
+fades the identity row, the dock, both scene slots (`topOverlay`, `bottomOverlay`) and
+the settings sheet out with `motion-fade`, and hides the system bars (transient on swipe).
+The scene keeps the whole screen; nothing else is drawn but one `glass-icon-button`
+(`FullscreenExit`, "Exit full screen") on a `chrome-scrim` ground in the top trailing
+corner, inside the safe-drawing inset. That button and system Back both bring everything
+back. The control lives in the scaffold, never in a sample.
 
 ### Car Chrome (Android Auto demo)
 
@@ -1088,6 +1100,40 @@ the camera mode keeps `ARSceneView`'s own plane renderer).
   is still pinned dark (#3907). Streaming to a computer is an
   advanced option in the sheet, under its own heading; its status card shows only once
   connected.
+
+### Model Viewer Showroom (Android demo)
+
+Every model opens in a studio showroom (2026-10-14) instead of on the flat
+`stage-background`, where a car mirrored a grey softbox studio nobody could see over a
+black void. References: a **car configurator** (a car on a polished floor in a dark
+showroom), **Apple product pages** (an object on a white seamless) and **Sketchfab**'s
+studio scenes.
+
+- **A seamless cyclorama: the subject is the only edge.** The floor runs from
+  `stage-showroom-floor-center` under the subject to `-floor-rim` away from it, then height
+  fog in `stage-showroom-horizon` carries it into the backdrop, which darkens to
+  `stage-showroom-zenith` above. No horizon line at any orbit elevation, no clear colour.
+- **Two rooms, one per theme.** Light is a white photo studio, dark a charcoal showroom with
+  a pool of light under the subject. The glass chrome follows the theme too
+  (`themedStage`).
+- **The subject reflects the room it stands in.** The lighting map is the same studio
+  (`studio_showroom_{light,dark}_2k.hdr`, shared with the web viewer), so paint and glass
+  mirror the softboxes and the cove the user sees around them.
+- **Grounded.** A contact shadow under the footprint and SSAO; the polished zone under it
+  catches the studio's sheen and a faint planar mirror image of the subject's lower part,
+  as on the web viewer (Android: a second view at quarter resolution, refreshed every other
+  frame while the camera moves; off on low-RAM devices — screen-space reflections cost
+  ~360 ms a frame on a Pixel 4a). Away from
+  it the floor turns satin, so a low camera never sees the studio's light strips mirrored
+  across the bottom of the frame.
+- **Colours are the tokens.** PBR Neutral tone mapping (no hue shift: a red car stays its
+  red), and every stage colour is drawn pre-inverted through it. Picking another map in
+  the Lighting sheet shows that map with the previous look; "Showroom" is the sheet's first
+  entry and Reset lighting returns to it.
+- **Framed like a product shot.** A 40 mm lens; the pitch follows the subject's size, from
+  about 6.5° for a car (a low three-quarter) to 14.5° for a watch (tabletop); a light
+  vignette and a subtle bloom. The model settles onto the floor as it fades in; turntable
+  and gestures are unchanged.
 
 ### Tabs
 - Padding: 10px 20px
