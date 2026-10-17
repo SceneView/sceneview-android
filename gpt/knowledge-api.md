@@ -1,6 +1,6 @@
 <!--
   GENERATED FILE — DO NOT EDIT.
-  Source of truth: /llms.txt  (SceneView 4.56.0)
+  Source of truth: /llms.txt  (SceneView 4.57.0)
   Regenerate:      node tools/generate-gpt-knowledge.js
   Drift is caught in CI (ci.yml -> repo-hygiene). Edit llms.txt instead.
   See issue #2724.
@@ -9,7 +9,7 @@
 # SceneView — API Reference
 
 > Composables, node types, resource loading, camera, math, and per-platform APIs.
-> Auto-generated from `llms.txt` (SceneView 4.56.0). This is a slice of the machine-readable API reference — the same content an AI reads to generate SceneView code.
+> Auto-generated from `llms.txt` (SceneView 4.57.0). This is a slice of the machine-readable API reference — the same content an AI reads to generate SceneView code.
 
 ## Docs
 
@@ -2119,7 +2119,7 @@ On a phone where `Session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)` is `
 depth from a monocular network: it runs a `MonocularDepthEstimator` on the CPU camera image,
 off the render thread, and scales the network's relative inverse depth to metres with a
 robust fit `1/z = s·d + t` on ARCore's own plane samples and feature points. The runtime
-lives in a separate module, `arsceneview-depth-ml` (LiteRT 2.1.5, in the repo, not yet on
+lives in a separate module, `arsceneview-depth-ml` (LiteRT 2.3.0, in the repo, not yet on
 Maven Central): `DepthAnythingV2Estimator` runs Depth Anything V2 **Small** (Apache-2.0;
 Base/Large/Giant are CC-BY-NC — never ship them). `arsceneview` itself never depends on
 LiteRT. iOS has the same pipeline (`ARDepthFrame.Source.ml`, see the SceneViewSwift section).
@@ -2208,7 +2208,8 @@ it came from: unproject with `frame.cameraPose`, never the current pose.
 
 Cost: a one-time **27.7 MB** download into `noBackupFilesDir/sceneview-depth-ml/`, checked
 against its SHA-256 (concurrent loads share one download). LiteRT native code per ABI:
-arm64-v8a ≈ 8 MB, x86_64 ≈ 10.7 MB, armeabi-v7a 3.5 MB (CPU only); an AAB serves one ABI.
+arm64-v8a ≈ 9.4 MB, x86_64 ≈ 12.2 MB, armeabi-v7a ≈ 6.3 MB (GPU accelerator included);
+an AAB serves one ABI.
 The network input is **518×686** (H×W, the whole CPU image stretched), output 518×686
 inverse depth. Inference runs at ≤ 5 Hz on one worker thread, halves at thermal MODERATE,
 pauses at SEVERE and skips frames while the camera holds still; expect each map to be
@@ -4772,7 +4773,7 @@ cube.updateCollisionShape()              // opt back in: re-derive, and resume t
 ## Compose Multiplatform (sceneview-compose)
 
 One composable from `commonMain`, several renderers underneath. Artifact:
-`io.github.sceneview:sceneview-compose:4.56.0` — on Maven Central since 4.27.0, released
+`io.github.sceneview:sceneview-compose:4.57.0` — on Maven Central since 4.27.0, released
 in lock-step with `sceneview`. 4.26.0 and earlier do NOT contain this module — never
 emit a version below 4.27.0 for it.
 
@@ -4977,7 +4978,7 @@ Full rationale: `docs/docs/compose-multiplatform.md`.
 
 ## SceneView Web (Kotlin/JS + Filament.js)
 
-Package: `sceneview-web` v4.56.0 — npm `sceneview-web`
+Package: `sceneview-web` v4.57.0 — npm `sceneview-web`
 Renderer: **Filament.js (WebGL2/WASM)** — same Filament engine as SceneView Android, compiled to WebAssembly.
 Requires: Chrome 79+, Edge 79+, Firefox 78+ (WebGL2). Safari 15+ (WebGL2).
 
@@ -5609,7 +5610,7 @@ Renderer: **RealityKit**. Requires iOS 18+ / macOS 15+ / visionOS 2+.
 
 SPM dependency (Package.swift or Xcode):
 ```swift
-.package(url: "https://github.com/sceneview/sceneview.git", from: "4.56.0")
+.package(url: "https://github.com/sceneview/sceneview.git", from: "4.57.0")
 ```
 
 Import: `import SceneViewSwift`

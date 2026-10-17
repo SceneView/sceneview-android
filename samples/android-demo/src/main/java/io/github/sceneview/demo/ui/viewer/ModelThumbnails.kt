@@ -103,10 +103,13 @@ object ModelThumbnails {
  * equirect, so the picture on the tile is the light the user gets. The drawable names are the
  * viewer's slot names, not file stems — `env_thumb_sunset` is the tile of the "Sunset" slot, which
  * is `sky_on_fire` since #4052. `sunset_2k.hdr` itself is an overcast seascape (it still lights the
- * home hero and the reflection-probe demo) and has no tile because no sheet offers it.
+ * home hero and the reflection-probe demo) and has no tile because no sheet offers it. The
+ * "Showroom" slot has one tile per theme, like the two studio maps it stands for.
  */
 object EnvironmentThumbnails {
     private val resources: Map<String, Int> = mapOf(
+        "studio_showroom_dark" to R.drawable.env_thumb_studio_showroom_dark,
+        "studio_showroom_light" to R.drawable.env_thumb_studio_showroom_light,
         "studio" to R.drawable.env_thumb_studio,
         "studio_warm" to R.drawable.env_thumb_studio_warm,
         "sky_on_fire" to R.drawable.env_thumb_sunset,

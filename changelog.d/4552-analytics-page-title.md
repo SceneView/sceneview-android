@@ -1,2 +1,0 @@
-<!-- category: Fixed -->
-- **Website: the site's own audience reports name each page again ([#4552](https://github.com/sceneview/sceneview/issues/4552)).** Every page of `sceneview.github.io` reported itself with an empty title, so the report by page title was one blank row and the `/go/*` pages could not be told apart by name. Each page now reports the title shown in its browser tab. Nothing else in what the site measures changed, and the AR session page still keeps a recording's link out of it.
