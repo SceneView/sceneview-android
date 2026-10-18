@@ -66,7 +66,7 @@
 # ─── CURRENT STATE — measured, not narrated ────────────────────────────────
 # Current ledger (2026-10-18, after AR catalogue clean-up wave 1, `finger-drawing` and `ar-pool`): 41 rows, 28 working / 0 stub / 13 android-only.
 # (2026-10-14, +1 android-only: `ar-pool`, Pool in the garden — no iOS screen yet.)
-# (Wave 1, 43 -> 40 rows: three AR cards retired and DROPPED per the ledger rule.
+# (Wave 1, 44 -> 41 rows: three AR cards retired and DROPPED per the ledger rule.
 #  `ar-depth-collider` is the On your table mode of `rolling-balls`, `ar-scene-mesh`
 #  the colour switch of the Streetscape mode of `ar-geospatial-anchors` and `ar-fog`
 #  lands on `lighting`. `ar-ml-object-label` lost its card but keeps its row: it stays
