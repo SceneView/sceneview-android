@@ -3636,6 +3636,7 @@
       "id": "kitchenaid_stand_mixer",
       "name": "KitchenAid stand mixer",
       "_comment": "Real-product catalogue (#4560): website gallery (view.html) and Android HD pack, real-world scale, base at the origin.",
+      "note": "Modified derivative (CC-BY-4.0 indicate-changes): the hosted copy removes the power cord trailing on the counter, its plug and the strain relief hanging on it (#4614), so the bounds are the mixer's own (23 x 36 x 39 cm instead of 32 x 36 x 53 cm), and re-centres the footprint on the origin. The cord's entry on the motor head, every other mesh and every material are untouched.",
       "source": "sketchfab",
       "sourceId": "716dfa11eb8f4020833584a3c3d09d5d",
       "sourceUrl": "https://sketchfab.com/3d-models/kitchenaid-stand-mixer-716dfa11eb8f4020833584a3c3d09d5d",
