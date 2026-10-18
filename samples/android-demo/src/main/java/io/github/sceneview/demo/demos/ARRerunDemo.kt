@@ -362,8 +362,11 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
         opening?.cancel()
         opening = scope.launch {
             // A scan with its model opens on it at once; the recording is read meanwhile. Without
-            // one, the replay's cover says "Opening your scan…" while its files are read.
-            val kept = withContext(Dispatchers.IO) { store.hasModel(id) }
+            // one — or with one that no longer reads — the replay's cover says "Opening your scan…"
+            // while its files are read, then the model is built again from them.
+            val keptModel = withContext(Dispatchers.IO) { store.model(id) }
+            val kept = keptModel != null
+            resultModel = keptModel
             modelSource = null
             hasResult = kept
             screen = if (kept) RerunScreen.Model else RerunScreen.Replay
@@ -549,6 +552,7 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
             modelLoader = modelLoader,
             materialLoader = materialLoader,
             hintStays = qaState != null,
+            opened = resultModel,
         )
     }
     val exportable = when (screen) {

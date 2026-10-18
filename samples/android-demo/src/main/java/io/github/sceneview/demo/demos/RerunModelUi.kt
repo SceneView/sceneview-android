@@ -100,10 +100,13 @@ import io.github.sceneview.rememberEnvironment
 import io.github.sceneview.rememberRenderer
 import io.github.sceneview.rememberView
 import io.github.sceneview.utils.readBuffer
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.nio.ByteBuffer
@@ -123,7 +126,22 @@ internal sealed interface RerunModelSource {
      * The TSDF the recording fused from ARCore's raw depth, frame by frame: the full model.
      * [cloud], the recording's coloured points, is the fallback when meshing finds no surface.
      */
-    class Live(val tsdf: RerunTsdf, val cloud: DenseCloud?) : RerunModelSource
+    class Live(tsdf: RerunTsdf, val cloud: DenseCloud?) : RerunModelSource {
+        @Volatile
+        private var held: RerunTsdf? = tsdf
+
+        /** The fused depth; `null` once [release]d. */
+        val tsdf: RerunTsdf? get() = held
+
+        /**
+         * Lets the TSDF go (up to [RerunTsdf.MAX_BYTES]) once the model built from it is kept with
+         * its scan: reopened, the scan reads that model instead of meshing again.
+         */
+        fun release() {
+            held?.let(RerunLiveModels::forget)
+            held = null
+        }
+    }
 
     /** A kept scan's surfel cloud, when its raw depth is gone: the scan reopened later. */
     class Surfels(val cloud: DenseCloud) : RerunModelSource
@@ -202,6 +220,11 @@ internal object RerunLiveModels {
         pack ?: return null
         return kept?.takeIf { it.first.contentEquals(pack.manifest) }?.second
     }
+
+    /** Empties the slot when it holds [tsdf]. */
+    fun forget(tsdf: RerunTsdf) {
+        if (kept?.second === tsdf) kept = null
+    }
 }
 
 /** A built mesh: its `.glb`, its size, and what building it took. */
@@ -219,7 +242,7 @@ internal class RerunModelBuild(
 internal fun buildRerunModel(source: RerunModelSource, progress: (Float) -> Unit): RerunModelBuild {
     val started = System.nanoTime()
     val (tsdf, minWeight) = when (source) {
-        is RerunModelSource.Live -> source.tsdf to LIVE_MIN_WEIGHT
+        is RerunModelSource.Live -> checkNotNull(source.tsdf) { "TSDF released" } to LIVE_MIN_WEIGHT
         is RerunModelSource.Surfels -> RerunTsdf().also { t ->
             t.integrateSurfels(source.cloud) { progress(it * FUSE_SHARE) }
         } to RerunMarchingCubes.DEFAULT_MIN_WEIGHT
@@ -262,6 +285,9 @@ internal fun buildRerunModel(source: RerunModelSource, progress: (Float) -> Unit
 /**
  * The scan's model: the meshed surface, or — when meshing finds none — the scan's coloured points
  * as small squares ([RerunPointsMesh]). `null` when there is neither. Off the main thread.
+ *
+ * [progress] is also where a cancelled build stops: it may throw [CancellationException], which
+ * goes through untouched — a screen left mid-build stops meshing instead of racing the next one.
  */
 internal fun buildScanModel(source: RerunModelSource, progress: (Float) -> Unit): RerunScanModel? {
     val skipMesh = source is RerunModelSource.Synthetic && source.meshFails
@@ -269,6 +295,7 @@ internal fun buildScanModel(source: RerunModelSource, progress: (Float) -> Unit)
         null
     } else {
         runCatching { buildRerunModel(source) { progress(it * MESH_PART) } }
+            .onFailure { if (it is CancellationException) throw it }
             .onFailure { Log.w(TAG, "meshing failed", it) }
             .getOrNull()
             ?.takeIf { it.triangles > 0 }
@@ -296,7 +323,7 @@ internal fun buildScanModel(source: RerunModelSource, progress: (Float) -> Unit)
     return RerunScanModel(
         kind = RerunScanModel.Kind.Points,
         glb = RerunMeshGlb.write(points),
-        bounds = points.bounds(),
+        bounds = RerunPointsMesh.framingBounds(points),
         triangles = points.triangleCount,
         vertices = points.vertexCount,
     )
@@ -324,6 +351,7 @@ private sealed interface ModelState {
  * same model without building it again; never kept, it is built from [source] and saved.
  *
  * [onModel] hears the model once it is known (`null` when there is none), for the export sheet.
+ * [opened] is the kept model when the caller has already read it, so it is not read twice.
  */
 @Composable
 @Suppress("LongMethod", "LongParameterList", "CyclomaticComplexMethod")
@@ -342,17 +370,24 @@ internal fun RerunModelScreen(
     modelLoader: ModelLoader,
     materialLoader: MaterialLoader,
     hintStays: Boolean = false,
+    opened: RerunScanModel? = null,
 ) {
     var progress by remember(source, id) { mutableFloatStateOf(0f) }
     val state by produceState<ModelState>(ModelState.Loading, source, id) {
-        val kept = if (store != null && id != null) {
+        val kept = opened ?: if (store != null && id != null) {
             withContext(Dispatchers.IO) { runCatching { store.model(id) }.getOrNull() }
         } else {
             null
         }
         val model = kept ?: source?.let { from ->
             withContext(Dispatchers.Default) {
-                runCatching { buildScanModel(from) { progress = it } }
+                val job = coroutineContext.job
+                val report = { share: Float ->
+                    progress = share
+                    job.ensureActive()
+                }
+                runCatching { buildScanModel(from, report) }
+                    .onFailure { if (it is CancellationException) throw it }
                     .onFailure { Log.w(TAG, "model build failed", it) }
                     .getOrNull()
             }
@@ -360,10 +395,12 @@ internal fun RerunModelScreen(
         // A model built now is kept with its scan, so the next open reads it instead of meshing again.
         val keepAs = id?.takeIf { kept == null && store != null }
         if (keepAs != null && model != null) {
-            withContext(Dispatchers.IO) {
+            val saved = withContext(Dispatchers.IO) {
                 runCatching { checkNotNull(store).saveModel(keepAs, model) }
                     .onFailure { Log.w(TAG, "model not saved", it) }
+                    .isSuccess
             }
+            if (saved) (source as? RerunModelSource.Live)?.release()
         }
         value = if (model != null) ModelState.Ready(model) else ModelState.Failed
     }

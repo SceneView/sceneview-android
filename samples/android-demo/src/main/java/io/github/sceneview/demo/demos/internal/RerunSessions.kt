@@ -226,6 +226,20 @@ class RerunSessionStore(val root: File) {
         .sortedByDescending { it.createdAt }
 
     /**
+     * Deletes the directories a save cut short left behind — capture files, maybe a model, but no
+     * `session.json` — which [list] never shows and nothing else would ever free. Only those
+     * untouched for [graceMillis], so a save under way (its `session.json` comes last) is spared.
+     * Returns how many went.
+     */
+    fun sweepOrphans(nowMillis: Long = System.currentTimeMillis(), graceMillis: Long = ORPHAN_GRACE_MS): Int =
+        root.listFiles { file -> file.isDirectory }.orEmpty()
+            .filter { dir -> !File(dir, INFO).isFile && nowMillis - dir.lastTouched() >= graceMillis }
+            .count { it.deleteRecursively() }
+
+    private fun File.lastTouched(): Long =
+        maxOf(lastModified(), listFiles().orEmpty().maxOfOrNull { it.lastModified() } ?: 0L)
+
+    /**
      * A dense scan kept before its `session.json` counted the dense cloud (it counted ARCore's
      * sparse map, capped at 12k, while the scan HUD showed the cloud): its points read again from
      * its manifest, so the list says what the scan and its replay say.
@@ -288,9 +302,6 @@ class RerunSessionStore(val root: File) {
             RerunScanModel.parse(info, glb)
         }.getOrNull()
     }
-
-    /** `true` when session [id] keeps a whole result model: its `model.json`, written last, is there. */
-    fun hasModel(id: String): Boolean = File(directoryOf(id), MODEL_INFO).isFile
 
     /** Renames session [id] to [title] (trimmed); `null` when it is gone or [title] is blank. */
     fun rename(id: String, title: String): RerunStoredSession? {
@@ -379,6 +390,9 @@ class RerunSessionStore(val root: File) {
         const val MODEL_GLB = "model.glb"
         const val MODEL_INFO = "model.json"
         private const val PARTIAL = ".partial"
+
+        /** How long a directory without `session.json` is left alone: far longer than any save. */
+        const val ORPHAN_GRACE_MS = 60L * 60 * 1000
         private const val MILLIS = 1000L
     }
 }

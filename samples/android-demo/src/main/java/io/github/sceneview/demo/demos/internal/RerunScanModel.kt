@@ -66,12 +66,17 @@ class RerunScanModel(
         private val pretty = Json { prettyPrint = true }
         private val lenient = Json { ignoreUnknownKeys = true; isLenient = true }
 
-        /** `null` when [info] is not a whole `model.json`, or [glb] is not a `.glb`. */
+        /**
+         * `null` when [info] is not a whole `model.json`, was written by a newer app ([VERSION]),
+         * or [glb] is not a `.glb`: the scan then builds its model again.
+         */
         @Suppress("ReturnCount") // one early return per required key
         fun parse(info: String, glb: ByteArray): RerunScanModel? {
             if (glb.size < GLB_HEADER || !glb.startsWithGlbMagic()) return null
             val root = runCatching { lenient.parseToJsonElement(info) as? JsonObject }.getOrNull() ?: return null
             fun number(key: String) = (root[key] as? JsonPrimitive)?.takeIf { !it.isString }
+            val version = number("version")?.intOrNull ?: return null
+            if (version !in 1..VERSION) return null
             val kind = Kind.of((root["kind"] as? JsonPrimitive)?.takeIf { it.isString }?.content) ?: return null
             val bounds = (root["bounds"] as? JsonArray)
                 ?.mapNotNull { (it as? JsonPrimitive)?.floatOrNull }
@@ -141,7 +146,8 @@ object RerunPointsMesh {
             val bx = ny * tz - nz * ty
             val by = nz * tx - nx * tz
             val bz = nx * ty - ny * tx
-            val color = cloud.colors[i].takeIf { it and RGB != 0 }?.let { it or OPAQUE } ?: UNCOLOURED
+            // `0` is "no colour" (DenseCloud); a coloured point is opaque, black included.
+            val color = cloud.colors[i].takeIf { it ushr ALPHA_SHIFT != 0 } ?: UNCOLOURED
             val v = k * QUAD
             corner(positions, v, x - tx - bx, y - ty - by, z - tz - bz)
             corner(positions, v + 1, x + tx - bx, y + ty - by, z + tz - bz)
@@ -172,8 +178,30 @@ object RerunPointsMesh {
     private const val QUAD_INDICES = 6
     private const val PARALLEL = 0.9f
     private const val EPSILON = 1e-6f
-    private const val RGB = 0xFFFFFF
-    private const val OPAQUE = 0xFF shl 24
+    private const val ALPHA_SHIFT = 24
+    private const val LOW = 0.01f
+    private const val HIGH = 0.99f
+
+    /**
+     * The box the result frames a points model by: per axis, from the 1st to the 99th percentile
+     * of its vertices. Points are noisy — a few strays far off, which a min/max box would fit
+     * whole, leave the room itself small in the middle of the screen. All zero for no vertex.
+     */
+    fun framingBounds(mesh: RerunMesh, low: Float = LOW, high: Float = HIGH): FloatArray {
+        val n = mesh.vertexCount
+        val out = FloatArray(BOUNDS)
+        if (n == 0) return out
+        val axis = FloatArray(n)
+        for (a in 0 until 3) {
+            for (v in 0 until n) axis[v] = mesh.positions[v * 3 + a]
+            axis.sort()
+            out[a] = axis[((n - 1) * low).toInt()]
+            out[a + 3] = axis[((n - 1) * high + 0.5f).toInt().coerceAtMost(n - 1)]
+        }
+        return out
+    }
+
+    private const val BOUNDS = 6
 }
 
 /**

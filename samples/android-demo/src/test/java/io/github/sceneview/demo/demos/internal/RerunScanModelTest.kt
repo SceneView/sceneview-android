@@ -4,6 +4,9 @@ import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.cross
 import dev.romainguy.kotlin.math.dot
 import dev.romainguy.kotlin.math.normalize
+import io.github.sceneview.demo.demos.RerunModelSource
+import io.github.sceneview.demo.demos.buildScanModel
+import kotlinx.coroutines.CancellationException
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -40,7 +43,6 @@ class RerunScanModelTest {
 
         // A new store on the same directory: the app killed and opened again.
         val reopened = RerunSessionStore(root)
-        assertTrue(reopened.hasModel(saved.id))
         val back = assertNotNull(reopened.model(saved.id))
         assertEquals(RerunScanModel.Kind.Points, back.kind)
         assertArrayEquals(model.glb, back.glb)
@@ -66,7 +68,6 @@ class RerunScanModelTest {
         val store = RerunSessionStore(folder.newFolder("sessions"))
         val saved = store.save(bundled(), "Old scan", RerunSessionSource.Recorded, 1_000_000L)
 
-        assertFalse(store.hasModel(saved.id))
         assertNull(store.model(saved.id))
         assertEquals(listOf(saved), store.list())
         assertEquals(bundled(), store.capture(saved.id))
@@ -82,7 +83,6 @@ class RerunScanModelTest {
 
         // The .glb written, the save cut before model.json: no model.
         File(dir, "model.glb").writeBytes(model.glb)
-        assertFalse(store.hasModel(saved.id))
         assertNull(store.model(saved.id))
 
         // model.json present but its .glb gone, or not a .glb, or the json itself broken.
@@ -105,7 +105,6 @@ class RerunScanModelTest {
         val store = RerunSessionStore(folder.newFolder("sessions"))
         val saved = store.save(bundled(), "Room", RerunSessionSource.Recorded, 1_000_000L, model = floorModel())
         assertTrue(store.delete(saved.id))
-        assertFalse(store.hasModel(saved.id))
         assertNull(store.model(saved.id))
         val error = runCatching { store.saveModel(saved.id, floorModel()) }.exceptionOrNull()
         assertTrue("a model for a scan that is gone is refused", error is IllegalStateException)
@@ -121,6 +120,44 @@ class RerunScanModelTest {
         assertNotNull(store.model(saved.id))
         assertNull("a blank name is refused", store.rename(saved.id, "   "))
         assertNull("a scan that is gone", store.rename("nope", "x"))
+    }
+
+    @Test
+    fun `a save cut short is swept once it is old, never a save under way or a whole scan`() {
+        val root = folder.newFolder("sessions")
+        val store = RerunSessionStore(root)
+        val whole = store.save(bundled(), "Room", RerunSessionSource.Recorded, 1_000_000L, model = floorModel())
+        val now = System.currentTimeMillis()
+        val grace = RerunSessionStore.ORPHAN_GRACE_MS
+
+        // Capture files and a model, but the save died before session.json.
+        val old = File(root, "OLD").apply { mkdirs() }
+        File(old, RerunCapturePack.MEDIA).writeBytes(ByteArray(64))
+        File(old, RerunSessionStore.MODEL_GLB).writeBytes(ByteArray(64))
+        old.listFiles()!!.forEach { it.setLastModified(now - grace - 1_000) }
+        old.setLastModified(now - grace - 1_000)
+        // The same, written a moment ago: a save under way.
+        val fresh = File(root, "FRESH").apply { mkdirs() }
+        File(fresh, RerunCapturePack.MEDIA).writeBytes(ByteArray(64))
+        File(root, whole.id).listFiles()!!.forEach { it.setLastModified(now - grace * 2) }
+
+        assertEquals(1, store.sweepOrphans(nowMillis = now))
+        assertFalse(old.exists())
+        assertTrue(fresh.exists())
+        assertEquals(listOf(whole), store.list())
+        assertNotNull(store.model(whole.id))
+    }
+
+    @Test
+    fun `a model json from a newer app, or with no version, is refused`() {
+        val model = floorModel()
+        val info = model.infoJson()
+        assertTrue(info.contains("\"version\": ${RerunScanModel.VERSION}"))
+        val version = "\"version\": ${RerunScanModel.VERSION}"
+        val newer = info.replace(version, "\"version\": ${RerunScanModel.VERSION + 1}")
+        assertNull(RerunScanModel.parse(newer, model.glb))
+        assertNull(RerunScanModel.parse(info.replace("\"version\": ${RerunScanModel.VERSION},", ""), model.glb))
+        assertNotNull(RerunScanModel.parse(info, model.glb))
     }
 
     @Test
@@ -166,7 +203,80 @@ class RerunScanModelTest {
         assertTrue(mesh.colors.all { it == RerunPointsMesh.UNCOLOURED })
     }
 
+    @Test
+    fun `a black point stays black, only a point with no colour is grey`() {
+        val cloud = DenseCloud(
+            positions = FloatArray(6),
+            colors = intArrayOf(0xFF000000.toInt(), 0),
+            normals = floatArrayOf(0f, 1f, 0f, 0f, 1f, 0f),
+        )
+        val mesh = RerunPointsMesh.of(cloud)
+        assertEquals(0xFF000000.toInt(), mesh.colors[0])
+        assertEquals(RerunPointsMesh.UNCOLOURED, mesh.colors[4])
+    }
+
+    @Test
+    fun `a points model is framed by its points, not by a few strays far off`() {
+        val room = floorCloud(side = 40) // 0.78 m a side
+        val strays = 3
+        val positions = room.positions.copyOf(room.positions.size + strays * 3)
+        for (k in 0 until strays) {
+            positions[room.positions.size + k * 3] = 25f + k
+            positions[room.positions.size + k * 3 + 1] = -9f
+            positions[room.positions.size + k * 3 + 2] = 14f
+        }
+        val cloud = DenseCloud(
+            positions = positions,
+            colors = room.colors.copyOf(room.count + strays),
+            normals = FloatArray(positions.size) { if (it % 3 == 1) 1f else 0f },
+        )
+        val mesh = RerunPointsMesh.of(cloud)
+        val all = mesh.bounds()
+        val framed = RerunPointsMesh.framingBounds(mesh)
+        assertTrue("min/max reaches the strays", all[3] > 25f)
+        assertTrue("framed x ${framed.toList()}", framed[0] >= -0.05f && framed[3] <= 0.85f)
+        assertTrue("framed y", framed[1] >= -0.05f && framed[4] <= 0.05f)
+        assertTrue("framed z", framed[2] >= -0.05f && framed[5] <= 0.85f)
+        assertTrue("still the whole room", framed[3] - framed[0] > 0.7f && framed[5] - framed[2] > 0.7f)
+        val empty = RerunMesh(FloatArray(0), FloatArray(0), IntArray(0), IntArray(0))
+        assertArrayEquals(FloatArray(6), RerunPointsMesh.framingBounds(empty), 0f)
+    }
+
+    // ── Building it ───────────────────────────────────────────────────────────
+
+    @Test
+    fun `a build that is cancelled stops at its next progress and says so`() {
+        var calls = 0
+        val error = runCatching {
+            buildScanModel(RerunModelSource.Synthetic()) {
+                calls++
+                throw CancellationException("left the screen")
+            }
+        }.exceptionOrNull()
+        assertTrue("cancellation goes through, not a points fallback: $error", error is CancellationException)
+        assertEquals(1, calls)
+    }
+
     // ── Read back for the thumbnail ───────────────────────────────────────────
+
+    @Test
+    fun `the model glb is one well-formed container`() {
+        val mesh = RerunPointsMesh.of(floorCloud(side = 5))
+        val glb = RerunMeshGlb.write(mesh)
+        val head = java.nio.ByteBuffer.wrap(glb).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        assertEquals(0x46546C67, head.getInt(0))
+        assertEquals(2, head.getInt(4))
+        assertEquals(glb.size, head.getInt(8))
+        val jsonLength = head.getInt(12)
+        assertEquals(0, jsonLength % 4)
+        val binLength = head.getInt(20 + jsonLength)
+        assertEquals(0x004E4942, head.getInt(24 + jsonLength))
+        assertEquals(glb.size, 28 + jsonLength + binLength)
+        val vertices = mesh.vertexCount
+        assertEquals(vertices * 28 + mesh.indices.size * 4, binLength)
+        val json = String(glb, 20, jsonLength, Charsets.UTF_8)
+        assertTrue(json, json.contains("\"byteLength\":$binLength"))
+    }
 
     @Test
     fun `a model glb reads back into the mesh it was written from`() {

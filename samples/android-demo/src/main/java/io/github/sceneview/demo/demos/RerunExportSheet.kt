@@ -429,13 +429,15 @@ private class RerunExportFiles(private val context: Context, private val source:
     private var scene: RerunExportScene? = null
 
     suspend fun write(format: RerunExportFormat): File = lock.withLock {
-        val bytes = when (format) {
-            RerunExportFormat.Model -> source.model?.invoke()?.glb
-                ?: RerunGlbWriter.write(scene(), anchorModels(context, scene()), BitmapRerunImageCodec)
-            RerunExportFormat.Points -> withContext(Dispatchers.Default) { RerunPlyWriter.write(scene()) }
-            RerunExportFormat.Scan -> RerunScanFile.write(capture())
-            RerunExportFormat.Recording ->
-                withContext(Dispatchers.Default) { RerunRrdWriter.write(scene(), BitmapRerunImageCodec) }
+        // Encoding (JPEG, glTF, zip) is heavy: never on the main thread the sheet launches from.
+        val bytes = withContext(Dispatchers.Default) {
+            when (format) {
+                RerunExportFormat.Model -> source.model?.invoke()?.glb
+                    ?: RerunGlbWriter.write(scene(), anchorModels(context, scene()), BitmapRerunImageCodec)
+                RerunExportFormat.Points -> RerunPlyWriter.write(scene())
+                RerunExportFormat.Scan -> RerunScanFile.write(capture())
+                RerunExportFormat.Recording -> RerunRrdWriter.write(scene(), BitmapRerunImageCodec)
+            }
         }
         withContext(Dispatchers.IO) {
             val into = dir ?: freshExportDirectory(context).also { dir = it }
