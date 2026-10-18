@@ -171,7 +171,7 @@ private fun LandingPage(state: RerunLandingState, actions: RerunLandingActions) 
 }
 
 /**
- * The landing's primary action: the camera in its well, "Record your room" and the privacy
+ * The landing's primary action: the camera in its well, "Start scanning" and the privacy
  * promise under it, on the accent fill.
  */
 @Composable
@@ -231,7 +231,7 @@ private fun GlassAction(icon: ImageVector, label: String, onClick: () -> Unit, m
     }
 }
 
-/** "Your sessions": the notice, the file being opened, then the cards — or the empty state. */
+/** "Your scans": the notice, the file being opened, then the cards — or the empty state. */
 @Composable
 private fun SessionsSection(state: RerunLandingState, actions: RerunLandingActions) {
     var confirming by remember { mutableStateOf<LandingSession?>(null) }

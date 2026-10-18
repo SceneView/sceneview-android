@@ -26,6 +26,7 @@ import io.github.sceneview.demo.demos.internal.ReplayLens
 import io.github.sceneview.demo.demos.internal.ReplayManifest
 import io.github.sceneview.demo.demos.internal.RerunCapturePack
 import io.github.sceneview.demo.demos.internal.ScanArchive
+import io.github.sceneview.demo.demos.internal.ScanClock
 import io.github.sceneview.demo.demos.internal.ScanDevice
 import io.github.sceneview.demo.demos.internal.ScanIntrinsics
 import io.github.sceneview.demo.demos.internal.ScanProjection
@@ -115,8 +116,11 @@ internal class ScanCapture private constructor(
     // Why depth frames did or did not grow the map, logged every two seconds for a device run.
     private val intake = DepthIntake()
 
-    /** When Record started, on the monotonic clock: the HUD's clock runs from it (see [elapsedSeconds]). */
-    private val startedNanos = SystemClock.elapsedRealtimeNanos()
+    /**
+     * The HUD's clock, from when Record started on the monotonic clock (see [elapsedSeconds]). It
+     * stops while the scan is paused or in review (#4627).
+     */
+    private val clock = ScanClock(SystemClock.elapsedRealtimeNanos())
 
     /** Surfels in the dense map so far: the HUD's "N surfaces" count. `0` without raw depth. */
     val denseCount: Int get() = denseTotal.get()
@@ -135,8 +139,13 @@ internal class ScanCapture private constructor(
      * the trace records nothing while tracking is lost, and a clock read off it froze for 2.4 s at
      * "Not enough detail" on a Pixel 9.
      */
-    fun elapsedSeconds(nowNanos: Long = SystemClock.elapsedRealtimeNanos()): Float =
-        ((nowNanos - startedNanos).coerceAtLeast(0L) / NANOS_PER_SECOND).toFloat()
+    fun elapsedSeconds(nowNanos: Long = SystemClock.elapsedRealtimeNanos()): Float = clock.elapsedSeconds(nowNanos)
+
+    /** Pause or review: the clock stops. The recorder stops feeding this scan for as long. */
+    fun stopClock(nowNanos: Long = SystemClock.elapsedRealtimeNanos()) = clock.stop(nowNanos)
+
+    /** Resume or Keep scanning: the clock runs on from where it stopped. */
+    fun resumeClock(nowNanos: Long = SystemClock.elapsedRealtimeNanos()) = clock.resume(nowNanos)
 
     /** The scan as it grows. Its thumbnails fill in as the photos are encoded. */
     val live = RerunReplayMedia(
@@ -399,7 +408,6 @@ internal class ScanCapture private constructor(
         /** One depth-verdict line a second of frame time at most. */
         private const val LOG_INTERVAL_NS = 1_000_000_000L
         private const val NANOS_PER_MS = 1_000_000L
-        private const val NANOS_PER_SECOND = 1e9
 
         /** A second between two snapshots of the dense map for the live 3D card. */
         const val LIVE_DENSE_INTERVAL_NS = 1_000_000_000L
