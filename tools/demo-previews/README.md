@@ -87,6 +87,14 @@ room as a miniature: an emulator capture (Pixel_7a, 1080×2400) of the dollhouse
 AR half cannot run on the emulator (#2754). Crop: the full-width 1080×864 band from y = 958
 (5:4), resized to 800×640, WebP q82.
 
+`ar-pool` cannot run its AR session on the emulator either (#2754), so its card is the pool
+the `pool_preview` QA state draws without one: an emulator capture (Pixel_7a, 1280×2856) of
+`--es demo ar-pool --ez qa_mode true --es qa_state pool_preview`, the default 8 × 4 m pool
+with the white liner, one per theme. Crop: the full-width 1280×1024 band from y = 700 (5:4)
+— the far coping, the waterline mosaic, the Roman steps and the water with its caustics,
+none of the demo's chrome — resized to 800×640, WebP q80. The stage is the backdrop photo
+in both themes, so the two cards differ only by where the animated caustics were.
+
 `rolling-balls` became its own demo in #4083 and has no render golden: its card is an
 emulator capture (Pixel_7a, 1080×2400) of the opening shot a few seconds after launch — the
 wooden board (maple field, walnut frame, since the redesign) and the rubber, glass and steel
@@ -350,11 +358,12 @@ draw no alpha.
 The sheet's "Scenes" row holds one card, the Park, in two files: the sheet shows the one this
 build will load (`SketchfabConfig.apiKey`), so the card is what the scene opens on (#4039).
 
-- `model_picker_park.webp`: the bundled fallback models only (soldier, sheen chair, lantern,
-  shiba), what a **keyless** build loads. Emulator capture (Pixel_7a, 1080×2400) of
-  `--es demo multi-model --ez qa_mode true` (orbit frozen) after `pm clear` with Wi-Fi and data
-  off, so a keyed build falls back too. Window x 0–1080, y 790–1654, resized to 600×480 and
-  encoded with `cwebp -q 85`.
+- `model_picker_park.webp`: the bundled fallback models only (Quaternius Ranger, sheen chair,
+  lantern, shiba), what a **keyless** build loads. Emulator capture (Pixel_7a, 1280×2856) of
+  `--es demo multi-model --ez qa_mode true` (orbit and animations frozen) after `pm clear` with
+  Wi-Fi and data off, so a keyed build falls back too. Full-width 5:4 window x 0–1280,
+  y 955–1979 (the Ranger's hood to the shiba), resized to 600×480 and encoded as WebP q85
+  (#4586).
 - `model_picker_park_streamed.webp`: a **keyed** debug build, so the four streamed `park`
   registry models. Same capture online, window x 0–1080, y 880–1744, same resize and encoding.
   The image shows CC-BY 4.0 models, credited where the app credits them, under "Park

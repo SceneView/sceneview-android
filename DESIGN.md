@@ -1076,19 +1076,29 @@ the camera mode keeps `ARSceneView`'s own plane renderer).
   fingers pan, pinch zooms); double-tap or Recenter hands it back.
 - **Timeline**: play/pause, the time, a scrubber, the length, and a *Live* chip in
   `success` while the view follows the session. Scrubbing pauses; *Live* jumps back.
-- **Record mode is read from a metre away.** It is filmed over the user's shoulder, so the
-  scan's figures (points, surfaces, photos) are `type-display` white on the dark scrim, the
-  clock is `type-title`, and the only red is `danger` (the dot and the shutter). The 3D
-  card under them is the same view the replay opens on, growing as the phone moves, framed
-  to the scan with no intro. While recording the dock is empty: nothing may leave a scan
-  half-taken. The privacy line ("Everything stays on your phone.") ends the idle copy.
+- **The capture says one thing at a time (#4627).** One compact card on top: the red dot
+  (`danger`, muted while paused) and "Scanning · 0:42" in `type-title`, then "124,300 points
+  captured" in `type-body` — counted from zero, never shown against a cap. The 3D card under
+  it is the same view the replay opens on, growing as the phone moves, framed to the scan
+  with no intro. At the bottom, one coaching line in a scrim pill ("Move slowly sideways";
+  on a lost track "Scan paused. Point at an area you already scanned.") over two 48 dp
+  buttons: tonal Pause (Resume) and filled Finish. Finish opens a review card ("Review your
+  scan", the figures, tonal Keep scanning and filled Save scan) that returns to the same
+  capture; only Save scan builds it. A failed write stays as a card ("Couldn't save your
+  scan", Discard, Try again), never a toast; its Discard asks "Discard this scan?" first.
+  Back during a capture pauses it and asks Keep scanning, Save scan or Discard (`error`) —
+  only Keep scanning and Discard when nothing was captured; Keep scanning scans again. A lost
+  track stops the clock with the capture. While capturing the dock is empty; the Settings
+  button still shows over a capture today, and hiding it is the next step of #4627. The
+  privacy line ("Saved on your phone. Nothing leaves it unless you share it.") ends the idle
+  copy.
 - **One flow, like a capture app (Polycam, Scaniverse, Reality Composer), laid out as the
   iOS demo's (#4068).** The demo opens on a scrolling page on the themed stage's ground, max width
-  560 dp, clear of the header and the settings button: `type-display` "Scan a room in 3D"
-  over one muted line; the one primary action, "Record your room", a 96 dp `radius-lg` card
-  in `accent-progress` with the camera in a 56 dp well, "Everything stays on your phone."
-  under it and a chevron; then a row of two glass actions, "Watch a sample session"
-  (weighted) and "Open file". "Your sessions" (`type-card`, "On this phone" on the right)
+  560 dp, clear of the header and the settings button: `type-display` "3D Scan" over one
+  muted line, "Move around a space and watch it take shape."; the one primary action, "Start
+  scanning", a 96 dp `radius-lg` card in `accent-progress` with the camera in a 56 dp well,
+  the privacy line under it and a chevron; then a row of two glass actions, "See an example"
+  (weighted) and "Open scan". "Your scans" (`type-card`, "On this phone" on the right)
   lists glass `radius-md` cards: the first photo (64 dp, `radius-sm`), the title, "date ·
   source", then "path · points · photos · duration", and a ⋮ menu with "Share scan file" and
   "Delete" — Delete in the theme's `error` colour, confirmed by a dialog whose confirm is
