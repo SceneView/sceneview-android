@@ -1,9 +1,7 @@
 package io.github.sceneview.demo.demos
 
 import android.util.Log
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -46,11 +44,13 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextOverflow
 import com.google.android.filament.ColorGrading
 import com.google.android.filament.Engine
@@ -414,14 +414,17 @@ internal fun RerunModelScreen(
                     ModelStatusCard(text = stringResource(R.string.scan_result_partial))
                 else -> Unit
             }
-            AnimatedVisibility(
-                visible = shown && hintVisible,
-                enter = fadeIn(),
-                exit = fadeOut(),
-                modifier = Modifier.align(Alignment.CenterHorizontally),
-            ) {
-                ModelHint(stringResource(R.string.scan_result_hint))
-            }
+            // Laid out from the start and only faded: the model is framed above this slot, and a
+            // hint that came and went would move the model when it goes.
+            val hintShown = shown && hintVisible
+            val hintAlpha by animateFloatAsState(if (hintShown) 1f else 0f, label = "hint")
+            ModelHint(
+                text = stringResource(R.string.scan_result_hint),
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .alpha(hintAlpha)
+                    .then(if (hintShown) Modifier else Modifier.clearAndSetSemantics { }),
+            )
         },
         dock = listOfNotNull(
             DockItem(
@@ -611,14 +614,14 @@ private fun ModelStatusCard(text: String, progress: (() -> Float)? = null) {
 
 /** The one-line gesture hint, a pill that leaves after a few seconds. */
 @Composable
-private fun ModelHint(text: String) {
+private fun ModelHint(text: String, modifier: Modifier = Modifier) {
     val chrome = LocalStageChrome.current
     val shape = RoundedCornerShape(SceneViewTokens.Radius.full)
     Text(
         text = text,
         style = SceneViewTokens.Type.caption,
         color = chrome.onCard,
-        modifier = Modifier
+        modifier = modifier
             .padding(top = Space.sm)
             .clip(shape)
             .background(chrome.card, shape)
