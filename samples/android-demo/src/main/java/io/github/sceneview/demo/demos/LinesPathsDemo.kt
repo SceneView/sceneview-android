@@ -243,7 +243,7 @@ fun LinesPathsDemo(onBack: () -> Unit) {
             Spacer(modifier = Modifier.height(12.dp))
 
             // Toggleable on the whole row so tapping the label flips the state and UiAutomator
-            // finds a clickable ancestor — same contract as the Fog mode's switches in LightingLabDemo.
+            // finds a clickable ancestor — same contract as the Fog switch in LightingDemo.
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
