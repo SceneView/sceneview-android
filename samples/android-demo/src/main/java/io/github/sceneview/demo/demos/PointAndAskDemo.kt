@@ -99,12 +99,13 @@ import io.github.sceneview.demo.BuildConfig
 import io.github.sceneview.demo.DemoScaffold
 import io.github.sceneview.demo.DemoSettings
 import io.github.sceneview.demo.R
-import io.github.sceneview.demo.ai.ASK_FIRST_TOKEN_TIMEOUT_MS
 import io.github.sceneview.demo.ai.ASK_LOG_TAG
 import io.github.sceneview.demo.ai.ASK_STATE_LOG_TAG
 import io.github.sceneview.demo.ai.AskEngineStatus
 import io.github.sceneview.demo.ai.downloadPercent
+import io.github.sceneview.demo.ai.logKey
 import io.github.sceneview.demo.ai.logLine
+import io.github.sceneview.demo.ai.runAskRound
 import io.github.sceneview.demo.ai.AskCaptureOutcome
 import io.github.sceneview.demo.ai.AskCaptureSource
 import io.github.sceneview.demo.ai.AskEngine
@@ -147,11 +148,11 @@ import io.github.sceneview.rememberModelInstance
 import io.github.sceneview.rememberModelLoader
 import io.github.sceneview.rememberOnGestureListener
 import io.github.sceneview.rememberViewNodeManager
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -392,7 +393,8 @@ fun PointAndAskDemo(onBack: () -> Unit) {
     }
     // Every state the user can see, one logcat line each, in order — the phone proof reads
     // `adb logcat -s PointAndAsk` and gets the same sequence the screen showed (#2648).
-    LaunchedEffect(shownStep) {
+    // Keyed on `logKey()`, not the step: a download tick or a streamed token is not a new state.
+    LaunchedEffect(shownStep.logKey()) {
         Log.i(ASK_STATE_LOG_TAG, shownStep.logLine())
     }
 
@@ -1569,9 +1571,6 @@ private fun Context.openObjectLabelsFallback() {
 /** Demo id of the on-device fallback — must stay a registered id (`DeepLinkRouter`). */
 internal const val FALLBACK_DEMO_ID = "ar-ml-object-label"
 
-/** Thrown by the first-token watchdog; caught and turned into [AskFailure.TimedOut]. */
-private class AskTimeout : RuntimeException()
-
 private const val BYTES_PER_MB = 1024L * 1024L
 
 private const val PERCENT_FLOAT = 100f
@@ -1582,11 +1581,10 @@ private const val PERCENT_FLOAT = 100f
  * `(null, null)` for "the stream completed". Takes ownership of [bitmap] (recycled when the
  * round ends).
  *
- * The throwable is classified rather than swallowed (#3343): the card names the actual cause,
- * and every failure is logged with its ML Kit error code. Interpreting those events — keeping
- * a partial answer, counting a run of failures, deciding whether the platform actually said
- * "unsupported" — is `AskFlow`'s job, not this function's, which is exactly why that logic is
- * unit-tested and this glue is not (#3407).
+ * The round itself — first-token watchdog, error classification, the one terminal event — is
+ * [runAskRound], unit-tested with a fake stream (#2648). Interpreting those events — keeping a
+ * partial answer, counting a run of failures, deciding whether the platform actually said
+ * "unsupported" — is `AskFlow`'s job (#3407). This is only the Android glue: logcat, bitmap.
  */
 private fun CoroutineScope.askAboutBitmap(
     bitmap: Bitmap,
@@ -1594,47 +1592,22 @@ private fun CoroutineScope.askAboutBitmap(
     question: String,
     onEvent: (failure: AskFailure?, text: String?) -> Unit,
 ) = launch {
-    var text = ""
+    var lastText = ""
     try {
-        // A hung inference used to leave "thinking" up forever, with every later tap
-        // swallowed by the busy guard. The budget covers the first token only — once text
-        // flows, a long answer may take as long as it needs (#2648).
-        val firstToken = CompletableDeferred<Unit>()
-        val watchdog = launch {
-            delay(ASK_FIRST_TOKEN_TIMEOUT_MS)
-            if (!firstToken.isCompleted) throw AskTimeout()
-        }
         Log.i(ASK_STATE_LOG_TAG, "engine: prompt sent (${bitmap.width}x${bitmap.height} frame)")
-        try {
-            askEngine.askStream(bitmap, question).collect { delta ->
-                if (firstToken.complete(Unit)) Log.i(ASK_STATE_LOG_TAG, "engine: first token received")
-                text += delta
-                onEvent(null, text)
+        runAskRound(
+            // Built inside the flow so an engine that throws on the call is classified too.
+            stream = flow { emitAll(askEngine.askStream(bitmap, question)) },
+            log = { message, error ->
+                if (error == null) Log.i(ASK_STATE_LOG_TAG, message) else Log.w(ASK_STATE_LOG_TAG, message, error)
+            },
+        ) { failure, text ->
+            if (failure == null && text == null && lastText.isBlank()) {
+                Log.w(ASK_LOG_TAG, "Gemini Nano completed the stream with no text (#3343).")
             }
-        } finally {
-            watchdog.cancel()
+            if (text != null) lastText = text
+            onEvent(failure, text)
         }
-        Log.i(ASK_STATE_LOG_TAG, "engine: stream completed, ${text.length} chars")
-        if (text.isBlank()) {
-            Log.w(ASK_LOG_TAG, "Gemini Nano completed the stream with no text (#3343).")
-        }
-        onEvent(null, null)
-    } catch (ignored: AskTimeout) {
-        Log.w(ASK_STATE_LOG_TAG, "engine: no token within ${ASK_FIRST_TOKEN_TIMEOUT_MS}ms, round timed out")
-        onEvent(AskFailure.TimedOut, null)
-    } catch (e: CancellationException) {
-        throw e
-    } catch (e: Throwable) {
-        // Throwable, not Exception: a minified build missing the ML Kit classes raises a
-        // NoClassDefFoundError, which is an Error — letting it escape would kill the
-        // coroutine scope silently and leave the demo wedged in `Thinking` (cf. #3188).
-        val failure = AskFailure.of(e)
-        Log.w(
-            ASK_STATE_LOG_TAG,
-            "engine: inference failed, GenAI error code=${AskFailure.errorCodeOf(e)} -> $failure",
-            e,
-        )
-        onEvent(failure, null)
     } finally {
         bitmap.recycle()
     }

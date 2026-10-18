@@ -100,6 +100,18 @@ fun AskStep.logLine(): String = when (this) {
     is AskStep.Failed -> "state=failed failure=$failure persistent=$persistent"
 }
 
+/**
+ * What has to change for [logLine] to be worth another logcat line: the state type, the whole
+ * download percent, the streaming flag — never a single byte or token. AICore reports a 1 GB
+ * download in thousands of ticks and an answer streams token by token; keying the log on the
+ * raw step wrote one line per tick (review of #4602).
+ */
+fun AskStep.logKey(): Any = when (this) {
+    is AskStep.ModelDownloading -> "downloading:${downloadPercent(bytesDownloaded, bytesToDownload)}"
+    is AskStep.Answered -> "answered:$streaming"
+    else -> this
+}
+
 /** Logcat tag for the user-visible state sequence — `adb logcat -s PointAndAsk`. */
 const val ASK_STATE_LOG_TAG = "PointAndAsk"
 

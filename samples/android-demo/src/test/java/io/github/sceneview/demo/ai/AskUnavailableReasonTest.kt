@@ -1,6 +1,7 @@
 package io.github.sceneview.demo.ai
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
@@ -87,6 +88,27 @@ class AskUnavailableReasonTest {
             "state=download-failed failure=DownloadInterrupted",
             AskStep.ModelDownloadFailed(AskFailure.DownloadInterrupted).logLine(),
         )
+    }
+
+    @Test
+    fun `log key changes per whole percent and streaming flag, not per tick`() {
+        assertEquals(
+            AskStep.ModelDownloading(370L, 1_000L).logKey(),
+            AskStep.ModelDownloading(379L, 1_000L).logKey(),
+        )
+        assertNotEquals(
+            AskStep.ModelDownloading(379L, 1_000L).logKey(),
+            AskStep.ModelDownloading(380L, 1_000L).logKey(),
+        )
+        assertEquals(
+            AskStep.Answered("A", streaming = true).logKey(),
+            AskStep.Answered("A mug", streaming = true).logKey(),
+        )
+        assertNotEquals(
+            AskStep.Answered("A mug", streaming = true).logKey(),
+            AskStep.Answered("A mug", streaming = false).logKey(),
+        )
+        assertNotEquals(AskStep.Ready.logKey(), AskStep.Thinking.logKey())
     }
 
     @Test
