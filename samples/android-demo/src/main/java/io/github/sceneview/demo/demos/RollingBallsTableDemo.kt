@@ -21,6 +21,7 @@ import io.github.sceneview.ar.ARCoreAvailability
 import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.physics.DepthCollider
 import io.github.sceneview.demo.ARCameraInitScrim
+import io.github.sceneview.demo.BuildConfig
 import io.github.sceneview.demo.DemoScaffold
 import io.github.sceneview.demo.R
 import io.github.sceneview.demo.common.SceneAction
@@ -107,19 +108,21 @@ fun RollingBallsTableDemo(onBack: () -> Unit) {
             null
         },
         // The Drop / Drop 5 / Reset actions are the demo's core interaction, so
-        // they live on-screen via SceneActionBar (#1964). The sheet keeps only
-        // the "Show depth surface" toggle — genuine secondary configuration.
+        // they live on-screen via SceneActionBar (#1964). Debug builds also keep
+        // the secondary "Show the depth surface" control in the sheet (#4626).
         controls = {
             Text(
                 text = stringResource(R.string.demo_rolling_balls_table_explainer),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            SwitchRow(
-                label = stringResource(R.string.demo_rolling_balls_table_show_depth),
-                checked = showDepthMesh,
-                onCheckedChange = { showDepthMesh = it },
-            )
+            if (BuildConfig.DEBUG) {
+                SwitchRow(
+                    label = stringResource(R.string.demo_rolling_balls_table_show_depth),
+                    checked = showDepthMesh,
+                    onCheckedChange = { showDepthMesh = it },
+                )
+            }
         },
         // Primary actions on-screen (#1964) — Drop / Drop 5 / Reset are the demo's core
         // interaction. Hosted by the scaffold's `bottomOverlay` slot so the bar is laid
