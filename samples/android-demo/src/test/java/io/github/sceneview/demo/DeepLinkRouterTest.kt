@@ -501,10 +501,15 @@ class DeepLinkRouterTest {
             )
             assertNull("'$retired' is retired", ALL_DEMOS.find { it.id == retired })
         }
-        // 42 since #4603 folded `lighting-lab` into `lighting`, plus Finger Drawing (#4082); 40
-        // since wave 1 of the AR catalogue clean-up retired three AR ids and hid a fourth
-        // (`ar-ml-object-label`, registered but unlisted as Point & Ask's on-device fallback).
-        assertEquals("Android registers 40 demos after step 0, #4603, Finger Drawing and wave 1", 40, ALL_DEMOS.size)
+        // 42 since #4603 folded `lighting-lab` into `lighting`, plus Finger Drawing (#4082) and
+        // Pool in the garden; 41 since wave 1 of the AR catalogue clean-up retired three AR ids
+        // and hid a fourth (`ar-ml-object-label`, registered but unlisted as Point & Ask's
+        // on-device fallback).
+        assertEquals(
+            "Android registers 41 demos after step 0, #4603, Finger Drawing, Pool in the garden and wave 1",
+            41,
+            ALL_DEMOS.size,
+        )
     }
 
     @Test
