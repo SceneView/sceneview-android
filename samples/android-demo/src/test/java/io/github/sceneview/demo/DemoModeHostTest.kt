@@ -91,7 +91,8 @@ class DemoModeHostTest {
     fun `the XR card is listed only on an XR device`() {
         val listed = listedDemos(ALL_DEMOS, xrDevice = false).map { it.id }
         assertFalse("ar-xr" in listed)
-        assertEquals(ALL_DEMOS.size - XR_ONLY_DEMO_IDS.size, listed.size)
+        // Labs demos are hidden too while Labs is off (the default).
+        assertEquals(ALL_DEMOS.size - XR_ONLY_DEMO_IDS.size - LABS_DEMO_IDS.size, listed.size)
         assertTrue("ar-xr" in listedDemos(ALL_DEMOS, xrDevice = true).map { it.id })
     }
 }

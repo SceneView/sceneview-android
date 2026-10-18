@@ -87,6 +87,14 @@ room as a miniature: an emulator capture (Pixel_7a, 1080×2400) of the dollhouse
 AR half cannot run on the emulator (#2754). Crop: the full-width 1080×864 band from y = 958
 (5:4), resized to 800×640, WebP q82.
 
+`ar-pool` cannot run its AR session on the emulator either (#2754), so its card is the pool
+the `pool_preview` QA state draws without one: an emulator capture (Pixel_7a, 1280×2856) of
+`--es demo ar-pool --ez qa_mode true --es qa_state pool_preview`, the default 8 × 4 m pool
+with the white liner, one per theme. Crop: the full-width 1280×1024 band from y = 700 (5:4)
+— the far coping, the waterline mosaic, the Roman steps and the water with its caustics,
+none of the demo's chrome — resized to 800×640, WebP q80. The stage is the backdrop photo
+in both themes, so the two cards differ only by where the animated caustics were.
+
 `rolling-balls` became its own demo in #4083 and has no render golden: its card is an
 emulator capture (Pixel_7a, 1080×2400) of the opening shot a few seconds after launch — the
 wooden board (maple field, walnut frame, since the redesign) and the rubber, glass and steel
@@ -121,6 +129,15 @@ default framing fills a portrait band, hence the distance. Crop: the full-width 
 band from y = 794, resized to 800×640, WebP q85 (`cwebp -crop 0 794 1280 1024 -resize 800
 640`). One capture per theme: the stage and the card both follow the app theme, so the dark
 card is the dark stage with the dark card surface. Its prompt is gone from `prompts.json`.
+
+`finger-drawing` (#4082) has nothing to show until someone draws, so its card is a drawing:
+an emulator capture (Pixel_7a, 1280×2856) of `sceneview://demo/finger-drawing` after four
+strokes injected as touch events — an Azure spiral and an Amber star at the default 12 dp,
+then a Coral heart and a row of Mint loops at 21 dp — and, in Orbit, one 140 px drag to the
+left so the tubes show their volume. Crop: the full-width 1280×1024 band from y = 803,
+resized to 800×640, WebP q85 (`cwebp -crop 0 803 1280 1024 -resize 800 640`). One capture
+per theme of the same drawing: the stage follows the app theme, so the dark card is the dark
+stage. Android only until the iOS screen exists (#3907).
 
 ### Cards generated from real captures (2026-09-30)
 
