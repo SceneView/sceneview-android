@@ -122,6 +122,9 @@ internal class ScanCapture private constructor(
      */
     private val clock = ScanClock(SystemClock.elapsedRealtimeNanos())
 
+    /** The journal [finish] took, kept so Try again rebuilds from it after a build that threw. */
+    private var finishedEvents: List<ArDebugEvent>? = null
+
     /** Surfels in the dense map so far: the HUD's "N surfaces" count. `0` without raw depth. */
     val denseCount: Int get() = denseTotal.get()
 
@@ -141,11 +144,12 @@ internal class ScanCapture private constructor(
      */
     fun elapsedSeconds(nowNanos: Long = SystemClock.elapsedRealtimeNanos()): Float = clock.elapsedSeconds(nowNanos)
 
-    /** Pause or review: the clock stops. The recorder stops feeding this scan for as long. */
-    fun stopClock(nowNanos: Long = SystemClock.elapsedRealtimeNanos()) = clock.stop(nowNanos)
-
-    /** Resume or Keep scanning: the clock runs on from where it stopped. */
-    fun resumeClock(nowNanos: Long = SystemClock.elapsedRealtimeNanos()) = clock.resume(nowNanos)
+    /**
+     * The clock runs while [running] — scanning with tracking held — and stops otherwise: paused,
+     * in review, or with tracking lost. It runs on from where it stopped. Idempotent.
+     */
+    fun followClock(running: Boolean, nowNanos: Long = SystemClock.elapsedRealtimeNanos()) =
+        clock.follow(running, nowNanos)
 
     /** The scan as it grows. Its thumbnails fill in as the photos are encoded. */
     val live = RerunReplayMedia(
@@ -348,8 +352,12 @@ internal class ScanCapture private constructor(
         // The fusion under way finishes first, and its last growth goes on the timeline.
         fuseJob?.join()
         model?.join()
-        trace.journal?.lastOrNull()?.let { recordDepthStats(it.nanos) }
-        val events = trace.journal?.toList().orEmpty()
+        // The journal is taken once and kept: a build that threw (out of memory, painting the
+        // planes) is retried from the same events, not from a journal already let go.
+        val events = finishedEvents ?: run {
+            trace.journal?.lastOrNull()?.let { recordDepthStats(it.nanos) }
+            trace.journal?.toList().orEmpty().also { finishedEvents = it }
+        }
         trace.journal = null
         jobs.toList().joinAll()
         if (trace.isEmpty) return null

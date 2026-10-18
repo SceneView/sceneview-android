@@ -186,33 +186,68 @@ internal fun ScanSaveFailedCard(onDiscard: () -> Unit, onRetry: () -> Unit) {
 
 /**
  * Back during a capture: keep scanning, save it, or discard it — never a silent loss. After a
- * failed write, Save scan reads Try again.
+ * failed write, Save scan reads Try again. A capture that caught nothing ([empty]) has nothing
+ * to save: Keep scanning or Discard only.
  */
 @Composable
 internal fun ScanLeaveDialog(
     saveFailed: Boolean,
+    empty: Boolean,
     onKeepScanning: () -> Unit,
     onSave: () -> Unit,
     onDiscard: () -> Unit,
 ) {
+    val discard: @Composable () -> Unit = {
+        TextButton(onClick = onDiscard) {
+            Text(ScanCopy.DISCARD, color = MaterialTheme.colorScheme.error)
+        }
+    }
     AlertDialog(
         onDismissRequest = onKeepScanning,
         title = { Text(ScanCopy.LEAVE_TITLE) },
-        text = { Text(ScanCopy.LEAVE_DETAIL) },
+        text = { Text(if (empty) ScanCopy.LEAVE_EMPTY_DETAIL else ScanCopy.LEAVE_DETAIL) },
         confirmButton = {
-            TextButton(onClick = onSave) { Text(if (saveFailed) ScanCopy.TRY_AGAIN else ScanCopy.SAVE_SCAN) }
+            if (empty) {
+                TextButton(onClick = onKeepScanning) { Text(ScanCopy.KEEP_SCANNING) }
+            } else {
+                TextButton(onClick = onSave) { Text(if (saveFailed) ScanCopy.TRY_AGAIN else ScanCopy.SAVE_SCAN) }
+            }
         },
         dismissButton = {
-            Row {
-                TextButton(onClick = onDiscard) {
-                    Text(ScanCopy.DISCARD, color = MaterialTheme.colorScheme.error)
-                }
-                TextButton(onClick = onKeepScanning) {
-                    Text(if (saveFailed) ScanCopy.CANCEL else ScanCopy.KEEP_SCANNING)
+            if (empty) {
+                discard()
+            } else {
+                Row {
+                    discard()
+                    TextButton(onClick = onKeepScanning) {
+                        Text(if (saveFailed) ScanCopy.CANCEL else ScanCopy.KEEP_SCANNING)
+                    }
                 }
             }
         },
         modifier = Modifier.testTag(SCAN_LEAVE_TAG),
+    )
+}
+
+/**
+ * Discard on the "Couldn't save" card: the scan was never written, so dropping it is final and
+ * asks first.
+ */
+@Composable
+internal fun ScanDiscardDialog(onCancel: () -> Unit, onDiscard: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onCancel,
+        title = { Text(ScanCopy.DISCARD_TITLE) },
+        text = { Text(ScanCopy.DISCARD_DETAIL) },
+        confirmButton = {
+            TextButton(onClick = onDiscard) {
+                Text(ScanCopy.DISCARD, color = MaterialTheme.colorScheme.error)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onCancel) { Text(ScanCopy.CANCEL) }
+        },
+        modifier = Modifier.testTag(SCAN_DISCARD_TAG),
     )
 }
 
@@ -297,3 +332,4 @@ internal const val SCAN_REVIEW_TAG = "ar_rerun_scan_review"
 internal const val SCAN_SAVING_TAG = "ar_rerun_scan_saving"
 internal const val SCAN_SAVE_FAILED_TAG = "ar_rerun_scan_save_failed"
 internal const val SCAN_LEAVE_TAG = "ar_rerun_scan_leave"
+internal const val SCAN_DISCARD_TAG = "ar_rerun_scan_discard"

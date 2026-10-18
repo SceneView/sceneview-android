@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.SystemClock
+import android.util.Log
 import android.view.MotionEvent
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -135,6 +136,7 @@ import io.github.sceneview.rememberMaterialLoader
 import io.github.sceneview.rememberModelInstance
 import io.github.sceneview.rememberModelLoader
 import io.github.sceneview.rememberOnGestureListener
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -804,6 +806,8 @@ private fun RerunLiveScreen(
     var builtPack by remember { mutableStateOf<RerunCapturePack?>(null) }
     var builtTitle by remember { mutableStateOf("") }
     var leaveAsked by remember { mutableStateOf(false) }
+    // Discard on the "Couldn't save" card: the scan was never written, so it asks first.
+    var discardAsked by remember { mutableStateOf(false) }
     // Rerun v2: whether this phone runs ARCore's raw depth, set when the session is configured.
     // With it a scan also fuses a dense surfel map (tier "depth"); without it, the sparse v1 scan.
     var rawDepth by remember { mutableStateOf(false) }
@@ -927,14 +931,8 @@ private fun RerunLiveScreen(
             delay(AUTO_START_POLL_MS)
         }
     }
-    // Pause, Finish and Keep scanning move the phase; the capture's clock stops with it.
-    val moveTo = { next: ScanPhase ->
-        if (next != phase) {
-            val now = SystemClock.elapsedRealtimeNanos()
-            if (next.integrates) scan?.resumeClock(now) else scan?.stopClock(now)
-            phase = next
-        }
-    }
+    // Pause, Finish and Keep scanning move the phase; the capture's clock follows it (below).
+    val moveTo = { next: ScanPhase -> phase = next }
     // Drops the capture, built or not: the camera goes back to waiting for the next one.
     val dropCapture = {
         if (scan != null) {
@@ -944,6 +942,7 @@ private fun RerunLiveScreen(
         qaScan = null
         builtPack = null
         leaveAsked = false
+        discardAsked = false
         phase = ScanPhase.Scanning
     }
     // Save scan builds the capture — no more photos, the last ones encoded, its planes painted
@@ -958,13 +957,23 @@ private fun RerunLiveScreen(
         moveTo(ScanPhase.Saving)
         scope.launch {
             val now = System.currentTimeMillis()
-            val pack = builtPack ?: when {
-                qaTrace != null && sample != null -> qaSessionOf(qaTrace, sample)
-                capture != null -> capture.finish()
-                else -> null
-            }?.also {
+            // The build can throw too — out of memory on a long scan, painting its planes. That
+            // lands on the same "Couldn't save" card as a failed write, and Try again rebuilds.
+            val built = runCatching {
+                builtPack ?: when {
+                    qaTrace != null && sample != null -> qaSessionOf(qaTrace, sample)
+                    capture != null -> capture.finish()
+                    else -> null
+                }
+            }.onFailure { if (it is CancellationException) throw it }
+            if (built.isFailure) {
+                Log.w(SCAN_LOG_TAG, "3D Scan: building the scan failed", built.exceptionOrNull())
+                phase = ScanPhase.SaveFailed
+                return@launch
+            }
+            val pack = built.getOrNull()?.also {
+                if (builtPack == null) builtTitle = recordingTitle(now)
                 builtPack = it
-                builtTitle = recordingTitle(now)
             }
             if (pack == null) {
                 // Nothing to build after all: the next capture starts from the shutter.
@@ -991,12 +1000,13 @@ private fun RerunLiveScreen(
         dropCapture()
         onBack()
     }
-    // Back during a capture asks first: keep scanning, save, or discard. While it saves, Back
-    // waits for the write.
+    // Back during a capture asks first: keep scanning, save, or discard. The capture pauses
+    // while it asks, so nothing is recorded behind the dialog. While it saves, Back waits.
     val onBackFromLive: () -> Unit = {
         if (!recording) {
             onBack()
         } else if (phase != ScanPhase.Saving) {
+            moveTo(phase.leaveAsked())
             leaveAsked = true
         }
     }
@@ -1012,6 +1022,10 @@ private fun RerunLiveScreen(
     val trackingLost = recording && (
         ForcedTrackingFailure.override != null || if (qaRecord) qaTrackingLost else !isTracking
         )
+    // The capture's clock runs only while it scans with tracking held: Pause, review, the Back
+    // dialog and a lost track all stop it, and it runs on from there.
+    val clockRuns = phase.clockRuns(trackingLost)
+    LaunchedEffect(scan, clockRuns) { scan?.followClock(clockRuns) }
 
     DemoScaffold(
         title = stringResource(R.string.demo_ar_rerun_title),
@@ -1103,7 +1117,8 @@ private fun RerunLiveScreen(
                         )
                         phase == ScanPhase.Saving -> ScanSavingCard()
                         phase == ScanPhase.SaveFailed -> ScanSaveFailedCard(
-                            onDiscard = dropCapture,
+                            // The scan was never written: discarding it asks first.
+                            onDiscard = { discardAsked = true },
                             onRetry = onSaveScan,
                         )
                         else -> ScanControls(
@@ -1242,12 +1257,25 @@ private fun RerunLiveScreen(
             if (leaveAsked) {
                 ScanLeaveDialog(
                     saveFailed = phase == ScanPhase.SaveFailed,
+                    // A capture that caught nothing has nothing to save: Keep scanning or Discard.
+                    empty = captureEmpty && builtPack == null,
                     onKeepScanning = {
                         leaveAsked = false
-                        if (phase == ScanPhase.Reviewing) moveTo(ScanPhase.Scanning)
+                        // Back paused the capture, or it was paused or in review already: Keep
+                        // scanning means scanning again, from any of them.
+                        moveTo(phase.keepScanning())
                     },
                     onSave = onSaveScan,
                     onDiscard = onDiscardScan,
+                )
+            }
+            if (discardAsked) {
+                ScanDiscardDialog(
+                    onCancel = { discardAsked = false },
+                    onDiscard = {
+                        discardAsked = false
+                        dropCapture()
+                    },
                 )
             }
 
@@ -1534,6 +1562,9 @@ private const val QA_RECORD_NEVER_LOOP_S = 3_600f
 
 /** Seconds the tracking-loss QA scan captures before it loses tracking. */
 private const val QA_TRACKING_LOST_AFTER_S = 3f
+
+/** `adb logcat -s ARRerunDemo`: a scan build that threw. */
+private const val SCAN_LOG_TAG = "ARRerunDemo"
 
 /** How often the live screen checks whether ARCore has found the room, to start recording. */
 private const val AUTO_START_POLL_MS = 100L

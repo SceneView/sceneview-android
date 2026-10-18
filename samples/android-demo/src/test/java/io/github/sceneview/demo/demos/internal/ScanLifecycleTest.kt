@@ -134,6 +134,61 @@ class ScanLifecycleTest {
         assertTrue(ScanCopy.SAVE_FAILED_DETAIL.contains("not saved"))
     }
 
+    @Test
+    fun `the clock runs only while scanning with tracking held`() {
+        assertTrue(ScanPhase.Scanning.clockRuns(trackingLost = false))
+        assertFalse(ScanPhase.Scanning.clockRuns(trackingLost = true))
+        for (phase in ScanPhase.entries - ScanPhase.Scanning) {
+            assertFalse(phase.name, phase.clockRuns(trackingLost = false))
+            assertFalse(phase.name, phase.clockRuns(trackingLost = true))
+        }
+    }
+
+    @Test
+    fun `a lost track stops the clock and it runs on when tracking returns`() {
+        val clock = ScanClock(startedNanos = 0L)
+        // 2 s scanning, 3 s with tracking lost, 1 s scanning again: 3 s captured.
+        clock.follow(ScanPhase.Scanning.clockRuns(trackingLost = false), 0L)
+        clock.follow(ScanPhase.Scanning.clockRuns(trackingLost = true), 2 * S)
+        assertTrue(clock.isStopped)
+        assertEquals(2f, clock.elapsedSeconds(4 * S), EPS)
+        clock.follow(ScanPhase.Scanning.clockRuns(trackingLost = true), 4 * S) // still lost: no-op
+        clock.follow(ScanPhase.Scanning.clockRuns(trackingLost = false), 5 * S)
+        assertFalse(clock.isStopped)
+        assertEquals(3f, clock.elapsedSeconds(6 * S), EPS)
+    }
+
+    @Test
+    fun `tracking back while paused leaves the clock stopped`() {
+        val clock = ScanClock(startedNanos = 0L)
+        clock.follow(ScanPhase.Scanning.clockRuns(trackingLost = true), 1 * S)
+        clock.follow(ScanPhase.Paused.clockRuns(trackingLost = false), 3 * S)
+        assertTrue(clock.isStopped)
+        assertEquals(1f, clock.elapsedSeconds(10 * S), EPS)
+    }
+
+    @Test
+    fun `Back pauses a capture and its Keep scanning resumes it from anywhere still open`() {
+        // The Back dialog pauses a scanning capture; Keep scanning then scans again, whether the
+        // dialog was opened from Scanning, Paused or the review.
+        for (opened in listOf(ScanPhase.Scanning, ScanPhase.Paused, ScanPhase.Reviewing)) {
+            val behind = opened.leaveAsked()
+            assertFalse(behind.name, behind.integrates)
+            assertFalse(behind.name, behind.clockRuns(trackingLost = false))
+            assertEquals(opened.name, ScanPhase.Scanning, behind.keepScanning())
+        }
+        assertEquals(ScanPhase.Paused, ScanPhase.Scanning.leaveAsked())
+        assertEquals(ScanPhase.SaveFailed, ScanPhase.SaveFailed.leaveAsked())
+        assertEquals(ScanPhase.SaveFailed, ScanPhase.SaveFailed.keepScanning())
+    }
+
+    @Test
+    fun `discarding an unsaved scan asks first, with no claim it was saved`() {
+        assertEquals("Discard this scan?", ScanCopy.DISCARD_TITLE)
+        assertTrue(ScanCopy.DISCARD_DETAIL.contains("never saved"))
+        assertFalse(ScanCopy.LEAVE_EMPTY_DETAIL.contains("Save"))
+    }
+
     private companion object {
         const val S = 1_000_000_000L
         const val EPS = 1e-4f

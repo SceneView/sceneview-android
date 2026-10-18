@@ -1085,10 +1085,13 @@ the camera mode keeps `ARSceneView`'s own plane renderer).
   buttons: tonal Pause (Resume) and filled Finish. Finish opens a review card ("Review your
   scan", the figures, tonal Keep scanning and filled Save scan) that returns to the same
   capture; only Save scan builds it. A failed write stays as a card ("Couldn't save your
-  scan", Discard, Try again), never a toast. Back during a capture asks Keep scanning, Save
-  scan or Discard (`error`). While capturing the dock is empty and the Settings button
-  hidden: nothing may leave a scan half-taken. The privacy line ("Saved on your phone.
-  Nothing leaves it unless you share it.") ends the idle copy.
+  scan", Discard, Try again), never a toast; its Discard asks "Discard this scan?" first.
+  Back during a capture pauses it and asks Keep scanning, Save scan or Discard (`error`) —
+  only Keep scanning and Discard when nothing was captured; Keep scanning scans again. A lost
+  track stops the clock with the capture. While capturing the dock is empty; the Settings
+  button still shows over a capture today, and hiding it is the next step of #4627. The
+  privacy line ("Saved on your phone. Nothing leaves it unless you share it.") ends the idle
+  copy.
 - **One flow, like a capture app (Polycam, Scaniverse, Reality Composer), laid out as the
   iOS demo's (#4068).** The demo opens on a scrolling page on the themed stage's ground, max width
   560 dp, clear of the header and the settings button: `type-display` "3D Scan" over one

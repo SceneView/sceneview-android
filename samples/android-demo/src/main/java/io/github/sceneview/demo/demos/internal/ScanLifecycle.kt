@@ -27,6 +27,12 @@ enum class ScanPhase {
     /** Whether this phase takes new frames into the capture. */
     val integrates: Boolean get() = this == Scanning
 
+    /**
+     * Whether the capture's clock runs: only while it integrates and tracking holds. A lost track
+     * records nothing and the HUD reads Paused, so the clock stops with it.
+     */
+    fun clockRuns(trackingLost: Boolean): Boolean = integrates && !trackingLost
+
     /** Whether the capture can still go back to [Scanning]: nothing has been built yet. */
     val canKeepScanning: Boolean get() = this == Scanning || this == Paused || this == Reviewing
 
@@ -39,6 +45,9 @@ enum class ScanPhase {
 
     /** Finish: a reversible review, from a capture that is still open. */
     fun finish(): ScanPhase = if (canKeepScanning) Reviewing else this
+
+    /** Back asks to leave: a scanning capture pauses behind the dialog, so it records nothing. */
+    fun leaveAsked(): ScanPhase = if (this == Scanning) Paused else this
 
     /** Keep scanning: back to the same capture, from anywhere it has not been built yet. */
     fun keepScanning(): ScanPhase = if (canKeepScanning) Scanning else this
@@ -57,6 +66,9 @@ class ScanClock(private val startedNanos: Long) {
     fun stop(nowNanos: Long) {
         if (stoppedAt == null) stoppedAt = nowNanos
     }
+
+    /** Runs or stops the clock as [running] says. Idempotent: the same value twice changes nothing. */
+    fun follow(running: Boolean, nowNanos: Long) = if (running) resume(nowNanos) else stop(nowNanos)
 
     fun resume(nowNanos: Long) {
         val at = stoppedAt ?: return

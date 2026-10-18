@@ -399,6 +399,9 @@ object ScanCopy {
     const val CANCEL = "Cancel"
     const val LEAVE_TITLE = "Leave this scan?"
     const val LEAVE_DETAIL = "Save it on this phone, or discard what you captured."
+    const val LEAVE_EMPTY_DETAIL = "Nothing captured yet. Keep scanning, or discard it and leave."
+    const val DISCARD_TITLE = "Discard this scan?"
+    const val DISCARD_DETAIL = "It was never saved, so it can't be recovered."
 
     /** The top line of the capture: `Scanning · 0:42`, `Paused · 0:42`. */
     fun status(phase: ScanPhase, clock: String): String =
