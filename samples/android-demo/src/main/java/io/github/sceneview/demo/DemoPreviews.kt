@@ -69,7 +69,6 @@ object DemoPreviews {
         ),
         "geometry" to PreviewPair(R.drawable.preview_geometry_light, R.drawable.preview_geometry_dark),
         "lighting" to PreviewPair(R.drawable.preview_lighting_light, R.drawable.preview_lighting_dark),
-        "lighting-lab" to PreviewPair(R.drawable.preview_lighting_lab_light, R.drawable.preview_lighting_lab_dark),
         "lines-paths" to PreviewPair(R.drawable.preview_lines_paths_light, R.drawable.preview_lines_paths_dark),
         "materials" to PreviewPair(R.drawable.preview_materials_light, R.drawable.preview_materials_dark),
         "model-viewer" to PreviewPair(R.drawable.preview_model_viewer_light, R.drawable.preview_model_viewer_dark),
