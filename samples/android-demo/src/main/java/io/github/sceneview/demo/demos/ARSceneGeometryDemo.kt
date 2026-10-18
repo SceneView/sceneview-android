@@ -534,7 +534,7 @@ private fun configureStreetscapeGeometry(
         false
     }
     if (!geospatialOk) {
-        state.geospatialUnavailable = "Geospatial API not available on this device"
+        state.geospatialUnavailable = "Scene geometry isn't available here"
         Log.w(tag, "Geospatial mode unsupported — running plain AR session")
         config.planeFindingMode = Config.PlaneFindingMode.DISABLED
         return
@@ -548,7 +548,7 @@ private fun configureStreetscapeGeometry(
         // then fails at configure() time with an IllegalStateException. Surface a readable
         // message instead of a hard crash.
         Log.w(tag, "Geospatial config failed — falling back", error)
-        state.geospatialUnavailable = "Geospatial config failed: ${error.message}"
+        state.geospatialUnavailable = "Scene geometry couldn't start"
         config.geospatialMode = Config.GeospatialMode.DISABLED
         config.streetscapeGeometryMode = Config.StreetscapeGeometryMode.DISABLED
         config.planeFindingMode = Config.PlaneFindingMode.DISABLED

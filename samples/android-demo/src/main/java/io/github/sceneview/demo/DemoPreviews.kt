@@ -54,6 +54,8 @@ object DemoPreviews {
         "ar-plane-node" to PreviewPair(R.drawable.preview_ar_plane_node_light, R.drawable.preview_ar_plane_node_dark),
         "ar-plane-renderer-v2" to PreviewPair(R.drawable.preview_ar_plane_renderer_v2_light, R.drawable.preview_ar_plane_renderer_v2_dark),
         "ar-point-cloud" to PreviewPair(R.drawable.preview_ar_point_cloud_light, R.drawable.preview_ar_point_cloud_dark),
+        // The placed pool of the `pool_preview` QA state: the AR session cannot run on the emulator (#2754).
+        "ar-pool" to PreviewPair(R.drawable.preview_ar_pool_light, R.drawable.preview_ar_pool_dark),
         "ar-raw-depth-point-cloud" to PreviewPair(R.drawable.preview_ar_raw_depth_point_cloud_light, R.drawable.preview_ar_raw_depth_point_cloud_dark),
         "ar-rerun" to PreviewPair(R.drawable.preview_ar_rerun_light, R.drawable.preview_ar_rerun_dark),
         "ar-scene-mesh" to PreviewPair(R.drawable.preview_ar_scene_mesh_light, R.drawable.preview_ar_scene_mesh_dark),
@@ -63,6 +65,10 @@ object DemoPreviews {
         "contact-shadow-preview" to PreviewPair(R.drawable.preview_contact_shadow_preview_light, R.drawable.preview_contact_shadow_preview_dark),
         "custom-geometry" to PreviewPair(R.drawable.preview_custom_geometry_light, R.drawable.preview_custom_geometry_dark),
         "debug-overlay" to PreviewPair(R.drawable.preview_debug_overlay_light, R.drawable.preview_debug_overlay_dark),
+        "finger-drawing" to PreviewPair(
+            R.drawable.preview_finger_drawing_light,
+            R.drawable.preview_finger_drawing_dark,
+        ),
         "geometry" to PreviewPair(R.drawable.preview_geometry_light, R.drawable.preview_geometry_dark),
         "lighting" to PreviewPair(R.drawable.preview_lighting_light, R.drawable.preview_lighting_dark),
         "lines-paths" to PreviewPair(R.drawable.preview_lines_paths_light, R.drawable.preview_lines_paths_dark),

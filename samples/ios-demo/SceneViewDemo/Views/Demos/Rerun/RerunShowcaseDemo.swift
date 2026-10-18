@@ -2,7 +2,7 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// The Rerun AR Replay demo (`sceneview://demo/ar-rerun`), the iOS twin of Android's
+/// The 3D Scan demo (`sceneview://demo/ar-rerun`), the iOS twin of Android's
 /// `ARRerunDemo`: record a room with ARKit and replay it in 3D — the camera's path and photos,
 /// the surfaces with their photos, the room's coloured points and the models placed in it.
 ///
@@ -79,7 +79,7 @@ struct RerunShowcaseDemo: View {
     var body: some View {
         GeometryReader { proxy in
             DemoScaffold(
-                "Rerun AR Replay",
+                "3D Scan",
                 dock: dock,
                 accent: accent,
                 chromeMode: screen == .record ? .ar : .stage

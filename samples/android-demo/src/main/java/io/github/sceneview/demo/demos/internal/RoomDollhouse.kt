@@ -599,11 +599,11 @@ object DollhouseCopy {
     const val VIEW_IN_AR = "View in AR"
     const val VIEW_IN_AR_CAPTION = "AR"
     const val OPENING = "Opening your room…"
-    const val OPEN_FAILED = "This room could not be opened. Record it again, or pick another session."
+    const val OPEN_FAILED = "This room could not be opened. Scan it again, or pick another scan."
 
     const val NO_SURFACES_TITLE = "This recording has no surfaces yet — record again"
     const val NO_SURFACES_BODY = "It kept the path you walked and its photos, but no floor, wall or " +
-        "table, so there is no room to stand on your table. Record your room again, moving slowly " +
+        "table, so there is no room to stand on your table. Scan your room again, moving slowly " +
         "past the floor and the walls."
     const val OTHER_RECORDINGS = "Or stand another recording"
     const val ON_THE_TABLE = "On the table"
@@ -612,9 +612,9 @@ object DollhouseCopy {
     const val RESET_HOLD = "Room removed. Point at a table — it stands where you aim."
 
     const val EMPTY_TITLE = "No room recorded yet"
-    const val EMPTY_BODY = "Record your room with the Rerun demo, and it stands on your table as a " +
+    const val EMPTY_BODY = "Scan your room with 3D Scan, and it stands on your table as a " +
         "miniature you can walk around."
-    const val RECORD = "Record your room"
+    const val RECORD = "Start scanning"
 
     const val REAL_SIZE = "Real size"
     const val RESET = "Reset"
