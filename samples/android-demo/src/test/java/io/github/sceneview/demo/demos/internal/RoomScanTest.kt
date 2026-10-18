@@ -193,7 +193,7 @@ class RoomScanTest {
 
     @Test
     fun `the copy says the scan stays on the phone`() {
-        assertEquals("Everything stays on your phone.", ScanCopy.PRIVACY)
+        assertEquals("Saved on your phone. Nothing leaves it unless you share it.", ScanCopy.PRIVACY)
         assertTrue(ScanCopy.IDLE_DETAIL.endsWith(ScanCopy.PRIVACY))
     }
 
