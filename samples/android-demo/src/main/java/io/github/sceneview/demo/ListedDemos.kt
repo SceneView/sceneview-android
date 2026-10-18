@@ -46,7 +46,10 @@ fun isXrDevice(context: Context): Boolean =
  * A demo opts in by adding its id here, typically a PR labelled `needs-device` whose feature
  * would otherwise wait for a real-phone review before reaching anyone.
  */
-internal val LABS_DEMO_IDS: Set<String> = emptySet()
+internal val LABS_DEMO_IDS: Set<String> = setOf(
+    // Finger Drawing (#4082): the 3D half is proven, the AR half waits for Labs testers.
+    "finger-drawing",
+)
 
 /** Whether this demo is a SceneView Labs experiment — see [LABS_DEMO_IDS]. */
 val DemoEntry.isLabs: Boolean

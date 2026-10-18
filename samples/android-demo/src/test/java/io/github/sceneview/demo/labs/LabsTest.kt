@@ -21,14 +21,15 @@ class LabsTest {
 
     private class FakeStore(override var joined: Boolean = false, override var enabled: Boolean = false) : LabsStore
 
-    private val fakeLabsId = ALL_DEMOS.first { it.id !in XR_ONLY_DEMO_IDS }.id
+    private val fakeLabsId = ALL_DEMOS.first { it.id !in XR_ONLY_DEMO_IDS && it.id !in LABS_DEMO_IDS }.id
 
     @After
     fun detach() = Labs.attach(FakeStore())
 
     @Test
-    fun `the shipped Labs registry is empty`() {
-        assertTrue(LABS_DEMO_IDS.isEmpty())
+    fun `every shipped Labs id is a routable phone demo`() {
+        val phoneIds = ALL_DEMOS.map { it.id }.filterNot { it in XR_ONLY_DEMO_IDS }.toSet()
+        assertTrue(LABS_DEMO_IDS.all { it in phoneIds })
     }
 
     @Test
@@ -53,7 +54,7 @@ class LabsTest {
     fun `the Home card counts Labs demos whether or not Labs is on`() {
         val labs = labsDemos(ALL_DEMOS, xrDevice = false, labsIds = setOf(fakeLabsId))
         assertEquals(listOf(fakeLabsId), labs.map { it.id })
-        assertTrue(labsDemos(ALL_DEMOS, xrDevice = false).isEmpty())
+        assertEquals(LABS_DEMO_IDS, labsDemos(ALL_DEMOS, xrDevice = false).map { it.id }.toSet())
     }
 
     @Test
