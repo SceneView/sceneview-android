@@ -6,6 +6,22 @@ package io.github.sceneview.demo.demos.internal
  * ending it. Nothing here touches ARCore.
  */
 
+/**
+ * What a depth scan's dense map is doing with its memory (#4629). It never stops at a cap the
+ * user can see: past its budget it keeps the newest areas fine and merges the ones the camera
+ * has left into coarser points.
+ */
+enum class ScanDetail {
+    /** Every new area is kept at full detail. */
+    Fine,
+
+    /** The map has just merged areas the camera left into coarser points to make room. */
+    Adjusting,
+
+    /** Even merged, the map has no more room: new areas are no longer kept. Save the scan. */
+    Full,
+}
+
 /** Where a capture stands. Only [Scanning] integrates new frames. */
 enum class ScanPhase {
     /** Frames are integrated: path, points, photos, depth. */

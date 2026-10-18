@@ -119,6 +119,7 @@ import io.github.sceneview.demo.demos.internal.RerunStatusUx
 import io.github.sceneview.demo.demos.internal.DollhouseCopy
 import io.github.sceneview.demo.demos.internal.RoomDollhouse
 import io.github.sceneview.demo.demos.internal.ScanCopy
+import io.github.sceneview.demo.demos.internal.ScanDetail
 import io.github.sceneview.demo.demos.internal.ScanPhase
 import io.github.sceneview.demo.demos.internal.of
 import io.github.sceneview.demo.demos.internal.parseArDebugLog
@@ -821,6 +822,8 @@ private fun RerunLiveScreen(
     val qaRecord = qaState in RECORD_QA_STATES
     val qaTrackingLost = qaState == QA_STATE_RECORD_TRACKING_LOST
     val qaSaveFails = qaState == QA_STATE_RECORD_SAVE_FAILED
+    // #4629: `record-long` feeds the dense map a whole flat; `-fixed` runs it with the old cap.
+    var qaLong by remember { mutableStateOf<QaLongScan?>(null) }
     LaunchedEffect(qaRecord, sample) {
         val source = sample?.takeIf { qaRecord } ?: return@LaunchedEffect
         val events = withContext(Dispatchers.IO) {
@@ -830,9 +833,14 @@ private fun RerunLiveScreen(
         player.trace.keyframeSpacing = ReplayGeometry.KEYFRAME_SPACING_M
         player.trace.journal = ArrayList()
         debugSession.trace = player.trace
+        val long = qaState.takeIf { it in LONG_QA_STATES }
+            ?.let { QaLongScan.over(source.trace, fixed = it == QA_STATE_RECORD_LONG_FIXED) }
+        qaLong = long
         qaScan = RerunReplayMedia(
             player.trace, source.manifest, emptyMap(), source.thumbnails, ByteArray(0), growing = true,
+            liveDense = long?.let { { it.dense.live } },
         )
+        long?.let { launch { it.run { phase.integrates } } }
         var last = 0L
         var played = 0f
         while (true) {
@@ -1017,7 +1025,11 @@ private fun RerunLiveScreen(
     // What the capture holds so far, counted off the scan itself: dense points on a depth scan,
     // ARCore's feature points otherwise. Zero at the start, never shown against a cap.
     val stats = debugSession.stats
-    val capturedPoints = if (scan?.rawDepth == true) scan?.denseCount ?: 0 else stats.mapPoints
+    val capturedPoints = when {
+        scan?.rawDepth == true -> scan?.denseCount ?: 0
+        qaLong != null -> qaLong?.dense?.count ?: 0
+        else -> stats.mapPoints
+    }
     val capturedPhotos = debugSession.trace.imageCount
     val captureEmpty = capturedPoints == 0 && capturedPhotos == 0 && stats.planes == 0
     val capturedClock = ArDebugFormat.clock(scan?.elapsedSeconds() ?: stats.duration)
@@ -1129,6 +1141,7 @@ private fun RerunLiveScreen(
                                 phase = phase,
                                 trackingLost = trackingLost,
                                 photoLimitReached = scan?.isPhotoLimitReached == true,
+                                detail = scan?.denseDetail ?: qaLong?.dense?.detail() ?: ScanDetail.Fine,
                             ),
                             onTogglePause = { moveTo(phase.togglePause()) },
                             onFinish = { moveTo(phase.finish()) },
@@ -1556,8 +1569,13 @@ private const val QA_STATE_RECORD_TRACKING_LOST = "record-tracking-lost"
 /** QA only (#4627): the capture screen whose write fails, to show the failure that stays. */
 private const val QA_STATE_RECORD_SAVE_FAILED = "record-save-failed"
 
+/** QA only (#4629): the capture screen fed a whole flat's depth, and the same with the old fixed cap. */
+private const val QA_STATE_RECORD_LONG = "record-long"
+private const val QA_STATE_RECORD_LONG_FIXED = "record-long-fixed"
+private val LONG_QA_STATES = setOf(QA_STATE_RECORD_LONG, QA_STATE_RECORD_LONG_FIXED)
+
 private val RECORD_QA_STATES =
-    setOf(QA_STATE_RECORD, QA_STATE_RECORD_TRACKING_LOST, QA_STATE_RECORD_SAVE_FAILED)
+    setOf(QA_STATE_RECORD, QA_STATE_RECORD_TRACKING_LOST, QA_STATE_RECORD_SAVE_FAILED) + LONG_QA_STATES
 
 /** The QA scan plays the sample once and holds on its end, as a scan in progress would. */
 private const val QA_RECORD_NEVER_LOOP_S = 3_600f
