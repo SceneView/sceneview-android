@@ -83,9 +83,11 @@ filamentWeb = "1.52.3"
 # blobs in the same PR (the CONTRIBUTING.md invariant, applied to the site).
 filamentWebsite = "1.72.1"
 # Desktop Filament via filament-kmp on Maven. Independent of the three Filament
-# runtime pins above — this artifact vendors its own native Filament
-# (0.4.0 ships 1.75.0). Used only by sceneview-compose desktopMain.
-filamentKmp = "0.6.0"
+# runtime pins above — this artifact vendors its own native Filament and its own
+# built-in materials (0.7.3 ships Filament 1.77.3, MATERIAL_VERSION 77, same as 0.6.0).
+# Used only by sceneview-compose desktopMain, which loads no SceneView .filamat: a bump
+# that changes MATERIAL_VERSION needs no blob here, only a desktop-demo run.
+filamentKmp = "0.7.3"
 arCore = "1.56.0"
 
 # Networking
@@ -130,11 +132,12 @@ mlkitGenaiPrompt = "1.0.0-beta4"
 mediapipeTasksVision = "0.10.26"
 # LiteRT (ex-TensorFlow Lite) — runtime of the optional `arsceneview-depth-ml` module
 # (monocular depth, Depth Anything V2 Small). Never a dependency of `arsceneview` itself.
-# Pinned to 2.1.5, the last single-AAR release: 2.2.0 splits into `litert` + `litert-api`,
-# two AARs declaring the same namespace, which fails AGP 9's app manifest merge unless
-# `android.uniquePackageNames=false` is set for the whole build. Bump only once Google gives
-# the two halves distinct namespaces (`:samples:android-demo:processDebugMainManifest` is the proof).
-litert = "2.1.5"
+# 2.3.0 ships three AARs with distinct namespaces — `litert` (…litert.impl, libLiteRt.so),
+# `litert-api` (…litert, JNI, pulled in transitively) and `litert-gpu` (…litert.gpu, the
+# OpenCL/OpenGL accelerator that 2.1.5 bundled). 2.2.x gave `litert` and `litert-api` the same
+# namespace, which failed AGP 9's app manifest merge; `:samples:android-demo:processDebugMainManifest`
+# is the proof for any bump. `litert-gpu` must stay declared or `Backend.Gpu` loses its accelerator.
+litert = "2.3.0"
 
 # Publishing & Docs
 mavenPublish = "0.37.0"
@@ -272,6 +275,7 @@ mlkit-object-detection = { group = "com.google.mlkit", name = "object-detection"
 mlkit-genai-prompt = { group = "com.google.mlkit", name = "genai-prompt", version.ref = "mlkitGenaiPrompt" }
 mediapipe-tasks-vision = { group = "com.google.mediapipe", name = "tasks-vision", version.ref = "mediapipeTasksVision" }
 litert = { group = "com.google.ai.edge.litert", name = "litert", version.ref = "litert" }
+litert-gpu = { group = "com.google.ai.edge.litert", name = "litert-gpu", version.ref = "litert" }
 
 # Testing
 androidx-test-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxTestJunit" }
