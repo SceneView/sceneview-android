@@ -6395,7 +6395,7 @@ by `samples/android-demo/scripts/collate-demos.sh` — never edit between the ma
 
 ### Developer tools
 
-- `ar-rerun` — Rerun AR Replay. Watch a real AR session rebuild itself in 3D.
+- `ar-rerun` — 3D Scan. Move around a space and watch it take shape in 3D.
 - `debug-overlay` — Debug Overlay. Find the node budget for smooth 3D rendering on your device.
 
 ### Place in AR

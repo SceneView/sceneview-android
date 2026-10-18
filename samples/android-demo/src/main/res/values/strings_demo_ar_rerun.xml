@@ -5,6 +5,6 @@
      remains globally resolvable. Adding a new demo never needs to touch
      this file or `strings.xml` — see #1870. -->
 <resources>
-    <string name="demo_ar_rerun_title">Rerun AR Replay</string>
-    <string name="demo_ar_rerun_subtitle">Watch a real AR session rebuild itself in 3D</string>
+    <string name="demo_ar_rerun_title">3D Scan</string>
+    <string name="demo_ar_rerun_subtitle">Move around a space and watch it take shape in 3D</string>
 </resources>
