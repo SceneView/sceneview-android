@@ -290,7 +290,7 @@
 # merges silently: update the row in the same PR that changes either screen.
 
 demos:
-  # ─── working (31) — iOS has a real, non-placeholder destination ─────────
+  # ─── working (30) — iOS has a real, non-placeholder destination ─────────
   - id: animation-physics
     androidStatus: Working
     iosStatus: working
@@ -402,8 +402,11 @@ demos:
       Dock has Host | Resolve. Host: auto-place the lantern, map the room,
       upload, share the code (clipboard or share sheet). Resolve: paste a code
       and see the anchor in the same spot. Android: a Collaborative mode holds
-      the former `ar-collaborative` card, two local peers sharing one placement
-      (samples step 0).
+      the former `ar-collaborative` card as a full-screen shared space with no
+      camera: two local viewers, Alice and Bob, each get half the screen
+      (stacked in portrait, side by side in landscape), orbit it on their own,
+      tap the floor to place a cube, sphere or cylinder that appears in the
+      other half, and see each other as a cone (samples step 0, #4390).
     parity: broken
     evidence: >-
       bridge=nil so Host and Resolve are always disabled
@@ -650,7 +653,10 @@ demos:
       (RerunShowcaseDemo.swift:9-11): Record a room on-device
       (RerunLiveCaptureView, :155-162), replay it in 3D, Share exports
       .rrd/.glb/.usdz/.ply (:239-241,414-461). Scaffold + sheet; no live
-      sidecar stream or stats card as on Android, no Session MP4 mode
+      sidecar stream or stats card as on Android, no Session MP4 mode;
+      the Android .rrd export opens on a default layout (RerunRrdBlueprint)
+      and ends with the footer `rerun rrd verify` asks for (RerunRrdFooter),
+      RerunRRDWriter.swift writes neither yet
   - id: ar-scene-mesh
     androidStatus: KnownIssue
     iosStatus: working
@@ -850,27 +856,14 @@ demos:
       Helmet, probe balls, slate floor, orbit dock and reset now match
       (#4175); left: LightTypesDemo.swift:172 four of seven HDRs, :559-580
       one control per rig, no exposure or IBL rotation. The 3 legacy cards
-      left in step 0; their ids open the matching rig
-  - id: lighting-lab
-    androidStatus: Working
-    iosStatus: working
-    category: CREATE
-    android: samples/android-demo/src/main/java/io/github/sceneview/demo/demos/LightingLabDemo.kt
-    ios: [lighting-lab]
-    iosFiles:
-      - samples/ios-demo/SceneViewDemo/Views/Demos/LightingLabDemo.swift
-    contract: >-
-      A workbench on the lighting stage, one fixed key over a studio IBL,
-      every knob live: exposure, IBL intensity and rotation, sky,
-      reflection-probe zone, SSAO, fog, anti-aliasing.
-    parity: diverges
-    evidence: >-
-      LightingLabDemo.swift: same stage, 48/38 spot key, studio_warm bench,
-      live IBL intensity, sky toggle, sunset ReflectionProbeNode applied
-      while the camera is inside its zone. No IBL rotation (turning the IBL
-      entity renders pixel-identical at 0 and 174 deg on iOS 26.3), no
-      exposure, SSAO, fog, MSAA/FXAA or dithering: RealityView on iOS
-      exposes none, stated in the sheet
+      left in step 0; their ids open the matching rig. #4603 folded Android's
+      `lighting-lab` card in (IBL intensity, sky switch, reflection probe,
+      SSAO, fog, MSAA/FXAA, dithering under every rig) and dropped its row;
+      iOS folded LightingLabDemo.swift the same way: IBL intensity and sky
+      switch on the Image rig, the sunset reflection probe under every rig,
+      Sky and Reflections in the dock, `lighting-lab` and `reflection-probes`
+      aliased to `lighting`. No fog, SSAO, MSAA/FXAA or dithering: RealityView
+      on iOS exposes none, stated in the sheet
   - id: lines-paths
     androidStatus: Working
     iosStatus: working

@@ -166,6 +166,22 @@ public final class io/github/sceneview/animation/KeyframeTrack {
 	public final fun getKeyframes ()Ljava/util/List;
 }
 
+public final class io/github/sceneview/animation/LightCues {
+	public static final field INSTANCE Lio/github/sceneview/animation/LightCues;
+	public final fun blink (FFFF)F
+	public static synthetic fun blink$default (Lio/github/sceneview/animation/LightCues;FFFFILjava/lang/Object;)F
+	public final fun breathe (FFF)F
+	public static synthetic fun breathe$default (Lio/github/sceneview/animation/LightCues;FFFILjava/lang/Object;)F
+	public final fun fadeIn (FFFLkotlin/jvm/functions/Function1;)F
+	public static synthetic fun fadeIn$default (Lio/github/sceneview/animation/LightCues;FFFLkotlin/jvm/functions/Function1;ILjava/lang/Object;)F
+	public final fun flash (FFFFF)F
+	public static synthetic fun flash$default (Lio/github/sceneview/animation/LightCues;FFFFFILjava/lang/Object;)F
+	public final fun glitch (FFFFI)F
+	public static synthetic fun glitch$default (Lio/github/sceneview/animation/LightCues;FFFFIILjava/lang/Object;)F
+	public final fun ignition (FFFI)F
+	public static synthetic fun ignition$default (Lio/github/sceneview/animation/LightCues;FFFIILjava/lang/Object;)F
+}
+
 public final class io/github/sceneview/animation/PlaybackMode : java/lang/Enum {
 	public static final field LOOP Lio/github/sceneview/animation/PlaybackMode;
 	public static final field ONCE Lio/github/sceneview/animation/PlaybackMode;

@@ -17,21 +17,19 @@ inputs:
 runs:
   using: composite
   steps:
-    # `:samples:desktop-demo` (filament-kmp desktop renderer, FFM-based, #2540)
-    # pins `jvmToolchain(22)`. Gradle configures every included subproject on
-    # any `./gradlew` invocation from root, so every job needs a JDK 22.
-    # settings.gradle applies the foojay toolchain resolver, but only as a
-    # fallback for machines without one: Gradle auto-detects an installed
-    # JDK 22 first, so installing it here keeps CI off that network
-    # download. Installed first so `inputs.java-version` stays last and
-    # keeps owning JAVA_HOME (the JDK that actually runs Gradle).
-    - name: Set up JDK 22 + ${{ inputs.java-version }}
+    # One JDK. Until #4423, `:sceneview-compose` and `:samples:desktop-demo`
+    # pinned `jvmToolchain(22)` for filament-kmp's FFM binding, and Gradle
+    # configures every included subproject on any root `./gradlew`, so every
+    # job also installed a JDK 22. filament-kmp 0.7+ is JNI and both modules
+    # are on `jvmToolchain(21)`, the default below. The jobs that pass 17
+    # (Flutter, React Native) build standalone projects through `-p`, which
+    # never configure the root build; if one ever does, settings.gradle's
+    # foojay resolver provisions JDK 21 rather than failing.
+    - name: Set up JDK ${{ inputs.java-version }}
       uses: actions/setup-java@v5
       with:
         distribution: ${{ inputs.java-distribution }}
-        java-version: |
-          22
-          ${{ inputs.java-version }}
+        java-version: ${{ inputs.java-version }}
 
     # Build-cache-aware Gradle setup. Replaces the lightweight
     # `cache: gradle` shortcut on setup-java (wrapper + deps only) with the

@@ -135,10 +135,13 @@
     <string name="ar_dock_reset_caption">Reset</string>
     <string name="ar_status_scanning">Scanning for surfaces…</string>
     <!-- Placement coaching copy lives in strings_demo_ar_placement.xml (`ar_place_*`). -->
-    <string name="ar_starting_session">Starting AR session…</string>
-    <string name="ar_starting_session_subtitle">Hold up — initializing ARCore.</string>
     <string name="ar_permission_required_title">Camera permission is required to run AR</string>
     <string name="ar_permission_required_subtitle">Grant the permission in system settings, then return to this tab.</string>
+    <string name="ar_permission_allow_subtitle">Allow camera access to start this demo.</string>
+    <string name="ar_permission_blocked_subtitle">Camera access is off for this app. Turn it on in system settings — the demo starts when you come back.</string>
+    <string name="ar_permission_refused_subtitle">This demo draws on the live camera view, so it cannot start without it. Android will ask one more time.</string>
+    <string name="ar_permission_allow">Allow camera</string>
+    <string name="ar_permission_open_settings">Open settings</string>
 
     <!-- Featured AR demos on the AR launcher -->
     <string name="featured_ar_placement_title">Place in AR</string>
@@ -326,13 +329,14 @@
     <!-- Stage 3 per-demo offline indicator chip (DemoScaffold v2) -->
     <string name="demo_chip_streamed">Streamed (cached)</string>
     <string name="demo_chip_streaming">Streaming…</string>
-    <string name="demo_chip_bundled">Offline model</string>
 
     <!-- DemoScaffold v2 bottom-sheet settings (#1154) -->
     <!-- Identity-pill asset-source suffix (DemoScaffold top row). -->
     <string name="demo_source_streamed">Streamed</string>
     <string name="demo_source_streaming">Streaming</string>
-    <string name="demo_source_bundled">Offline</string>
+    <!-- Where the model on screen comes from, never the state of the network: "Offline" read
+         as "your phone has no connection" with Wi-Fi up (#4503). -->
+    <string name="demo_source_bundled">Built-in model</string>
     <!-- Settings-sheet actions + stalled-load card (DemoScaffold). -->
     <string name="demo_menu_qa_mode">QA mode</string>
     <string name="demo_loading_scene_cd">Scene loading</string>
@@ -340,6 +344,8 @@
     <string name="demo_loading_stalled_title">Still loading…</string>
     <string name="demo_loading_stalled_body">The scene has not rendered a frame yet.</string>
     <string name="demo_loading_retry">Retry</string>
+    <string name="demo_content_slow">Still loading part of this scene…</string>
+    <string name="demo_content_failed">Part of this scene could not load. Return to the catalog and reopen this demo to try again.</string>
     <!-- Loading narration (#3825): each line names the step the code is in at that moment,
          and a trailing ellipsis is animated by NarrationText. Never add a line for a step
          the code does not actually run. -->
@@ -348,6 +354,9 @@
     <string name="demo_settings_title">Settings</string>
     <string name="demo_settings_open">Open demo settings</string>
     <string name="demo_settings_fab_cd">Demo settings</string>
+    <!-- #4558: the identity row's last button gives the 3D view the whole screen. -->
+    <string name="demo_full_screen_cd">Full screen</string>
+    <string name="demo_full_screen_exit_cd">Exit full screen</string>
     <string name="demo_settings_reset">Reset</string>
     <string name="demo_settings_reset_cd">Reset demo settings to defaults</string>
     <!-- The settings sheet has no scrim to tap (#3827), so it carries its own close. -->

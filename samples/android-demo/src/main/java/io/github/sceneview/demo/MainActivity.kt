@@ -29,8 +29,12 @@ import androidx.navigation.navArgument
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import io.github.sceneview.demo.common.ArDemoPermissionGate
 import io.github.sceneview.demo.common.ProvideStatusBarIcons
 import io.github.sceneview.demo.fragments.GeneratedDemos
+import io.github.sceneview.demo.labs.Labs
+import io.github.sceneview.demo.labs.LabsGateBody
+import io.github.sceneview.demo.labs.openLabsSupportLink
 import io.github.sceneview.demo.theme.SceneViewDemoTheme
 import io.github.sceneview.demo.theme.SceneViewTokens
 import io.github.sceneview.demo.theme.LocalMotionEnabled
@@ -189,8 +193,8 @@ class MainActivity : ComponentActivity() {
         DemoSettings.qaMode = intent?.getBooleanExtra("qa_mode", false) ?: false
         DemoSettings.qaBackdrop = resolveQaBackdrop(intent)
         // Optional id of a visual state a demo should pin itself to (#3421, #3455). One extra
-        // for every demo's vocabulary (Cloud Anchors, Point & Ask). Only honoured in QA mode
-        // — a forced state makes a demo show something that never happened.
+        // for every demo's vocabulary (Cloud Anchors, Point & Ask). Only honoured by a debug
+        // build in QA mode — a forced state makes a demo show something that never happened.
         DemoSettings.qaDemoState = resolveQaDemoState(intent)
         // Optional path to an ARCore playback fixture (.mp4). Confined to the app's own
         // external-files dir so a malicious deep link can't probe arbitrary device paths
@@ -257,11 +261,12 @@ class MainActivity : ComponentActivity() {
      * cloud project and a second device), Point & Ask cards (AICore). Each demo owns its
      * own ids; see [DemoSettings.qaDemoState].
      *
-     * Gated on `qa_mode` by [DeepLinkRouter.resolveQaState], deliberately: unlike the camera
-     * backdrop, which only changes what is *behind* the scene, this changes what the demo
-     * *claims*, so it must never be reachable from an ordinary launch. Reads
-     * [DemoSettings.qaMode] rather than the extra again so the gate and the flag it guards
-     * cannot disagree. Tracks the latest intent like the other QA extras.
+     * Gated on a debug build with `qa_mode` on by [DeepLinkRouter.resolveQaState],
+     * deliberately: unlike the camera backdrop, which only changes what is *behind* the
+     * scene, this changes what the demo *claims*, so it must never be reachable from an
+     * ordinary launch — nor from the store build, where any app can send `qa_mode` (#4555).
+     * Reads [DemoSettings.qaMode] rather than the extra again so the gate and the flag it
+     * guards cannot disagree. Tracks the latest intent like the other QA extras.
      */
     private fun resolveQaDemoState(intent: Intent?): String? =
         DeepLinkRouter.resolveQaState(DemoSettings.qaMode, intent?.getStringExtra("qa_state"))
@@ -552,7 +557,7 @@ fun SceneViewDemoApp(activity: MainActivity? = null) {
         if (!hasHome) {
             navController.navigate("list") { popUpTo(navController.graph.id) { inclusive = true } }
         }
-        navController.navigate("demo/$id") { popUpTo("list") }
+        navController.navigate("demo/$id")
         activity?.consumePendingPushDemo()
     }
 
@@ -683,10 +688,9 @@ fun SceneViewDemoApp(activity: MainActivity? = null) {
             )
             reportScope.launch {
                 val screenshot = activity?.let { captureBugReportScreenshot(it) }
-                bugReport = PendingBugReport(
-                    info = captureBugReportInfo(context, screen),
-                    screenshot = screenshot,
-                )
+                // Two `logcat` runs, each waited for: not on the main thread.
+                val info = withContext(Dispatchers.IO) { captureBugReportInfo(context, screen) }
+                bugReport = PendingBugReport(info = info, screenshot = screenshot)
             }
         }
 
@@ -722,7 +726,12 @@ fun SceneViewDemoApp(activity: MainActivity? = null) {
     }
 }
 
-/** Pushes a deep-linked demo above Home so leaving it disposes all destination-scoped work. */
+/**
+ * Opens a deep-linked demo directly above Home, so leaving it disposes all destination-scoped
+ * work. A link that arrives while another demo is open replaces that demo (#4502): Back
+ * returns to Home, exactly as after a cold start by the same link, never to the demo the link
+ * interrupted. A link to the demo already open replaces it too, so its `?tab=` is read again.
+ */
 @Composable
 internal fun PendingDemoNavigation(
     navController: NavHostController,
@@ -731,7 +740,7 @@ internal fun PendingDemoNavigation(
 ) {
     LaunchedEffect(pendingId) {
         val id = pendingId ?: return@LaunchedEffect
-        navController.navigate("demo/$id")
+        navController.navigate("demo/$id") { popUpTo("list") }
         onConsumed()
     }
 }
@@ -754,6 +763,42 @@ internal fun PendingDemoNavigation(
  */
 @Composable
 fun DemoRouter(id: String, onBack: () -> Unit) {
+    val entry = ALL_DEMOS.find { it.id == id }
+    // A Labs demo with Labs off for this install (a shared deep link, an old shortcut) opens
+    // the Labs explainer instead; joining or switching Labs on there opens the demo in place.
+    if (entry?.isLabs == true && !Labs.enabled) {
+        LabsGateScreen(title = stringResource(entry.titleRes), onBack = onBack)
+        return
+    }
+    if (entry?.opensCameraOnEntry == true) {
+        ArDemoPermissionGate(
+            title = stringResource(entry.titleRes),
+            onBack = onBack,
+        ) {
+            RoutedDemo(id = id, onBack = onBack)
+        }
+        return
+    }
+    RoutedDemo(id = id, onBack = onBack)
+}
+
+/** The Labs explainer standing in for a Labs demo: no scene, no dock, the page background. */
+@Composable
+private fun LabsGateScreen(title: String, onBack: () -> Unit) {
+    val context = LocalContext.current
+    DemoScaffold(title = title, onBack = onBack, dockHidden = true, themedStage = true, hasScene = false) {
+        LabsGateBody(
+            access = Labs.access,
+            labsDemos = rememberLabsDemos(),
+            onJoinClick = { FeedbackOpenRequest.request() },
+            onEnabledChange = Labs::setEnabled,
+            onOpenCollectiveClick = { openLabsSupportLink(context) },
+        )
+    }
+}
+
+@Composable
+private fun RoutedDemo(id: String, onBack: () -> Unit) {
     val matched = GeneratedDemos.Screen(id = id, onBack = onBack)
     if (!matched) {
         check(!BuildConfig.DEBUG) {

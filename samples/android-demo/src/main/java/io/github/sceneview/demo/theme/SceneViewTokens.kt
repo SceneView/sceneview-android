@@ -24,14 +24,49 @@ import androidx.compose.ui.unit.sp
  * the translation it is.
  *
  * An immutable object fits these application-wide constants better than a
- * CompositionLocal: none of the source tokens varies with theme or composition.
+ * CompositionLocal: none of the source tokens varies with composition. The few that differ
+ * between light and dark ([Showroom], [DebugView]) are pairs of constants, and the screen
+ * that draws them picks one from the theme it is in.
  */
 @Immutable
 object SceneViewTokens {
-    /** Model-viewer stage, deliberately identical in light and dark themes. */
+    /**
+     * `stage-background`: the clear colour of a full-screen 3D stage, deliberately identical in
+     * light and dark themes. The Model Viewer draws a themed [Showroom] instead.
+     */
     object Stage {
         val background = Color(0xFF0B0F16)
     }
+
+    /**
+     * `DESIGN.md` — the studio showroom (`stage-studio-*`), shared with the web viewer's `/view`
+     * studio: the room the Model Viewer stands every model in. A seamless cyclorama — the pool of
+     * light under the subject, the floor carried into the horizon by the distance, the wall
+     * darkening towards the top — so the subject is the only thing with an edge.
+     *
+     * [Light] is a white photo studio (Apple product pages, Sketchfab's light scenes); [Dark]
+     * is a charcoal car showroom. The studio's lighting map (`studio_showroom_{light,dark}_2k.hdr`,
+     * the web viewer's too) is the same room, so what the subject reflects is what the viewer
+     * sees around it.
+     */
+    object Showroom {
+        /** White studio: a near-white pool, the wall a step greyer towards the top. */
+        val Light = ShowroomPalette(
+            top = Color(0xFFCDD3DB),
+            horizon = Color(0xFFE7EAEF),
+            floor = Color(0xFFF2F4F7),
+            pool = Color(0xFFFDFDFE),
+        )
+
+        /** Charcoal showroom: a blue-grey pool of light, the room falling to near-black above. */
+        val Dark = ShowroomPalette(
+            top = Color(0xFF0B0E13),
+            horizon = Color(0xFF222833),
+            floor = Color(0xFF2B323E),
+            pool = Color(0xFF3A4250),
+        )
+    }
+
     /** `DESIGN.md` — Spatial Gallery overlay colours. */
     object SpatialGalleryColor {
         val stageScrimStart = Color.Transparent
@@ -270,16 +305,16 @@ object SceneViewTokens {
         val heroFieldEmbeddedDark = Color(0xFF232A39)
 
         /**
-         * `hero-sky-*` — the dusk Compose paints behind the transparent home stage
-         * (#3948), top to bottom. The 3D flight is rendered over this gradient with no
-         * skybox of its own, so the sky is one gradient in both themes: [heroSkyTop] is
-         * the `stage-background` value, [heroSkyHorizon] is also the scene's fog colour,
-         * which is what lets the far ridges dissolve into it.
+         * `hero-sky-*` — the night Compose paints behind the transparent home stage
+         * (#3948), top to bottom: what shows until the night circuit's own sky dome has
+         * landed, and on a device that shows the still. One gradient in both themes:
+         * [heroSkyTop] is the `stage-background` value, [heroSkyHorizon] is the scene's
+         * haze (its fog colour, in sRGB), so the dome lands on the colour already there.
          */
         val heroSkyTop = Color(0xFF0B0F16)
-        val heroSkyDusk = Color(0xFF3B1D46)
-        val heroSkyHorizon = Color(0xFFE2734F)
-        val heroSkyGround = Color(0xFF2A1220)
+        val heroSkyDusk = Color(0xFF161C2C)
+        val heroSkyHorizon = Color(0xFF3F4D65)
+        val heroSkyGround = Color(0xFF1D2230)
 
         val chipBackgroundLight = Color(0xFFF1F3F5)
         /**
@@ -439,6 +474,22 @@ object SceneViewTokens {
          */
         const val rowTextStartFraction = 0.44f
 
+        /**
+         * `home-row-whole-dissolve` — the same, for a row that shows its picture whole
+         * (the "What's new" row): the picture stays solid across the band a card holds its
+         * subject in and only its trailing margin dissolves, into its own edge colour.
+         */
+        const val rowWholeDissolveStart = 0.84f
+
+        /**
+         * `home-row-whole-melt` — the strip after a whole picture (`space-xl`) over which
+         * the picture's own edge colour carries on and melts into the row's tint. One
+         * ease runs from `home-row-whole-dissolve` to the end of the strip; the text
+         * starts after it. `space-2xl` breaks the row's subtitle onto a second line on a
+         * 411 dp phone.
+         */
+        val rowWholeMelt = 32.dp
+
         /** Row text insets: `space-md` at the trailing edge, 14 dp above and below. */
         val rowTextPaddingEnd = 16.dp
         val rowTextPaddingVertical = 14.dp
@@ -576,6 +627,38 @@ object SceneViewTokens {
 
         /** Widest a coaching pill may grow — a long line stays one readable column. */
         val maxWidth = 480.dp
+
+        /**
+         * `card-min-width` — narrowest a decision card may be when it moves into the corner
+         * beside the bottom chrome on a phone held sideways (#4509). Its title and each of
+         * its buttons still hold on one line at this width; with less room than this the
+         * card stays above the chrome instead.
+         */
+        val cardMinWidth = 192.dp
+
+        /**
+         * `action-label-min-width` — the least room a card's action label is given, per unit
+         * of font scale (#4509). "Try again" breaks at its space and each word stays whole at
+         * this width; with less, the label would break inside a word, so the card is not moved
+         * into a corner that narrow.
+         */
+        val actionLabelMinWidth = 36.dp
+
+        /**
+         * `sdk-card-margin` — the margin the SDK's own AR cards (`ARCameraPermissionOverlay`,
+         * `ARCoreAvailabilityOverlay`) keep around themselves, on every side (#4533). Not a
+         * spacing this app chooses: a measurement of the SDK card, which the app needs to
+         * place that card beside its chrome. `ArOverlaySdkCardTokensTest` measures the card
+         * and fails when the SDK moves away from this value.
+         */
+        val sdkCardMargin = 24.dp
+
+        /**
+         * `sdk-card-action-insets` — everything the SDK's AR card puts on either side of its
+         * action's label, both sides together: [sdkCardMargin], 20 dp of card padding and
+         * 20 dp of button padding, twice (#4533). Measured by the same test.
+         */
+        val sdkCardActionInsets = 128.dp
     }
 
     /**

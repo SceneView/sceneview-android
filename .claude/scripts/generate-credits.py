@@ -325,13 +325,6 @@ NON_CATALOG_BUNDLED = {
         "sourceUrl": "https://github.com/sceneview/sceneview/blob/main/LICENSE",
         "note": "Compiled from `samples/android-demo/src/main/materials/studio_pbr.mat`",
     },
-    "hero_terrain.filamat": {
-        "name": "hero_terrain.filamat",
-        "author": "SceneView project",
-        "license": "Apache-2.0",
-        "sourceUrl": "https://github.com/sceneview/sceneview/blob/main/LICENSE",
-        "note": "Compiled from `samples/android-demo/src/main/materials/hero_terrain.mat` (#3948)",
-    },
     "cosmos_sprite.filamat": {
         "name": "cosmos_sprite.filamat",
         "author": "SceneView project",
@@ -388,6 +381,13 @@ NON_CATALOG_BUNDLED = {
         "sourceUrl": "https://github.com/sceneview/sceneview/blob/main/LICENSE",
         "note": "Compiled from `samples/android-demo/src/main/materials/tray_wood.mat` (Rolling Balls board)",
     },
+    "showroom_floor.filamat": {
+        "name": "showroom_floor.filamat",
+        "author": "SceneView project",
+        "license": "Apache-2.0",
+        "sourceUrl": "https://github.com/sceneview/sceneview/blob/main/LICENSE",
+        "note": "Compiled from `samples/android-demo/src/main/materials/showroom_floor.mat` (Model Viewer showroom floor)",
+    },
     # Hand-authored 1 kB 3MF fixtures for the web /open page (#3512).
     "printed-icosahedron.3mf": {
         "name": "printed-icosahedron.3mf",
@@ -426,12 +426,46 @@ NON_CATALOG_BUNDLED = {
         "sourceUrl": "https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker",
         "note": "On-device pose model bundle used by `ARBodyTrackerDemo`",
     },
+    "night_circuit.glb": {
+        "name": "Night circuit (Khronos Car Concept on a SceneView set)",
+        "author": "Darmstadt Graphics Group GmbH (Eric Chadwick); set by SceneView",
+        "license": "CC-BY-4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+        "sourceUrl": "https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/CarConcept",
+        "note": "The Car Concept on the night circuit built by `tools/scenes/circuit/build.sh`, "
+        "the android-demo home hero (#3948)",
+    },
+    "circuit_ibl.ktx": {
+        "name": "Night circuit environment",
+        "author": "SceneView project",
+        "license": "Apache-2.0",
+        "sourceUrl": "https://github.com/sceneview/sceneview/blob/main/LICENSE",
+        "note": "Rendered from the night circuit's set description and prefiltered with cmgen",
+    },
     "neutral_ibl.ktx": {
         "name": "Neutral IBL (Filament default environment)",
         "author": "Google LLC — Filament",
         "license": "Apache-2.0",
         "sourceUrl": "https://github.com/google/filament/tree/main/third_party/environments",
         "note": "Prefiltered KTX environment shipped with Filament, used by the web demo as its default lighting",
+    },
+    "studio_showroom_dark_2k.hdr": {
+        "name": "Studio showroom, dark (synthetic photo studio)",
+        "author": "SceneView project",
+        "license": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sourceUrl": "https://github.com/sceneview/sceneview/tree/main/tools/scenes/studio",
+        "note": "Generated deterministically by `tools/scenes/studio/build-hdr.mjs` (variant `dark`): "
+        "a charcoal room with an overhead softbox and strip lights, no photographic source",
+    },
+    "studio_showroom_light_2k.hdr": {
+        "name": "Studio showroom, light (synthetic photo studio)",
+        "author": "SceneView project",
+        "license": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "sourceUrl": "https://github.com/sceneview/sceneview/tree/main/tools/scenes/studio",
+        "note": "Generated deterministically by `tools/scenes/studio/build-hdr.mjs` (variant `light`): "
+        "a white cyclorama with an overhead softbox and strip lights, no photographic source",
     },
 }
 

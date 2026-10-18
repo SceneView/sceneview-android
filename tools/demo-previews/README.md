@@ -60,9 +60,9 @@ ids, so do not pass them to `gen.py --only` for Android (the iOS imagesets still
 |---|---|---|
 | `materials` | `materials_default.png` | 540, 1102, 1080 — the nine-sphere grid |
 | `debug-overlay` | — | Superseded 2026-09-30: the card is now the iOS pair, see "Cards shared with Android" below. Was 540, 800, 1400, black-padded — the stats HUD over its sphere |
-| `camera-gestures` | `cameragestures_default.png` | 575, 1065, 1000 — the whole stage |
+| `camera-gestures` | `cameragestures_default.png` | 575, 1065, 1000 — the whole stage. Dark card only since #4351: the demo follows the theme, so the light card is its own capture — Pixel_7a (1280×2856) in light mode, `--ez qa_mode true`, window x 74–1280, y 910–1875, framed like the dark one |
 | `lighting` | `lighting_default.png` | 540, 1080, 1080 — helmet and probes under the photo environment |
-| `lighting-lab` | `lightinglab_default.png` | 540, 990, 1080 — the lit floor with its sun disc |
+| `lighting-lab` | — | Retired on Android by #4603: the card folded into `lighting` and its golden went with it. Was `lightinglab_default.png`, 540, 990, 1080 — the lit floor with its sun disc |
 | `secondary-camera` | — | Superseded 2026-09-30: generated from a real capture, see "Cards generated from real captures" below. Was `secondarycamera_default.png`, 540, 870, 1600, black-padded — the picture-in-picture inset |
 | `animation-physics` | `animationphysics_default.png` | Light card superseded 2026-09-30: generated from this golden crop (500, 1414, 760), see "Cards generated from real captures" below. The dark card is still its own capture: Pixel_7a in night mode, `--ez qa_mode true`, crop 500, 1508, 760 (the screen is 96 px taller than the golden); since #4223 its stage is the dark stage (`SceneViewTokens.Stage.background`), so the dark card is the fox on that dark stage |
 | `splat-preview` | `splatpreview_default.png` | 540, 1010, 1500, black-padded, then an elliptical vignette to black (radii 600 × 900 px, fade from 0.62) so the splat's soft fringe does not end on a hard crop edge (#4073) |
@@ -146,6 +146,23 @@ raw, kept or rejected, with its exact prompt, ref and reason is archived outside
 
 Regenerating one of these from `prompts.json` gives a new sample, not these pixels: check the
 new pair on the home rows in both themes before committing it.
+
+### Dark AR cards re-cropped out of a baked frame (#4351)
+
+Two dark cards carried a frame inside the picture, which the art direction forbids and which
+showed as a light band on a dark row: `preview_ar_scene_mesh_dark.webp` was a phone mock-up
+on a cream field, `preview_ar_raw_depth_point_cloud_dark.webp` a picture on a beige mat. Both
+are now a 5:4 crop of the committed picture taken inside that frame, with no new generation —
+the scene, light and colours are the ones already shipped, enlarged about 1.5×:
+
+```
+cwebp -crop 215 125 485 388 -resize 800 640 -q 85   # ar_scene_mesh, dark
+cwebp -crop 118 94 565 452 -resize 800 640 -q 85    # ar_raw_depth_point_cloud, dark
+```
+
+The source of each crop is the file as it was before that change (`git show
+b1dc1dc59:samples/android-demo/src/main/res/drawable-nodpi/<name>.webp`, decoded with
+`dwebp`). The light halves had no frame and are untouched.
 
 ## iOS imagesets
 

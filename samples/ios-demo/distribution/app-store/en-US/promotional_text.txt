@@ -1,1 +1,1 @@
-New: Cosmos, a galaxy and a ringed star system in real time, and Room Scan, scan your room and replay it in 3D. Nearly 50 live screens, each linked to the code that draws it.
+Nearly 50 live 3D and AR screens for SwiftUI, each linked to the code that draws it. Start with Cosmos, a galaxy in real time, and Room Scan, a room replayed in 3D.

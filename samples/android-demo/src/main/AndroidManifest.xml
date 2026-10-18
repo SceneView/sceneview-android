@@ -208,10 +208,19 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <!--
+            `singleTop` is what makes a link reach a running app (#4502). With the default
+            `standard` mode a link sent while the app is open either stacked a second
+            MainActivity on the first (two navigation stacks, two renderers, Back walking
+            through both), or, when it equalled the intent the task was started with (the
+            app cold-started by that very link), only brought the task forward and was
+            dropped. `singleTop` delivers every such intent to `onNewIntent`.
+        -->
         <activity
             android:name=".MainActivity"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|uiMode"
             android:exported="true"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.SceneViewDemo.Starting"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>

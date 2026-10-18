@@ -18,7 +18,7 @@ SceneView uses **native renderers per platform** for the best performance and to
 | **macOS** | RealityKit | SwiftUI | `SceneViewSwift` | Alpha (v4.39.0) |
 | **visionOS** | RealityKit | SwiftUI | `SceneViewSwift` | Alpha (v4.39.0) |
 | **Web** | Filament.js (WASM) | Kotlin/JS | `sceneview-web` | Alpha |
-| **Desktop** | Filament via `SceneViewer` (filament-kmp) | Compose Desktop | `samples/desktop-demo` | Alpha (JDK 22+) |
+| **Desktop** | Filament via `SceneViewer` (filament-kmp) | Compose Desktop | `samples/desktop-demo` | Alpha (JDK 21+) |
 | **Android TV** | Filament | Compose TV | `sceneview` | Alpha |
 | **Flutter** | Filament / RealityKit | PlatformView | `flutter/sceneview_flutter` | Alpha |
 | **React Native** | Filament / RealityKit | Fabric | `react-native/react-native-sceneview` | Alpha |
@@ -42,7 +42,7 @@ The primary platform. SceneView wraps Google Filament (PBR rendering) and ARCore
 - **3D**: `SceneView { }` composable with 48+ node types
 - **AR**: `ARSceneView { }` with plane detection, image tracking, face mesh, cloud anchors, geospatial
 - **Min SDK**: 24 (Android 7.0)
-- **Install**: `implementation("io.github.sceneview:sceneview:4.53.0")`
+- **Install**: `implementation("io.github.sceneview:sceneview:4.57.0")`
 
 [:octicons-arrow-right-24: Android Quickstart](quickstart.md)
 
@@ -56,7 +56,7 @@ SceneViewSwift provides a native SwiftUI library powered by RealityKit and ARKit
 - **AR**: `ARSceneView()` with plane detection and tap-to-place (iOS only)
 - **Formats**: USDZ / Reality / USD through RealityKit; STL, OBJ, PLY and 3MF through `MeshAsset`. **No glTF / GLB** — RealityKit does not read it; convert with `tools/convert-usdz.sh`. See [Model formats](formats.md).
 - **Min versions**: iOS 18+, macOS 15+, visionOS 2+
-- **Install**: `.package(url: "https://github.com/sceneview/sceneview.git", from: "4.53.0")`
+- **Install**: `.package(url: "https://github.com/sceneview/sceneview.git", from: "4.57.0")`
 
 [:octicons-arrow-right-24: Apple Quickstart](quickstart-ios.md)
 
@@ -78,14 +78,15 @@ SceneView Web uses **Filament.js** -- the same Filament rendering engine as Andr
 ## Desktop (Compose Desktop)
 
 The desktop actual of `sceneview-compose` renders with **Filament**, through the
-community [filament-kmp](https://github.com/Erkko68/filament-kmp) FFM bindings: an
+community [filament-kmp](https://github.com/Erkko68/filament-kmp) JNI bindings: an
 offscreen render, pipelined `readPixels`, then a Skia image in the Compose tree.
 
 - **3D**: `SceneViewer(…)` — the same viewer subset as the other Compose Multiplatform
   targets (glTF model, orbit camera, light, environment, tap hit-testing). **No AR.**
 - **Framework**: Compose Desktop
-- **Requirements**: JDK 22+ (FFM), launched with `--enable-native-access=ALL-UNNAMED`
-- **Install**: `implementation("io.github.sceneview:sceneview-compose:4.53.0")`
+- **Requirements**: JDK 21+, no JVM flag (filament-kmp's JNI binding needs 17; the
+  `kotlin-math` dependency ships JDK 21 bytecode)
+- **Install**: `implementation("io.github.sceneview:sceneview-compose:4.57.0")`
 - **Sample**: `samples/desktop-demo/` — run it with `./gradlew :samples:desktop-demo:run`
 
 [:octicons-arrow-right-24: Compose Multiplatform](compose-multiplatform.md) ·

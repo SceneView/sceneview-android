@@ -1,10 +1,17 @@
 package io.github.sceneview.demo
 
+import android.content.res.Resources
+import android.util.LruCache
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.imageResource
 
 /**
  * Captured preview images for the home grid, keyed by [DemoEntry.id].
@@ -58,7 +65,6 @@ object DemoPreviews {
         "debug-overlay" to PreviewPair(R.drawable.preview_debug_overlay_light, R.drawable.preview_debug_overlay_dark),
         "geometry" to PreviewPair(R.drawable.preview_geometry_light, R.drawable.preview_geometry_dark),
         "lighting" to PreviewPair(R.drawable.preview_lighting_light, R.drawable.preview_lighting_dark),
-        "lighting-lab" to PreviewPair(R.drawable.preview_lighting_lab_light, R.drawable.preview_lighting_lab_dark),
         "lines-paths" to PreviewPair(R.drawable.preview_lines_paths_light, R.drawable.preview_lines_paths_dark),
         "materials" to PreviewPair(R.drawable.preview_materials_light, R.drawable.preview_materials_dark),
         "model-viewer" to PreviewPair(R.drawable.preview_model_viewer_light, R.drawable.preview_model_viewer_dark),
@@ -74,6 +80,30 @@ object DemoPreviews {
     @DrawableRes
     fun resourceFor(id: String, dark: Boolean = false): Int? =
         previews[id]?.let { if (dark) it.dark else it.light }
+
+    /**
+     * The pictures already decoded, most recently drawn last (#4461).
+     *
+     * `painterResource` keeps a picture only as long as the card that asked for it: the
+     * platform's own drawable cache holds weak references, so by the time a demo is closed
+     * the list behind it has lost every picture and decodes them again, on the main thread,
+     * in the one frame that starts the exit transition (about 8 ms a card on a Pixel 4a).
+     * Holding the last few screens of pictures here makes coming back to a list free.
+     *
+     * Bounded by size, not by count: [PREVIEW_CACHE_BYTES] is about sixteen 800x640 captures.
+     */
+    private val decoded = object : LruCache<Int, ImageBitmap>(PREVIEW_CACHE_BYTES) {
+        override fun sizeOf(key: Int, value: ImageBitmap): Int = value.asAndroidBitmap().allocationByteCount
+    }
+
+    /** The picture for [res], decoded once and kept while the cache has room for it. */
+    internal fun bitmap(resources: Resources, @DrawableRes res: Int): ImageBitmap =
+        decoded[res] ?: ImageBitmap.imageResource(resources, res).also { decoded.put(res, it) }
+
+    /** Lets go of every decoded picture; the next card to need one decodes it again. */
+    fun trimMemory() = decoded.evictAll()
+
+    private const val PREVIEW_CACHE_BYTES = 32 * 1024 * 1024
 }
 
 /**
@@ -82,4 +112,7 @@ object DemoPreviews {
  */
 @Composable
 fun DemoEntry.previewPainter(): Painter? =
-    DemoPreviews.resourceFor(id, dark = isSystemInDarkTheme())?.let { painterResource(it) }
+    DemoPreviews.resourceFor(id, dark = isSystemInDarkTheme())?.let { res ->
+        val resources = LocalContext.current.resources
+        remember(res, resources) { BitmapPainter(DemoPreviews.bitmap(resources, res)) }
+    }

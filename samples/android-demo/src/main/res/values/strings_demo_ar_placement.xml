@@ -36,6 +36,11 @@
     <string name="ar_place_no_surface_title">No surface found.</string>
     <string name="ar_place_no_surface_detail">Try a brighter area with a rug or visible floor detail.</string>
     <string name="ar_place_no_surface_detail_wall">Plain walls are harder to find. Try the wall-floor edge, or a wall with a frame or poster.</string>
+    <!-- #4522: frames arrive, AR never starts, and the gyroscope delivers nothing. No button:
+         only a restart brings the sensor back. No "gyroscope", no "tracking" (DESIGN.md). The
+         remedy is the title: it is the line that stays in view when the card runs out of height. -->
+    <string name="ar_place_motion_sensor_title">Restart your phone</string>
+    <string name="ar_place_motion_sensor_detail">Its motion sensor isn\'t responding, and AR can\'t start without it.</string>
     <string name="ar_place_view_in_3d">View in 3D</string>
     <string name="ar_place_keep_scanning">Keep scanning</string>
     <string name="ar_place_recovery_failed_title">Couldn\'t recover this placement.</string>

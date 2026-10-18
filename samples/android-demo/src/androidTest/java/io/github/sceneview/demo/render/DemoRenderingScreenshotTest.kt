@@ -201,35 +201,11 @@ class DemoRenderingScreenshotTest {
             pixelDiffTolerancePercent = 8.0f, maxChannelDiff = 16)
     }
 
-    @Test
-    fun fogDemo_default_state() {
-        captureAndCompare(demoSlug = "fog", goldenName = "fog_default", settleSeconds = 14,
-            pixelDiffTolerancePercent = 8.0f, maxChannelDiff = 16)
-    }
-
-    @Test
-    fun lightingLabDemo_default_state() {
-        // #2239 Batch 2 folded `dynamic-sky`, `environment`, `reflection-probes` and
-        // `post-processing` into `lighting-lab`; #3539 then rebuilt the screen and the
-        // tabs are gone. There is one frame now — the shared `LightingStage` (helmet on
-        // a lit floor between a chrome and a matte probe ball) under a studio IBL and a
-        // single shadow-casting key — with every knob live in the sheet. `DynamicSkyNode`
-        // moved to the `lighting` showcase's Sun rig, so there is no procedural sky on
-        // this screen any more.
-        //
-        // The tolerance is inherited from the scene that DID have a procedural sky and
-        // has not been re-measured against the rebuilt frame, because this case has never
-        // completed a CI run (#3554). The IBL prefilter still has cold/warm cache variance
-        // and the chrome probe magnifies it, so 15 % is kept as the conservative value
-        // until a green run gives a real number to tighten it to.
-        //
-        // #3554: this case killed the emulator process at capture. The screen was the only
-        // demo building two 2 048² HDR environments at once, and it built the probe's one
-        // eagerly although the probe starts off — see `LightingLabDemo.probeEnvironment`.
-        // That allocation is now deferred, which is the fix under test here.
-        captureAndCompare(demoSlug = "lighting-lab", goldenName = "lightinglab_default", settleSeconds = 14,
-            pixelDiffTolerancePercent = 15.0f, maxChannelDiff = 24)
-    }
+    // #4603 folded `lighting-lab` into `lighting`, and the `fog` and `lighting-lab` slugs
+    // now open the Lighting screen, which `lightingDemo_default_state` above covers. Their
+    // cases (`fog_default`, `lightinglab_default`) went with the screen they pictured. The
+    // lab's #3554 guard — the reflection probe's HDR built only once the probe is on —
+    // moved with the probe into `LightingDemo`.
 
     @Test
     fun materialsDemo_default_state() {
@@ -264,10 +240,9 @@ class DemoRenderingScreenshotTest {
     // no sub-modes: object gestures are the dock's Move toggle inside the same scene.
 
     // #2239 Batch 2 — `dynamic-sky`, `environment`, `reflection-probes`, and
-    // `post-processing` consolidated into `lighting-lab` (covered by
-    // `lightingLabDemo_default_state` above). The Environment / Reflections / Post-FX
-    // sub-modes are reachable via segmented-button taps; dedicated sub-mode captures
-    // would need a tab-aware deep-link parameter (follow-up).
+    // `post-processing` consolidated into `lighting-lab`, itself folded into `lighting` by
+    // #4603 (covered by `lightingDemo_default_state` above). Their options are switches in
+    // the Lighting sheet, driven by `DemoInteractionTest.lighting_reflectionsAndFrame`.
 
     // #2239 Batch 4 — `texture-streaming` and `occlusion-material` consolidated into
     // `materials` (covered by `materialsDemo_default_state` above). The Inspect /
@@ -323,6 +298,13 @@ class DemoRenderingScreenshotTest {
      * gaussians through `SplatParser`, then uploads its data textures before the first
      * instanced draw. The scene is static once loaded (the camera only moves on user drag, and
      * there is no spin loop), so the wait is for loading, not for motion to settle.
+     *
+     * "Loaded" includes the node's painter's sort (#4459): the points start in the file's order
+     * and are re-ordered for the camera on a background thread, so the same camera gave two
+     * pictures depending on whether the capture fell before or after that order reached the
+     * screen. The demo now names itself "Scene ready" only on frames drawn with no sort in
+     * flight, and never moves its camera after the first frame, so the order it parks on is
+     * the one sorted for the home pose.
      */
     @Test
     fun splatPreviewDemo_default_state() {
@@ -489,6 +471,26 @@ class DemoRenderingScreenshotTest {
         // flag the library's render tests use (#803, #912). Skipped-with-a-reason is the
         // honest verdict there; a permanent red that means "wrong hardware" trains
         // everyone to ignore the leg.
+        // The app says "Scene ready" over a failed load on purpose, so the user is told and
+        // the screen is not left waiting. That is a verdict for a person, not a picture to
+        // compare or record: a golden of a stage missing its model is the bug of #4459.
+        if (device.hasObject(By.textContains(CONTENT_FAILED_CARD_TEXT))) {
+            val savedTo = saveToDeviceForReview(rawCapture, "${goldenName}_content_failed_to_load")
+            throw AssertionError(
+                "Demo '$demoSlug' displayed its \"$CONTENT_FAILED_CARD_TEXT\" card: a model or " +
+                    "environment failed to load, so the stage is not the scene of $goldenName. " +
+                    "Capture saved to $savedTo.",
+            )
+        }
+        if (!settled && device.hasObject(By.textContains(CONTENT_SLOW_CARD_TEXT))) {
+            val savedTo = saveToDeviceForReview(rawCapture, "${goldenName}_content_still_loading")
+            throw AssertionError(
+                "Demo '$demoSlug' was still showing its \"$CONTENT_SLOW_CARD_TEXT\" card after " +
+                    "${settleBudgetMs}ms: a model or environment had not landed, so the stage is " +
+                    "not the scene of $goldenName. Capture saved to $savedTo.",
+            )
+        }
+
         if (!settled && device.hasObject(By.textContains(STALL_CARD_TEXT))) {
             val savedTo = saveToDeviceForReview(rawCapture, "${goldenName}_never_rendered_a_frame")
             val message = "Demo '$demoSlug' displayed its \"$STALL_CARD_TEXT\" card: the " +
@@ -743,10 +745,8 @@ class DemoRenderingScreenshotTest {
             // Re-baselined after the #3423 rebuild (runtime-generated torus knot).
             "customgeometry_default",
             "debugoverlay_default",
-            "fog_default",
             "geometry_default",
             "lighting_default",
-            "lightinglab_default",
             // Re-baselined after the #3425 rebuild (tube-extruded splines with sphere
             // control points, replacing the 1-px `LINES` scene the old golden pictured).
             "linespaths_default",
@@ -783,6 +783,16 @@ class DemoRenderingScreenshotTest {
          * editing this one makes the check silently stop matching, so they move together.
          */
         const val STALL_CARD_TEXT = "The scene has not rendered a frame yet."
+
+        /**
+         * The start of `R.string.demo_content_failed`: a load the demo saw fail. The scene is
+         * "ready" with this card up, so it is checked for on its own. Moves with the string,
+         * like [STALL_CARD_TEXT].
+         */
+        const val CONTENT_FAILED_CARD_TEXT = "Part of this scene could not load."
+
+        /** `R.string.demo_content_slow`: a load still in flight past the app's own wait. */
+        const val CONTENT_SLOW_CARD_TEXT = "Still loading part of this scene"
 
         /** Every demo slug in `DemoRegistry` is lower-kebab; nothing here reaches a shell unchecked. */
         val DEMO_SLUG_PATTERN = Regex("[a-z0-9]+(-[a-z0-9]+)*")
@@ -821,10 +831,15 @@ class DemoRenderingScreenshotTest {
          */
         val SWANGLE_BASELINED_GOLDENS: Set<String> = setOf(
             "animationphysics_default",
+            // Six cases re-baselined for #4448 from the captures of run 38073545804, each one
+            // the screen with all of its content in it and each matched by at least one other
+            // run of the same day: camera-gestures (Camera | PiP switch, #4282), debug-overlay
+            // and secondary-camera (floor and light stage, #4111), fog and lighting (stage
+            // fading into the sky, #4156), model-viewer (navy stage, #4179).
             "cameragestures_default",
             "customgeometry_default",
             "debugoverlay_default",
-            "fog_default",
+            // `fog_default` left with the `fog` case (#4603: the slug opens `lighting`).
             // Re-baselined after the #4335 rebuild (seven primitives on the stage), from the
             // first-run capture of run 37154919481.
             "geometry_default",
@@ -834,12 +849,14 @@ class DemoRenderingScreenshotTest {
             "modelviewer_default",
             "pickingcollision_default",
             "secondarycamera_default",
+            // First baselined for #4459, once the scan opens framed and sorted in one step:
+            // runs 38090189401, 38090195575 and 38090201359 gave the same picture (51 px of
+            // 2 488 320 apart at most). It was out until then: 54.7 % of pixels moved between
+            // runs when the sort order chased a camera glide.
+            "splatpreview_default",
             // Re-baselined after the Inspect and Media rewrite (the rocket replaces the helmet
             // and its cards), from the first-run capture of run 37677981378.
             "twodinthreed_default",
-            // lightinglab_default: rejected — the helmet is missing from the CI capture.
-            // splatpreview_default: rejected — its framing differs run to run (54.7 % of
-            // pixels in run 36416690269), so no single capture is a reference.
         )
 
         // How long we allow the demo screen to compose after `am start` — covers a cold

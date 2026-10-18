@@ -1,6 +1,6 @@
 <!--
   GENERATED FILE — DO NOT EDIT.
-  Source of truth: /llms.txt  (SceneView 4.53.0)
+  Source of truth: /llms.txt  (SceneView 4.57.0)
   Regenerate:      node tools/generate-gpt-knowledge.js
   Drift is caught in CI (ci.yml -> repo-hygiene). Edit llms.txt instead.
   See issue #2724.
@@ -9,7 +9,7 @@
 # SceneView — Best Practices & Troubleshooting
 
 > Threading, performance, error handling, debugging, recording, and media.
-> Auto-generated from `llms.txt` (SceneView 4.53.0). This is a slice of the machine-readable API reference — the same content an AI reads to generate SceneView code.
+> Auto-generated from `llms.txt` (SceneView 4.57.0). This is a slice of the machine-readable API reference — the same content an AI reads to generate SceneView code.
 
 ## Render Quality
 
@@ -93,6 +93,8 @@ The extension `View.applyRenderQuality(RenderQuality)` configures `shadowOptions
 
 `onSessionFailed: (Exception) -> Unit` lumps all 25 ARCore exception subclasses into a single `Exception`. Apps that want to retry vs fallback vs "install ARCore" vs "open Settings" need exhaustive `when` matching — string-matching on exception messages is fragile. Wire `onSessionFailure: (ARSessionFailure) -> Unit` instead (it fires alongside `onSessionFailed`, so legacy callers keep working).
 
+An exception thrown inside the frame loop of a **running** session does not reach these callbacks: it is only logged (`SceneView` tag, "ARCore session update failed") and the loop keeps running, so a session that recovers draws again. A throw from your own `onSessionUpdated` / `onTrackingFailureChanged` is logged under that callback's name ("onSessionUpdated threw"), not as an ARCore failure, and does not skip the other callback. The same tag carries one `AR tracking: state=… reason=…` line per tracking transition — a camera that sits in `PAUSED` with reason `NONE` included, the stall `onTrackingFailureChanged` never reports — and repeats it every ten seconds for as long as the camera is not tracking, with the time that state has lasted (`AR tracking: state=PAUSED reason=NONE for=20s`), so a bug report's logcat shows where tracking stood and whether it was ever reached.
+
 Use an **exhaustive `when` with NO `else` branch** — that is the whole point of the sealed hierarchy. The compiler then forces you to revisit this site the day SceneView adds a new subtype (#1759). An `else ->` fallback silently defeats that contract.
 
 ```kotlin
@@ -159,6 +161,29 @@ fun ArScreenWithFailureHandling() = ARSceneView(
         }
     }
 ) { /* … */ }
+```
+
+**A session that delivers camera frames but never tracks, with no reason** (`TrackingState.PAUSED`, `TrackingFailureReason.NONE`, for good) is usually a phone whose gyroscope has stopped delivering samples: ARCore reports nothing, and only restarting the phone brings the sensor back. `probeARMotionSensors(context)` listens to the gyroscope and the accelerometer for one second and returns the two event counts; `ARMotionSensorSample.health` is `DELIVERING`, `SILENT` (accelerometer delivers, gyroscope does not — tell the person to restart their phone) or `UNKNOWN` (no verdict — the sensor service refused a listener, or delivered nothing at all — say nothing, and measure again later if the session still has not tracked). SceneView draws nothing for it and no failure callback fires; call it some ten seconds into a session that has never tracked, in the foreground only, never while tracking works:
+
+```kotlin
+/** `neverTracked`: camera frames arriving, never TRACKING, no TrackingFailureReason. */
+@Composable
+fun rememberRestartPhoneAdvice(neverTracked: Boolean): Boolean {
+    val context = LocalContext.current
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    var restartPhone by remember { mutableStateOf(false) }
+    LaunchedEffect(neverTracked, lifecycle) {
+        if (!neverTracked) return@LaunchedEffect
+        // Foreground only: a paused session is not a stalled one. The wait starts over on return.
+        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            if (restartPhone) return@repeatOnLifecycle
+            delay(10_000)
+            val sample = probeARMotionSensors(context) ?: return@repeatOnLifecycle   // null: no gyroscope
+            restartPhone = sample.health == ARMotionSensorHealth.SILENT
+        }
+    }
+    return restartPhone
+}
 ```
 
 For apps that route many subtypes to the same action, extract a tiny helper that returns a coarse category and `when` on that — still exhaustive, no `else ->`:
@@ -235,9 +260,11 @@ Stream an ARCore or ARKit session to the [Rerun](https://rerun.io) viewer for sc
 ### Two modes
 
 - **Live (default)** — sidecar spawns the Rerun viewer, you debug interactively.
-- **Save & share** — sidecar writes a `.rrd` file. Drop it onto https://sceneview.github.io/rerun/ to view in-place, or re-host (R2, GitHub release, gist) and open `https://sceneview.github.io/rerun/?url=<encoded>` to share with remote teammates. Lets you attach a fully-replayable session to a bug report.
+- **Save & share** — sidecar writes a `.rrd` file. Drop it onto https://sceneview.github.io/rerun/ to view in-place, or host it at an https address that allows cross-origin requests (CORS) and open `https://sceneview.github.io/rerun/?url=<encoded>` to share with remote teammates — step 4 of *Save & share flow* below says which hosts do. Lets you attach a fully-replayable session to a bug report.
 
 The Android demo's Rerun Debug screen also draws the session **on the phone, with no computer**: a second `SceneView` on the same `Engine` (`SurfaceType.TextureSurface`, `isOpaque = true`, a custom `CameraGestureDetector.CameraManipulator`) shows the camera trail, the live frustum, the feature-point map, the planes and the anchors from a free orbit camera, with a timeline to scrub the session. It is demo code, not SDK API — `samples/android-demo/.../demos/ArDebugView.kt` is the pattern to copy for a second 3D view over an `ARSceneView`.
+
+Its export sheet also writes a recorded session to a `.rrd` with no sidecar and no Rerun SDK (`RerunRrdWriter`, pure Kotlin, Rerun 0.38.1 format). On Android the file opens on a default layout, written as a Rerun blueprint next to the recording: the room in 3D beside the camera's photos (2 : 1), the side panels collapsed, the time panel open. It is a *default* blueprint, so a layout the viewer's user saved for the app still wins, and "Reset to default blueprint" brings this one back. The iOS demo's writer does not write the layout yet.
 
 ### Architecture
 
@@ -259,7 +286,7 @@ Same wire format on Android and iOS. A single sidecar handles both platforms.
 1. Run sidecar in save mode: `python rerun-bridge.py --save`
 2. In the app, tap **Save & Share** while streaming. The bridge sends a `{"type":"control","cmd":"save_now"}` line; the sidecar flushes a `.rrd` and replies with `{"type":"control","ack":"saved","path":"…","viewerUrl":"…","events":N}`.
 3. Open https://sceneview.github.io/rerun/ — when no session is loaded the page shows a drop-zone (drag the `.rrd` onto it to render in-place) and a QR code that opens the AR Rerun demo on a phone for users who don't have one to start from.
-4. To share with a remote teammate, re-host the `.rrd` on a public URL (Cloudflare R2, GitHub release asset, S3, gist) and send them `https://sceneview.github.io/rerun/?url=<encoded-public-url>`.
+4. To share with a remote teammate, host the `.rrd` at a public https address and send them `https://sceneview.github.io/rerun/?url=<encoded-public-url>`. The page downloads the file from the visitor's browser, so the link has to end in `.rrd` and its host has to allow cross-origin requests (CORS). A file in a public GitHub repository does, through its `raw.githubusercontent.com` link, and so does GitHub Pages; a GitHub release asset does not: GitHub sends no CORS header for it (checked 2026-10-13). A Cloudflare R2 or S3 bucket does once it has a CORS rule that allows `https://sceneview.github.io`. When the page cannot read the file, it says so on screen, with the likely causes.
 
 The Kotlin API surface for step 2:
 
