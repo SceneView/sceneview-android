@@ -123,10 +123,14 @@ internal object DeepLinkRouter {
         // `post-processing` stay on the lab — which no longer has tabs, so they
         // carry no [ALIAS_INITIAL_TAB] entry. Every one of the four deep links
         // still resolves, each to the half that now hosts its subject.
+        // #4603 then folded the lab itself into `lighting` (its reflections and
+        // frame switches sit under every rig), so `lighting-lab` and the two ids
+        // it had kept resolve there too — on the default rig, no tab pre-selected.
         "dynamic-sky" to "lighting",
         "environment" to "lighting",
-        "reflection-probes" to "lighting-lab",
-        "post-processing" to "lighting-lab",
+        "lighting-lab" to "lighting",
+        "reflection-probes" to "lighting",
+        "post-processing" to "lighting",
         // #2239 Batch 3 — the retired `animation` and `physics` demos merged into
         // `animation-physics`. #4083 then split the Physics tab back out as its own
         // `rolling-balls` demo, so `animation-physics` has no tabs any more and
@@ -161,8 +165,9 @@ internal object DeepLinkRouter {
         // card with no modes of its own under the card literally named "Lighting
         // Lab". Since #3496 fog is a switch on the lab's one bench rather than a
         // mode, so the alias no longer pre-selects anything. `ARFogNode` keeps
-        // `FogNode` demonstrated in AR (`ar-fog`).
-        "fog" to "lighting-lab",
+        // `FogNode` demonstrated in AR (`ar-fog`). Since #4603 that switch lives
+        // in `lighting`, so the alias follows it.
+        "fog" to "lighting",
         // #2239 catalogue regroup — `gesture-feedback-preview` merged into
         // `camera-gestures` as its third mode. The Gestures mode flips `isEditable`
         // and draws no affordance; the preview drew the affordance with no controls.
@@ -297,6 +302,8 @@ internal object DeepLinkRouter {
         "ar-cloud-anchor" to mapOf("cloud-anchors" to 0, "collaborative" to 1),
         "ar-geospatial-anchors" to mapOf("anchors" to 0, "terrain" to 0, "streetscape" to 2),
         "ar-xr" to mapOf("hands" to 0, "face" to 1),
+        // finger-drawing — [3D, AR] (#4082).
+        "finger-drawing" to mapOf("3d" to 0, "ar" to 1),
     )
 
     /**
@@ -329,6 +336,7 @@ internal object DeepLinkRouter {
         "ar-rerun",
         "ar-cloud-anchor",
         "ar-xr",
+        "finger-drawing",
     )
 
     /**

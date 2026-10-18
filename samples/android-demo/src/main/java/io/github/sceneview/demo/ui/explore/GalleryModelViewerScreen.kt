@@ -329,7 +329,7 @@ private fun DownloadingContent(
         collector.join()
         result.fold(
             onSuccess = onReady,
-            onFailure = { onError(it.message ?: downloadFailedMsg) },
+            onFailure = { onError(downloadFailedMsg) },
         )
     }
 

@@ -313,48 +313,36 @@ object ScanArchive {
     }
 }
 
-/** The figures the Record screen shows while scanning, read off the trace. */
-data class ScanFigures(
-    val points: Int,
-    val surfaces: Int,
-    val photos: Int,
-    /** Surfels of the dense depth map (Rerun v2 tier `depth`); `0` for a sparse scan. */
-    val dense: Int = 0,
-) {
-    companion object {
-        val Empty = ScanFigures(0, 0, 0)
-    }
-}
 
 /** Copy of the Record mode, pure so a test holds it to what the brief promised. */
 object ScanCopy {
-    /** The promise under the Record button, and in the sheet. */
-    const val PRIVACY = "Everything stays on your phone."
+    /** The promise under the Start button, and in the sheet. */
+    const val PRIVACY = "Saved on your phone. Nothing leaves it unless you share it."
 
-    const val IDLE_TITLE = "Scan your room in 3D"
-    const val IDLE_DETAIL = "Tap record, then walk the phone slowly around the room. $PRIVACY"
-    const val WAITING = "Move the phone slowly to find the room. Recording starts once it is found."
+    const val IDLE_TITLE = "3D Scan"
+    const val IDLE_DETAIL = "Move the phone slowly around a space. $PRIVACY"
+    const val WAITING = "Move slowly to get started."
 
-    // The landing, worded as the iOS demo's (#4068), "phone" for "iPhone".
-    const val LANDING_TITLE = "Scan a room in 3D"
-    const val LANDING_BODY = "Walk around with your phone. SceneView keeps the camera's path, its photos, " +
-        "the surfaces and the points, then replays the room in 3D."
+    // The landing (#4627): one name for the feature, "3D Scan", on every surface.
+    const val LANDING_TITLE = "3D Scan"
+    const val LANDING_BODY = "Move around a space and watch it take shape."
 
     /** The landing's one primary action. */
-    const val RECORD = "Record your room"
-    const val WATCH_SAMPLE = "Watch a sample session"
-    const val OPEN_FILE = "Open file"
-    const val SESSIONS_TITLE = "Your sessions"
+    const val RECORD = "Start scanning"
+    const val WATCH_SAMPLE = "See an example"
+    const val OPEN_FILE = "Open scan"
+    const val SESSIONS_TITLE = "Your scans"
     const val ON_THIS_PHONE = "On this phone"
-    const val SESSIONS_EMPTY_TITLE = "No sessions yet"
-    const val SESSIONS_EMPTY = "Rooms you record are kept here, on this phone, until you delete them. " +
+    const val SESSIONS_EMPTY_TITLE = "No scans yet"
+    const val SESSIONS_EMPTY = "Scans you make are kept here, on this phone, until you delete them. " +
         "You can also open a .svscan scan file."
-    const val OPENING_FILE = "Opening file…"
+    const val OPENING_FILE = "Opening scan…"
     const val SHARE_SCAN = "Share scan file"
     const val DELETE = "Delete"
     const val DELETE_DETAIL = "It is removed from this phone. Files you already shared are not affected."
-    const val OPEN_FAILED = "This session could not be opened."
-    const val SAVE_FAILED = "Your scan could not be saved on this phone. It stays open until you leave."
+    const val OPEN_FAILED = "This scan could not be opened."
+    const val SAVE_FAILED = "Couldn't save your scan"
+    const val SAVE_FAILED_DETAIL = "Your scan is still here, not saved yet. Try again, or discard it."
 
     /** `Delete "Room · Sep 28, 2:32 PM"?` */
     fun deleteTitle(title: String): String = "Delete “$title”?"
@@ -383,19 +371,72 @@ object ScanCopy {
         if (seconds.isFinite() && seconds > 0f) parts += ArDebugFormat.clock(seconds)
         return parts.joinToString(" · ")
     }
-    const val STOP_HINT = "Tap to stop and open your scan in 3D"
-    const val FINISHING = "Building your scan…"
+
     const val LOADING = "Opening your scan…"
     const val REPLAY_TITLE = "Your scan"
-    const val SAMPLE_TITLE = "Recorded AR session"
+    const val SAMPLE_TITLE = "Example scan"
     const val FULL = "Photo limit reached — points and path keep recording."
+
+    // The capture lifecycle (#4627): Scanning ⇄ Paused, Finish opens a review that Keep scanning
+    // leaves for the same capture; only Save scan ends it.
+    const val SCANNING = "Scanning"
+    const val PAUSED = "Paused"
+    const val PAUSE = "Pause"
+    const val RESUME = "Resume"
+    const val FINISH = "Finish"
+    const val COACH_SCANNING = "Move slowly sideways"
+    const val COACH_PAUSED = "Nothing is captured while paused."
+    const val TRACKING_LOST = "Scan paused. Point at an area you already scanned."
+    const val REVIEW_TITLE = "Review your scan"
+    const val REVIEW_DETAIL = "Keep scanning to add more, or save it on this phone."
+    const val EMPTY_TITLE = "Nothing captured yet"
+    const val EMPTY_DETAIL = "Move the phone slowly around the space, then tap Finish again."
+    const val KEEP_SCANNING = "Keep scanning"
+    const val SAVE_SCAN = "Save scan"
+    const val SAVING = "Saving scan…"
+    const val TRY_AGAIN = "Try again"
+    const val DISCARD = "Discard"
+    const val CANCEL = "Cancel"
+    const val LEAVE_TITLE = "Leave this scan?"
+    const val LEAVE_DETAIL = "Save it on this phone, or discard what you captured."
+    const val LEAVE_EMPTY_DETAIL = "Nothing captured yet. Keep scanning, or discard it and leave."
+    const val DISCARD_TITLE = "Discard this scan?"
+    const val DISCARD_DETAIL = "It was never saved, so it can't be recovered."
+
+    /** The top line of the capture: `Scanning · 0:42`, `Paused · 0:42`. */
+    fun status(phase: ScanPhase, clock: String): String =
+        "${if (phase == ScanPhase.Scanning) SCANNING else PAUSED} · $clock"
+
+    /** The capture's one count, from zero and never against a cap: `124,300 points captured`. */
+    fun pointsCaptured(points: Int): String {
+        val n = points.coerceAtLeast(0)
+        return "${ArDebugFormat.count(n)} ${label(n, "point", "points")} captured"
+    }
+
+    /** What the review says about the capture so far: `124,300 points · 42 photos · 0:42`. */
+    fun reviewFigures(points: Int, photos: Int, clock: String): String {
+        val parts = mutableListOf("${ArDebugFormat.count(points.coerceAtLeast(0))} ${label(points, "point", "points")}")
+        if (photos > 0) parts += "${ArDebugFormat.count(photos)} ${label(photos, "photo", "photos")}"
+        parts += clock
+        return parts.joinToString(" · ")
+    }
+
+    /**
+     * The one coaching line under the capture, or `null` when a card speaks instead: tracking
+     * loss first, then the photo limit, then the plain advice.
+     */
+    fun coaching(phase: ScanPhase, trackingLost: Boolean, photoLimitReached: Boolean): String? = when (phase) {
+        ScanPhase.Scanning -> when {
+            trackingLost -> TRACKING_LOST
+            photoLimitReached -> FULL
+            else -> COACH_SCANNING
+        }
+        ScanPhase.Paused -> COACH_PAUSED
+        else -> null
+    }
 
     /** `1` → `1 photo`, `12` → `12 photos`: the figure's label follows its value. */
     fun label(count: Int, one: String, many: String): String = if (count == 1) one else many
-
-    /** The HUD's tier, beside "Scanning": what this phone's scan really is (Rerun v2). */
-    const val TIER_DEPTH = "Depth scan"
-    const val TIER_SPARSE = "Sparse scan"
 
     /**
      * A figure of the Record screen, in full up to `9,999` and compact past it (`12k`), so three

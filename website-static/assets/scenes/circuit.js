@@ -34,13 +34,25 @@
     redsOff: 0.9,                       // the gantry goes dark
     redsOn: 1.6, redsStep: 1.0,         // column i lights at redsOn + i * redsStep
     out: 7.0,                           // lights out
-    flash: [7.0, 7.45], flashLen: 0.38, // two high-beam pulses
+    // Two high-beam pulses, each a half sine: the second starts as the first ends, so the
+    // pair reads as one double flash, under three a second (#4587, as Android in #4583).
+    flash: [7.0, 7.45], flashLen: 0.45,
     brakeOn: 7.0, brakeOff: 9.6,        // brake lights held while the camera is behind
     redsBack: 15.0, redsBackStep: 0.3,  // the gantry relights for the drift, as on the poster
     beaconPeriod: 1.2, beaconOn: 0.12,
-    flicker: [[0.2, 1.8], [9.0, 9.5]]   // the pit neon struggles, twice
+    // The pit neon struggles twice: ten 120 ms slots, never below flickerFloor. It was
+    // 28 slots a second down to 0.15, a strobe.
+    flicker: [[0.2, 1.4], [9.0, 10.2]], flickerSlots: 10, flickerFloor: 0.6
   };
-  var HEADLIGHT = 1e7, HEADLIGHT_FLASH = 2.4e7, HEADLIGHT_EMIT = 10;   // the car's own lamp material
+  var HEADLIGHT = 1e7, HEADLIGHT_EMIT = 10;                              // the car's own lamp material
+  // At a high-beam peak, times the steady level: the spots, the lamp glass, the cones in the
+  // haze. They were 2.4, 3.2 and 3.5: with bloom, the cones lit the whole haze white.
+  var FLASH_LIGHT = 1.6, FLASH_LAMP = 1.8, FLASH_BEAM = 1.8;
+  // Head-on glare: what is left of the spots, the glass and the cones with the camera square
+  // in front of the nose. Seen end-on, the stacked cones washed the lower half of the frame
+  // white as the film came round the nose. The dimming starts past the poster's angle
+  // (cos 0.81), so the still and the first frame of the film stay the same picture.
+  var HEAD_ON_LIGHTS = 0.6, HEAD_ON_LAMPS = 0.55, HEAD_ON_BEAMS = 0.3, HEAD_ON_FROM = 0.8, HEAD_ON_SPAN = 0.18;
   var BEAM = [0.72, 0.85, 1], BEAM_ALPHA = 0.045;                        // the cones in the haze (GLB material 'Beam')
   var BRAKE = 6e5, BRAKE_ON = 2.6e6, BRAKE_EMIT = 2;
   var START_LIGHT = 1.3e7, RED = 22, BEACON = 12, NEON = 4;
@@ -140,13 +152,9 @@
         put('red' + i, Math.round(s * RED * 100) / 100, function (v) { sv.setMaterial('Light startRed' + i, { emissiveStrength: v }); });
       }
       put('startLight', Math.round(lit / 5 * 100) / 100, function (v) { sv.setLight(startLight, { intensity: START_LIGHT * v }); });
-      // Lights out: two high-beam pulses, the beams in the haze with them.
-      var f = Math.max(bump(t, FX.flash[0], FX.flashLen), bump(t, FX.flash[1], FX.flashLen));
-      put('flash', Math.round(f * 100) / 100, function (v) {
-        for (var j = 0; j < 2; j++) sv.setLight(headlights[j], { intensity: HEADLIGHT + (HEADLIGHT_FLASH - HEADLIGHT) * v });
-        sv.setMaterial('Headlight', { emissiveStrength: HEADLIGHT_EMIT * (1 + 2.2 * v) });
-        sv.setMaterial('Beam', { baseColor: [BEAM[0], BEAM[1], BEAM[2], BEAM_ALPHA * (1 + 2.5 * v)] });
-      });
+      // Lights out: two high-beam pulses, the beams in the haze with them. place() applies
+      // them, with the head-on dimming of the pose it sets.
+      pulse = Math.max(bump(t, FX.flash[0], FX.flashLen), bump(t, FX.flash[1], FX.flashLen));
       // Brakes: held while the camera passes over the tail.
       var b = ramp(t, FX.brakeOn, 0.35) * (1 - ramp(t, FX.brakeOff, 0.6));
       put('brake', Math.round(b * 100) / 100, function (v) {
@@ -160,10 +168,30 @@
       var n = 1;
       for (var k = 0; k < FX.flicker.length; k++) {
         var w = FX.flicker[k];
-        if (t >= w[0] && t < w[1]) n = hash(Math.floor(t * 28)) > 0.45 ? 1 : 0.15 + 0.3 * hash(Math.floor(t * 28) + 7);
+        if (t >= w[0] && t < w[1]) n = FX.flickerFloor + (1 - FX.flickerFloor) * struggle((t - w[0]) / (w[1] - w[0]), k);
       }
       put('neon', Math.round(n * 100) / 100, function (v) { sv.setMaterial('Light ledWarm', { emissiveStrength: NEON * v }); });
       redsCount = lit;
+    }
+    // A tube catching, u 0 → 1 across the window: lit more and more often, steady on the
+    // last slot so the window ends without a jump (Android's LightCues.ignition).
+    function struggle(u, k) {
+      var slot = Math.floor(u * FX.flickerSlots);
+      if (slot >= FX.flickerSlots - 1) return 1;
+      var lit = hash(k * 97 + slot) < u * u * 1.2, grain = hash(k * 97 + slot + 7919);
+      return lit ? 0.8 + 0.2 * grain : 0.06 * grain;
+    }
+    // The headlights: the flash pulse from fx(), dimmed as the camera comes round the nose.
+    var pulse = 0;
+    function headlightsFx(angle) {
+      var g = Math.round(ramp(Math.cos(angle), HEAD_ON_FROM, HEAD_ON_SPAN) * 100) / 100;
+      var p = Math.round(pulse * 100) / 100;
+      put('headlights', p + '/' + g, function () {
+        function dim(left) { return 1 - (1 - left) * g; }
+        for (var j = 0; j < 2; j++) sv.setLight(headlights[j], { intensity: HEADLIGHT * (1 + (FLASH_LIGHT - 1) * p) * dim(HEAD_ON_LIGHTS) });
+        sv.setMaterial('Headlight', { emissiveStrength: HEADLIGHT_EMIT * (1 + (FLASH_LAMP - 1) * p) * dim(HEAD_ON_LAMPS) });
+        sv.setMaterial('Beam', { baseColor: [BEAM[0], BEAM[1], BEAM[2], BEAM_ALPHA * (1 + (FLASH_BEAM - 1) * p) * dim(HEAD_ON_BEAMS)] });
+      });
     }
     // Rain: the GLB's one animation, a seamless loop. It runs with the film; a still has it frozen.
     function rain(on) { if (on) sv.playAnimation(0, true); else sv.stopAnimation(); }
@@ -181,10 +209,12 @@
         angle: angle, height: height, radius: radius * zoom, fov: fov,
         target: [CAR[0] - Math.cos(angle) * s, CAR[1] + (lift || 0), CAR[2] + Math.sin(angle) * s]
       });
+      headlightsFx(angle);
     }
     function retarget() {               // after the visitor turned the camera
       var o = sv.getCameraOrbit(), s = shift * (o.radius / (POSE.radius * zoom));
       sv.setCameraOrbit({ target: [CAR[0] - Math.cos(o.angle) * s, o.target[1], CAR[2] + Math.sin(o.angle) * s] });
+      headlightsFx(o.angle);
     }
     function setFrame(m, k) {
       k = k || 1;
@@ -250,7 +280,7 @@
     function pause() { playing = false; if (raf) cancelAnimationFrame(raf); raf = 0; rain(false); }
     // A still: the pose the film ends on (reduced motion, or the poster capture).
     function hold(t) {
-      pause(); userOwns = false; END = SHOTS[SHOTS.length - 1]; clock = t == null ? END.t : t;
+      pause(); userOwns = false; END = SHOTS[SHOTS.length - 1]; driftAngle = END.angle; clock = t == null ? END.t : t;
       fx(clock);
       place(sample('angle', clock), sample('height', clock), sample('radius', clock), sample('fov', clock), sample('lift', clock));
     }

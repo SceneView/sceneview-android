@@ -201,35 +201,11 @@ class DemoRenderingScreenshotTest {
             pixelDiffTolerancePercent = 8.0f, maxChannelDiff = 16)
     }
 
-    @Test
-    fun fogDemo_default_state() {
-        captureAndCompare(demoSlug = "fog", goldenName = "fog_default", settleSeconds = 14,
-            pixelDiffTolerancePercent = 8.0f, maxChannelDiff = 16)
-    }
-
-    @Test
-    fun lightingLabDemo_default_state() {
-        // #2239 Batch 2 folded `dynamic-sky`, `environment`, `reflection-probes` and
-        // `post-processing` into `lighting-lab`; #3539 then rebuilt the screen and the
-        // tabs are gone. There is one frame now — the shared `LightingStage` (helmet on
-        // a lit floor between a chrome and a matte probe ball) under a studio IBL and a
-        // single shadow-casting key — with every knob live in the sheet. `DynamicSkyNode`
-        // moved to the `lighting` showcase's Sun rig, so there is no procedural sky on
-        // this screen any more.
-        //
-        // The tolerance is inherited from the scene that DID have a procedural sky and
-        // has not been re-measured against the rebuilt frame, because this case has never
-        // completed a CI run (#3554). The IBL prefilter still has cold/warm cache variance
-        // and the chrome probe magnifies it, so 15 % is kept as the conservative value
-        // until a green run gives a real number to tighten it to.
-        //
-        // #3554: this case killed the emulator process at capture. The screen was the only
-        // demo building two 2 048² HDR environments at once, and it built the probe's one
-        // eagerly although the probe starts off — see `LightingLabDemo.probeEnvironment`.
-        // That allocation is now deferred, which is the fix under test here.
-        captureAndCompare(demoSlug = "lighting-lab", goldenName = "lightinglab_default", settleSeconds = 14,
-            pixelDiffTolerancePercent = 15.0f, maxChannelDiff = 24)
-    }
+    // #4603 folded `lighting-lab` into `lighting`, and the `fog` and `lighting-lab` slugs
+    // now open the Lighting screen, which `lightingDemo_default_state` above covers. Their
+    // cases (`fog_default`, `lightinglab_default`) went with the screen they pictured. The
+    // lab's #3554 guard — the reflection probe's HDR built only once the probe is on —
+    // moved with the probe into `LightingDemo`.
 
     @Test
     fun materialsDemo_default_state() {
@@ -264,10 +240,9 @@ class DemoRenderingScreenshotTest {
     // no sub-modes: object gestures are the dock's Move toggle inside the same scene.
 
     // #2239 Batch 2 — `dynamic-sky`, `environment`, `reflection-probes`, and
-    // `post-processing` consolidated into `lighting-lab` (covered by
-    // `lightingLabDemo_default_state` above). The Environment / Reflections / Post-FX
-    // sub-modes are reachable via segmented-button taps; dedicated sub-mode captures
-    // would need a tab-aware deep-link parameter (follow-up).
+    // `post-processing` consolidated into `lighting-lab`, itself folded into `lighting` by
+    // #4603 (covered by `lightingDemo_default_state` above). Their options are switches in
+    // the Lighting sheet, driven by `DemoInteractionTest.lighting_reflectionsAndFrame`.
 
     // #2239 Batch 4 — `texture-streaming` and `occlusion-material` consolidated into
     // `materials` (covered by `materialsDemo_default_state` above). The Inspect /
@@ -770,10 +745,8 @@ class DemoRenderingScreenshotTest {
             // Re-baselined after the #3423 rebuild (runtime-generated torus knot).
             "customgeometry_default",
             "debugoverlay_default",
-            "fog_default",
             "geometry_default",
             "lighting_default",
-            "lightinglab_default",
             // Re-baselined after the #3425 rebuild (tube-extruded splines with sphere
             // control points, replacing the 1-px `LINES` scene the old golden pictured).
             "linespaths_default",
@@ -866,14 +839,11 @@ class DemoRenderingScreenshotTest {
             "cameragestures_default",
             "customgeometry_default",
             "debugoverlay_default",
-            "fog_default",
+            // `fog_default` left with the `fog` case (#4603: the slug opens `lighting`).
             // Re-baselined after the #4335 rebuild (seven primitives on the stage), from the
             // first-run capture of run 37154919481.
             "geometry_default",
             "lighting_default",
-            // First baselined for #4448, from the first-run capture of run 38073545804: the
-            // helmet is in it, and run 38065275881 gave the same picture.
-            "lightinglab_default",
             "linespaths_default",
             "materials_default",
             "modelviewer_default",

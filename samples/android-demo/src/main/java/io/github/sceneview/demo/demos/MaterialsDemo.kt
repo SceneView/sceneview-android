@@ -1346,8 +1346,8 @@ private fun OcclusionSection(
         controls = {
             ModeSelector(mode, onModeChange)
             // Toggleable on the whole row so tapping the label flips the state and
-            // UiAutomator finds a clickable ancestor — the contract the Post-FX switches in
-            // LightingLabDemo and the Lines & Paths switches share.
+            // UiAutomator finds a clickable ancestor — the contract the frame switches in
+            // LightingDemo and the Lines & Paths switches share.
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
