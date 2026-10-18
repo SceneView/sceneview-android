@@ -828,11 +828,14 @@ private fun RerunLiveScreen(
             player.trace, source.manifest, emptyMap(), source.thumbnails, ByteArray(0), growing = true,
         )
         var last = 0L
+        var played = 0f
         while (true) {
             withFrameNanos { now ->
                 val dt = if (last == 0L) 0f else (now - last) / 1e9f
                 last = now
-                if (phase.integrates && !qaTrackingLost) player.advance(dt)
+                // The tracking-loss state scans a few seconds first, so it loses a real capture.
+                val tracking = !qaTrackingLost || played < QA_TRACKING_LOST_AFTER_S
+                if (phase.integrates && tracking) played += dt.also { player.advance(it) }
             }
         }
     }
@@ -1027,8 +1030,10 @@ private fun RerunLiveScreen(
                         value = SystemClock.elapsedRealtimeNanos()
                     }
                 }
+                // Tracking loss freezes the capture, so the HUD says so: the coaching line
+                // reads "Scan paused", and a red "Scanning" dot above it would contradict it.
                 ScanHud(
-                    phase = phase,
+                    phase = if (trackingLost && phase.integrates) ScanPhase.Paused else phase,
                     seconds = scan?.elapsedSeconds(now) ?: stats.duration,
                     points = capturedPoints,
                 )
@@ -1526,6 +1531,9 @@ private val RECORD_QA_STATES =
 
 /** The QA scan plays the sample once and holds on its end, as a scan in progress would. */
 private const val QA_RECORD_NEVER_LOOP_S = 3_600f
+
+/** Seconds the tracking-loss QA scan captures before it loses tracking. */
+private const val QA_TRACKING_LOST_AFTER_S = 3f
 
 /** How often the live screen checks whether ARCore has found the room, to start recording. */
 private const val AUTO_START_POLL_MS = 100L
