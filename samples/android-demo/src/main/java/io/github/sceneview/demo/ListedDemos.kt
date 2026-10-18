@@ -35,6 +35,8 @@ fun isXrDevice(context: Context): Boolean =
  * would otherwise wait for a real-phone review before reaching anyone.
  */
 internal val LABS_DEMO_IDS: Set<String> = setOf(
+    // Finger Drawing (#4082): the 3D half is proven, the AR half waits for Labs testers.
+    "finger-drawing",
     // Pool in the garden (#4571): Night and the dug-in look still need a real lawn.
     "ar-pool",
 )
