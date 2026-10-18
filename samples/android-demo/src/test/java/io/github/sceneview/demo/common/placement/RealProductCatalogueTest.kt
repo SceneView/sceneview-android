@@ -16,7 +16,7 @@ import java.io.File
 class RealProductCatalogueTest {
 
     private val sampleAssets = listOf(
-        "khronos_toy_car", "threejs_soldier", "khronos_glam_velvet_sofa", "khronos_sheen_chair",
+        "khronos_toy_car", "quaternius_ranger", "khronos_glam_velvet_sofa", "khronos_sheen_chair",
         "khronos_lantern", "khronos_iridescent_dish",
     )
 

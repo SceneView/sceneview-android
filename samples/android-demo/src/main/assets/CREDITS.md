@@ -48,9 +48,9 @@ Assets bundled: **53**.
 - `models/khronos_toy_car.glb` — **[Toy Car](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/ToyCar)** by Guido Odendahl (model); Eric Chadwick (extensions and scene composition) — [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/) (2.2 MB)
 - `models/night_circuit.glb` — **[Night circuit (Khronos Car Concept on a SceneView set)](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/CarConcept)** by Darmstadt Graphics Group GmbH (Eric Chadwick); set by SceneView — [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/) (4.2 MB)  
   The Car Concept on the night circuit built by `tools/scenes/circuit/build.sh`, the android-demo home hero (#3948)
+- `models/quaternius_ranger.glb` — **[Ranger](https://quaternius.com/packs/modularcharacteroutfitsfantasy.html)** by Quaternius — [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/) (5.7 MB)
 - `models/shiba.glb` — **[Shiba](https://sketchfab.com/3d-models/shiba-faef9fe5ace445e7b2989d1c1ece361c)** by zixisun51 — [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/) (669 KB)
 - `models/tesla_model_3.glb` — **[Tesla Model 3](https://sketchfab.com/3d-models/tesla-model-3-123c10f376ec4f18b93c73afc382808b)** by David_Holiday — [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/) (549 KB)
-- `models/threejs_soldier.glb` — **[Soldier](https://github.com/mrdoob/three.js/blob/dev/examples/models/gltf/Soldier.glb)** by Tomás Laulhé (modified by Don McCurdy) — [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/) (2.3 MB)
 - `models/ue_boom_speaker.glb` — **[Ultimate Ears BOOM speaker](https://app.gazebosim.org/GoogleResearch/fuel/models/Logitech_Ultimate_Ears_Boom_Wireless_Speaker_Night_Black)** by Google LLC — [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/) (367 KB)
 - `splats/rainbow_sphere.ply` — **[rainbow_sphere.ply](https://github.com/sceneview/sceneview/blob/main/LICENSE)** by SceneView project — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) (448 KB)  
   Generated procedurally by `tools/generate-splat-sphere.py`

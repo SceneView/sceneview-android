@@ -77,6 +77,7 @@ import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.rememberARCameraStream
 import io.github.sceneview.ar.rerun.RerunBridge
 import io.github.sceneview.ar.rerun.rememberRerunBridge
+import io.github.sceneview.demo.BuildConfig
 import io.github.sceneview.demo.DemoBottomOverlayScope
 import io.github.sceneview.demo.DemoScaffold
 import io.github.sceneview.demo.DemoSettings
@@ -711,8 +712,7 @@ private fun RerunReplayScreen(
 }
 
 /**
- * The settings sheet: what the demo is, then — advanced — how to stream a live session to a
- * computer.
+ * The settings sheet explains the demo. Debug builds also show the computer-streaming setup.
  */
 @Composable
 private fun RerunSheet() {
@@ -721,11 +721,13 @@ private fun RerunSheet() {
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
-    RerunSetupSection()
-    // Developer-only debug toggle — visible when QA mode is on. Lets QA force-emit each
-    // TrackingFailureReason so the actionable-message overlay can be validated without staging a
-    // real failure. See io.github.sceneview.demo.common.ForcedTrackingFailure / #1881.
-    ForceTrackingFailureMenu()
+    if (BuildConfig.DEBUG) {
+        RerunSetupSection()
+        // Developer-only debug toggle — visible when QA mode is on. Lets QA force-emit each
+        // TrackingFailureReason so the actionable-message overlay can be validated without staging a
+        // real failure. See io.github.sceneview.demo.common.ForcedTrackingFailure / #1881.
+        ForceTrackingFailureMenu()
+    }
 }
 
 /**
@@ -1251,7 +1253,7 @@ private fun DemoBottomOverlayScope.RerunCameraBottomOverlay(
     // Primary action on-screen (#1964), offered only when it can work (#2658,
     // #3831): with no computer attached a save can only fail, and the status card
     // already says so without an error-toned banner.
-    if (rerunShowsSaveAction(isConnected = isConnected, sharing = sharing)) {
+    if (BuildConfig.DEBUG && rerunShowsSaveAction(isConnected = isConnected, sharing = sharing)) {
         val saveUx = rerunSaveActionUx(sharing = sharing, isConnected = isConnected)
         SceneActionBar(
             SceneAction(
