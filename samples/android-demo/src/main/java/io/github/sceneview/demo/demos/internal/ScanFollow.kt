@@ -1,0 +1,97 @@
+package io.github.sceneview.demo.demos.internal
+
+import io.github.sceneview.math.Position
+import kotlin.math.atan2
+import kotlin.math.sqrt
+
+/**
+ * The live view of 3D Scan follows the phone like a navigation app (#4628): heading-up, so the
+ * way the phone faces is always the top of the screen, from a little behind and above it, the
+ * phone itself on a fixed point in the lower part of the view. A drag or a pinch leaves it
+ * ([ArDebugOrbitCamera]'s free mode) and Recenter brings it back.
+ *
+ * Only the view follows: this corrects nothing of ARCore's pose, drift included. It is the same
+ * world, seen from where the phone is.
+ */
+class ScanFollow {
+
+    /** The last heading read off the phone, kept while it looks straight up or down. */
+    var headingDegrees: Float? = null
+        private set
+
+    /**
+     * The follow pose for the phone at [camera] (ARCore's display-oriented pose), or `null`
+     * before the first pose with a heading. Each call updates [headingDegrees] from it.
+     */
+    fun poseFor(camera: DebugPose?): OrbitPose? {
+        camera ?: return null
+        val heading = headingOf(camera, headingDegrees) ?: return null
+        headingDegrees = heading
+        return poseAt(camera, heading)
+    }
+
+    companion object {
+        /**
+         * How far the view stands from the phone, in metres. Close enough that what the phone
+         * just took in fills the screen, far enough that a room's width still reads around it.
+         */
+        const val DISTANCE_M = 2.6f
+
+        /** How steeply the view looks down on the phone: a map with depth, not a floor plan. */
+        const val ELEVATION_DEGREES = 38f
+
+        /**
+         * Where the phone sits on screen, as [ArDebugOrbitCamera.lift]: a fifth of the height
+         * below the centre, so most of the view is the area ahead, as in a navigation app.
+         */
+        const val LIFT = -0.2f
+
+        /**
+         * The follow ease, per second: a time constant of about 120 ms, which takes the tremor
+         * of a hand out of the picture without lagging behind a turn.
+         */
+        const val APPROACH_RATE = 8f
+
+        /**
+         * The least horizontal share of the phone's forward axis that still gives a heading:
+         * under it (pointing within ~80° of straight up or down) the last heading holds, since
+         * the yaw of a phone looking at the floor is noise.
+         */
+        const val MIN_HORIZONTAL = 0.17f
+
+        /**
+         * The heading of [camera], in the [OrbitPose.azimuthDegrees] convention: the azimuth at
+         * which an [OrbitPose] looks the way the phone does. The phone looks down its local −Z;
+         * an orbit camera at azimuth `a` looks along `(−sin a, ·, −cos a)`. [previous] comes
+         * back when the phone points too close to vertical to have one.
+         */
+        fun headingOf(camera: DebugPose, previous: Float? = null): Float? {
+            val (forwardX, _, forwardZ) = forwardOf(camera)
+            val horizontal = sqrt(forwardX * forwardX + forwardZ * forwardZ)
+            if (!horizontal.isFinite() || horizontal < MIN_HORIZONTAL) return previous
+            return Math.toDegrees(atan2(-forwardX, -forwardZ).toDouble()).toFloat()
+        }
+
+        /** The follow pose for the phone at [camera], heading [headingDegrees]. */
+        fun poseAt(camera: DebugPose, headingDegrees: Float): OrbitPose = OrbitPose(
+            target = Position(camera.x, camera.y, camera.z),
+            azimuthDegrees = headingDegrees,
+            elevationDegrees = ELEVATION_DEGREES,
+            distance = DISTANCE_M,
+        )
+
+        /** The phone's forward axis in the world: its local −Z, rotated by its quaternion. */
+        fun forwardOf(camera: DebugPose): Triple<Float, Float, Float> {
+            val x = camera.qx
+            val y = camera.qy
+            val z = camera.qz
+            val w = camera.qw
+            // Minus the rotation matrix's third column.
+            return Triple(
+                -2f * (x * z + w * y),
+                -2f * (y * z - w * x),
+                -(1f - 2f * (x * x + y * y)),
+            )
+        }
+    }
+}

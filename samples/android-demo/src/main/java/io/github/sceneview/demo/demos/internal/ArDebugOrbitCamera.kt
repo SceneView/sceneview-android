@@ -42,7 +42,15 @@ class ArDebugOrbitCamera(
      * middle: lifting the picture there keeps the room out from under the filmstrip.
      */
     val lift: Float = 0f,
+    /** How fast following eases onto [home], per second ([ArDebugFraming.APPROACH_RATE]). */
+    val approachRate: Float = ArDebugFraming.APPROACH_RATE,
 ) : CameraGestureDetector.CameraManipulator {
+
+    /**
+     * Told when [following] changes: a touch takes the camera over, a recenter hands it back.
+     * The 3D Scan live view shows its Recenter pill off it (#4628).
+     */
+    var onFollowingChange: ((Boolean) -> Unit)? = null
 
     /** Current pose. Plain field, not Compose state: it changes every frame. */
     var pose: OrbitPose = initialPose
@@ -53,7 +61,11 @@ class ArDebugOrbitCamera(
 
     /** `true` while the camera frames the session by itself. */
     var following: Boolean = true
-        private set
+        private set(value) {
+            if (field == value) return
+            field = value
+            onFollowingChange?.invoke(value)
+        }
 
     /** Viewport height in pixels, for pan speed and for the view's screen-constant sizes. */
     var viewportHeight: Int = 1
@@ -242,7 +254,7 @@ class ArDebugOrbitCamera(
                 val ramp = (followSeconds / 2f).coerceAtMost(1f)
                 home = home.copy(azimuthDegrees = home.azimuthDegrees + DRIFT_DEGREES_PER_SECOND * ramp * dt)
             }
-            pose = ArDebugFraming.approach(pose, home, dt)
+            pose = ArDebugFraming.approach(pose, home, dt, approachRate)
             return
         }
 
@@ -506,8 +518,13 @@ object ArDebugFraming {
      * One frame of the ease from [pose] to [home]: an exponential approach, which is frame-rate
      * independent and retargets smoothly — home moves every time the trail grows.
      */
-    fun approach(pose: OrbitPose, home: OrbitPose, deltaSeconds: Float): OrbitPose {
-        val fraction = 1f - exp(-APPROACH_RATE * deltaSeconds)
+    fun approach(
+        pose: OrbitPose,
+        home: OrbitPose,
+        deltaSeconds: Float,
+        rate: Float = APPROACH_RATE,
+    ): OrbitPose {
+        val fraction = 1f - exp(-rate * deltaSeconds)
         val next = CameraRig.lerp(pose, home, fraction)
         // Snap when close, so an idle view reaches a fixed point (render-on-demand can rest).
         val angleSettled = abs(CameraRig.shortestDelta(next.azimuthDegrees, home.azimuthDegrees)) < 0.01f &&

@@ -89,6 +89,7 @@ import io.github.sceneview.demo.demos.internal.DebugMesh
 import io.github.sceneview.demo.demos.internal.DebugPlaneKind
 import io.github.sceneview.demo.demos.internal.DebugPose
 import io.github.sceneview.demo.demos.internal.IntervalGate
+import io.github.sceneview.demo.demos.internal.OrbitPose
 import io.github.sceneview.demo.demos.internal.CameraRig
 import io.github.sceneview.demo.demos.internal.PlaneLayering
 import io.github.sceneview.demo.demos.internal.RoomMeasure
@@ -590,6 +591,11 @@ private fun stageBoundsOf(frame: ArDebugFrame): FloatArray {
  *
  * [onShown] fires once, when the session's content has been on screen for a few rendered frames
  * — textures uploaded, nothing half-drawn — so a caller can hold its cover and chrome until then.
+ *
+ * [transparent] draws no ground: the layers over whatever is under the view (3D Scan's live view
+ * draws them over the dimmed camera, #4628). [visible] picks the layers drawn, the session's own
+ * choice by default. [follow], when set, is where following mode heads for each frame instead of
+ * framing the content's bounds — `null` keeps the last home.
  */
 @Composable
 internal fun ArDebugSceneView(
@@ -602,6 +608,9 @@ internal fun ArDebugSceneView(
     compact: Boolean = false,
     replay: RerunReplayMedia? = null,
     onShown: (() -> Unit)? = null,
+    transparent: Boolean = false,
+    visible: (DebugGroup) -> Boolean = session::isVisible,
+    follow: ((ArDebugFrame) -> OrbitPose?)? = null,
 ) {
     val context = LocalContext.current
     val shown by rememberUpdatedState(onShown)
@@ -623,7 +632,7 @@ internal fun ArDebugSceneView(
         ColorGrading.Builder().toneMapper(ToneMapper.Linear()).build(engine)
     }
     DisposableEffect(colorGrading) { onDispose { engine.destroyColorGrading(colorGrading) } }
-    val environment = rememberEnvironment(engine, key = chrome.ground) {
+    val environment = rememberEnvironment(engine, key = chrome.ground to transparent) {
         val stage = colorOf(chrome.ground).toLinearSpace()
         val bundle = KTX1Loader.createIndirectLight(
             engine,
@@ -633,7 +642,9 @@ internal fun ArDebugSceneView(
             engine = engine,
             // The placed models are lit; the debug layers are unlit and ignore it.
             indirectLight = bundle.indirectLight?.also { it.intensity = DEFAULT_IBL_INTENSITY },
-            skybox = Skybox.Builder().color(stage.x, stage.y, stage.z, 1f).build(engine),
+            skybox = Skybox.Builder()
+                .color(stage.x, stage.y, stage.z, if (transparent) 0f else 1f)
+                .build(engine),
             // The bundle's cubemap leaves with the environment, after the light (#4358).
             textures = listOfNotNull(bundle.cubemap),
         )
@@ -658,7 +669,7 @@ internal fun ArDebugSceneView(
 
     // The stage colour behind the view: a TextureView stays transparent until its first frame,
     // which would show the AR camera through the "3D view" for as long as the engine takes.
-    Box(modifier.background(chrome.ground)) {
+    Box(if (transparent) modifier else modifier.background(chrome.ground)) {
         SceneView(
             modifier = Modifier.matchParentSize(),
             // A TextureView composes with the chrome and the AR SurfaceView under it.
@@ -668,7 +679,7 @@ internal fun ArDebugSceneView(
             materialLoader = materialLoader,
             view = view,
             renderer = renderer,
-            isOpaque = true,
+            isOpaque = !transparent,
             frameRatePolicy = FrameRatePolicy.Continuous(maxFps = if (compact) PIP_FPS else null),
             autoCenterContent = false,
             environment = environment,
@@ -678,6 +689,8 @@ internal fun ArDebugSceneView(
                 if (!clock.configured) {
                     clock.configured = true
                     view.configureForDebug(colorGrading)
+                    // Bloom spreads past the layers' alpha: over the camera it would haze it.
+                    if (transparent) view.bloomOptions = view.bloomOptions.apply { enabled = false }
                 }
                 session.tick(dt)
 
@@ -717,8 +730,16 @@ internal fun ArDebugSceneView(
                     elevationDegrees = orbit.homeElevation,
                     margin = if (replay != null) ArDebugFraming.REPLAY_MARGIN else ArDebugFraming.HOME_MARGIN,
                 )
-                if (orbit.following) orbit.home = home
-                if (!orbit.hasFramedContent && bounds != null) {
+                val followed = follow?.invoke(frame)
+                if (orbit.following) {
+                    if (follow == null) orbit.home = home else if (followed != null) orbit.home = followed
+                }
+                if (follow != null) {
+                    if (!orbit.hasFramedContent && followed != null) {
+                        orbit.hasFramedContent = true
+                        orbit.snapTo(followed)
+                    }
+                } else if (!orbit.hasFramedContent && bounds != null) {
                     orbit.hasFramedContent = true
                     val intro = replay != null && !replay.growing && orbit.drift
                     if (intro) orbit.playIntro(ReplayIntro.startFor(home), held = true) else orbit.snapTo(home)
@@ -729,14 +750,14 @@ internal fun ArDebugSceneView(
                 // The picture-in-picture packs the room into a few hundred pixels: full-size points
                 // would read as noise there, so they shrink while lines keep their weight.
                 val pointStyle = if (compact) ArDebugStyle(style.metresPerPixel * PIP_POINT_SCALE) else style
-                layers.sync(frame, style, pointStyle, stageBoundsOf(whole), floorY, session::isVisible, replayLayers)
+                layers.sync(frame, style, pointStyle, stageBoundsOf(whole), floorY, visible, replayLayers)
                 replayLayers?.sync(
                     frame, pointStyle, floorY,
                     ReplayVisibility(
-                        planes = session.isVisible(DebugGroup.Planes),
-                        points = session.isVisible(DebugGroup.Points),
-                        anchors = session.isVisible(DebugGroup.Anchors),
-                        trail = session.isVisible(DebugGroup.Trail),
+                        planes = visible(DebugGroup.Planes),
+                        points = visible(DebugGroup.Points),
+                        anchors = visible(DebugGroup.Anchors),
+                        trail = visible(DebugGroup.Trail),
                         measure = !compact,
                     ),
                     eye = CameraRig.eye(orbit.pose).let { Vec3(it.x, it.y, it.z) },
@@ -771,7 +792,7 @@ internal fun ArDebugSceneView(
             // the first set for good, drawing freed textures: "Invalid texture still bound".
             key(layers) { Node(apply = { layers.nodes.values.forEach { addChildNode(it) } }) }
             key(replayLayers) { Node(apply = { replayLayers?.nodes?.forEach { addChildNode(it) } }) }
-            if (session.isVisible(DebugGroup.Anchors)) {
+            if (visible(DebugGroup.Anchors)) {
                 anchors.forEach { anchor ->
                     // One instance per anchor: a Filament model instance can only hang off one node.
                     key(anchor.id) {

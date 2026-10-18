@@ -578,6 +578,14 @@ object SceneViewTokens {
         val onScrim = Color(0xFFFFFFFF)
 
         /**
+         * `ar-camera-dim` — the veil over the live camera under 3D Scan's coloured cloud
+         * (#4628): dark enough that the cloud's own colours lead, light enough that what is
+         * not scanned yet still reads on the camera behind and guides the next move. Black
+         * at 55 % in both themes: the ground is the camera, not a `surface`.
+         */
+        val cameraDim = Color(0x8C000000)
+
+        /**
          * `on-ar-scrim-dim` — secondary text on an AR overlay (labels, captions, the
          * body of an explanation card). White at 72 % in both themes, like [onScrim],
          * because the ground is a camera frame and not a `surface`.
