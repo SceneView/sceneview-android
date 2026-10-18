@@ -73,8 +73,12 @@ object RerunMarchingCubes {
     /** Pieces smaller than this are sensor noise, floaters, not the room. */
     const val MIN_COMPONENT_TRIANGLES = 500
 
-    /** 1.5 M triangles: ~54 MB of vertices and indices, the most a phone renders at ease. */
-    const val MAX_TRIANGLES = 1_500_000
+    /**
+     * 1 M triangles: ~26 MB of vertices and indices, held three times while the result opens (the
+     * mesh, its `.glb`, the renderer's copy) next to the TSDF's 48 MB — what a Pixel 4a-class
+     * phone's heap takes. A full 48 MB TSDF meshes to about this much, so a room is rarely cut.
+     */
+    const val MAX_TRIANGLES = 1_000_000
 
     /** A voxel no colour reached. */
     const val NO_COLOR = 0xFF9E9E9E.toInt()
