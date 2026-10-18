@@ -6,6 +6,8 @@ import androidx.compose.ui.platform.LocalInspectionMode
 import com.dropbox.differ.SimpleImageComparator
 import com.github.takahirom.roborazzi.RoborazziOptions
 import com.github.takahirom.roborazzi.captureRoboImage
+import io.github.sceneview.demo.labs.LabsAccess
+import io.github.sceneview.demo.labs.LabsHomeCard
 import io.github.sceneview.demo.theme.SceneViewDemoTheme
 import io.github.sceneview.demo.ui.home.HomeScreen
 import org.junit.Assert.assertTrue
@@ -24,7 +26,7 @@ import org.robolectric.annotation.GraphicsMode
  *
  * Each test runs with [LocalInspectionMode] forced on so the "What's new"
  * loader is skipped — the goldens pin the home chrome (pinned header, hero,
- * category chips, the grouped list rows in editorial order, status chips, the
+ * section chips, the grouped list rows in editorial order, status chips, the
  * "Browse online models" row, both palettes, `fontScale = 1.5` reflow and the
  * tablet column count of `homeListColumns`), not a release's version string.
  *
@@ -125,13 +127,23 @@ class HomeScreenSnapshotTest {
             Surface {
                 HomeScreen(
                     demos = PHONE_DEMOS,
-                    selectedCategory = null,
-                    onCategoryChange = {},
                     query = "",
                     onQueryChange = {},
                     onDemoClick = {},
                     onBrowseOnlineClick = {},
                     buildVersion = PINNED_BUILD_VERSION,
+                    // A fresh install: the SceneView Labs invitation under the hero.
+                    labsCard = { modifier ->
+                        LabsHomeCard(
+                            access = LabsAccess.NotJoined,
+                            labsDemos = emptyList(),
+                            onJoinClick = {},
+                            onEnabledChange = {},
+                            onDemoClick = {},
+                            onOpenCollectiveClick = {},
+                            modifier = modifier,
+                        )
+                    },
                 )
             }
         }

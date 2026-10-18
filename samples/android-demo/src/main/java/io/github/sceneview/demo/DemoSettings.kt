@@ -108,10 +108,11 @@ object DemoSettings {
      *    placed pool over the backdrop photo without an AR session, to judge its look.
      *
      * Set only through [io.github.sceneview.demo.DeepLinkRouter.resolveQaState], which
-     * returns `null` unless [qaMode] is on, and only read where
-     * [io.github.sceneview.demo.common.qaStateOverridesAllowed] is honoured — so a release
-     * build cannot be steered into a fake state by an intent, and toggling QA mode off from
-     * the sheet drops the pin at once.
+     * returns `null` unless this is a debug build with [qaMode] on, and only read where
+     * [io.github.sceneview.demo.common.qaStateOverridesAllowed] — the same two conditions —
+     * is honoured. So a release build cannot be steered into a fake state by an intent,
+     * whatever `qa_mode` says (#4555), and toggling QA mode off from the sheet drops the pin
+     * at once.
      */
     var qaDemoState: String? by mutableStateOf(null)
 

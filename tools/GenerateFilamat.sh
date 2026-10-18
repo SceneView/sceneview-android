@@ -179,6 +179,7 @@ MATS=(
     "android-demo:pool_liner:samples/android-demo/src/main/materials/pool_liner.mat:samples/android-demo/src/main/assets/materials/pool_liner.filamat:--optimize-size -p mobile -a opengl -a vulkan"
     "android-demo:pool_coping:samples/android-demo/src/main/materials/pool_coping.mat:samples/android-demo/src/main/assets/materials/pool_coping.filamat:--optimize-size -p mobile -a opengl -a vulkan"
     "android-demo:pool_night_veil:samples/android-demo/src/main/materials/pool_night_veil.mat:samples/android-demo/src/main/assets/materials/pool_night_veil.filamat:--optimize-size -p mobile -a opengl -a vulkan"
+    "android-demo:showroom_floor:samples/android-demo/src/main/materials/showroom_floor.mat:samples/android-demo/src/main/assets/materials/showroom_floor.filamat:--optimize-size -p mobile -a opengl -a vulkan"
     "arsceneview:camera_stream_depth:arsceneview/src/main/materials/camera_stream_depth.mat:arsceneview/src/main/assets/materials/camera_stream_depth.filamat:--optimize-size -p mobile -a opengl -a vulkan"
     "arsceneview:camera_stream_person_occlusion:arsceneview/src/main/materials/camera_stream_person_occlusion.mat:arsceneview/src/main/assets/materials/camera_stream_person_occlusion.filamat:--optimize-size -p mobile -a opengl -a vulkan"
     "arsceneview:camera_stream_flat:arsceneview/src/main/materials/camera_stream_flat.mat:arsceneview/src/main/assets/materials/camera_stream_flat.filamat:--optimize-size -p mobile -a opengl -a vulkan"
