@@ -11,7 +11,7 @@ import simd
 struct RerunStoredSession: Identifiable, Codable, Equatable, Sendable {
     /// Where the session came from.
     enum Source: String, Codable, Sendable {
-        /// Recorded on this phone with Record your room.
+        /// Recorded on this phone with Start scanning.
         case recorded
         /// Opened from a SceneView scan file (`.svscan`).
         case scan
@@ -161,12 +161,13 @@ struct RerunSessionStore: Sendable {
         return url
     }
 
-    /// "Room · Sep 28, 14:32": the title a fresh recording gets.
-    static func recordingTitle(at date: Date, locale: Locale = .current, timeZone: TimeZone = .current) -> String {
+    /// "Room · Sep 28, 14:32", "Object · …", "Area · …": the title a fresh recording of `scope` gets.
+    static func recordingTitle(at date: Date, scope: RerunScanScope = .room, locale: Locale = .current,
+                               timeZone: TimeZone = .current) -> String {
         var style = Date.FormatStyle(date: .abbreviated, time: .shortened)
         style.locale = locale
         style.timeZone = timeZone
-        return "Room · " + date.formatted(style)
+        return RerunScanScopeCopy.label(scope) + " · " + date.formatted(style)
     }
 }
 

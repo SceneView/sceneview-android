@@ -617,6 +617,9 @@ struct RerunPack: Sendable {
     /// `true` for the session bundled with the app.
     var isShowcase: Bool
 
+    /// What the capture was a scan of, as its manifest's `scope` key says; a room without one.
+    var scope: RerunScanScope = .room
+
     /// The static v2 cloud is carried by the replay session; the stage does not draw it yet.
     var dense: RerunDenseCloud? = nil
 
@@ -631,6 +634,7 @@ struct RerunPack: Sendable {
         guard let parsed = RerunManifest.parse(manifest) else { throw LoadError.unreadableManifest }
         let trace = RerunTrace.of(RerunLog.parse(log), keyframeSpacing: replayKeyframeSpacing)
         var pack = RerunPack(title: title, manifest: parsed, trace: trace, media: media, isShowcase: isShowcase)
+        pack.scope = RerunScanScope.of(manifest: manifest)
         if let dense = parsed.dense, let bytes = pack.bytes(for: dense.path) {
             pack.dense = RerunDenseCloud.decode(bytes, voxelM: dense.voxelM)
             if pack.dense?.positions.count != dense.count { pack.dense = nil }
