@@ -625,7 +625,7 @@ internal fun RerunModelScreen(
                 // The scan in its own world space, metres, Y up: framed by its bounds, not moved.
                 instance?.let { ModelNode(modelInstance = it, autoAnimate = false) }
                 ground?.let {
-                    ScanGroundLayer(it.meshes, engine, materialLoader, ScanGroundColors.of(chrome.card, chrome.ground))
+                    ScanGroundLayer(it.meshes, engine, materialLoader, ScanGroundColors.current())
                 }
             }
             // The ground until the model is drawn on its framing: no pose but that one is seen.
@@ -743,7 +743,7 @@ private fun FloorLegend(percent: Int) {
     val chrome = LocalStageChrome.current
     val shape = RoundedCornerShape(SceneViewTokens.Radius.full)
     val label = stringResource(R.string.scan_coverage_label, percent)
-    val colors = ScanGroundColors.of(chrome.card, chrome.ground)
+    val colors = ScanGroundColors.current()
     Row(
         modifier = Modifier
             .heightIn(min = SceneViewTokens.Layout.touchTarget)

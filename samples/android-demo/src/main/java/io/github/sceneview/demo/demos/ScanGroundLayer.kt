@@ -2,6 +2,7 @@ package io.github.sceneview.demo.demos
 
 import android.os.SystemClock
 import android.util.Log
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
@@ -16,16 +17,25 @@ import com.google.android.filament.Material
 import com.google.android.filament.MaterialInstance
 import io.github.sceneview.SceneScope
 import io.github.sceneview.demo.demos.internal.ScanGroundMeshes
+import io.github.sceneview.demo.theme.LocalStageChrome
 import io.github.sceneview.demo.theme.SceneViewTokens
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.material.setColor
 
 /**
  * The colours of the ground a scan's result stands on (#4719), from the stage's own: the slab is
- * the stage's card, like the dollhouse's plinth, its edge a shade darker; what the scan did not
- * see is hatched in the guidance amber the live map marks "still to scan" with, so the two read
- * as one map. Every colour opaque, composited over the stage ground: unlit and linear-mapped
- * (`configureForDebug`), each shows at its token's value.
+ * the stage's card, like the dollhouse's plinth; what the scan did not see is hatched in the
+ * guidance amber the live map marks "still to scan" with, so the two read as one map.
+ *
+ * - On a light stage the edge is a shade darker than the slab and a hole is the slab tinted amber.
+ * - On a dark stage the card is near-black like the ground, so the slab would read as a hole in
+ *   it: the slab takes the theme's `surface-container-high`, its edge `outline-variant`, and a
+ *   hole a light `on-surface` veil over the slab, the way the light stage's holes are white, so
+ *   all three lift off the dark ground.
+ *
+ * Every colour opaque, composited over what it lies on: unlit and linear-mapped
+ * (`configureForDebug`), each shows at its token's value, and a theme switch repaints the same
+ * materials without changing their kind.
  */
 internal data class ScanGroundColors(val slab: Color, val edge: Color, val missing: Color, val hatch: Color) {
     companion object {
@@ -35,18 +45,39 @@ internal data class ScanGroundColors(val slab: Color, val edge: Color, val missi
         /** How much amber a missing tile takes: a tint, so the hatching reads on it. */
         const val MISSING_TINT = 0.2f
 
+        /** How much of `on-surface` a hole takes on a dark stage: light, like the light stage's. */
+        const val DARK_HOLE_VEIL = 0.55f
+
         private const val HALF = 0.5f
 
-        fun of(card: Color, ground: Color): ScanGroundColors {
-            val slab = card.compositeOver(ground)
+        /**
+         * The colours on the stage of [card] over [ground]; [container], [outline] and
+         * [onSurface] are the theme's `surface-container-high`, `outline-variant` and
+         * `on-surface`, used on a dark stage only.
+         */
+        fun of(card: Color, ground: Color, container: Color, outline: Color, onSurface: Color): ScanGroundColors {
+            val stage = card.compositeOver(ground)
+            val dark = stage.luminance() < HALF
+            val slab = if (dark) container.compositeOver(ground) else stage
             val amber = SceneViewTokens.ArOverlay.accentGuidance
             return ScanGroundColors(
                 slab = slab,
-                // Darker on a light stage, lighter on a dark one: the slab's side reads in both.
-                edge = lerp(slab, if (slab.luminance() < HALF) Color.White else Color.Black, EDGE_SHADE),
-                missing = lerp(slab, amber, MISSING_TINT),
+                edge = if (dark) outline.compositeOver(slab) else lerp(slab, Color.Black, EDGE_SHADE),
+                missing = if (dark) {
+                    onSurface.copy(alpha = DARK_HOLE_VEIL).compositeOver(slab)
+                } else {
+                    lerp(slab, amber, MISSING_TINT)
+                },
                 hatch = amber,
             )
+        }
+
+        /** The colours of the stage and theme of the moment. */
+        @Composable
+        fun current(): ScanGroundColors {
+            val chrome = LocalStageChrome.current
+            val scheme = MaterialTheme.colorScheme
+            return of(chrome.card, chrome.ground, scheme.surfaceContainerHigh, scheme.outlineVariant, scheme.onSurface)
         }
     }
 }
