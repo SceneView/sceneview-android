@@ -433,6 +433,13 @@ object ScanCopy {
         return "${ArDebugFormat.count(n)} ${label(n, "point", "points")} captured"
     }
 
+    /**
+     * The save in progress, with what it is doing (#4719): `Fusing 261k points…`, the capture's
+     * own count; [SAVING] when it has none to tell.
+     */
+    fun fusing(points: Int): String =
+        if (points <= 0) SAVING else "Fusing ${figure(points)} ${label(points, "point", "points")}…"
+
     /** What the review says about the capture so far: `124,300 points · 42 photos · 0:42`. */
     fun reviewFigures(points: Int, photos: Int, clock: String): String {
         val parts = mutableListOf("${ArDebugFormat.count(points.coerceAtLeast(0))} ${label(points, "point", "points")}")

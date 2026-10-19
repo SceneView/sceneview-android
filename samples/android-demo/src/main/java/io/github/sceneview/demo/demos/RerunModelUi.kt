@@ -2,6 +2,7 @@ package io.github.sceneview.demo.demos
 
 import android.util.Log
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -49,11 +50,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.style.TextOverflow
 import com.google.android.filament.ColorGrading
 import com.google.android.filament.Engine
@@ -80,6 +83,7 @@ import io.github.sceneview.demo.demos.internal.DollhouseFraming
 import io.github.sceneview.demo.demos.internal.DollhouseOpening
 import io.github.sceneview.demo.demos.internal.FramingInsets
 import io.github.sceneview.demo.demos.internal.RerunCapturePack
+import io.github.sceneview.demo.demos.internal.RerunGlbMesh
 import io.github.sceneview.demo.demos.internal.RerunMarchingCubes
 import io.github.sceneview.demo.demos.internal.RerunMeshGlb
 import io.github.sceneview.demo.demos.internal.RerunPointsMesh
@@ -88,6 +92,8 @@ import io.github.sceneview.demo.demos.internal.RerunScanModel
 import io.github.sceneview.demo.demos.internal.RerunSessionStore
 import io.github.sceneview.demo.demos.internal.RerunSyntheticRoom
 import io.github.sceneview.demo.demos.internal.RerunTsdf
+import io.github.sceneview.demo.demos.internal.ScanGround
+import io.github.sceneview.demo.demos.internal.ScanGroundMeshes
 import io.github.sceneview.demo.demos.internal.ScanPreset
 import io.github.sceneview.demo.demos.internal.ScanResultCinematics
 import io.github.sceneview.demo.isDemoCompactHeight
@@ -261,7 +267,7 @@ internal fun buildRerunModel(source: RerunModelSource, progress: (Float) -> Unit
     }
     val fused = System.nanoTime()
     val base = if (source is RerunModelSource.Live) 0f else FUSE_SHARE
-    val extraction = RerunMarchingCubes.extract(tsdf, minWeight) { progress(base + (MESH_SHARE - base) * it) }
+    val extraction = RerunMarchingCubes.extractWhole(tsdf, minWeight) { progress(base + (MESH_SHARE - base) * it) }
     val mesh = extraction.mesh
     val glb = if (mesh.triangleCount > 0) RerunMeshGlb.write(mesh) else ByteArray(0)
     progress(1f)
@@ -421,10 +427,17 @@ internal fun RerunModelScreen(
         }
     }
     DisposableEffect(instance) { onDispose { instance?.let { modelLoader.destroyModel(it.model) } } }
+    // The ground it stands on and the floor it missed (#4719), read off the model's own vertices.
+    val ground by produceState<GroundBuild?>(null, model) {
+        value = model?.let { built -> withContext(Dispatchers.Default) { groundOf(built) } }
+    }
     // No drift: the camera holds still once the reveal has landed, until the user moves it.
     val orbit = remember(source, id) { ArDebugOrbitCamera(drift = false) }
     // The reveal, the 3D ↔ Plan crane and the tour (#4631), every one cut short by a touch.
     val cinematics = remember(orbit) { ScanResultCinematics(orbit) }
+    SideEffect {
+        model?.bounds?.let { b -> cinematics.extent = maxOf(b[3] - b[0], b[5] - b[2]).coerceAtLeast(MIN_EXTENT_M) }
+    }
     // Read live by the framing below, so a toggle and the frame that flies to it agree.
     var plan by remember(model) { mutableStateOf(false) }
     var touring by remember(model) { mutableStateOf(false) }
@@ -467,15 +480,23 @@ internal fun RerunModelScreen(
             val hintAlpha by animateFloatAsState(if (hintShown) 1f else 0f, label = "hint")
             // Laid out from the start too, for the same reason; usable once the model is seen.
             val tourReady = shown && instance != null
-            ScanTourPill(
-                touring = touring,
-                enabled = tourReady,
-                onClick = { cinematics.request(ScanResultCinematics.Request.ToggleTour) },
-                modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .alpha(if (tourReady) 1f else 0f)
-                    .then(if (tourReady) Modifier else Modifier.clearAndSetSemantics { }),
-            )
+            // Side by side, so the legend adds no height over the model.
+            Row(
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+                horizontalArrangement = Arrangement.spacedBy(Space.sm),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                val floor = ground?.ground?.takeIf { tourReady && it.seen + it.missing > 0 }
+                floor?.let { FloorLegend(ScanGround.percent(it.seenShare, it.missing, it.seen)) }
+                ScanTourPill(
+                    touring = touring,
+                    enabled = tourReady,
+                    onClick = { cinematics.request(ScanResultCinematics.Request.ToggleTour) },
+                    modifier = Modifier
+                        .alpha(if (tourReady) 1f else 0f)
+                        .then(if (tourReady) Modifier else Modifier.clearAndSetSemantics { }),
+                )
+            }
             ModelHint(
                 text = stringResource(R.string.scan_result_hint),
                 modifier = Modifier
@@ -603,6 +624,9 @@ internal fun RerunModelScreen(
             ) {
                 // The scan in its own world space, metres, Y up: framed by its bounds, not moved.
                 instance?.let { ModelNode(modelInstance = it, autoAnimate = false) }
+                ground?.let {
+                    ScanGroundLayer(it.meshes, engine, materialLoader, ScanGroundColors.current())
+                }
             }
             // The ground until the model is drawn on its framing: no pose but that one is seen.
             if (!shown) Box(Modifier.matchParentSize().background(chrome.ground).testTag(RERUN_MODEL_VEIL_TAG))
@@ -689,6 +713,64 @@ private fun ModelStatusCard(text: String, progress: (() -> Float)? = null) {
                 drawStopIndicator = {},
             )
         }
+    }
+}
+
+/** The ground of a model (#4719): where it stands and which of its floor it saw. */
+private class GroundBuild(val ground: ScanGround, val meshes: ScanGroundMeshes)
+
+/** [model]'s ground, `null` when its vertices cannot be read or stand on nothing. Off the main thread. */
+private fun groundOf(model: RerunScanModel): GroundBuild? = runCatching {
+    val started = System.nanoTime()
+    val mesh = RerunGlbMesh.read(model.glb) ?: return@runCatching null
+    val ground = ScanGround.of(mesh.positions, mesh.normals, mesh.vertexCount) ?: return@runCatching null
+    GroundBuild(ground, ScanGroundMeshes.of(ground)).also {
+        Log.i(
+            TAG,
+            "ground: floor y ${"%.2f".format(ground.floorY)} m, ${ground.columns}x${ground.rows} cells of " +
+                "${(ground.cellM * CM_PER_M).toInt()} cm, ${ground.seen} seen, ${ground.missing} missing, " +
+                "${it.meshes.triangles} triangles in ${(System.nanoTime() - started) / NS_PER_MS} ms",
+        )
+    }
+}.onFailure { Log.w(TAG, "ground failed", it) }.getOrNull()
+
+/**
+ * How much of the floor the scan covers, and the hatching that marks the rest: the live map's
+ * own words and swatch, so the result reads as the map the scan was filling in.
+ */
+@Composable
+private fun FloorLegend(percent: Int) {
+    val chrome = LocalStageChrome.current
+    val shape = RoundedCornerShape(SceneViewTokens.Radius.full)
+    val label = stringResource(R.string.scan_coverage_label, percent)
+    val colors = ScanGroundColors.current()
+    Row(
+        modifier = Modifier
+            .heightIn(min = SceneViewTokens.Layout.touchTarget)
+            .clip(shape)
+            .background(chrome.card, shape)
+            .overMediaEdge(shape, chrome.edgeRing, chrome.edgeHalo)
+            .padding(horizontal = Space.md, vertical = Space.sm)
+            .clearAndSetSemantics { contentDescription = label }
+            .testTag(RERUN_MODEL_FLOOR_TAG),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Space.sm),
+    ) {
+        val swatch = RoundedCornerShape(SceneViewTokens.Radius.xs)
+        Canvas(Modifier.size(Space.md).clip(swatch)) {
+            drawRect(colors.missing)
+            val step = size.width / HATCH_LINES
+            val stroke = step * HATCH_STROKE
+            for (i in -HATCH_LINES..HATCH_LINES) {
+                val x = i * step
+                drawLine(colors.hatch, Offset(x, size.height), Offset(x + size.height, 0f), strokeWidth = stroke)
+            }
+        }
+        Text(
+            text = stringResource(R.string.scan_coverage_floor, percent),
+            style = SceneViewTokens.Type.caption,
+            color = chrome.onCard,
+        )
     }
 }
 
@@ -794,6 +876,15 @@ internal const val RERUN_MODEL_NAME_TAG = "rerun_model_name"
 internal const val RERUN_MODEL_HINT_TAG = "rerun_model_hint"
 internal const val RERUN_MODEL_TOUR_TAG = "rerun_model_tour"
 internal const val RERUN_MODEL_VEIL_TAG = "rerun_model_veil"
+internal const val RERUN_MODEL_FLOOR_TAG = "rerun_model_floor"
+
+/** The legend's swatch: this many hatching lines across it, each this share of their spacing. */
+private const val HATCH_LINES = 3
+private const val HATCH_STROKE = 0.35f
+private const val CM_PER_M = 100f
+
+/** The smallest scan the tour pushes into, metres: an object on a table. */
+private const val MIN_EXTENT_M = 0.2f
 
 private const val TAG = "RerunModel"
 private const val LOG_EVERY_FRAMES = 30

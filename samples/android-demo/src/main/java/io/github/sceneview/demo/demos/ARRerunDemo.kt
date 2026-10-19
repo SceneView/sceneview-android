@@ -1787,7 +1787,7 @@ private fun RerunLiveScreen(
                             onKeepScanning = { moveTo(ScanPhase.Scanning) },
                             onSave = onSaveScan,
                         )
-                        phase == ScanPhase.Saving -> ScanSavingCard()
+                        phase == ScanPhase.Saving -> ScanSavingCard(points = capturedPoints)
                         phase == ScanPhase.SaveFailed -> ScanSaveFailedCard(
                             // The scan was never written: discarding it asks first.
                             onDiscard = { discardAsked = true },
@@ -1944,6 +1944,7 @@ private fun RerunLiveScreen(
                     modelLoader = modelLoader,
                     materialLoader = materialLoader,
                     livePose = scanLivePose,
+                    saving = phase == ScanPhase.Saving,
                 )
             }
 

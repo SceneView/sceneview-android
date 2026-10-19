@@ -46,6 +46,9 @@ internal class ScanResultCinematics(
     var touring = false
         private set
 
+    /** The scan's larger horizontal side, metres: how far the tour's dolly and fly-through push in. */
+    var extent = 1f
+
     private var shown = false
     private var pending: Request? = null
 
@@ -97,11 +100,13 @@ internal class ScanResultCinematics(
     private fun tour(home: OrbitPose) {
         val atHome = orbit.following && orbit.pose == ArDebugFraming.clamp(home)
         val target = handOff(home)
-        val lap = CameraPath.tour(target.toShot())
+        // Crane, dolly, fly-through, pull-out (#4719): from rest into the lap, then the lap loops.
+        val path = ScanTourPath.of(target.toShot(), extent)
+        val play = { animator.play(path.leadIn, onFinished = { animator.play(path.lap) }) }
         if (atHome && !animator.isPlaying) {
-            animator.play(lap)
+            play()
         } else {
-            animator.flyTo(target.toShot(), flyOver = 0f, onFinished = { animator.play(lap) })
+            animator.flyTo(target.toShot(), flyOver = 0f, onFinished = play)
         }
         touring = true
     }
