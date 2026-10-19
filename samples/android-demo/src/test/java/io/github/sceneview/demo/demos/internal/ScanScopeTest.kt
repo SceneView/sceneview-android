@@ -2,6 +2,7 @@ package io.github.sceneview.demo.demos.internal
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -77,6 +78,23 @@ class ScanScopeTest {
         home = home.measured(2, RoomSurvey.empty(SurveyGap.NoDepth))
         assertNull(home.rooms[0].survey)
         assertNotNull(home.rooms[1].survey)
+    }
+
+    @Test
+    fun `a survey of a home left behind never lands in the next home`() {
+        // Home A: Room 1 saved, its survey still running off the main thread.
+        var home = HomeScan().add("a1", "Room 1 · first home")
+        val first = home.id
+        // The user leaves it and starts a new home before that survey ends; its Room 1 is saved.
+        home = home.next().add("b1", "Room 1 · second home")
+        assertNotEquals(first, home.id)
+        // Home A's survey finishes now: the new home's Room 1 is untouched.
+        home = home.measuredIn(first, 1, RoomSurvey.empty(SurveyGap.NoDepth))
+        assertNull(home.rooms.single().survey)
+        assertEquals("b1", home.rooms.single().id)
+        // Its own survey still lands.
+        home = home.measuredIn(home.id, 1, RoomSurvey.empty(SurveyGap.NoDepth))
+        assertNotNull(home.rooms.single().survey)
     }
 
     @Test

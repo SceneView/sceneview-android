@@ -30,6 +30,7 @@ import io.github.sceneview.demo.demos.internal.ScanClock
 import io.github.sceneview.demo.demos.internal.ScanDevice
 import io.github.sceneview.demo.demos.internal.ScanIntrinsics
 import io.github.sceneview.demo.demos.internal.ScanDetail
+import io.github.sceneview.demo.demos.internal.ScanCutoff
 import io.github.sceneview.demo.demos.internal.ScanPreset
 import io.github.sceneview.demo.demos.internal.ScanProjection
 import io.github.sceneview.demo.demos.internal.YuvFrame
@@ -83,6 +84,8 @@ internal class ScanCapture private constructor(
     val trace = ArDebugTrace().apply {
         keyframeSpacing = ReplayGeometry.KEYFRAME_SPACING_M
         journal = ArrayList()
+        // #4683: an object keeps arm's length in its sparse points and planes too, depth or not.
+        cutoff = ScanCutoff.of(preset)
     }
 
     private val gate = KeyframeGate(preset.photoStepM, preset.photoTurnDegrees, preset.maxPhotos)

@@ -109,6 +109,11 @@ data class RerunStoredSession(
     val points: Int,
     val planes: Int,
     val photos: Int,
+    /**
+     * What was scanned (#4683): an object's scan has no floor plan and no room figures. A
+     * `session.json` written before it was kept, or by the iOS demo, reads as a room.
+     */
+    val scope: ScanScope = ScanScope.Room,
 ) {
     /** Pretty-printed with sorted keys, like the iOS encoder. */
     fun toJson(): String = pretty.encodeToString(
@@ -121,6 +126,7 @@ data class RerunStoredSession(
             put("photos", photos)
             put("planes", planes)
             put("points", points)
+            put("scope", scope.key)
             put("source", source.wireName)
             put("title", title)
         },
@@ -148,8 +154,12 @@ data class RerunStoredSession(
                 points = number("points")?.intOrNull ?: return null,
                 planes = number("planes")?.intOrNull ?: return null,
                 photos = number("photos")?.intOrNull ?: return null,
+                scope = scopeOf(string("scope")),
             )
         }
+
+        /** The scope kept under [key]; a room for none — a session kept before scopes were — or one unknown. */
+        fun scopeOf(key: String?): ScanScope = ScanScope.entries.firstOrNull { it.key == key } ?: ScanScope.Room
 
         /** ISO 8601 with an offset (`2026-09-28T12:32:05Z`), in epoch seconds; `null` otherwise. */
         fun epochSecondOf(iso: String): Long? = runCatching { OffsetDateTime.parse(iso).toEpochSecond() }.getOrNull()
@@ -167,6 +177,7 @@ data class RerunStoredSession(
             source: RerunSessionSource,
             createdAt: Long,
             id: String = UUID.randomUUID().toString().uppercase(),
+            scope: ScanScope = ScanScope.Room,
         ): RerunStoredSession? {
             val trace = capture.trace
             if (trace.isEmpty) return null
@@ -183,6 +194,7 @@ data class RerunStoredSession(
                 points = trace.pointCountAt(trace.duration, capture.manifest.dense?.count ?: 0),
                 planes = last.planes.size,
                 photos = trace.imageCount,
+                scope = scope,
             )
         }
 
@@ -267,10 +279,11 @@ class RerunSessionStore(val root: File) {
         source: RerunSessionSource,
         nowMillis: Long = System.currentTimeMillis(),
         model: RerunScanModel? = null,
+        scope: ScanScope = ScanScope.Room,
     ): RerunStoredSession {
         val opened = capture.open() ?: throw RerunImportFailure.Unreadable(title)
         // Whole seconds: `session.json` stores ISO 8601, so what `save` returns equals what `list` reads.
-        val session = RerunStoredSession.of(opened, title, source, createdAt = nowMillis / MILLIS)
+        val session = RerunStoredSession.of(opened, title, source, createdAt = nowMillis / MILLIS, scope = scope)
             ?: throw RerunImportFailure.Empty(title)
         val dir = directoryOf(session.id)
         dir.mkdirs()

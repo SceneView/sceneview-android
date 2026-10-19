@@ -140,6 +140,30 @@ class RerunSessionStoreTest {
     }
 
     @Test
+    fun `a session keeps what was scanned, and one kept before reads as a room`() {
+        val store = RerunSessionStore(folder.newFolder("scoped"))
+        val vase = store.save(bundled(), "Object · Oct 19", RerunSessionSource.Recorded, scope = ScanScope.Object)
+        assertEquals(ScanScope.Object, vase.scope)
+        assertEquals(ScanScope.Object, store.list().single().scope)
+        assertTrue(File(store.directoryOf(vase.id), "session.json").readText().contains("\"scope\": \"object\""))
+        // A rename keeps it.
+        assertEquals(ScanScope.Object, store.rename(vase.id, "Vase")!!.scope)
+        assertEquals(ScanScope.Object, store.list().single().scope)
+
+        // A session.json from before #4683 — or the iOS demo's — has no scope: it is a room.
+        val old = """{"id":"A","title":"t","createdAt":"2026-09-28T12:32:05Z","source":"recorded",""" +
+            """"duration":1,"pathMetres":1,"points":1,"planes":1,"photos":1}"""
+        assertEquals(ScanScope.Room, RerunStoredSession.parse(old)!!.scope)
+        // A scope a later build adds reads as a room too, rather than not at all.
+        val later = old.replace("\"photos\":1}", "\"photos\":1,\"scope\":\"garden\"}")
+        assertEquals(ScanScope.Room, RerunStoredSession.parse(later)!!.scope)
+        for (scope in ScanScope.entries) {
+            val session = RerunStoredSession.parse(old)!!.copy(scope = scope)
+            assertEquals(session, RerunStoredSession.parse(session.toJson()))
+        }
+    }
+
+    @Test
     fun `a session json missing a key, or from nowhere, does not read`() {
         assertNull(RerunStoredSession.parse("""{"id":"A","title":"t","source":"recorded"}"""))
         assertNull(RerunStoredSession.parse("not json"))

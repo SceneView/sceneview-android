@@ -93,8 +93,14 @@ data class ScanPreset(
 /**
  * A whole home in progress (#4647): the rooms saved so far in this session, in order. Immutable
  * and pure, so the screen holds it as state and a test holds its numbering and its totals.
+ *
+ * [id] tells one home from the next (#4683): a room's survey runs off the main thread and can
+ * finish after a new home has started; it lands only in the home it was measured for ([measuredIn]).
  */
-data class HomeScan(val rooms: List<HomeRoom> = emptyList()) {
+data class HomeScan(val rooms: List<HomeRoom> = emptyList(), val id: Int = 0) {
+    /** A new, empty home, told apart from this one. */
+    fun next(): HomeScan = HomeScan(id = id + 1)
+
     /** The number the room being scanned now takes: one past the rooms saved. */
     val nextNumber: Int get() = rooms.size + 1
 
@@ -107,6 +113,13 @@ data class HomeScan(val rooms: List<HomeRoom> = emptyList()) {
     /** The home with room [number] given its [survey], once measured off the main thread. */
     fun measured(number: Int, survey: RoomSurvey): HomeScan =
         copy(rooms = rooms.map { if (it.number == number) it.copy(survey = survey) else it })
+
+    /**
+     * [measured] for home [home] only: a survey of another home — one left before its rooms were
+     * all measured — changes nothing here.
+     */
+    fun measuredIn(home: Int, number: Int, survey: RoomSurvey): HomeScan =
+        if (home == id) measured(number, survey) else this
 
     /**
      * The home's Rooms block: one row per room, named [roomName] of its number, then the total —
