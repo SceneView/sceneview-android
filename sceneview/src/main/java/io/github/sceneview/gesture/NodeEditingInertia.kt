@@ -270,10 +270,13 @@ internal class NodeEditingInertia(
 
         /** [angle] brought into `(−π, π]`, so an `atan2` wrap is not read as a full turn. */
         fun wrapRadians(angle: Float): Float {
-            val twoPi = (2 * PI).toFloat()
+            // Compared against the Float π: Float π rounds above Double π, so a Double bound
+            // would wrap an exact Float π to −π.
+            val pi = PI.toFloat()
+            val twoPi = 2f * pi
             var a = angle % twoPi
-            if (a > PI) a -= twoPi
-            if (a <= -PI) a += twoPi
+            if (a > pi) a -= twoPi
+            if (a <= -pi) a += twoPi
             return a
         }
     }

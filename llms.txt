@@ -3800,6 +3800,13 @@ Key facts an AI codegen pass must get right:
 - These are plain `Node` properties, not composable parameters — to change them
   reactively after creation, re-push them from a `LaunchedEffect` keyed on the new
   values (the `apply` block runs only once at node creation).
+- A flick **coasts** after release (`Node.editingInertia`, default `Inertia.Default`): a
+  drag keeps sliding along the surface it was dragged on and stops where that surface ends
+  (an AR object stays on its plane), a twist keeps turning, a pinch keeps growing until
+  `editableScaleRange`. `onMoveEnd` / `onRotateEnd` / `onScaleEnd` and the editing
+  listeners' `onEditingEnd` fire **once the node is at rest**, so an `AnchorNode` re-anchors
+  where the coast ended. `editingInertia = Inertia.None` stops the node dead on release; a
+  new touch always stops a coast.
 
 The `camera-gestures` demo in `samples/android-demo` is the canonical end-to-end
 example. Its dock's **Move** item flips `isEditable` on whichever subject currently has
@@ -4132,7 +4139,7 @@ Most are default parameter values in `SceneView`/`ARSceneView` — call them exp
 | `rememberCameraNode(engine) { ... }` | `CameraNode` | Custom camera with apply block |
 | `rememberMainLightNode(engine) { ... }` | `LightNode` | Primary directional light (key) with apply block — shadows ON by default; apply block is reactive (re-runs on recomposition, so Compose-state-driven intensity/direction/color update live) |
 | `rememberFillLightNode(engine) { ... }` | `LightNode` | Soft fill light opposite the main light — lifts shadows so models don't look flat; apply block is reactive (same as `rememberMainLightNode`) |
-| `rememberCameraManipulator(orbitRadius, targetPosition?)` | `CameraManipulator?` | Orbit/pan/zoom camera controller, distance-first (recommended): the camera starts `orbitRadius` metres from the target along the default 3/4 viewing angle — `orbitRadius = 2.78f` is the stock framing. Keyed on `orbitRadius` and `targetPosition`: a new value rebuilds the manipulator and `SceneView` glides the camera there (~0.6 s) instead of cutting — derive the radius once, don't animate it. See "Camera" |
+| `rememberCameraManipulator(orbitRadius, targetPosition?, inertia?)` | `CameraManipulator?` | Orbit/pan/zoom camera controller, distance-first (recommended): the camera starts `orbitRadius` metres from the target along the default 3/4 viewing angle — `orbitRadius = 2.78f` is the stock framing. Keyed on `orbitRadius` and `targetPosition`: a new value rebuilds the manipulator and `SceneView` glides the camera there (~0.6 s) instead of cutting — derive the radius once, don't animate it. Optional `inertia` (default `Inertia.Default`; `Inertia.None` = no coast). See "Camera" |
 | `rememberCameraManipulator(orbitHomePosition?, targetPosition?)` | `CameraManipulator?` | Same, with an explicit eye position. `orbitHomePosition` is the camera's **absolute** eye position, never an offset from `targetPosition`; under the default `autoCenterContent = true` the subject is framed from `\|orbitHomePosition\|` — see "Camera". Name kept as-is (not `eyePosition`) to stay binary-compatible on major version 4 |
 | `rememberOnGestureListener(...)` | `OnGestureListener` | Gesture callbacks for tap/drag/pinch |
 | `rememberViewNodeManager()` | `ViewNode.WindowManager` | Required for ViewNode composables |
@@ -4247,6 +4254,38 @@ override fun update(deltaTime: Float) {          // already ticked every frame
 ``` Note that with an ORBIT manipulator the zoom is centred on the orbit pivot,
 not anchored under the finger: Filament's `OrbitManipulator::scroll` moves the eye along the gaze
 and ignores `x`/`y`.
+
+### Gesture inertia
+
+Every gesture that moves something coasts after the finger lifts, like a list fling: camera
+orbit, pan and pinch-zoom, and the drag / twist / pinch of an editable node (AR objects
+included). The release velocity is measured over the last 100 ms of the gesture (zero if the
+finger rested 40 ms before lifting), then decays exponentially with a 0.35 s time constant,
+integrated exactly so the coast is the same at any frame rate. A slow, deliberate drag stops
+where it is left; a new touch stops any coast on the spot; a pinch coast stops at the zoom or
+scale limit.
+
+```kotlin
+// Default: the camera coasts.
+SceneView(cameraManipulator = rememberCameraManipulator(orbitRadius = 3f))
+// A camera that stops dead on release.
+SceneView(cameraManipulator = rememberCameraManipulator(orbitRadius = 3f, inertia = Inertia.None))
+// A longer, floatier coast.
+SceneView(
+    cameraManipulator = rememberCameraManipulator(
+        orbitRadius = 3f,
+        inertia = Inertia(timeConstantSeconds = 0.6f),
+    )
+)
+```
+
+- `inertia` is applied to the stock `CameraGestureDetector.DefaultCameraManipulator` (also
+  settable as its `inertia` property); changing it does not rebuild the manipulator. A custom
+  manipulator gets `stopInertia()` on every touch-down (default no-op) and owns its own coast.
+- Node editing reads `Node.editingInertia` on the node that owns the edit — see "Editable nodes".
+- `InertiaTracker` (`sceneview-core`, package `io.github.sceneview.gesture`) is the shared
+  maths: `addSample` the cumulative position, `release` on finger up, `advance(dt, out)` per
+  frame.
 
 ### How far `orbitHomePosition` actually puts the camera
 
