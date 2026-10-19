@@ -1027,7 +1027,7 @@ private fun RerunLiveScreen(
     val stats = debugSession.stats
     val capturedPoints = when {
         scan?.rawDepth == true -> scan?.denseCount ?: 0
-        qaLong != null -> qaLong?.dense?.count ?: 0
+        qaLong != null -> qaLong?.shownCount ?: 0
         else -> stats.mapPoints
     }
     val capturedPhotos = debugSession.trace.imageCount
@@ -1062,7 +1062,7 @@ private fun RerunLiveScreen(
                 // reads "Scan paused", and a red "Scanning" dot above it would contradict it.
                 ScanHud(
                     phase = if (trackingLost && phase.integrates) ScanPhase.Paused else phase,
-                    seconds = scan?.elapsedSeconds(now) ?: stats.duration,
+                    seconds = scan?.elapsedSeconds(now) ?: qaLong?.shownSeconds ?: stats.duration,
                     points = capturedPoints,
                 )
                 ScanStage(
@@ -1141,7 +1141,7 @@ private fun RerunLiveScreen(
                                 phase = phase,
                                 trackingLost = trackingLost,
                                 photoLimitReached = scan?.isPhotoLimitReached == true,
-                                detail = scan?.denseDetail ?: qaLong?.dense?.detail() ?: ScanDetail.Fine,
+                                detail = scan?.denseDetail ?: qaLong?.shownDetail ?: ScanDetail.Fine,
                             ),
                             onTogglePause = { moveTo(phase.togglePause()) },
                             onFinish = { moveTo(phase.finish()) },

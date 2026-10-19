@@ -2,10 +2,16 @@ package io.github.sceneview.demo.demos
 
 import android.os.Debug
 import android.util.Log
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import io.github.sceneview.demo.demos.internal.ArDebugGeometry
 import io.github.sceneview.demo.demos.internal.ArDebugTrace
 import io.github.sceneview.demo.demos.internal.DenseFusion
 import io.github.sceneview.demo.demos.internal.DepthBackProjection
+import io.github.sceneview.demo.demos.internal.ScanDetail
 import io.github.sceneview.demo.demos.internal.ScanWalkthrough
 import io.github.sceneview.demo.demos.internal.Vec3
 import kotlinx.coroutines.Dispatchers
@@ -34,6 +40,21 @@ internal class QaLongScan(fixed: Boolean, origin: Vec3) {
         private set
 
     /**
+     * What the HUD shows of [dense], as snapshot state: the bundled replay behind the QA scan
+     * holds on its end after a few seconds, and nothing else recomposes the capture screen then.
+     */
+    var shownCount by mutableIntStateOf(0)
+        private set
+
+    /** The walk's own clock, a depth frame every 0.1 s: the replay's stops with it. */
+    var shownSeconds by mutableFloatStateOf(0f)
+        private set
+
+    /** The coaching line's [ScanDetail], kept current like [shownCount]. */
+    var shownDetail by mutableStateOf(ScanDetail.Fine)
+        private set
+
+    /**
      * Plays the walk, one depth frame every [ScanCapture.DEPTH_INTERVAL_NS] while [integrates]
      * says the capture scans, holding on its end. Logs the map's figures every [LOG_EVERY] frames.
      */
@@ -41,18 +62,34 @@ internal class QaLongScan(fixed: Boolean, origin: Vec3) {
         Log.i(LOG_TAG, "start: budget ${dense.fusion.maxPoints} points, ${walk.frameCount} frames")
         while (played < walk.frameCount) {
             if (!integrates()) {
+                show()
                 delay(PAUSED_POLL_MS)
                 continue
             }
             val started = System.nanoTime()
             dense.add(DepthBackProjection.project(walk.frame(played)))
             played++
+            show()
             if (played % LOG_EVERY == 0 || played == walk.frameCount) log()
             val spent = (System.nanoTime() - started) / NANOS_PER_MS
             delay((ScanCapture.DEPTH_INTERVAL_NS / NANOS_PER_MS - spent).coerceAtLeast(0L))
         }
         val rooms = walk.pointsPerRoom(dense.savedCloud()).joinToString("/")
         Log.i(LOG_TAG, "done: saved ${dense.count} points, per room $rooms")
+        // The walk is over; "Adjusting detail" still has to time out on screen.
+        while (dense.detail() == ScanDetail.Adjusting) {
+            delay(PAUSED_POLL_MS)
+            show()
+        }
+        show()
+    }
+
+    private fun show() {
+        shownCount = dense.count
+        val detail = dense.detail()
+        if (detail != shownDetail) Log.i(LOG_TAG, "detail $shownDetail -> $detail at frame $played")
+        shownDetail = detail
+        shownSeconds = played * ScanCapture.DEPTH_INTERVAL_NS / NANOS_PER_S
     }
 
     private fun log() {
@@ -78,6 +115,7 @@ internal class QaLongScan(fixed: Boolean, origin: Vec3) {
         private const val LOG_EVERY = 30
         private const val PAUSED_POLL_MS = 100L
         private const val NANOS_PER_MS = 1_000_000L
+        private const val NANOS_PER_S = 1e9f
         private const val BYTES_PER_MB = 1_048_576L
     }
 }
