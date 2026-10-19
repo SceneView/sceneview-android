@@ -1010,12 +1010,14 @@ demos:
     ios: []
     iosFiles: []
     contract: >-
-      Live AR with a toy car: toggle depth of field, Focus depth and Blur
-      strength sliders, tap to focus at real depth; blurs the camera feed and
-      the virtual content.
+      Portrait focus (#4649): live AR with a real-size sneaker kept sharp
+      while the room blurs by its ARCore depth, like a camera's portrait
+      mode. Original | Portrait before/after switch; the focus follows the
+      sneaker, a tap on the room focuses there (focus ring), a tap on the
+      sneaker comes back; Blur and Focus distance sliders.
     parity: missing
     evidence: >-
-      No iOS scene; ARDepthOfFieldDemo.kt:181-203,279. LiDAR sceneDepth plus
+      No iOS scene; ARDepthOfFieldDemo.kt (PortraitFocus). LiDAR sceneDepth plus
       ARView postProcess can do it (#3652)
   - id: ar-geospatial-anchors
     androidStatus: KnownIssue
@@ -1059,8 +1061,9 @@ demos:
     ios: []
     iosFiles: []
     contract: >-
-      An auto-placed helmet; Turn stabilization on/off toggles ARCore EIS on
-      the camera feed to compare motion.
+      SceneView Labs demo since #4649 (listed only with Labs on): an
+      auto-placed helmet; Turn stabilization on/off toggles ARCore EIS on the
+      camera feed to compare motion. The card says the difference is subtle.
     parity: not-feasible-on-ios
     evidence: >-
       ARCore ImageStabilizationMode.EIS (ARFeatureComparison.kt:119-123);

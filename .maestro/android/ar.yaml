@@ -147,7 +147,7 @@ appId: io.github.sceneview.demo.qa
     file: flows/demo.yaml
     env:
       DEMO_ID: ar-depth-of-field
-      DEMO_NAME: AR Depth of Field
+      DEMO_NAME: Portrait focus
 - runFlow:
     file: flows/demo.yaml
     env:
