@@ -26,6 +26,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -265,7 +266,7 @@ fun ARDepthOfFieldDemo(onBack: () -> Unit) {
                     )
                 }
             }
-            ringAt?.let { FocusRing(it, ringTap) }
+            ringAt?.let { FocusRing(it, ringTap, onFinished = { ringAt = null }) }
         }
     }
 }
@@ -306,11 +307,13 @@ private fun PortraitStatusCard(status: PortraitFocusStatus, focus: Float) {
  * colour of the iOS focus square) that fades out, restarted by every tap ([tap]).
  */
 @Composable
-private fun FocusRing(at: Offset, tap: Int) {
+internal fun FocusRing(at: Offset, tap: Int, onFinished: () -> Unit) {
     val alpha = remember { Animatable(0f) }
+    val finish by rememberUpdatedState(onFinished)
     LaunchedEffect(tap) {
         alpha.snapTo(1f)
         alpha.animateTo(0f, tween(FOCUS_RING_FADE_MS, delayMillis = FOCUS_RING_HOLD_MS))
+        finish()
     }
     val size = SceneViewTokens.Space.x3l
     val half = with(LocalDensity.current) { size.toPx() / 2f }
@@ -338,8 +341,8 @@ private const val DEFAULT_FOCUS_METRES = 1.0f
 private const val MAX_BLUR = 6f
 
 /** How long the focus ring stays fully visible, then how long it fades, in ms. */
-private const val FOCUS_RING_HOLD_MS = 600
-private const val FOCUS_RING_FADE_MS = 400
+internal const val FOCUS_RING_HOLD_MS = 600
+internal const val FOCUS_RING_FADE_MS = 400
 
 /**
  * The sneaker's world position (x, y, z): 1 m ahead of the session's first pose (the world

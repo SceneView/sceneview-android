@@ -46,11 +46,20 @@ class ScanFollow {
          */
         const val LIFT = -0.2f
 
+        /** The live view's [OrbitBand]: the whole card, the phone drawn at [LIFT]. */
+        val BAND = OrbitBand.CARD.copy(lift = LIFT)
+
         /**
          * The follow ease, per second: a time constant of about 120 ms, which takes the tremor
          * of a hand out of the picture without lagging behind a turn.
          */
         const val APPROACH_RATE = 8f
+
+        /**
+         * The fastest the view turns with the phone: two turns a second, past any hand, so
+         * heading-up keeps up with a quick turn where the room's framing swings round slowly.
+         */
+        const val MAX_TURN_DEGREES_PER_SECOND = 720f
 
         /**
          * The least horizontal share of the phone's forward axis that still gives a heading:

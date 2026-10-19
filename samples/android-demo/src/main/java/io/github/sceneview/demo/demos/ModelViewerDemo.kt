@@ -130,6 +130,9 @@ import io.github.sceneview.demo.ui.viewer.ShowroomReflection
 import io.github.sceneview.demo.ui.viewer.rememberShowroomReflection
 import io.github.sceneview.demo.ui.viewer.ShowroomMath
 import io.github.sceneview.demo.ui.viewer.ShowroomStage
+import io.github.sceneview.demo.ui.viewer.ViewerGroundGrid
+import io.github.sceneview.demo.ui.viewer.ViewerOpeningMove
+import io.github.sceneview.demo.ui.viewer.flyToOne
 import io.github.sceneview.demo.ui.viewer.ShowroomToneMapping
 import io.github.sceneview.demo.ui.viewer.ShowroomViewOptions
 import io.github.sceneview.demo.ui.viewer.rememberShowroomStage
@@ -659,13 +662,10 @@ private fun ViewerScene.mode(): ModelViewerMode = when (this) {
 private const val MODEL_COVER_FRAMES = 2
 
 /**
- * Length of the camera fly-in when the model lands (#3406). Twice `duration-medium`:
- * a screen transition is 350 ms, but this one is the subject arriving rather than a
- * surface changing, and under 500 ms the dolly reads as a stutter instead of a move.
- * Long enough to be seen, short enough that the first drag is never waiting on it —
- * and a touch cancels it outright.
+ * Length of the camera fly-in when the model lands (#3406): the shared opening move's
+ * `motion-entrance` (#4651). A touch cancels it outright.
  */
-private const val CAMERA_ENTRANCE_MILLIS = 700
+private const val CAMERA_ENTRANCE_MILLIS = ViewerOpeningMove.DURATION_MILLIS
 
 /**
  * How long the resting framing takes to follow a change of the chrome insets or the viewport
@@ -677,13 +677,6 @@ private const val FRAMING_SETTLE_MILLIS = 350
 private val NoContentPadding = PaddingValues(0.dp)
 
 /**
- * Largest step, in seconds, one frame may advance the camera flights by. The frames that first
- * show a model are the ones its upload drops; a flight timed on the wall clock spends itself in
- * those gaps and reaches the screen as a cut. Capped, a dropped frame only makes it run longer.
- */
-private const val MAX_FLIGHT_STEP_SECONDS = 1f / 20f
-
-/**
  * The clip a model opens on: the one named "Idle" when the model has one (Blender exports often
  * prefix the armature, `CharacterArmature|Idle`), otherwise the first.
  */
@@ -691,28 +684,6 @@ private fun defaultClipIndex(animator: com.google.android.filament.gltfio.Animat
     (0 until animator.animationCount).firstOrNull {
         animator.getAnimationName(it).substringAfterLast('|').equals("Idle", ignoreCase = true)
     } ?: 0
-
-/**
- * Animates this value from where it is to `1f` over [durationMillis] of *frames*, eased by
- * [easing]. Unlike `animateTo(tween(...))`, which reads the wall clock, each frame advances by
- * at most [MAX_FLIGHT_STEP_SECONDS], so a stall pauses the flight instead of skipping it.
- */
-private suspend fun Animatable<Float, *>.flyToOne(
-    durationMillis: Int,
-    easing: androidx.compose.animation.core.Easing,
-) {
-    val duration = durationMillis / 1000f
-    val start = value
-    var elapsed = 0f
-    var last = withFrameNanos { it }
-    while (elapsed < duration) {
-        val now = withFrameNanos { it }
-        elapsed += ((now - last) / 1_000_000_000f).coerceIn(0f, MAX_FLIGHT_STEP_SECONDS)
-        last = now
-        val t = easing.transform((elapsed / duration).coerceAtMost(1f))
-        snapTo(start + (1f - start) * t)
-    }
-}
 
 /**
  * The resting framing the camera is actually aimed with — the live [DemoMath.ViewerFraming],
@@ -1386,7 +1357,7 @@ private fun SingleModelSection(
         launch { fitProgress.animateTo(1f, SceneViewTokens.Motion.spring()) }
         // The flight is read by the camera manipulator from inside the render loop; wake it.
         renderInvalidator.requestRender()
-        entranceProgress.flyToOne(CAMERA_ENTRANCE_MILLIS, SceneViewTokens.Ease.expressive)
+        entranceProgress.flyToOne(CAMERA_ENTRANCE_MILLIS, ViewerOpeningMove.easing)
     }
     // Back closes transient chrome before leaving the demo.
     val anySheetOpen = animationBarOpen || modelSheetOpen || environmentSheetOpen
@@ -1952,6 +1923,15 @@ private fun SingleModelSection(
                         yawDegrees = modelYaw + frontYaw,
                         showFloor = showroomStaged,
                         shadowAlpha = fitProgress.value,
+                    )
+                }
+                // The ground grid every viewer shares (#4651), on the floor the model settles onto.
+                if (bounds != null) {
+                    ViewerGroundGrid(
+                        floorY = stageFloorY,
+                        target = modelCenter,
+                        isDark = showroomDark,
+                        requestRender = renderInvalidator::requestRender,
                     )
                 }
                 activeModelInstance?.let { instance ->

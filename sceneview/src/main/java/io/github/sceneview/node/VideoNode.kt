@@ -13,6 +13,7 @@ import dev.romainguy.kotlin.math.normalize
 import io.github.sceneview.drainFramePipeline
 import io.github.sceneview.geometries.Plane
 import io.github.sceneview.loaders.MaterialLoader
+import io.github.sceneview.matchToneMapInverse
 import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Size
@@ -97,6 +98,7 @@ open class VideoNode(
             val old = field
             field = value
             setMaterialInstanceAt(0, value)
+            value.matchToneMapInverse(collisionSystem?.view)
             // The external [texture] stays bound to [old] until the next frame: destroying [old]
             // immediately would free a MaterialInstance still GPU-referenced by [texture], the
             // exact `Invalid texture still bound to MaterialInstance` SIGABRT #1497 fixed for

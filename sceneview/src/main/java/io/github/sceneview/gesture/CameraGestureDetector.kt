@@ -1127,7 +1127,10 @@ class FovZoomCameraManipulator @JvmOverloads constructor(
     override fun doubleTapZoom(x: Int, y: Int, zoomIn: Boolean) = inner.doubleTapZoom(x, y, zoomIn)
     override fun stopInertia() {
         fovInertia.stop()
-        inner.stopInertia()
+        // Same tolerance as [CameraGestureDetector.stopInertia]: a Java manipulator compiled
+        // before the default method existed throws `AbstractMethodError` on it — and
+        // [scrollBegin] calls this on every pinch.
+        runCatching { inner.stopInertia() }
     }
 
     override val isFrameActive: Boolean get() = fovInertia.isCoasting || inner.isFrameActive

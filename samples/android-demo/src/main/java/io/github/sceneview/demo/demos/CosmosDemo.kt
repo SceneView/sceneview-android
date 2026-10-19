@@ -1387,6 +1387,8 @@ private class FabricInstances(val sheet: MaterialInstance, val worlds: List<Mate
         val light = CosmosSpacetime.LIGHT
         sheet.setParameter("lightDir", light[0], light[1], light[2])
         sheet.setParameter("baseColor", base[0], base[1], base[2])
+        val grid = CosmosSpacetime.sheetGridLinear()
+        sheet.setParameter("gridColor", grid[0], grid[1], grid[2])
         sheet.setParameter("intensity", 0f)
         worlds.forEachIndexed { slot, world ->
             val look = FABRIC_LOOKS[slot]

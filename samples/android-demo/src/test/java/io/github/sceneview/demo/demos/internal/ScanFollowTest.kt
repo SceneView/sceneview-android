@@ -87,7 +87,7 @@ class ScanFollowTest {
     @Test
     fun `heading-up - the view looks the way the phone faces, whatever the yaw`() {
         for (yaw in listOf(0f, 37f, 90f, 180f, -100f)) {
-            val orbit = ArDebugOrbitCamera(drift = false, lift = ScanFollow.LIFT)
+            val orbit = ArDebugOrbitCamera(drift = false, band = ScanFollow.BAND)
             orbit.setViewport(1080, 2400)
             val pose = ScanFollow().poseFor(phone(yaw, pitchDegrees = -20f))!!
             orbit.snapTo(pose)
@@ -116,10 +116,14 @@ class ScanFollowTest {
 
     @Test
     fun `turning the phone turns the followed view the short way, damped`() {
-        val orbit = ArDebugOrbitCamera(drift = false, approachRate = ScanFollow.APPROACH_RATE)
+        val orbit = ArDebugOrbitCamera(
+            drift = false,
+            approachRate = ScanFollow.APPROACH_RATE,
+            maxTurnDegreesPerSecond = ScanFollow.MAX_TURN_DEGREES_PER_SECOND,
+        )
         val follow = ScanFollow()
         orbit.snapTo(follow.poseFor(phone(170f))!!)
-        orbit.home = follow.poseFor(phone(-170f))!!
+        orbit.followTo(follow.poseFor(phone(-170f))!!)
 
         orbit.update(1f / 60f)
         val step = CameraRig.shortestDelta(170f, orbit.pose.azimuthDegrees)
@@ -144,7 +148,7 @@ class ScanFollowTest {
 
         // Free, it no longer eases onto the phone.
         val before = orbit.pose
-        orbit.home = ScanFollow.poseAt(phone(90f), 90f)
+        orbit.followTo(ScanFollow.poseAt(phone(90f), 90f))
         orbit.update(0.1f)
         assertEquals(before, orbit.pose)
 
@@ -169,8 +173,9 @@ class ScanFollowTest {
     /** The scan's own orbit camera, as `RerunLiveScreen` builds it, on a Pixel 7a-sized view. */
     private fun scanOrbit(width: Int = 1280, height: Int = 2856) = ArDebugOrbitCamera(
         drift = false,
-        lift = ScanFollow.LIFT,
+        band = ScanFollow.BAND,
         approachRate = ScanFollow.APPROACH_RATE,
+        maxTurnDegreesPerSecond = ScanFollow.MAX_TURN_DEGREES_PER_SECOND,
         degreesPerViewWidth = ScanFollow.DRAG_DEGREES_PER_VIEW_WIDTH,
         elevationRange = ScanFollow.DRAG_ELEVATION_RANGE,
         maxCoastDegrees = ScanFollow.MAX_COAST_DEGREES,

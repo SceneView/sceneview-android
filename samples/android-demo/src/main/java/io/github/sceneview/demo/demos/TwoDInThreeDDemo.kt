@@ -90,7 +90,9 @@ import io.github.sceneview.sample.rememberMaterialInstance
  *
  * ViewNode requires its WindowManager on SceneView; its separate composition inherits no locals,
  * so re-apply the theme inside. A manager sizes every child to its largest: keep a fixed card box.
- * The card is lit and bloom is disabled to avoid the halo of an unlit white card. Rendering last
+ * The card is unlit so its swatches show their authored token colours (#4595 follow-up): a lit
+ * card takes the scene light and displayed amber as ochre. Bloom stays disabled so the unlit
+ * white card has no halo. Rendering last
  * does not change picking order: the raw touch callback prioritises the visible on-top card.
  */
 @Composable
@@ -322,7 +324,7 @@ fun TwoDInThreeDInspectDemo(onBack: () -> Unit) {
                     // Face camera on: `cameraPositionProvider` keeps the card square to the screen —
                     // orbit, or spin the rocket under it, and it follows. Off: `rotation` applies again,
                     // the angle it had when its part was picked, and the card turns away with the rocket.
-                    ViewNode(windowManager = manager, unlit = false, position = anchor,
+                    ViewNode(windowManager = manager, unlit = true, position = anchor,
                         rotation = resting, scale = Scale(cardScale), isVisible = selected != null,
                         cameraPositionProvider = if (faceCamera) cameraPosition else null,
                         apply = { cardNode = this; isHittable = false; isTouchForwardingEnabled = true },

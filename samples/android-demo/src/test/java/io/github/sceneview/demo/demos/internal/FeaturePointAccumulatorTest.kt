@@ -104,6 +104,7 @@ class FeaturePointAccumulatorTest {
         val out = FloatArray(10 * PointCloudSprites.VERTICES_PER_POINT * PointCloudSprites.STRIDE)
         val written = PointCloudSprites.write(
             cloud, minConfidence = 0.1f, nowMs = 10_000L, camX = 0f, camY = 0f, camZ = 0f,
+            camForwardX = 0f, camForwardY = 0f, camForwardZ = -1f,
             focalPx = 1000f, radiusPx = 10f, palette = palette, out = out,
         )
         assertEquals(2, written)
@@ -128,7 +129,11 @@ class FeaturePointAccumulatorTest {
             fresh = floatArrayOf(1f, 0f, 0f),
         )
         val out = FloatArray(4 * PointCloudSprites.VERTICES_PER_POINT * PointCloudSprites.STRIDE)
-        PointCloudSprites.write(cloud, 0f, 1_100L, 0f, 0f, 0f, 1000f, 10f, palette, out)
+        PointCloudSprites.write(
+            cloud, minConfidence = 0f, nowMs = 1_100L, camX = 0f, camY = 0f, camZ = 0f,
+            camForwardX = 0f, camForwardY = 0f, camForwardZ = -1f,
+            focalPx = 1000f, radiusPx = 10f, palette = palette, out = out,
+        )
         assertEquals(1f, out[3], 1e-6f)
         assertEquals(0f, out[5], 1e-6f)
         assertEquals(1f, out[6], 1e-6f)
