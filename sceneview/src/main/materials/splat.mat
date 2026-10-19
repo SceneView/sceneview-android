@@ -134,7 +134,11 @@ vertex {
         float3 c = o;
         float peak = max(o.r, max(o.g, o.b));
         if (peak >= 0.76) {
-            float np = min(peak, 0.9999);
+            // Cap the peak at 0.99143 (displays as 252.8/255): its inverse is 7.24, the same
+            // scene value Filmic's inverse gives white. PBR Neutral's inverse is unbounded as the
+            // peak nears 1, so near-white splats became scene values in the hundreds with their
+            // chroma amplified ~87x, and bloom smeared them into a yellow/cyan haze (#4595 QA).
+            float np = min(peak, 0.99143);
             float p = 0.0576 / (1.0 - np) + 0.52;
             float g = 1.0 - 1.0 / (0.15 * (p - np) + 1.0);
             c = (o - np * g) / (1.0 - g) * (p / np);
