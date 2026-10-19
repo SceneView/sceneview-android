@@ -237,7 +237,7 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
     var openingFile by remember { mutableStateOf(false) }
 
     // What the replay shows: the sample, or one of your scans — the same view either way.
-    var showingScan by remember { mutableStateOf(false) }
+    var showingScan by remember { mutableStateOf(qaState in PLAN_QA_STATES) }
     var scanMedia by remember { mutableStateOf<RerunReplayMedia?>(null) }
     // The replay is titled after the session it shows, as the card that opened it is.
     var scanTitle by remember { mutableStateOf(ScanCopy.REPLAY_TITLE) }
@@ -336,6 +336,8 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
         opening = null
         screen = RerunScreen.Landing
     }
+    // The floor plan opens from the result's export sheet (#4540) and goes back to it.
+    val leavePlan = { screen = if (hasResult) RerunScreen.Model else RerunScreen.Replay }
     val leaveDollhouse = { dollhouseReturn?.let { screen = it } ?: onBack() }
     val leaveLive = {
         if (recordingForDollhouse) {
@@ -350,6 +352,7 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
             RerunScreen.Dollhouse -> leaveDollhouse()
             RerunScreen.Live -> leaveLive()
             RerunScreen.Replay -> if (showingScan && hasResult) screen = RerunScreen.Model else toLanding()
+            RerunScreen.Plan -> leavePlan()
             else -> toLanding()
         }
     }
@@ -434,6 +437,28 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
     }
     val pickFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let(importFile)
+    }
+    // QA's floor plan: the ray-cast room, kept as a scan would be, then opened on its plan.
+    if (qaState in PLAN_QA_STATES) {
+        LaunchedEffect(Unit) {
+            val pack = syntheticPlanCapture(partial = qaState == QA_STATE_PLAN_PARTIAL)
+            val kept = withContext(Dispatchers.IO) {
+                // It replaces the one session it kept the time before, whose id it wrote beside
+                // the sessions — never another session, whatever that one is titled.
+                val mine = File(store.root, QA_PLAN_MARKER)
+                val last = runCatching { mine.readText().trim() }.getOrNull()
+                store.list().firstOrNull { it.id == last && it.title == QA_PLAN_TITLE }?.let { store.delete(it.id) }
+                store.save(pack, QA_PLAN_TITLE, RerunSessionSource.Recorded).also { mine.writeText(it.id) }
+            }
+            sessionsVersion++
+            val opened = loadRerunSession(pack) ?: return@LaunchedEffect
+            scanId = kept.id
+            scanMedia = opened
+            scanTitle = kept.title
+            scanPack = pack
+            showingScan = true
+            screen = RerunScreen.Plan
+        }
     }
     val inbox = DemoSettings.rerunInbox
     LaunchedEffect(inbox) {
@@ -546,6 +571,12 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
             arPlaybackDataset = arPlaybackDataset,
             startIn3d = qaState == QA_STATE_DOLLHOUSE_3D,
         )
+        RerunScreen.Plan -> RerunPlanScreen(
+            media = scanMedia,
+            title = scanTitle,
+            date = planDate(sessions?.firstOrNull { it.id == scanId }?.info?.createdAt),
+            onBack = leavePlan,
+        )
         RerunScreen.Model -> RerunModelScreen(
             source = modelSource,
             title = if (showingScan) scanTitle else ScanCopy.REPLAY_TITLE,
@@ -599,15 +630,26 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
                 }
             }
         }
-        RerunExportSheet(source = source, onDismiss = { exporting = false })
+        // The floor plan is a scan's: it is measured on the depth the scan recorded (#4540).
+        val planMedia = scanMedia?.takeIf { showingScan }
+        RerunExportSheet(
+            source = source,
+            onDismiss = { exporting = false },
+            onFloorPlan = planMedia?.let {
+                {
+                    exporting = false
+                    screen = RerunScreen.Plan
+                }
+            },
+        )
     }
 }
 
 /**
- * The demo's screens: the landing, the live AR session (Record), the replay, and the dollhouse —
- * a session stood on a table in AR (#4075).
+ * The demo's screens: the landing, the live AR session (Record), the replay, the dollhouse — a
+ * session stood on a table in AR (#4075) — the scan's result, and its floor plan (#4540).
  */
-private enum class RerunScreen { Landing, Live, Replay, Dollhouse, Model }
+private enum class RerunScreen { Landing, Live, Replay, Dollhouse, Model, Plan }
 
 /** The replay's three views. */
 private enum class RerunMode { Scene, Map, Camera }
@@ -1881,6 +1923,17 @@ private const val QA_STATE_MODEL_POINTS = "model-synthetic-points"
 
 /** The same result with its export sheet open. */
 private const val QA_STATE_MODEL_EXPORT = "model-synthetic-export"
+
+/** A kept scan of the ray-cast room, opened on its floor plan (#4540): four walls and the ceiling seen. */
+private const val QA_STATE_PLAN_SYNTHETIC = "plan-synthetic"
+
+/** The same room with one wall and the ceiling never scanned: the plan says what is missing. */
+private const val QA_STATE_PLAN_PARTIAL = "plan-partial"
+
+private val PLAN_QA_STATES = setOf(QA_STATE_PLAN_SYNTHETIC, QA_STATE_PLAN_PARTIAL)
+
+/** Beside the sessions, the id of the one session QA's plan states kept: the only one they replace. */
+private const val QA_PLAN_MARKER = "qa-plan-session.txt"
 
 /** The QA states that open straight on the result screen. */
 private val MODEL_QA_STATES = setOf(QA_STATE_MODEL_SYNTHETIC, QA_STATE_MODEL_POINTS, QA_STATE_MODEL_EXPORT)
