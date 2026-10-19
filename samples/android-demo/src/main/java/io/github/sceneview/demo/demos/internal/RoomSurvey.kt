@@ -570,12 +570,17 @@ object RoomSurveyor {
                 val reach = if (input.trail.size >= 3) REACH_M else CELL_M
                 val nu = ceil((maxU - minU + 2 * reach) / CELL_M).toInt() + 1
                 val nv = ceil((maxV - minV + 2 * reach) / CELL_M).toInt() + 1
-                if (nu.toLong() * nv > MAX_CELLS) return null
+                if (nu.toLong() * nv > MAX_GRID_BYTES / GRID_BYTES_PER_CELL) return null
                 // Snapped to the grid's own step, so a cloud read twice lands in the same cells.
                 return Grid(floor((minU - reach) / CELL_M) * CELL_M, floor((minV - reach) / CELL_M) * CELL_M, nu, nv)
             }
 
-            private const val MAX_CELLS = 4_000_000L
+            /**
+             * Per cell: occupied (1 byte), then for each of 5 classes counts (4), lows (4),
+             * highs (4), sums (4), fronted (1), and backed (1): 1 + 5 * 18 = 91 bytes.
+             */
+            private const val GRID_BYTES_PER_CELL = 91L
+            private const val MAX_GRID_BYTES = 48L * 1024 * 1024
         }
     }
 

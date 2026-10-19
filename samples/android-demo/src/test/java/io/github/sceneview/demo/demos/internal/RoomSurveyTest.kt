@@ -197,6 +197,21 @@ class RoomSurveyTest {
     }
 
     @Test
+    fun `a camera trail whose grid exceeds the memory budget is not measured`() {
+        val room = Room().box().input()
+        val trail = floatArrayOf(
+            room.trail[0], room.trail[1], room.trail[2],
+            room.trail[0] + 40f, room.trail[1], room.trail[2] + 40f,
+        )
+
+        val survey = RoomSurveyor.survey(RoomSurveyInput(room.positions, room.normals, trail))
+
+        assertFalse(survey.hasPlan)
+        assertNull(survey.area)
+        assertEquals(SurveyGap.NoWalls, survey.gaps.first())
+    }
+
+    @Test
     fun `the outline starts top-left and walks clockwise on the page`() {
         val walls = Room().box().survey().walls
 
