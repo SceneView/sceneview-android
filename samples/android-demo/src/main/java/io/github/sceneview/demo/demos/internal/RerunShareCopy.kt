@@ -15,7 +15,7 @@ import java.util.UUID
  */
 internal object RerunShareCopy {
     /**
-     * Writes [capture], marked with its [scope], as `<title>.svscan` in a fresh directory of
+     * Writes [capture], marked with its [scope] and [title], as `<title>.svscan` in a fresh directory of
      * [shareRoot], which is emptied first: one shared copy exists at a time, so opening the sheet
      * or flipping its switch never piles scans of several megabytes up in the cache. Call it off
      * the main thread, one at a time.
@@ -27,7 +27,7 @@ internal object RerunShareCopy {
         includePhotos: Boolean,
         scope: ScanScope = ScanScope.Room,
     ): File {
-        val scoped = RerunScanFile.withScope(capture, scope)
+        val scoped = RerunScanFile.stamped(capture, scope, title)
         val shared = if (includePhotos) scoped else withoutPhotos(scoped)
         shareRoot.deleteRecursively()
         val dir = File(shareRoot, UUID.randomUUID().toString()).apply { check(mkdirs()) }

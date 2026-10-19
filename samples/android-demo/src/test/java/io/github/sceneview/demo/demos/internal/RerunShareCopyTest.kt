@@ -18,7 +18,7 @@ class RerunShareCopyTest {
     @get:Rule val temp = TemporaryFolder()
 
     @Test
-    fun `photos included sends exactly the stored capture in a cache copy`() {
+    fun `photos included sends the stored capture, titled, in a cache copy`() {
         val capture = fixture()
         val stored = temp.newFile("original.svscan").apply { writeBytes(RerunScanFile.write(capture)) }
         val original = stored.readBytes()
@@ -26,7 +26,8 @@ class RerunShareCopyTest {
         val shared = RerunShareCopy.write(capture, "Room", cache, true)
         assertTrue(shared.canonicalPath.startsWith(cache.canonicalPath + File.separator))
         assertFalse(shared.canonicalPath == stored.canonicalPath)
-        assertArrayEquals(original, shared.readBytes())
+        // The stored capture, with only its title added to the manifest (#4695).
+        assertArrayEquals(RerunScanFile.write(RerunScanFile.withTitle(capture, "Room")), shared.readBytes())
         assertArrayEquals(original, stored.readBytes())
         assertEntries(shared)
         val opened = RerunScanFile.read(shared.readBytes())!!.open()!!
