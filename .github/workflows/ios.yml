@@ -24,6 +24,8 @@ on:
       - 'assets/manifest.json'
       - 'tools/fetch-assets.sh'
       - '.github/workflows/ios.yml'
+  schedule:
+    - cron: '30 3 * * *'
   workflow_dispatch:
 
 # Cancel only a genuinely superseded PR run, never a push to `main` — same
@@ -170,6 +172,7 @@ jobs:
   # self-hosted Xcode lists stay on 26.x until this job is green.
   build-xcode27:
     name: Build & Test (iOS, Xcode 27 preview)
+    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
     runs-on: xcode-27
     continue-on-error: true
     timeout-minutes: 30
@@ -382,6 +385,7 @@ jobs:
   # key is separate.
   build-demo-xcode27:
     name: Build & Test (iOS sample demo, Xcode 27 preview)
+    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
     runs-on: xcode-27
     continue-on-error: true
     timeout-minutes: 30
