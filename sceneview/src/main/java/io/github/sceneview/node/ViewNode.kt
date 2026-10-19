@@ -38,8 +38,10 @@ import com.google.android.filament.Scene
 import com.google.android.filament.Stream
 import com.google.android.filament.Texture
 import io.github.sceneview.EngineDestroyQueue
+import io.github.sceneview.collision.CollisionSystem
 import io.github.sceneview.collision.HitResult
 import io.github.sceneview.loaders.MaterialLoader
+import io.github.sceneview.matchToneMapInverse
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Size
 import io.github.sceneview.math.worldToLocalDirection
@@ -250,6 +252,7 @@ class ViewNode(
             val old = field
             field = value
             setMaterialInstanceAt(0, value)
+            value.matchToneMapInverse(collisionSystem?.view)
             materialLoader.destroyMaterialInstance(old)
         }
 
@@ -431,6 +434,10 @@ class ViewNode(
      */
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
     override fun takeTouchStreamHandBack(): Boolean = touchForwarder.takeHandBack()
+
+    override fun onCollisionSystemChanged(collisionSystem: CollisionSystem?) {
+        materialInstance.matchToneMapInverse(collisionSystem?.view)
+    }
 
     override fun destroy() {
         // Once only (#4259): a second call would free handles, material instances and an

@@ -56,7 +56,7 @@ import io.github.sceneview.node.FogNode
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberMaterialLoader
 import io.github.sceneview.rememberModelLoader
-import io.github.sceneview.rememberView
+import io.github.sceneview.rememberARView
 import io.github.sceneview.sample.ui.LabeledSlider
 import java.util.Locale
 
@@ -107,7 +107,7 @@ fun ARFogDemo(onBack: () -> Unit) {
     val engine = rememberEngine()
     val modelLoader = rememberModelLoader(engine)
     val materialLoader = rememberMaterialLoader(engine)
-    val view = rememberView(engine)
+    val view = rememberARView(engine)
 
     var trackingFailureReason by remember { mutableStateOf<TrackingFailureReason?>(null) }
     var isTracking by remember { mutableStateOf(false) }

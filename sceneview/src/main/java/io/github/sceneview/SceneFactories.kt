@@ -8,6 +8,7 @@ import com.google.android.filament.Engine
 import com.google.android.filament.Filament
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.LightManager
+import com.google.android.filament.MaterialInstance
 import com.google.android.filament.Renderer
 import com.google.android.filament.Skybox
 import com.google.android.filament.Texture
@@ -212,6 +213,17 @@ fun createARView(engine: Engine): View = engine.createView().apply {
  */
 internal val filmicViews: MutableSet<View> =
     java.util.Collections.synchronizedSet(java.util.Collections.newSetFromMap(java.util.WeakHashMap()))
+
+/**
+ * Points a material that pre-distorts its colour by the inverse of the view's tone mapper
+ * (`video_texture*.mat`, `view_texture_*.mat`) at the inverse matching [view]: Filmic for a
+ * [createARView] view, PBR Neutral for every other one (#4595). No-op without a view, or for a
+ * material that has no `inverseFilmic` parameter.
+ */
+internal fun MaterialInstance.matchToneMapInverse(view: View?) {
+    if (view == null || !material.hasParameter("inverseFilmic")) return
+    setParameter("inverseFilmic", view in filmicViews)
+}
 
 fun createRenderer(engine: Engine): Renderer = engine.createRenderer()
 
