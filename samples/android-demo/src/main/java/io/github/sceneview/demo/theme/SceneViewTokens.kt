@@ -781,9 +781,9 @@ object SceneViewTokens {
             // Anchors — `success`: something the user placed and that holds.
             anchor = Color(0xFF16A34A),
             anchorGlow = 1.6f,
-            // Floor grid: 0.5 m minor, 1 m major, white at 7 % / 14 %.
-            gridMinor = Color(0x12FFFFFF),
-            gridMajor = Color(0x24FFFFFF),
+            // Floor grid (#4040): 25 cm minor, 1 m major, white at 16 % / 36 %, fading out round the room.
+            gridMinor = Color(0x29FFFFFF),
+            gridMajor = Color(0x5CFFFFFF),
             // Origin gizmo: X `danger`, Y `success`, Z `primary` (dark value).
             axisX = Color(0xFFEA4335),
             axisY = Color(0xFF16A34A),
@@ -795,7 +795,7 @@ object SceneViewTokens {
          * one blue, `#BDD3FF` → `#3D7FD9` → `primary` (the oldest is the palest, as it is the
          * dimmest on the dark stage); the frustum and the floor planes take `primary`, the walls
          * `tertiary`; history points are `on-surface` at 55 %; the grid is `on-surface` at
-         * 8 % / 16 %.
+         * 18 % / 40 % (#4040).
          */
         val Light = DebugPalette(
             // One blue, faint to strong (#4597): `mark-color` lid → body → `primary`.
@@ -818,8 +818,8 @@ object SceneViewTokens {
             otherOutline = Color(0x991A1A2E),
             anchor = Color(0xFF16A34A),
             anchorGlow = 1f,
-            gridMinor = Color(0x141A1A2E),
-            gridMajor = Color(0x291A1A2E),
+            gridMinor = Color(0x2E1A1A2E),
+            gridMajor = Color(0x661A1A2E),
             axisX = Color(0xFFEA4335),
             axisY = Color(0xFF16A34A),
             axisZ = Color(0xFF005BC1),

@@ -1117,7 +1117,12 @@ the camera mode keeps `ARSceneView`'s own plane renderer).
   and tables, lilac on walls; the origin gizmo follows X red / Y green / Z blue. *Light*: the
   same meanings in the light scheme's values — the path runs `#BDD3FF` → `#3D7FD9` →
   `primary`, the frustum and floors take `primary`, walls `tertiary`, history points are
-  `on-surface` at 55 %, the grid `on-surface` at 8 % / 16 %.
+  `on-surface` at 55 %, the grid `on-surface` at 18 % / 40 %.
+- **The floor grid gives the room its scale** (#4040). A line every 25 cm, a major line every
+  metre, about one and two pixels wide; white at 16 % / 36 % on the dark ground, `on-surface`
+  at 18 % / 40 % on the light one. It is whole under the room and fades out over 3 m past its
+  corners (`replay_grid.mat`), the ground grid of Polycam or Reality Composer: readable at a
+  glance, never an edge, and always under the points, the path and the dimensions.
 - **Only the present glows.** On the dark ground the trail head, the live frustum, the live
   points and the anchors are pushed past 1.0 in linear light so bloom lifts them; history
   stays flat. The eye lands on "now" without a legend. On the light ground nothing glows —
