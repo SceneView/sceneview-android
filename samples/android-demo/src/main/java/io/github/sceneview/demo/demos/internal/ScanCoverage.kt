@@ -41,11 +41,12 @@ internal class CoverageGrid(
         private set
 
     /**
-     * Bins the points of [mapPoints] (xyz triples) not seen yet. Returns `true` when a cell became
-     * covered — the scan grew.
+     * Bins the first [count] points of [mapPoints] (xyz triples) not seen yet — all of them by
+     * default; a dense cloud revealed as a prefix passes its revealed count. Returns `true` when a
+     * cell became covered — the scan grew.
      */
-    fun update(mapPoints: FloatArray): Boolean {
-        val total = mapPoints.size / 3
+    fun update(mapPoints: FloatArray, count: Int = mapPoints.size / 3): Boolean {
+        val total = count.coerceIn(0, mapPoints.size / 3)
         if (total < consumed) reset()
         var grew = false
         for (i in consumed until total) {
