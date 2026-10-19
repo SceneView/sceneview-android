@@ -44,18 +44,23 @@ class RerunMeshSimplifierTest {
         }
         ball(0, 12f)
         ball(60, 2f)
-        val synthetic = RerunTsdf()
-        RerunSyntheticRoom.frames().take(30).forEach { synthetic.integrate(it) }
-        val firstThirty = RerunMarchingCubes.extract(synthetic).mesh
-        RerunSyntheticRoom.frames().drop(30).forEach { synthetic.integrate(it) }
-        val fixtures = listOf(
-            "noise-20" to RerunMarchingCubes.extract(noise, minComponentTriangles = 0).mesh,
-            "balls-all" to RerunMarchingCubes.extract(balls, minComponentTriangles = 0).mesh,
-            "balls-kept" to RerunMarchingCubes.extract(balls).mesh,
-            "room-30-frames" to firstThirty,
-            "room-all-frames" to RerunMarchingCubes.extract(synthetic).mesh,
+        // Built one at a time and dropped after its check: the room's volume and meshes held together
+        // with the simplifier's working arrays overflow the default test heap on CI.
+        fun syntheticRoom(frames: Int?): RerunMesh {
+            val synthetic = RerunTsdf()
+            val all = RerunSyntheticRoom.frames()
+            (if (frames == null) all else all.take(frames)).forEach { synthetic.integrate(it) }
+            return RerunMarchingCubes.extract(synthetic).mesh
+        }
+        val fixtures: List<Pair<String, () -> RerunMesh>> = listOf(
+            "noise-20" to { RerunMarchingCubes.extract(noise, minComponentTriangles = 0).mesh },
+            "balls-all" to { RerunMarchingCubes.extract(balls, minComponentTriangles = 0).mesh },
+            "balls-kept" to { RerunMarchingCubes.extract(balls).mesh },
+            "room-30-frames" to { syntheticRoom(30) },
+            "room-all-frames" to { syntheticRoom(null) },
         )
-        for ((name, mesh) in fixtures) {
+        for ((name, build) in fixtures) {
+            val mesh = build()
             val target = if (name.startsWith("room")) 100_000 else mesh.triangleCount / 2
             val result = checkReduction(name, mesh, target)
             assertTrue("$name: ${result.triangleCount} > $target",
