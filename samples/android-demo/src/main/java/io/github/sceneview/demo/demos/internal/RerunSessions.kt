@@ -403,7 +403,9 @@ class RerunSessionStore(val root: File) {
                 throw RerunImportFailure.Unreadable(fileName).apply { initCause(other) }
             }
         }
-        val title = fileName.substringBeforeLast('.').trim().ifEmpty { "Opened session" }
+        // A scan file carries the title it was saved under (#4695): the file name lost its colons.
+        val title = (if (kind == RerunFileKind.Scan) RerunScanFile.titleOf(capture) else null)
+            ?: fileName.substringBeforeLast('.').trim().ifEmpty { "Opened session" }
         val source = if (kind == RerunFileKind.Scan) RerunSessionSource.Scan else RerunSessionSource.Rrd
         return try {
             // A scan file says what it was a scan of; a recording from Rerun is a room.
@@ -520,6 +522,33 @@ object RerunScanFile {
         return RerunCapturePack(manifest.toString().toByteArray(), capture.log, capture.media)
     }
 
+    /**
+     * The title [capture] was saved under, as its manifest's top-level `title` key says (#4695);
+     * `null` for a file without one — every scan file written before the key was — or a blank one.
+     */
+    fun titleOf(capture: RerunCapturePack): String? =
+        (manifestOf(capture)?.get(TITLE) as? JsonPrimitive)?.takeIf { it.isString }?.content?.trim()?.ifEmpty { null }
+
+    /**
+     * [capture] with [title] in its manifest, so the scan opens under the title it was shared with
+     * rather than its file name, whose colons were replaced. The same capture when the manifest
+     * already carries [title] or [title] is blank; every other key is kept.
+     */
+    fun withTitle(capture: RerunCapturePack, title: String): RerunCapturePack {
+        val name = title.trim()
+        if (name.isEmpty() || titleOf(capture) == name) return capture
+        val root = manifestOf(capture) ?: return capture
+        val manifest = JsonObject(root + (TITLE to JsonPrimitive(name)))
+        return RerunCapturePack(manifest.toString().toByteArray(), capture.log, capture.media)
+    }
+
+    /** [capture] as a file carries it: marked with its [scope] and its [title]. */
+    fun stamped(capture: RerunCapturePack, scope: ScanScope, title: String): RerunCapturePack =
+        withTitle(withScope(capture, scope), title)
+
+    private fun manifestOf(capture: RerunCapturePack): JsonObject? =
+        runCatching { Json.parseToJsonElement(String(capture.manifest)) as? JsonObject }.getOrNull()
+
     /** A zip whose first entry is the manifest: how both apps write a scan file. */
     fun looksLikeOne(head: ByteArray): Boolean {
         if (head.size < ZIP_HEADER || StoredZip.u32(head, 0) != StoredZip.LOCAL) return false
@@ -531,6 +560,7 @@ object RerunScanFile {
     private const val ZIP_HEADER = 30
     private const val NAME_LENGTH_AT = 26
     private const val SCOPE = "scope"
+    private const val TITLE = "title"
 }
 
 /**

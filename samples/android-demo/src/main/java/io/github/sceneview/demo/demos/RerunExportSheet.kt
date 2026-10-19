@@ -514,7 +514,8 @@ private class RerunExportFiles(private val context: Context, private val source:
                     ?.let { model -> sharedRerunModel(model) { job.ensureActive() }.also { note = it.note }.glb }
                     ?: RerunGlbWriter.write(scene(), anchorModels(context, scene()), BitmapRerunImageCodec)
                 RerunExportFormat.Points -> RerunPlyWriter.write(scene())
-                RerunExportFormat.Scan -> RerunScanFile.write(RerunScanFile.withScope(capture(), source.scope))
+                RerunExportFormat.Scan ->
+                    RerunScanFile.write(RerunScanFile.stamped(capture(), source.scope, source.title))
                 RerunExportFormat.Recording -> RerunRrdWriter.write(scene(), BitmapRerunImageCodec)
             }
         }
