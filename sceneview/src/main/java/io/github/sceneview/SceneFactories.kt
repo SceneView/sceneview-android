@@ -8,6 +8,7 @@ import com.google.android.filament.Engine
 import com.google.android.filament.Filament
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.LightManager
+import com.google.android.filament.MaterialInstance
 import com.google.android.filament.Renderer
 import com.google.android.filament.Skybox
 import com.google.android.filament.Texture
@@ -28,6 +29,8 @@ import io.github.sceneview.math.colorOf
 import io.github.sceneview.math.toColor
 import io.github.sceneview.node.CameraNode
 import io.github.sceneview.node.LightNode
+import io.github.sceneview.node.Node
+import io.github.sceneview.node.VideoNode
 import io.github.sceneview.node.ViewNode
 import io.github.sceneview.utils.OpenGL
 import io.github.sceneview.utils.readBuffer
@@ -212,6 +215,25 @@ fun createARView(engine: Engine): View = engine.createView().apply {
  */
 internal val filmicViews: MutableSet<View> =
     java.util.Collections.synchronizedSet(java.util.Collections.newSetFromMap(java.util.WeakHashMap()))
+
+/**
+ * Points a material that pre-distorts its colour by the inverse of the view's tone mapper
+ * (`video_texture*.mat`, `view_texture_*.mat`) at the inverse matching [view]: Filmic for a
+ * [createARView] view, PBR Neutral for every other one (#4595). No-op without a view, or for a
+ * material that has no `inverseFilmic` parameter.
+ */
+/** Matches a [VideoNode] or [ViewNode] material to [view]'s tone mapper; other nodes are left as is. */
+internal fun Node.matchToneMapInverse(view: View?) {
+    when (this) {
+        is VideoNode -> materialInstance.matchToneMapInverse(view)
+        is ViewNode -> materialInstance.matchToneMapInverse(view)
+    }
+}
+
+internal fun MaterialInstance.matchToneMapInverse(view: View?) {
+    if (view == null || !material.hasParameter("inverseFilmic")) return
+    setParameter("inverseFilmic", view in filmicViews)
+}
 
 fun createRenderer(engine: Engine): Renderer = engine.createRenderer()
 
