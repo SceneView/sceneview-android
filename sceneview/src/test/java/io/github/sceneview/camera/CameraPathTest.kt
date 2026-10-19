@@ -147,21 +147,66 @@ class CameraPathTest {
         val rooms = listOf(home, home.copy(target = Position(4f, 0f, 0f)), home.copy(target = Position(4f, 0f, 5f)))
         val path = CameraPath.through(rooms, secondsPerShot = 2f)
         assertEquals(4f, path.durationSeconds, 0f)
-        assertShotClose(rooms[1], path.shotAt(2f).let { path.shotAt(unease(path, 2f)) })
+        // Expressive by default, and still on each shot at its declared second (easing per segment).
+        assertShotClose(rooms[1], path.shotAt(2f))
         assertShotClose(rooms[2], path.shotAt(4f))
         assertEquals(home, path.start)
     }
 
-    /** Time at which an eased path is at absolute keyframe time [seconds]. */
-    private fun unease(path: CameraPath, seconds: Float): Float {
-        val wanted = seconds / path.durationSeconds
-        var lo = 0f
-        var hi = 1f
-        repeat(40) {
-            val mid = (lo + hi) / 2
-            if (path.easing(mid) < wanted) lo = mid else hi = mid
+    @Test
+    fun easedPathReachesEveryKeyframeAtItsDeclaredSecond() {
+        val shots = listOf(
+            CameraShot(Position(0f, 0f, 0f), 0f, 20f, 2f),
+            CameraShot(Position(2f, 0f, 1f), 90f, 45f, 4f),
+            CameraShot(Position(5f, 1f, 0f), 140f, 10f, 3f),
+        )
+        val path = CameraPath(
+            shots.mapIndexed { index, shot -> CameraKeyframe(shot, index * 2f) },
+            easing = CameraEasing.Expressive,
+        )
+        assertShotClose(shots[0], path.shotAt(0f))
+        assertShotClose(shots[1], path.shotAt(2f))
+        assertShotClose(shots[2], path.shotAt(4f))
+        // Expressive within a segment: well past half-way by half the segment's time.
+        val mid = path.shotAt(1f)
+        assertTrue(mid.azimuthDegrees > 45f && mid.azimuthDegrees < 90f)
+    }
+
+    @Test
+    fun timeCountsFromTheFirstKeyframe() {
+        val path = CameraPath(
+            listOf(CameraKeyframe(home, 1f), CameraKeyframe(home.copy(distance = 6f), 3f)),
+            easing = CameraEasing.Linear,
+        )
+        assertShotClose(home, path.shotAt(0f))
+        // Finished at its duration, and on its last shot then: what CameraAnimator lands on.
+        assertTrue(path.isFinishedAt(2f))
+        assertShotClose(path.end!!, path.shotAt(2f))
+    }
+
+    @Test
+    fun aFractionalLoopingTourClosesAtTheSeam() {
+        for (turns in listOf(1.5f, 0.75f, 2.3f)) {
+            val path = CameraPath.tour(home, durationSeconds = 9f, turns = turns)
+            val end = path.end!!
+            val start = path.start!!
+            assertEquals("elevation at the seam, $turns turns", start.elevationDegrees, end.elevationDegrees, 1e-3f)
+            assertEquals(start.distance, end.distance, 1e-4f)
+            assertEquals(start.target, end.target)
+            // No jump across the seam: just before and just after it are a frame's motion apart.
+            val h = 1f / 120f
+            val before = path.shotAt(9f - h)
+            val after = path.shotAt(9f + h)
+            assertEquals(
+                "elevation across the seam, $turns turns",
+                before.elevationDegrees,
+                after.elevationDegrees,
+                0.05f,
+            )
+            assertTrue(abs(after.azimuthDegrees - before.azimuthDegrees) < 2f)
+            // It still rises in between.
+            assertTrue((0..90).any { path.shotAt(it / 10f).elevationDegrees > home.elevationDegrees + 1f })
         }
-        return (lo + hi) / 2 * path.durationSeconds
     }
 
     private fun assertShotClose(expected: CameraShot, actual: CameraShot, tolerance: Float = 1e-3f) {

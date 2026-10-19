@@ -100,6 +100,7 @@ import io.github.sceneview.demo.demos.internal.ReplayGeometry
 import io.github.sceneview.demo.demos.internal.ReplayIntro
 import io.github.sceneview.demo.demos.internal.RoomMeasure
 import io.github.sceneview.demo.demos.internal.ScanPlanes
+import io.github.sceneview.demo.demos.internal.ScanFollow
 import io.github.sceneview.demo.theme.DebugPalette
 import io.github.sceneview.demo.theme.LocalStageChrome
 import io.github.sceneview.demo.theme.SceneViewTokens
@@ -824,9 +825,13 @@ internal fun ArDebugSceneView(
                 orbit.limits = if (follow == null) ArDebugFraming.limits(bounds, home, floorY) else OrbitLimits.NONE
                 if (follow != null) {
                     // A drag orbits the cloud, not the phone behind it (#4628).
-                    orbit.pivot = bounds?.let {
-                        Position((it[0] + it[3]) / 2f, (it[1] + it[4]) / 2f, (it[2] + it[5]) / 2f)
+                    if (clock.pivotFor !== frame) {
+                        clock.pivotFor = frame
+                        clock.pivot = ScanFollow.cloudCentre(frame.mapPoints) ?: bounds?.let {
+                            Position((it[0] + it[3]) / 2f, (it[1] + it[4]) / 2f, (it[2] + it[5]) / 2f)
+                        }
                     }
+                    orbit.pivot = clock.pivot
                     if (!orbit.hasFramedContent && followed != null) {
                         orbit.hasFramedContent = true
                         orbit.snapTo(followed)
@@ -952,6 +957,8 @@ private class FrameClock {
     var wholeFor: ArDebugTrace? = null
     var subject: SceneSubject? = null
     var subjectFor: ArDebugFrame? = null
+    var pivotFor: ArDebugFrame? = null
+    var pivot: Position? = null
     var contentFrames = 0
     var shown = false
 

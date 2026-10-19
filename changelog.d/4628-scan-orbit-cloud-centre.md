@@ -1,0 +1,2 @@
+<!-- category: Fixed -->
+- **Demo app: dragging 3D Scan's live view turns around the scanned cloud ([#4628](https://github.com/sceneview/sceneview/issues/4628)).** A long drag or a flick used to turn the view around where you stood, so past about a third of a turn it faced away from the cloud and the screen went almost empty. The view now turns around the middle of what you have scanned, so the cloud stays in view from every side.

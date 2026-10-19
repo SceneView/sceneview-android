@@ -84,6 +84,17 @@ class DenseFusionBudgetTest {
         assertEquals(DenseFusion.MAX_BUDGET, DenseFusion.budgetFor(1L shl 30))
     }
 
+    @Test
+    fun `a compaction that coarsens without merging voxels still emits their levels`() {
+        val fusion = DenseFusion(maxPoints = 10, maxLevel = 1)
+        val positions = FloatArray(8 * 3) { if (it % 3 == 0) (it / 3 * 2) * 0.02f + 0.001f else 0f }
+        fusion.add(DenseSamples(8, positions, FloatArray(positions.size), IntArray(8), ByteArray(8)))
+
+        assertEquals(8, fusion.count)
+        assertEquals(0, fusion.compactions)
+        assertArrayEquals(ByteArray(8) { 1 }, fusion.cloud().levels)
+    }
+
     // ── The saved format and the drawing ─────────────────────────────────────
 
     @Test
