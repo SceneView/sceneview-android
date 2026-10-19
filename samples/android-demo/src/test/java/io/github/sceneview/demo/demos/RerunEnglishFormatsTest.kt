@@ -97,7 +97,7 @@ class RerunEnglishFormatsTest {
     fun `share and placement actions use the agreed English vocabulary`() {
         val context = org.robolectric.RuntimeEnvironment.getApplication()
         val labels = mapOf(
-            io.github.sceneview.demo.R.string.scan_place to "Place",
+            io.github.sceneview.demo.R.string.scan_place to "Place in AR",
             io.github.sceneview.demo.R.string.scan_share to "Share",
             io.github.sceneview.demo.R.string.scan_close to "Close",
             io.github.sceneview.demo.R.string.scan_share_include_photos to "Include photos",
@@ -111,7 +111,7 @@ class RerunEnglishFormatsTest {
         )
         for ((id, expected) in labels) assertEquals(expected, context.getString(id))
         assertEquals(
-            "This file contains photos of your room and the path you walked. " +
+            "This file contains your room in 3D, its photos and the path you walked. " +
                 "Anyone you send it to can see them.",
             context.getString(io.github.sceneview.demo.R.string.scan_share_privacy),
         )
@@ -123,8 +123,8 @@ class RerunEnglishFormatsTest {
         // may not promise a file free of images.
         val context = org.robolectric.RuntimeEnvironment.getApplication()
         assertEquals(
-            "The surfaces and points in this file are still images of your room, " +
-                "with the path you walked. Anyone you send it to can see them.",
+            "Even without photos, the 3D surfaces and points in this file show your room " +
+                "and the path you walked. Anyone you send it to can see them.",
             context.getString(io.github.sceneview.demo.R.string.scan_share_privacy_without_photos),
         )
     }
