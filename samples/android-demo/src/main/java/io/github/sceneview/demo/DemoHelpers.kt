@@ -31,6 +31,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.sceneview.ar.ARCoreAvailability
+import io.github.sceneview.demo.ui.viewer.ViewerOpeningMove
 import io.github.sceneview.math.Position
 import kotlinx.coroutines.flow.first
 import java.io.File
@@ -1804,9 +1805,9 @@ class EntranceCameraManipulator(
     private val fitDistance: () -> Float = { 1f },
     private val distanceOverride: () -> Float? = { null },
     private val onDistanceChange: (Float) -> Unit = {},
-    private val startDistanceScale: Float = 1.55f,
-    private val startYawDegrees: Float = 24f,
-    private val startLiftFraction: Float = 0.22f,
+    private val startDistanceScale: Float = ViewerOpeningMove.START_DISTANCE_SCALE,
+    private val startYawDegrees: Float = ViewerOpeningMove.START_YAW_DEGREES,
+    private val startLiftFraction: Float = ViewerOpeningMove.START_LIFT_FRACTION,
     /** The lowest the eye may orbit to, in world Y — `null` = only the polar clamp. */
     private val minEyeHeight: () -> Float? = { null },
     /** With [minEyeHeight]: the shallowest the eye may look down at the target, in degrees. */
@@ -1863,22 +1864,14 @@ class EntranceCameraManipulator(
                 z = eye.z + (start.z - eye.z) * remaining,
             )
         }
-        val dx = eye.x - target.x
-        val dy = eye.y - target.y
-        val dz = eye.z - target.z
-        val radius = sqrt(dx * dx + dy * dy + dz * dz)
-        // Degenerate framing: nothing to fly along, sit at the resting pose.
-        if (!radius.isFinite() || radius <= 1e-6f) return eye
-        // Swing the offset around world +Y, push it out along itself, and lift it.
-        val yaw = Math.toRadians((startYawDegrees * remaining).toDouble()).toFloat()
-        val c = cos(yaw)
-        val s = sin(yaw)
-        val scale = 1f + (startDistanceScale - 1f) * remaining
-        val lift = radius * startLiftFraction * remaining
-        return Position(
-            x = target.x + (dx * c + dz * s) * scale,
-            y = target.y + (dy + lift) * scale,
-            z = target.z + (dz * c - dx * s) * scale,
+        // The shared opening move (#4651): swung round, pushed out and lifted by what is left.
+        return ViewerOpeningMove.eye(
+            rest = eye,
+            target = target,
+            progress = p,
+            startDistanceScale = startDistanceScale,
+            startYawDegrees = startYawDegrees,
+            startLiftFraction = startLiftFraction,
         )
     }
 
@@ -2033,8 +2026,9 @@ class EntranceCameraManipulator(
         if (zoomAnimationDuration > 0f) {
             zoomAnimationElapsed += deltaTime
             val progress = zoomAnimationElapsed / zoomAnimationDuration
+            // On the opening move's curve (#4651): a zoom lands the way the camera arrived.
             onDistanceChange(
-                io.github.sceneview.gesture.animatedZoomDistance(
+                ViewerOpeningMove.zoomDistance(
                     start = zoomAnimationStart,
                     target = zoomAnimationTarget,
                     progress = progress,

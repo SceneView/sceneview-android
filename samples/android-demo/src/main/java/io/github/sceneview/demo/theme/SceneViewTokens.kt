@@ -67,6 +67,18 @@ object SceneViewTokens {
         )
     }
 
+    /**
+     * `DESIGN.md` — `stage-grid-minor` / `stage-grid-major`: the ground grid every 3D viewer of
+     * the demo shares (#4651, `ViewerGroundGrid`). Colour and alpha both: the grid is drawn over
+     * the floor, never instead of it.
+     */
+    object ViewerGrid {
+        val LightMinor = Color(0x735C6780)
+        val LightMajor = Color(0xBF5C6780)
+        val DarkMinor = Color(0x388B95A6)
+        val DarkMajor = Color(0x738B95A6)
+    }
+
     /** `DESIGN.md` — Spatial Gallery overlay colours. */
     object SpatialGalleryColor {
         val stageScrimStart = Color.Transparent

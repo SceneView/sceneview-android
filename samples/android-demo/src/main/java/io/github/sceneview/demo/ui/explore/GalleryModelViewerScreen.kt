@@ -115,6 +115,8 @@ import io.github.sceneview.environment.Environment
 import io.github.sceneview.loaders.EnvironmentLoader
 import io.github.sceneview.loaders.ModelLoader
 import io.github.sceneview.math.Direction
+import io.github.sceneview.demo.ui.viewer.ViewerGroundGrid
+import io.github.sceneview.demo.ui.viewer.rememberViewerOpeningMove
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Size
 import io.github.sceneview.model.ModelInstance
@@ -570,6 +572,16 @@ private fun RenderContent(
         // A rotation re-fits with the model in frame: that one is a camera move.
         contentShown = instance != null,
     )
+    // The opening move every viewer shares (#4651): the camera flies onto the orbit's framing as
+    // the model appears, and the first touch takes it over without a cut.
+    val openingCamera = rememberViewerOpeningMove(
+        inner = cameraManipulator,
+        target = Position(0f, framing?.lookAtY ?: 0f, 0f),
+        subject = instance,
+        ready = instance != null && framing != null,
+    )
+    // The grid is drawn over the sheet, so it takes the sheet's theme.
+    val gridDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
 
     Column(
         modifier = Modifier
@@ -628,7 +640,7 @@ private fun RenderContent(
                     modelLoader = modelLoader,
                     environmentLoader = environmentLoader,
                     environment = environment,
-                    cameraManipulator = cameraManipulator,
+                    cameraManipulator = openingCamera,
                 ) {
                     // The model renders at its TRUE glTF size and is recentred so its
                     // bounding-box centre lands on the world origin the hero orbit pivots
@@ -642,6 +654,13 @@ private fun RenderContent(
                     val planeSize = remember(he) {
                         (maxOf(he[0], he[2]) * 6f).coerceAtLeast(1f)
                     }
+
+                    // The ground grid every viewer shares (#4651), on the shadow catcher's floor.
+                    ViewerGroundGrid(
+                        floorY = groundY,
+                        target = Position(0f, framing?.lookAtY ?: 0f, 0f),
+                        isDark = gridDark,
+                    )
 
                     // Directional light angled to cast a soft shadow under the model.
                     // Intensity 80 000 lx matches the studio_2k IBL contribution so
