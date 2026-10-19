@@ -72,10 +72,15 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -156,6 +161,7 @@ import io.github.sceneview.demo.demos.internal.ScanClock
 import io.github.sceneview.demo.demos.internal.ScanCopy
 import io.github.sceneview.demo.demos.internal.ScanDetail
 import io.github.sceneview.demo.demos.internal.ScanFollow
+import io.github.sceneview.demo.demos.internal.ScanLens
 import io.github.sceneview.demo.demos.internal.ScanPhase
 import io.github.sceneview.demo.demos.internal.ScanCutoff
 import io.github.sceneview.demo.demos.internal.ScanScope
@@ -1383,6 +1389,9 @@ private fun RerunLiveScreen(
     // pinch takes it over and shows Recenter, which hands it back to the phone.
     var scanFollowing by remember(scanMedia) { mutableStateOf(true) }
     val scanFollow = remember(scanMedia) { ScanFollow() }
+    // #4716: following, the live view draws from the phone's own eye and lens, so its points sit
+    // on the camera image they were taken from, instead of 2.6 m behind and above the phone.
+    val scanLens = remember(scanMedia) { ScanLens() }
     // What the capture has covered (#4631): the live map and the coach read it, frame by frame.
     val scanCoverage = remember(scanMedia) { ScanCoverageState() }
     val scanOrbit = remember(scanMedia) {
@@ -1395,7 +1404,35 @@ private fun RerunLiveScreen(
             elevationRange = ScanFollow.DRAG_ELEVATION_RANGE,
             maxCoastDegrees = ScanFollow.MAX_COAST_DEGREES,
         )
-            .apply { onFollowingChange = { scanFollowing = it } }
+            .apply {
+                onFollowingChange = { scanFollowing = it }
+                firstPerson = scanLens
+            }
+    }
+
+    // #4716 on the emulator, which has no AR: the `record` take's own photos stand in for the
+    // camera, each with the pose and the lens it was taken with, drawn full screen under the live
+    // view as ARCore draws its image — so a capture shows whether the points sit on the picture.
+    var qaPhoto by remember(scanMedia) { mutableStateOf<ImageBitmap?>(null) }
+    var stageSize by remember { mutableStateOf(IntSize.Zero) }
+    LaunchedEffect(qaScan, scanLens, stageSize) {
+        val media = qaScan?.takeIf { qaRecord && !qaTrackingLost } ?: return@LaunchedEffect
+        if (stageSize.width <= 0 || stageSize.height <= 0) return@LaunchedEffect
+        val aspect = stageSize.width.toFloat() / stageSize.height
+        var shown = -1
+        while (true) {
+            val index = withFrameNanos { media.trace.imageIndexAt(media.trace.duration) }
+            if (index < 0 || index == shown) continue
+            val path = media.trace.imagePath(index)
+            val photo = media.thumbnails[path] ?: continue
+            val pose = media.trace.frameAt(media.trace.imageTime(index)).camera ?: continue
+            shown = index
+            qaPhoto = photo.asImageBitmap()
+            scanLens.update { cameraToWorld, projection ->
+                ScanLens.poseMatrix(pose, cameraToWorld)
+                ScanLens.cropProjection(media.manifest.lens, aspect, projection)
+            }
+        }
     }
 
     var isTracking by remember { mutableStateOf(false) }
@@ -1790,8 +1827,18 @@ private fun RerunLiveScreen(
         val cameraStream = rememberARCameraStream(materialLoader)
         // QA camera backdrop (#3308): the emulator delivers no camera frame.
         val qaBackdrop = rememberQaCameraBackdropActive(cameraReady)
-        Box(modifier = Modifier.fillMaxSize()) {
-            if (qaBackdrop) QaCameraBackdrop(seed = QA_SEED)
+        Box(modifier = Modifier.fillMaxSize().onSizeChanged { stageSize = it }) {
+            val photo = qaPhoto
+            if (qaBackdrop && photo != null) {
+                Image(
+                    photo,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else if (qaBackdrop) {
+                QaCameraBackdrop(seed = QA_SEED)
+            }
             ARSceneView(
                 modifier = Modifier.fillMaxSize(),
                 engine = engine,
@@ -1817,6 +1864,16 @@ private fun RerunLiveScreen(
                     if (frame.timestamp > 0L) cameraReady = true
                     latestFrame = frame
                     isTracking = frame.camera.trackingState == TrackingState.TRACKING
+                    // The live view's eye (#4716): this very frame's pose and projection, for the
+                    // AR view's display geometry, which the live view shares, full screen.
+                    if (isTracking) {
+                        scanLens.update { cameraToWorld, projection ->
+                            frame.camera.displayOrientedPose.toMatrix(cameraToWorld, 0)
+                            frame.camera.getProjectionMatrix(projection, 0, ScanLens.NEAR_M, ScanLens.FAR_M)
+                        }
+                    } else {
+                        scanLens.invalidate()
+                    }
                     // Bridge gates on its own enabled + connection state, so this
                     // is safe whether or not the recorder is reachable.
                     bridge.logFrame(session, frame)
@@ -1878,6 +1935,7 @@ private fun RerunLiveScreen(
                     follow = scanFollow,
                     coverage = scanCoverage,
                     following = scanFollowing,
+                    firstPerson = isTracking || qaPhoto != null,
                     media = scanMedia,
                     engine = engine,
                     modelLoader = modelLoader,

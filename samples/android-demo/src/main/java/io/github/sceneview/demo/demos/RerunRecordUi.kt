@@ -346,7 +346,10 @@ private fun ScanHint(text: String) {
  * what is not scanned yet still shows, and on top the points in the colours the camera saw —
  * no path, no photo frames, no plane grid. The view follows the phone like a navigation app,
  * heading-up ([ScanFollow]); a drag or a pinch takes it over, and [ScanRecenterPill] gives it
- * back. While it follows, a marker holds the phone's place, where [ScanFollow.LIFT] draws it.
+ * back. While it follows a tracked phone, it draws from the phone's own eye and lens
+ * ([firstPerson], #4716), so each point sits on the camera pixel it was taken from; without a
+ * tracked frame it follows from behind and above, and a marker holds the phone's place, where
+ * [ScanFollow.LIFT] draws it.
  */
 @Composable
 @Suppress("LongParameterList") // the demo's shared engine, handed down once
@@ -356,6 +359,7 @@ internal fun ScanLiveView(
     follow: ScanFollow,
     coverage: ScanCoverageState,
     following: Boolean,
+    firstPerson: Boolean,
     media: RerunReplayMedia,
     engine: Engine,
     modelLoader: ModelLoader,
@@ -377,7 +381,8 @@ internal fun ScanLiveView(
             follow = { frame -> follow.poseFor(frame.camera) },
             observe = coverage::observe,
         )
-        if (following) {
+        // From the phone's own eye (#4716) the phone is the viewpoint: there is no place to mark.
+        if (following && !firstPerson) {
             val youAreHere = stringResource(R.string.demo_ar_rerun_you_are_here)
             Box(
                 contentAlignment = Alignment.Center,

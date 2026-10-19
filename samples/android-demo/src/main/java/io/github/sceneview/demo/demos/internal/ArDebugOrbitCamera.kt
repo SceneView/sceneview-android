@@ -14,6 +14,7 @@ import io.github.sceneview.gesture.CameraGestureDetector
 import io.github.sceneview.gesture.zoomedDistanceForPinch
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Transform
+import io.github.sceneview.math.toTransform
 import io.github.sceneview.verticalFovDegreesForFocalLength
 import kotlin.math.abs
 import kotlin.math.asin
@@ -167,6 +168,17 @@ class ArDebugOrbitCamera(
             field = value
             onFollowingChange?.invoke(value)
         }
+
+    /**
+     * The phone camera's own eye (#4716): while following, and while it holds a tracked frame, the
+     * camera stands exactly there instead of on the orbit, so what is drawn sits on the camera
+     * image under the view. A drag or a pinch leaves it for the orbit, Recenter comes back to it.
+     * The orbit keeps following the phone underneath, so the view a drag opens is the current one.
+     */
+    var firstPerson: ScanLens? = null
+
+    /** `true` while the camera stands at [firstPerson]'s eye rather than on the orbit. */
+    val inFirstPerson: Boolean get() = following && firstPerson?.ready == true
 
     /** Viewport height in pixels, for pan speed and for the view's screen-constant sizes. */
     var viewportHeight: Int = 1
@@ -348,6 +360,7 @@ class ArDebugOrbitCamera(
     }
 
     override fun getTransform(): Transform {
+        firstPerson?.takeIf { following && it.ready }?.let { return it.cameraToWorld.toTransform() }
         // Drawn from further back while a [squeeze] holds the picture smaller: the orbit is not
         // touched, so the picture comes back whole when the squeeze goes.
         val drawn = pose.copy(distance = pose.distance / shownScale)

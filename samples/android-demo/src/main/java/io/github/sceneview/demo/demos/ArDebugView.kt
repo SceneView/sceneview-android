@@ -75,6 +75,7 @@ import io.github.sceneview.DEFAULT_IBL_INTENSITY
 import io.github.sceneview.EngineDestroyQueue
 import io.github.sceneview.FrameRatePolicy
 import io.github.sceneview.SceneView
+import io.github.sceneview.rememberCameraNode
 import io.github.sceneview.SurfaceType
 import io.github.sceneview.demo.demos.internal.ArDebugFormat
 import io.github.sceneview.demo.demos.internal.ArDebugFrame
@@ -102,6 +103,7 @@ import io.github.sceneview.demo.demos.internal.RoomMeasure
 import io.github.sceneview.demo.demos.internal.scanSummary
 import io.github.sceneview.demo.demos.internal.ScanPlanes
 import io.github.sceneview.demo.demos.internal.ScanFollow
+import io.github.sceneview.demo.demos.internal.ScanLens
 import io.github.sceneview.demo.theme.DebugPalette
 import io.github.sceneview.demo.theme.LocalStageChrome
 import io.github.sceneview.demo.theme.SceneViewTokens
@@ -117,6 +119,7 @@ import io.github.sceneview.material.setColor
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.colorOf
 import io.github.sceneview.math.toLinearSpace
+import io.github.sceneview.math.toTransform
 import io.github.sceneview.model.Model
 import io.github.sceneview.model.ModelInstance
 import io.github.sceneview.node.MeshNode
@@ -758,6 +761,8 @@ internal fun ArDebugSceneView(
     val environment = rememberStageEnvironment(engine, chrome.ground, transparent)
     val view = rememberView(engine)
     val renderer = rememberRenderer(engine)
+    // Held here so the phone's own lens can replace the orbit's while 3D Scan follows (#4716).
+    val cameraNode = rememberCameraNode(engine)
 
     val layers = remember(engine, materials) { ArDebugLayers(engine, materials.instances) }
     // The replay's textured layers: created before the SceneView, released after its nodes.
@@ -790,6 +795,7 @@ internal fun ArDebugSceneView(
             materialLoader = materialLoader,
             view = view,
             renderer = renderer,
+            cameraNode = cameraNode,
             isOpaque = !transparent,
             frameRatePolicy = FrameRatePolicy.Continuous(maxFps = if (compact) PIP_FPS else null),
             autoCenterContent = false,
@@ -808,6 +814,21 @@ internal fun ArDebugSceneView(
                     if (transparent) view.bloomOptions = view.bloomOptions.apply { enabled = false }
                 }
                 session.tick(dt)
+                // From the phone's eye, through the phone's lens (#4716): ARCore's projection for
+                // the AR view under this one, same size, so a point lands on its camera pixel. The
+                // orbit's lens comes back with the orbit, after a drag or a pinch.
+                val lens = orbit.firstPerson
+                if (lens != null && orbit.inFirstPerson) {
+                    clock.lensApplied = true
+                    cameraNode.setCustomProjection(
+                        lens.projection.toTransform(),
+                        ScanLens.NEAR_M.toDouble(),
+                        ScanLens.FAR_M.toDouble(),
+                    )
+                } else if (clock.lensApplied) {
+                    clock.lensApplied = false
+                    cameraNode.updateProjection()
+                }
 
                 val trace = session.trace
                 if (trace !== clock.trace) {
@@ -1026,6 +1047,7 @@ internal class SceneSubject(
 /** Per-view frame bookkeeping, deliberately not Compose state: it changes every frame. */
 private class FrameClock {
     var lastNanos = 0L
+    var lensApplied = false
     var configured = false
     var trace: ArDebugTrace? = null
     var frame: ArDebugFrame? = null
