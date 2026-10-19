@@ -4460,6 +4460,54 @@ On the axis that binds, the projected box spans exactly `±widthFill` (or `±hei
 of the half-view; on the other it is centred and spans less. The camera is assumed
 upright (world `+Y` up); looking straight down, "right" is world `+X`.
 
+### Cinematic camera — shots, transitions, paths, reveal, tour (`io.github.sceneview.camera`)
+
+Camera *moves* as a cinematographer calls them, pure Kotlin and JVM-tested (#4631). A
+`CameraShot` is an orbit around a target — azimuth from `+Z` towards `+X`, elevation above
+the horizon, distance — not an eye position, so two shots of one subject interpolate on an
+arc *around* it, never through it. Every move is a function of time: the same shot lands at
+30, 60 or 120 Hz, and a stalled frame advances by at most 50 ms (runs long, never jumps).
+
+```kotlin
+import io.github.sceneview.camera.*
+
+val home = CameraShot(target = Position(0f, 0.8f, 0f), azimuthDegrees = 35f, elevationDegrees = 32f, distance = 4f)
+val plan = home.copy(elevationDegrees = 84f)          // same room, seen as a floor plan
+val eye = home.eye                                     // derived; CameraShot.lookingAt(eye, target) inverts it
+
+// One animator owns the camera. Wrap any gesture manipulator with it: while a move plays the
+// camera is the animator's; the first touch interrupts and the gesture takes over without a cut.
+val animator = remember { CameraAnimator(initial = home) }
+SceneView(
+    cameraManipulator = rememberCinematicCameraManipulator(animator, inner = rememberCameraManipulator(orbitRadius = 4f)),
+) { … }
+
+LaunchedEffect(model) { animator.play(CameraPath.reveal(home)) }   // the entrance: high, wide, 75° round, cranes onto home in 2.8 s
+Button(onClick = { animator.flyTo(plan) }) { Text("Plan") }        // 700 ms, ease-expressive, no cut
+Button(onClick = { animator.play(CameraPath.tour(home)) }) { Text("Tour") }   // one slow lap, 18 s, loops seamlessly
+Button(onClick = { animator.flyTo(otherRoom) })                     // another subject: pulls back at mid-flight (fly-over), lands exactly
+```
+
+- `CameraTransition(from, to, durationSeconds, easing = CameraEasing.Expressive, flyOver = 0.5f)`
+  and the pure `cameraTransition(from, to, progress)` for a scroll or slider. `flyOver` adds
+  that share of the targets' separation to the distance at mid-flight (sine bump, exact ends);
+  `0f` is a straight carry. `CameraEasing.Expressive` is DESIGN.md's `cubic-bezier(0.2, 0, 0, 1)`.
+- `CameraPath(keyframes, easing, shortestArc = true, loop = false)` — Catmull-Rom over the
+  orbit parameters: the camera passes each `CameraKeyframe(shot, seconds)` on time with
+  continuous velocity across it. `shortestArc` unwraps azimuths the short way; a full turn is
+  spelled `azimuthDegrees + 360f` with it off. Builders: `reveal(home)`, `tour(around, turns)`,
+  `through(shots, secondsPerShot)`. A looping path's azimuth keeps counting (`home + 720°` on
+  lap two); `CameraShot.normalizeDegrees` wraps it for display.
+- `CameraAnimator`: `play(path, onFinished)`, `flyTo(to, durationSeconds = 0.7f)` from
+  wherever the camera is, `snapTo`, `advance(dt): CameraShot`, `interrupt(): CameraShotVelocity`.
+  Without a `SceneView`, drive it yourself: `cameraNode.transform = animator.advance(dt).transform()`.
+- Hand-off: an inner manipulator that implements `CameraShotSink` gets `takeOver(shot, velocity)`
+  on the first touch and carries on at that speed; any other manipulator (the default orbit one
+  included) gets a 350 ms glide from the move's last frame onto its own pose.
+
+`CinematicHero` (below) and `applyCinematicOrbit` stay as they are: a hero is scroll-driven,
+these are time-driven. Pick the animator when the move has a beginning and an end.
+
 ---
 
 ## Render Quality
