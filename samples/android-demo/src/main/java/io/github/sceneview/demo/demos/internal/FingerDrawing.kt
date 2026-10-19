@@ -43,7 +43,7 @@ internal data class StrokePoint(val position: Position, val radius: Float)
  *                   whatever the camera distance was.
  * @param leadIn     Non-null when this piece continues another: the sample just before its
  *                   first point. The curve leaves the first point heading the way the previous
- *                   piece arrived, and that end is not tapered.
+ *                   piece arrived.
  * @param leadOut    Non-null when another piece continues this one: the sample just after
  *                   its last point.
  */
@@ -199,14 +199,16 @@ internal data class Drawing(
  *    every `spacing`. Touch events arrive 5–40 px apart; joined by straight segments they
  *    draw a polygon. The centripetal form is the one that never overshoots or loops between
  *    unevenly spaced samples.
- * 2. [tapered] — the thickness eases down towards both ends, like a brush lifting off.
- * 3. [frames] — a cross-section orientation per ring, by parallel transport (the double
+ *    A stroke keeps its thickness right to its ends: there is no taper. The ends are closed
+ *    by full hemispherical caps (step 3), so a stroke reads as paint of the chosen
+ *    thickness, not as a brush lifting off (#4504).
+ * 2. [frames] — a cross-section orientation per ring, by parallel transport (the double
  *    reflection method). A naive "up vector" frame flips when the stroke turns past it and
  *    pinches the tube; a transported frame cannot twist.
- * 4. [vertices] — [RADIAL_SEGMENTS] vertices per ring, plus [CAP_RINGS] rings closing each
- *    end in a hemisphere. Normals follow the thickness slope, so a swelling stroke shades as
+ * 3. [vertices] — [RADIAL_SEGMENTS] vertices per ring, plus [CAP_RINGS] rings closing each
+ *    end in a hemisphere of the end's own radius. Normals follow the thickness slope, so a swelling stroke shades as
  *    a cone, not as a stack of cylinders.
- * 5. [triangleIndices] — a quad strip between consecutive rings. It depends on the ring
+ * 4. [triangleIndices] — a quad strip between consecutive rings. It depends on the ring
  *    count only.
  *
  * ## Growing in place
@@ -258,12 +260,6 @@ internal object FingerDrawing {
 
     /** Thinnest a fast stroke gets, as a share of the chosen thickness. */
     const val FAST_WIDTH_FACTOR: Float = 0.45f
-
-    /** Thickness at the very tip of a stroke, as a share of its thickness there. */
-    const val TAPER_TIP_FACTOR: Float = 0.5f
-
-    /** Length of the taper at each end, in radii. */
-    const val TAPER_LENGTH_RADII: Float = 5f
 
     /** Distance between two generated rings, in dp on screen at pen-down. */
     const val RING_SPACING_DP: Float = 2.5f
@@ -402,36 +398,6 @@ internal object FingerDrawing {
     private fun blend(a: StrokePoint, b: StrokePoint, wa: Float, wb: Float) =
         StrokePoint(a.position * wa + b.position * wb, a.radius * wa + b.radius * wb)
 
-    /**
-     * [centerline] with the thickness eased down to [TAPER_TIP_FACTOR] at both ends, over
-     * [TAPER_LENGTH_RADII] radii — or over half the stroke when it is shorter than two tapers,
-     * so its middle always reaches the chosen thickness. A single dot is left alone, and so is
-     * an end where another piece of the same stroke takes over ([start] / [end] `false`).
-     */
-    fun tapered(
-        centerline: List<StrokePoint>,
-        start: Boolean = true,
-        end: Boolean = true,
-    ): List<StrokePoint> {
-        if (centerline.size < 2 || (!start && !end)) return centerline
-        val arc = FloatArray(centerline.size)
-        for (i in 1 until centerline.size) {
-            arc[i] = arc[i - 1] + length(centerline[i].position - centerline[i - 1].position)
-        }
-        val total = arc.last()
-        if (total < EPSILON) return centerline
-        return centerline.mapIndexed { i, point ->
-            val taperLength = min(point.radius * TAPER_LENGTH_RADII, total / 2f)
-            val fromEnd = min(
-                if (start) arc[i] else Float.MAX_VALUE,
-                if (end) total - arc[i] else Float.MAX_VALUE,
-            )
-            val t = if (taperLength < EPSILON) 1f else (fromEnd / taperLength).coerceIn(0f, 1f)
-            val eased = t * t * (3f - 2f * t)
-            point.copy(radius = point.radius * (TAPER_TIP_FACTOR + (1f - TAPER_TIP_FACTOR) * eased))
-        }
-    }
-
     // ── Frames ────────────────────────────────────────────────────────────────
 
     /** The orientation of one ring: the curve's direction and two axes across it. */
@@ -523,7 +489,7 @@ internal object FingerDrawing {
         CAPACITY_STEPS.firstOrNull { it >= centerlineCount } ?: centerlineCount
 
     /**
-     * The tube around [centerline] — already resampled and tapered — as
+     * The tube around [centerline] — already resampled — as
      * [vertexCount]`(capacity)` vertices: start cap, one ring per centreline point, end cap,
      * then padding collapsed on the end pole.
      *
@@ -634,10 +600,10 @@ internal object FingerDrawing {
         }
     }
 
-    /** The centreline [vertices] sweeps for [stroke]: resampled, then tapered. */
-    fun line(stroke: Stroke): List<StrokePoint> = tapered(
-        centerline = centerline(stroke.points, stroke.spacing, stroke.leadIn, stroke.leadOut),
-        start = stroke.leadIn == null,
-        end = stroke.leadOut == null,
-    )
+    /**
+     * The centreline [vertices] sweeps for [stroke]: resampled, at the thickness the finger
+     * gave it right to both ends — the caps [vertices] adds close it with a full half-sphere.
+     */
+    fun line(stroke: Stroke): List<StrokePoint> =
+        centerline(stroke.points, stroke.spacing, stroke.leadIn, stroke.leadOut)
 }
