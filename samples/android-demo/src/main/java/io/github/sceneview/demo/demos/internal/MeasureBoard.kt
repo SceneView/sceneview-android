@@ -4,7 +4,7 @@ package io.github.sceneview.demo.demos.internal
  * The three ways of measuring in the `ar-measure` demo.
  *
  * - [Distance]: tap point after point, every segment gets its length. Tap the first point
- *   again to close an outline and read its area.
+ *   again to close an outline and read its area, or tap Done to end an open chain.
  * - [Wall]: tap the two ends of a wall where it meets the floor; the wall then rises with
  *   the aim, a tap locks its height and reads its area.
  * - [Room]: trace the floor corner by corner, tap the first corner to close it; all the
@@ -29,6 +29,7 @@ enum class MeasurePhase {
  * device, a plain position in tests): the board only orders them.
  *
  * @property closed the outline loops back to its first point.
+ * @property ended a Distance chain the user ended with Done, open: the next point starts a new chain.
  * @property raising the walls follow the aim (wall or room still open for a height).
  * @property height the locked wall height, metres; `null` until locked.
  */
@@ -36,13 +37,14 @@ data class MeasureFigure<P>(
     val mode: MeasureMode,
     val points: List<P> = emptyList(),
     val closed: Boolean = false,
+    val ended: Boolean = false,
     val raising: Boolean = false,
     val height: Float? = null,
 ) {
     /** Done: no tap can change it any more, the next tap starts a new figure. */
     val finished: Boolean
         get() = when (mode) {
-            MeasureMode.Distance -> closed
+            MeasureMode.Distance -> closed || ended
             MeasureMode.Wall, MeasureMode.Room -> height != null
         }
 
@@ -107,6 +109,19 @@ data class MeasureBoard<P>(
         return replaceActive(next)
     }
 
+    /** A Distance chain with a segment can be ended with Done; walls and rooms end themselves. */
+    val canFinish: Boolean
+        get() = active?.let { it.mode == MeasureMode.Distance && it.points.size >= 2 } == true
+
+    /**
+     * Done: ends the active Distance chain where it is. The chain stays on screen with its
+     * lengths; the next point starts a new chain instead of adding a segment to this one.
+     */
+    fun finish(): MeasureBoard<P> {
+        val figure = active?.takeIf { canFinish } ?: return this
+        return replaceActive(figure.copy(ended = true))
+    }
+
     /** Locks the rising walls of the active figure at [height] metres. */
     fun lockHeight(height: Float): MeasureBoard<P> {
         val figure = active?.takeIf { it.raising } ?: return this
@@ -115,7 +130,7 @@ data class MeasureBoard<P>(
         )
     }
 
-    /** Steps back one action: unlock a height, lower the walls, reopen, or drop a point. */
+    /** Steps back one action: unlock a height, lower the walls, reopen, resume a chain, or drop a point. */
     fun undo(): MeasureBoard<P> {
         val figure = figures.lastOrNull() ?: return this
         val stepped: MeasureFigure<P>? = when {
@@ -124,6 +139,7 @@ data class MeasureBoard<P>(
                 figure.copy(raising = false, points = figure.points.dropLast(1))
             figure.raising -> figure.copy(raising = false, closed = false)
             figure.closed -> figure.copy(closed = false)
+            figure.ended -> figure.copy(ended = false)
             figure.points.size > 1 -> figure.copy(points = figure.points.dropLast(1))
             else -> null
         }
