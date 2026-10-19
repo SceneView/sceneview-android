@@ -37,7 +37,14 @@ import io.github.sceneview.material.setColor
  * (`configureForDebug`), each shows at its token's value, and a theme switch repaints the same
  * materials without changing their kind.
  */
-internal data class ScanGroundColors(val slab: Color, val edge: Color, val missing: Color, val hatch: Color) {
+internal data class ScanGroundColors(
+    val slab: Color,
+    val edge: Color,
+    val missing: Color,
+    val hatch: Color,
+    /** Whether these are a dark stage's: the legend's swatch then frames its hatching. */
+    val dark: Boolean = false,
+) {
     companion object {
         /** How far the slab's edge is shaded from its top: the dollhouse plinth's shade. */
         const val EDGE_SHADE = 0.28f
@@ -69,6 +76,7 @@ internal data class ScanGroundColors(val slab: Color, val edge: Color, val missi
                     lerp(slab, amber, MISSING_TINT)
                 },
                 hatch = amber,
+                dark = dark,
             )
         }
 

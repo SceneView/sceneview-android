@@ -164,6 +164,30 @@ class ScanFollow {
         }
 
         /**
+         * The phone's eye as an orbit pose (#4719): the camera at [cameraToWorld]'s position
+         * (column-major, as `Pose.toMatrix` writes it), looking down its forward axis at a point
+         * level with [centre] along it — the cloud's depth ahead of the phone, [MIN_EYE_REACH_M] at
+         * least. The saving orbit sets out from it, so it leaves the camera image without a cut.
+         */
+        fun eyePose(cameraToWorld: FloatArray, centre: Position): OrbitPose {
+            val ex = cameraToWorld[12]
+            val ey = cameraToWorld[13]
+            val ez = cameraToWorld[14]
+            val fx = -cameraToWorld[8]
+            val fy = -cameraToWorld[9]
+            val fz = -cameraToWorld[10]
+            val ahead = (centre.x - ex) * fx + (centre.y - ey) * fy + (centre.z - ez) * fz
+            val reach = ahead.takeIf { it.isFinite() }?.coerceAtLeast(MIN_EYE_REACH_M) ?: MIN_EYE_REACH_M
+            return CameraRig.poseOf(
+                eye = Position(ex, ey, ez),
+                target = Position(ex + fx * reach, ey + fy * reach, ez + fz * reach),
+            )
+        }
+
+        /** The nearest the eye's orbit target stands ahead of the phone, metres. */
+        const val MIN_EYE_REACH_M = 0.5f
+
+        /**
          * How far [points] reach on the floor from [centre], metres: the 95th percentile of their
          * horizontal distance, so a few stray far points do not shrink the room on screen. Sampled
          * evenly, [CENTRE_SAMPLE] points at most; `0` without any.

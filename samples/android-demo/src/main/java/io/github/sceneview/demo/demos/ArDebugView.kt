@@ -816,12 +816,12 @@ internal fun ArDebugSceneView(
                 session.tick(dt)
                 // From the phone's eye, through the phone's lens (#4716): ARCore's projection for
                 // the AR view under this one, same size, so a point lands on its camera pixel. The
-                // orbit's lens comes back with the orbit, after a drag or a pinch.
-                val lens = orbit.firstPerson
-                if (lens != null && orbit.inFirstPerson) {
+                // orbit's lens comes back with the orbit, after a drag or a pinch, or eased back
+                // over the hand-off off the phone's eye as a save starts (#4719).
+                if (orbit.firstPerson != null && orbit.customProjection(clock.projection)) {
                     clock.lensApplied = true
                     cameraNode.setCustomProjection(
-                        lens.projection.toTransform(),
+                        clock.projection.toTransform(),
                         ScanLens.NEAR_M.toDouble(),
                         ScanLens.FAR_M.toDouble(),
                     )
@@ -1048,6 +1048,7 @@ internal class SceneSubject(
 private class FrameClock {
     var lastNanos = 0L
     var lensApplied = false
+    val projection = FloatArray(ScanLens.MATRIX_SIZE)
     var configured = false
     var trace: ArDebugTrace? = null
     var frame: ArDebugFrame? = null

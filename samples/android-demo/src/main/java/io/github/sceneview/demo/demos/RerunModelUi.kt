@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -757,11 +758,17 @@ private fun FloorLegend(percent: Int) {
         horizontalArrangement = Arrangement.spacedBy(Space.sm),
     ) {
         val swatch = RoundedCornerShape(SceneViewTokens.Radius.xs)
-        Canvas(Modifier.size(Space.md).clip(swatch)) {
+        // On a dark stage the hole's veil and the amber are close in tone, and three fine stripes
+        // melt into one beige disc at this size: the swatch takes the dark ground's own look —
+        // fewer, bolder stripes, framed by the hole's `outline-variant` edge.
+        val lines = if (colors.dark) DARK_HATCH_LINES else HATCH_LINES
+        val share = if (colors.dark) DARK_HATCH_STROKE else HATCH_STROKE
+        val ring = Modifier.border(SceneViewTokens.Layout.selectedOutlineWidth, colors.edge, swatch)
+        Canvas(Modifier.size(Space.md).clip(swatch).then(if (colors.dark) ring else Modifier)) {
             drawRect(colors.missing)
-            val step = size.width / HATCH_LINES
-            val stroke = step * HATCH_STROKE
-            for (i in -HATCH_LINES..HATCH_LINES) {
+            val step = size.width / lines
+            val stroke = step * share
+            for (i in -lines..lines) {
                 val x = i * step
                 drawLine(colors.hatch, Offset(x, size.height), Offset(x + size.height, 0f), strokeWidth = stroke)
             }
@@ -881,6 +888,8 @@ internal const val RERUN_MODEL_FLOOR_TAG = "rerun_model_floor"
 /** The legend's swatch: this many hatching lines across it, each this share of their spacing. */
 private const val HATCH_LINES = 3
 private const val HATCH_STROKE = 0.35f
+private const val DARK_HATCH_LINES = 2
+private const val DARK_HATCH_STROKE = 0.42f
 private const val CM_PER_M = 100f
 
 /** The smallest scan the tour pushes into, metres: an object on a table. */

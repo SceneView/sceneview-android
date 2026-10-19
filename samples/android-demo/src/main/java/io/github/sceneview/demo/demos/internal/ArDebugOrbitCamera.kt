@@ -180,6 +180,57 @@ class ArDebugOrbitCamera(
     /** `true` while the camera stands at [firstPerson]'s eye rather than on the orbit. */
     val inFirstPerson: Boolean get() = following && firstPerson?.ready == true
 
+    /**
+     * The eye the view is easing away from (#4719), while it does: [firstPerson] stopped seeing
+     * through the phone — the save starting, tracking lost — while the view still followed.
+     */
+    private var handoff: EyeHandoff? = null
+
+    /** Whether the last look at [firstPerson] found the view standing at its eye. */
+    private var wasFirstPerson = false
+
+    /**
+     * `true` while the view stands at [firstPerson]'s eye or eases off its last one: what the
+     * camera shows is the phone's own view, or still leaves it.
+     */
+    val seesThroughEye: Boolean get() = checkHandoff() != null || inFirstPerson
+
+    /**
+     * Starts an [EyeHandoff] the first time [firstPerson] is found no longer [ScanLens.ready]
+     * while still following, and drops it once done or once a gesture takes the view over.
+     */
+    private fun checkHandoff(): EyeHandoff? {
+        val lens = firstPerson
+        if (lens != null && following && lens.ready) {
+            wasFirstPerson = true
+            handoff = null
+            return null
+        }
+        if (wasFirstPerson) {
+            wasFirstPerson = false
+            if (lens != null && following && lens.held) {
+                handoff = EyeHandoff(lens.cameraToWorld.copyOf(), lens.projection.copyOf())
+            }
+        }
+        if (!following || handoff?.done == true) handoff = null
+        return handoff
+    }
+
+    /**
+     * The projection the view draws through, into [out], when it is not the orbit's own lens:
+     * [firstPerson]'s while it stands at the phone's eye, the [EyeHandoff]'s mix while it eases
+     * off it. `false` when the orbit's lens applies.
+     */
+    fun customProjection(out: FloatArray): Boolean {
+        checkHandoff()?.let {
+            it.projection(verticalFovDegrees, aspect, out)
+            return true
+        }
+        val lens = firstPerson?.takeIf { inFirstPerson } ?: return false
+        lens.projection.copyInto(out)
+        return true
+    }
+
     /** Viewport height in pixels, for pan speed and for the view's screen-constant sizes. */
     var viewportHeight: Int = 1
         private set
@@ -360,7 +411,13 @@ class ArDebugOrbitCamera(
     }
 
     override fun getTransform(): Transform {
+        val handoff = checkHandoff()
         firstPerson?.takeIf { following && it.ready }?.let { return it.cameraToWorld.toTransform() }
+        return handoff?.transform(orbitTransform()) ?: orbitTransform()
+    }
+
+    /** The camera's model matrix on the orbit, [pose] as drawn. */
+    private fun orbitTransform(): Transform {
         // Drawn from further back while a [squeeze] holds the picture smaller: the orbit is not
         // touched, so the picture comes back whole when the squeeze goes.
         val drawn = pose.copy(distance = pose.distance / shownScale)
@@ -451,6 +508,7 @@ class ArDebugOrbitCamera(
     override fun update(deltaTime: Float) {
         recenteredByTap = false
         val dt = deltaTime.takeIf { it.isFinite() && it > 0f && it < 0.25f } ?: return
+        checkHandoff()?.let { it.seconds += dt }
         if (grabbing && !panning) {
             val spin = maxSpin
             azimuthVelocity = (dragAzimuth / dt).coerceIn(-spin, spin)
