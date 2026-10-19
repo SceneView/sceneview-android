@@ -69,6 +69,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -599,6 +600,8 @@ private fun ColumnScope.CoachStackContent(
         onKeepScanning = { state.keepScanning() },
         onScanAgain = { state.resetPlacement() },
         onRestartSession = onRestartSession,
+        // The coach stack around it already keeps `space-md` from the screen edge.
+        edgeMargin = 0.dp,
         modifier = Modifier.weight(1f, fill = false),
     )
 
@@ -683,6 +686,13 @@ private fun coachingIcon(message: PlacementCoachingMessage?): ImageVector? = whe
  * from the same `DESIGN.md` tokens as the coaching pill (`ar-scrim`, `radius-lg`,
  * `over-media-edge`, `dock-item` touch targets), with the primary action filled in the
  * theme's `primary` role.
+ *
+ * The card keeps its own side margin ([edgeMargin], `space-md`), like every AR Overlay Card
+ * (`CardShell`): most callers put it in the scaffold's `bottomOverlay` band, which spans the
+ * whole scene, and a card without a margin of its own went edge to edge there — Wall mode,
+ * the room dollhouse, the pool, the Cloud Anchors and comparison screens (#4531). The Place
+ * coach stack already pads its children by the same `space-md` and passes `0.dp`, so the
+ * card sits at one distance from the screen edge wherever it is shown.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -693,6 +703,7 @@ internal fun PlacementActionCard(
     onScanAgain: () -> Unit,
     onRestartSession: (() -> Unit)?,
     surface: PlacementSurface = PlacementSurface.SURFACE,
+    edgeMargin: Dp = SceneViewTokens.Space.md,
     modifier: Modifier = Modifier,
 ) {
     // Latch the last card for the length of the exit animation, as the pill does.
@@ -774,6 +785,7 @@ internal fun PlacementActionCard(
         Column(
             modifier = Modifier
                 .padding(top = SceneViewTokens.Space.sm)
+                .padding(horizontal = edgeMargin)
                 .testTag(PlacementTestTags.PLACEMENT_CARD)
                 .widthIn(max = SceneViewTokens.ArOverlay.maxWidth)
                 .fillMaxWidth()
