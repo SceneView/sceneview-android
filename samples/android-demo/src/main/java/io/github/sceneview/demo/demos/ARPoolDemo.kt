@@ -277,12 +277,13 @@ private fun PoolSession(choices: PoolChoices, onBack: () -> Unit, onRestart: () 
                     guidance.isCoaching -> null
                     invalidMove -> stringResource(R.string.ar_place_keep_on_surface)
                     state.phase == PlacementPhase.SCANNING -> stringResource(R.string.ar_place_move_slowly)
-                    state.phase == PlacementPhase.TRACKING_LOST -> stringResource(R.string.ar_place_tracking_paused) +
+                    state.phase == PlacementPhase.TRACKING_LOST -> stringResource(
                         if (trackingFailure == TrackingFailureReason.INSUFFICIENT_LIGHT) {
-                            " " + stringResource(R.string.ar_place_try_brighter_area)
+                            R.string.ar_place_tracking_paused_low_light
                         } else {
-                            ""
-                        }
+                            R.string.ar_place_tracking_paused
+                        },
+                    )
                     state.phase == PlacementPhase.RECOVERING -> stringResource(R.string.ar_place_finding_placement)
                     showHint -> stringResource(R.string.ar_pool_hint)
                     else -> null

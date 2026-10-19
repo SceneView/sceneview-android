@@ -846,8 +846,8 @@ private suspend fun sharePlanPdf(
 ): Boolean {
     val file = withContext(Dispatchers.IO) {
         runCatching {
-            val shareRoot = File(context.cacheDir, RERUN_SHARE_DIR)
-            // Only the latest shared file is kept: the share sheet has read it by the next share.
+            val shareRoot = rerunShareDirectory(context, RERUN_SHARE_PLAN)
+            // Only the latest shared plan is kept: the share sheet has read it by the next share.
             shareRoot.deleteRecursively()
             val dir = File(shareRoot, UUID.randomUUID().toString()).apply { mkdirs() }
             val name = words.pdfFile.format(title).replace(Regex("[\\\\/:*?\"<>|]"), "-")

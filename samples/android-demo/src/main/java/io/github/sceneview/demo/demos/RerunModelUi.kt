@@ -76,7 +76,6 @@ import io.github.sceneview.demo.demos.internal.DenseCloud
 import io.github.sceneview.demo.demos.internal.DenseFusion
 import io.github.sceneview.demo.demos.internal.DepthBackProjection
 import io.github.sceneview.demo.demos.internal.DepthFrame
-import io.github.sceneview.demo.demos.internal.DollhouseCopy
 import io.github.sceneview.demo.demos.internal.DollhouseFraming
 import io.github.sceneview.demo.demos.internal.DollhouseOpening
 import io.github.sceneview.demo.demos.internal.FramingInsets
@@ -521,8 +520,7 @@ internal fun RerunModelScreen(
             onViewInAr?.let {
                 DockItem(
                     icon = Icons.Rounded.ViewInAr,
-                    label = DollhouseCopy.VIEW_IN_AR,
-                    caption = DollhouseCopy.VIEW_IN_AR_CAPTION,
+                    label = stringResource(R.string.scan_place),
                     onClick = it,
                 )
             },

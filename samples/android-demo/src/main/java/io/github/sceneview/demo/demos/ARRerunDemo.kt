@@ -200,7 +200,7 @@ import java.io.File
  * opens it in the same replay; it stays under "Your scans" until deleted, and shares as a
  * `.svscan` scan file the iOS demo opens too. Nothing leaves the phone unless you share it.
  *
- * **View in AR** (#4075), at the end of a replay of your own room or from a session's menu, stands
+ * **Place** (#4075), at the end of a replay of your own room or from a session's menu, stands
  * that room on a table as a miniature — a dollhouse — through [RoomDollhouseScreen]. With
  * [startInDollhouse] the demo opens there directly: the `ar-splat-room` card of the home screen.
  *
@@ -259,7 +259,7 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
     var scanTitle by remember { mutableStateOf(ScanCopy.REPLAY_TITLE) }
     // The scan's own files, for the export sheet; the sample's are read from the assets there.
     var scanPack by remember { mutableStateOf<RerunCapturePack?>(null) }
-    // The kept session the replay shows, when it was opened from the list: View in AR stands that one.
+    // The kept session the replay shows, when it was opened from the list: Place stands that one.
     var scanId by remember { mutableStateOf<String?>(null) }
     var exporting by remember {
         mutableStateOf(qaReplay == RerunReplayQaState.ReplayExport || qaState == QA_STATE_MODEL_EXPORT)
@@ -566,11 +566,6 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
                 onOpen = {
                     notice = null
                     openStored(it.id, it.info.title)
-                },
-                onShare = { session ->
-                    scope.launch {
-                        if (!shareScanFile(context, store, session.info)) notice = ScanCopy.OPEN_FAILED
-                    }
                 },
                 onViewInAr = { session ->
                     notice = null
@@ -1009,15 +1004,14 @@ private fun RerunReplayScreen(
                 onClick = { onMode(RerunMode.Camera) },
                 selected = mode == RerunMode.Camera,
             ),
-            // With View in AR as the accent, Export stays one tap away in the dock.
+            // With Place as the accent, Export stays one tap away in the dock.
             export.takeIf { onViewInAr != null },
         ),
         // Your own room stands on a table in AR (#4075); the sample offers its files instead.
         dockAccent = onViewInAr?.let {
             DockItem(
                 icon = Icons.Rounded.ViewInAr,
-                label = DollhouseCopy.VIEW_IN_AR,
-                caption = DollhouseCopy.VIEW_IN_AR_CAPTION,
+                label = stringResource(R.string.scan_place),
                 onClick = it,
                 enabled = media != null,
             )
