@@ -622,13 +622,12 @@ class ArDebugOrbitCameraTest {
         assertEquals(OrbitBand.STAGE_LANDSCAPE.lift, camera.lift, 0f)
     }
 
-    // ── The settings sheet and the free camera (#4563, #4564) ─────────────────
+    // ── The settings sheet (#4564) ─────────────────
 
-    /** A camera holding [room] fitted in [band], with [fitAt] wired as the replay's 3D view does. */
+    /** A camera holding [room] fitted in [band], as the replay's 3D view does. */
     private fun replayCamera(band: OrbitBand, aspect: Float): ArDebugOrbitCamera {
         val camera = ArDebugOrbitCamera(drift = false, band = band)
         camera.setViewport(1080, (1080 / aspect).toInt())
-        camera.fitAt = { azimuth, elevation -> ArDebugFraming.home(room, azimuth, fov, aspect, elevation, band) }
         camera.home = ArDebugFraming.home(room, ArDebugFraming.HOME_AZIMUTH, fov, aspect, band = band)
         camera.snapTo(camera.home)
         return camera
@@ -680,62 +679,5 @@ class ArDebugOrbitCameraTest {
         assertEquals(band.lift, camera.shownLift, 0f)
         assertEquals(1f, camera.shownScale, 0f)
         assertArrayEquals(before, camera.getTransform().toFloatArray(), 1e-5f)
-    }
-
-    @Test
-    fun `an orbit that lets go settles on the whole room, at the angle the finger left`() {
-        val band = OrbitBand(halfWidth = 0.9f, halfHeight = 0.46f, lift = 0.04f)
-        val aspect = 0.46f
-        val camera = replayCamera(band, aspect)
-        for (dx in listOf(-700, -350, 250, 600)) {
-            camera.grabBegin(540, 1200, strafe = false)
-            camera.grabUpdate(540 + dx, 1100)
-            camera.update(1f / 60f)
-            camera.grabEnd()
-            repeat(180) { camera.update(1f / 60f) }
-            assertFalse(camera.following)
-            val pose = camera.pose
-            val fit = ArDebugFraming.home(room, pose.azimuthDegrees, fov, aspect, pose.elevationDegrees, band)
-            assertEquals(fit.distance, camera.pose.distance, 1e-3f)
-            assertFramed(camera.pose, band, aspect)
-        }
-
-        // A pan that lets go comes back onto the room too.
-        camera.grabBegin(540, 1200, strafe = true)
-        camera.grabUpdate(900, 1600)
-        camera.grabEnd()
-        repeat(180) { camera.update(1f / 60f) }
-        assertFramed(camera.pose, band, aspect)
-    }
-
-    @Test
-    fun `a pinch sets the zoom the room is held at, and a pinch in is kept cropped`() {
-        val band = OrbitBand(halfWidth = 0.9f, halfHeight = 0.46f, lift = 0.04f)
-        val aspect = 0.46f
-        val camera = replayCamera(band, aspect)
-
-        // Out: the room is held smaller, whole, through the next orbit.
-        camera.scrollBegin(0, 0, 400f)
-        repeat(10) { camera.scrollUpdate(0, 0, 400f, 380f) }
-        camera.scrollEnd()
-        assertTrue(camera.userZoom > 1.1f)
-        camera.grabBegin(540, 1200, strafe = false)
-        camera.grabUpdate(100, 1200)
-        camera.grabEnd()
-        repeat(180) { camera.update(1f / 60f) }
-        assertFramed(camera.pose, band, aspect)
-
-        // In: the user's choice, nothing pulls the camera back.
-        camera.scrollBegin(0, 0, 100f)
-        repeat(20) { camera.scrollUpdate(0, 0, 100f, 120f) }
-        camera.scrollEnd()
-        assertTrue(camera.userZoom < ArDebugOrbitCamera.ZOOMED_IN)
-        val zoomed = camera.pose.distance
-        repeat(180) { camera.update(1f / 60f) }
-        assertEquals(zoomed, camera.pose.distance, 0f)
-
-        // A double-tap hands the framing back, the zoom reset.
-        camera.doubleTapZoom(0, 0, zoomIn = true)
-        assertEquals(1f, camera.userZoom, 0f)
     }
 }

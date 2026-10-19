@@ -852,20 +852,6 @@ internal fun ArDebugSceneView(
                     band = orbit.band,
                     fill = if (finished) 1f else ArDebugFraming.GROWING_FILL,
                 )
-                // A finished recording is held whole once a gesture lets go (#4563): the free camera
-                // settles onto the room's fit at whatever angle the finger left it.
-                orbit.fitAt = if (finished && follow == null && bounds != null) {
-                    { azimuth, elevation ->
-                        ArDebugFraming.homeWithMeasure(
-                            bounds, measured, floorY, orbit.viewportHeight,
-                            azimuth, orbit.verticalFovDegrees, orbit.aspect,
-                            elevationDegrees = elevation,
-                            band = orbit.band,
-                        )
-                    }
-                } else {
-                    null
-                }
                 val followed = follow?.invoke(frame)
                 if (orbit.following) {
                     if (follow == null) orbit.home = home else if (followed != null) orbit.followTo(followed)

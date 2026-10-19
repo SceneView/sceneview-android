@@ -122,22 +122,6 @@ class ArDebugOrbitCamera(
     var shownScale: Float = 1f
         private set
 
-    /**
-     * The pose that frames the whole room from an azimuth and an elevation, in [band] — set by
-     * the view while it holds a finished scene, `null` otherwise. Once a gesture lets go, the free
-     * camera eases its pivot and distance onto it at whatever angle the finger left (#4563), so
-     * no orbit, pan or coast leaves part of the room under the chrome. A pinch sets the zoom the
-     * room is held at ([userZoom]); a pinch in past the fit is the user's choice and is kept.
-     */
-    var fitAt: ((azimuthDegrees: Float, elevationDegrees: Float) -> OrbitPose)? = null
-
-    /**
-     * The distance the user's last pinch left, over the fitted one: 1 frames the room exactly,
-     * more holds it smaller, less is a deliberate zoom-in that the camera no longer re-frames.
-     */
-    var userZoom: Float = 1f
-        private set
-
     /** What the gestures may do around the scene on screen; set by the view with [home]. */
     var limits: OrbitLimits = OrbitLimits.NONE
 
@@ -181,7 +165,6 @@ class ArDebugOrbitCamera(
     private var lastY = 0
     private var panning = false
     private var grabbing = false
-    private var pinching = false
     private var dragAzimuth = 0f
     private var dragElevation = 0f
     private var azimuthVelocity = 0f
@@ -254,7 +237,6 @@ class ArDebugOrbitCamera(
         followSeconds = 0f
         azimuthVelocity = 0f
         elevationVelocity = 0f
-        userZoom = 1f
         heading = if (overhead) {
             ArDebugFraming.mapAzimuth(pose.azimuthDegrees, roomYawDegrees)
         } else {
@@ -346,7 +328,6 @@ class ArDebugOrbitCamera(
 
     override fun scrollBegin(x: Int, y: Int, separation: Float) {
         takeOver()
-        pinching = true
     }
 
     override fun scrollUpdate(x: Int, y: Int, prevSeparation: Float, currSeparation: Float) {
@@ -363,12 +344,7 @@ class ArDebugOrbitCamera(
         )
     }
 
-    override fun scrollEnd() {
-        pinching = false
-        // What the pinch left, against the room's fit at this angle: the zoom later re-framing keeps.
-        val fit = fitAt?.invoke(pose.azimuthDegrees, pose.elevationDegrees) ?: return
-        if (fit.distance > 0f) userZoom = pose.distance / fit.distance
-    }
+    override fun scrollEnd() = Unit
 
     override fun doubleTapZoom(x: Int, y: Int, zoomIn: Boolean) = recenter()
 
@@ -414,14 +390,6 @@ class ArDebugOrbitCamera(
             pose = slidTowardsPivot(next, turned)
             azimuthVelocity = CameraRig.decayInertia(azimuthVelocity, dt)
             elevationVelocity = CameraRig.decayInertia(elevationVelocity, dt)
-        }
-        // Once no finger holds it, the free camera settles on the whole room at its own angle,
-        // under the coast and at the zoom the last pinch chose (#4563). A pinch in past the fit
-        // is a choice: nothing re-frames it.
-        if (!pinching && userZoom >= ZOOMED_IN) {
-            fitAt?.invoke(pose.azimuthDegrees, pose.elevationDegrees)?.let { fit ->
-                pose = ArDebugFraming.settle(pose, fit, userZoom, dt, SETTLE_RATE)
-            }
         }
     }
 
@@ -533,15 +501,6 @@ class ArDebugOrbitCamera(
 
         /** The degrees of drag over which the orbit's centre slides onto [pivot]. */
         const val PIVOT_SLIDE_DEGREES = 30f
-
-        /**
-         * How fast the free camera settles back onto the whole room, per second: about a third
-         * of a second, so it rides along a coast rather than snapping after it.
-         */
-        const val SETTLE_RATE = 6f
-
-        /** Below this [userZoom], the user has zoomed in on purpose: the room may stay cropped. */
-        const val ZOOMED_IN = 0.98f
 
         /**
          * How fast the picture follows a [squeeze], per second: the settings sheet rises in some
@@ -1150,21 +1109,6 @@ object ArDebugFraming {
             .coerceAtLeast(MIN_SQUEEZE_SCALE)
     }
 
-    /**
-     * [pose] eased, at [rate] per second, onto [fit]'s pivot and onto its distance times [zoom] —
-     * its angle left alone: the view a finger left stays the view, only the room comes back whole
-     * into it (#4563). Lands exactly on the goal once close, so a view at rest stands still.
-     */
-    fun settle(pose: OrbitPose, fit: OrbitPose, zoom: Float, deltaSeconds: Float, rate: Float): OrbitPose {
-        val goal = pose.copy(target = fit.target, distance = fit.distance * zoom)
-        val next = CameraRig.lerp(pose, goal, 1f - exp(-rate * deltaSeconds))
-            .copy(azimuthDegrees = pose.azimuthDegrees, elevationDegrees = pose.elevationDegrees)
-        val offset = length(next.target - goal.target) + abs(next.distance - goal.distance)
-        return if (offset < SETTLED_M) goal else next
-    }
-
-    /** Close enough to a settle's goal, in metres, to stand on it. */
-    private const val SETTLED_M = 1e-3f
 
     /** The smallest a squeeze draws the picture: under it the room is a speck, better left covered. */
     const val MIN_SQUEEZE_SCALE = 0.3f

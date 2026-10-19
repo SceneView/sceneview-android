@@ -869,8 +869,8 @@ private fun RerunReplayScreen(
     // The settings sheet rises over the stage's lower part (#4564): while it is up, the room is
     // drawn smaller and higher, into the band it leaves between the header and the sheet's top,
     // and comes back down when it closes. The sheet's target detent, so the picture starts moving
-    // with the sheet.
-    val sheetCover = with(LocalDensity.current) { LocalDemoSheetCover.current.toPx() }
+    // with the sheet. Read in the scaffold's scene slot, which is where the scaffold provides it.
+    var sheetCover by remember { mutableFloatStateOf(0f) }
     val windowHeight = LocalWindowInfo.current.containerSize.height.toFloat()
     val squeeze = if (sheetCover > 0f && measured != null) {
         val sheetTop = windowHeight - sheetCover
@@ -1040,6 +1040,8 @@ private fun RerunReplayScreen(
             )
         } ?: export,
     ) {
+        val cover = with(LocalDensity.current) { LocalDemoSheetCover.current.toPx() }
+        SideEffect { sheetCover = cover }
         when {
             media == null -> Unit // the scaffold's cover says it is loading
             mode == RerunMode.Camera -> RerunCameraView(media, thumbnails, session, Modifier.fillMaxSize())
