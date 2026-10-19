@@ -99,6 +99,10 @@ Glassmorphism adds depth and layering to surfaces that float over content (nav, 
 | `ar-scrim` | rgba(0,0,0,0.94) | rgba(0,0,0,0.88) | AR coaching overlay ground, over the camera feed |
 | `ar-scrim-border` | 1px rgba(255,255,255,0.16) | 1px rgba(255,255,255,0.10) | AR coaching overlay hairline |
 | `ar-camera-dim` | rgba(0,0,0,0.55) | rgba(0,0,0,0.55) | Veil over the live camera under 3D Scan's coloured cloud: the cloud leads, what is not scanned yet still reads on the camera behind (Android `ArOverlay.cameraDim`) |
+| `ar-mesh-ground` | #1f8bff | #1f8bff | Ground drawn into the camera image — Streetscape terrain, plane markers (Android `ArOverlay.meshGround`, #4623). Not `primary`: #005bc1 sinks into a dim room and #a4c1ff turns to milk over a white wall |
+| `ar-mesh-structure` | #ff7a1a | #ff7a1a | What stands on the ground — buildings, walls (`ArOverlay.meshStructure`). Tinted into the camera image it reads #bd4e03 over mid-grey and #f2b316 over a white wall: a redder orange (#ff5a1f) turned plain red over a grey floor, which is most of a street. Blue against orange stays apart under every common colour-vision deficiency |
+| `ar-mesh-fill-alpha` | 0.6 | 0.6 | Not a colour: the opacity of a mesh overlay's fill (`ArOverlay.MESH_FILL_ALPHA`) |
+| `ar-points-settled` | #00e5ff | #00e5ff | A feature point ARCore is sure of; the confidence ramp runs `ar-mesh-ground` → this, fresh points are `warning` (`ArOverlay.pointsSettled`) |
 
 **The dark ramp is solved for ratio, not picked by eye.** Contrast ratio compresses at
 the dark end, where `(Y+0.05)` is dominated by the constant: against a `#0D1117` page a
@@ -1052,6 +1056,21 @@ button is the only way out of the state the card explains.
   the shutter disc use `danger` (#ea4335) — the camera-app convention — so a red dot over
   the camera always means "this is being recorded", never an error (#3831).
 
+### AR scene overlays
+
+Meshes drawn into the AR camera image — Streetscape terrain and buildings, plane markers —
+take the `ar-mesh-*` tokens and the demo's `ar_mesh_tint` material
+(`rememberArMeshTintInstance`), never a brand colour at some alpha (#4623). The AR view
+tone-maps with Filmic and the camera feed is pre-inverted to round-trip, so a bright wall
+sits above 1.0 in the buffer: a translucent overlay mixed with it comes out pastel
+(`primary` turned `#ced3e1`, the lilac `#e3dde9`). The tint multiplies the camera image by
+the colour and lays the colour down where the image is dark, so the hue holds on a white
+wall and in a dim corner and the room still reads through it. Ground is `ar-mesh-ground`,
+what stands on it `ar-mesh-structure`; faces are shaded by their angle so a building's
+form reads without lights. Check a new overlay colour over a white wall and a grey floor:
+Filmic's shoulder pushes warm hues towards yellow on the wall, its toe towards red on the
+floor, and the colour has to read as itself on both.
+
 ### AR Debug View (Android demo)
 
 The in-app 3D view (#3950) of the **3D Scan** demo (`ar-rerun`; renamed for a clearer
@@ -1091,12 +1110,12 @@ the camera mode keeps `ARSceneView`'s own plane renderer).
   `surface-container-highest` in light, the `surface-dim` grounding plane in dark. Use it
   instead of a Compose gradient behind a transparent scene whenever the camera can tilt.
 - **Colour carries meaning, and only existing palette values carry it**
-  (`SceneViewTokens.DebugView`, one palette per ground). *Dark*: the trail runs the brand
-  ramp from `accent-deep` (oldest) to `tint-light` (now); the live frustum is `tint-light`;
+  (`SceneViewTokens.DebugView`, one palette per ground). *Dark*: the camera path runs one
+  blue, faint to strong (#4597): `#0D419D` (oldest) → `#3D7FD9` → `tint-light` (now); the live frustum is `tint-light`;
   what the camera sees *this second* is `warning`; everything seen so far is dim white;
   anchors are `success`; planes are a translucent fill with a solid outline, blue on floors
   and tables, lilac on walls; the origin gizmo follows X red / Y green / Z blue. *Light*: the
-  same meanings in the light scheme's values — the trail runs `tint-soft` → `tertiary` →
+  same meanings in the light scheme's values — the path runs `#BDD3FF` → `#3D7FD9` →
   `primary`, the frustum and floors take `primary`, walls `tertiary`, history points are
   `on-surface` at 55 %, the grid `on-surface` at 8 % / 16 %.
 - **Only the present glows.** On the dark ground the trail head, the live frustum, the live
@@ -1184,6 +1203,25 @@ the camera mode keeps `ARSceneView`'s own plane renderer).
   is still pinned dark (#3907). Streaming to a computer is an
   advanced option in the sheet, under its own heading; its status card shows only once
   connected.
+- **Plan view: a page of figures, not a scene (#4540).** A scan's third view is a scrolling
+  page on the themed stage's ground, max width 560 dp like the landing: the dimensioned
+  plan in a glass `radius-md` card, the survey's table, what the scan lacks, then the two
+  shares. *Nothing reads under the header:* its pills float without a ground of their own,
+  so the page starts below them and is clipped there — text never scrolls behind a pill.
+  *The settings sheet is opaque here* (`surface-container`, no glass): over a table of
+  figures a glass sheet shows two texts at once. "Export 3D files" stands at the head of
+  the sheet, on screen as it opens. *On its side* the table scrolls beside the plan. Where the
+  header and the dock leave the height the flattest plan asks for (a tablet), the plan is
+  fitted whole to its card. A phone on its side leaves a strip: the plan keeps its size,
+  scrolls on its own and says so on its card — it is never squeezed to fit.
+  *The plan's labels stop growing at font scale 1.3:* they sit on a drawing to scale, where
+  a wall 1 m long has only so much room, and at ×2 they would cover the outline they
+  dimension. Every figure the plan carries is repeated in the table under it, which follows
+  the system font scale in full. *Marks:* a measured figure carries "±", an estimate "≈"
+  and no "±", an unseen wall is dashed and reads "not seen", a figure the scan cannot give
+  reads "not measured"; one note says what "≈" means and one that "±" is the scatter of the
+  scan, not an accuracy — the same marks and the same notes on the screen, in the PDF and
+  in the shared text.
 
 ### Model Viewer Showroom (Android demo)
 

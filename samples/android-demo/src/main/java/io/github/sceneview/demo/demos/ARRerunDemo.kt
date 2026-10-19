@@ -17,6 +17,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +26,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
@@ -35,6 +37,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.RestartAlt
+import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.IosShare
 import androidx.compose.material.icons.rounded.Map
 import androidx.compose.material.icons.rounded.Movie
@@ -42,6 +46,7 @@ import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material.icons.rounded._3dRotation
 import androidx.compose.material.icons.rounded.ViewInAr
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -59,6 +64,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -74,6 +80,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
@@ -120,6 +127,7 @@ import io.github.sceneview.demo.demos.internal.ArDebugOrbitCamera
 import io.github.sceneview.demo.demos.internal.OrbitBand
 import io.github.sceneview.demo.demos.internal.ArDebugSession
 import io.github.sceneview.demo.demos.internal.ArDebugTrace
+import io.github.sceneview.demo.demos.internal.RERUN_DEVELOPER_TITLE
 import io.github.sceneview.demo.demos.internal.RERUN_INTRO
 import io.github.sceneview.demo.demos.internal.RERUN_REPLAY_INTRO
 import io.github.sceneview.demo.demos.internal.RERUN_SETUP_STEPS
@@ -237,7 +245,7 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
     var openingFile by remember { mutableStateOf(false) }
 
     // What the replay shows: the sample, or one of your scans — the same view either way.
-    var showingScan by remember { mutableStateOf(false) }
+    var showingScan by remember { mutableStateOf(qaState in PLAN_QA_STATES) }
     var scanMedia by remember { mutableStateOf<RerunReplayMedia?>(null) }
     // The replay is titled after the session it shows, as the card that opened it is.
     var scanTitle by remember { mutableStateOf(ScanCopy.REPLAY_TITLE) }
@@ -292,8 +300,9 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
 
     // The dollhouse (#4075): one of your sessions, stood on a table in AR. [dollhouseRequest] is
     // the session asked for (null: the newest), [dollhouseMedia] the one read, and Back returns to
-    // [dollhouseReturn] — or leaves the demo when it opened straight on the dollhouse.
-    val dollhouseReturn = if (startInDollhouse) null else RerunScreen.Landing
+    // [dollhouseReturn] — the screen it was opened from (#4619: the replay or the model, not the
+    // list) — or leaves the demo when it opened straight on the dollhouse.
+    var dollhouseReturn by remember { mutableStateOf(if (startInDollhouse) null else RerunScreen.Landing) }
     var dollhouseRequest by remember { mutableStateOf<String?>(null) }
     var dollhouseMedia by remember { mutableStateOf<RerunReplayMedia?>(null) }
     var dollhouseTitle by remember { mutableStateOf(ScanCopy.REPLAY_TITLE) }
@@ -328,6 +337,10 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
         dollhouseTitle = title
         dollhouseMedia = media
         dollhouseFailed = false
+        // Another session picked on the dollhouse, or one just recorded for it, keeps its way back.
+        if (screen == RerunScreen.Landing || screen == RerunScreen.Replay || screen == RerunScreen.Model) {
+            dollhouseReturn = screen
+        }
         screen = RerunScreen.Dollhouse
     }
 
@@ -336,6 +349,10 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
         opening = null
         screen = RerunScreen.Landing
     }
+    // The floor plan opens from an export sheet (#4540) and Back returns to the screen whose sheet
+    // opened it: the replay's or the result's (#4599). QA opens it straight, with no opener.
+    var planOpener by remember { mutableStateOf<RerunScreen?>(null) }
+    val leavePlan = { screen = planReturnOf(planOpener, hasResult) }
     val leaveDollhouse = { dollhouseReturn?.let { screen = it } ?: onBack() }
     val leaveLive = {
         if (recordingForDollhouse) {
@@ -350,6 +367,7 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
             RerunScreen.Dollhouse -> leaveDollhouse()
             RerunScreen.Live -> leaveLive()
             RerunScreen.Replay -> if (showingScan && hasResult) screen = RerunScreen.Model else toLanding()
+            RerunScreen.Plan -> leavePlan()
             else -> toLanding()
         }
     }
@@ -434,6 +452,28 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
     }
     val pickFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let(importFile)
+    }
+    // QA's floor plan: the ray-cast room, kept as a scan would be, then opened on its plan.
+    if (qaState in PLAN_QA_STATES) {
+        LaunchedEffect(Unit) {
+            val pack = syntheticPlanCapture(partial = qaState == QA_STATE_PLAN_PARTIAL)
+            val kept = withContext(Dispatchers.IO) {
+                // It replaces the one session it kept the time before, whose id it wrote beside
+                // the sessions — never another session, whatever that one is titled.
+                val mine = File(store.root, QA_PLAN_MARKER)
+                val last = runCatching { mine.readText().trim() }.getOrNull()
+                store.list().firstOrNull { it.id == last && it.title == QA_PLAN_TITLE }?.let { store.delete(it.id) }
+                store.save(pack, QA_PLAN_TITLE, RerunSessionSource.Recorded).also { mine.writeText(it.id) }
+            }
+            sessionsVersion++
+            val opened = loadRerunSession(pack) ?: return@LaunchedEffect
+            scanId = kept.id
+            scanMedia = opened
+            scanTitle = kept.title
+            scanPack = pack
+            showingScan = true
+            screen = RerunScreen.Plan
+        }
     }
     val inbox = DemoSettings.rerunInbox
     LaunchedEffect(inbox) {
@@ -551,6 +591,12 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
             arPlaybackDataset = arPlaybackDataset,
             startIn3d = qaState == QA_STATE_DOLLHOUSE_3D,
         )
+        RerunScreen.Plan -> RerunPlanScreen(
+            media = scanMedia,
+            title = scanTitle,
+            date = planDate(sessions?.firstOrNull { it.id == scanId }?.info?.createdAt),
+            onBack = leavePlan,
+        )
         RerunScreen.Model -> RerunModelScreen(
             source = modelSource,
             title = if (showingScan) scanTitle else ScanCopy.REPLAY_TITLE,
@@ -604,15 +650,35 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
                 }
             }
         }
-        RerunExportSheet(source = source, onDismiss = { exporting = false })
+        // The floor plan is a scan's: it is measured on the depth the scan recorded (#4540).
+        val planMedia = scanMedia?.takeIf { showingScan }
+        RerunExportSheet(
+            source = source,
+            onDismiss = { exporting = false },
+            onFloorPlan = planMedia?.let {
+                {
+                    exporting = false
+                    planOpener = screen
+                    screen = RerunScreen.Plan
+                }
+            },
+        )
     }
 }
 
 /**
- * The demo's screens: the landing, the live AR session (Record), the replay, and the dollhouse —
- * a session stood on a table in AR (#4075).
+ * The demo's screens: the landing, the live AR session (Record), the replay, the dollhouse — a
+ * session stood on a table in AR (#4075) — the scan's result, and its floor plan (#4540).
  */
-private enum class RerunScreen { Landing, Live, Replay, Dollhouse, Model }
+internal enum class RerunScreen { Landing, Live, Replay, Dollhouse, Model, Plan }
+
+/**
+ * Where Back from the floor plan goes: the screen whose export sheet opened it ([opener]), or —
+ * opened with none, as QA does — the scan's result when it has one, else its replay.
+ */
+internal fun planReturnOf(opener: RerunScreen?, hasResult: Boolean): RerunScreen =
+    opener?.takeUnless { it == RerunScreen.Plan }
+        ?: if (hasResult) RerunScreen.Model else RerunScreen.Replay
 
 /** The replay's three views. */
 private enum class RerunMode { Scene, Map, Camera }
@@ -856,7 +922,9 @@ private fun RerunReplayScreen(
                 modifier = Modifier.fillMaxSize().onGloballyPositioned { stage = it.boundsInRoot() },
                 replay = media,
                 onShown = onRevealed,
-                observe = coverage::observe,
+                observe = { frame ->
+                    coverage.observe(frame, media.dense?.cloud?.positions, media.pointCountAt(frame.time))
+                },
             )
         }
     }
@@ -926,12 +994,41 @@ private fun RerunSheet(head: (@Composable () -> Unit)? = null) {
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
-    if (BuildConfig.DEBUG) {
-        RerunSetupSection()
-        // Developer-only debug toggle — visible when QA mode is on. Lets QA force-emit each
-        // TrackingFailureReason so the actionable-message overlay can be validated without staging a
-        // real failure. See io.github.sceneview.demo.common.ForcedTrackingFailure / #1881.
-        ForceTrackingFailureMenu()
+    // Debug builds only, and folded (#4619): shell commands are for us, not for the sheet's reader.
+    if (BuildConfig.DEBUG) RerunDeveloperSection()
+}
+
+/** "Developer tools", folded by default: streaming to a computer and the forced tracking failures. */
+@Composable
+private fun RerunDeveloperSection() {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    Column(modifier = Modifier.padding(top = Space.md)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = SceneViewTokens.Layout.touchTarget)
+                .clickable(role = Role.Button, onClick = { expanded = !expanded }),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = RERUN_DEVELOPER_TITLE,
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.weight(1f).semantics { heading() },
+            )
+            Icon(
+                imageVector = if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        AnimatedVisibility(visible = expanded) {
+            Column {
+                RerunSetupSection()
+                // Lets QA force-emit each TrackingFailureReason so the actionable-message overlay can
+                // be validated without staging a real failure. See ForcedTrackingFailure / #1881.
+                ForceTrackingFailureMenu()
+            }
+        }
     }
 }
 
@@ -1645,7 +1742,7 @@ private fun DemoBottomOverlayScope.RerunCameraBottomOverlay(
 /** "Connect your computer", numbered, commands in mono blocks. Theme colours: it is the sheet. */
 @Composable
 private fun RerunSetupSection() {
-    // Space.md above: the sheet's intro paragraph sits right before this heading.
+    // Space.md above: it opens under the "Developer tools" row that folds it.
     Column(
         modifier = Modifier.padding(top = Space.md),
         verticalArrangement = Arrangement.spacedBy(Space.sm),
@@ -1887,6 +1984,17 @@ private const val QA_STATE_MODEL_POINTS = "model-synthetic-points"
 
 /** The same result with its export sheet open. */
 private const val QA_STATE_MODEL_EXPORT = "model-synthetic-export"
+
+/** A kept scan of the ray-cast room, opened on its floor plan (#4540): four walls and the ceiling seen. */
+private const val QA_STATE_PLAN_SYNTHETIC = "plan-synthetic"
+
+/** The same room with one wall and the ceiling never scanned: the plan says what is missing. */
+private const val QA_STATE_PLAN_PARTIAL = "plan-partial"
+
+private val PLAN_QA_STATES = setOf(QA_STATE_PLAN_SYNTHETIC, QA_STATE_PLAN_PARTIAL)
+
+/** Beside the sessions, the id of the one session QA's plan states kept: the only one they replace. */
+private const val QA_PLAN_MARKER = "qa-plan-session.txt"
 
 /** The QA states that open straight on the result screen. */
 private val MODEL_QA_STATES = setOf(QA_STATE_MODEL_SYNTHETIC, QA_STATE_MODEL_POINTS, QA_STATE_MODEL_EXPORT)

@@ -652,6 +652,35 @@ object SceneViewTokens {
          */
         val accentRecord = Color(0xFFEA4335)
 
+        /**
+         * `ar-mesh-ground` — the ground ARCore found (Streetscape terrain, a floor plane
+         * marker) drawn **into** the camera image (#4623). A saturated azure rather than the
+         * brand `primary`: #005bc1 sinks into a dim room and the dark-scheme #a4c1ff turns to
+         * milk once blended over a white wall. Theme-independent, like every accent here —
+         * the ground is the camera. Paired with [meshStructure], blue against orange: the one
+         * hue pair that stays apart under every common colour-vision deficiency.
+         */
+        val meshGround = Color(0xFF1F8BFF)
+
+        /**
+         * `ar-mesh-structure` — what stands on the ground (Streetscape buildings, walls), drawn
+         * into the camera image (#4623). Saturated orange, the complement of [meshGround]. Filmic
+         * pushes it red over mid-grey and amber over a white wall; this hue sits in the middle.
+         */
+        val meshStructure = Color(0xFFFF7A1A)
+
+        /**
+         * `ar-mesh-fill-alpha` — the strength of a mesh overlay's tint (#4623): strong enough
+         * that the colour leads on a bright wall, light enough that the room still reads.
+         */
+        const val MESH_FILL_ALPHA = 0.6f
+
+        /**
+         * `ar-points-settled` — a feature point ARCore is confident about (#4623). Vivid cyan;
+         * the low end of the confidence ramp is [meshGround], the fresh end `warning`.
+         */
+        val pointsSettled = Color(0xFF00E5FF)
+
         /** Widest a coaching pill may grow — a long line stays one readable column. */
         val maxWidth = 480.dp
 
@@ -715,7 +744,7 @@ object SceneViewTokens {
      * Two palettes, one per ground (#4080). [Dark] is drawn on [Stage.background] — the live
      * camera's picture-in-picture, and the replay in dark theme. [Light] is drawn on the light
      * stage the replay takes in light theme (`surface-dim`, see [StageChrome.Light]). Every
-     * colour is an existing palette value — the brand ramp for the trail, `warning` for what the
+     * colour is an existing palette value — one blue, faint to strong, for the trail, `warning` for what the
      * camera sees right now, `success` for anchors, the axis convention X red / Y green / Z blue.
      * The `glow` factors multiply a colour past 1.0 in linear light so bloom picks it up: only the
      * few "live" elements glow, so the eye lands on the present. On the light ground nothing
@@ -725,9 +754,10 @@ object SceneViewTokens {
     object DebugView {
         /** On the dark stage. */
         val Dark = DebugPalette(
-            // Trail, oldest → newest: `accent-deep` → `tint-soft` → `tint-light`.
-            trailOld = Color(0xFF5A32A3),
-            trailMid = Color(0xFFD2A8FF),
+            // Trail, oldest → newest, one blue faint to strong (#4597): `gradient-hero-alt`'s
+            // `#0D419D` → `mark-color` body `#3D7FD9` → `primary` (dark) `#A4C1FF`.
+            trailOld = Color(0xFF0D419D),
+            trailMid = Color(0xFF3D7FD9),
             trailNew = Color(0xFFA4C1FF),
             // Glows are held low (#4306): the room is the result, the tracking aids stand behind it.
             trailHeadGlow = 2.0f,
@@ -762,14 +792,15 @@ object SceneViewTokens {
 
         /**
          * On the light stage: the same meanings in the light scheme's values. The trail runs
-         * `tint-soft` → `tertiary` → `primary` (the oldest is now the palest, as it is the
+         * one blue, `#BDD3FF` → `#3D7FD9` → `primary` (the oldest is the palest, as it is the
          * dimmest on the dark stage); the frustum and the floor planes take `primary`, the walls
          * `tertiary`; history points are `on-surface` at 55 %; the grid is `on-surface` at
          * 8 % / 16 %.
          */
         val Light = DebugPalette(
-            trailOld = Color(0xFFD2A8FF),
-            trailMid = Color(0xFF6446CD),
+            // One blue, faint to strong (#4597): `mark-color` lid → body → `primary`.
+            trailOld = Color(0xFFBDD3FF),
+            trailMid = Color(0xFF3D7FD9),
             trailNew = Color(0xFF005BC1),
             trailHeadGlow = 1f,
             frustum = Color(0xFF005BC1),

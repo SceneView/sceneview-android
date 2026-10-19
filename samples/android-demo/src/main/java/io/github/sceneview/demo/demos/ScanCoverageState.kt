@@ -102,8 +102,13 @@ internal class ScanCoverageState {
     private var extentVersion = -1
     private var floorKey = 0
 
-    fun observe(frame: ArDebugFrame) {
-        val grew = grid.update(frame.mapPoints)
+    /**
+     * [dense] is a v2 scan's dense cloud (flat xyz), of which [denseCount] surfels are found by
+     * [frame]'s time: it stands in for the feature points, as it does in the 3D view, so a scan whose
+     * room is drawn from depth does not read `Floor 0 % covered` under that room (#4619).
+     */
+    fun observe(frame: ArDebugFrame, dense: FloatArray? = null, denseCount: Int = 0) {
+        val grew = if (dense != null) grid.update(dense, denseCount) else grid.update(frame.mapPoints)
         coachLine = coach.update(frame.time, frame.camera, grew)
         val moved = frame.camera != camera
         camera = frame.camera
