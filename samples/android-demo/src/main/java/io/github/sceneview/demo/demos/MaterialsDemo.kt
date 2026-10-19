@@ -1181,7 +1181,7 @@ private fun rememberStudioMaterial(
  * do not use them. One shader serves eight of the nine spheres, so "this material has no clear
  * coat" has to be written as `clearCoat = 0`; an unwritten uniform is not a guaranteed zero.
  */
-private fun MaterialInstance.push(
+internal fun MaterialInstance.push(
     material: StudioMaterial,
     metallic: Float = material.metallic,
     roughness: Float = material.roughness,
