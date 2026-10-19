@@ -170,7 +170,7 @@ class DenseFusion(
         val normals = FloatArray(n * 3)
         val colors = IntArray(n)
         val confidences = ByteArray(n)
-        val levels = if (compactions > 0) ByteArray(n) else null
+        val levels = if ((0 until n).any { levelOf(voxelKeys[kept[it]]) != 0 }) ByteArray(n) else null
         for (o in 0 until n) {
             val i = kept[o]
             positions[o * 3] = px[i]
@@ -358,7 +358,14 @@ class DenseFusion(
         }
         colorWeight[j] = minOf(cs, MAX_WEIGHT)
         if ((confidence[i].toInt() and 0xFF) > (confidence[j].toInt() and 0xFF)) confidence[j] = confidence[i]
-        views[j] = maxOf(views[j], views[i])
+        // Below MIN_VIEWS each side is one frame: equal last ids are the same observation,
+        // different ids make the merged voxel confirmed. Past it, keep the known bound instead
+        // of guessing how much the older frame histories overlap.
+        views[j] = if (views[j] < MIN_VIEWS && views[i] < MIN_VIEWS && lastView[j] != lastView[i]) {
+            views[j] + views[i]
+        } else {
+            maxOf(views[j], views[i])
+        }
         lastView[j] = maxOf(lastView[j], lastView[i])
         firstView[j] = minOf(firstView[j], firstView[i])
     }
