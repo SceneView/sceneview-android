@@ -829,7 +829,8 @@ class DemoRenderingScreenshotTest {
          * the first-run skip; see `render-goldens-swangle/README.md` for why each one is out.
          */
         val SWANGLE_BASELINED_GOLDENS: Set<String> = setOf(
-            "animationphysics_default",
+            // `animationphysics_default` and `twodinthreed_default` are out while #4624
+            // re-records them: the fox on the themed stage, the rocket before its media wall.
             // Six cases re-baselined for #4448 from the captures of run 38073545804, each one
             // the screen with all of its content in it and each matched by at least one other
             // run of the same day: camera-gestures (Camera | PiP switch, #4282), debug-overlay
@@ -853,9 +854,6 @@ class DemoRenderingScreenshotTest {
             // 2 488 320 apart at most). It was out until then: 54.7 % of pixels moved between
             // runs when the sort order chased a camera glide.
             "splatpreview_default",
-            // Re-baselined after the Inspect and Media rewrite (the rocket replaces the helmet
-            // and its cards), from the first-run capture of run 37677981378.
-            "twodinthreed_default",
         )
 
         // How long we allow the demo screen to compose after `am start` — covers a cold

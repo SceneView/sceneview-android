@@ -202,7 +202,7 @@ internal object CalloutLayout {
     val SHOWCASE_STRIP_TARGET = Position(y = 0.62f)
 
     /** Captions of the showcase: the 4:1 TextNode raster, two thirds of the gallery's size. */
-    val SHOWCASE_CAPTION_SIZE = Size(0.48f, 0.12f, 0f)
+    val SHOWCASE_CAPTION_SIZE = Size(0.6f, 0.15f, 0f)
 
     fun showcase(strip: Boolean): List<Exhibit> = if (strip) SHOWCASE_STRIP else SHOWCASE
 
