@@ -12,8 +12,6 @@
 <resources>
     <string name="demo_lighting_title">Lighting</string>
     <string name="demo_lighting_subtitle">Studio light, daylight, reflections, fog and shading</string>
-    <string name="demo_lighting">Lighting</string>
-    <string name="demo_lighting_desc">Image-based, three-point studio and dynamic sun lighting</string>
     <string name="demo_lighting_loading">Loading the stage…</string>
 
     <!-- Rig picker. Order matches the `LightingRig` enum, which `ALIAS_INITIAL_TAB` indexes. -->

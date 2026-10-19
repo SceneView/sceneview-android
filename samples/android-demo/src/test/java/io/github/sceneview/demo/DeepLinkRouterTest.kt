@@ -496,8 +496,12 @@ class DeepLinkRouterTest {
             )
             assertNull("'$retired' is retired", ALL_DEMOS.find { it.id == retired })
         }
-        // 42 since #4603 folded `lighting-lab` into `lighting`.
-        assertEquals("Android ships 42 cards after step 0 and #4603", 42, ALL_DEMOS.size)
+        // 42 since #4603 folded `lighting-lab` into `lighting`, plus Finger Drawing (#4082) and Pool in the garden.
+        assertEquals(
+            "Android ships 44 cards after step 0, #4603, Finger Drawing (#4082) and Pool in the garden",
+            44,
+            ALL_DEMOS.size,
+        )
     }
 
     @Test

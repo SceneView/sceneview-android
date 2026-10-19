@@ -523,10 +523,7 @@ private fun DemoBottomOverlayScope.MlDepthCard(state: MlDepthState, downloadProg
                 )
             }
             MlDepthState.Throttled -> stringResource(R.string.demo_ar_depth_ml_throttled)
-            is MlDepthState.Failed -> stringResource(
-                R.string.demo_ar_depth_ml_failed,
-                state.error.message ?: state.error.javaClass.simpleName,
-            )
+            is MlDepthState.Failed -> stringResource(R.string.demo_ar_depth_ml_failed)
         }
         Text(
             text = body,

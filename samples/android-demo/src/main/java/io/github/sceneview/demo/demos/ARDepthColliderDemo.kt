@@ -28,6 +28,7 @@ import io.github.sceneview.ar.ARCoreAvailability
 import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.physics.DepthCollider
 import io.github.sceneview.demo.ARCameraInitScrim
+import io.github.sceneview.demo.BuildConfig
 import io.github.sceneview.demo.DemoScaffold
 import io.github.sceneview.demo.R
 import io.github.sceneview.demo.common.SceneAction
@@ -106,29 +107,30 @@ fun ARDepthColliderDemo(onBack: () -> Unit) {
         onBack = onBack,
         peekHeader = if (ballCount > 0) "Balls dropped: $ballCount" else null,
         // The Drop / Drop 5 / Reset actions are the demo's core interaction, so
-        // they live on-screen via SceneActionBar (#1964). The sheet keeps only
-        // the "Show depth mesh" dev toggle — genuine secondary configuration.
+        // they live on-screen via SceneActionBar (#1964). Debug builds also keep
+        // the secondary "Show depth mesh" control in the sheet.
         controls = {
             Text(
-                text = "Aim at the floor or a table, then tap Drop. Balls bounce off real geometry " +
-                    "via DepthCollider (#1713).",
+                text = "Aim at the floor or a table, then tap Drop. Balls bounce off real surfaces.",
                 style = MaterialTheme.typography.bodyMedium,
             )
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    text = "Show depth mesh (dev)",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Switch(
-                    checked = showDepthMesh,
-                    onCheckedChange = { showDepthMesh = it },
-                )
+            if (BuildConfig.DEBUG) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        text = "Show depth mesh",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Switch(
+                        checked = showDepthMesh,
+                        onCheckedChange = { showDepthMesh = it },
+                    )
+                }
             }
         },
         // Primary actions on-screen (#1964) — Drop / Drop 5 / Reset are the demo's core
