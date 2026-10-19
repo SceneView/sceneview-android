@@ -254,7 +254,7 @@ internal suspend fun prepareSharedScan(
         shareCopyLock.withLock {
             val capture = store.capture(session.id) ?: return@withContext null
             val root = rerunShareDirectory(context, RERUN_SHARE_SCAN)
-            val file = RerunShareCopy.write(capture, session.title, root, includePhotos)
+            val file = RerunShareCopy.write(capture, session.title, root, includePhotos, session.scope)
             PreparedScan(includePhotos, file, file.length())
         }
     }

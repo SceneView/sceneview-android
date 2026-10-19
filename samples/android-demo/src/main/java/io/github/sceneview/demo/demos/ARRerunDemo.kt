@@ -775,7 +775,7 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
     }
     if (exporting && exportable) {
         val onModel = screen == RerunScreen.Model
-        val source = remember(showingScan, scanTitle, scanPack, onModel, resultModel) {
+        val source = remember(showingScan, scanTitle, scanPack, onModel, resultModel, scanKind) {
             val pack = scanPack
             val model = resultModel
             when {
@@ -783,6 +783,7 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
                     title = scanTitle,
                     capture = pack?.let { { it } },
                     model = model?.let { { it } },
+                    scope = scanKind,
                 )
                 // QA: the synthetic room's model, and no recording to go with it.
                 onModel -> RerunExportSource(title = ScanCopy.REPLAY_TITLE, model = model?.let { { it } })
@@ -928,6 +929,8 @@ private fun RerunReplayScreen(
     val coverage = remember(media) { ScanCoverageState() }
     // The floor's coverage is a room's figure: an object's scan has no floor to cover (#4683).
     val showsCoverage = media != null && mode != RerunMode.Camera && measuresRoom
+    // An object's scan has no map: one opened while the map was showing opens in 3D.
+    LaunchedEffect(measuresRoom, mode) { if (!measuresRoom && mode == RerunMode.Map) onMode(RerunMode.Scene) }
     // The camera frames are pictures, ready with the files; the 3D view says when it has drawn.
     val ready = media != null && (revealed || mode == RerunMode.Camera)
     LaunchedEffect(ready) { if (ready) onRevealed() }
@@ -1052,13 +1055,15 @@ private fun RerunReplayScreen(
                 onClick = { if (mode == RerunMode.Scene) orbit.recenter() else onMode(RerunMode.Scene) },
                 selected = mode == RerunMode.Scene,
             ),
+            // The map is the floor plan seen from above: an object's scan has no floor plan, and its
+            // top view is what the 3D view's orbit already shows (#4683).
             DockItem(
                 icon = Icons.Rounded.Map,
                 label = "Map view",
                 caption = "Map",
                 onClick = { onMode(RerunMode.Map) },
                 selected = mode == RerunMode.Map,
-            ),
+            ).takeIf { measuresRoom },
             DockItem(
                 icon = Icons.Rounded.Movie,
                 label = "Camera frames",

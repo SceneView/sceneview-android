@@ -241,6 +241,38 @@ class RerunSessionStoreTest {
     }
 
     @Test
+    fun `an object scan shared as a file opens as an object, and an old file as a room (#4683)`() {
+        val noRrd: (ByteArray) -> RerunCapturePack = { fail("not a .rrd"); error("") }
+        val shareRoot = folder.newFolder("share")
+        for (photos in listOf(true, false)) {
+            val sent = RerunShareCopy.write(bundled(), "Mug", shareRoot, photos, ScanScope.Object)
+            val store = RerunSessionStore(folder.newFolder("object-$photos"))
+            val opened = store.import(sent.name, sent.readBytes(), noRrd)
+            assertEquals(ScanScope.Object, opened.scope)
+            assertEquals(ScanScope.Object, store.list().single().scope)
+            // Shared on again from the phone it was opened on, it is still an object.
+            val again = RerunShareCopy.write(store.capture(opened.id)!!, opened.title, shareRoot, photos, opened.scope)
+            val other = RerunSessionStore(folder.newFolder("again-$photos"))
+            assertEquals(ScanScope.Object, other.import(again.name, again.readBytes(), noRrd).scope)
+        }
+
+        // A room's file is the stored capture byte for byte, and opens as a room.
+        val room = RerunShareCopy.write(bundled(), "Kitchen", shareRoot, true, ScanScope.Room)
+        assertArrayEquals(RerunScanFile.write(bundled()), room.readBytes())
+        val rooms = RerunSessionStore(folder.newFolder("rooms"))
+        assertEquals(ScanScope.Room, rooms.import(room.name, room.readBytes(), noRrd).scope)
+        // A file written before the key — or with one this version does not know — opens as a room.
+        val unknown = RerunCapturePack(
+            String(bundled().manifest).replaceFirst("{", "{\"scope\":\"galaxy\",").toByteArray(),
+            bundled().log,
+            bundled().media,
+        )
+        assertEquals(ScanScope.Room, RerunScanFile.scopeOf(bundled()))
+        assertEquals(ScanScope.Room, RerunScanFile.scopeOf(unknown))
+        assertEquals(ScanScope.Object, RerunScanFile.scopeOf(RerunScanFile.withScope(unknown, ScanScope.Object)))
+    }
+
+    @Test
     fun `the same file opened twice is one session, a different file is another (#4680)`() {
         val store = RerunSessionStore(folder.newFolder("sessions"))
         val noRrd: (ByteArray) -> RerunCapturePack = { fail("not a .rrd"); error("") }

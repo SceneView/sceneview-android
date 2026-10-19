@@ -406,7 +406,9 @@ class RerunSessionStore(val root: File) {
         val title = fileName.substringBeforeLast('.').trim().ifEmpty { "Opened session" }
         val source = if (kind == RerunFileKind.Scan) RerunSessionSource.Scan else RerunSessionSource.Rrd
         return try {
-            save(capture, title, source, nowMillis)
+            // A scan file says what it was a scan of; a recording from Rerun is a room.
+            val scope = if (kind == RerunFileKind.Scan) RerunScanFile.scopeOf(capture) else ScanScope.Room
+            save(capture, title, source, nowMillis, scope = scope)
         } catch (failure: RerunImportFailure.Empty) {
             throw RerunImportFailure.Empty(fileName).apply { initCause(failure) }
         } catch (failure: RerunImportFailure.Unreadable) {
@@ -496,6 +498,28 @@ object RerunScanFile {
     fun read(bytes: ByteArray): RerunCapturePack? =
         StoredZip.read(bytes)?.let { files -> RerunCapturePack.of(files.toMap()) }
 
+    /**
+     * What [capture] was a scan of, as its manifest's top-level `scope` key says (#4683): a room
+     * for a file without one — every scan file written before the key was — or with one unknown.
+     */
+    fun scopeOf(capture: RerunCapturePack): ScanScope {
+        val root = runCatching { Json.parseToJsonElement(String(capture.manifest)) as? JsonObject }.getOrNull()
+        return RerunStoredSession.scopeOf((root?.get(SCOPE) as? JsonPrimitive)?.content)
+    }
+
+    /**
+     * [capture] with [scope] in its manifest, so an object scan shared as a file opens as one. The
+     * same capture, byte for byte, when the manifest already reads as [scope] — a room's file is
+     * unchanged. The rest of the manifest, keys this version does not know included, is kept.
+     */
+    fun withScope(capture: RerunCapturePack, scope: ScanScope): RerunCapturePack {
+        if (scopeOf(capture) == scope) return capture
+        val root = runCatching { Json.parseToJsonElement(String(capture.manifest)) as? JsonObject }.getOrNull()
+            ?: return capture
+        val manifest = JsonObject(root + (SCOPE to JsonPrimitive(scope.key)))
+        return RerunCapturePack(manifest.toString().toByteArray(), capture.log, capture.media)
+    }
+
     /** A zip whose first entry is the manifest: how both apps write a scan file. */
     fun looksLikeOne(head: ByteArray): Boolean {
         if (head.size < ZIP_HEADER || StoredZip.u32(head, 0) != StoredZip.LOCAL) return false
@@ -506,6 +530,7 @@ object RerunScanFile {
 
     private const val ZIP_HEADER = 30
     private const val NAME_LENGTH_AT = 26
+    private const val SCOPE = "scope"
 }
 
 /**
