@@ -83,7 +83,7 @@ Glassmorphism adds depth and layering to surfaces that float over content (nav, 
 | `stage-tray-walnut-late` | #2E1B12 | #2E1B12 | Rings of the walnut frame and body (Android `TrayStage.WALNUT_LATE`): the dark edge that frames the pale field. Fixed in both themes |
 | `stage-tray-steel` | #D7DCE3 | #D7DCE3 | Chrome ball of the Rolling Balls demo (Android `TrayStage.STEEL_COLOR`, metallic, roughness 0.06): near-neutral so it mirrors the studio. Fixed in both themes |
 | `stage-tray-glass` | #BFE6EA | #BFE6EA | Glass marble of the Rolling Balls demo (Android `TrayStage.GLASS_COLOR`, full transmission, IOR 1.5): the aqua tint the light picks up through it, and its chip swatch. Fixed in both themes |
-| `stage-tray-rubber-1`…`-5` | #F2654B · #2E86F0 · #F5B029 · #2FBF8F · #9B5DE5 | same | Rubber balls of the Rolling Balls demo, in turn (Android `TrayStage.RUBBER_COLORS`, clear-coated): coral, azure, amber, mint, orchid — each holds on the maple and on the walnut. Fixed in both themes |
+| `stage-tray-rubber-1`…`-5` | #F2654B · #2E86F0 · #F5B029 · #2FBF8F · #9B5DE5 | same | Rubber balls of the Rolling Balls demo, in turn (Android `TrayStage.RUBBER_COLORS`, clear-coated): coral, azure, amber, mint, orchid — each holds on the maple and on the walnut. Fixed in both themes. Also the five paints of the Finger Drawing demo (#4082), where each holds on the light and on the dark stage |
 | `stage-pip-floor` | #E2E6EB | #161B22 | Floor of the iOS Secondary Camera (PiP) stage (iOS `Stage.pipFloor`; dark is Android's `StageSky.floor`). Light is a step under `surface-container-highest` so the ground reads against the backdrop (1.13:1 on `stage-pip-backdrop`, enough for a fill; the grid carries the edge) |
 | `stage-pip-grid` | #7A8494 | #5C6780 | Grid lines on `stage-pip-floor` (iOS `Stage.pipGrid`): 3.0:1 on the floor in both themes, where Android's `outline` / `outline-subtle` measured 1.18:1 / 2.18:1 |
 | `stage-pip-backdrop` | #F1F3F5 | #0B0F16 | Flat backdrop of the Secondary Camera stage (iOS `Stage.pipBackdrop`, = `surface-container-high` light / `stage-background` dark). The floor texture fades into exactly this colour at its rim, so no camera angle shows the floor's edge |
@@ -135,6 +135,7 @@ the surface ramp above, not the M3 tonal ramp.
 | `hero-subtitle` | rgba(255,255,255,0.80) | rgba(255,255,255,0.80) | Hero subtitle, max width 260dp |
 | `hero-pill-bg` | #ffffff | #ffffff | Hero CTA pill (44dp, `radius-full`) |
 | `hero-pill-text` | #1a1a2e | #1a1a2e | Hero CTA label |
+| `hero-pill-icon` | 18dp, `hero-pill-text` | 18dp, `hero-pill-text` | Arrow after the hero CTA label (`ArrowForward`, auto-mirrored), `hero-pill-icon-gap` 8dp (`space-sm`) |
 | `header-glass` | `surface` at 72 % over the list under it blurred `header-glass-blur` (24dp) | `surface` at 78 %, same blur | Sticky home header once the list scrolls under it (API 31+). The blurred copy is drawn over a `surface` ground, so no sharp title shows through: the rows read as colour moving behind frosted glass, never as an overlap. `on-surface` holds 8.7:1 (light) / 8.2:1 (dark) against the worst ground, `on-surface-variant` 4.9:1 / 4.2:1 (icons, 3:1 bar). The stage is a `TextureView`, so its frame is in the recorded copy too. iOS: the same `surface` veil over native Liquid Glass (`glassEffect(.regular)`) on iOS 26+, over `.ultraThinMaterial` below — bare glass let the row titles read through |
 | `header-overlay` | `surface` at 100 % | `surface` at 100 % | The same header below API 31 (no `RenderEffect`). Tried at the `glass-sheet` opacity: without a backdrop blur the card titles scrolling under the wordmark stay legible and read as an overlap bug, so without blur it stays opaque |
 | `card-glass` | `surface-container` (#ffffff) at 80 % over the card's own picture blurred 28dp — at 72 % a dark picture turned it a muddy grey | `surface-container` at 90 % (the `glass-sheet` value), same blur | Caption of a home card. Below API 31 (no `RenderEffect`) there is no blurred copy and the fill takes `glass-sheet` (88 % / 90 %) |
@@ -148,9 +149,14 @@ category.
 
 **Above the chips, a demo is pushed once.** The header pager, the "Featured" banners and
 the "What's new" row's picture are read in that order, and each only shows what the ones
-before it do not; a group left with nothing of its own is not drawn. The pager stays at two
-pages (Models, Cosmos) so the banners keep the other three featured demos: the banner is the
-card the Home is liked for. In the catalogue, a demo shown as a banner is not listed again
+before it do not; a group left with nothing of its own is not drawn. The pager has four
+pages (Model Viewer, Cosmos, Real-World Scan, Rolling Balls — #4622): the flagship and
+Cosmos, then the two newest showpieces that are not Labs experiments, outside the common Featured list so the
+banners keep the other three featured demos: the banner is the card the Home is liked for.
+The flagship's page is titled after the screen it opens, "Model Viewer", not the catalogue's
+"Models", which read as a section. Each page's one action is the `hero-pill`: label, then a
+`hero-pill-icon` arrow `hero-pill-icon-gap` after it — a bare "Open" over the live stage read
+as a caption. iOS still shows one band titled "Models" with a bare "Open" (`HomeHero.swift`); that is a parity item. In the catalogue, a demo shown as a banner is not listed again
 in its category; a search is a query and lists every match. The "What's new" row
 opens the "What's new" sheet over the whole catalogue: a tap on a home row must not make
 the catalogue look smaller than it is.
@@ -732,6 +738,18 @@ with `motion-fade`.
 - **The caption is not the accessible name.** The content description stays the full
   phrase ("Demo settings"); only the visible caption is shortened ("Settings").
 
+#### Full screen (Android demo, #4558)
+
+Every scene screen built on `DemoScaffold` carries a full-screen control: a
+`glass-icon-button` (`Fullscreen` glyph, "Full screen") at the trailing end of the
+identity row, so it sits where the back button's mirror would be on every demo. One tap
+fades the identity row, the dock, both scene slots (`topOverlay`, `bottomOverlay`) and
+the settings sheet out with `motion-fade`, and hides the system bars (transient on swipe).
+The scene keeps the whole screen; nothing else is drawn but one `glass-icon-button`
+(`FullscreenExit`, "Exit full screen") on a `chrome-scrim` ground in the top trailing
+corner, inside the safe-drawing inset. That button and system Back both bring everything
+back. The control lives in the scaffold, never in a sample.
+
 ### Car Chrome (Android Auto demo)
 
 `samples/android-auto-demo` is shown on a car's screen while parked, touched at arm's
@@ -1064,19 +1082,29 @@ the camera mode keeps `ARSceneView`'s own plane renderer).
   fingers pan, pinch zooms); double-tap or Recenter hands it back.
 - **Timeline**: play/pause, the time, a scrubber, the length, and a *Live* chip in
   `success` while the view follows the session. Scrubbing pauses; *Live* jumps back.
-- **Record mode is read from a metre away.** It is filmed over the user's shoulder, so the
-  scan's figures (points, surfaces, photos) are `type-display` white on the dark scrim, the
-  clock is `type-title`, and the only red is `danger` (the dot and the shutter). The 3D
-  card under them is the same view the replay opens on, growing as the phone moves, framed
-  to the scan with no intro. While recording the dock is empty: nothing may leave a scan
-  half-taken. The privacy line ("Everything stays on your phone.") ends the idle copy.
+- **The capture says one thing at a time (#4627).** One compact card on top: the red dot
+  (`danger`, muted while paused) and "Scanning · 0:42" in `type-title`, then "124,300 points
+  captured" in `type-body` — counted from zero, never shown against a cap. The 3D card under
+  it is the same view the replay opens on, growing as the phone moves, framed to the scan
+  with no intro. At the bottom, one coaching line in a scrim pill ("Move slowly sideways";
+  on a lost track "Scan paused. Point at an area you already scanned.") over two 48 dp
+  buttons: tonal Pause (Resume) and filled Finish. Finish opens a review card ("Review your
+  scan", the figures, tonal Keep scanning and filled Save scan) that returns to the same
+  capture; only Save scan builds it. A failed write stays as a card ("Couldn't save your
+  scan", Discard, Try again), never a toast; its Discard asks "Discard this scan?" first.
+  Back during a capture pauses it and asks Keep scanning, Save scan or Discard (`error`) —
+  only Keep scanning and Discard when nothing was captured; Keep scanning scans again. A lost
+  track stops the clock with the capture. While capturing the dock is empty; the Settings
+  button still shows over a capture today, and hiding it is the next step of #4627. The
+  privacy line ("Saved on your phone. Nothing leaves it unless you share it.") ends the idle
+  copy.
 - **One flow, like a capture app (Polycam, Scaniverse, Reality Composer), laid out as the
   iOS demo's (#4068).** The demo opens on a scrolling page on the themed stage's ground, max width
-  560 dp, clear of the header and the settings button: `type-display` "Scan a room in 3D"
-  over one muted line; the one primary action, "Record your room", a 96 dp `radius-lg` card
-  in `accent-progress` with the camera in a 56 dp well, "Everything stays on your phone."
-  under it and a chevron; then a row of two glass actions, "Watch a sample session"
-  (weighted) and "Open file". "Your sessions" (`type-card`, "On this phone" on the right)
+  560 dp, clear of the header and the settings button: `type-display` "3D Scan" over one
+  muted line, "Move around a space and watch it take shape."; the one primary action, "Start
+  scanning", a 96 dp `radius-lg` card in `accent-progress` with the camera in a 56 dp well,
+  the privacy line under it and a chevron; then a row of two glass actions, "See an example"
+  (weighted) and "Open scan". "Your scans" (`type-card`, "On this phone" on the right)
   lists glass `radius-md` cards: the first photo (64 dp, `radius-sm`), the title, "date ·
   source", then "path · points · photos · duration", and a ⋮ menu with "Share scan file" and
   "Delete" — Delete in the theme's `error` colour, confirmed by a dialog whose confirm is

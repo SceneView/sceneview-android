@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import io.github.sceneview.demo.R
 import io.github.sceneview.demo.common.DemoModalBottomSheet
 import io.github.sceneview.demo.common.putVoiceSilenceExtras
+import io.github.sceneview.demo.labs.Labs
 import io.github.sceneview.demo.theme.SceneViewTokens
 import kotlinx.coroutines.launch
 
@@ -227,6 +228,8 @@ fun BugReportSheet(
                 onClick = {
                     if (openGitHubIssue(context, report.info, note)) {
                         sendError = null
+                        // The first report sent joins SceneView Labs (see Labs.onReportSent).
+                        Labs.onReportSent()
                         onDismiss()
                     } else {
                         sendError = noAppError
@@ -246,6 +249,7 @@ fun BugReportSheet(
                 onClick = {
                     if (shareReport(context, report, note, includeScreenshot)) {
                         sendError = null
+                        Labs.onReportSent()
                         onDismiss()
                     } else {
                         sendError = noAppError

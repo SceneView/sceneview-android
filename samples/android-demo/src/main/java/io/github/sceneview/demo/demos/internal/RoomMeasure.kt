@@ -5,7 +5,6 @@ import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.hypot
-import kotlin.math.max
 import kotlin.math.sin
 
 /**
@@ -20,8 +19,13 @@ class RoomMeasure(val corners: FloatArray, val width: Float, val depth: Float, v
     /** The rectangle's area, m². */
     val area: Float get() = width * depth
 
-    /** `3.4 × 4.1 m · 14 m²`: the room as a floor plan names it. */
-    val summary: String get() = "${metres(width, unit = false)} × ${metres(depth)} · ${squareMetres(area)}"
+    /**
+     * `3.40 m × 4.10 m · 13.9 m²` (or `11 ft 2 in × 13 ft 5 in · 150 ft²`): the room as a floor
+     * plan names it, in the same units and format as every other Measure figure.
+     */
+    fun summary(system: MeasureUnitSystem, locale: Locale): String =
+        "${formatMeasureLength(width, system, locale)} × ${formatMeasureLength(depth, system, locale)} · " +
+            formatMeasureArea(area, system, locale)
 
     companion object {
         /** A room is at least this wide on each side: under it, a table top is not a room. */
@@ -86,16 +90,6 @@ class RoomMeasure(val corners: FloatArray, val width: Float, val depth: Float, v
             if (abs(sx) < 1e-9 && abs(sy) < 1e-9) return 0f
             return (atan2(sy, sx) / 4.0).toFloat()
         }
-
-        /** `3.4 m`, `12 m`: a tenth of a metre under 10 m, the metre past it. */
-        fun metres(m: Float, unit: Boolean = true): String {
-            val value = if (m < 10f) String.format(Locale.US, "%.1f", m) else String.format(Locale.US, "%.0f", m)
-            return if (unit) "$value m" else value
-        }
-
-        /** `14 m²`, `2.5 m²`. */
-        fun squareMetres(m2: Float): String =
-            if (m2 < 10f) String.format(Locale.US, "%.1f m²", m2) else String.format(Locale.US, "%.0f m²", max(m2, 0f))
     }
 }
 
