@@ -72,6 +72,11 @@ on:
   # Invoked by nightly-ci.yml so the scheduled full-validation run reuses
   # this render-test definition rather than duplicating it. See #1324.
   workflow_call:
+    inputs:
+      base-sha:
+        description: Compare paths with this SHA and dispatch only changed legs.
+        type: string
+        default: ''
 
 # Cancellation is allowed on pull requests only (#2917, #3216).
 #
@@ -109,14 +114,16 @@ jobs:
   #     macOS `ios-render` job (277 macOS runner-minutes); 23 touched no
   #     Android path, yet each booted four emulators (489 runner-minutes).
   #
-  # Not evaluated on workflow_dispatch nor on the nightly `workflow_call`:
-  # there `changes` is skipped and every job runs, so the nightly still
-  # re-validates anything a filter below might have missed within 24 h.
+  # Direct dispatches compare the selected ref with `main`; scheduled callers
+  # pass the last successful nightly SHA. The nightly's own manual dispatch
+  # passes no SHA, so it still runs every leg.
   # Fail-open: if this job does not conclude `success`, every job runs, so a
   # broken filter can cost minutes but never skip a suite silently.
   changes:
     name: Detect changed paths
-    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    if: >-
+      ${{ github.event_name == 'pull_request' || github.event_name == 'push'
+      || github.event_name == 'workflow_dispatch' || inputs.base-sha != '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -135,7 +142,7 @@ jobs:
       - uses: dorny/paths-filter@v4
         id: filter
         with:
-          base: ${{ github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000' && github.event.before || 'main' }}
+          base: ${{ inputs.base-sha || (github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000' && github.event.before) || 'main' }}
           filters: |
             shared: &shared
               - '.github/workflows/render-tests.yml'

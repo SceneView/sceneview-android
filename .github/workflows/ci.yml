@@ -73,6 +73,12 @@ on:
           gets compiled/tested/built within 24h.
         type: boolean
         default: false
+      base-sha:
+        description: >-
+          Compare paths with this SHA when a caller wants per-job dispatch.
+          Empty keeps the normal workflow-call behaviour.
+        type: string
+        default: ''
 
 # Cancel only a genuinely superseded PR run, never a push to `main` (#2089,
 # #2925).
@@ -148,9 +154,9 @@ jobs:
       # The App Store submit/catch-up programs — gates `app-store-scripts`.
       app-store-scripts: ${{ steps.filter.outputs.app-store-scripts }}
     steps:
-      # Checked out only on `push`. `dorny/paths-filter` reads the diff from
-      # the GitHub API on `pull_request` and never touches the working tree; it
-      # needs git only on `push`, where it diffs against the previous commit.
+      # Checked out on non-PR events. `dorny/paths-filter` reads the diff from
+      # the GitHub API on `pull_request` and never touches the working tree; a
+      # push or reusable caller instead diffs against an explicit base SHA.
       #
       # The checkout was therefore pure cost on PRs — and it is the step that
       # overran. Measured across #3005, #3053 and #3055: `actions/checkout@v7`
@@ -209,7 +215,7 @@ jobs:
           # explicitly with that event's `before` sha so rapid successive
           # pushes cannot collapse into one diff. The all-zero `before` sha
           # used when GitHub cannot name a parent falls back to `main`.
-          base: ${{ github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000' && github.event.before || 'main' }}
+          base: ${{ inputs.base-sha || (github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000' && github.event.before) || 'main' }}
           filters: |
             shared: &shared
               - '.github/workflows/ci.yml'
