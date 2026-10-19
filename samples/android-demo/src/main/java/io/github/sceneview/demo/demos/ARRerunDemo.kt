@@ -53,6 +53,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -147,6 +148,7 @@ import io.github.sceneview.demo.demos.internal.RerunSetupStep
 import io.github.sceneview.demo.demos.internal.RerunStatusUx
 import io.github.sceneview.demo.demos.internal.DollhouseCopy
 import io.github.sceneview.demo.demos.internal.RoomDollhouse
+import io.github.sceneview.demo.demos.internal.ScanBack
 import io.github.sceneview.demo.demos.internal.ScanClock
 import io.github.sceneview.demo.demos.internal.ScanCopy
 import io.github.sceneview.demo.demos.internal.ScanDetail
@@ -180,8 +182,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * 3D Scan (the Rerun demo, id `ar-rerun`): a space scanned with ARCore, rebuilt in 3D.
@@ -248,7 +253,11 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
     // The sessions kept on this phone, re-read whenever one is saved, opened from a file or deleted.
     val store = remember { rerunSessionStore(context.applicationContext) }
     var sessionsVersion by remember { mutableIntStateOf(0) }
-    val sessions by produceState<List<LandingSession>?>(null, sessionsVersion) { value = store.landingSessions() }
+    // A scan saved after its capture screen was left (#4500) lands in the list too.
+    val savedAway = RerunScanBuilds.savedAway
+    val sessions by produceState<List<LandingSession>?>(null, sessionsVersion, savedAway) {
+        value = store.landingSessions()
+    }
     // What the landing says about the last file opened: why it did not open, or that it is opening.
     var notice by remember { mutableStateOf<String?>(null) }
     var openingFile by remember { mutableStateOf(false) }
@@ -331,6 +340,8 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
     }
     // A whole home in progress: the rooms saved in this session, each measured on its own.
     var home by remember { mutableStateOf(HomeScan()) }
+    // Which home [home] is: a room saved after its screen was left joins only the home it was scanned for.
+    var homeSession by remember { mutableIntStateOf(0) }
     // The room of the home whose plan is open full screen.
     var homePlanRoom by remember { mutableStateOf<HomeRoom?>(null) }
     val dollhouseSession = if (qaState == QA_STATE_DOLLHOUSE_EMPTY) {
@@ -539,6 +550,7 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
         scanScope = picked
         ScanScopeStore.remember(context, picked)
         home = HomeScan()
+        homeSession++
         screen = RerunScreen.Live
     }
     // A file handed to this activity only: another MainActivity still showing 3D Scan behind it
@@ -556,7 +568,12 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
     when (screen) {
         RerunScreen.Landing -> RerunLandingScreen(
             onBack = onBack,
-            state = RerunLandingState(sessions = sessions, notice = notice, openingFile = openingFile),
+            state = RerunLandingState(
+                sessions = sessions,
+                notice = notice,
+                openingFile = openingFile,
+                savingScan = RerunScanBuilds.saving > 0,
+            ),
             actions = RerunLandingActions(
                 onRecord = {
                     notice = null
@@ -650,6 +667,13 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
                 scanScope = if (recordingForDollhouse) ScanScope.Room else scanScope,
                 roomNumber = home.nextNumber,
                 onRoomSaved = onRoomSaved,
+                homeSession = homeSession,
+                onSavedAway = { scan, title, id, homeOf ->
+                    sessionsVersion++
+                    // A room of the home still open joins its summary, measured as any other.
+                    if (scan != null && homeOf != null && homeOf == homeSession) onRoomSaved(scan, title, id)
+                },
+                onSaveFailedAway = { notice = ScanCopy.SAVE_FAILED_AWAY },
                 onFinishHome = { screen = RerunScreen.Home },
                 engine = engine,
                 modelLoader = modelLoader,
@@ -1164,6 +1188,10 @@ private fun RerunLiveScreen(
     scanScope: ScanScope,
     roomNumber: Int,
     onRoomSaved: (RerunReplayMedia, String, String?) -> Unit,
+    homeSession: Int,
+    /** A save that finished after the screen was left (#4500): the scan, and its home if a room of one. */
+    onSavedAway: (RerunReplayMedia?, String, String?, Int?) -> Unit,
+    onSaveFailedAway: () -> Unit,
     onFinishHome: () -> Unit,
     engine: Engine,
     modelLoader: ModelLoader,
@@ -1173,6 +1201,18 @@ private fun RerunLiveScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    // #4500: a scan being saved outlives this screen. The capture's own work runs in a scope kept
+    // until its save is done, and the save itself in the process's (RerunScanBuilds).
+    val captureScope = remember { RerunScanBuilds.captureScope() }
+    val attached = remember { AtomicBoolean(true) }
+    val saveJob = remember { AtomicReference<Job?>(null) }
+    DisposableEffect(Unit) {
+        onDispose {
+            attached.set(false)
+            val saving = saveJob.get()?.takeIf { it.isActive }
+            if (saving == null) captureScope.cancel() else saving.invokeOnCompletion { captureScope.cancel() }
+        }
+    }
 
     // QA only (`--es qa_state connected|saved`): draw the connected status, or the saved
     // dialog, on the emulator, which can reach neither ARCore nor a computer (#2754).
@@ -1355,7 +1395,7 @@ private fun RerunLiveScreen(
     // Record starts on the frame on screen, whose camera gives the scan its lens.
     val onStartScan = start@{
         val frame = latestFrame ?: return@start
-        val capture = ScanCapture.start(frame, scope, rawDepth, scanScope.preset) ?: return@start
+        val capture = ScanCapture.start(frame, captureScope, rawDepth, scanScope.preset) ?: return@start
         debugFullScreen = false
         debugSession.trace = capture.trace
         debugSession.goLive()
@@ -1402,7 +1442,10 @@ private fun RerunLiveScreen(
         if (phase == ScanPhase.Saving || nothingToSave) return@save
         leaveAsked = false
         moveTo(ScanPhase.Saving)
-        scope.launch {
+        // The home this room belongs to, when it is one: read now, for a save that ends away.
+        val homeOf = homeSession.takeIf { next != SaveNext.Open }
+        RerunScanBuilds.started()
+        val job = RerunScanBuilds.scope.launch {
             val now = System.currentTimeMillis()
             // The build can throw too — out of memory on a long scan, painting its planes. That
             // lands on the same "Couldn't save" card as a failed write, and Try again rebuilds.
@@ -1416,6 +1459,7 @@ private fun RerunLiveScreen(
             if (built.isFailure) {
                 Log.w(SCAN_LOG_TAG, "3D Scan: building the scan failed", built.exceptionOrNull())
                 phase = ScanPhase.SaveFailed
+                if (!attached.get()) onSaveFailedAway()
                 return@launch
             }
             val pack = built.getOrNull()?.also {
@@ -1437,10 +1481,16 @@ private fun RerunLiveScreen(
             }
             if (savedId == null) {
                 phase = ScanPhase.SaveFailed
+                if (!attached.get()) onSaveFailedAway()
                 return@launch
             }
             val opened = runCatching { loadRerunSession(pack) }.getOrNull()
             dropCapture()
+            if (!attached.get()) {
+                // The screen was left while it saved: the scan is kept and listed, nothing opens.
+                onSavedAway(opened, title, savedId, homeOf)
+                return@launch
+            }
             if (opened == null) return@launch
             when (next) {
                 SaveNext.Open -> onScanned(opened, title, pack, savedId)
@@ -1458,6 +1508,8 @@ private fun RerunLiveScreen(
                 }
             }
         }
+        saveJob.set(job)
+        job.invokeOnCompletion { RerunScanBuilds.ended(away = !attached.get()) }
     }
     val onSaveScan = { saveScan(if (scanScope.roomByRoom) SaveNext.FinishHome else SaveNext.Open) }
     val onDiscardScan = {
@@ -1465,17 +1517,20 @@ private fun RerunLiveScreen(
         onBack()
     }
     // Back during a capture asks first: keep scanning, save, or discard. The capture pauses
-    // while it asks, so nothing is recorded behind the dialog. While it saves, Back waits.
+    // while it asks, so nothing is recorded behind the dialog. While it saves, Back leaves at
+    // once and the save goes on behind it (#4500): the scan lands in "Your scans".
     val onBackFromLive: () -> Unit = {
-        if (!recording) {
-            onBack()
-        } else if (betweenRooms && phase == ScanPhase.Paused) {
-            // Nothing captured since the last room was saved: Back goes to the home's summary.
-            dropCapture()
-            onBack()
-        } else if (phase != ScanPhase.Saving) {
-            moveTo(phase.leaveAsked())
-            leaveAsked = true
+        when (ScanBack.of(recording, betweenRooms, phase)) {
+            ScanBack.Leave -> {
+                // Between two rooms, nothing captured since the last one: Back goes to the summary.
+                if (recording) dropCapture()
+                onBack()
+            }
+            ScanBack.LeaveWhileSaving -> onBack()
+            ScanBack.AskFirst -> {
+                moveTo(phase.leaveAsked())
+                leaveAsked = true
+            }
         }
     }
     BackHandler(enabled = recording, onBack = onBackFromLive)

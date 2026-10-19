@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -94,6 +96,8 @@ internal class RerunLandingState(
     val sessions: List<LandingSession>?,
     val notice: String?,
     val openingFile: Boolean,
+    /** A scan still being saved after its capture screen was left (#4500): it is listed when done. */
+    val savingScan: Boolean = false,
 )
 
 /** What the landing's controls do. */
@@ -132,15 +136,7 @@ private fun LandingPage(state: RerunLandingState, actions: RerunLandingActions) 
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .windowInsetsPadding(WindowInsets.safeDrawing)
-                // The list ends a gutter above everything the scaffold floats at the bottom —
-                // the mode pill and the settings button — so its last session scrolls clear.
-                .padding(
-                    top = RerunHeaderClearance,
-                    bottom = maxOf(SETTINGS_FAB_RESERVED_SPACE, LocalDemoBottomChromeCover.current) +
-                        Space.md,
-                )
+                .rerunPageScroll()
                 .padding(horizontal = Space.md),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -176,7 +172,7 @@ private fun LandingPage(state: RerunLandingState, actions: RerunLandingActions) 
                 // What happened to the file just opened: under the button that opened it, not
                 // inside the list of sessions.
                 state.notice?.let { NoticeCard(it, onDismiss = actions.onDismissNotice) }
-                if (state.openingFile) OpeningCard()
+                if (state.openingFile) OpeningCard(ScanCopy.OPENING_FILE)
                 SessionsSection(state, actions)
             }
         }
@@ -269,9 +265,12 @@ private fun SessionsSection(state: RerunLandingState, actions: RerunLandingActio
                 )
             }
         }
+        // The scan saving behind (#4500) heads the list it is about to join.
+        if (state.savingScan) OpeningCard(ScanCopy.SAVING, testTag = SAVING_SCAN_TAG)
         when {
             sessions == null -> Unit
-            sessions.isEmpty() -> EmptySessions()
+            sessions.isEmpty() && !state.savingScan -> EmptySessions()
+            sessions.isEmpty() -> Unit
             else -> sessions.forEach { session ->
                 SessionCard(
                     session = session,
@@ -322,14 +321,14 @@ private fun NoticeCard(text: String, onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun OpeningCard() {
-    LandingCard(background = stage.glass, testTag = OPENING_TAG) {
+private fun OpeningCard(text: String, testTag: String = OPENING_TAG) {
+    LandingCard(background = stage.glass, testTag = testTag) {
         CircularProgressIndicator(
             modifier = Modifier.size(ProgressSize),
             color = stage.accent,
             strokeWidth = ProgressStroke,
         )
-        Text(text = ScanCopy.OPENING_FILE, style = Type.body.copy(color = stage.onGlass))
+        Text(text = text, style = Type.body.copy(color = stage.onGlass))
     }
 }
 
@@ -529,6 +528,21 @@ private fun SessionThumbnail(session: LandingSession) {
 /** What the header's pills take at the top of a Room Scan page: the landing's and the plan's. */
 internal val RerunHeaderClearance = SceneViewTokens.Layout.touchTarget + Space.md * 2
 
+/**
+ * A 3D Scan page's scroll (#4535): its viewport starts under the status bar and the header, so
+ * what scrolls up is cut at the header's bottom edge instead of passing under the title and the
+ * clock. The bottom stays inside the scroll: the last row scrolls clear of the settings button.
+ */
+@Composable
+internal fun Modifier.rerunPageScroll(): Modifier = this
+    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
+    .padding(top = RerunHeaderClearance)
+    .verticalScroll(rememberScrollState())
+    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
+    // The list ends a gutter above everything the scaffold floats at the bottom — the mode pill
+    // and the settings button — so its last row scrolls clear.
+    .padding(bottom = maxOf(SETTINGS_FAB_RESERVED_SPACE, LocalDemoBottomChromeCover.current) + Space.md)
+
 /** The widest a Room Scan page of text is laid out: the landing's and the plan's. */
 internal val RerunPageMaxWidth = 560.dp
 private val RecordCardHeight = Space.x4l
@@ -557,3 +571,4 @@ internal const val SESSION_VIEW_IN_AR_TAG = "ar_rerun_session_view_in_ar"
 internal const val RECORD_ROOM_TAG = "ar_rerun_record_room"
 internal const val NOTICE_TAG = "ar_rerun_notice"
 internal const val OPENING_TAG = "ar_rerun_opening"
+internal const val SAVING_SCAN_TAG = "ar_rerun_saving_scan"

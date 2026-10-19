@@ -70,6 +70,31 @@ enum class ScanPhase {
 }
 
 /**
+ * What Back does on the capture screen. A scan is never lost to it (#4500): one being built
+ * goes on building after the screen is left, and lands in "Your scans" when it is saved.
+ */
+enum class ScanBack {
+    /** Nothing to lose: no capture, or a home between two rooms with nothing new captured. */
+    Leave,
+
+    /** A capture not built yet: Back asks first — keep scanning, save, or discard. */
+    AskFirst,
+
+    /** Save scan was tapped: the screen is left at once and the scan is built and saved behind it. */
+    LeaveWhileSaving,
+    ;
+
+    companion object {
+        fun of(recording: Boolean, betweenRooms: Boolean, phase: ScanPhase): ScanBack = when {
+            !recording -> Leave
+            phase == ScanPhase.Saving -> LeaveWhileSaving
+            betweenRooms && phase == ScanPhase.Paused -> Leave
+            else -> AskFirst
+        }
+    }
+}
+
+/**
  * The capture's clock, on a monotonic nanosecond clock: it stops while the capture is not
  * integrating (paused, in review) and resumes where it stopped.
  */
