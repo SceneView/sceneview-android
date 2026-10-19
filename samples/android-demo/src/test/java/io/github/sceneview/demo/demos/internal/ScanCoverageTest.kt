@@ -52,6 +52,24 @@ class CoverageGridTest {
     }
 
     @Test
+    fun `a dense cloud revealed as a prefix bins only the points found so far`() {
+        // #4619: a v2 replay's room is its dense cloud, revealed surfel by surfel along the timeline.
+        val grid = CoverageGrid()
+        val dense = cells(0 to 0, 1 to 0, 2 to 0)
+        val perCell = CoverageGrid.MIN_POINTS
+        assertTrue(grid.update(dense, count = perCell))
+        assertEquals(1, grid.covered)
+        assertTrue(grid.update(dense, count = 3 * perCell))
+        assertEquals(3, grid.covered)
+        // A count past the cloud is clamped to it, not an out-of-bounds read.
+        assertFalse(grid.update(dense, count = 99 * perCell))
+        assertEquals(3, grid.covered)
+        // Back to the start of the timeline: the grid starts again, as a scrubbed replay does.
+        grid.update(dense, count = 0)
+        assertEquals(0, grid.covered)
+    }
+
+    @Test
     fun `negative coordinates fall in the cell below, not in cell zero`() {
         val grid = CoverageGrid()
         assertEquals(-1, grid.cellOf(-0.1f))
