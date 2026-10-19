@@ -1054,6 +1054,7 @@ public final class io/github/sceneview/ar/PlaneDiscoveryPhase : java/lang/Enum {
 public final class io/github/sceneview/ar/PlaneVisualizer : io/github/sceneview/collision/TransformProvider {
 	public static final field $stable I
 	public static final field Companion Lio/github/sceneview/ar/PlaneVisualizer$Companion;
+	public static final field SCAN_IN_DURATION_MS J
 	public fun <init> (Lcom/google/android/filament/Engine;Lcom/google/android/filament/Scene;Lcom/google/ar/core/Plane;)V
 	public final fun destroy ()V
 	public fun getTransformationMatrix ()Lio/github/sceneview/collision/Matrix;
@@ -2791,6 +2792,15 @@ public final class io/github/sceneview/ar/scene/PlaneRenderer : io/github/scenev
 	public static final field $stable I
 	public static final field Companion Lio/github/sceneview/ar/scene/PlaneRenderer$Companion;
 	public static final field MATERIAL_COLOR Ljava/lang/String;
+	public static final field MATERIAL_CONTRAST Ljava/lang/String;
+	public static final field MATERIAL_FOCUS Ljava/lang/String;
+	public static final field MATERIAL_GRID_ALPHA Ljava/lang/String;
+	public static final field MATERIAL_GRID_TINT Ljava/lang/String;
+	public static final field MATERIAL_OPACITY Ljava/lang/String;
+	public static final field MATERIAL_SCAN_PLANE_RADIUS Ljava/lang/String;
+	public static final field MATERIAL_SCAN_PROGRESS Ljava/lang/String;
+	public static final field MATERIAL_SURFACE_ALPHA Ljava/lang/String;
+	public static final field MATERIAL_SURFACE_KIND Ljava/lang/String;
 	public static final field MATERIAL_TEXTURE Ljava/lang/String;
 	public static final field MATERIAL_UV_SCALE Ljava/lang/String;
 	public field viewSize Landroid/util/Size;
@@ -2798,6 +2808,7 @@ public final class io/github/sceneview/ar/scene/PlaneRenderer : io/github/scenev
 	public fun destroy ()V
 	public final fun getEngine ()Lcom/google/android/filament/Engine;
 	public final fun getMaxHitTestPerSecond ()I
+	public final fun getMaxUpdatesPerSecond ()I
 	public final fun getPlaneMaterial ()Lcom/google/android/filament/Material;
 	public final fun getPlaneRendererMode ()Lio/github/sceneview/ar/scene/PlaneRenderer$PlaneRendererMode;
 	public final fun getPlaneTexture ()Lcom/google/android/filament/Texture;
@@ -2807,6 +2818,7 @@ public final class io/github/sceneview/ar/scene/PlaneRenderer : io/github/scenev
 	public fun isVisible ()Z
 	public fun setEnabled (Z)V
 	public final fun setMaxHitTestPerSecond (I)V
+	public final fun setMaxUpdatesPerSecond (I)V
 	public final fun setPlaneRendererMode (Lio/github/sceneview/ar/scene/PlaneRenderer$PlaneRendererMode;)V
 	public fun setShadowReceiver (Z)V
 	public fun setViewSize (Landroid/util/Size;)V

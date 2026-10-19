@@ -49,7 +49,7 @@ object DemoPreviews {
         "ar-people-occlusion" to PreviewPair(R.drawable.preview_ar_people_occlusion_light, R.drawable.preview_ar_people_occlusion_dark),
         "ar-placement" to PreviewPair(R.drawable.preview_ar_placement_light, R.drawable.preview_ar_placement_dark),
         "ar-plane-node" to PreviewPair(R.drawable.preview_ar_plane_node_light, R.drawable.preview_ar_plane_node_dark),
-        "ar-plane-renderer-v2" to PreviewPair(R.drawable.preview_ar_plane_renderer_v2_light, R.drawable.preview_ar_plane_renderer_v2_dark),
+        "ar-surfaces" to PreviewPair(R.drawable.preview_ar_surfaces_light, R.drawable.preview_ar_surfaces_dark),
         "ar-point-cloud" to PreviewPair(R.drawable.preview_ar_point_cloud_light, R.drawable.preview_ar_point_cloud_dark),
         // The placed pool of the `pool_preview` QA state: the AR session cannot run on the emulator (#2754).
         "ar-pool" to PreviewPair(R.drawable.preview_ar_pool_light, R.drawable.preview_ar_pool_dark),

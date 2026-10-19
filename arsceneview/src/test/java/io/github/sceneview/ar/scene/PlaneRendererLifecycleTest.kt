@@ -6,7 +6,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Lifecycle of [PlaneRendererV2]'s per-plane visualizers, without a Filament Engine:
+ * Lifecycle of [PlaneRenderer]'s per-plane visualizers, without a Filament Engine:
  *
  *  1. [planeVisualizerAction] never builds a visualizer for a subsumed or stopped plane. The
  *     test it replaces (`TRACKING || subsumedBy == null`) let every subsumed plane through, so
@@ -14,7 +14,7 @@ import org.junit.Test
  *  2. [OwnedVisualizers] destroys a visualizer's MaterialInstances with it: live instances stay
  *     at 2 × live visualizers. They used to be released only when the whole renderer was.
  */
-class PlaneRendererV2LifecycleTest {
+class PlaneRendererLifecycleTest {
 
     // ── 1. Which planes get a visualizer ─────────────────────────────────────────────────
 
@@ -84,7 +84,7 @@ class PlaneRendererV2LifecycleTest {
             },
         )
 
-        /** Mirrors `PlaneRendererV2.update`: renderPlane for each updated plane, then cleanup. */
+        /** Mirrors `PlaneRenderer.update`: renderPlane for each updated plane, then cleanup. */
         fun gatedUpdate(updatedPlanes: List<FakePlane>) {
             for (plane in updatedPlanes) {
                 val action = planeVisualizerAction(
@@ -125,7 +125,7 @@ class PlaneRendererV2LifecycleTest {
 
         // ARCore merges the table into the floor; the table stays in getUpdatedPlanes.
         table.isSubsumed = true
-        // 10 gated updates = 1 s at the default maxHitTestPerSecond.
+        // 10 gated updates = 1 s at the default maxUpdatesPerSecond.
         repeat(10) {
             fakes.gatedUpdate(all)
             fakes.assertInstancesMatchVisualizers()
