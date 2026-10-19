@@ -1639,6 +1639,21 @@ fun ARSceneView(
         onDispose { sceneRenderer.destroy() }
     }
 
+    // Clear the swap chain every frame (#4499), as [io.github.sceneview.SceneView] does (#2400).
+    // Filament defaults to `clear = false` and counts on a skybox to repaint the background; an AR
+    // view has none, and its camera quad stays hidden until the first camera image (#3373). The
+    // frames owed to a new swap chain (`arFramesOwed`) were therefore presented over an uncleared
+    // colour buffer — undefined memory, which a tile-based GPU (the Pixel 4a's Adreno) fills with
+    // whatever it last drew: pieces of the previous screen, flashed as a mauve rectangle and a white
+    // frame where the camera was about to appear. Opaque black — the camera's own "no image yet" —
+    // or transparent on a translucent surface, so what is composed beneath shows through.
+    LaunchedEffect(renderer, isOpaque) {
+        renderer.clearOptions = Renderer.ClearOptions().apply {
+            clear = true
+            clearColor = doubleArrayOf(0.0, 0.0, 0.0, if (isOpaque) 1.0 else 0.0)
+        }
+    }
+
     // ── Render loop ───────────────────────────────────────────────────────────────────────────────
 
     LaunchedEffect(engine, renderer, view, scene) {
@@ -1757,7 +1772,12 @@ fun ARSceneView(
 
     // The caller's `modifier` sizes this Box; the surface fills it exactly as it used to fill
     // the bare AndroidView, and the permission overlay (#3308) can sit on top of it.
-    Box(modifier = modifier) {
+    //
+    // An opaque view stands on black (#4499): a SurfaceView draws nothing in the window until its
+    // surface exists, so for the first frames the window background showed through instead — a
+    // white screen in light theme on the 3D Scan live view. Once the surface is up, the SurfaceView
+    // punches its hole through this ground; a translucent view keeps whatever is composed beneath.
+    Box(modifier = if (isOpaque) modifier.background(Color.Black) else modifier) {
         when (surfaceType) {
             SurfaceType.Surface -> AndroidView(
                 modifier = Modifier.fillMaxSize(),
