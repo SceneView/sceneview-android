@@ -141,6 +141,7 @@ import io.github.sceneview.demo.demos.internal.RoomDollhouse
 import io.github.sceneview.demo.demos.internal.ScanClock
 import io.github.sceneview.demo.demos.internal.ScanCopy
 import io.github.sceneview.demo.demos.internal.ScanDetail
+import io.github.sceneview.demo.demos.internal.ScanFollow
 import io.github.sceneview.demo.demos.internal.ScanPhase
 import io.github.sceneview.demo.demos.internal.of
 import io.github.sceneview.demo.demos.internal.parseArDebugLog
@@ -1028,7 +1029,22 @@ private fun RerunLiveScreen(
     }
     val scanMedia = scan?.live ?: qaScan
     val recording = scanMedia != null
-    val scanOrbit = remember(scanMedia) { ArDebugOrbitCamera(drift = false, band = OrbitBand.CARD) }
+    // #4628: the live view follows the phone heading-up, like a navigation app. A drag or a
+    // pinch takes it over and shows Recenter, which hands it back to the phone.
+    var scanFollowing by remember(scanMedia) { mutableStateOf(true) }
+    val scanFollow = remember(scanMedia) { ScanFollow() }
+    val scanOrbit = remember(scanMedia) {
+        ArDebugOrbitCamera(
+            drift = false,
+            band = ScanFollow.BAND,
+            approachRate = ScanFollow.APPROACH_RATE,
+            maxTurnDegreesPerSecond = ScanFollow.MAX_TURN_DEGREES_PER_SECOND,
+            degreesPerViewWidth = ScanFollow.DRAG_DEGREES_PER_VIEW_WIDTH,
+            elevationRange = ScanFollow.DRAG_ELEVATION_RANGE,
+            maxCoastDegrees = ScanFollow.MAX_COAST_DEGREES,
+        )
+            .apply { onFollowingChange = { scanFollowing = it } }
+    }
 
     var isTracking by remember { mutableStateOf(false) }
     var cameraReady by remember { mutableStateOf(false) }
@@ -1239,14 +1255,6 @@ private fun RerunLiveScreen(
                     seconds = scan?.elapsedSeconds(now) ?: qaLong?.shownSeconds ?: stats.duration,
                     points = capturedPoints,
                 )
-                ScanStage(
-                    session = debugSession,
-                    orbit = scanOrbit,
-                    media = scanMedia,
-                    engine = engine,
-                    modelLoader = modelLoader,
-                    materialLoader = materialLoader,
-                )
             } else if (debugFullScreen) {
                 ArDebugLegend(debugSession)
             } else {
@@ -1294,6 +1302,9 @@ private fun RerunLiveScreen(
                     sharing = sharing,
                     onSaveAndShare = onSaveAndShare,
                 )
+                if (recording && !scanFollowing && phase != ScanPhase.Saving) {
+                    ScanRecenterPill(onRecenter = { scanOrbit.recenter() })
+                }
                 if (arCoreAvailability == null || qaState != null) {
                     when {
                         !recording -> ScanShutter(startEnabled = isTracking, onStart = onStartScan)
@@ -1429,6 +1440,21 @@ private fun RerunLiveScreen(
                         }
                     }
                 }
+            }
+
+            // A capture owns the screen (#4628): its cloud full screen over the dimmed camera,
+            // following the phone. The camera keeps tracking, and recording, under it.
+            if (recording && scanMedia != null) {
+                ScanLiveView(
+                    session = debugSession,
+                    orbit = scanOrbit,
+                    follow = scanFollow,
+                    following = scanFollowing,
+                    media = scanMedia,
+                    engine = engine,
+                    modelLoader = modelLoader,
+                    materialLoader = materialLoader,
+                )
             }
 
             // Full-screen 3D view over the camera, which keeps tracking (and recording) under it.

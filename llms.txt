@@ -137,7 +137,7 @@ fun SceneView(
 )
 ```
 
-**Defaults changed in v4.0.10+:** shadows ON (mainLight + fillLight), SSAO + bloom enabled, neutral exposure (~1.0), dual-light setup out-of-the-box. No more "flat-lit chrome look" — drop a model in and it renders cinematic by default.
+**Defaults changed in v4.0.10+:** shadows ON (mainLight + fillLight), SSAO + bloom enabled, neutral exposure (~1.0), dual-light setup out-of-the-box. Tone mapper: Khronos PBR Neutral (#4595 — identity up to 0.76, so base colours display as authored; `rememberARView` keeps Filmic). Old look: `view.colorGrading = ColorGrading.Builder().toneMapper(ToneMapper.Filmic()).build(engine)`. No more "flat-lit chrome look" — drop a model in and it renders cinematic by default.
 
 **`frameRatePolicy` (default `FrameRatePolicy.OnDemand()`, v4.38.0+ / #3108) — breaking change:** it replaces the `isRendering: Boolean` parameter, which is **removed, with no deprecated overload**. Before v4.38.0 a `SceneView` drew every vsync for as long as it was composed, whether or not anything had changed; a static 3D screen therefore kept the GPU redrawing an identical frame 60 or 120 times a second, which reads to the user as battery drain and thermal throttling on devices whose Choreographer keeps ticking a visually static UI.
 
@@ -4137,7 +4137,7 @@ Most are default parameter values in `SceneView`/`ARSceneView` — call them exp
 | `rememberOnGestureListener(...)` | `OnGestureListener` | Gesture callbacks for tap/drag/pinch |
 | `rememberViewNodeManager()` | `ViewNode.WindowManager` | Required for ViewNode composables |
 | `rememberSurfaceMirrorer()` | `SurfaceMirrorer` | In-app video recording — mirror frames to a `MediaRecorder` surface, no MediaProjection (see "Record the scene to MP4") |
-| `rememberView(engine)` | `View` | Filament view (one per viewport) |
+| `rememberView(engine)` | `View` | Filament view (one per viewport), PBR Neutral tone mapper |
 | `rememberARView(engine)` | `View` | AR-tuned view (Filmic tone mapper — round-trips the camera background, #1434) |
 | `rememberRenderer(engine)` | `Renderer` | Filament renderer (one per window) |
 | `rememberScene(engine)` | `Scene` | Filament scene graph |
@@ -4459,6 +4459,54 @@ val manipulator = rememberCameraManipulator(orbitHomePosition = fit.eye, targetP
 On the axis that binds, the projected box spans exactly `±widthFill` (or `±heightFill`)
 of the half-view; on the other it is centred and spans less. The camera is assumed
 upright (world `+Y` up); looking straight down, "right" is world `+X`.
+
+### Cinematic camera — shots, transitions, paths, reveal, tour (`io.github.sceneview.camera`)
+
+Camera *moves* as a cinematographer calls them, pure Kotlin and JVM-tested (#4631). A
+`CameraShot` is an orbit around a target — azimuth from `+Z` towards `+X`, elevation above
+the horizon, distance — not an eye position, so two shots of one subject interpolate on an
+arc *around* it, never through it. Every move is a function of time: the same shot lands at
+30, 60 or 120 Hz, and a stalled frame advances by at most 50 ms (runs long, never jumps).
+
+```kotlin
+import io.github.sceneview.camera.*
+
+val home = CameraShot(target = Position(0f, 0.8f, 0f), azimuthDegrees = 35f, elevationDegrees = 32f, distance = 4f)
+val plan = home.copy(elevationDegrees = 84f)          // same room, seen as a floor plan
+val eye = home.eye                                     // derived; CameraShot.lookingAt(eye, target) inverts it
+
+// One animator owns the camera. Wrap any gesture manipulator with it: while a move plays the
+// camera is the animator's; the first touch interrupts and the gesture takes over without a cut.
+val animator = remember { CameraAnimator(initial = home) }
+SceneView(
+    cameraManipulator = rememberCinematicCameraManipulator(animator, inner = rememberCameraManipulator(orbitRadius = 4f)),
+) { … }
+
+LaunchedEffect(model) { animator.play(CameraPath.reveal(home)) }   // the entrance: high, wide, 75° round, cranes onto home in 2.8 s
+Button(onClick = { animator.flyTo(plan) }) { Text("Plan") }        // 700 ms, ease-expressive, no cut
+Button(onClick = { animator.play(CameraPath.tour(home)) }) { Text("Tour") }   // one slow lap, 18 s, loops seamlessly
+Button(onClick = { animator.flyTo(otherRoom) })                     // another subject: pulls back at mid-flight (fly-over), lands exactly
+```
+
+- `CameraTransition(from, to, durationSeconds, easing = CameraEasing.Expressive, flyOver = 0.5f)`
+  and the pure `cameraTransition(from, to, progress)` for a scroll or slider. `flyOver` adds
+  that share of the targets' separation to the distance at mid-flight (sine bump, exact ends);
+  `0f` is a straight carry. `CameraEasing.Expressive` is DESIGN.md's `cubic-bezier(0.2, 0, 0, 1)`.
+- `CameraPath(keyframes, easing, shortestArc = true, loop = false)` — Catmull-Rom over the
+  orbit parameters: the camera passes each `CameraKeyframe(shot, seconds)` on time with
+  continuous velocity across it. `shortestArc` unwraps azimuths the short way; a full turn is
+  spelled `azimuthDegrees + 360f` with it off. Builders: `reveal(home)`, `tour(around, turns)`,
+  `through(shots, secondsPerShot)`. A looping path's azimuth keeps counting (`home + 720°` on
+  lap two); `CameraShot.normalizeDegrees` wraps it for display.
+- `CameraAnimator`: `play(path, onFinished)`, `flyTo(to, durationSeconds = 0.7f)` from
+  wherever the camera is, `snapTo`, `advance(dt): CameraShot`, `interrupt(): CameraShotVelocity`.
+  Without a `SceneView`, drive it yourself: `cameraNode.transform = animator.advance(dt).transform()`.
+- Hand-off: an inner manipulator that implements `CameraShotSink` gets `takeOver(shot, velocity)`
+  on the first touch and carries on at that speed; any other manipulator (the default orbit one
+  included) gets a 350 ms glide from the move's last frame onto its own pose.
+
+`CinematicHero` (below) and `applyCinematicOrbit` stay as they are: a hero is scroll-driven,
+these are time-driven. Pick the animator when the move has a beginning and an end.
 
 ---
 
@@ -8344,8 +8392,11 @@ optional (default `1`); `a < 1` makes the canvas see-through so the page behind 
 covers the background.
 
 Tone mapping: the Kotlin/JS bundle (`sceneview-web.js`) and the hand-written website viewer
-(`website-static/js/sceneview.js`) grade with Filmic, the Android default
-(`SceneFactories.createView`), so a model is graded the same way on Android and on the web.
+(`website-static/js/sceneview.js`) grade with Filmic. Android's `SceneFactories.createView`
+grades with PBR Neutral, which keeps base colours as authored; Filament's JavaScript bindings
+expose no PBR Neutral tone mapper, so the web keeps Filmic and shows light, pastel base colours
+a little paler than Android does. Web primitives take linear colours (`createBox` etc. write
+`baseColorFactor` as given): convert an sRGB hex first, or it renders pastel.
 Neither grades the background: both show the colour they are given (hand-written viewer:
 sRGB 0-1, default `#333C57`), and a transparent canvas leaves the page behind it untouched.
 

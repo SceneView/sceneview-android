@@ -96,6 +96,7 @@ Glassmorphism adds depth and layering to surfaces that float over content (nav, 
 | `stage-studio-vignette` | 0.8 | 0.6 | Not a colour: the grey the studio's corners are multiplied by before tone mapping (`_STUDIO_THEMES` in `sceneview.js`) |
 | `ar-scrim` | rgba(0,0,0,0.94) | rgba(0,0,0,0.88) | AR coaching overlay ground, over the camera feed |
 | `ar-scrim-border` | 1px rgba(255,255,255,0.16) | 1px rgba(255,255,255,0.10) | AR coaching overlay hairline |
+| `ar-camera-dim` | rgba(0,0,0,0.55) | rgba(0,0,0,0.55) | Veil over the live camera under 3D Scan's coloured cloud: the cloud leads, what is not scanned yet still reads on the camera behind (Android `ArOverlay.cameraDim`) |
 
 **The dark ramp is solved for ratio, not picked by eye.** Contrast ratio compresses at
 the dark end, where `(Y+0.05)` is dominated by the constant: against a `#0D1117` page a
