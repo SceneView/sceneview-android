@@ -909,6 +909,14 @@ object SceneViewTokens {
             durationMillis = fadeMillis,
             easing = FastOutSlowInEasing,
         )
+
+        /** `motion-focus`: the camera re-framing as full screen opens or closes (#4558). */
+        const val focusMillis = 600
+
+        fun <T> focus(): TweenSpec<T> = tween(
+            durationMillis = focusMillis,
+            easing = Ease.expressive,
+        )
     }
 
     /** `DESIGN.md` — Easing curves (`ease-*`). */

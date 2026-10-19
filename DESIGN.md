@@ -542,6 +542,7 @@ Nothing else animates.
 | `motion-fade` | `tween(300ms, FastOutSlowIn)` | Every opacity change — chrome toggle, menus |
 | `motion-handover` | `tween(150ms, FastOutSlowIn)` | The loading cover giving way to the first rendered frame — the scene is already there, so the veil leaves fast |
 | `motion-screen` | `tween(350ms, ease-expressive)` | Screen transitions — Material shared-axis X, both screens travelling ⅙ of the viewport while they cross-fade |
+| `motion-focus` | `tween(600ms, ease-expressive)` | The camera re-framing as a demo's full screen opens or closes (#4558): the subject glides into the whole screen while the chrome fades, and back to the band the chrome leaves on the way out. Never a cut |
 | `motion-entrance` | `tween(700ms, ease-expressive)` | The camera fly-in when a 3D scene's subject arrives — once per screen, cancelled by the first touch |
 | `motion-coach-sweep` | 2800ms per sweep, eased both ways, across 22–78 % of the illustration | The phone of the AR coaching card sweeping over the surface it is looking for, lighting feature points behind it. Half speed and 60 % opacity while tracking is limited |
 | `motion-coach-resolve` | `spring(dampingRatio = 0.6, stiffness = 400)`, scale 0.6 → 1 | The "surface found" beat — the card leaves and a pill with a `primary` check springs in below centre, held 1s |
@@ -784,6 +785,13 @@ The scene keeps the whole screen; nothing else is drawn but one `glass-icon-butt
 (`FullscreenExit`, "Exit full screen") on a `chrome-scrim` ground in the top trailing
 corner, inside the safe-drawing inset. That button and system Back both bring everything
 back. The control lives in the scaffold, never in a sample.
+
+The picture follows (#4558, design pass): the bands a demo frames its subject by ease to
+zero on `motion-focus` while the chrome fades, so the subject glides into the whole screen
+instead of staying where the chrome had left it, and glides back on the way out — to the
+same picture. Gestures keep working in both states and during the move. The chrome is
+hidden, not collapsed to a translucent strip nor made more transparent: hiding it gives the
+3D the whole screen, and the way back stays in the corner where the way in was.
 
 ### Car Chrome (Android Auto demo)
 
