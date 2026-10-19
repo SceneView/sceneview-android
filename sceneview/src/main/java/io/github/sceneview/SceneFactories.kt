@@ -29,6 +29,8 @@ import io.github.sceneview.math.colorOf
 import io.github.sceneview.math.toColor
 import io.github.sceneview.node.CameraNode
 import io.github.sceneview.node.LightNode
+import io.github.sceneview.node.Node
+import io.github.sceneview.node.VideoNode
 import io.github.sceneview.node.ViewNode
 import io.github.sceneview.utils.OpenGL
 import io.github.sceneview.utils.readBuffer
@@ -220,6 +222,14 @@ internal val filmicViews: MutableSet<View> =
  * [createARView] view, PBR Neutral for every other one (#4595). No-op without a view, or for a
  * material that has no `inverseFilmic` parameter.
  */
+/** Matches a [VideoNode] or [ViewNode] material to [view]'s tone mapper; other nodes are left as is. */
+internal fun Node.matchToneMapInverse(view: View?) {
+    when (this) {
+        is VideoNode -> materialInstance.matchToneMapInverse(view)
+        is ViewNode -> materialInstance.matchToneMapInverse(view)
+    }
+}
+
 internal fun MaterialInstance.matchToneMapInverse(view: View?) {
     if (view == null || !material.hasParameter("inverseFilmic")) return
     setParameter("inverseFilmic", view in filmicViews)

@@ -12,7 +12,6 @@ import com.google.android.filament.Texture
 import dev.romainguy.kotlin.math.normalize
 import io.github.sceneview.drainFramePipeline
 import io.github.sceneview.geometries.Plane
-import io.github.sceneview.collision.CollisionSystem
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.matchToneMapInverse
 import io.github.sceneview.math.Direction
@@ -174,10 +173,6 @@ open class VideoNode(
             { frameSignal.onFrameAvailable() },
             Handler(Looper.getMainLooper())
         )
-    }
-
-    override fun onCollisionSystemChanged(collisionSystem: CollisionSystem?) {
-        materialInstance.matchToneMapInverse(collisionSystem?.view)
     }
 
     /**

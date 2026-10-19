@@ -780,16 +780,8 @@ open class Node protected constructor(
             if (field != value) {
                 field = value
                 collider?.setAttachedCollisionSystem(value)
-                onCollisionSystemChanged(value)
             }
         }
-
-    /**
-     * Called when this node joins or leaves a scene ([collisionSystem] carries the scene's view).
-     * `VideoNode` and `ViewNode` use it to match their material's tone-mapper inverse to that
-     * view (#4595).
-     */
-    internal open fun onCollisionSystemChanged(collisionSystem: CollisionSystem?) = Unit
 
     var collider: Collider? = null
         set(value) {
