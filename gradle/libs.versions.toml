@@ -111,7 +111,7 @@ playServicesLocation = "21.4.0"
 firebaseBom = "34.19.0"
 googleServices = "4.5.0"
 firebaseCrashlyticsPlugin = "3.0.8"
-playServicesNearby = "19.5.0"
+playServicesNearby = "19.5.1"
 
 # ML Kit (object detection — ARMLObjectLabelDemo, #1737; since the AR catalogue clean-up
 # it is Point & Ask's on-device fallback on phones without AICore, #4608)
