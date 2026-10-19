@@ -54,6 +54,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import io.github.sceneview.demo.R
 import io.github.sceneview.demo.common.DemoModalBottomSheet
 import io.github.sceneview.demo.common.VoiceDictationButton
@@ -71,9 +72,9 @@ import kotlinx.coroutines.launch
  * include/exclude toggle, an optional description (with an optional voice
  * dictation shortcut, #3263), and two exits — a pre-filled GitHub issue in
  * the browser (the primary, default action) or the system share sheet
- * (text + screenshot attachment; the user picks Gmail / GitHub / anything —
- * text only for the GitHub path, since a URL cannot carry the image, and the
- * UI says so).
+ * (a short summary, the whole report as a .txt file and the screenshot; the
+ * user picks Gmail / GitHub / anything — text only for the GitHub path, since
+ * a URL cannot carry the image, and the UI says so).
  *
  * On a successful hand-off the sheet simply dismisses itself — the browser
  * or share sheet opening over the app IS the visible confirmation, so no
@@ -386,10 +387,14 @@ private fun PrivacyHint() {
 }
 
 /**
- * Hand the report to the system share sheet: structured text as
- * `EXTRA_TEXT`, the screenshot (when included) as an `EXTRA_STREAM`
- * FileProvider attachment. The user picks the destination — nothing is
- * sent by the app itself.
+ * Hand the report to the system share sheet: a short summary as `EXTRA_TEXT`,
+ * the whole report with the log as a `.txt` FileProvider attachment, and the
+ * screenshot (when included) as a second one. The user picks the destination —
+ * nothing is sent by the app itself.
+ *
+ * The log never rides in the intent itself (#4528): 1200 lines in `EXTRA_TEXT`
+ * made a ~600 KB Binder transaction, and the chooser was refused on the first tap
+ * with nothing on screen. A `content://` URI weighs a few bytes.
  *
  * Returns `true` once the chooser has launched (the caller then dismisses
  * the sheet and shows a confirmation), `false` when no app can handle it
@@ -401,24 +406,37 @@ private fun shareReport(
     note: String,
     includeScreenshot: Boolean,
 ): Boolean {
-    val text = formatShareText(report.info, note)
     val title = formatReportTitle(report.info, note)
+    val authority = "${context.packageName}.fileprovider"
+    val reportUri = writeReportFile(context, report.info, note)?.let { file ->
+        runCatching { FileProvider.getUriForFile(context, authority, file) }.getOrNull()
+    }
+    val text = formatShareText(report.info, note, logAttached = reportUri != null)
     val screenshotUri = report.screenshot
         ?.takeIf { includeScreenshot }
         ?.let { shot -> (context as? Activity)?.let { shot.contentUri(it) } }
-    val send = Intent(Intent.ACTION_SEND).apply {
+    val attachments = listOfNotNull(reportUri, screenshotUri)
+    val send = when {
+        attachments.size > 1 -> Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+            type = "*/*"
+            putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(attachments))
+        }
+        attachments.size == 1 -> Intent(Intent.ACTION_SEND).apply {
+            type = if (attachments[0] == screenshotUri) "image/png" else "text/plain"
+            putExtra(Intent.EXTRA_STREAM, attachments[0])
+        }
+        else -> Intent(Intent.ACTION_SEND).apply { type = "text/plain" }
+    }.apply {
         putExtra(Intent.EXTRA_SUBJECT, title)
         putExtra(Intent.EXTRA_TEXT, text)
-        if (screenshotUri != null) {
-            type = "image/png"
-            putExtra(Intent.EXTRA_STREAM, screenshotUri)
+        if (attachments.isNotEmpty()) {
             // ClipData + the grant flag: some share targets resolve the
             // stream through ClipData only, and the read grant must ride
             // the chooser to whichever app the user picks.
-            clipData = ClipData.newUri(context.contentResolver, title, screenshotUri)
+            clipData = ClipData.newUri(context.contentResolver, title, attachments[0]).also { clip ->
+                attachments.drop(1).forEach { clip.addItem(ClipData.Item(it)) }
+            }
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        } else {
-            type = "text/plain"
         }
     }
     return runCatching {
