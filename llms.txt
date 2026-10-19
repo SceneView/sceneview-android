@@ -137,7 +137,7 @@ fun SceneView(
 )
 ```
 
-**Defaults changed in v4.0.10+:** shadows ON (mainLight + fillLight), SSAO + bloom enabled, neutral exposure (~1.0), dual-light setup out-of-the-box. No more "flat-lit chrome look" — drop a model in and it renders cinematic by default.
+**Defaults changed in v4.0.10+:** shadows ON (mainLight + fillLight), SSAO + bloom enabled, neutral exposure (~1.0), dual-light setup out-of-the-box. Tone mapper: Khronos PBR Neutral (#4595 — identity up to 0.76, so base colours display as authored; `rememberARView` keeps Filmic). Old look: `view.colorGrading = ColorGrading.Builder().toneMapper(ToneMapper.Filmic()).build(engine)`. No more "flat-lit chrome look" — drop a model in and it renders cinematic by default.
 
 **`frameRatePolicy` (default `FrameRatePolicy.OnDemand()`, v4.38.0+ / #3108) — breaking change:** it replaces the `isRendering: Boolean` parameter, which is **removed, with no deprecated overload**. Before v4.38.0 a `SceneView` drew every vsync for as long as it was composed, whether or not anything had changed; a static 3D screen therefore kept the GPU redrawing an identical frame 60 or 120 times a second, which reads to the user as battery drain and thermal throttling on devices whose Choreographer keeps ticking a visually static UI.
 
@@ -4137,7 +4137,7 @@ Most are default parameter values in `SceneView`/`ARSceneView` — call them exp
 | `rememberOnGestureListener(...)` | `OnGestureListener` | Gesture callbacks for tap/drag/pinch |
 | `rememberViewNodeManager()` | `ViewNode.WindowManager` | Required for ViewNode composables |
 | `rememberSurfaceMirrorer()` | `SurfaceMirrorer` | In-app video recording — mirror frames to a `MediaRecorder` surface, no MediaProjection (see "Record the scene to MP4") |
-| `rememberView(engine)` | `View` | Filament view (one per viewport) |
+| `rememberView(engine)` | `View` | Filament view (one per viewport), PBR Neutral tone mapper |
 | `rememberARView(engine)` | `View` | AR-tuned view (Filmic tone mapper — round-trips the camera background, #1434) |
 | `rememberRenderer(engine)` | `Renderer` | Filament renderer (one per window) |
 | `rememberScene(engine)` | `Scene` | Filament scene graph |
@@ -8392,8 +8392,11 @@ optional (default `1`); `a < 1` makes the canvas see-through so the page behind 
 covers the background.
 
 Tone mapping: the Kotlin/JS bundle (`sceneview-web.js`) and the hand-written website viewer
-(`website-static/js/sceneview.js`) grade with Filmic, the Android default
-(`SceneFactories.createView`), so a model is graded the same way on Android and on the web.
+(`website-static/js/sceneview.js`) grade with Filmic. Android's `SceneFactories.createView`
+grades with PBR Neutral, which keeps base colours as authored; Filament's JavaScript bindings
+expose no PBR Neutral tone mapper, so the web keeps Filmic and shows light, pastel base colours
+a little paler than Android does. Web primitives take linear colours (`createBox` etc. write
+`baseColorFactor` as given): convert an sRGB hex first, or it renders pastel.
 Neither grades the background: both show the colour they are given (hand-written viewer:
 sRGB 0-1, default `#333C57`), and a transparent canvas leaves the page behind it untouched.
 
