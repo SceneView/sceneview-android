@@ -25,7 +25,8 @@ import java.util.Locale
  *   app version, device, OS, ABI, display),
  * - the app's own logcat tail ([collectAppLogcat] — readable without any
  *   permission for the app's own pid), and the AR tracking lines found further
- *   back in it ([collectArTrackingLog]),
+ *   back in it ([collectArTrackingLog]), both with paths, URIs, e-mail addresses
+ *   and user-chosen names masked ([LogRedaction], #4526),
  * - an optional screenshot captured via `PixelCopy` (see `CapturedScreenshot.kt`).
  *
  * Nothing ever leaves the device by itself: the user explicitly shares the
@@ -256,14 +257,21 @@ private fun readOwnLogcat(arguments: List<String>): List<String> = runCatching {
  * Assemble the full report snapshot. Runs `logcat` and waits for it (twice when
  * the AR tracking history is empty): call it off the main thread.
  */
-fun captureBugReportInfo(context: Context, screen: ReportScreen): BugReportInfo =
-    BugReportInfo(
+fun captureBugReportInfo(context: Context, screen: ReportScreen): BugReportInfo {
+    // Masked here, once, before anything can read them (#4526): the sheet's preview,
+    // the attached file, the share text and the public issue all see the same lines.
+    val userNames = UserChosenNames.snapshot()
+    return BugReportInfo(
         metadata = captureBugReportMetadata(context, screen),
-        logcat = collectAppLogcat(),
+        logcat = LogRedaction.redactLines(collectAppLogcat(), userNames),
         // The in-memory history first (#4529): the log buffer drops these lines within a
         // minute of an AR session, the history keeps them for the whole process.
-        arTracking = reportArTracking(ArTrackingHistory.snapshot(), ::collectArTrackingLog),
+        arTracking = LogRedaction.redactLines(
+            reportArTracking(ArTrackingHistory.snapshot(), ::collectArTrackingLog),
+            userNames,
+        ),
     )
+}
 
 /**
  * The AR tracking lines a report carries: [history] when it holds any, else what

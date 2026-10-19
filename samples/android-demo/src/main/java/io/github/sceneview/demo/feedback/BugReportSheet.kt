@@ -10,10 +10,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -52,6 +54,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
@@ -95,6 +98,7 @@ fun BugReportSheet(
     var note by remember { mutableStateOf("") }
     var includeScreenshot by remember { mutableStateOf(report.screenshot != null) }
     var sendError by remember { mutableStateOf<String?>(null) }
+    var previewExpanded by remember { mutableStateOf(false) }
     // Keyboard fix (#3322): a plain ModalBottomSheet does not consume the IME inset, so
     // the system keyboard used to cover the note field with no way to scroll it into
     // view — `imePadding()` below shrinks the sheet's content height as the keyboard
@@ -196,6 +200,16 @@ fun BugReportSheet(
 
             Spacer(Modifier.height(12.dp))
             AttachedContextHint(info = report.info)
+
+            // #4526: what the attached file carries, masked, before anyone sends it.
+            if (report.info.logcat.isNotEmpty() || report.info.arTracking.isNotEmpty()) {
+                ReportPreview(
+                    info = report.info,
+                    note = note,
+                    expanded = previewExpanded,
+                    onExpandedChange = { previewExpanded = it },
+                )
+            }
 
             Spacer(Modifier.height(SceneViewTokens.Space.sm))
             PrivacyHint()
@@ -362,6 +376,53 @@ private fun AttachedContextHint(info: BugReportInfo) {
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+    }
+}
+
+/**
+ * The attached report as it will leave the device, folded by default (#4526):
+ * paths, URIs, e-mail addresses and picked file names already read
+ * `<redacted …>` here, so the person sending it can check that for themselves.
+ */
+@Composable
+private fun ReportPreview(
+    info: BugReportInfo,
+    note: String,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        TextButton(
+            onClick = { onExpandedChange(!expanded) },
+            contentPadding = PaddingValues(horizontal = 0.dp),
+        ) {
+            Text(
+                stringResource(
+                    if (expanded) R.string.feedback_report_preview_hide else R.string.feedback_report_preview_show,
+                ),
+            )
+        }
+        if (expanded) {
+            // Built only while unfolded: the whole log tail, rebuilt as the note changes.
+            val text = remember(info, note) { formatReportFile(info, note) }
+            Surface(
+                shape = RoundedCornerShape(SceneViewTokens.Radius.sm),
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 280.dp),
+            ) {
+                Text(
+                    text,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier
+                        .verticalScroll(rememberScrollState())
+                        .padding(SceneViewTokens.Space.md),
+                )
+            }
+        }
     }
 }
 

@@ -331,7 +331,9 @@
         <item quantity="one">%d log line</item>
         <item quantity="other">%d log lines</item>
     </plurals>
-    <string name="feedback_report_privacy">Sent only through the app you pick — no account, no upload, no recording.</string>
+    <string name="feedback_report_preview_show">Preview the attached report</string>
+    <string name="feedback_report_preview_hide">Hide the preview</string>
+    <string name="feedback_report_privacy">Sent only through the app you pick — no account, no upload, no recording. File paths, links and e-mail addresses in the log are masked.</string>
     <string name="feedback_report_share">Share report</string>
     <string name="feedback_report_open_github">Send to GitHub</string>
     <string name="feedback_report_share_chooser">Share bug report</string>
