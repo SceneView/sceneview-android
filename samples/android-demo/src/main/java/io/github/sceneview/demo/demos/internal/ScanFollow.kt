@@ -111,5 +111,33 @@ class ScanFollow {
                 -(1f - 2f * (x * x + y * y)),
             )
         }
+
+        /** At most this many points are averaged: enough for a stable centre, cheap per frame. */
+        const val CENTRE_SAMPLE = 20_000
+
+        /**
+         * Where a drag orbits: the mean of the scanned points, `null` without any. Not the centre
+         * of the phone's path and the planes — the phone stands at the edge of what it scans, so
+         * orbiting its path half a turn left the view facing away from the cloud. Large clouds are
+         * sampled evenly, [CENTRE_SAMPLE] points at most.
+         */
+        fun cloudCentre(points: FloatArray): Position? {
+            val count = points.size / 3
+            if (count == 0) return null
+            val step = (count + CENTRE_SAMPLE - 1) / CENTRE_SAMPLE
+            var x = 0.0
+            var y = 0.0
+            var z = 0.0
+            var n = 0
+            var i = 0
+            while (i < count) {
+                x += points[i * 3]
+                y += points[i * 3 + 1]
+                z += points[i * 3 + 2]
+                n++
+                i += step
+            }
+            return Position((x / n).toFloat(), (y / n).toFloat(), (z / n).toFloat())
+        }
     }
 }
