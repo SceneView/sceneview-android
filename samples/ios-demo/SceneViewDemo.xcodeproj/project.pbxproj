@@ -26,6 +26,8 @@
 		B7E40000000000000000000B /* RerunGLBWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7E50000000000000000000B /* RerunGLBWriter.swift */; };
 		B7E40000000000000000000C /* RerunUSDZWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7E50000000000000000000C /* RerunUSDZWriter.swift */; };
 		B7E40000000000000000000D /* RerunRRDWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7E50000000000000000000D /* RerunRRDWriter.swift */; };
+		B7E400000000000000000046 /* RerunRRDBlueprint.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7E500000000000000000046 /* RerunRRDBlueprint.swift */; };
+		B7E400000000000000000047 /* RerunRRDFooter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7E500000000000000000047 /* RerunRRDFooter.swift */; };
 		B7E40000000000000000000E /* RerunRRDArrow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7E50000000000000000000E /* RerunRRDArrow.swift */; };
 		B7E40000000000000000000F /* RerunRRDProtobuf.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7E50000000000000000000F /* RerunRRDProtobuf.swift */; };
 		B7E400000000000000000010 /* RerunCaptureRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7E500000000000000000010 /* RerunCaptureRecorder.swift */; };
@@ -295,6 +297,8 @@
 		B7E50000000000000000000B /* RerunGLBWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RerunGLBWriter.swift; path = SceneViewDemo/Views/Demos/Rerun/RerunGLBWriter.swift; sourceTree = SOURCE_ROOT; };
 		B7E50000000000000000000C /* RerunUSDZWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RerunUSDZWriter.swift; path = SceneViewDemo/Views/Demos/Rerun/RerunUSDZWriter.swift; sourceTree = SOURCE_ROOT; };
 		B7E50000000000000000000D /* RerunRRDWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RerunRRDWriter.swift; path = SceneViewDemo/Views/Demos/Rerun/RerunRRDWriter.swift; sourceTree = SOURCE_ROOT; };
+		B7E500000000000000000046 /* RerunRRDBlueprint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RerunRRDBlueprint.swift; path = SceneViewDemo/Views/Demos/Rerun/RerunRRDBlueprint.swift; sourceTree = SOURCE_ROOT; };
+		B7E500000000000000000047 /* RerunRRDFooter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RerunRRDFooter.swift; path = SceneViewDemo/Views/Demos/Rerun/RerunRRDFooter.swift; sourceTree = SOURCE_ROOT; };
 		B7E50000000000000000000E /* RerunRRDArrow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RerunRRDArrow.swift; path = SceneViewDemo/Views/Demos/Rerun/RerunRRDArrow.swift; sourceTree = SOURCE_ROOT; };
 		B7E50000000000000000000F /* RerunRRDProtobuf.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RerunRRDProtobuf.swift; path = SceneViewDemo/Views/Demos/Rerun/RerunRRDProtobuf.swift; sourceTree = SOURCE_ROOT; };
 		B7E500000000000000000010 /* RerunCaptureRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RerunCaptureRecorder.swift; path = SceneViewDemo/Views/Demos/Rerun/RerunCaptureRecorder.swift; sourceTree = SOURCE_ROOT; };
@@ -577,6 +581,8 @@
 				B7E50000000000000000000B /* RerunGLBWriter.swift */,
 				B7E50000000000000000000C /* RerunUSDZWriter.swift */,
 				B7E50000000000000000000D /* RerunRRDWriter.swift */,
+				B7E500000000000000000046 /* RerunRRDBlueprint.swift */,
+				B7E500000000000000000047 /* RerunRRDFooter.swift */,
 				B7E50000000000000000000E /* RerunRRDArrow.swift */,
 				B7E50000000000000000000F /* RerunRRDProtobuf.swift */,
 				B7E500000000000000000010 /* RerunCaptureRecorder.swift */,
@@ -1251,6 +1257,8 @@
 				B7E40000000000000000000B /* RerunGLBWriter.swift in Sources */,
 				B7E40000000000000000000C /* RerunUSDZWriter.swift in Sources */,
 				B7E40000000000000000000D /* RerunRRDWriter.swift in Sources */,
+				B7E400000000000000000046 /* RerunRRDBlueprint.swift in Sources */,
+				B7E400000000000000000047 /* RerunRRDFooter.swift in Sources */,
 				B7E40000000000000000000E /* RerunRRDArrow.swift in Sources */,
 				B7E40000000000000000000F /* RerunRRDProtobuf.swift in Sources */,
 				B7E400000000000000000010 /* RerunCaptureRecorder.swift in Sources */,
