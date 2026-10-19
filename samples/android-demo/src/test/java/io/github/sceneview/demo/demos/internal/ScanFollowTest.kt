@@ -291,4 +291,68 @@ class ScanFollowTest {
             assertTrue("dx $dx dy $dy at ($x, $y)", abs(x) < 1f && abs(y) < 1f)
         }
     }
+
+    @Test
+    fun `the orbit's centre is the scanned cloud's own, sampled on a large cloud`() {
+        assertNull(ScanFollow.cloudCentre(FloatArray(0)))
+        val two = ScanFollow.cloudCentre(floatArrayOf(0f, 0f, 0f, 2f, 4f, -6f))!!
+        assertEquals(1f, two.x, 1e-6f)
+        assertEquals(2f, two.y, 1e-6f)
+        assertEquals(-3f, two.z, 1e-6f)
+        val big = room(points = 500_000)
+        val centre = ScanFollow.cloudCentre(big)!!
+        // 25 times the sample: every 25th point is averaged, within a few cm of the true mean.
+        for (axis in 0..2) {
+            var sum = 0.0
+            for (i in 0 until big.size / 3) sum += big[i * 3 + axis]
+            val exact = (sum / (big.size / 3)).toFloat()
+            assertEquals("axis $axis", exact, floatArrayOf(centre.x, centre.y, centre.z)[axis], 0.1f)
+        }
+    }
+
+    @Test
+    fun `a half turn round the cloud still faces the room the phone stands at the edge of`() {
+        val walls = room(points = 4_000)
+        // The phone, and so its whole path, stands by the near wall looking in.
+        val phone = phone(0f, position = Float3(0f, 1.4f, -0.7f))
+        fun shownAfter(dx: Int?): Int {
+            val orbit = scanOrbit()
+            orbit.snapTo(ScanFollow.poseAt(phone, 0f))
+            orbit.pivot = ScanFollow.cloudCentre(walls)
+            if (dx != null) drag(orbit, dx, coastSeconds = 10f)
+            var shown = 0
+            for (i in 0 until walls.size / 3) {
+                val p = projected(orbit, Float3(walls[i * 3], walls[i * 3 + 1], walls[i * 3 + 2])) ?: continue
+                if (abs(p.first) < 1f && abs(p.second) < 1f) shown++
+            }
+            return shown
+        }
+        val following = shownAfter(null)
+        assertTrue("$following on screen while following", following > 0)
+        for (dx in listOf(-1280, -900, -640, 640, 900, 1280)) {
+            val shown = shownAfter(dx)
+            assertTrue("dx $dx: $shown on screen, $following while following", shown >= following / 2)
+        }
+    }
+
+    /**
+     * [points] spread on the far and side walls of a 4 m square room centred on (0, −2.5): what a
+     * phone at its near edge has scanned ahead of it, the wall behind it not yet.
+     */
+    private fun room(points: Int): FloatArray {
+        val out = FloatArray(points * 3)
+        for (i in 0 until points) {
+            val t = (i % 1000) / 1000f * 4f - 2f
+            val h = (i / 1000 % 25) / 25f * 2.4f
+            val (x, z) = when (i % 3) {
+                0 -> t to -4.5f
+                1 -> -2f to t - 2.5f
+                else -> 2f to t - 2.5f
+            }
+            out[i * 3] = x
+            out[i * 3 + 1] = h
+            out[i * 3 + 2] = z
+        }
+        return out
+    }
 }
