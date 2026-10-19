@@ -5,7 +5,9 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.SystemClock
+import android.util.Log
 import android.view.MotionEvent
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -20,9 +22,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -43,8 +48,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -56,13 +63,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.coerceAtLeast
+import androidx.compose.ui.unit.dp
 import com.google.android.filament.Engine
 import com.google.ar.core.Anchor
 import com.google.ar.core.Config
@@ -77,6 +95,7 @@ import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.rememberARCameraStream
 import io.github.sceneview.ar.rerun.RerunBridge
 import io.github.sceneview.ar.rerun.rememberRerunBridge
+import io.github.sceneview.demo.BuildConfig
 import io.github.sceneview.demo.DemoBottomOverlayScope
 import io.github.sceneview.demo.DemoScaffold
 import io.github.sceneview.demo.DemoSettings
@@ -95,8 +114,10 @@ import io.github.sceneview.demo.common.ArDemoPermissionGate
 import io.github.sceneview.demo.common.qaStateOverridesAllowed
 import io.github.sceneview.demo.common.rememberQaCameraBackdropActive
 import io.github.sceneview.demo.common.trackingFailureMessage
+import io.github.sceneview.demo.demos.internal.ArDebugFormat
 import io.github.sceneview.demo.demos.internal.ArDebugLogPlayer
 import io.github.sceneview.demo.demos.internal.ArDebugOrbitCamera
+import io.github.sceneview.demo.demos.internal.OrbitBand
 import io.github.sceneview.demo.demos.internal.ArDebugSession
 import io.github.sceneview.demo.demos.internal.ArDebugTrace
 import io.github.sceneview.demo.demos.internal.RERUN_INTRO
@@ -105,6 +126,8 @@ import io.github.sceneview.demo.demos.internal.RERUN_SETUP_STEPS
 import io.github.sceneview.demo.demos.internal.RERUN_SETUP_TITLE
 import io.github.sceneview.demo.demos.internal.ReplayGeometry
 import io.github.sceneview.demo.demos.internal.RerunReplayAssets
+import io.github.sceneview.demo.demos.internal.RerunScanModel
+import io.github.sceneview.demo.demos.internal.ScanDevice
 import io.github.sceneview.demo.demos.internal.RerunCapturePack
 import io.github.sceneview.demo.demos.internal.RerunExportFormat
 import io.github.sceneview.demo.demos.internal.RerunExportSource
@@ -115,8 +138,11 @@ import io.github.sceneview.demo.demos.internal.RerunSetupStep
 import io.github.sceneview.demo.demos.internal.RerunStatusUx
 import io.github.sceneview.demo.demos.internal.DollhouseCopy
 import io.github.sceneview.demo.demos.internal.RoomDollhouse
+import io.github.sceneview.demo.demos.internal.ScanClock
 import io.github.sceneview.demo.demos.internal.ScanCopy
-import io.github.sceneview.demo.demos.internal.ScanFigures
+import io.github.sceneview.demo.demos.internal.ScanDetail
+import io.github.sceneview.demo.demos.internal.ScanFollow
+import io.github.sceneview.demo.demos.internal.ScanPhase
 import io.github.sceneview.demo.demos.internal.of
 import io.github.sceneview.demo.demos.internal.parseArDebugLog
 import io.github.sceneview.demo.demos.internal.rerunSaveActionUx
@@ -134,6 +160,7 @@ import io.github.sceneview.rememberMaterialLoader
 import io.github.sceneview.rememberModelInstance
 import io.github.sceneview.rememberModelLoader
 import io.github.sceneview.rememberOnGestureListener
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -142,21 +169,22 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
- * The Rerun demo: an AR session rebuilt in 3D.
+ * 3D Scan (the Rerun demo, id `ar-rerun`): a space scanned with ARCore, rebuilt in 3D.
  *
- * It opens on a **landing** laid out as the iOS demo's (#4068): "Record your room", "Watch a
- * sample session", "Open file", and the sessions kept on this phone.
+ * It opens on a **landing** laid out as the iOS demo's (#4068): "Start scanning", "See an
+ * example", "Open scan", and the scans kept on this phone (#4627).
  *
  * The **sample** is a real ARCore session bundled with the app — the camera's path, its photos in
  * their frustums, the planes it found textured with the room, the coloured point cloud and the
  * models placed on them — orbitable, with a filmstrip of the recorded frames that scrubs it. It
  * needs no ARCore, so it works on every device and on the emulator (#2754).
  *
- * **Record** scans your own room live with ARCore — the path, the coloured points, the planes and
- * a photo every few steps, growing in a 3D card while you walk. Stop saves it on the phone, as
- * the same three files the sample ships in the iOS demo's session layout, and opens it in the
- * same replay; it stays under "Your sessions" until deleted, and shares as a `.svscan` scan
- * file the iOS demo opens too. Nothing leaves the phone unless you share it.
+ * **Start scanning** captures a space live with ARCore — the path, the coloured points, the
+ * planes and a photo every few steps, growing in a 3D card while you walk. Pause freezes it;
+ * Finish opens a review that Keep scanning leaves for the same capture; Save scan writes it on
+ * the phone, as the same three files the sample ships in the iOS demo's session layout, and
+ * opens it in the same replay; it stays under "Your scans" until deleted, and shares as a
+ * `.svscan` scan file the iOS demo opens too. Nothing leaves the phone unless you share it.
  *
  * **View in AR** (#4075), at the end of a replay of your own room or from a session's menu, stands
  * that room on a table as a miniature — a dollhouse — through [RoomDollhouseScreen]. With
@@ -185,7 +213,7 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
         mutableStateOf(
             when {
                 startInDollhouse || qaState in DOLLHOUSE_QA_STATES -> RerunScreen.Dollhouse
-                qaState == QA_STATE_MODEL_SYNTHETIC -> RerunScreen.Model
+                qaState in MODEL_QA_STATES -> RerunScreen.Model
                 qaReplay != null -> RerunScreen.Replay
                 arPlaybackDataset != null || qaState in LIVE_QA_STATES -> RerunScreen.Live
                 else -> RerunScreen.Landing
@@ -217,23 +245,34 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
     var scanPack by remember { mutableStateOf<RerunCapturePack?>(null) }
     // The kept session the replay shows, when it was opened from the list: View in AR stands that one.
     var scanId by remember { mutableStateOf<String?>(null) }
-    var exporting by remember { mutableStateOf(qaReplay == RerunReplayQaState.ReplayExport) }
+    var exporting by remember {
+        mutableStateOf(qaReplay == RerunReplayQaState.ReplayExport || qaState == QA_STATE_MODEL_EXPORT)
+    }
     var opening by remember { mutableStateOf<Job?>(null) }
     // Bumped on every open, so reopening the same replay frames and plays it afresh.
     var openCount by remember { mutableIntStateOf(0) }
     val media = if (showingScan) scanMedia else sample
-    // The final model (RerunModelUi.kt): your scan's room, meshed. The sample is not offered one.
+    // The scan's result (RerunModelUi.kt): your room as one model, kept with the scan. Picked once
+    // when a scan opens, so the build is not restarted by a recomposition. The sample has none.
     var modelSource by remember {
-        mutableStateOf<RerunModelSource?>(RerunModelSource.Synthetic.takeIf { qaState == QA_STATE_MODEL_SYNTHETIC })
+        mutableStateOf<RerunModelSource?>(
+            when (qaState) {
+                QA_STATE_MODEL_SYNTHETIC, QA_STATE_MODEL_EXPORT -> RerunModelSource.Synthetic()
+                QA_STATE_MODEL_POINTS -> RerunModelSource.Synthetic(meshFails = true)
+                else -> null
+            },
+        )
     }
-    val scanModel = if (showingScan) RerunModelSource.of(scanPack, scanMedia) else null
+    // The model on screen, once built or read back: what the export sheet writes first.
+    var resultModel by remember { mutableStateOf<RerunScanModel?>(null) }
+    // Whether the scan shown has a result screen: the replay's Back returns to it.
+    var hasResult by remember { mutableStateOf(modelSource != null) }
 
     val replaySession = remember { ArDebugSession().apply { loops = true } }
-    // QA captures hold still: no intro fly-in, no idle drift. Each opening is framed afresh.
-    val replayOrbit = remember(media, openCount) {
-        ArDebugOrbitCamera(drift = qaState == null, lift = REPLAY_STAGE_LIFT)
-    }
-    val replayPipOrbit = remember(media, openCount) { ArDebugOrbitCamera(drift = qaState == null) }
+    // The band of the stage the chrome leaves free, per orientation: the room is fitted into it.
+    val stageBand = LocalConfiguration.current.let { OrbitBand.stage(it.screenWidthDp.toFloat() / it.screenHeightDp) }
+    // QA captures hold still: no intro fly-in, no idle sway. Each opening is framed afresh.
+    val replayOrbit = remember(media, openCount) { ArDebugOrbitCamera(drift = qaState == null, band = stageBand) }
     LaunchedEffect(media, openCount) {
         val replay = media ?: return@LaunchedEffect
         replaySession.trace = replay.trace
@@ -246,7 +285,8 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
     // cover, the chrome and the playback all wait for the stage, so nothing shows up empty.
     var revealed by remember(media, openCount) { mutableStateOf(false) }
     LaunchedEffect(revealed, media) {
-        if (revealed && !showingScan && qaReplay?.pauseAt == null) replaySession.playFromStart()
+        val held = qaReplay?.pauseAt != null || qaState == QA_STATE_MODEL_SYNTHETIC
+        if (revealed && !showingScan && !held) replaySession.playFromStart()
     }
     LaunchedEffect(mode, replayOrbit) { replayOrbit.overhead = mode == RerunMode.Map }
 
@@ -309,7 +349,7 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
         when (screen) {
             RerunScreen.Dollhouse -> leaveDollhouse()
             RerunScreen.Live -> leaveLive()
-            RerunScreen.Model -> if (showingScan) screen = RerunScreen.Replay else toLanding()
+            RerunScreen.Replay -> if (showingScan && hasResult) screen = RerunScreen.Model else toLanding()
             else -> toLanding()
         }
     }
@@ -320,34 +360,57 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
         openCount++
         screen = RerunScreen.Replay
     }
-    val openScan = { media: RerunReplayMedia, title: String, pack: RerunCapturePack ->
-        scanId = null
+    // A scan, just recorded or reopened: its result when it has one (a model kept with it, or the
+    // depth to build one), else its replay. [kept]: the store already holds its model.
+    val openResult = { media: RerunReplayMedia, title: String, pack: RerunCapturePack, id: String?, kept: Boolean ->
+        scanId = id
         scanMedia = media
         scanTitle = title
         scanPack = pack
         showingScan = true
         mode = RerunMode.Scene
         openCount++
-        screen = RerunScreen.Replay
+        // A kept model is read back as it is: no source, so nothing is built again.
+        modelSource = if (kept) null else RerunModelSource.of(pack, media)
+        hasResult = kept || modelSource != null
+        resultModel = null
+        screen = if (hasResult) RerunScreen.Model else RerunScreen.Replay
     }
     val openStored = { id: String, title: String ->
-        // The replay's cover says "Opening your scan…" while its files are read.
         scanMedia = null
         scanTitle = title
         scanPack = null
+        scanId = id
         showingScan = true
+        resultModel = null
         mode = RerunMode.Scene
-        screen = RerunScreen.Replay
         opening?.cancel()
         opening = scope.launch {
+            // A scan with its model opens on it at once; the recording is read meanwhile. Without
+            // one — or with one that no longer reads — the replay's cover says "Opening your scan…"
+            // while its files are read, then the model is built again from them.
+            val keptModel = withContext(Dispatchers.IO) { store.model(id) }
+            val kept = keptModel != null
+            resultModel = keptModel
+            modelSource = null
+            hasResult = kept
+            screen = if (kept) RerunScreen.Model else RerunScreen.Replay
             val capture = withContext(Dispatchers.IO) { store.capture(id) }
             val opened = capture?.let { runCatching { loadRerunSession(it) }.getOrNull() }
-            if (capture == null || opened == null) {
-                notice = ScanCopy.OPEN_FAILED
-                screen = RerunScreen.Landing
-            } else {
-                openScan(opened, title, capture)
-                scanId = id
+            when {
+                capture != null && opened != null -> if (screen == RerunScreen.Model && kept) {
+                    // Already on the model: the recording only completes the scan behind it.
+                    scanMedia = opened
+                    scanPack = capture
+                    openCount++
+                } else {
+                    openResult(opened, title, capture, id, kept)
+                }
+                kept -> Unit
+                else -> {
+                    notice = ScanCopy.OPEN_FAILED
+                    screen = RerunScreen.Landing
+                }
             }
         }
     }
@@ -428,13 +491,14 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
         ) {
             RerunLiveScreen(
                 onBack = leaveLive,
-                onScanned = { scan, title, pack ->
+                onScanned = { scan, title, pack, id ->
                     sessionsVersion++
                     if (recordingForDollhouse) {
                         recordingForDollhouse = false
                         openDollhouse(null, title, scan)
                     } else {
-                        openScan(scan, title, pack)
+                        // Save scan lands on the model, built here and kept with the scan.
+                        openResult(scan, title, pack, id, false)
                     }
                 },
                 store = store,
@@ -447,7 +511,7 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
             )
         }
         RerunScreen.Replay -> RerunReplayScreen(
-            onBack = toLanding,
+            onBack = { if (showingScan && hasResult) screen = RerunScreen.Model else toLanding() },
             mode = mode,
             onMode = { mode = it },
             media = media,
@@ -455,16 +519,10 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
             scanTitle = scanTitle,
             session = replaySession,
             orbit = replayOrbit,
+            stageBand = stageBand,
             revealed = revealed,
             onRevealed = { revealed = true },
-            pipOrbit = replayPipOrbit,
             onExport = { exporting = true },
-            onBuildModel = scanModel?.let { source ->
-                {
-                    modelSource = source
-                    screen = RerunScreen.Model
-                }
-            },
             // Your own room only: the sample is not a room of yours to stand on a table.
             onViewInAr = scanMedia?.takeIf { showingScan }?.let { scan ->
                 { openDollhouse(scanId, scanTitle, scan) }
@@ -493,26 +551,57 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
             arPlaybackDataset = arPlaybackDataset,
             startIn3d = qaState == QA_STATE_DOLLHOUSE_3D,
         )
-        RerunScreen.Model -> modelSource?.let { source ->
-            RerunModelScreen(
-                source = source,
-                title = if (showingScan) scanTitle else ScanCopy.REPLAY_TITLE,
-                onBack = { if (showingScan) screen = RerunScreen.Replay else toLanding() },
-                engine = engine,
-                modelLoader = modelLoader,
-                materialLoader = materialLoader,
-                drift = qaState == null,
-            )
-        }
+        RerunScreen.Model -> RerunModelScreen(
+            source = modelSource,
+            title = if (showingScan) scanTitle else ScanCopy.REPLAY_TITLE,
+            store = store.takeIf { scanId != null },
+            id = scanId,
+            onModel = { resultModel = it },
+            onBack = toLanding,
+            onRename = scanId?.let { id ->
+                { name: String ->
+                    scanTitle = name.trim().ifEmpty { scanTitle }
+                    scope.launch {
+                        withContext(Dispatchers.IO) { runCatching { store.rename(id, name) } }
+                        sessionsVersion++
+                    }
+                }
+            },
+            // The recording behind the model, once it is read: a scan reopened shows its model first.
+            onReplay = scanMedia?.takeIf { showingScan }?.let { { screen = RerunScreen.Replay } },
+            onViewInAr = scanMedia?.takeIf { showingScan }?.let { scan ->
+                { openDollhouse(scanId, scanTitle, scan) }
+            },
+            onExport = { exporting = true },
+            engine = engine,
+            modelLoader = modelLoader,
+            materialLoader = materialLoader,
+            hintStays = qaState != null,
+            opened = resultModel,
+        )
     }
-    if (exporting && screen == RerunScreen.Replay && media != null) {
-        val source = remember(showingScan, scanTitle, scanPack) {
+    val exportable = when (screen) {
+        RerunScreen.Replay -> media != null
+        RerunScreen.Model -> true
+        else -> false
+    }
+    if (exporting && exportable) {
+        val onModel = screen == RerunScreen.Model
+        val source = remember(showingScan, scanTitle, scanPack, onModel, resultModel) {
             val pack = scanPack
-            if (showingScan && pack != null) {
-                RerunExportSource(scanTitle) { pack }
-            } else {
-                val appContext = context.applicationContext
-                RerunExportSource(ScanCopy.SAMPLE_TITLE) { sampleCapturePack(appContext) }
+            val model = resultModel
+            when {
+                showingScan -> RerunExportSource(
+                    title = scanTitle,
+                    capture = pack?.let { { it } },
+                    model = model?.let { { it } },
+                )
+                // QA: the synthetic room's model, and no recording to go with it.
+                onModel -> RerunExportSource(title = ScanCopy.REPLAY_TITLE, model = model?.let { { it } })
+                else -> {
+                    val appContext = context.applicationContext
+                    RerunExportSource(ScanCopy.SAMPLE_TITLE, capture = { sampleCapturePack(appContext) })
+                }
             }
         }
         RerunExportSheet(source = source, onDismiss = { exporting = false })
@@ -529,8 +618,8 @@ private enum class RerunScreen { Landing, Live, Replay, Dollhouse, Model }
 private enum class RerunMode { Scene, Map, Camera }
 
 /**
- * The landing, laid out as the iOS demo's: "Scan a room in 3D", "Record your room", the sample
- * and "Open file", then "Your sessions". A themed stage like the replay it opens (#4080): the
+ * The landing, laid out as the iOS demo's: "3D Scan", "Start scanning", the example and "Open
+ * scan", then "Your scans". A themed stage like the replay it opens (#4080): the
  * light stage in light theme, the dark one in dark theme.
  */
 @Composable
@@ -547,9 +636,14 @@ private fun RerunLandingScreen(onBack: () -> Unit, state: RerunLandingState, act
 }
 
 /**
- * The bundled replay: the 3D view (orbit, or the overhead map) or the camera's frames, under the
- * HUD, the corner card that swaps to the other view, and the filmstrip. A themed stage (#4080):
- * it follows the app theme, where the live camera screen keeps the media chrome.
+ * The replay: the 3D view (orbit, or the overhead map) or the camera's frames, and one thin
+ * timeline bar over the dock (#4379). A themed stage (#4080): it follows the app theme, where the
+ * live camera screen keeps the media chrome. A tap on the stage hides the header, the bar and
+ * the dock; another brings them back.
+ *
+ * What is read once lives in the settings sheet: the layers and their figures, and — for a scan
+ * that can be meshed — Points | Surface (#4306), the surface being drawn by this same 3D view,
+ * under the same camera, instead of a second screen.
  */
 @Composable
 @Suppress("LongParameterList") // the demo's shared engine and replay state, handed down once
@@ -564,22 +658,66 @@ private fun RerunReplayScreen(
     onRevealed: () -> Unit,
     session: ArDebugSession,
     orbit: ArDebugOrbitCamera,
-    pipOrbit: ArDebugOrbitCamera,
+    stageBand: OrbitBand,
     onExport: () -> Unit,
     onViewInAr: (() -> Unit)?,
     engine: Engine,
     modelLoader: ModelLoader,
     materialLoader: MaterialLoader,
-    onBuildModel: (() -> Unit)? = null,
 ) {
     val thumbnails = remember(media) { media?.thumbnails?.mapValues { it.value.asImageBitmap() }.orEmpty() }
+    val title = if (isScan) scanTitle else ScanCopy.SAMPLE_TITLE
+    // The stage the chrome really leaves, measured on screen: the room is fitted between the
+    // header above and the timeline bar below, whatever the phone or the font scale. A phone on
+    // its side has no height to give a row under the room: the bar stands in the top corner,
+    // under the header's line, and the room keeps the middle of the window.
+    val compact = compactStage()
+    var stage by remember { mutableStateOf(Rect.Zero) }
+    // Kept while a tap has the chrome hidden: the room does not move when the bar leaves.
+    var timeline by remember(compact) { mutableStateOf<Rect?>(null) }
+    var headerBottom by remember(compact) { mutableFloatStateOf(Float.NaN) }
+    // On its side: where the dock starts, under the room.
+    var pillTop by remember(compact) { mutableFloatStateOf(Float.NaN) }
+    val statusBottom = WindowInsets.safeDrawing.getTop(LocalDensity.current).toFloat()
+    // The room's dimensions are written under its floor, outside the box the band fits: they
+    // keep this much air over the dock.
+    val pillClearance = with(LocalDensity.current) { Space.lg.toPx() }
+    val measured = when {
+        compact -> sideBand(stage, timeline, statusBottom, pillTop - pillClearance)
+        else -> stackedBand(stage, headerBottom, timeline)
+    }
+    val band = measured ?: stageBand
+    SideEffect { orbit.band = band }
+    // What the recording covers at the replay's time (#4631): the map card in the top corner, in
+    // the 3D and Map views, which feed it.
+    val coverage = remember(media) { ScanCoverageState() }
+    val showsCoverage = media != null && mode != RerunMode.Camera
     // The camera frames are pictures, ready with the files; the 3D view says when it has drawn.
     val ready = media != null && (revealed || mode == RerunMode.Camera)
     LaunchedEffect(ready) { if (ready) onRevealed() }
     val readyState = rememberUpdatedState(ready)
-    val hudIn = rememberReveal(revealed, delayMillis = REVEAL_STAGGER_MS)
-    val cardIn = rememberReveal(revealed, delayMillis = REVEAL_STAGGER_MS * 2)
-    val filmstripIn = rememberReveal(revealed, delayMillis = REVEAL_STAGGER_MS * 2)
+    val filmstripIn = rememberReveal(revealed, delayMillis = REVEAL_STAGGER_MS)
+    // The 3D view runs the session's clock while it draws. Over the camera's frames there is
+    // none on screen (the corner picture-in-picture that ran it is gone, #4379): the screen does.
+    // It counts for the view too: the sheet's layer rows and the timeline read those figures.
+    if (media != null && mode == RerunMode.Camera) {
+        LaunchedEffect(session, media) {
+            // A finished recording stands on the floor of the whole recording, as in the 3D view.
+            val whole = if (media.growing) null else session.trace.let { it.frameAt(it.duration) }
+            var last = withFrameNanos { it }
+            var countedAt = last - STATS_INTERVAL_NS
+            while (true) {
+                val now = withFrameNanos { it }
+                session.tick((now - last) / NANOS_PER_SECOND)
+                last = now
+                if (now - countedAt >= STATS_INTERVAL_NS) {
+                    countedAt = now
+                    val frame = session.trace.frameAt(session.time)
+                    session.count(frame, media.pointCountAt(frame.time), stageFloorY(whole ?: frame))
+                }
+            }
+        }
+    }
     // The session on screen as open files: .rrd, .glb and .ply, written on the phone.
     val export = DockItem(
         icon = Icons.Rounded.IosShare,
@@ -591,69 +729,82 @@ private fun RerunReplayScreen(
     DemoScaffold(
         title = stringResource(R.string.demo_ar_rerun_title),
         onBack = onBack,
-        controls = { RerunSheet() },
+        controls = {
+            // What the 3D view draws, layer by layer, and its figures.
+            RerunSheet { RerunLayersSection(session) }
+        },
         firstFrameRendered = readyState,
         loadingLabel = if (isScan) ScanCopy.LOADING else RERUN_REPLAY_LOADING,
         themedStage = true,
+        // The room has the screen (#4379): a tap on the stage hides the header, the timeline and
+        // the dock, and another brings them back.
+        chromeToggleOnTap = true,
+        overlaysFollowChrome = true,
+        // 3D Scan shows no mode switch on any of its screens (#4397).
+        modeSwitch = null,
         topOverlay = {
-            if (media != null) {
-                RerunReplayHud(
-                    session = session,
-                    modifier = Modifier
-                        .padding(horizontal = Space.md)
-                        .widthIn(max = ArOverlay.maxWidth)
-                        .fillMaxWidth()
-                        .reveal(hudIn, rise = -Space.md),
-                )
-                // Space.sm on top of the scaffold's Space.sm stack gap: the card sits Space.md under
-                // the HUD, the spacing the HUD keeps from the header and the screen's edges.
-                val corner = Modifier
-                    .align(Alignment.End)
-                    .padding(top = Space.sm, end = Space.md)
-                    .reveal(cardIn, rise = -Space.md)
-                when (mode) {
-                    // The map is a floor plan and needs the whole width: the camera card would sit
-                    // on the room's far corner. The dock's Camera button stays one tap away.
-                    RerunMode.Map -> Unit
-                    RerunMode.Camera -> ArDebugPip(
-                        session = session,
-                        orbit = pipOrbit,
-                        engine = engine,
-                        modelLoader = modelLoader,
-                        materialLoader = materialLoader,
-                        onExpand = { onMode(RerunMode.Scene) },
-                        modifier = corner,
-                        replay = media,
-                    )
-                    RerunMode.Scene -> RerunCameraCard(
+            if (media != null && compact) {
+                // On its side: what is scanned in the start corner, the timeline in the end one,
+                // the room centred between them (the band keeps clear of the wider of the two).
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+                    if (showsCoverage) {
+                        ScanCoverageMap(
+                            state = coverage,
+                            modifier = Modifier
+                                .padding(start = Space.md)
+                                .reveal(filmstripIn, rise = -Space.md),
+                        )
+                    }
+                    Spacer(Modifier.weight(1f))
+                    RerunTimelineBar(
                         media = media,
                         thumbnails = thumbnails,
                         session = session,
-                        onOpen = { onMode(RerunMode.Camera) },
-                        modifier = corner,
+                        modifier = Modifier
+                            .padding(end = Space.md)
+                            .width(SceneViewTokens.DebugView.compactCardWidth)
+                            // Measured outside the reveal: where the bar rests, not where it rises from.
+                            .onGloballyPositioned { timeline = it.boundsInRoot() }
+                            .reveal(filmstripIn, rise = -Space.md),
                     )
                 }
+            } else if (showsCoverage) {
+                // What is scanned and what is not, in the corner under the header: the room is
+                // fitted below the card, as below the header, so the card never stands on it.
+                ScanCoverageMap(
+                    state = coverage,
+                    modifier = Modifier
+                        .align(Alignment.Start)
+                        .padding(start = Space.md)
+                        // Measured outside the reveal: where the card rests, not where it rises from.
+                        .onGloballyPositioned { headerBottom = it.boundsInRoot().bottom }
+                        .reveal(filmstripIn, rise = -Space.md),
+                )
+            } else {
+                // Nothing to draw: this marks where the header ends over the room — by its
+                // position: an empty box has no bounds.
+                Spacer(Modifier.fillMaxWidth().onGloballyPositioned { headerBottom = it.positionInRoot().y })
             }
         },
         bottomOverlay = {
-            if (media != null && onBuildModel != null) {
-                RerunBuildModelButton(
-                    onClick = onBuildModel,
-                    modifier = Modifier.align(Alignment.CenterHorizontally).reveal(filmstripIn, rise = Space.lg),
-                )
-            }
-            if (media != null) {
-                RerunFilmstripCard(
+            if (media != null && compact) {
+                // Nothing to draw: the timeline stands in the corner. This marks where the dock
+                // starts under the room.
+                Spacer(Modifier.fillMaxWidth().onGloballyPositioned { pillTop = it.positionInRoot().y })
+            } else if (media != null) {
+                RerunTimelineBar(
                     media = media,
                     thumbnails = thumbnails,
                     session = session,
-                    modifier = Modifier.reveal(filmstripIn, rise = Space.lg),
-                    title = if (isScan) scanTitle else ScanCopy.SAMPLE_TITLE,
-                    caption = when (mode) {
-                        RerunMode.Map -> "Top-down map of the room"
-                        RerunMode.Camera -> "What the camera saw"
-                        else -> "Drag to orbit · double-tap to recenter"
-                    },
+                    modifier = Modifier
+                        // The bar goes with the dock: one small gutter above it, not a card
+                        // stacked over it.
+                        .offset(y = (dockGap - Space.sm).coerceAtLeast(0.dp))
+                        .padding(horizontal = Space.md)
+                        .widthIn(max = ArOverlay.maxWidth)
+                        .fillMaxWidth()
+                        .onGloballyPositioned { timeline = it.boundsInRoot() }
+                        .reveal(filmstripIn, rise = Space.lg),
                 )
             }
         },
@@ -702,36 +853,94 @@ private fun RerunReplayScreen(
                 engine = engine,
                 modelLoader = modelLoader,
                 materialLoader = materialLoader,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().onGloballyPositioned { stage = it.boundsInRoot() },
                 replay = media,
                 onShown = onRevealed,
+                observe = coverage::observe,
             )
         }
     }
 }
 
 /**
- * The settings sheet: what the demo is, then — advanced — how to stream a live session to a
- * computer.
+ * A phone on its side: too short for the stacked cards, and wide enough for the two side cards to
+ * leave the room a stage between them — by the rule the band itself is measured with
+ * ([OrbitBand.halfWidthBeside]). A window that is short and narrow (split screen) keeps the
+ * stacked layout: beside the room, the cards would stand on it.
  */
 @Composable
-private fun RerunSheet() {
+private fun compactStage(): Boolean {
+    if (LocalConfiguration.current.screenHeightDp.dp >= SceneViewTokens.DebugView.compactStageHeight) return false
+    val density = LocalDensity.current
+    val direction = LocalLayoutDirection.current
+    val insets = WindowInsets.safeDrawing
+    // The room stays centred: the side a cutout pushes further in decides for both.
+    val inset = maxOf(insets.getLeft(density, direction), insets.getRight(density, direction))
+    val card = with(density) { (Space.md + SceneViewTokens.DebugView.compactCardWidth).toPx() }
+    val width = LocalWindowInfo.current.containerSize.width.toFloat()
+    return OrbitBand.halfWidthBeside(cardEnd = inset + card, viewWidth = width) != null
+}
+
+/**
+ * The band the replay's chrome leaves the room on [stage] when the phone is upright, measured on
+ * screen: from [headerBottom], where the header ends, down to the timeline bar. `null` until both
+ * are laid out.
+ */
+private fun stackedBand(stage: Rect, headerBottom: Float, timeline: Rect?): OrbitBand? {
+    if (timeline == null) return null
+    return OrbitBand.between(headerBottom - stage.top, timeline.top - stage.top, stage.height)
+}
+
+/**
+ * The same band for a phone on its side: the timeline bar stands in a top corner, so the room —
+ * which stays centred — keeps clear of it on both sides, from [statusBottom] under the status bar
+ * down to [pillTop], where the dock starts. `null` until the bar is laid out.
+ */
+private fun sideBand(stage: Rect, timeline: Rect?, statusBottom: Float, pillTop: Float): OrbitBand? {
+    if (timeline == null) return null
+    // How far in the bar reaches from the edge it stands against, whichever that is (RTL).
+    val reach = minOf(stage.right - timeline.left, timeline.right - stage.left)
+    return OrbitBand.betweenSides(
+        startCardEnd = reach,
+        endCardStart = stage.width - reach,
+        top = (statusBottom - stage.top).coerceAtLeast(0f),
+        bottom = pillTop - stage.top,
+        viewWidth = stage.width,
+        viewHeight = stage.height,
+    )
+}
+
+/**
+ * The settings sheet: [head], what the screen it is opened from keeps off its stage (#4379) — the
+ * replay's layers and figures, a scan's counts — then what the demo is and, advanced, how to
+ * stream a live session to a computer, with [stream], that stream's status, once it is connected.
+ */
+@Composable
+private fun RerunSheet(head: (@Composable () -> Unit)? = null) {
+    if (head != null) {
+        head()
+        Spacer(Modifier.size(Space.md))
+    }
     Text(
         text = RERUN_REPLAY_INTRO,
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
-    RerunSetupSection()
-    // Developer-only debug toggle — visible when QA mode is on. Lets QA force-emit each
-    // TrackingFailureReason so the actionable-message overlay can be validated without staging a
-    // real failure. See io.github.sceneview.demo.common.ForcedTrackingFailure / #1881.
-    ForceTrackingFailureMenu()
+    if (BuildConfig.DEBUG) {
+        RerunSetupSection()
+        // Developer-only debug toggle — visible when QA mode is on. Lets QA force-emit each
+        // TrackingFailureReason so the actionable-message overlay can be validated without staging a
+        // real failure. See io.github.sceneview.demo.common.ForcedTrackingFailure / #1881.
+        ForceTrackingFailureMenu()
+    }
 }
 
 /**
- * Live AR — Record: the camera, with taps placing the shiba on planes, recorded into the in-app
- * 3D view (#3950). The scan starts by itself once ARCore has found the room, and Stop saves it
- * on the phone and hands it to [onScanned], opened, for the replay.
+ * Live AR — the capture: the camera, with taps placing the shiba on planes, recorded into the
+ * in-app 3D view (#3950). The scan starts by itself once ARCore has found the space; Pause,
+ * Finish and its review, Keep scanning and Save scan follow [ScanPhase] (#4627), and a saved
+ * scan is handed to [onScanned], opened, with its id in the store, for its result (#4597).
+ * Back during a capture asks first.
  *
  * #3831: the screen used to open on a banner about a "recording service" and "Settings" for
  * every Play Store user without a computer attached. Streaming to a computer is now an advanced
@@ -741,7 +950,7 @@ private fun RerunSheet() {
 @Suppress("LongParameterList", "LongMethod") // the live AR screen, moved as-is behind the replay
 private fun RerunLiveScreen(
     onBack: () -> Unit,
-    onScanned: (RerunReplayMedia, String, RerunCapturePack) -> Unit,
+    onScanned: (RerunReplayMedia, String, RerunCapturePack, String?) -> Unit,
     store: RerunSessionStore,
     sample: RerunReplayMedia?,
     engine: Engine,
@@ -791,18 +1000,31 @@ private fun RerunLiveScreen(
         }
     }
 
-    // Record mode: the room scan in progress, and its 3D card's camera. A scan records into the
+    // Capture mode: the scan in progress, and its 3D card's camera. A scan records into the
     // debug session's trace, so the 3D view and the scan are the same data.
     var scan by remember { mutableStateOf<ScanCapture?>(null) }
-    var finishing by remember { mutableStateOf(false) }
+    // #4627: where the capture stands. Pause and Finish freeze it; Finish opens a review that
+    // Keep scanning leaves for the same capture. Only Save scan builds it — `finish()` is final.
+    var phase by remember { mutableStateOf(ScanPhase.Scanning) }
+    // The built scan, held across a failed write so Try again writes the same one.
+    var builtPack by remember { mutableStateOf<RerunCapturePack?>(null) }
+    var builtTitle by remember { mutableStateOf("") }
+    var leaveAsked by remember { mutableStateOf(false) }
+    // Discard on the "Couldn't save" card: the scan was never written, so it asks first.
+    var discardAsked by remember { mutableStateOf(false) }
     // Rerun v2: whether this phone runs ARCore's raw depth, set when the session is configured.
     // With it a scan also fuses a dense surfel map (tier "depth"); without it, the sparse v1 scan.
     var rawDepth by remember { mutableStateOf(false) }
-    // QA only (`--es qa_state record`): the Record screen mid-scan, fed by the sample room's
-    // log and photos, since the emulator cannot track. Its Stop saves that take like a real
-    // scan — the same builder, bake and file — and opens it.
+    // QA only (`--es qa_state record`): the capture screen mid-scan, fed by the sample room's
+    // log and photos, since the emulator cannot track. Its Save scan saves that take like a real
+    // scan — the same builder, bake and file — and opens it. `record-tracking-lost` holds it on
+    // a lost track; `record-save-failed` makes its write fail.
     var qaScan by remember { mutableStateOf<RerunReplayMedia?>(null) }
-    val qaRecord = qaState == QA_STATE_RECORD
+    val qaRecord = qaState in RECORD_QA_STATES
+    val qaTrackingLost = qaState == QA_STATE_RECORD_TRACKING_LOST
+    val qaSaveFails = qaState == QA_STATE_RECORD_SAVE_FAILED
+    // #4629: `record-long` feeds the dense map a whole flat; `-fixed` runs it with the old cap.
+    var qaLong by remember { mutableStateOf<QaLongScan?>(null) }
     LaunchedEffect(qaRecord, sample) {
         val source = sample?.takeIf { qaRecord } ?: return@LaunchedEffect
         val events = withContext(Dispatchers.IO) {
@@ -812,21 +1034,46 @@ private fun RerunLiveScreen(
         player.trace.keyframeSpacing = ReplayGeometry.KEYFRAME_SPACING_M
         player.trace.journal = ArrayList()
         debugSession.trace = player.trace
+        val long = qaState.takeIf { it in LONG_QA_STATES }
+            ?.let { QaLongScan.over(source.trace, fixed = it == QA_STATE_RECORD_LONG_FIXED) }
+        qaLong = long
         qaScan = RerunReplayMedia(
             player.trace, source.manifest, emptyMap(), source.thumbnails, ByteArray(0), growing = true,
+            liveDense = long?.let { { it.dense.live } },
         )
+        long?.let { launch { it.run { phase.integrates } } }
         var last = 0L
+        var played = 0f
         while (true) {
             withFrameNanos { now ->
                 val dt = if (last == 0L) 0f else (now - last) / 1e9f
                 last = now
-                if (!finishing) player.advance(dt)
+                // The tracking-loss state scans a few seconds first, so it loses a real capture.
+                val tracking = !qaTrackingLost || played < QA_TRACKING_LOST_AFTER_S
+                if (phase.integrates && tracking) played += dt.also { player.advance(it) }
             }
         }
     }
     val scanMedia = scan?.live ?: qaScan
     val recording = scanMedia != null
-    val scanOrbit = remember(scanMedia) { ArDebugOrbitCamera(drift = false, lift = SCAN_STAGE_LIFT) }
+    // #4628: the live view follows the phone heading-up, like a navigation app. A drag or a
+    // pinch takes it over and shows Recenter, which hands it back to the phone.
+    var scanFollowing by remember(scanMedia) { mutableStateOf(true) }
+    val scanFollow = remember(scanMedia) { ScanFollow() }
+    // What the capture has covered (#4631): the live map and the coach read it, frame by frame.
+    val scanCoverage = remember(scanMedia) { ScanCoverageState() }
+    val scanOrbit = remember(scanMedia) {
+        ArDebugOrbitCamera(
+            drift = false,
+            band = ScanFollow.BAND,
+            approachRate = ScanFollow.APPROACH_RATE,
+            maxTurnDegreesPerSecond = ScanFollow.MAX_TURN_DEGREES_PER_SECOND,
+            degreesPerViewWidth = ScanFollow.DRAG_DEGREES_PER_VIEW_WIDTH,
+            elevationRange = ScanFollow.DRAG_ELEVATION_RANGE,
+            maxCoastDegrees = ScanFollow.MAX_COAST_DEGREES,
+        )
+            .apply { onFollowingChange = { scanFollowing = it } }
+    }
 
     var isTracking by remember { mutableStateOf(false) }
     var cameraReady by remember { mutableStateOf(false) }
@@ -896,10 +1143,11 @@ private fun RerunLiveScreen(
         debugFullScreen = false
         debugSession.trace = capture.trace
         debugSession.goLive()
+        phase = ScanPhase.Scanning
         scan = capture
     }
-    // Record starts by itself, once, as soon as ARCore has found the room: "Record your room"
-    // was the tap. After a Stop that caught nothing, the shutter starts the next one.
+    // The capture starts by itself, once, as soon as ARCore has found the space. After a
+    // capture that caught nothing, or a discarded one, the shutter starts the next one.
     var autoStarted by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         if (qaDebug != null || qaRecord) return@LaunchedEffect
@@ -911,49 +1159,116 @@ private fun RerunLiveScreen(
             delay(AUTO_START_POLL_MS)
         }
     }
-    // Stop takes no more photos, waits for the last ones to be encoded, builds the scan into its
-    // file — its planes painted from its photos — saves it on the phone and opens it in the
-    // replay, read back from what was saved. A scan that caught nothing opens nothing.
-    val onStopScan = stop@{
+    // Pause, Finish and Keep scanning move the phase; the capture's clock follows it (below).
+    val moveTo = { next: ScanPhase -> phase = next }
+    // Drops the capture, built or not: the camera goes back to waiting for the next one.
+    val dropCapture = {
+        if (scan != null) {
+            debugSession.trace = ArDebugTrace()
+            scan = null
+        }
+        qaScan = null
+        builtPack = null
+        leaveAsked = false
+        discardAsked = false
+        phase = ScanPhase.Scanning
+    }
+    // Save scan builds the capture — no more photos, the last ones encoded, its planes painted
+    // from its photos — writes it on the phone and opens it, read back from what was saved. A
+    // failed write keeps the built scan on screen for Try again; nothing claims it was saved.
+    val onSaveScan = save@{
         val qaTrace = qaScan?.trace
         val capture = scan
-        if (finishing || (qaTrace == null && capture == null)) return@stop
-        finishing = true
+        val nothingToSave = builtPack == null && qaTrace == null && capture == null
+        if (phase == ScanPhase.Saving || nothingToSave) return@save
+        leaveAsked = false
+        moveTo(ScanPhase.Saving)
         scope.launch {
             val now = System.currentTimeMillis()
-            val title = recordingTitle(now)
-            val built = when {
-                qaTrace != null && sample != null -> qaSessionOf(qaTrace, sample)
-                capture != null -> capture.finish()
-                else -> null
-            }
-            val opened = built?.let { pack ->
-                val saved = withContext(Dispatchers.IO) {
-                    runCatching {
-                        store.save(pack, title, RerunSessionSource.Recorded, now)
-                    }.isSuccess
+            // The build can throw too — out of memory on a long scan, painting its planes. That
+            // lands on the same "Couldn't save" card as a failed write, and Try again rebuilds.
+            val built = runCatching {
+                builtPack ?: when {
+                    qaTrace != null && sample != null -> qaSessionOf(qaTrace, sample)
+                    capture != null -> capture.finish()
+                    else -> null
                 }
-                if (!saved) Toast.makeText(context, ScanCopy.SAVE_FAILED, Toast.LENGTH_LONG).show()
-                runCatching { loadRerunSession(pack) }.getOrNull()?.let { it to pack }
+            }.onFailure { if (it is CancellationException) throw it }
+            if (built.isFailure) {
+                Log.w(SCAN_LOG_TAG, "3D Scan: building the scan failed", built.exceptionOrNull())
+                phase = ScanPhase.SaveFailed
+                return@launch
             }
-            if (capture != null) {
-                debugSession.trace = ArDebugTrace()
-                scan = null
+            val pack = built.getOrNull()?.also {
+                if (builtPack == null) builtTitle = recordingTitle(now)
+                builtPack = it
             }
-            finishing = false
-            if (opened != null) onScanned(opened.first, title, opened.second)
+            if (pack == null) {
+                // Nothing to build after all: the next capture starts from the shutter.
+                dropCapture()
+                return@launch
+            }
+            val title = builtTitle
+            // The saved entry's id opens its result screen, where the name is edited (#4597).
+            val savedId = withContext(Dispatchers.IO) {
+                runCatching {
+                    check(!qaSaveFails) { "QA: forced save failure" }
+                    store.save(pack, title, RerunSessionSource.Recorded, now).id
+                }.getOrNull()
+            }
+            if (savedId == null) {
+                phase = ScanPhase.SaveFailed
+                return@launch
+            }
+            val opened = runCatching { loadRerunSession(pack) }.getOrNull()
+            dropCapture()
+            if (opened != null) onScanned(opened, title, pack, savedId)
         }
     }
+    val onDiscardScan = {
+        dropCapture()
+        onBack()
+    }
+    // Back during a capture asks first: keep scanning, save, or discard. The capture pauses
+    // while it asks, so nothing is recorded behind the dialog. While it saves, Back waits.
+    val onBackFromLive: () -> Unit = {
+        if (!recording) {
+            onBack()
+        } else if (phase != ScanPhase.Saving) {
+            moveTo(phase.leaveAsked())
+            leaveAsked = true
+        }
+    }
+    BackHandler(enabled = recording, onBack = onBackFromLive)
+
+    // What the capture holds so far, counted off the scan itself: dense points on a depth scan,
+    // ARCore's feature points otherwise. Zero at the start, never shown against a cap.
+    val stats = debugSession.stats
+    val capturedPoints = when {
+        scan?.rawDepth == true -> scan?.denseCount ?: 0
+        qaLong != null -> qaLong?.shownCount ?: 0
+        else -> stats.mapPoints
+    }
+    val capturedPhotos = debugSession.trace.imageCount
+    val captureEmpty = capturedPoints == 0 && capturedPhotos == 0 && stats.planes == 0
+    val capturedClock = ArDebugFormat.clock(scan?.elapsedSeconds() ?: stats.duration)
+    val trackingLost = recording && (
+        ForcedTrackingFailure.override != null || if (qaRecord) qaTrackingLost else !isTracking
+        )
+    // The capture's clock runs only while it scans with tracking held: Pause, review, the Back
+    // dialog and a lost track all stop it, and it runs on from there.
+    val clockRuns = phase.clockRuns(trackingLost)
+    LaunchedEffect(scan, clockRuns) { scan?.followClock(clockRuns) }
 
     DemoScaffold(
         title = stringResource(R.string.demo_ar_rerun_title),
-        onBack = onBack,
+        onBack = onBackFromLive,
         // The sheet holds what the screen must not: the connection steps a developer types
-        // once. The screen itself only says what the demo does and whether it is live.
-        controls = { RerunSheet() },
+        // once. The screen itself only says what the demo does and whether it is live. A
+        // capture in progress owns the screen: no Settings over it.
+        controls = if (recording) null else { { RerunSheet() } },
         topOverlay = {
             if (recording && scanMedia != null) {
-                val stats = debugSession.stats
                 // The HUD runs on its own clock: the trace records nothing while tracking is
                 // lost ("Not enough detail"), and a HUD read off it froze there for seconds.
                 val now by produceState(SystemClock.elapsedRealtimeNanos(), scan) {
@@ -962,24 +1277,12 @@ private fun RerunLiveScreen(
                         value = SystemClock.elapsedRealtimeNanos()
                     }
                 }
+                // Tracking loss freezes the capture, so the HUD says so: the coaching line
+                // reads "Scan paused", and a red "Scanning" dot above it would contradict it.
                 ScanHud(
-                    figures = ScanFigures(
-                        points = stats.mapPoints,
-                        surfaces = stats.planes,
-                        photos = debugSession.trace.imageCount,
-                        dense = scan?.denseCount ?: 0,
-                    ),
-                    depthScan = scan?.rawDepth == true,
-                    seconds = scan?.elapsedSeconds(now) ?: stats.duration,
-                    photoLimitReached = scan?.isPhotoLimitReached == true,
-                )
-                ScanStage(
-                    session = debugSession,
-                    orbit = scanOrbit,
-                    media = scanMedia,
-                    engine = engine,
-                    modelLoader = modelLoader,
-                    materialLoader = materialLoader,
+                    phase = if (trackingLost && phase.integrates) ScanPhase.Paused else phase,
+                    seconds = scan?.elapsedSeconds(now) ?: qaLong?.shownSeconds ?: stats.duration,
+                    points = capturedPoints,
                 )
             } else if (debugFullScreen) {
                 ArDebugLegend(debugSession)
@@ -1015,9 +1318,12 @@ private fun RerunLiveScreen(
             if (debugFullScreen) {
                 ArDebugTimelineCard(debugSession)
             } else {
+                // During a capture its one coaching line speaks instead: one message at a time.
                 RerunCameraBottomOverlay(
-                    visible = (!isTracking && arCoreAvailability == null && qaDebug == null && !qaRecord) ||
-                        ForcedTrackingFailure.override != null,
+                    visible = !recording && (
+                        (!isTracking && arCoreAvailability == null && qaDebug == null) ||
+                            ForcedTrackingFailure.override != null
+                        ),
                     trackingFailureReason = trackingFailureReason,
                     // Before a scan, the wait is for Record; during one, ARCore's own guidance.
                     searching = if (recording) null else ScanCopy.WAITING,
@@ -1025,14 +1331,43 @@ private fun RerunLiveScreen(
                     sharing = sharing,
                     onSaveAndShare = onSaveAndShare,
                 )
-                if (arCoreAvailability == null || qaState != null) {
-                    ScanShutter(
-                        recording = recording,
-                        finishing = finishing,
-                        startEnabled = isTracking,
-                        onStart = onStartScan,
-                        onStop = onStopScan,
+                if (recording && scanMedia != null && phase in SCAN_MAP_PHASES) {
+                    ScanCoverageMap(
+                        state = scanCoverage,
+                        modifier = Modifier.align(Alignment.Start).padding(start = Space.md),
                     )
+                }
+                if (recording && !scanFollowing && phase != ScanPhase.Saving) {
+                    ScanRecenterPill(onRecenter = { scanOrbit.recenter() })
+                }
+                if (arCoreAvailability == null || qaState != null) {
+                    when {
+                        !recording -> ScanShutter(startEnabled = isTracking, onStart = onStartScan)
+                        phase == ScanPhase.Reviewing -> ScanReviewCard(
+                            empty = captureEmpty,
+                            figures = ScanCopy.reviewFigures(capturedPoints, capturedPhotos, capturedClock),
+                            onKeepScanning = { moveTo(ScanPhase.Scanning) },
+                            onSave = onSaveScan,
+                        )
+                        phase == ScanPhase.Saving -> ScanSavingCard()
+                        phase == ScanPhase.SaveFailed -> ScanSaveFailedCard(
+                            // The scan was never written: discarding it asks first.
+                            onDiscard = { discardAsked = true },
+                            onRetry = onSaveScan,
+                        )
+                        else -> ScanControls(
+                            phase = phase,
+                            coaching = ScanCopy.coaching(
+                                phase = phase,
+                                trackingLost = trackingLost,
+                                photoLimitReached = scan?.isPhotoLimitReached == true,
+                                detail = scan?.denseDetail ?: qaLong?.shownDetail ?: ScanDetail.Fine,
+                                coach = scanCoverage.coachLine,
+                            ),
+                            onTogglePause = { moveTo(phase.togglePause()) },
+                            onFinish = { moveTo(phase.finish()) },
+                        )
+                    }
                 }
             }
         },
@@ -1095,9 +1430,11 @@ private fun RerunLiveScreen(
                     // is safe whether or not the recorder is reachable.
                     bridge.logFrame(session, frame)
                     // A QA fixture owns the 3D view; otherwise it mirrors this session.
-                    // A room scan rides on the same pass until Stop: then it takes no more photos.
-                    if (qaDebug == null && !qaRecord) {
-                        debugRecorder.record(debugSession.trace, session, frame, anchors, scan.takeUnless { finishing })
+                    // A scan rides on the same pass while it is scanning.
+                    // Paused, in review or saving, a capture takes nothing: no path, no points.
+                    val capturing = scan == null || phase.integrates
+                    if (qaDebug == null && !qaRecord && capturing) {
+                        debugRecorder.record(debugSession.trace, session, frame, anchors, scan)
                     }
                 },
                 // A forced QA state hides the SDK's "Couldn't start AR" card so the screen
@@ -1141,6 +1478,22 @@ private fun RerunLiveScreen(
                 }
             }
 
+            // A capture owns the screen (#4628): its cloud full screen over the dimmed camera,
+            // following the phone. The camera keeps tracking, and recording, under it.
+            if (recording && scanMedia != null) {
+                ScanLiveView(
+                    session = debugSession,
+                    orbit = scanOrbit,
+                    follow = scanFollow,
+                    coverage = scanCoverage,
+                    following = scanFollowing,
+                    media = scanMedia,
+                    engine = engine,
+                    modelLoader = modelLoader,
+                    materialLoader = materialLoader,
+                )
+            }
+
             // Full-screen 3D view over the camera, which keeps tracking (and recording) under it.
             if (debugFullScreen) {
                 ArDebugSceneView(
@@ -1150,6 +1503,31 @@ private fun RerunLiveScreen(
                     modelLoader = modelLoader,
                     materialLoader = materialLoader,
                     modifier = Modifier.fillMaxSize(),
+                )
+            }
+
+            if (leaveAsked) {
+                ScanLeaveDialog(
+                    saveFailed = phase == ScanPhase.SaveFailed,
+                    // A capture that caught nothing has nothing to save: Keep scanning or Discard.
+                    empty = captureEmpty && builtPack == null,
+                    onKeepScanning = {
+                        leaveAsked = false
+                        // Back paused the capture, or it was paused or in review already: Keep
+                        // scanning means scanning again, from any of them.
+                        moveTo(phase.keepScanning())
+                    },
+                    onSave = onSaveScan,
+                    onDiscard = onDiscardScan,
+                )
+            }
+            if (discardAsked) {
+                ScanDiscardDialog(
+                    onCancel = { discardAsked = false },
+                    onDiscard = {
+                        discardAsked = false
+                        dropCapture()
+                    },
                 )
             }
 
@@ -1184,8 +1562,9 @@ private fun RerunLiveScreen(
 }
 
 /**
- * The status over the camera: a dot that turns green while events reach the computer, a
- * title, and one quieter line — what the demo does, or how much has been sent.
+ * The stream's status, a line of the settings sheet's "Connect your computer" section: a dot that
+ * turns green while events reach the computer, a title, and how much has been sent. It was a
+ * card over the camera (#4379); Save & Share on the screen already says a computer is there.
  */
 @Composable
 private fun RerunStatusCard(status: RerunStatusUx) {
@@ -1251,7 +1630,7 @@ private fun DemoBottomOverlayScope.RerunCameraBottomOverlay(
     // Primary action on-screen (#1964), offered only when it can work (#2658,
     // #3831): with no computer attached a save can only fail, and the status card
     // already says so without an error-toned banner.
-    if (rerunShowsSaveAction(isConnected = isConnected, sharing = sharing)) {
+    if (BuildConfig.DEBUG && rerunShowsSaveAction(isConnected = isConnected, sharing = sharing)) {
         val saveUx = rerunSaveActionUx(sharing = sharing, isConnected = isConnected)
         SceneActionBar(
             SceneAction(
@@ -1411,25 +1790,41 @@ private val StatusDotSize = Space.sm + Space.xs / 2 // 10 dp, same as the record
 private const val MAX_PLACEMENT_DISTANCE_METERS = 5f
 private const val QA_SEED = "ar-rerun"
 
-/** Where the replay stage draws the room: 7 % of the height above centre, clear of the filmstrip. */
-private const val REPLAY_STAGE_LIFT = 0.07f
-
-/** The Record screen's 3D card frames the room higher: its floor used to sit clipped at the card's foot. */
-private const val SCAN_STAGE_LIFT = 0.12f
 private const val QA_STATE_CONNECTED = "connected"
 private const val QA_STATE_SAVED = "saved"
 
 /** QA only: the Record screen mid-scan, fed by the sample room (#2754: no AR on the emulator). */
 private const val QA_STATE_RECORD = "record"
 
+/** QA only (#4627): the capture screen held on a lost track, which the emulator never has. */
+private const val QA_STATE_RECORD_TRACKING_LOST = "record-tracking-lost"
+
+/** QA only (#4627): the capture screen whose write fails, to show the failure that stays. */
+private const val QA_STATE_RECORD_SAVE_FAILED = "record-save-failed"
+
+/** QA only (#4629): the capture screen fed a whole flat's depth, and the same with the old fixed cap. */
+private const val QA_STATE_RECORD_LONG = "record-long"
+private const val QA_STATE_RECORD_LONG_FIXED = "record-long-fixed"
+private val LONG_QA_STATES = setOf(QA_STATE_RECORD_LONG, QA_STATE_RECORD_LONG_FIXED)
+
+private val RECORD_QA_STATES =
+    setOf(QA_STATE_RECORD, QA_STATE_RECORD_TRACKING_LOST, QA_STATE_RECORD_SAVE_FAILED) + LONG_QA_STATES
+
 /** The QA scan plays the sample once and holds on its end, as a scan in progress would. */
 private const val QA_RECORD_NEVER_LOOP_S = 3_600f
+
+/** Seconds the tracking-loss QA scan captures before it loses tracking. */
+private const val QA_TRACKING_LOST_AFTER_S = 3f
+
+/** `adb logcat -s ARRerunDemo`: a scan build that threw. */
+private const val SCAN_LOG_TAG = "ARRerunDemo"
 
 /** How often the live screen checks whether ARCore has found the room, to start recording. */
 private const val AUTO_START_POLL_MS = 100L
 
 /** The scan HUD's clock ticks ten times a second, tracking or not. */
 private const val HUD_TICK_MS = 100L
+private const val NANOS_PER_SECOND = 1e9f
 
 /**
  * QA only: the take the Record screen played from the sample, built into a session like a real
@@ -1447,7 +1842,11 @@ private suspend fun qaSessionOf(trace: ArDebugTrace, sample: RerunReplayMedia): 
             ScanPhoto(path, jpeg, pose)
         }
     }
-    return RerunCaptureBuilder.build(events, sample.manifest.lens, photos)
+    // The emulator has no depth: the ray-cast room stands in for a scan's fused points, so the
+    // result the QA take opens on is built, kept and reopened as a real scan's is.
+    val dense = withContext(Dispatchers.Default) { syntheticCloud() }
+    val device = ScanDevice("android", Build.MODEL, ScanDevice.TIER_DEPTH, ScanDevice.SOURCE_RAW_DEPTH)
+    return RerunCaptureBuilder.build(events, sample.manifest.lens, photos, device = device, dense = dense)
 }
 private const val QA_SCRUB_FRACTION = 0.45f
 private const val AR_DEBUG_FIXTURE = "rerun/sample-session.jsonl"
@@ -1480,12 +1879,21 @@ private const val QA_STATE_DOLLHOUSE_EMPTY = "dollhouse-empty"
 /** The dollhouse of the newest session, in the 3D view: the emulator cannot run AR (#2754). */
 private const val QA_STATE_DOLLHOUSE_3D = "dollhouse-3d"
 
-/** The final model built from the ray-cast room: the emulator's view of the model screen, which it cannot scan. */
+/** The result built from the ray-cast room: the emulator's view of the result screen, which it cannot scan. */
 private const val QA_STATE_MODEL_SYNTHETIC = "model-synthetic"
+
+/** The same room when meshing finds no surface: the coloured-points fallback. */
+private const val QA_STATE_MODEL_POINTS = "model-synthetic-points"
+
+/** The same result with its export sheet open. */
+private const val QA_STATE_MODEL_EXPORT = "model-synthetic-export"
+
+/** The QA states that open straight on the result screen. */
+private val MODEL_QA_STATES = setOf(QA_STATE_MODEL_SYNTHETIC, QA_STATE_MODEL_POINTS, QA_STATE_MODEL_EXPORT)
 
 /** The QA states that open straight on the live AR screen. */
 private val LIVE_QA_STATES =
-    ArDebugQaState.entries.map { it.key } + QA_STATE_CONNECTED + QA_STATE_SAVED + QA_STATE_RECORD
+    ArDebugQaState.entries.map { it.key } + QA_STATE_CONNECTED + QA_STATE_SAVED + RECORD_QA_STATES
 
 /**
  * The QA states of the bundled replay: a view, and where the replay stands — paused at a fixed
@@ -1520,3 +1928,6 @@ private val QA_SHARE_RESULT = RerunBridge.ShareResult(
 )
 
 internal const val RERUN_STATUS_CARD_TAG = "ar_rerun_status_card"
+
+/** The capture phases that show its coverage map (#4631): while it is open, not under a card. */
+private val SCAN_MAP_PHASES = setOf(ScanPhase.Scanning, ScanPhase.Paused)

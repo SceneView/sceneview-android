@@ -1,5 +1,9 @@
 package io.github.sceneview.demo.demos
 
+import androidx.compose.material.icons.rounded.OpenInFull
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.fillMaxSize
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -7,7 +11,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -15,9 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.OpenInFull
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.Icon
@@ -27,6 +28,7 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -69,19 +71,19 @@ import com.google.ar.core.Session
 import com.google.ar.core.TrackingState
 import dev.romainguy.kotlin.math.Quaternion
 import io.github.sceneview.DEFAULT_IBL_INTENSITY
+import io.github.sceneview.EngineDestroyQueue
 import io.github.sceneview.FrameRatePolicy
 import io.github.sceneview.SceneView
 import io.github.sceneview.SurfaceType
-import io.github.sceneview.createEnvironment
 import io.github.sceneview.demo.demos.internal.ArDebugFormat
 import io.github.sceneview.demo.demos.internal.ArDebugFrame
 import io.github.sceneview.demo.demos.internal.ArDebugFraming
 import io.github.sceneview.demo.demos.internal.ArDebugGeometry
 import io.github.sceneview.demo.demos.internal.ArDebugOrbitCamera
 import io.github.sceneview.demo.demos.internal.ArDebugSession
-import io.github.sceneview.demo.demos.internal.ArDebugStats
 import io.github.sceneview.demo.demos.internal.ArDebugStyle
 import io.github.sceneview.demo.demos.internal.ArDebugTrace
+import io.github.sceneview.demo.demos.internal.OrbitLimits
 import io.github.sceneview.demo.demos.internal.DebugAnchor
 import io.github.sceneview.demo.demos.internal.DebugGroup
 import io.github.sceneview.demo.demos.internal.DebugLayer
@@ -89,13 +91,16 @@ import io.github.sceneview.demo.demos.internal.DebugMesh
 import io.github.sceneview.demo.demos.internal.DebugPlaneKind
 import io.github.sceneview.demo.demos.internal.DebugPose
 import io.github.sceneview.demo.demos.internal.IntervalGate
+import io.github.sceneview.demo.demos.internal.MeasureUnitSystem
+import io.github.sceneview.demo.demos.internal.OrbitPose
 import io.github.sceneview.demo.demos.internal.CameraRig
 import io.github.sceneview.demo.demos.internal.PlaneLayering
-import io.github.sceneview.demo.demos.internal.RoomMeasure
 import io.github.sceneview.demo.demos.internal.Vec3
 import io.github.sceneview.demo.demos.internal.ReplayGeometry
 import io.github.sceneview.demo.demos.internal.ReplayIntro
+import io.github.sceneview.demo.demos.internal.RoomMeasure
 import io.github.sceneview.demo.demos.internal.ScanPlanes
+import io.github.sceneview.demo.demos.internal.ScanFollow
 import io.github.sceneview.demo.theme.DebugPalette
 import io.github.sceneview.demo.theme.LocalStageChrome
 import io.github.sceneview.demo.theme.SceneViewTokens
@@ -104,21 +109,26 @@ import io.github.sceneview.demo.theme.SceneViewTokens.DebugView
 import io.github.sceneview.demo.theme.SceneViewTokens.Glass
 import io.github.sceneview.demo.theme.SceneViewTokens.Space
 import io.github.sceneview.demo.ui.overMediaEdge
+import io.github.sceneview.environment.Environment
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
+import io.github.sceneview.material.setColor
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.colorOf
 import io.github.sceneview.math.toLinearSpace
+import io.github.sceneview.model.Model
+import io.github.sceneview.model.ModelInstance
 import io.github.sceneview.node.MeshNode
-import io.github.sceneview.rememberEnvironment
 import io.github.sceneview.rememberModelInstance
 import io.github.sceneview.rememberRenderer
 import io.github.sceneview.rememberView
+import io.github.sceneview.safeDestroyEnvironment
 import io.github.sceneview.safeDestroyIndexBuffer
 import io.github.sceneview.safeDestroyVertexBuffer
 import io.github.sceneview.utils.readBuffer
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.util.Locale
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.roundToInt
@@ -429,9 +439,9 @@ internal class DebugLayerNode(
 }
 
 /** Colour, glow and draw priority of each layer — all from a [SceneViewTokens.DebugView] palette. */
-private class LayerPaint(val color: Color, val glow: Float = 1f, val priority: Int = 4)
+internal class LayerPaint(val color: Color, val glow: Float = 1f, val priority: Int = 4)
 
-private fun paintOf(layer: DebugLayer, palette: DebugPalette): LayerPaint = when (layer) {
+internal fun paintOf(layer: DebugLayer, palette: DebugPalette): LayerPaint = when (layer) {
     // Priority 1, not 0: the replay's photo floor (priority 0) goes under the grid.
     DebugLayer.GridMinor -> LayerPaint(palette.gridMinor, priority = 1)
     DebugLayer.GridMajor -> LayerPaint(palette.gridMajor, priority = 1)
@@ -464,15 +474,45 @@ private fun MaterialLoader.createLayerMaterial(paint: LayerPaint): MaterialInsta
     createUnlitColorInstance(paint.color).apply {
         // The opaque unlit material culls back faces; ribbons and fans are seen from both sides.
         if (paint.color.alpha >= 1f) setCullingMode(Material.CullingMode.NONE)
-        if (paint.glow != 1f) {
-            // Past 1.0 in linear light, so the bloom pass (threshold 1.0) lifts it.
-            val linear = colorOf(paint.color).toLinearSpace()
-            setParameter(
-                "color", Colors.RgbaType.LINEAR,
-                linear.x * paint.glow, linear.y * paint.glow, linear.z * paint.glow, linear.w,
-            )
-        }
+        paint(paint)
     }
+
+/** [paint]'s colour and glow on a layer's material, in place. */
+private fun MaterialInstance.paint(paint: LayerPaint) {
+    if (paint.glow == 1f) {
+        setColor(paint.color)
+    } else {
+        // Past 1.0 in linear light, so the bloom pass (threshold 1.0) lifts it.
+        val linear = colorOf(paint.color).toLinearSpace()
+        setParameter(
+            "color", Colors.RgbaType.LINEAR,
+            linear.x * paint.glow, linear.y * paint.glow, linear.z * paint.glow, linear.w,
+        )
+    }
+}
+
+/**
+ * The flat layers' material instances, one per [DebugLayer], for as long as the view lives.
+ *
+ * A theme switch recolours them in place ([paint]). Building a second set and destroying the
+ * first, as a `remember` keyed on the palette did, freed instances the scene's nodes still drew:
+ * the scene is a composition of its own, which had not let go of them yet (#4330). A layer is
+ * opaque or translucent in every palette alike, so the material it was created on always fits.
+ */
+private class LayerMaterials(private val materialLoader: MaterialLoader, private var palette: DebugPalette) {
+    val instances: Map<DebugLayer, MaterialInstance> =
+        DebugLayer.entries.associateWith { materialLoader.createLayerMaterial(paintOf(it, palette)) }
+
+    /** Takes [palette]'s colours; nothing is done while it is the one already shown. */
+    fun paint(palette: DebugPalette) {
+        if (palette === this.palette) return
+        this.palette = palette
+        instances.forEach { (layer, instance) -> instance.paint(paintOf(layer, palette)) }
+    }
+
+    /** On the main thread, after the nodes that draw them left the scene. */
+    fun destroy() = instances.values.forEach { materialLoader.destroyMaterialInstance(it) }
+}
 
 /** The parts rebuilt independently, each when its own inputs change. */
 private enum class Part(val layers: List<DebugLayer>, val group: DebugGroup) {
@@ -572,15 +612,55 @@ private class ArDebugLayers(engine: Engine, materials: Map<DebugLayer, MaterialI
         }
 }
 
-/** Grid extent for [frame]: the content bounds snapped to the grid, so it never crawls. */
-private fun stageBoundsOf(frame: ArDebugFrame): FloatArray {
-    val bounds = ArDebugGeometry.contentBounds(frame) ?: floatArrayOf(-1f, 0f, -2f, 1f, 0f, 0.5f)
+/** Grid extent for the framed [subject] bounds, snapped to the grid so it never crawls. */
+private fun stageBoundsOf(subject: FloatArray?): FloatArray {
+    val bounds = subject ?: floatArrayOf(-1f, 0f, -2f, 1f, 0f, 0.5f)
     val cell = ArDebugGeometry.GRID_CELL_M
     return floatArrayOf(
         floor(bounds[0] / cell) * cell, 0f, floor(bounds[2] / cell) * cell,
         ceil(bounds[3] / cell) * cell, 0f, ceil(bounds[5] / cell) * cell,
     )
 }
+
+/**
+ * The environment of a 3D view on the themed stage: the neutral light the placed models are lit by
+ * (the debug layers are unlit and ignore it) and a skybox in the stage's [ground] — cleared to
+ * nothing when [transparent], for a view drawn over the camera (#4628).
+ *
+ * Built once for the view. A theme switch repaints the skybox in place: building another
+ * environment for it destroyed the skybox and the light of a scene still on screen (#4330), and
+ * left a cubemap of the light on the GPU each time — [Engine.safeDestroyEnvironment] frees the
+ * light, not the texture it was built from. That texture is freed here, with the view, a few
+ * frames after the light that reads it ([EngineDestroyQueue]).
+ */
+@Composable
+internal fun rememberStageEnvironment(engine: Engine, ground: Color, transparent: Boolean = false): Environment {
+    val context = LocalContext.current
+    // The light is keyed with the environment that owns it: one never outlives the other.
+    val light = remember(engine) {
+        KTX1Loader.createIndirectLight(engine, context.assets.readBuffer("environments/neutral/neutral_ibl.ktx"))
+    }
+    // Before the environment's own effect, so Compose runs it after: the light first, then its cubemap.
+    DisposableEffect(light) {
+        onDispose { light.cubemap?.let { EngineDestroyQueue.of(engine).enqueueTexture(it) } }
+    }
+    val environment = remember(light) {
+        val stage = colorOf(ground).toLinearSpace()
+        Environment(
+            indirectLight = light.indirectLight?.also { it.intensity = DEFAULT_IBL_INTENSITY },
+            skybox = Skybox.Builder().color(stage.x, stage.y, stage.z, skyboxAlpha(transparent)).build(engine),
+        )
+    }
+    DisposableEffect(environment) { onDispose { engine.safeDestroyEnvironment(environment) } }
+    SideEffect {
+        val stage = colorOf(ground).toLinearSpace()
+        environment.skybox?.setColor(stage.x, stage.y, stage.z, skyboxAlpha(transparent))
+    }
+    return environment
+}
+
+/** A transparent view's skybox clears to nothing, so what is under the view shows through it. */
+private fun skyboxAlpha(transparent: Boolean): Float = if (transparent) 0f else 1f
 
 /**
  * The 3D debug view: a second SceneView on the demo's [engine], drawing [session] from [orbit].
@@ -590,8 +670,16 @@ private fun stageBoundsOf(frame: ArDebugFrame): FloatArray {
  *
  * [onShown] fires once, when the session's content has been on screen for a few rendered frames
  * — textures uploaded, nothing half-drawn — so a caller can hold its cover and chrome until then.
+ *
+ * [transparent] draws no ground: the layers over whatever is under the view (3D Scan's live view
+ * draws them over the dimmed camera, #4628). [visible] picks the layers drawn, the session's own
+ * choice by default. [follow], when set, is where following mode heads for each frame instead of
+ * framing the content's bounds — `null` keeps the last home. [observe] hears each frame's
+ * [ArDebugFrame] after it is drawn and changes nothing of the view: 3D Scan's coverage map
+ * reads the cloud and the trail off it (#4631).
  */
 @Composable
+@Suppress("LongParameterList") // the demo's shared engine, handed down once, and one flag per reading
 internal fun ArDebugSceneView(
     session: ArDebugSession,
     orbit: ArDebugOrbitCamera,
@@ -602,63 +690,51 @@ internal fun ArDebugSceneView(
     compact: Boolean = false,
     replay: RerunReplayMedia? = null,
     onShown: (() -> Unit)? = null,
+    transparent: Boolean = false,
+    visible: (DebugGroup) -> Boolean = session::isVisible,
+    follow: ((ArDebugFrame) -> OrbitPose?)? = null,
+    observe: ((ArDebugFrame) -> Unit)? = null,
 ) {
-    val context = LocalContext.current
     val shown by rememberUpdatedState(onShown)
+    val observer by rememberUpdatedState(observe)
     // The ground and palette of the stage this view is drawn on (#4080): the dark stage under
     // media chrome, the light one on a themed stage in light theme.
     val chrome = LocalStageChrome.current
     val palette = chrome.debug
 
     // Created before the SceneView so they are released after it (Compose forgets in reverse).
-    val materials = remember(materialLoader, palette) {
-        DebugLayer.entries.associateWith { materialLoader.createLayerMaterial(paintOf(it, palette)) }
-    }
-    DisposableEffect(materials) {
-        onDispose { materials.values.forEach { materialLoader.destroyMaterialInstance(it) } }
-    }
+    // Not keyed on the palette: what a theme switch changes is repainted in place below (#4330).
+    val materials = remember(materialLoader) { LayerMaterials(materialLoader, palette) }
+    DisposableEffect(materials) { onDispose { materials.destroy() } }
     // Linear tone mapping: the unlit layers show their token colours exactly, and the stage
     // skybox is exactly the stage's ground. Values past 1.0 still bloom (bloom runs before it).
     val colorGrading = remember(engine) {
         ColorGrading.Builder().toneMapper(ToneMapper.Linear()).build(engine)
     }
     DisposableEffect(colorGrading) { onDispose { engine.destroyColorGrading(colorGrading) } }
-    val environment = rememberEnvironment(engine, key = chrome.ground) {
-        val stage = colorOf(chrome.ground).toLinearSpace()
-        val bundle = KTX1Loader.createIndirectLight(
-            engine,
-            context.assets.readBuffer("environments/neutral/neutral_ibl.ktx"),
-        )
-        createEnvironment(
-            engine = engine,
-            // The placed models are lit; the debug layers are unlit and ignore it.
-            indirectLight = bundle.indirectLight?.also { it.intensity = DEFAULT_IBL_INTENSITY },
-            skybox = Skybox.Builder().color(stage.x, stage.y, stage.z, 1f).build(engine),
-            // The bundle's cubemap leaves with the environment, after the light (#4358).
-            textures = listOfNotNull(bundle.cubemap),
-        )
-    }
+    val environment = rememberStageEnvironment(engine, chrome.ground, transparent)
     val view = rememberView(engine)
     val renderer = rememberRenderer(engine)
 
-    val layers = remember(engine, materials) { ArDebugLayers(engine, materials) }
+    val layers = remember(engine, materials) { ArDebugLayers(engine, materials.instances) }
     // The replay's textured layers: created before the SceneView, released after its nodes.
-    val replayLayers = remember(engine, materialLoader, replay, palette, chrome.ground) {
-        replay?.let {
-            ReplayLayers(
-                engine, materialLoader, it,
-                measureInk = palette.floorOutline.toArgb(),
-                measureHalo = chrome.ground.toArgb(),
-            )
-        }
+    val measureInk = palette.floorOutline.toArgb()
+    val measureHalo = chrome.ground.toArgb()
+    val replayLayers = remember(engine, materialLoader, replay) {
+        replay?.let { ReplayLayers(engine, materialLoader, it, measureInk, measureHalo) }
     }
     DisposableEffect(replayLayers) { onDispose { replayLayers?.destroy() } }
+    // The theme's colours, on the layers the scene already draws.
+    SideEffect {
+        materials.paint(palette)
+        replayLayers?.setMeasureColors(measureInk, measureHalo)
+    }
     var anchors by remember { mutableStateOf(emptyList<DebugAnchor>()) }
     val clock = remember { FrameClock() }
 
     // The stage colour behind the view: a TextureView stays transparent until its first frame,
     // which would show the AR camera through the "3D view" for as long as the engine takes.
-    Box(modifier.background(chrome.ground)) {
+    Box(if (transparent) modifier else modifier.background(chrome.ground)) {
         SceneView(
             modifier = Modifier.matchParentSize(),
             // A TextureView composes with the chrome and the AR SurfaceView under it.
@@ -668,7 +744,7 @@ internal fun ArDebugSceneView(
             materialLoader = materialLoader,
             view = view,
             renderer = renderer,
-            isOpaque = true,
+            isOpaque = !transparent,
             frameRatePolicy = FrameRatePolicy.Continuous(maxFps = if (compact) PIP_FPS else null),
             autoCenterContent = false,
             environment = environment,
@@ -678,6 +754,8 @@ internal fun ArDebugSceneView(
                 if (!clock.configured) {
                     clock.configured = true
                     view.configureForDebug(colorGrading)
+                    // Bloom spreads past the layers' alpha: over the camera it would haze it.
+                    if (transparent) view.bloomOptions = view.bloomOptions.apply { enabled = false }
                 }
                 session.tick(dt)
 
@@ -711,46 +789,99 @@ internal fun ArDebugSceneView(
                 } else {
                     frame
                 }
-                val bounds = ArDebugGeometry.contentBounds(whole)
-                val home = ArDebugFraming.home(
-                    bounds, orbit.home.azimuthDegrees, orbit.verticalFovDegrees, orbit.aspect,
+                val finished = replay != null && !replay.growing
+                val floorY = stageFloorY(whole)
+                // A finished recording is measured once, clouds included, and seen from the side
+                // it was scanned from; a session still growing is framed on what it has so far.
+                val subject = if (finished) {
+                    clock.subject?.takeIf { clock.subjectFor === whole }
+                        ?: SceneSubject.of(whole, replay?.dense?.cloud?.positions, floorY).also {
+                            clock.subject = it
+                            clock.subjectFor = whole
+                        }
+                } else {
+                    SceneSubject(ArDebugGeometry.contentBounds(whole), room = replayLayers?.measure)
+                }
+                val bounds = subject.bounds
+                // The room's dimensions are written outside its walls: where they are drawn, the
+                // framing leaves them their room, so no figure is cut by the screen's edge.
+                val measured = subject.room.takeIf { !compact }
+                orbit.roomYawDegrees = subject.roomYawDegrees
+                val firstContent = !orbit.hasFramedContent && bounds != null
+                if (firstContent) {
+                    subject.frontAzimuth?.let { orbit.frontAzimuth = it }
+                    // Turns the automatic framing to the room's good side before it is first shown.
+                    orbit.recenter()
+                }
+                val home = ArDebugFraming.homeWithMeasure(
+                    bounds, measured, floorY, orbit.viewportHeight,
+                    orbit.home.azimuthDegrees, orbit.verticalFovDegrees, orbit.aspect,
                     elevationDegrees = orbit.homeElevation,
-                    margin = if (replay != null) ArDebugFraming.REPLAY_MARGIN else ArDebugFraming.HOME_MARGIN,
+                    band = orbit.band,
+                    fill = if (finished) 1f else ArDebugFraming.GROWING_FILL,
                 )
-                if (orbit.following) orbit.home = home
-                if (!orbit.hasFramedContent && bounds != null) {
+                val followed = follow?.invoke(frame)
+                if (orbit.following) {
+                    if (follow == null) orbit.home = home else if (followed != null) orbit.followTo(followed)
+                }
+                // A followed view stands inside the room it scans, so the room's walls cannot hold
+                // its gestures: it keeps the empty-session reach (#4628).
+                orbit.limits = if (follow == null) ArDebugFraming.limits(bounds, home, floorY) else OrbitLimits.NONE
+                if (follow != null) {
+                    // A drag orbits the cloud, not the phone behind it (#4628).
+                    if (clock.pivotFor !== frame) {
+                        clock.pivotFor = frame
+                        clock.pivot = ScanFollow.cloudCentre(frame.mapPoints) ?: bounds?.let {
+                            Position((it[0] + it[3]) / 2f, (it[1] + it[4]) / 2f, (it[2] + it[5]) / 2f)
+                        }
+                    }
+                    orbit.pivot = clock.pivot
+                    if (!orbit.hasFramedContent && followed != null) {
+                        orbit.hasFramedContent = true
+                        orbit.snapTo(followed)
+                    }
+                } else if (firstContent) {
                     orbit.hasFramedContent = true
-                    val intro = replay != null && !replay.growing && orbit.drift
-                    if (intro) orbit.playIntro(ReplayIntro.startFor(home), held = true) else orbit.snapTo(home)
+                    if (finished && orbit.drift) {
+                        orbit.playIntro(ReplayIntro.startFor(home), held = true)
+                    } else {
+                        orbit.snapTo(home)
+                    }
                 }
 
                 val style = ArDebugStyle.forOrbit(orbit.pose.distance, orbit.verticalFovDegrees, orbit.viewportHeight)
-                val floorY = (ArDebugGeometry.floorHeight(whole) * 100f).roundToInt() / 100f
                 // The picture-in-picture packs the room into a few hundred pixels: full-size points
                 // would read as noise there, so they shrink while lines keep their weight.
                 val pointStyle = if (compact) ArDebugStyle(style.metresPerPixel * PIP_POINT_SCALE) else style
-                layers.sync(frame, style, pointStyle, stageBoundsOf(whole), floorY, session::isVisible, replayLayers)
+                layers.sync(frame, style, pointStyle, stageBoundsOf(bounds), floorY, visible, replayLayers)
                 replayLayers?.sync(
                     frame, pointStyle, floorY,
                     ReplayVisibility(
-                        planes = session.isVisible(DebugGroup.Planes),
-                        points = session.isVisible(DebugGroup.Points),
-                        anchors = session.isVisible(DebugGroup.Anchors),
-                        trail = session.isVisible(DebugGroup.Trail),
+                        planes = visible(DebugGroup.Planes),
+                        points = visible(DebugGroup.Points),
+                        anchors = visible(DebugGroup.Anchors),
+                        trail = visible(DebugGroup.Trail),
                         measure = !compact,
+                        measureOnTop = orbit.overhead,
                     ),
                     eye = CameraRig.eye(orbit.pose).let { Vec3(it.x, it.y, it.z) },
                 )
 
+                observer?.invoke(frame)
                 if (frame.anchors != anchors) anchors = frame.anchors
                 if (frameTimeNanos - clock.statsAtNanos >= STATS_INTERVAL_NS) {
                     clock.statsAtNanos = frameTimeNanos
                     // A replay with a dense cloud counts its surfels, as the sessions list does.
                     val points = replay?.pointCountAt(frame.time) ?: frame.mapPointCount
-                    session.stats = ArDebugStats.of(frame, trace.duration, points).let { stats ->
-                        // A replay names the room it found, as a floor plan would.
-                        if (replay == null) stats else stats.copy(room = RoomMeasure.of(frame.planes, floorY)?.summary)
-                    }
+                    session.count(frame, points)
+                }
+                // A replay names the room it found, as a floor plan would: the one its dimensions
+                // draw ([ReplayLayers.measure]), so the two never disagree — and on the frame the
+                // floor redraws them, rather than a stats tick later.
+                if (replayLayers != null) {
+                    val locale = Locale.getDefault()
+                    val room = replayLayers.measure?.summary(MeasureUnitSystem.forLocale(locale), locale)
+                    if (session.stats.room != room) session.stats = session.stats.copy(room = room)
                 }
                 // onFrame only fires for a frame that reached the surface (#3444): counting them is
                 // counting what the user has actually seen.
@@ -764,14 +895,12 @@ internal fun ArDebugSceneView(
                 }
             },
         ) {
-            // The layer nodes hang off a plain node, and are destroyed with it. Keyed on their
-            // layers: a new palette (a theme switch on a themed stage) or a new replay rebuilds
-            // them, and the old nodes must leave the scene before their materials and textures
-            // are released — Compose forgets this group before the effects above. One node held
-            // the first set for good, drawing freed textures: "Invalid texture still bound".
+            // Each set of layer nodes hangs off one plain node, and is destroyed with it. Keyed on
+            // the set: were it ever replaced while the view stays, its nodes leave the scene before
+            // its material instances are destroyed, and the next set's nodes are attached.
             key(layers) { Node(apply = { layers.nodes.values.forEach { addChildNode(it) } }) }
             key(replayLayers) { Node(apply = { replayLayers?.nodes?.forEach { addChildNode(it) } }) }
-            if (session.isVisible(DebugGroup.Anchors)) {
+            if (visible(DebugGroup.Anchors)) {
                 anchors.forEach { anchor ->
                     // One instance per anchor: a Filament model instance can only hang off one node.
                     key(anchor.id) {
@@ -791,6 +920,35 @@ internal fun ArDebugSceneView(
     }
 }
 
+/**
+ * What the camera frames of a session: its [bounds], the side it is best seen from
+ * ([frontAzimuth], `null` while the path names none), the heading of its walls
+ * ([roomYawDegrees], `null` without any) and the [room] its dimensions are written round
+ * (`null` when it holds none).
+ */
+internal class SceneSubject(
+    val bounds: FloatArray?,
+    val frontAzimuth: Float? = null,
+    val roomYawDegrees: Float? = null,
+    val room: RoomMeasure? = null,
+) {
+    companion object {
+        /**
+         * The subject of the finished recording [whole], with its [dense] cloud (flat xyz) and
+         * its floor at [floorY].
+         */
+        fun of(whole: ArDebugFrame, dense: FloatArray?, floorY: Float): SceneSubject {
+            val bounds = ArDebugGeometry.subjectBounds(whole, dense)
+            return SceneSubject(
+                bounds = bounds,
+                frontAzimuth = ArDebugFraming.frontAzimuth(bounds, whole.trail),
+                roomYawDegrees = ArDebugGeometry.roomYawDegrees(whole.planes),
+                room = RoomMeasure.of(whole.planes, floorY),
+            )
+        }
+    }
+}
+
 /** Per-view frame bookkeeping, deliberately not Compose state: it changes every frame. */
 private class FrameClock {
     var lastNanos = 0L
@@ -802,6 +960,10 @@ private class FrameClock {
     var statsAtNanos = 0L
     var wholeFrame: ArDebugFrame? = null
     var wholeFor: ArDebugTrace? = null
+    var subject: SceneSubject? = null
+    var subjectFor: ArDebugFrame? = null
+    var pivotFor: ArDebugFrame? = null
+    var pivot: Position? = null
     var contentFrames = 0
     var shown = false
 
@@ -837,7 +999,10 @@ internal fun com.google.android.filament.View.configureForDebug(colorGrading: Co
 private const val PIP_FPS = 30
 private const val PIP_POINT_SCALE = 0.55f
 private const val FRAME_INTERVAL_NS = 50_000_000L // rebuild the frame at most at 20 Hz
-private const val STATS_INTERVAL_NS = 250_000_000L
+internal const val STATS_INTERVAL_NS = 250_000_000L
+
+/** The floor the stage stands on, to the centimetre. [whole] is the frame the scene is framed on. */
+internal fun stageFloorY(whole: ArDebugFrame): Float = (ArDebugGeometry.floorHeight(whole) * 100f).roundToInt() / 100f
 private const val BLOOM_STRENGTH = 0.28f
 private const val ANCHOR_MODEL_SIZE_M = 0.3f
 
@@ -1072,7 +1237,8 @@ private fun LiveChip(live: Boolean, onClick: () -> Unit) {
 
 private const val LIVE_FILL_ALPHA = 0.22f
 
-internal const val AR_DEBUG_PIP_TAG = "ar_debug_pip"
 internal const val AR_DEBUG_LEGEND_TAG = "ar_debug_legend"
 internal const val AR_DEBUG_TIMELINE_TAG = "ar_debug_timeline"
 internal const val AR_DEBUG_LIVE_TAG = "ar_debug_live"
+
+internal const val AR_DEBUG_PIP_TAG = "ar_debug_pip"

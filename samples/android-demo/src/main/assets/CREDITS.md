@@ -15,7 +15,7 @@ Re-run that script after adding, removing or re-compressing a bundled asset;
 `ci.yml` → `build` (step "Check asset credits") fails if this file and the
 assets disagree.
 
-Assets bundled: **42**.
+Assets bundled: **47**.
 
 > **Optimization note (#934, #2305).** The bundled GLBs and HDRs are compressed
 > for a lean APK while preserving on-device visual quality:
@@ -43,8 +43,8 @@ Assets bundled: **42**.
 - `models/khronos_toy_car.glb` — **[Toy Car](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/ToyCar)** by Guido Odendahl (model); Eric Chadwick (extensions and scene composition) — [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/) (2.2 MB)
 - `models/night_circuit.glb` — **[Night circuit (Khronos Car Concept on a SceneView set)](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/CarConcept)** by Darmstadt Graphics Group GmbH (Eric Chadwick); set by SceneView — [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/) (4.2 MB)  
   The Car Concept on the night circuit built by `tools/scenes/circuit/build.sh`, the android-demo home hero (#3948)
+- `models/quaternius_ranger.glb` — **[Ranger](https://quaternius.com/packs/modularcharacteroutfitsfantasy.html)** by Quaternius — [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/) (5.7 MB)
 - `models/shiba.glb` — **[Shiba](https://sketchfab.com/3d-models/shiba-faef9fe5ace445e7b2989d1c1ece361c)** by zixisun51 — [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/) (669 KB)
-- `models/threejs_soldier.glb` — **[Soldier](https://github.com/mrdoob/three.js/blob/dev/examples/models/gltf/Soldier.glb)** by Tomás Laulhé (modified by Don McCurdy) — [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/) (2.3 MB)
 - `splats/rainbow_sphere.ply` — **[rainbow_sphere.ply](https://github.com/sceneview/sceneview/blob/main/LICENSE)** by SceneView project — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) (448 KB)  
   Generated procedurally by `tools/generate-splat-sphere.py`
 
@@ -83,10 +83,18 @@ Assets bundled: **42**.
   Compiled from `samples/android-demo/src/main/materials/cosmos_ribbon.mat` (Cosmos demo, #4152)
 - `materials/cosmos_ring.filamat` — **[cosmos_ring.filamat](https://github.com/sceneview/sceneview/blob/main/LICENSE)** by SceneView project — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) (44 KB)  
   Compiled from `samples/android-demo/src/main/materials/cosmos_ring.mat` (Cosmos ringed world, #4192)
-- `materials/cosmos_spacetime.filamat` — **[cosmos_spacetime.filamat](https://github.com/sceneview/sceneview/blob/main/LICENSE)** by SceneView project — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) (52 KB)  
+- `materials/cosmos_spacetime.filamat` — **[cosmos_spacetime.filamat](https://github.com/sceneview/sceneview/blob/main/LICENSE)** by SceneView project — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) (54 KB)  
   Compiled from `samples/android-demo/src/main/materials/cosmos_spacetime.mat` (Cosmos Spacetime view)
 - `materials/cosmos_sprite.filamat` — **[cosmos_sprite.filamat](https://github.com/sceneview/sceneview/blob/main/LICENSE)** by SceneView project — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) (43 KB)  
   Compiled from `samples/android-demo/src/main/materials/cosmos_sprite.mat` (Cosmos demo, #4152)
+- `materials/pool_coping.filamat` — **[pool_coping.filamat](https://github.com/sceneview/sceneview/blob/main/LICENSE)** by SceneView project — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) (627 KB)  
+  Compiled from `samples/android-demo/src/main/materials/pool_coping.mat` (Pool in the garden)
+- `materials/pool_liner.filamat` — **[pool_liner.filamat](https://github.com/sceneview/sceneview/blob/main/LICENSE)** by SceneView project — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) (742 KB)  
+  Compiled from `samples/android-demo/src/main/materials/pool_liner.mat` (Pool in the garden)
+- `materials/pool_night_veil.filamat` — **[pool_night_veil.filamat](https://github.com/sceneview/sceneview/blob/main/LICENSE)** by SceneView project — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) (45 KB)  
+  Compiled from `samples/android-demo/src/main/materials/pool_night_veil.mat` (Pool in the garden)
+- `materials/pool_water.filamat` — **[pool_water.filamat](https://github.com/sceneview/sceneview/blob/main/LICENSE)** by SceneView project — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) (582 KB)  
+  Compiled from `samples/android-demo/src/main/materials/pool_water.mat` (Pool in the garden)
 - `materials/showroom_floor.filamat` — **[showroom_floor.filamat](https://github.com/sceneview/sceneview/blob/main/LICENSE)** by SceneView project — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) (631 KB)  
   Compiled from `samples/android-demo/src/main/materials/showroom_floor.mat` (Model Viewer showroom floor)
 - `materials/studio_glass.filamat` — **[studio_glass.filamat](https://github.com/sceneview/sceneview/blob/main/LICENSE)** by SceneView project — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) (536 KB)  
@@ -95,6 +103,8 @@ Assets bundled: **42**.
   Compiled from `samples/android-demo/src/main/materials/studio_pbr.mat`
 - `materials/tray_wood.filamat` — **[tray_wood.filamat](https://github.com/sceneview/sceneview/blob/main/LICENSE)** by SceneView project — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) (733 KB)  
   Compiled from `samples/android-demo/src/main/materials/tray_wood.mat` (Rolling Balls board)
+- `materials/viewer_grid.filamat` — **[viewer_grid.filamat](https://github.com/sceneview/sceneview/blob/main/LICENSE)** by SceneView project — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) (46 KB)  
+  Compiled from `samples/android-demo/src/main/materials/viewer_grid.mat` (3D viewers' ground grid, #4651)
 - `mediapipe/pose_landmarker_lite.task` — **[MediaPipe Pose Landmarker (lite)](https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker)** by Google LLC — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) (5.8 MB)  
   On-device pose model bundle used by `ARBodyTrackerDemo`
 - `rerun/sample-session.jsonl` — **[sample-session.jsonl](https://github.com/sceneview/sceneview/blob/main/LICENSE)** by SceneView project — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) (176 KB)  
@@ -157,7 +167,7 @@ Listed from [`assets/hd-pack/android.json`](../../../../../assets/hd-pack/androi
 - `jansport-backpack` — **[JanSport backpack](https://app.gazebosim.org/GoogleResearch/fuel/models/Jansport_School_Backpack_Blue_Streak)** by Google LLC — [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/) (1.3 MB)
 - `jbl-charge-speaker` — **[JBL Charge speaker](https://app.gazebosim.org/GoogleResearch/fuel/models/JBL_Charge_Speaker_portable_wireless_wired_Green)** by Google LLC — [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/) (547 KB)
 - `jbl-tour-one-m3-v2` — **[JBL Tour One M3 headphones](https://sketchfab.com/3d-models/jbl-tour-one-m3-black-45f0b3ccbee84492a05998d5daecff16)** by cubemodelex — [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/) (4.4 MB)
-- `kitchenaid-stand-mixer` — **[KitchenAid stand mixer](https://sketchfab.com/3d-models/kitchenaid-stand-mixer-716dfa11eb8f4020833584a3c3d09d5d)** by MelissaVerdonck — [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/) (3.1 MB)
+- `kitchenaid-stand-mixer` — **[KitchenAid stand mixer](https://sketchfab.com/3d-models/kitchenaid-stand-mixer-716dfa11eb8f4020833584a3c3d09d5d)** by MelissaVerdonck — [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/) (2.8 MB)
 - `macbook-pro-13` — **[MacBook Pro 13"](https://sketchfab.com/3d-models/macbook-pro-13-inch-2020-efab224280fd4c3993c808107f7c0b38)** by timblewee — [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/) (3.6 MB)
 - `mech-drone` — **[Mech drone (sci-fi)](https://sketchfab.com/3d-models/mech-drone-8d06874aac5246c59edb4adbe3606e0e)** by Willy Decarpentrie — [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/) (4.7 MB)
 - `mini-cooper-s` — **[MINI Cooper S](https://sketchfab.com/3d-models/mini-cooper-s-b262744901a04cda823f17289d1a4847)** by cenobyte — [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/) (4.5 MB)

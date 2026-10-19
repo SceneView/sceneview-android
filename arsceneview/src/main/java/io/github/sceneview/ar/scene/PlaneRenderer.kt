@@ -1,8 +1,12 @@
+@file:Suppress("DEPRECATION")
+
 package io.github.sceneview.ar.scene
 
+import android.util.Size
 import com.google.android.filament.Engine
 import com.google.android.filament.MaterialInstance
 import com.google.android.filament.Scene
+import com.google.android.filament.Texture
 import com.google.ar.core.Frame
 import com.google.ar.core.Plane
 import com.google.ar.core.Session
@@ -51,7 +55,7 @@ class PlaneRenderer(
     val engine: Engine,
     private val materialLoader: MaterialLoader,
     private val scene: Scene
-) {
+) : PlaneRendererBase {
 
     /** Which tracked planes [PlaneRenderer] draws. */
     enum class PlaneRendererMode {
@@ -114,12 +118,38 @@ class PlaneRenderer(
      */
     var maxUpdatesPerSecond: Int = 10
 
+    /** Former name of [maxUpdatesPerSecond]: reads and writes the same value. */
+    @Deprecated(
+        "Renamed: it bounds plane updates, not hit tests.",
+        ReplaceWith("maxUpdatesPerSecond"),
+    )
+    var maxHitTestPerSecond: Int
+        get() = maxUpdatesPerSecond
+        set(value) {
+            maxUpdatesPerSecond = value
+        }
+
+    /**
+     * Always `null`: the surface marks are procedural and no texture is loaded any more. The
+     * textured-grid renderer this belonged to was folded into this one in 4.57.0 (#4307).
+     */
+    @Deprecated("The plane marks are procedural: there is no plane texture any more. Always null.")
+    val planeTexture: Texture? get() = null
+
+    /**
+     * Display size of the surface the renderer draws into, still set by `ARSceneView` on every
+     * resize. Nothing reads it: the plane under the centre of the screen is picked from the
+     * camera pose (#3339), which needs no viewport size.
+     */
+    @Deprecated("Unused since centre-plane selection stopped hit-testing the screen (#3339).")
+    override lateinit var viewSize: Size
+
     /**
      * ### Enable/disable the plane renderer.
      *
      * Disabling fades the planes out; enabling fades them back in.
      */
-    var isEnabled = true
+    override var isEnabled = true
         set(value) {
             if (field != value) {
                 field = value
@@ -133,7 +163,7 @@ class PlaneRenderer(
      * If false - no planes are drawn. Note that shadow visibility is independent of plane
      * visibility.
      */
-    var isVisible = true
+    override var isVisible = true
         set(value) {
             if (field != value) {
                 field = value
@@ -148,7 +178,7 @@ class PlaneRenderer(
      *
      * If false - no planes receive shadows, regardless of the per-plane setting.
      */
-    var isShadowReceiver = true
+    override var isShadowReceiver = true
         set(value) {
             if (field != value) {
                 field = value
@@ -172,7 +202,7 @@ class PlaneRenderer(
      * animations.
      */
     @Suppress("UNUSED_PARAMETER", "UnusedParameter")
-    fun update(session: Session, frame: Frame) {
+    override fun update(session: Session, frame: Frame) {
         if (isEnabled && frame.fps(this.frame) < maxUpdatesPerSecond) {
             this.frame = frame
             isCameraTracking = frame.camera.isTracking
@@ -206,7 +236,7 @@ class PlaneRenderer(
     }
 
     /** Releases every plane visualizer and the two materials. Called by `ARSceneView`. */
-    fun destroy() {
+    override fun destroy() {
         // Visualizers first: each one takes its entity out of the scene before its two
         // MaterialInstances are destroyed.
         visualizers.clear()
@@ -261,6 +291,17 @@ class PlaneRenderer(
     }
 
     companion object {
+        /** No longer a parameter of the plane material, which has no texture. */
+        @Deprecated("The plane material has no texture parameter any more (#4307).")
+        const val MATERIAL_TEXTURE = "texture"
+
+        /** No longer a parameter of the plane material: tint the marks with [MATERIAL_GRID_TINT]. */
+        @Deprecated(
+            "The plane material has no colour parameter any more: use MATERIAL_GRID_TINT.",
+            ReplaceWith("MATERIAL_GRID_TINT"),
+        )
+        const val MATERIAL_COLOR = "color"
+
         /** Float2 — marks per metre along the two surface axes (default 10 × 10). */
         const val MATERIAL_UV_SCALE = "uvScale"
 

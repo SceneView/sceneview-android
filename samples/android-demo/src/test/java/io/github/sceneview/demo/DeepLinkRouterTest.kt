@@ -481,6 +481,11 @@ class DeepLinkRouterTest {
             "ar-hand-tracking" to "ar-xr",
             "ar-xr-face" to "ar-xr",
             "video-recording" to "cosmos",
+            // AR catalogue clean-up, wave 1 (`ar-ml-object-label` stays registered, unlisted:
+            // it is Point & Ask's on-device fallback).
+            "ar-fog" to "lighting",
+            "ar-scene-mesh" to "ar-geospatial-anchors",
+            "ar-depth-collider" to "rolling-balls",
         )
         expected.forEach { (retired, card) ->
             assertEquals("validate('$retired')", card, DeepLinkRouter.validate(retired, ALL_DEMOS))
@@ -496,8 +501,15 @@ class DeepLinkRouterTest {
             )
             assertNull("'$retired' is retired", ALL_DEMOS.find { it.id == retired })
         }
-        // 42 since #4603 folded `lighting-lab` into `lighting`.
-        assertEquals("Android ships 42 cards after step 0 and #4603", 42, ALL_DEMOS.size)
+        // 42 since #4603 folded `lighting-lab` into `lighting`, plus Finger Drawing (#4082) and
+        // Pool in the garden; 41 since wave 1 of the AR catalogue clean-up retired three AR ids
+        // and hid a fourth (`ar-ml-object-label`, registered but unlisted as Point & Ask's
+        // on-device fallback).
+        assertEquals(
+            "Android registers 41 demos after step 0, #4603, Finger Drawing, Pool in the garden and wave 1",
+            41,
+            ALL_DEMOS.size,
+        )
     }
 
     @Test
@@ -533,8 +545,14 @@ class DeepLinkRouterTest {
         // The old in-card tabs keep their index inside the default mode.
         assertEquals(DeepLinkRouter.Launch("ar-placement", 1), launch("wall-placement"))
         assertEquals(DeepLinkRouter.Launch("ar-geospatial-anchors", 1), launch("ar-rooftop"))
-        // `ar-scene-mesh` lost its Streetscape mode, so it reads no tab any more.
-        assertEquals(DeepLinkRouter.Launch("ar-scene-mesh", null), launch("ar-scene-mesh", "1"))
+        // AR catalogue clean-up, wave 1: the four retired AR cards open the sample that now
+        // carries their subject, on the mode that shows it.
+        assertEquals(DeepLinkRouter.Launch("ar-geospatial-anchors", 2), launch("ar-scene-mesh"))
+        assertEquals(DeepLinkRouter.Launch("rolling-balls", 2), launch("ar-depth-collider"))
+        assertEquals(DeepLinkRouter.Launch("rolling-balls", 2), launch("rolling-balls", "table"))
+        // Point & Ask's fallback opens the ML Kit object labels themselves, never Point & Ask.
+        assertEquals(DeepLinkRouter.Launch("ar-ml-object-label", null), launch("ar-ml-object-label"))
+        assertEquals(DeepLinkRouter.Launch("lighting", null), launch("ar-fog"))
     }
 
     @Test

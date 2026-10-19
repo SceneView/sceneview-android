@@ -10,7 +10,7 @@
     <string name="ar_surfaces_dock_surfaces_label">Show detected surfaces</string>
     <string name="ar_surfaces_dock_surfaces_caption">Surfaces</string>
     <string name="ar_surfaces_status_scanning">Move your phone slowly: dots mark floors, dashes mark walls.</string>
-    <string name="ar_surfaces_status_found">Tap the floor to place the car.</string>
-    <string name="ar_surfaces_status_placed">Drag the car to move it, twist to turn it, or tap the floor to put it elsewhere.</string>
+    <string name="ar_surfaces_status_found">Tap the floor to place the sofa.</string>
+    <string name="ar_surfaces_status_placed">Drag the sofa to move it, twist to turn it, or tap the floor to put it elsewhere.</string>
     <string name="ar_surfaces_status_move">Move your phone slowly so it can see the room.</string>
 </resources>

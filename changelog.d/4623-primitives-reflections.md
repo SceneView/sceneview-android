@@ -1,0 +1,2 @@
+<!-- category: Changed -->
+- **android-demo — Geometry Primitives:** the seven shapes now open in studio finishes instead of one flat tint: a mirror-chrome sphere, polished gold torus, satin copper capsule, satin aluminium cylinder, glazed ceramic cone and clear-coated lacquer on the cube and the plane, so the studio light shows up as reflections and highlights. Settings has **Studio finishes / One material**: the Metallic and Roughness sliders still drive one shared material, and dragging either one switches to it (#4623).

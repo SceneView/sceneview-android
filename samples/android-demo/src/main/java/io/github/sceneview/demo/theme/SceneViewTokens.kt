@@ -67,6 +67,18 @@ object SceneViewTokens {
         )
     }
 
+    /**
+     * `DESIGN.md` — `stage-grid-minor` / `stage-grid-major`: the ground grid every 3D viewer of
+     * the demo shares (#4651, `ViewerGroundGrid`). Colour and alpha both: the grid is drawn over
+     * the floor, never instead of it.
+     */
+    object ViewerGrid {
+        val LightMinor = Color(0x735C6780)
+        val LightMajor = Color(0xBF5C6780)
+        val DarkMinor = Color(0x388B95A6)
+        val DarkMajor = Color(0x738B95A6)
+    }
+
     /** `DESIGN.md` — Spatial Gallery overlay colours. */
     object SpatialGalleryColor {
         val stageScrimStart = Color.Transparent
@@ -395,6 +407,13 @@ object SceneViewTokens {
         val heroSubtitleMaxWidth = 260.dp
         val heroPillHeight = 44.dp
         val heroPillPaddingHorizontal = 18.dp
+        /**
+         * The arrow after the hero pill's label (#4622): the pill is the page's one action,
+         * and a bare word on a busy live stage read as a caption, not a button.
+         */
+        val heroPillIconSize = 18.dp
+        /** Gap between the hero pill's label and its arrow — `space-sm`. */
+        val heroPillIconGap = 8.dp
         val heroTopGap = 8.dp
         val chipRowTopGap = 28.dp
         val chipRowHeight = 40.dp
@@ -578,6 +597,14 @@ object SceneViewTokens {
         val onScrim = Color(0xFFFFFFFF)
 
         /**
+         * `ar-camera-dim` — the veil over the live camera under 3D Scan's coloured cloud
+         * (#4628): dark enough that the cloud's own colours lead, light enough that what is
+         * not scanned yet still reads on the camera behind and guides the next move. Black
+         * at 55 % in both themes: the ground is the camera, not a `surface`.
+         */
+        val cameraDim = Color(0x8C000000)
+
+        /**
          * `on-ar-scrim-dim` — secondary text on an AR overlay (labels, captions, the
          * body of an explanation card). White at 72 % in both themes, like [onScrim],
          * because the ground is a camera frame and not a `surface`.
@@ -702,17 +729,18 @@ object SceneViewTokens {
             trailOld = Color(0xFF5A32A3),
             trailMid = Color(0xFFD2A8FF),
             trailNew = Color(0xFFA4C1FF),
-            trailHeadGlow = 2.6f,
+            // Glows are held low (#4306): the room is the result, the tracking aids stand behind it.
+            trailHeadGlow = 2.0f,
             // The live camera frustum, and the fainter history frusta left every 60 cm.
             frustum = Color(0xFFA4C1FF),
-            frustumGlow = 1.8f,
-            frustumFace = Color(0x33A4C1FF),
-            keyframe = Color(0x59A4C1FF),
+            frustumGlow = 1.4f,
+            frustumFace = Color(0x24A4C1FF),
+            keyframe = Color(0x40A4C1FF),
             // Map points: everything seen so far, dim white — the room emerges as a cloud.
             mapPoint = Color(0x8CFFFFFF),
             // Live points: what the camera sees this second — `warning`, glowing.
             livePoint = Color(0xFFF59E0B),
-            livePointGlow = 2.0f,
+            livePointGlow = 1.4f,
             // Planes: translucent fill + solid outline, by orientation.
             floorFill = Color(0x29A4C1FF),
             floorOutline = Color(0xD9A4C1FF),
@@ -746,8 +774,8 @@ object SceneViewTokens {
             trailHeadGlow = 1f,
             frustum = Color(0xFF005BC1),
             frustumGlow = 1f,
-            frustumFace = Color(0x29005BC1),
-            keyframe = Color(0x66005BC1),
+            frustumFace = Color(0x1F005BC1),
+            keyframe = Color(0x4D005BC1),
             mapPoint = Color(0x8C1A1A2E),
             livePoint = Color(0xFFF59E0B),
             livePointGlow = 1f,
@@ -765,6 +793,14 @@ object SceneViewTokens {
             axisY = Color(0xFF16A34A),
             axisZ = Color(0xFF005BC1),
         )
+
+        /**
+         * A phone on its side (#4306, #4379): under [compactStageHeight] the window has no height
+         * to give a row above or under the room. The replay's timeline bar stands in the top
+         * corner, [compactCardWidth] wide, and the room keeps the middle.
+         */
+        val compactStageHeight = 500.dp
+        val compactCardWidth = 280.dp
 
         /** Picture-in-picture over the camera: portrait 3:4, like the phone it shows. */
         val pipWidth = 128.dp

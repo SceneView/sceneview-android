@@ -54,12 +54,14 @@ import com.google.android.filament.Renderer
 import com.google.android.filament.Scene
 import com.google.android.filament.View
 import com.google.android.filament.View.BlendMode
+import io.github.sceneview.camera.CinematicCameraManipulator
 import io.github.sceneview.collision.CollisionSystem
 import io.github.sceneview.collision.HitResult
 import io.github.sceneview.environment.Environment
 import io.github.sceneview.gesture.CameraGestureDetector
 import io.github.sceneview.gesture.CameraViewportSeed
 import io.github.sceneview.gesture.GestureDetector
+import io.github.sceneview.gesture.Inertia
 import io.github.sceneview.gesture.MoveGestureDetector
 import io.github.sceneview.gesture.RotateGestureDetector
 import io.github.sceneview.gesture.ScaleGestureDetector
@@ -515,6 +517,12 @@ fun SceneView(
         renderInvalidator?.attach(frameRateGate)
         onDispose { renderInvalidator?.detach(frameRateGate) }
     }
+    // A cinematic move started from outside the loop — a button, a `LaunchedEffect` — must wake a
+    // parked scene: once parked, nothing polls `cameraManipulator.isFrameActive` (#4652).
+    DisposableEffect(cameraManipulator, sceneInvalidator) {
+        val stop = (cameraManipulator as? CinematicCameraManipulator)?.wakeOnMoves(sceneInvalidator)
+        onDispose { stop?.invoke() }
+    }
 
     // ── Filament wiring — one keyed effect per parameter, each asking for the frame it needs ──────
     //
@@ -531,7 +539,16 @@ fun SceneView(
     // keyed on exactly that parameter (the pattern `renderQuality` already used since #1078), and
     // each asks for the frame its own write needs. Parameters that write nothing visible ask for
     // nothing, and are listed — with the reason — in the pull request's parameter table.
-    LaunchedEffect(scene, environment) {
+    //
+    // The environment is the one exception to "a `LaunchedEffect` per parameter": it is a
+    // `DisposableEffect`, because the scene has to let go of an environment before its owner
+    // destroys it (#4330). `rememberEnvironment(key = …)` destroys the previous environment in the
+    // same pass that hands this composable the next one; a `LaunchedEffect` only gave the scene
+    // the new skybox a dispatch later, and Filament's `Scene.setSkybox` reads the skybox it
+    // replaces — by then freed memory (SIGSEGV on a dark/light toggle). This effect is remembered
+    // after the caller's, so its `onDispose` runs first: the scene is already empty-handed when
+    // the old environment dies, and the swap completes before any frame can be drawn.
+    DisposableEffect(scene, environment) {
         scene.indirectLight = environment.indirectLight
         scene.skybox = environment.skybox
         // The first frozen image anyone would have hit: a dark/light toggle that swaps the
@@ -539,6 +556,12 @@ fun SceneView(
         // nothing else reports it, so without this the old sky stays on screen until something
         // unrelated wakes the loop.
         frameRateGate.requestRender()
+        onDispose {
+            // Only what this effect put there: a `ReflectionProbeNode`, or the caller, may have
+            // given the scene another light since.
+            if (scene.skybox === environment.skybox) scene.skybox = null
+            if (scene.indirectLight === environment.indirectLight) scene.indirectLight = null
+        }
     }
     LaunchedEffect(view, scene) {
         view.scene = scene
@@ -919,6 +942,10 @@ fun SceneView(
                 gestureDetector.onTouchEvent(event, hitResult)
                 if (!absorbedByEditableNode) {
                     cameraGestureDetectorRef.get()?.onTouchEvent(event)
+                } else if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+                    // The camera detector never sees this touch, but a finger on the screen still
+                    // stops a camera that is coasting from the previous flick.
+                    cameraGestureDetectorRef.get()?.stopInertia()
                 }
             }
         }
@@ -1095,7 +1122,9 @@ fun SceneView(
                             val active = isSceneFrameActive(
                                 gestureInFlight = gestureInFlightRef.get(),
                                 cameraMoved = cameraMoved,
-                                cameraPending = cameraPending,
+                                // A node edit coasting after release moves the scene with no
+                                // finger down and, in a scene with no manipulator, no camera.
+                                cameraPending = cameraPending || gestureDetector.isCoasting,
                                 hasActiveNode = frameActivity.hasActiveNode,
                                 // Not `progress < 1f`: Filament reports 0 for a loader that was
                                 // never asked for an async load, which read as "loading" for the
@@ -1149,6 +1178,10 @@ fun SceneView(
                             frameTimeNanos,
                             lastFrameTimeNanosRef.get().takeIf { it != 0L }
                         ).toFloat()
+
+                        // A node drag / twist / pinch still coasting after release takes its step
+                        // here, with the same capped time step as the camera.
+                        gestureDetector.advanceInertia(frameDelta)
 
                         // Library-level auto-center (#1026). No-op once the content union has settled
                         // and the gate latched, and skipped while the content bounds are still empty
@@ -2151,8 +2184,33 @@ fun rememberOnGestureListener(
  *                          `SceneView` forwards to your code and never wires to the camera.
  * @param targetPosition    Point in world space the camera orbits around and initially looks at
  *                          (optional; defaults to the origin). Does not affect the distance.
+ * @param inertia           How orbit, pan and pinch coast after the finger lifts.
+ *                          [Inertia.Default] (the default) coasts like a native fling;
+ *                          [Inertia.None] stops the camera dead on release. Applied to the
+ *                          manipulator [creator] returns when it is a
+ *                          [CameraGestureDetector.DefaultCameraManipulator].
  * @param creator           Factory for the manipulator. Override to set a custom orbit speed, etc.
  */
+@Composable
+fun rememberCameraManipulator(
+    orbitHomePosition: Position? = null,
+    targetPosition: Position? = null,
+    inertia: Inertia = Inertia.Default,
+    creator: () -> CameraGestureDetector.CameraManipulator = {
+        createDefaultCameraManipulator(orbitHomePosition, targetPosition)
+    }
+): CameraGestureDetector.CameraManipulator = remember(creator).also { it.applyInertia(inertia) }
+
+/**
+ * Binary-compatibility shim for the pre-`inertia` descriptor of [rememberCameraManipulator]. The
+ * Compose compiler puts every parameter in the JVM signature, so the new parameter retyped the
+ * function: this keeps a library compiled against the old signature linking, with the default
+ * [Inertia].
+ */
+@Deprecated(
+    "Binary-compatibility overload. Use the rememberCameraManipulator overload that takes `inertia`.",
+    level = DeprecationLevel.HIDDEN,
+)
 @Composable
 fun rememberCameraManipulator(
     orbitHomePosition: Position? = null,
@@ -2160,7 +2218,12 @@ fun rememberCameraManipulator(
     creator: () -> CameraGestureDetector.CameraManipulator = {
         createDefaultCameraManipulator(orbitHomePosition, targetPosition)
     }
-) = remember(creator)
+) = rememberCameraManipulator(
+    orbitHomePosition = orbitHomePosition,
+    targetPosition = targetPosition,
+    inertia = Inertia.Default,
+    creator = creator,
+)
 
 /**
  * Creates and remembers a [ViewNode.WindowManager] required by [SceneScope.ViewNode].

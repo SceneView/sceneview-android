@@ -4,6 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.Locale
 import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.sin
@@ -44,7 +45,7 @@ class RoomMeasureTest {
         assertEquals(yaw, measure.yaw, 1e-3f)
         assertEquals(3.4f, measure.width, 1e-3f)
         assertEquals(4.1f, measure.depth, 1e-3f)
-        assertEquals("3.4 × 4.1 m · 14 m²", measure.summary)
+        assertEquals("3.40 m × 4.10 m · 13.9 m²", measure.summary(MeasureUnitSystem.Metric, Locale.US))
     }
 
     @Test
@@ -78,11 +79,18 @@ class RoomMeasureTest {
     }
 
     @Test
-    fun `figures read as a plan writes them`() {
-        assertEquals("3.4 m", RoomMeasure.metres(3.43f))
-        assertEquals("12 m", RoomMeasure.metres(12.4f))
-        assertEquals("2.5 m²", RoomMeasure.squareMetres(2.5f))
-        assertEquals("14 m²", RoomMeasure.squareMetres(13.94f))
+    fun `the room reads in the Measure units, metric or imperial`() {
+        val measure = RoomMeasure.of(room(0f), floorY)!!
+        // One format for every Measure figure: the same strings MeasureUnits gives a segment.
+        val metric = measure.summary(MeasureUnitSystem.Metric, Locale.FRANCE)
+        assertEquals(
+            "${formatMeasureLength(3.4f, MeasureUnitSystem.Metric, Locale.FRANCE)} × " +
+                "${formatMeasureLength(4.1f, MeasureUnitSystem.Metric, Locale.FRANCE)} · " +
+                formatMeasureArea(3.4f * 4.1f, MeasureUnitSystem.Metric, Locale.FRANCE),
+            metric,
+        )
+        assertEquals("3,40 m × 4,10 m · 13,9 m²", metric)
+        assertEquals("11 ft 2 in × 13 ft 5 in · 150 ft²", measure.summary(MeasureUnitSystem.Imperial, Locale.US))
     }
 
     @Test
@@ -101,7 +109,7 @@ class RoomMeasureTest {
         val measure = RoomMeasure.of(room(0.4f), floorY)!!
         val mesh = DebugMesh()
         val offset = 0.2f
-        MeasureDrawing.addDimension(mesh, measure, 0, floorY, offset, 0.01f, textHeight = 0.12f, textWidth = 0.3f)
+        MeasureDrawing.addDimension(mesh, measure, 0, floorY, MeasureSize(0.12f, offset), 0.01f, labelWidthPx = 320f)
         assertTrue(mesh.triangleCount > 0)
         val c = measure.corners
         val cx = (c[0] + c[2] + c[4] + c[6]) / 4f
@@ -127,7 +135,7 @@ class RoomMeasureTest {
     fun `lines sample the solid strip and labels read upright, the atlas read bottom-up`() {
         val measure = RoomMeasure.of(room(0.4f), floorY)!!
         val mesh = DebugMesh()
-        MeasureDrawing.addDimension(mesh, measure, 1, floorY, 0.2f, 0.01f, textHeight = 0.12f, textWidth = 0.3f)
+        MeasureDrawing.addDimension(mesh, measure, 1, floorY, MeasureSize(0.12f, 0.2f), 0.01f, labelWidthPx = 320f)
         fun row(vertex: Int) = (1f - mesh.uvs[vertex * 2 + 1]) * MeasureDrawing.ATLAS_HEIGHT
         // The first ribbon is the dimension line: its four corners inside the solid strip.
         for (i in 0 until 4) {

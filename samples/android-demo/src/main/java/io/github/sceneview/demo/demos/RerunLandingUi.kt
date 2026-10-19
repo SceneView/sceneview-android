@@ -61,6 +61,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.github.sceneview.demo.LocalDemoBottomChromeCover
 import io.github.sceneview.demo.SETTINGS_FAB_RESERVED_SPACE
 import io.github.sceneview.demo.demos.internal.DollhouseCopy
 import io.github.sceneview.demo.demos.internal.ScanCopy
@@ -127,7 +128,13 @@ private fun LandingPage(state: RerunLandingState, actions: RerunLandingActions) 
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .windowInsetsPadding(WindowInsets.safeDrawing)
-                .padding(top = HeaderClearance, bottom = SETTINGS_FAB_RESERVED_SPACE)
+                // The list ends a gutter above everything the scaffold floats at the bottom —
+                // the mode pill and the settings button — so its last session scrolls clear.
+                .padding(
+                    top = HeaderClearance,
+                    bottom = maxOf(SETTINGS_FAB_RESERVED_SPACE, LocalDemoBottomChromeCover.current) +
+                        Space.md,
+                )
                 .padding(horizontal = Space.md),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -171,7 +178,7 @@ private fun LandingPage(state: RerunLandingState, actions: RerunLandingActions) 
 }
 
 /**
- * The landing's primary action: the camera in its well, "Record your room" and the privacy
+ * The landing's primary action: the camera in its well, "Start scanning" and the privacy
  * promise under it, on the accent fill.
  */
 @Composable
@@ -231,7 +238,7 @@ private fun GlassAction(icon: ImageVector, label: String, onClick: () -> Unit, m
     }
 }
 
-/** "Your sessions": the notice, the file being opened, then the cards — or the empty state. */
+/** "Your scans": the notice, the file being opened, then the cards — or the empty state. */
 @Composable
 private fun SessionsSection(state: RerunLandingState, actions: RerunLandingActions) {
     var confirming by remember { mutableStateOf<LandingSession?>(null) }

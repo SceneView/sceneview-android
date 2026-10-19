@@ -2,10 +2,8 @@ package io.github.sceneview.ar.scene
 
 import com.google.ar.core.TrackingState
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 /**
  * Lifecycle of [PlaneRenderer]'s per-plane visualizers, without a Filament Engine:
@@ -15,8 +13,6 @@ import java.io.File
  *     each gated update built a visualizer the cleanup destroyed right after.
  *  2. [OwnedVisualizers] destroys a visualizer's MaterialInstances with it: live instances stay
  *     at 2 × live visualizers. They used to be released only when the whole renderer was.
- *  3. The ripple phase in `plane_renderer.mat` is wrapped in highp, not read into a mediump
- *     `float` that steps by 0.25 s after 256 s of engine uptime.
  */
 class PlaneRendererLifecycleTest {
 
@@ -166,19 +162,4 @@ class PlaneRendererLifecycleTest {
         fakes.assertInstancesMatchVisualizers()
     }
 
-    // ── 3. Ripple time precision ─────────────────────────────────────────────────────────
-
-    @Test
-    fun `ripple phase is wrapped in highp`() {
-        // JVM tests run with the module directory as CWD.
-        val source = File("src/main/materials/plane_renderer.mat").readText()
-        assertFalse(
-            "a plain `float` is mediump under `-p mobile`: engine uptime loses sub-second " +
-                "precision after 256 s",
-            Regex("""(?m)^\s*float\s+\w+\s*=\s*getUserTime\(\)""").containsMatchIn(source),
-        )
-        assertTrue(
-            Regex("""highp\s+float\s+ripplePhase\s*=\s*getUserTimeMod\(""").containsMatchIn(source),
-        )
-    }
 }

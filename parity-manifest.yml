@@ -64,7 +64,15 @@
 # Do not enforce the correlation, and never "fix" a row to restore it.
 #
 # ─── CURRENT STATE — measured, not narrated ────────────────────────────────
-# Current ledger (2026-10-03, after iOS and Android samples step 0): 43 rows, 31 working / 0 stub / 12 android-only.
+# Current ledger (2026-10-18, after AR catalogue clean-up wave 1, `finger-drawing` and `ar-pool`): 41 rows, 28 working / 0 stub / 13 android-only.
+# (2026-10-14, +1 android-only: `ar-pool`, Pool in the garden — no iOS screen yet.)
+# (Wave 1, 44 -> 41 rows: three AR cards retired and DROPPED per the ledger rule.
+#  `ar-depth-collider` is the On your table mode of `rolling-balls`, `ar-scene-mesh`
+#  the colour switch of the Streetscape mode of `ar-geospatial-anchors` and `ar-fog`
+#  lands on `lighting`. `ar-ml-object-label` lost its card but keeps its row: it stays
+#  registered as Point & Ask's on-device fallback (#2648). iOS keeps its
+#  `ar-depth-collider` and `ar-scene-mesh` screens: they are listed in the `ios:` of
+#  `rolling-balls` and `ar-geospatial-anchors`, the delete list of an iOS rewrite.)
 # (2026-10-02, iOS samples step 0: 49 -> 35 iOS cards, `secondary-camera` included. Every
 #  absorbed iOS card is now a mode of the card that absorbed it and its id an alias, so no
 #  row changes status; the `ios:` lists name the 35 scene ids only. iOS allowedIds:
@@ -79,6 +87,7 @@
 #  `secondary-camera` scene is listed in `camera-gestures`' `ios:`.)
 # (android-only -> working: `splat-preview`, drawn as a point cloud on iOS — no splat renderer yet.)
 # (+1 android-only: `ar-splat-room`, #4023 — a dollhouse of your Rerun recording since #4075.)
+# (+1 android-only: `finger-drawing`, #4082 — 3D and AR modes; iOS counterpart in #3907.)
 # (+1 working: `cosmos` — iOS port with SceneViewSwift `.bloom`, iOS 26+ for the glow.)
 # (android-only -> working: `contact-shadow-preview` — procedural contact-shadow quads.)
 # (android-only -> working: `secondary-camera` — two SceneViews over one shared state, cloned helmet.)
@@ -273,7 +282,8 @@
 # (keyed `iosId`), and `shell:` the app frame a decision-maker meets first —
 # tabs, demo chrome, deep links (keyed `surface`). Every iOS scene id appears
 # exactly once, in one row's `ios:` or in `iosOnly`. Two iOS deep-link ids
-# have no scene and so no row: `fog` (a removal notice, see `ar-fog`) and
+# have no scene and so no row: `fog` (a removal notice; Android retired its
+# `ar-fog` card for `lighting` in wave 1) and
 # `ar-instant-placement`, an Android alias iOS never took (see `shell:`).
 #
 # Measured 2026-09-26 from the code at b4bff342e, not from captures:
@@ -290,7 +300,7 @@
 # merges silently: update the row in the same PR that changes either screen.
 
 demos:
-  # ─── working (30) — iOS has a real, non-placeholder destination ─────────
+  # ─── working (28) — iOS has a real, non-placeholder destination ─────────
   - id: animation-physics
     androidStatus: Working
     iosStatus: working
@@ -301,30 +311,33 @@ demos:
       - samples/ios-demo/SceneViewDemo/Views/Demos/AnimationDemo.swift
     contract: >-
       Animation (the Physics tab left for `rolling-balls` in #4083): Fox,
-      Soldier + 4 streamed models, play/pause/speed/loop, camera
+      Ranger + 4 streamed models, play/pause/speed/loop, camera
       Hero/Reveal/Vertigo/Tracking/Free
     parity: diverges
     evidence: >-
       iOS (#4236) is the Fox only, offline, on a lit studio stage: Survey/Walk/Run
       clips with a 0.35 s crossfade, play/pause, speed 0.25-2x, Loop/Once
-      (khronos_fox_clips.usdz, trimmed AnimationViews). Android-only: the Soldier
+      (khronos_fox_clips.usdz, trimmed AnimationViews). Android-only: the Ranger
       and streamed subjects, scrub, camera shots, brightness and two-clip blend
   - id: rolling-balls
     androidStatus: Working
     iosStatus: working
     category: VIEW_3D
     android: samples/android-demo/src/main/java/io/github/sceneview/demo/demos/RollingBallsDemo.kt
-    ios: [rolling-balls]
+    ios: [rolling-balls, ar-depth-collider]
     iosFiles:
       - samples/ios-demo/SceneViewDemo/Views/Demos/RollingBallsDemo.swift
       - samples/ios-demo/SceneViewDemo/Views/Demos/Scenes/RollingBallsScene.swift
       - samples/ios-demo/SceneViewDemo/Views/Demos/DoublePendulumDemo.swift
+      - samples/ios-demo/SceneViewDemo/Views/Demos/Scenes/ArDepthColliderScene.swift
     contract: >-
       Rubber/Steel/Foam ball tray on the themed stage sky (light and dark); opening shot of a
       steel cue into a six-ball rubber pyramid; material chips drop one ball;
       Drop, Tilt, Reset on the scene; sheet with counts, Drop 10, Level,
       pitch and roll sliders. Android: a Pendulum mode holds the former
-      `double-pendulum` card (samples step 0).
+      `double-pendulum` card (samples step 0), and an On your table AR mode
+      the former `ar-depth-collider` card (wave 1): Drop, Drop 5, Reset throw
+      balls from the camera that bounce off the real table through depth.
     parity: diverges
     evidence: >-
       #4083: iOS is a Swift port of the Android fixed-step simulation. Captured
@@ -412,23 +425,6 @@ demos:
       bridge=nil so Host and Resolve are always disabled
       (ArCloudAnchorsScene.swift:98-100,244-247, #2864). Tap-to-place with
       plane overlay (:268-276) vs auto (ARCloudAnchorDemo.kt:168)
-  - id: ar-depth-collider
-    androidStatus: Working
-    iosStatus: working
-    category: UNDERSTAND
-    android: samples/android-demo/src/main/java/io/github/sceneview/demo/demos/ARDepthColliderDemo.kt
-    ios: [ar-depth-collider]
-    iosFiles:
-      - samples/ios-demo/SceneViewDemo/Views/Demos/Scenes/ArDepthColliderScene.swift
-    contract: >-
-      Drop, Drop 5, Reset: balls thrown from the camera pose bounce off the
-      real floor through depth; a static floor stands in without depth; a dev
-      toggle shows the depth mesh.
-    parity: diverges
-    evidence: >-
-      D8 fixed. ARExperienceContainer.swift:68 gates it on LiDAR, so the
-      fallback floor (ArDepthColliderScene.swift:184-186) never runs; spawn
-      :203-208 lacks the #3217 throw
   - id: ar-depth-occlusion
     androidStatus: Working
     iosStatus: working
@@ -636,10 +632,11 @@ demos:
       - samples/ios-demo/SceneViewDemo/Views/Demos/Rerun/RerunLiveCaptureView.swift
       - samples/ios-demo/SceneViewDemo/Views/Demos/Rerun/RerunReplayStage.swift
     contract: >-
-      Rerun, plus Session MP4 by deep link. Rerun opens on a landing (Record
-      your room, Watch a sample session, Open file, Your sessions); a
-      recording replays as a 3D
-      rebuild of the room (camera path, planes, points) and opens as a
+      3D Scan, plus Session MP4 by deep link. 3D Scan (the card's name on
+      Android, a clearer name; iOS still titles it "Rerun AR Replay", #4325) opens
+      on a landing (Record your room, Watch a sample session, Open file, Your
+      sessions); a recording replays as a 3D rebuild of the room (camera path,
+      planes, points) and opens as a
       dollhouse; sessions share as a file, and a live stream to the Rerun
       viewer saves a .rrd. Session MP4 (Android only, the former
       `ar-record-playback` card since samples step 0): record the ARCore
@@ -657,30 +654,6 @@ demos:
       the Android .rrd export opens on a default layout (RerunRrdBlueprint)
       and ends with the footer `rerun rrd verify` asks for (RerunRrdFooter),
       RerunRRDWriter.swift writes neither yet
-  - id: ar-scene-mesh
-    androidStatus: KnownIssue
-    iosStatus: working
-    reason: >-
-      Context only (this row is `working` on iOS). #3463 folded the retired
-      `ar-streetscape` demo into this card as its Streetscape mode; samples
-      step 0 moved that mode to `ar-geospatial-anchors`, where the other
-      Google-backend Geospatial modes live, and the `ar-streetscape` deep link
-      follows it. This card keeps its `KnownIssue` badge for now. iOS is
-      untouched — its own `ar-scene-mesh` screen is the LiDAR
-      scene-reconstruction one.
-    category: UNDERSTAND
-    android: samples/android-demo/src/main/java/io/github/sceneview/demo/demos/ARSceneGeometryDemo.kt
-    ios: [ar-scene-mesh]
-    iosFiles:
-      - samples/ios-demo/SceneViewDemo/Views/Demos/ARSceneMeshDemo.swift
-    contract: >-
-      Scene Geometry: surrounding surfaces as translucent meshes coloured by
-      classification with a legend.
-    parity: diverges
-    evidence: >-
-      ARSceneMeshDemo.swift:57-74 Apple's debug .showSceneUnderstanding
-      wireframe of the LiDAR mesh; no classification colours or legend
-      (ARSceneGeometryDemo.kt ARSceneMeshDemo)
   - id: camera-gestures
     androidStatus: Working
     iosStatus: working
@@ -920,7 +893,7 @@ demos:
       Gallery scene left in #4039)
     parity: diverges
     evidence: >-
-      Models Fox/Hovercar/Butterfly vs Sofa/Chair/Dish/Soldier
+      Models Fox/Hovercar/Butterfly vs Sofa/Chair/Dish/Ranger
       (ModelViewerDemo.swift:37-44 vs .kt:277-283); lands on outdoor_cloudy
       sky (.swift:69,150); Park is a mode (MultiModelDemo, step 0), Gallery
       left; Browse→ExploreTab (.swift:368); HD
@@ -1022,7 +995,7 @@ demos:
   # must be *accepted* without having a screen has somewhere to go. (The
   # value is legal, not enforced — see the header: no script checks this file.)
 
-  # ─── android-only (12) — iOS has no screen, and no catalogue entry ───────
+  # ─── android-only (13) — iOS has no screen, and no catalogue entry ───────
   # Not a 404: `SceneViewDemoApp.onOpenURL` forwards an unregistered id to
   # `DemoDeepLinkRegistry.destination(for:)`, which answers with the honest
   # `DeepLinkPlaceholder`. The cross-platform QR-code contract holds; what
@@ -1038,33 +1011,15 @@ demos:
     ios: []
     iosFiles: []
     contract: >-
-      Live AR with a toy car: toggle depth of field, Focus depth and Blur
-      strength sliders, tap to focus at real depth; blurs the camera feed and
-      the virtual content.
+      Portrait focus (#4649): live AR with a real-size sneaker kept sharp
+      while the room blurs by its ARCore depth, like a camera's portrait
+      mode. Original | Portrait before/after switch; the focus follows the
+      sneaker, a tap on the room focuses there (focus ring), a tap on the
+      sneaker comes back; Blur and Focus distance sliders.
     parity: missing
     evidence: >-
-      No iOS scene; ARDepthOfFieldDemo.kt:181-203,279. LiDAR sceneDepth plus
+      No iOS scene; ARDepthOfFieldDemo.kt (PortraitFocus). LiDAR sceneDepth plus
       ARView postProcess can do it (#3652)
-  - id: ar-fog
-    androidStatus: Working
-    iosStatus: android-only
-    reason: >-
-      Removed on iOS: RealityKit has no depth-based fog. The AR fog demo
-      (#1717) is not ported, and the non-AR `fog` screen — which faked the
-      effect with a translucent volume — was removed rather than kept as a
-      look-alike. Its coming-soon Scene stub was deleted in #3231.
-    category: UNDERSTAND
-    android: samples/android-demo/src/main/java/io/github/sceneview/demo/demos/ARFogDemo.kt
-    ios: []
-    iosFiles: []
-    contract: >-
-      Fog on both real (depth) and virtual geometry, with an enable switch,
-      Density, Start and End sliders and colour presets.
-    parity: not-feasible-on-ios
-    evidence: >-
-      ARFogDemo.kt:195-241. RealityKit has no built-in fog; removed by
-      decision, look-alike deleted. A LiDAR depth post-process could do it
-      (ARSceneView.swift:809) - reopen only on decision
   - id: ar-geospatial-anchors
     androidStatus: KnownIssue
     iosStatus: android-only
@@ -1081,12 +1036,15 @@ demos:
       #3231.
     category: PLACE_AR
     android: samples/android-demo/src/main/java/io/github/sceneview/demo/demos/ARGeospatialAnchorsDemo.kt
-    ios: []
-    iosFiles: []
+    ios: [ar-scene-mesh]
+    iosFiles:
+      - samples/ios-demo/SceneViewDemo/Views/Demos/ARSceneMeshDemo.swift
     contract: >-
       Terrain | Rooftop | Streetscape: resolve a lat/lng anchor against Google
       terrain or building altitude, or show Streetscape building and terrain
-      geometry outdoors. Earth pose readout, Cloud-API-key banner.
+      geometry outdoors, coloured by class with a legend behind a switch (the
+      former `ar-scene-mesh` card, wave 1). Earth pose readout, Cloud-API-key
+      banner. iOS `ar-scene-mesh` is a LiDAR mesh screen, not this one.
     parity: not-feasible-on-ios
     evidence: >-
       ARKit has no terrain/rooftop anchor: ARGeoAnchor covers Apple-mapped
@@ -1104,8 +1062,9 @@ demos:
     ios: []
     iosFiles: []
     contract: >-
-      An auto-placed helmet; Turn stabilization on/off toggles ARCore EIS on
-      the camera feed to compare motion.
+      SceneView Labs demo since #4649 (listed only with Labs on): an
+      auto-placed helmet; Turn stabilization on/off toggles ARCore EIS on the
+      camera feed to compare motion. The card says the difference is subtle.
     parity: not-feasible-on-ios
     evidence: >-
       ARCore ImageStabilizationMode.EIS (ARFeatureComparison.kt:119-123);
@@ -1158,7 +1117,10 @@ demos:
     reason: >-
       No iOS screen — Vision/CoreML object labeling not ported (Phase 3,
       #2798). Its coming-soon Scene stub was deleted in #3231. Android marked
-      KnownIssue in samples step 0: labels are unreliable on device.
+      KnownIssue in samples step 0: labels are unreliable on device. Since
+      wave 1 (#4608) it has no Android catalogue card either: it stays
+      registered as Point & Ask's on-device fallback on phones without AICore
+      (#2648), reached only from Point & Ask's "unavailable" card.
     category: UNDERSTAND
     android: samples/android-demo/src/main/java/io/github/sceneview/demo/demos/ARMLObjectLabelDemo.kt
     ios: []
@@ -1167,9 +1129,6 @@ demos:
       Detects real objects in the camera feed and pins a 3D billboard label
       with the category name on each.
     parity: missing
-    evidence: >-
-      No iOS scene; ARMLObjectLabelDemo.kt:110. Vision on
-      ARFrame.capturedImage, a raycast and a billboard cover it (#3653)
   - id: ar-surfaces
     androidStatus: Working
     iosStatus: android-only
@@ -1259,7 +1218,7 @@ demos:
     ios: []
     iosFiles: []
     contract: >-
-      The newest room recorded in the Rerun demo (or the session picked from
+      The newest room recorded in the 3D Scan demo (or the session picked from
       its menu or at the end of its replay), ceiling cut away, auto-placed on
       the first horizontal surface as a miniature at a model maker's scale
       (about 1:12 for a bedroom, 35 cm longest side); drag, twist and pinch
@@ -1269,6 +1228,54 @@ demos:
     evidence: >-
       The iOS Rerun demo records and replays sessions but has no View in AR
       action; an iOS port reuses its replay layers under an anchor
+  - id: ar-pool
+    androidStatus: InReview
+    iosStatus: android-only
+    reason: >-
+      No iOS screen. Added to Android on 2026-10-14 with the occluder-mesh
+      seam (`ARCameraStream.isOccluderMeshEnabled`) it is built on; not
+      ported (#2798).
+    category: PLACE_AR
+    android: samples/android-demo/src/main/java/io/github/sceneview/demo/demos/ARPoolDemo.kt
+    ios: []
+    iosFiles: []
+    contract: >-
+      A real-size in-ground pool placed by the shared automatic-placement
+      flow and dug into the real ground: an invisible occlusion hull around
+      the liner keeps the camera's lawn on screen everywhere but the opening,
+      so the walls, Roman steps and floor show only through it, under a stone
+      coping. Transparent water with ripples, caustics, sky reflection and
+      depth tint; 6 x 3, 8 x 4 and 10 x 5 m presets, 1.2-1.5 m deep; white,
+      sand, light grey or blue liner; optional night mode: a transparent
+      black veil over the camera image darkens the garden, the pool's own
+      surfaces dim with it, and two underwater lamps light the water around
+      them. Drag and twist; pinch never resizes it (real size is locked).
+    parity: missing
+    evidence: >-
+      No iOS scene; ARPoolDemo.kt. RealityKit's OcclusionMaterial on a mesh
+      built from the same PoolGeometry hull is the iOS equivalent of the
+      occluder; the pool shell ports as a MeshResource
+  - id: finger-drawing
+    androidStatus: Working
+    iosStatus: android-only
+    reason: >-
+      No iOS screen yet. Added to Android first in #4082; the iOS counterpart
+      is tracked in #3907.
+    category: CREATE
+    android: samples/android-demo/src/main/java/io/github/sceneview/demo/demos/FingerDrawingDemo.kt
+    ios: []
+    iosFiles: []
+    contract: >-
+      Draw with one finger: each stroke is a smooth round tube, thicker where
+      the finger is slow, on a plane through the stage centre facing the
+      camera; Orbit turns the stage and the next stroke lies on the new
+      plane. AR mode: strokes painted 35 cm in front of the phone and hung on
+      anchors. Colour (five), Thickness, Undo and Clear in the sheet.
+    parity: missing
+    evidence: >-
+      No iOS scene; FingerDrawingDemo.kt, FingerDrawingArDemo.kt,
+      internal/FingerDrawing.kt. MeshResource from a MeshDescriptor and an
+      AnchorEntity cover it (#3907)
 
 # ─── iOS-only scenes, no Android row: 0 ─────────────────────────────
 # Keyed `iosId`, not `id`, so check-demo-id-parity.sh never reads them as

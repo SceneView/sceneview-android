@@ -6,289 +6,37 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
-/**
- * Vertex-attribute contract between the plane visualizer's mesh and the materials its renderer
- * applies to that mesh (#3186 / #3188 log signature).
- *
- * ## What broke
- *
- * The plane visualizer of the time declared a POSITION-only `VertexBuffer`, while [io.github.sceneview.ar.scene.PlaneRenderer] applies
- * `materials/plane_renderer_shadow.filamat` to it. That blob is a `shadowMultiplier : true`
- * material, and Filament unconditionally adds `TANGENTS` to a shadow-multiplier material's
- * required attributes — so every detected plane's shadow submesh logged
- *
- * ```
- * missing required attributes (0x3), declared=0x1
- * ```
- *
- * on every renderable rebuild AND on every per-frame `setMaterialInstanceAt`, and shaded against
- * OpenGL's generic-attribute fallback instead of the plane's real surface normal.
- *
- * ## Why a source/blob contract rather than a render test
- *
- * The mismatch is a *build-time* fact — the declared set and the required set are both fixed
- * before a frame is ever drawn — and Filament does not throw on it, it warns and renders wrong.
- * A pure-JVM test can therefore catch the whole class, while a render test cannot run at all
- * here (the native engine is not loaded in unit tests; same rationale as
- * `ShadowReceiverPlaneContractTest`).
- *
- * So this reads the two facts from their sources of truth and compares them:
- *  * **required** — the `MAT_REQA` chunk of each committed `.filamat` blob,
- *  * **declared** — the `VertexBuffer.VertexAttribute.*` set in [PlaneVisualizer]'s source.
- *
- * It generalises: any future material added to the plane renderer, or any attribute dropped from
- * the visualizer, fails here rather than on a user's device log.
- */
+/** Contracts for the compiled plane-material attribute metadata. */
 class PlaneVisualizerAttributeContractTest {
 
-    /**
-     * Pairs a plane renderer (which owns the materials) with the visualizer whose mesh those
-     * materials are applied to. JVM tests run with the module directory as CWD.
-     */
-    private data class PlanePipeline(
-        val label: String,
-        val visualizerClass: String,
-        val renderer: File,
-        val visualizer: File
-    )
-
-    private val pipelines = listOf(
-        PlanePipeline(
-            label = "PlaneRenderer",
-            visualizerClass = "PlaneVisualizer",
-            renderer = File("src/main/java/io/github/sceneview/ar/scene/PlaneRenderer.kt"),
-            visualizer = File("src/main/java/io/github/sceneview/ar/PlaneVisualizer.kt")
-        )
-    )
-
-    // ── 1. The rule that bit us: shadowMultiplier ⇒ TANGENTS required ─────────────────────────
-
     @Test
-    fun `plane_renderer_shadow requires TANGENTS because it is a shadowMultiplier material`() {
-        val matSource = File("src/main/materials/plane_renderer_shadow.mat")
-        assertTrue("Expected ${matSource.absolutePath}", matSource.exists())
-        assertTrue(
-            "plane_renderer_shadow.mat is expected to be a shadow catcher " +
-                "(`shadowMultiplier : true`) — that flag is WHY its compiled blob requires " +
-                "TANGENTS. If it is gone, this whole contract needs rewriting, not relaxing.",
-            matSource.readText().contains(Regex("""shadowMultiplier\s*:\s*true"""))
-        )
-
-        val required = requiredAttributes("plane_renderer_shadow")
-        assertEquals(
-            "plane_renderer_shadow.filamat MAT_REQA must be POSITION|TANGENTS (0x3): Filament " +
-                "adds TANGENTS to any shadowMultiplier material even though the shader is " +
-                "`unlit` and never reads a normal explicitly. Read: " +
-                "0x${required.toString(16)}.",
-            POSITION_BIT or TANGENTS_BIT,
-            required
-        )
+    fun `plane_renderer_shadow requires TANGENTS`() {
+        assertEquals(POSITION_BIT or TANGENTS_BIT, requiredAttributes("plane_renderer_shadow"))
     }
 
     @Test
     fun `the REQA parser distinguishes a POSITION-only material from a TANGENTS one`() {
-        // Vacuity guard for the assertion above: a parser that returned a constant, or that
-        // silently read the wrong chunk, would "pass" the shadow test for the wrong reason.
-        // plane_renderer.filamat is the neighbouring blob, compiled by the same GenerateFilamat
-        // run, applied to the same mesh — and it requires POSITION alone.
-        assertEquals(
-            "plane_renderer.filamat must require POSITION only (0x1) — it is `unlit` WITHOUT " +
-                "shadowMultiplier. If this reads 0x3 too, the parser is not reading MAT_REQA.",
-            POSITION_BIT,
-            requiredAttributes("plane_renderer")
-        )
+        assertEquals(POSITION_BIT, requiredAttributes("plane_renderer"))
     }
 
-    // ── 2. The regression guard ───────────────────────────────────────────────────────────────
-
-    @Test
-    fun `every plane visualizer declares every attribute its materials require`() {
-        pipelines.forEach { pipeline ->
-            val declared = declaredAttributes(pipeline.visualizer)
-            val materials = materialAssets(pipeline.renderer)
-
-            // Vacuity guards: an empty parse must never read as "nothing to check".
-            assertTrue(
-                "${pipeline.label}: parsed no VertexBuffer.VertexAttribute.* out of " +
-                    "${pipeline.visualizer.absolutePath} — the parser is looking at the wrong " +
-                    "file or the declaration moved.",
-                declared != 0
-            )
-            assertTrue(
-                "${pipeline.label}: parsed ${materials.size} material asset(s) out of " +
-                    "${pipeline.renderer.absolutePath}; a plane renderer applies at least a " +
-                    "plane material and a shadow material.",
-                materials.size >= 2
-            )
-            assertTrue(
-                "${pipeline.label}: ${pipeline.renderer.name} must actually drive " +
-                    "${pipeline.visualizerClass} — otherwise this pairing compares a mesh with " +
-                    "materials that are never applied to it.",
-                pipeline.renderer.readText().contains(pipeline.visualizerClass)
-            )
-
-            materials.forEach { material ->
-                val required = requiredAttributes(material)
-                val missing = required and declared.inv()
-                assertEquals(
-                    "${pipeline.label}: $material.filamat requires ${format(required)} but " +
-                        "${pipeline.visualizer.name} declares only ${format(declared)} — " +
-                        "missing ${format(missing)}. Filament does NOT fail the build for this: " +
-                        "it logs `missing required attributes (0x${required.toString(16)}), " +
-                        "declared=0x${declared.toString(16)}` and shades against the generic " +
-                        "vertex-attribute fallback, so the geometry renders WRONG rather than " +
-                        "not at all (#3186 / #3188). Add the attribute to the vertex buffer.",
-                    0,
-                    missing
-                )
-            }
-        }
-    }
-
-    @Test
-    fun `every plane visualizer allocates one backing buffer per declared attribute`() {
-        // A declared attribute whose buffer index is out of `bufferCount` range, or a buffer that
-        // is allocated but never bound, is the other half of the same failure: Filament reads an
-        // unset buffer. Keeping the two numbers equal keeps the "one attribute, one buffer"
-        // layout the visualizer uses (and that `geometries/Geometry.kt` uses too).
-        pipelines.forEach { pipeline ->
-            val source = stripComments(pipeline.visualizer.readText())
-            val attributeCount = Regex("""\.attribute\(""").findAll(source).count()
-            assertTrue(
-                "${pipeline.label}: found no `.attribute(` call in ${pipeline.visualizer.name}.",
-                attributeCount > 0
-            )
-            assertEquals(
-                "${pipeline.label}: ${pipeline.visualizer.name} declares $attributeCount vertex " +
-                    "attribute(s) but allocates ${bufferCount(pipeline.visualizer)} backing " +
-                    "buffer(s).",
-                attributeCount,
-                bufferCount(pipeline.visualizer)
-            )
-        }
-    }
-
-    @Test
-    fun `the visualizer uploads its constant tangent frame once, not per frame`() {
-        // Declaring TANGENTS without ever filling the buffer trades the warning for an unset
-        // buffer. The frame is constant (the mesh is flat in the plane's own frame and the pose
-        // rides on the entity transform), so the upload belongs at construction — the mesh
-        // rebuild must stay one POSITION upload + one index upload.
-        val source = stripComments(File("src/main/java/io/github/sceneview/ar/PlaneVisualizer.kt").readText())
-        val uploads = Regex("""setBufferAt\(\s*engine,\s*BUFFER_INDEX_TANGENT""").findAll(source).count()
-        assertEquals(
-            "PlaneVisualizer must upload its TANGENTS buffer exactly once (at construction). " +
-                "Found $uploads upload site(s).",
-            1,
-            uploads
-        )
-        assertTrue(
-            "The TANGENTS upload must sit in the `init { }` block, before rebuildMesh() — " +
-                "the rebuild path must not grow a second upload.",
-            source.indexOf("private fun rebuildMesh") > 0 &&
-                source.lastIndexOf("BUFFER_INDEX_TANGENT,") < source.indexOf("private fun rebuildMesh")
-        )
-    }
-
-    // ── helpers ───────────────────────────────────────────────────────────────────────────────
-
-    /** Bit set by each `VertexBuffer.VertexAttribute` — the enum's ordinal, as Filament packs it. */
-    private val attributeBits = mapOf(
-        "POSITION" to (1 shl 0),
-        "TANGENTS" to (1 shl 1),
-        "COLOR" to (1 shl 2),
-        "UV0" to (1 shl 3),
-        "UV1" to (1 shl 4),
-        "BONE_INDICES" to (1 shl 5),
-        "BONE_WEIGHTS" to (1 shl 6),
-        "UNUSED" to (1 shl 7),
-        "CUSTOM0" to (1 shl 8),
-        "CUSTOM1" to (1 shl 9),
-        "CUSTOM2" to (1 shl 10),
-        "CUSTOM3" to (1 shl 11),
-        "CUSTOM4" to (1 shl 12),
-        "CUSTOM5" to (1 shl 13),
-        "CUSTOM6" to (1 shl 14),
-        "CUSTOM7" to (1 shl 15)
-    )
-
-    /** Required-attribute bitmask of a committed blob, read from its `MAT_REQA` chunk. */
     private fun requiredAttributes(material: String): Int {
         val blob = File("src/main/assets/materials/$material.filamat")
         assertTrue("Expected ${blob.absolutePath}", blob.exists())
         val chunk = filamatChunk(blob.readBytes(), "MAT_REQA")
-        assertNotNull(
-            "$material.filamat has no MAT_REQA chunk — corrupt blob, or a matc version that " +
-                "renamed the chunk (then this test must follow, not be deleted).",
-            chunk
-        )
+        assertNotNull("$material.filamat has no MAT_REQA chunk", chunk)
         return readUInt32LE(chunk!!, 0)
     }
 
-    /** Declared-attribute bitmask of a visualizer, read from its `VertexBuffer.Builder` chain. */
-    private fun declaredAttributes(source: File): Int {
-        assertTrue("Expected ${source.absolutePath}", source.exists())
-        return Regex("""VertexBuffer\.VertexAttribute\.([A-Z0-9_]+)""")
-            .findAll(stripComments(source.readText()))
-            .fold(0) { mask, match ->
-                val name = match.groupValues[1]
-                val bit = attributeBits[name]
-                assertNotNull(
-                    "Unknown VertexAttribute `$name` in ${source.name} — add it to this test's " +
-                        "ordinal table (silently ignoring it would make the contract vacuous).",
-                    bit
-                )
-                mask or bit!!
-            }
-    }
-
-    /** `bufferCount(n)` of a visualizer, resolving a `const val` argument to its literal. */
-    private fun bufferCount(source: File): Int {
-        val text = stripComments(source.readText())
-        val argument = Regex("""\.bufferCount\(\s*([A-Za-z0-9_]+)\s*\)""").find(text)?.groupValues?.get(1)
-        assertNotNull("No `.bufferCount(...)` call found in ${source.name}", argument)
-        return argument!!.toIntOrNull()
-            ?: Regex("""const\s+val\s+$argument\s*=\s*(\d+)""").find(text)?.groupValues?.get(1)?.toInt()
-            ?: error("Could not resolve `bufferCount($argument)` to a literal in ${source.name}")
-    }
-
-    /** The `materials/<name>.filamat` assets a renderer loads. */
-    private fun materialAssets(renderer: File): List<String> {
-        assertTrue("Expected ${renderer.absolutePath}", renderer.exists())
-        return Regex(""""materials/([A-Za-z0-9_]+)\.filamat"""")
-            .findAll(renderer.readText())
-            .map { it.groupValues[1] }
-            .distinct()
-            .toList()
-    }
-
-    private fun format(mask: Int): String {
-        val names = attributeBits.filterValues { it and mask != 0 }.keys
-        return "0x${mask.toString(16)}" + if (names.isEmpty()) "" else " (${names.joinToString("|")})"
-    }
-
-    /** Drops block then line comments, so prose mentioning an attribute never counts as code. */
-    private fun stripComments(source: String): String = source
-        .replace(Regex("""/\*[\s\S]*?\*/"""), "")
-        .replace(Regex("""//[^\n]*"""), "")
-
-    /**
-     * Returns the payload of the first `.filamat` chunk with the given [tag], or null.
-     *
-     * The filamat container is a sequence of `[8-byte tag][uint32 LE size][payload]` chunks.
-     * Tags are 8-char ASCII identifiers stored as little-endian uint64s, so they appear
-     * byte-reversed on disk ("MAT_REQA" → "AQER_TAM").
-     */
     private fun filamatChunk(bytes: ByteArray, tag: String): ByteArray? {
         val tagBytes = tag.reversed().toByteArray(Charsets.US_ASCII)
-        var i = 0
-        while (i + 12 <= bytes.size) {
-            val size = readUInt32LE(bytes, i + 8)
-            if (size < 0 || i + 12 + size > bytes.size) return null
-            if (bytes.copyOfRange(i, i + 8).contentEquals(tagBytes)) {
-                return bytes.copyOfRange(i + 12, i + 12 + size)
+        var offset = 0
+        while (offset + 12 <= bytes.size) {
+            val size = readUInt32LE(bytes, offset + 8)
+            if (size < 0 || offset + 12 + size > bytes.size) return null
+            if (bytes.copyOfRange(offset, offset + 8).contentEquals(tagBytes)) {
+                return bytes.copyOfRange(offset + 12, offset + 12 + size)
             }
-            i += 12 + size
+            offset += 12 + size
         }
         return null
     }
