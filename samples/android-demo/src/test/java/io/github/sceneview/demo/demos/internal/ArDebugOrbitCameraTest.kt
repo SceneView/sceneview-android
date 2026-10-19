@@ -621,4 +621,121 @@ class ArDebugOrbitCameraTest {
         camera.band = OrbitBand.STAGE_LANDSCAPE
         assertEquals(OrbitBand.STAGE_LANDSCAPE.lift, camera.lift, 0f)
     }
+
+    // ── The settings sheet and the free camera (#4563, #4564) ─────────────────
+
+    /** A camera holding [room] fitted in [band], with [fitAt] wired as the replay's 3D view does. */
+    private fun replayCamera(band: OrbitBand, aspect: Float): ArDebugOrbitCamera {
+        val camera = ArDebugOrbitCamera(drift = false, band = band)
+        camera.setViewport(1080, (1080 / aspect).toInt())
+        camera.fitAt = { azimuth, elevation -> ArDebugFraming.home(room, azimuth, fov, aspect, elevation, band) }
+        camera.home = ArDebugFraming.home(room, ArDebugFraming.HOME_AZIMUTH, fov, aspect, band = band)
+        camera.snapTo(camera.home)
+        return camera
+    }
+
+    @Test
+    fun `a squeeze is drawn smaller and higher, inside the band it leaves`() {
+        val band = OrbitBand(halfWidth = 0.9f, halfHeight = 0.62f, lift = 0.04f)
+        val sheet = OrbitBand(halfWidth = 0.9f, halfHeight = 0.38f, lift = 0.2f)
+        assertEquals(1f, ArDebugFraming.squeezeScale(band, null), 0f)
+        assertEquals(0.38f / 0.62f, ArDebugFraming.squeezeScale(band, sheet), 1e-5f)
+        // A squeeze is never a zoom-in, nor a speck.
+        assertEquals(1f, ArDebugFraming.squeezeScale(band, band.copy(halfHeight = 0.8f)), 0f)
+        assertEquals(
+            ArDebugFraming.MIN_SQUEEZE_SCALE,
+            ArDebugFraming.squeezeScale(band, sheet.copy(halfHeight = 0.01f)),
+            0f,
+        )
+
+        val aspect = 0.46f
+        val camera = replayCamera(band, aspect)
+        camera.squeeze = sheet
+        repeat(60) { camera.update(1f / 60f) }
+        assertEquals(sheet.lift, camera.shownLift, 1e-4f)
+        // The room, drawn from further back by the scale, stands whole in the sheet's band.
+        val drawn = camera.pose.copy(distance = camera.pose.distance / camera.shownScale)
+        assertFramed(drawn, sheet, aspect)
+    }
+
+    @Test
+    fun `closing the sheet brings back the very picture it opened over, eased both ways`() {
+        val band = OrbitBand(halfWidth = 0.9f, halfHeight = 0.62f, lift = 0.04f)
+        val sheet = OrbitBand(halfWidth = 0.9f, halfHeight = 0.38f, lift = 0.2f)
+        val camera = replayCamera(band, 0.46f)
+        val before = camera.getTransform().toFloatArray()
+
+        camera.squeeze = sheet
+        camera.update(1f / 60f)
+        // Eased, not cut: one frame in, the picture is on its way, not there.
+        assertTrue(camera.shownLift > band.lift && camera.shownLift < sheet.lift)
+        repeat(60) { camera.update(1f / 60f) }
+        val open = camera.getTransform().toFloatArray()
+        assertFalse(before.contentEquals(open))
+
+        camera.squeeze = null
+        camera.update(1f / 60f)
+        assertTrue(camera.shownLift < sheet.lift && camera.shownLift > band.lift)
+        repeat(60) { camera.update(1f / 60f) }
+        assertEquals(band.lift, camera.shownLift, 0f)
+        assertEquals(1f, camera.shownScale, 0f)
+        assertArrayEquals(before, camera.getTransform().toFloatArray(), 1e-5f)
+    }
+
+    @Test
+    fun `an orbit that lets go settles on the whole room, at the angle the finger left`() {
+        val band = OrbitBand(halfWidth = 0.9f, halfHeight = 0.46f, lift = 0.04f)
+        val aspect = 0.46f
+        val camera = replayCamera(band, aspect)
+        for (dx in listOf(-700, -350, 250, 600)) {
+            camera.grabBegin(540, 1200, strafe = false)
+            camera.grabUpdate(540 + dx, 1100)
+            camera.update(1f / 60f)
+            camera.grabEnd()
+            repeat(180) { camera.update(1f / 60f) }
+            assertFalse(camera.following)
+            val pose = camera.pose
+            val fit = ArDebugFraming.home(room, pose.azimuthDegrees, fov, aspect, pose.elevationDegrees, band)
+            assertEquals(fit.distance, camera.pose.distance, 1e-3f)
+            assertFramed(camera.pose, band, aspect)
+        }
+
+        // A pan that lets go comes back onto the room too.
+        camera.grabBegin(540, 1200, strafe = true)
+        camera.grabUpdate(900, 1600)
+        camera.grabEnd()
+        repeat(180) { camera.update(1f / 60f) }
+        assertFramed(camera.pose, band, aspect)
+    }
+
+    @Test
+    fun `a pinch sets the zoom the room is held at, and a pinch in is kept cropped`() {
+        val band = OrbitBand(halfWidth = 0.9f, halfHeight = 0.46f, lift = 0.04f)
+        val aspect = 0.46f
+        val camera = replayCamera(band, aspect)
+
+        // Out: the room is held smaller, whole, through the next orbit.
+        camera.scrollBegin(0, 0, 400f)
+        repeat(10) { camera.scrollUpdate(0, 0, 400f, 380f) }
+        camera.scrollEnd()
+        assertTrue(camera.userZoom > 1.1f)
+        camera.grabBegin(540, 1200, strafe = false)
+        camera.grabUpdate(100, 1200)
+        camera.grabEnd()
+        repeat(180) { camera.update(1f / 60f) }
+        assertFramed(camera.pose, band, aspect)
+
+        // In: the user's choice, nothing pulls the camera back.
+        camera.scrollBegin(0, 0, 100f)
+        repeat(20) { camera.scrollUpdate(0, 0, 100f, 120f) }
+        camera.scrollEnd()
+        assertTrue(camera.userZoom < ArDebugOrbitCamera.ZOOMED_IN)
+        val zoomed = camera.pose.distance
+        repeat(180) { camera.update(1f / 60f) }
+        assertEquals(zoomed, camera.pose.distance, 0f)
+
+        // A double-tap hands the framing back, the zoom reset.
+        camera.doubleTapZoom(0, 0, zoomIn = true)
+        assertEquals(1f, camera.userZoom, 0f)
+    }
 }
