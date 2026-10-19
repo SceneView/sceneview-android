@@ -51,6 +51,8 @@ internal val LABS_DEMO_IDS: Set<String> = setOf(
     "finger-drawing",
     // Pool in the garden (#4571): Night and the dug-in look still need a real lawn.
     "ar-pool",
+    // Image Stabilization (#4649): a real effect, but too subtle for the main AR catalogue.
+    "ar-image-stabilization",
 )
 
 /** Whether this demo is a SceneView Labs experiment — see [LABS_DEMO_IDS]. */

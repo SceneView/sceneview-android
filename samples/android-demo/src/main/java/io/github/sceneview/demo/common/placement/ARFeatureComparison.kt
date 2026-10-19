@@ -3,6 +3,10 @@ package io.github.sceneview.demo.common.placement
 import android.os.SystemClock
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PersonSearch
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -10,6 +14,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import com.google.android.filament.Engine
 import com.google.ar.core.*
+import com.google.ar.core.exceptions.FatalException
+import com.google.ar.core.exceptions.NotYetAvailableException
 import io.github.sceneview.ar.*
 import io.github.sceneview.ar.arcore.configure
 import io.github.sceneview.demo.*
@@ -19,6 +25,8 @@ import io.github.sceneview.demo.common.DemoStatusBanner
 import io.github.sceneview.demo.common.DemoStatusTone
 import io.github.sceneview.demo.demos.internal.DepthOcclusionCopy
 import io.github.sceneview.demo.demos.internal.DemoMath
+import io.github.sceneview.demo.demos.internal.PeopleOcclusion
+import io.github.sceneview.demo.demos.internal.PeopleOcclusionStatus
 import io.github.sceneview.demo.theme.SceneViewTokens
 import io.github.sceneview.haptic.rememberHapticFeedback
 import io.github.sceneview.ar.ARHapticFeedback
@@ -66,6 +74,8 @@ private fun FeatureComparisonSession(feature: PlacementFeature, onBack: () -> Un
     var showHint by remember { mutableStateOf(false) }
     var hadPlacement by remember { mutableStateOf(false) }
     var trackingFailure by remember { mutableStateOf<TrackingFailureReason?>(null) }
+    // People: what the occlusion is doing right now (#4649). Written only when it changes.
+    var peopleStatus by remember { mutableStateOf(PeopleOcclusionStatus.Starting) }
     val guidance = rememberArGuidanceState(state, trackingFailureReason = trackingFailure)
 
     LaunchedEffect(retry) {
@@ -169,6 +179,10 @@ private fun FeatureComparisonSession(feature: PlacementFeature, onBack: () -> Un
                 DemoStatusCard(DepthOcclusionCopy.stateTitle(control.enabled) + ". " +
                     DepthOcclusionCopy.stateConsequence(control.enabled))
             }
+            val peopleLive = feature == PlacementFeature.PEOPLE && cameraReady && !cameraFailed
+            if (supported && peopleLive) {
+                PeopleOcclusionStatusCard(if (control.enabled) peopleStatus else PeopleOcclusionStatus.Off)
+            }
         },
         bottomOverlay = {
             if (supported && !cameraFailed) {
@@ -260,7 +274,12 @@ private fun FeatureComparisonSession(feature: PlacementFeature, onBack: () -> Un
                         PlacementFeature.STABILIZATION -> true
                     })
                 },
-                onSessionUpdated = { _, _ -> cameraReady = true },
+                onSessionUpdated = { _, frame ->
+                    cameraReady = true
+                    if (feature == PlacementFeature.PEOPLE && supported) {
+                        peopleStatus = PeopleOcclusion.status(enabled = true, personFraction = frame.personFraction())
+                    }
+                },
                 onSessionFailed = { cameraFailed = true },
                 onARCoreAvailability = { availability = it },
                 onTrackingFailureChanged = { trackingFailure = it },
@@ -287,6 +306,36 @@ private fun FeatureComparisonSession(feature: PlacementFeature, onBack: () -> Un
     if (show3D) {
         HelmetPreviewSheet(engine, modelLoader, materialLoader, onDismiss = { show3D = false })
     }
+}
+
+/**
+ * ARCore's share of `PERSON` pixels in this frame, or `null` while Scene Semantics has not
+ * produced a frame yet. Not the SDK's `semanticLabelFraction`, which answers 0 in both cases:
+ * here "starting" and "nobody in view" are two different sentences.
+ */
+private fun Frame.personFraction(): Float? = try {
+    getSemanticLabelFraction(SemanticLabel.PERSON)
+} catch (_: NotYetAvailableException) {
+    null
+} catch (_: FatalException) {
+    // AR_ERROR_FATAL when this session has no semantics: nothing to report but "not yet".
+    null
+}
+
+/** The live People Occlusion status over the camera (#4649): never a silent helmet over a person. */
+@Composable
+private fun PeopleOcclusionStatusCard(status: PeopleOcclusionStatus) {
+    val (text, tone, icon) = when (status) {
+        PeopleOcclusionStatus.Off ->
+            Triple(R.string.ar_people_status_off, DemoStatusTone.Guidance, Icons.Filled.VisibilityOff)
+        PeopleOcclusionStatus.Starting ->
+            Triple(R.string.ar_people_status_starting, DemoStatusTone.Progress, null)
+        PeopleOcclusionStatus.Searching ->
+            Triple(R.string.ar_people_status_searching, DemoStatusTone.Guidance, Icons.Filled.PersonSearch)
+        PeopleOcclusionStatus.Detected ->
+            Triple(R.string.ar_people_status_detected, DemoStatusTone.Progress, Icons.Filled.Person)
+    }
+    DemoStatusCard(stringResource(text), tone = tone, icon = icon)
 }
 
 /** Side of the cube the preview helmet is fitted into, in metres: the "Preview size" it states. */
