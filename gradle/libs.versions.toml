@@ -113,7 +113,8 @@ googleServices = "4.5.0"
 firebaseCrashlyticsPlugin = "3.0.8"
 playServicesNearby = "19.5.0"
 
-# ML Kit (object detection demo — see ARMLObjectLabelDemo, #1737)
+# ML Kit (object detection — ARMLObjectLabelDemo, #1737; since the AR catalogue clean-up
+# it is Point & Ask's on-device fallback on phones without AICore, #4608)
 mlkitObjectDetection = "17.0.2"
 
 # ML Kit GenAI Prompt API (Point & Ask demo — see PointAndAskDemo, #2648).

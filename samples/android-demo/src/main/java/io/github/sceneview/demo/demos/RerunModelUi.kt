@@ -22,7 +22,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.IosShare
+import androidx.compose.material.icons.rounded.Map
 import androidx.compose.material.icons.rounded.Replay
+import androidx.compose.material.icons.rounded.Stop
+import androidx.compose.material.icons.rounded._360
 import androidx.compose.material.icons.rounded.ViewInAr
 import androidx.compose.material.icons.rounded._3dRotation
 import androidx.compose.material3.AlertDialog
@@ -67,6 +70,7 @@ import io.github.sceneview.demo.DockItem
 import io.github.sceneview.demo.LocalDemoSceneRestingCover
 import io.github.sceneview.demo.R
 import io.github.sceneview.demo.demoContentPadding
+import io.github.sceneview.demo.demos.internal.ArDebugFraming
 import io.github.sceneview.demo.demos.internal.ArDebugOrbitCamera
 import io.github.sceneview.demo.demos.internal.DenseCloud
 import io.github.sceneview.demo.demos.internal.DenseFusion
@@ -85,6 +89,7 @@ import io.github.sceneview.demo.demos.internal.RerunScanModel
 import io.github.sceneview.demo.demos.internal.RerunSessionStore
 import io.github.sceneview.demo.demos.internal.RerunSyntheticRoom
 import io.github.sceneview.demo.demos.internal.RerunTsdf
+import io.github.sceneview.demo.demos.internal.ScanResultCinematics
 import io.github.sceneview.demo.isDemoCompactHeight
 import io.github.sceneview.demo.theme.LocalStageChrome
 import io.github.sceneview.demo.theme.SceneViewTokens
@@ -416,8 +421,13 @@ internal fun RerunModelScreen(
         }
     }
     DisposableEffect(instance) { onDispose { instance?.let { modelLoader.destroyModel(it.model) } } }
-    // Still: no drift, no entrance. The camera opens on the framing and stays there.
+    // No drift: the camera holds still once the reveal has landed, until the user moves it.
     val orbit = remember(source, id) { ArDebugOrbitCamera(drift = false) }
+    // The reveal, the 3D ↔ Plan crane and the tour (#4631), every one cut short by a touch.
+    val cinematics = remember(orbit) { ScanResultCinematics(orbit) }
+    // Read live by the framing below, so a toggle and the frame that flies to it agree.
+    var plan by remember(model) { mutableStateOf(false) }
+    var touring by remember(model) { mutableStateOf(false) }
     var shown by remember(model) { mutableStateOf(false) }
     var hintVisible by remember(model) { mutableStateOf(true) }
     LaunchedEffect(shown, hintStays) {
@@ -455,6 +465,17 @@ internal fun RerunModelScreen(
             // hint that came and went would move the model when it goes.
             val hintShown = shown && hintVisible
             val hintAlpha by animateFloatAsState(if (hintShown) 1f else 0f, label = "hint")
+            // Laid out from the start too, for the same reason; usable once the model is seen.
+            val tourReady = shown && instance != null
+            ScanTourPill(
+                touring = touring,
+                enabled = tourReady,
+                onClick = { cinematics.request(ScanResultCinematics.Request.ToggleTour) },
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .alpha(if (tourReady) 1f else 0f)
+                    .then(if (tourReady) Modifier else Modifier.clearAndSetSemantics { }),
+            )
             ModelHint(
                 text = stringResource(R.string.scan_result_hint),
                 modifier = Modifier
@@ -464,12 +485,29 @@ internal fun RerunModelScreen(
             )
         },
         dock = listOfNotNull(
+            // 3D and Plan are one camera move apart (Matterport's dollhouse ↔ floor plan); the
+            // selected one recenters, as the replay's 3D view does.
             DockItem(
                 icon = Icons.Rounded._3dRotation,
-                label = stringResource(R.string.scan_result_recenter_label),
-                caption = stringResource(R.string.scan_result_recenter),
-                onClick = { orbit.recenter() },
+                label = stringResource(R.string.scan_result_3d_label),
+                caption = stringResource(R.string.scan_result_3d),
+                onClick = {
+                    plan = false
+                    cinematics.request(ScanResultCinematics.Request.Recenter)
+                },
                 enabled = instance != null,
+                selected = !plan,
+            ),
+            DockItem(
+                icon = Icons.Rounded.Map,
+                label = stringResource(R.string.scan_result_plan_label),
+                caption = stringResource(R.string.scan_result_plan),
+                onClick = {
+                    plan = true
+                    cinematics.request(ScanResultCinematics.Request.Recenter)
+                },
+                enabled = instance != null,
+                selected = plan,
             ),
             onReplay?.let {
                 DockItem(
@@ -509,6 +547,10 @@ internal fun RerunModelScreen(
         val framing = remember(model, orbit) {
             model?.let { DollhouseFraming(it.bounds, RerunResultView.ELEVATION, orbit.verticalFovDegrees) }
         }
+        // The floor plan: the same room, the same turn, straight down from the map's elevation.
+        val planFraming = remember(model, orbit) {
+            model?.let { DollhouseFraming(it.bounds, ArDebugFraming.MAP_ELEVATION, orbit.verticalFovDegrees) }
+        }
         val opening = remember(model, orbit) { DollhouseOpening() }
         BoxWithConstraints(Modifier.fillMaxSize().background(chrome.ground)) {
             // What the chrome leaves of the view at rest — below the name, above the dock, between
@@ -536,7 +578,7 @@ internal fun RerunModelScreen(
             // The view's shape from its constraints: the surface reports its size after composing.
             val aspect = constraints.maxWidth.toFloat() / constraints.maxHeight.coerceAtLeast(1)
             val home = rememberUpdatedState {
-                framing?.home(RerunResultView.AZIMUTH, aspect, insets)
+                (if (plan) planFraming else framing)?.home(RerunResultView.AZIMUTH, aspect, insets)
             }
             SideEffect { home.value()?.let { opening.aim(orbit, it) } }
             SceneView(
@@ -551,11 +593,13 @@ internal fun RerunModelScreen(
                 frameRatePolicy = FrameRatePolicy.Continuous(),
                 autoCenterContent = false,
                 environment = environment,
-                cameraManipulator = orbit,
+                cameraManipulator = cinematics.manipulator,
                 onFrame = {
                     val framed = home.value() ?: return@SceneView
-                    if (instance != null && opening.drawn(orbit, framed)) shown = true
-                    opening.aim(orbit, framed)
+                    // The reveal starts on the frame the model is drawn on its framing, and the
+                    // view is let to be seen on its first frame, not the still one before it.
+                    if (cinematics.frameDrawn(opening, framed, ready = instance != null)) shown = true
+                    if (touring != cinematics.touring) touring = cinematics.touring
                 },
             ) {
                 // The scan in its own world space, metres, Y up: framed by its bounds, not moved.
@@ -668,6 +712,41 @@ private fun ModelHint(text: String, modifier: Modifier = Modifier) {
     )
 }
 
+/**
+ * Tour, and Stop while it plays (#4631): a pill in the stage's chrome over the model, beside
+ * which the hint is read — the one camera move the user asks for, never one that starts alone.
+ */
+@Composable
+private fun ScanTourPill(touring: Boolean, enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val chrome = LocalStageChrome.current
+    val shape = RoundedCornerShape(SceneViewTokens.Radius.full)
+    val label = stringResource(R.string.scan_result_tour_label)
+    Row(
+        modifier = modifier
+            .heightIn(min = SceneViewTokens.Layout.touchTarget)
+            .clip(shape)
+            .background(chrome.card, shape)
+            .overMediaEdge(shape, chrome.edgeRing, chrome.edgeHalo)
+            .clickable(enabled = enabled, role = Role.Button, onClickLabel = label, onClick = onClick)
+            .padding(horizontal = Space.md, vertical = Space.sm)
+            .testTag(RERUN_MODEL_TOUR_TAG),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Space.sm),
+    ) {
+        Icon(
+            imageVector = if (touring) Icons.Rounded.Stop else Icons.Rounded._360,
+            contentDescription = null,
+            tint = chrome.onCard,
+            modifier = Modifier.size(SceneViewTokens.Layout.dockIconSize),
+        )
+        Text(
+            text = stringResource(if (touring) R.string.scan_result_tour_stop else R.string.scan_result_tour),
+            style = SceneViewTokens.Type.caption,
+            color = chrome.onCard,
+        )
+    }
+}
+
 @Composable
 private fun RenameDialog(title: String, onDismiss: () -> Unit, onRename: (String) -> Unit) {
     var draft by remember { mutableStateOf(title) }
@@ -714,6 +793,7 @@ private fun rememberModelEnvironment(engine: Engine, ground: androidx.compose.ui
 internal const val RERUN_MODEL_CARD_TAG = "rerun_model_card"
 internal const val RERUN_MODEL_NAME_TAG = "rerun_model_name"
 internal const val RERUN_MODEL_HINT_TAG = "rerun_model_hint"
+internal const val RERUN_MODEL_TOUR_TAG = "rerun_model_tour"
 internal const val RERUN_MODEL_VEIL_TAG = "rerun_model_veil"
 
 private const val TAG = "RerunModel"

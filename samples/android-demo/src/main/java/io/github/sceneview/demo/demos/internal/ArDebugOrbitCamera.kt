@@ -3,8 +3,12 @@ package io.github.sceneview.demo.demos.internal
 import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.cross
 import dev.romainguy.kotlin.math.dot
+import dev.romainguy.kotlin.math.length
 import dev.romainguy.kotlin.math.lookAt
 import dev.romainguy.kotlin.math.normalize
+import io.github.sceneview.camera.CameraShot
+import io.github.sceneview.camera.CameraShotSink
+import io.github.sceneview.camera.CameraShotVelocity
 import io.github.sceneview.gesture.CameraGestureDetector
 import io.github.sceneview.gesture.zoomedDistanceForPinch
 import io.github.sceneview.math.Position
@@ -17,6 +21,7 @@ import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.hypot
+import kotlin.math.ln
 import kotlin.math.max
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -43,9 +48,41 @@ class ArDebugOrbitCamera(
     initialPose: OrbitPose = ArDebugFraming.DEFAULT_POSE,
     /** Slow sway while following. Off in QA, so captures are deterministic. */
     var drift: Boolean = true,
-    /** The clear part of the view the session is framed in: see [OrbitBand]. */
+    /** The clear part of the view the session is framed in, and the [lift] it draws at: see [OrbitBand]. */
     band: OrbitBand = OrbitBand.CARD,
-) : CameraGestureDetector.CameraManipulator {
+    /** How fast following eases onto [home], per second ([ArDebugFraming.APPROACH_RATE]). */
+    val approachRate: Float = ArDebugFraming.APPROACH_RATE,
+    /** The fastest following swings its heading round, in degrees per second. */
+    val maxTurnDegreesPerSecond: Float = ArDebugFraming.MAX_TURN_DEGREES_PER_SECOND,
+    /**
+     * The orbit a drag across the view's whole width makes, in degrees; `null` keeps the fixed
+     * [DEGREES_PER_PIXEL]. 3D Scan's live view gives 180 (#4628): a third of the screen turns it
+     * by 60°, the same on every phone, where 0.28°/px turned a Pixel 7a round by 500 px.
+     */
+    val degreesPerViewWidth: Float? = null,
+    /** The elevations a drag can reach, inside [ArDebugFraming.MIN_ELEVATION]…[ArDebugFraming.MAX_ELEVATION]. */
+    val elevationRange: ClosedFloatingPointRange<Float> =
+        ArDebugFraming.MIN_ELEVATION..ArDebugFraming.MAX_ELEVATION,
+    /**
+     * The furthest a released drag coasts on, in degrees, `null` for the coast [MAX_SPIN] allows.
+     * The fling is kept everywhere; 3D Scan bounds it so a flick cannot spin its cloud away.
+     */
+    val maxCoastDegrees: Float? = null,
+) : CameraGestureDetector.CameraManipulator, CameraShotSink {
+
+    /**
+     * Where a touch that takes the camera over should orbit around, `null` for the pose's own
+     * target. 3D Scan follows the phone, but its cloud lies ahead of it: a drag that turned around
+     * the phone swung the cloud behind the camera (#4628), so the view sets this to the cloud's
+     * centre and [takeOver] moves the orbit's pivot onto it, the picture unchanged.
+     */
+    var pivot: Position? = null
+
+    /**
+     * Told when [following] changes: a touch takes the camera over, a recenter hands it back.
+     * The 3D Scan live view shows its Recenter pill off it (#4628).
+     */
+    var onFollowingChange: ((Boolean) -> Unit)? = null
 
     /** Current pose. Plain field, not Compose state: it changes every frame. */
     var pose: OrbitPose = initialPose
@@ -86,7 +123,11 @@ class ArDebugOrbitCamera(
 
     /** `true` while the camera frames the session by itself. */
     var following: Boolean = true
-        private set
+        private set(value) {
+            if (field == value) return
+            field = value
+            onFollowingChange?.invoke(value)
+        }
 
     /** Viewport height in pixels, for pan speed and for the view's screen-constant sizes. */
     var viewportHeight: Int = 1
@@ -187,6 +228,16 @@ class ArDebugOrbitCamera(
         home = home.copy(azimuthDegrees = heading)
     }
 
+    /**
+     * Following mode heads for [target], its heading included: 3D Scan's live view hands it the
+     * phone-follow pose every frame ([ScanFollow]), where the other views set [home] and keep the
+     * room's own heading.
+     */
+    fun followTo(target: OrbitPose) {
+        heading = target.azimuthDegrees
+        home = target
+    }
+
     /** Puts the camera at [target] at once — the first frame of a view, where easing would lag. */
     fun snapTo(target: OrbitPose) {
         pose = ArDebugFraming.clamp(target)
@@ -200,15 +251,8 @@ class ArDebugOrbitCamera(
 
     override fun getTransform(): Transform {
         val eye = CameraRig.eye(pose)
-        val metresPerPixel = CameraRig.worldPerPixel(pose.distance, verticalFovDegrees, viewportHeight)
         // A pedestal move along the camera's own up axis: the picture slides, the orbit does not.
-        val drop = if (lift == 0f || metresPerPixel <= 0f) {
-            Float3()
-        } else {
-            val forward = normalize(pose.target - eye)
-            val up = cross(normalize(cross(forward, Float3(0f, 1f, 0f))), forward)
-            up * (lift * viewportHeight * metresPerPixel)
-        }
+        val drop = liftDrop(pose)
         return Transform(lookAt(eye = eye - drop, target = pose.target - drop, up = Float3(0f, 1f, 0f)))
     }
 
@@ -230,15 +274,29 @@ class ArDebugOrbitCamera(
             pose = bounded(pose.copy(target = pannedTarget(dx, dy)))
             return
         }
-        val next = bounded(
+        val perPixel = degreesPerPixel
+        val next = clampDrag(
             pose.copy(
-                azimuthDegrees = pose.azimuthDegrees - dx * DEGREES_PER_PIXEL,
-                elevationDegrees = pose.elevationDegrees - dy * DEGREES_PER_PIXEL,
+                azimuthDegrees = pose.azimuthDegrees - dx * perPixel,
+                elevationDegrees = pose.elevationDegrees - dy * perPixel,
             )
         )
+        val turned = abs(next.azimuthDegrees - pose.azimuthDegrees) + abs(next.elevationDegrees - pose.elevationDegrees)
         dragAzimuth += next.azimuthDegrees - pose.azimuthDegrees
         dragElevation += next.elevationDegrees - pose.elevationDegrees
-        pose = next
+        pose = slidTowardsPivot(next, turned)
+    }
+
+    /**
+     * [next] with its target moved part of the way onto [pivot], in proportion to the [turned]
+     * degrees: the touch-down keeps the picture ([repivoted]), and the first
+     * [PIVOT_SLIDE_DEGREES] of the drag carry the orbit's centre onto the cloud, so no angle
+     * turns it off screen.
+     */
+    private fun slidTowardsPivot(next: OrbitPose, turned: Float): OrbitPose {
+        val centre = pivot ?: return next
+        val share = (turned / PIVOT_SLIDE_DEGREES).coerceIn(0f, 1f)
+        return next.copy(target = next.target + (centre - next.target) * share)
     }
 
     override fun grabEnd() {
@@ -271,8 +329,9 @@ class ArDebugOrbitCamera(
     override fun update(deltaTime: Float) {
         val dt = deltaTime.takeIf { it.isFinite() && it > 0f && it < 0.25f } ?: return
         if (grabbing && !panning) {
-            azimuthVelocity = (dragAzimuth / dt).coerceIn(-MAX_SPIN, MAX_SPIN)
-            elevationVelocity = (dragElevation / dt).coerceIn(-MAX_SPIN, MAX_SPIN)
+            val spin = maxSpin
+            azimuthVelocity = (dragAzimuth / dt).coerceIn(-spin, spin)
+            elevationVelocity = (dragElevation / dt).coerceIn(-spin, spin)
         }
         dragAzimuth = 0f
         dragElevation = 0f
@@ -290,17 +349,22 @@ class ArDebugOrbitCamera(
             followSeconds += dt
             val sway = if (drift && !overhead) ArDebugFraming.sway(followSeconds) else 0f
             home = home.copy(azimuthDegrees = heading + sway)
-            pose = ArDebugFraming.approach(pose, home, dt)
+            pose = ArDebugFraming.approach(pose, home, dt, approachRate, maxTurnDegreesPerSecond)
             return
         }
 
         if (azimuthVelocity != 0f || elevationVelocity != 0f) {
-            pose = bounded(
+            val next = clampDrag(
                 pose.copy(
                     azimuthDegrees = pose.azimuthDegrees + azimuthVelocity * dt,
                     elevationDegrees = pose.elevationDegrees + elevationVelocity * dt,
                 )
             )
+            // A coast into the pitch limit stops there instead of pressing on it.
+            if (next.elevationDegrees != pose.elevationDegrees + elevationVelocity * dt) elevationVelocity = 0f
+            val turned = abs(next.azimuthDegrees - pose.azimuthDegrees) +
+                abs(next.elevationDegrees - pose.elevationDegrees)
+            pose = slidTowardsPivot(next, turned)
             azimuthVelocity = CameraRig.decayInertia(azimuthVelocity, dt)
             elevationVelocity = CameraRig.decayInertia(elevationVelocity, dt)
         }
@@ -309,6 +373,24 @@ class ArDebugOrbitCamera(
     /** [candidate] kept inside [limits]: what every gesture's result goes through. */
     private fun bounded(candidate: OrbitPose): OrbitPose =
         ArDebugFraming.clamp(candidate, limits, lift, verticalFovDegrees)
+
+    /**
+     * A cinematic move was cut short by a touch or a button (#4631): the camera takes over on the
+     * move's last [shot], free, and coasts on at the move's speed — capped like a fling, so the
+     * view never stops dead nor spins away.
+     */
+    override fun takeOver(shot: CameraShot, velocity: CameraShotVelocity) {
+        // The same limits as a gesture: the coast that follows goes through them on its first frame.
+        val landed = bounded(shot.toOrbitPose())
+        // A move that ends on its own is handed over too, at rest: when it lands where the camera
+        // is already following (ScanResultCinematics hands the orbit its framing first), it stays.
+        if (following && velocity.isZero && landed.isNear(pose)) return
+        pose = landed
+        takeOver()
+        val spin = maxSpin
+        azimuthVelocity = velocity.azimuthDegreesPerSecond.coerceIn(-spin, spin)
+        elevationVelocity = velocity.elevationDegreesPerSecond.coerceIn(-spin, spin)
+    }
 
     private fun takeOver() {
         following = false
@@ -319,6 +401,53 @@ class ArDebugOrbitCamera(
         // finger leaves is the view that stays.
         heading = pose.azimuthDegrees
         home = home.copy(azimuthDegrees = heading)
+        pivot?.let { pose = repivoted(it) }
+    }
+
+    private fun OrbitPose.isNear(other: OrbitPose): Boolean =
+        length(target - other.target) < LANDED_EPSILON &&
+            abs(azimuthDegrees - other.azimuthDegrees) < LANDED_EPSILON &&
+            abs(elevationDegrees - other.elevationDegrees) < LANDED_EPSILON &&
+            abs(distance - other.distance) < LANDED_EPSILON
+
+    /**
+     * The fastest a release coasts at, in degrees per second: [MAX_SPIN], or the speed whose
+     * decay ([CameraRig.decayInertia]) covers [maxCoastDegrees] in all.
+     */
+    val maxSpin: Float
+        get() = maxCoastDegrees?.let { minOf(MAX_SPIN, it * -ln(CameraRig.INERTIA_DECAY_PER_SECOND)) } ?: MAX_SPIN
+
+    /** The orbit's degrees per pixel of drag: [degreesPerViewWidth] over the width, or the fixed rate. */
+    val degreesPerPixel: Float
+        get() = degreesPerViewWidth?.let { it / viewportWidth } ?: DEGREES_PER_PIXEL
+
+    /**
+     * A drag's [next] pose: its pitch inside [elevationRange], then [bounded] — the room's limits
+     * (eye above the floor, outside the scan) win over the range.
+     */
+    private fun clampDrag(next: OrbitPose): OrbitPose =
+        bounded(next.copy(elevationDegrees = next.elevationDegrees.coerceIn(elevationRange)))
+
+    /**
+     * The pose that draws exactly the picture [pose] draws, orbiting around the point of the view
+     * ray nearest [point] instead of around its own target: same eye, same direction, the target
+     * slid along the ray to [point]'s depth (and up by the [lift] that depth draws it with).
+     */
+    fun repivoted(point: Position): OrbitPose {
+        val forward = normalize(pose.target - CameraRig.eye(pose))
+        val drawnEye = CameraRig.eye(pose) - liftDrop(pose)
+        val depth = dot(point - drawnEye, forward).coerceIn(ArDebugFraming.MIN_DISTANCE, ArDebugFraming.MAX_DISTANCE)
+        val moved = pose.copy(distance = depth)
+        return moved.copy(target = drawnEye + forward * depth + liftDrop(moved))
+    }
+
+    /** How far [lift] moves the drawn camera of [at] along its own up axis. */
+    private fun liftDrop(at: OrbitPose): Float3 {
+        val metresPerPixel = CameraRig.worldPerPixel(at.distance, verticalFovDegrees, viewportHeight)
+        if (lift == 0f || metresPerPixel <= 0f) return Float3()
+        val forward = normalize(at.target - CameraRig.eye(at))
+        val up = cross(normalize(cross(forward, Float3(0f, 1f, 0f))), forward)
+        return up * (lift * viewportHeight * metresPerPixel)
     }
 
     private fun pannedTarget(dx: Float, dy: Float): Position {
@@ -335,6 +464,12 @@ class ArDebugOrbitCamera(
         const val FOCAL_LENGTH_MM = 28.0
         const val DEGREES_PER_PIXEL = 0.28f
         const val MAX_SPIN = 360f
+
+        /** The degrees of drag over which the orbit's centre slides onto [pivot]. */
+        const val PIVOT_SLIDE_DEGREES = 30f
+
+        /** How close, in degrees and metres, a finished move must land to count as already there. */
+        private const val LANDED_EPSILON = 1e-3f
     }
 }
 
@@ -898,10 +1033,16 @@ object ArDebugFraming {
      * turns at [MAX_TURN_DEGREES_PER_SECOND] at most: a recenter from the far side swings round,
      * it does not whip.
      */
-    fun approach(pose: OrbitPose, home: OrbitPose, deltaSeconds: Float): OrbitPose {
-        val fraction = 1f - exp(-APPROACH_RATE * deltaSeconds)
+    fun approach(
+        pose: OrbitPose,
+        home: OrbitPose,
+        deltaSeconds: Float,
+        rate: Float = APPROACH_RATE,
+        maxTurnDegreesPerSecond: Float = MAX_TURN_DEGREES_PER_SECOND,
+    ): OrbitPose {
+        val fraction = 1f - exp(-rate * deltaSeconds)
         val eased = CameraRig.lerp(pose, home, fraction)
-        val turn = MAX_TURN_DEGREES_PER_SECOND * deltaSeconds
+        val turn = maxTurnDegreesPerSecond * deltaSeconds
         val next = eased.copy(
             azimuthDegrees = pose.azimuthDegrees + (eased.azimuthDegrees - pose.azimuthDegrees).coerceIn(-turn, turn),
         )

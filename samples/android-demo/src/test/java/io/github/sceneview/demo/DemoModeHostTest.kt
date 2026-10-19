@@ -91,8 +91,23 @@ class DemoModeHostTest {
     fun `the XR card is listed only on an XR device`() {
         val listed = listedDemos(ALL_DEMOS, xrDevice = false).map { it.id }
         assertFalse("ar-xr" in listed)
-        // Labs demos are hidden too while Labs is off (the default).
-        assertEquals(ALL_DEMOS.size - XR_ONLY_DEMO_IDS.size - LABS_DEMO_IDS.size, listed.size)
+        // Labs demos are hidden too while Labs is off (the default), and so is Point & Ask's
+        // on-device fallback, which no catalogue lists.
+        assertEquals(
+            ALL_DEMOS.size - XR_ONLY_DEMO_IDS.size - LABS_DEMO_IDS.size - FALLBACK_ONLY_DEMO_IDS.size,
+            listed.size,
+        )
         assertTrue("ar-xr" in listedDemos(ALL_DEMOS, xrDevice = true).map { it.id })
+    }
+
+    @Test
+    fun `Point and Ask's on-device fallback is routable but never listed`() {
+        // #4608 x #2648: the ML Kit object labels lost their card, but Point & Ask's
+        // "unavailable" card opens them on a phone without AICore.
+        assertTrue(ALL_DEMOS.any { it.id == "ar-ml-object-label" })
+        assertEquals("ar-ml-object-label", DeepLinkRouter.validate("ar-ml-object-label", ALL_DEMOS))
+        listOf(false, true).forEach { xr ->
+            assertFalse("ar-ml-object-label" in listedDemos(ALL_DEMOS, xrDevice = xr).map { it.id })
+        }
     }
 }

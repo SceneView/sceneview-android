@@ -6,8 +6,8 @@ import org.junit.Test
 
 /**
  * Pure-JVM tests for the `Surface.ROTATION_*` -> rotation-degrees mapping `ar-ml-object-label`
- * (ML Kit) uses to correct ARCore's raw sensor-orientation CPU camera image before feeding
- * it into its vision pipeline.
+ * (ML Kit, unlisted since wave 1 but still Point & Ask's on-device fallback) uses to correct
+ * ARCore's raw sensor-orientation CPU camera image before feeding it into its vision pipeline.
  *
  * `ar-body-tracker` shipped without such a correction (#3266) and then used this mapping;
  * since the Squat Coach rewrite it reads the rotation straight from ARCore's display

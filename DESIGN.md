@@ -87,6 +87,8 @@ Glassmorphism adds depth and layering to surfaces that float over content (nav, 
 | `stage-pip-floor` | #E2E6EB | #161B22 | Floor of the iOS Secondary Camera (PiP) stage (iOS `Stage.pipFloor`; dark is Android's `StageSky.floor`). Light is a step under `surface-container-highest` so the ground reads against the backdrop (1.13:1 on `stage-pip-backdrop`, enough for a fill; the grid carries the edge) |
 | `stage-pip-grid` | #7A8494 | #5C6780 | Grid lines on `stage-pip-floor` (iOS `Stage.pipGrid`): 3.0:1 on the floor in both themes, where Android's `outline` / `outline-subtle` measured 1.18:1 / 2.18:1 |
 | `stage-pip-backdrop` | #F1F3F5 | #0B0F16 | Flat backdrop of the Secondary Camera stage (iOS `Stage.pipBackdrop`, = `surface-container-high` light / `stage-background` dark). The floor texture fades into exactly this colour at its rim, so no camera angle shows the floor's edge |
+| `stage-grid-minor` | rgba(92,103,128,0.45) | rgba(139,149,166,0.22) | Minor lines of the ground grid every 3D viewer of the demo app shares (Android `ViewerGroundGrid`, #4651): an endless metric grid on the floor, in powers of ten that follow the zoom, fading out with the distance like Blender's viewport grid. Light is `stage-pip-grid` dark's blue-grey, dark is `outline` dark; both at an alpha that keeps the floor the floor |
+| `stage-grid-major` | rgba(92,103,128,0.75) | rgba(139,149,166,0.45) | Major lines of that grid, every tenth minor line, 1.5 px wide: the lines that give the scale |
 | `stage-studio-top` | #CDD3DB | #0B0E13 | Top of the photo-studio wall behind a product on `/view` (`--vp-studio-top`, SceneView web `setStudio` `top`): the wall darkens upwards from the horizon, so the model stays the brightest thing in the frame |
 | `stage-studio-horizon` | #E7EAEF | #222833 | Where the studio wall meets the floor, with no line (`--vp-studio-horizon`, `setStudio` `horizon`). Also the canvas clear colour, so the stage does not change tone when the 3D takes over |
 | `stage-studio-floor` | #F2F4F7 | #2B323E | Studio floor away from the model (`--vp-studio-floor`, `setStudio` `floor`) |
@@ -96,6 +98,7 @@ Glassmorphism adds depth and layering to surfaces that float over content (nav, 
 | `stage-studio-vignette` | 0.8 | 0.6 | Not a colour: the grey the studio's corners are multiplied by before tone mapping (`_STUDIO_THEMES` in `sceneview.js`) |
 | `ar-scrim` | rgba(0,0,0,0.94) | rgba(0,0,0,0.88) | AR coaching overlay ground, over the camera feed |
 | `ar-scrim-border` | 1px rgba(255,255,255,0.16) | 1px rgba(255,255,255,0.10) | AR coaching overlay hairline |
+| `ar-camera-dim` | rgba(0,0,0,0.55) | rgba(0,0,0,0.55) | Veil over the live camera under 3D Scan's coloured cloud: the cloud leads, what is not scanned yet still reads on the camera behind (Android `ArOverlay.cameraDim`) |
 
 **The dark ramp is solved for ratio, not picked by eye.** Contrast ratio compresses at
 the dark end, where `(Y+0.05)` is dominated by the constant: against a `#0D1117` page a
@@ -701,6 +704,22 @@ themed surface — so it is theme-independent and uses the "Button glass" row.
   - The Model Viewer's Lighting sheet uses the same glass fill and no scrim.
     Browsing sheets (model picker, credits, what's new) stay opaque and modal — you
     read those, you do not watch something change behind them.
+
+### Cosmos Spacetime Sheet (Android demo)
+
+The rubber sheet of Cosmos › Star › Spacetime (`cosmos_spacetime.mat`). The scene is deep
+space in both themes, so light and dark share one value; the shader writes the inverse of the
+Filmic tone mapper, so these are the colours on screen.
+
+| Token | Light | Dark | Usage |
+|---|---|---|---|
+| `cosmos-sheet` | #1C2638 | #1C2638 | The lit sheet on the flat plane, before the key light's shading (the far wall of the star's well reaches 1.25×) |
+| `cosmos-sheet-grid` | #A4C1FF | #A4C1FF | A grid line at full glow (`primary`, dark): 0.8 core + 0.22 halo, 1.6× at the star's well, fading out (squared) from 2 to 11, inside the rim at 12 |
+
+- **The grid carries the curvature.** Lines are straight on the flat XZ plane, so the wells
+  bend them; a lit grey surface alone read as a flat disc (#4623).
+- **No sheet colour in the bloom.** Every channel stays under the tone mapper's white, so
+  the star alone blooms.
 
 ### Floating Dock (Android demo)
 

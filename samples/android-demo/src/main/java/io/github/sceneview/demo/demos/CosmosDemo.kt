@@ -1,5 +1,6 @@
 package io.github.sceneview.demo.demos
 
+import io.github.sceneview.demo.common.rememberFilmicView
 import io.github.sceneview.demo.recording.rememberSceneRecorderState
 import io.github.sceneview.rememberSurfaceMirrorer
 import io.github.sceneview.demo.telemetry.LocalSampleId
@@ -90,7 +91,6 @@ import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberMaterialLoader
 import io.github.sceneview.rememberOnGestureListener
 import io.github.sceneview.rememberRenderInvalidator
-import io.github.sceneview.rememberView
 import io.github.sceneview.safeDestroyIndexBuffer
 import io.github.sceneview.safeDestroyVertexBuffer
 import io.github.sceneview.sample.ui.LabeledSlider
@@ -191,7 +191,7 @@ fun CosmosDemo(onBack: () -> Unit) {
 
     val engine = rememberEngine()
     val materialLoader = rememberMaterialLoader(engine)
-    val view = rememberView(engine)
+    val view = rememberFilmicView(engine)
     // The shared Record action (samples step 0, the former `video-recording` card): the scene's
     // frames are mirrored into an MP4 encoder, without the Compose chrome.
     val surfaceMirrorer = rememberSurfaceMirrorer()
@@ -1387,6 +1387,8 @@ private class FabricInstances(val sheet: MaterialInstance, val worlds: List<Mate
         val light = CosmosSpacetime.LIGHT
         sheet.setParameter("lightDir", light[0], light[1], light[2])
         sheet.setParameter("baseColor", base[0], base[1], base[2])
+        val grid = CosmosSpacetime.sheetGridLinear()
+        sheet.setParameter("gridColor", grid[0], grid[1], grid[2])
         sheet.setParameter("intensity", 0f)
         worlds.forEachIndexed { slot, world ->
             val look = FABRIC_LOOKS[slot]

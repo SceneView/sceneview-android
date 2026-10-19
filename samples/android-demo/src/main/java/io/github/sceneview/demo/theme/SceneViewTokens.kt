@@ -67,6 +67,18 @@ object SceneViewTokens {
         )
     }
 
+    /**
+     * `DESIGN.md` — `stage-grid-minor` / `stage-grid-major`: the ground grid every 3D viewer of
+     * the demo shares (#4651, `ViewerGroundGrid`). Colour and alpha both: the grid is drawn over
+     * the floor, never instead of it.
+     */
+    object ViewerGrid {
+        val LightMinor = Color(0x735C6780)
+        val LightMajor = Color(0xBF5C6780)
+        val DarkMinor = Color(0x388B95A6)
+        val DarkMajor = Color(0x738B95A6)
+    }
+
     /** `DESIGN.md` — Spatial Gallery overlay colours. */
     object SpatialGalleryColor {
         val stageScrimStart = Color.Transparent
@@ -583,6 +595,14 @@ object SceneViewTokens {
         val scrimLight = Color(0xF0000000)
         val scrimDark = Color(0xE0000000)
         val onScrim = Color(0xFFFFFFFF)
+
+        /**
+         * `ar-camera-dim` — the veil over the live camera under 3D Scan's coloured cloud
+         * (#4628): dark enough that the cloud's own colours lead, light enough that what is
+         * not scanned yet still reads on the camera behind and guides the next move. Black
+         * at 55 % in both themes: the ground is the camera, not a `surface`.
+         */
+        val cameraDim = Color(0x8C000000)
 
         /**
          * `on-ar-scrim-dim` — secondary text on an AR overlay (labels, captions, the

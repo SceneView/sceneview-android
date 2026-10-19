@@ -1,6 +1,5 @@
 package io.github.sceneview.demo.demos
 
-import io.github.sceneview.demo.telemetry.logOutboundLink
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
@@ -8,10 +7,7 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.net.ConnectivityManager
 import android.provider.Settings
-import android.speech.RecognizerIntent
 import android.util.Log
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -37,12 +33,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ErrorOutline
-import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface as M3Surface
@@ -123,21 +117,24 @@ import io.github.sceneview.demo.ai.rememberAskEngine
 import io.github.sceneview.demo.ai.toAvailability
 import io.github.sceneview.demo.common.ForceTrackingFailureMenu
 import io.github.sceneview.demo.common.QaCameraBackdrop
+import io.github.sceneview.demo.common.VoiceDictationButton
+import io.github.sceneview.demo.common.VoiceDictationListeningHint
 import io.github.sceneview.demo.common.placement.PivotedModelNode
-import io.github.sceneview.demo.common.putVoiceSilenceExtras
 import io.github.sceneview.demo.common.qaCameraBackdropEnabled
 import io.github.sceneview.demo.common.qaCameraBackdropSurfaceType
 import io.github.sceneview.demo.common.qaStateOverridesAllowed
 import io.github.sceneview.demo.common.rememberQaCameraBackdropActive
+import io.github.sceneview.demo.common.rememberVoiceDictation
 import io.github.sceneview.demo.demos.internal.ArPlacement
 import io.github.sceneview.demo.demos.internal.CardRequest
+import io.github.sceneview.demo.demos.internal.DemoMath
 import io.github.sceneview.demo.demos.internal.ProjectedPoint
 import io.github.sceneview.demo.demos.internal.SafeArea
 import io.github.sceneview.demo.demos.internal.ScreenProjection
 import io.github.sceneview.demo.demos.internal.layoutAnswerCards
-import io.github.sceneview.demo.demos.internal.DemoMath
 import io.github.sceneview.demo.demos.internal.rememberTexturesSettled
 import io.github.sceneview.demo.rememberArPlaybackDataset
+import io.github.sceneview.demo.telemetry.logOutboundLink
 import io.github.sceneview.demo.theme.SceneViewDemoTheme
 import io.github.sceneview.demo.theme.SceneViewTokens
 import io.github.sceneview.math.Position
@@ -307,11 +304,10 @@ private class AnswerPanel(
  * rather than reapplied from the original branch — that branch (`claude/point-and-ask-voice`,
  * tip `bc3ed0170`) forked 200+ commits back with no reachable merge-base by the time it was
  * revisited (#3083):
- *  - **Voice input** — an optional mic button on the question field launches the system
- *    speech recognizer (`ACTION_RECOGNIZE_SPEECH`) and appends the dictated text, the same
- *    zero-permission pattern `BugReportSheet` already shipped for its own dictation shortcut
- *    (#3292) — chosen over the original branch's raw `SpeechRecognizer` + runtime
- *    `RECORD_AUDIO` grant for less permission friction and one fewer failure mode to QA.
+ *  - **Voice input** — an optional mic button on the question field starts the shared
+ *    dictation (`rememberVoiceDictation`, #4618): the zero-permission system dialog
+ *    (`ACTION_RECOGNIZE_SPEECH`, #3292), reopened after each pause so one stays a sentence
+ *    rather than the end of it — still no `RECORD_AUDIO`, by design.
  *  - **Drop-3D mode** — long-press now drops whichever [PropSpec] is selected in the picker
  *    (`DROP_PROPS`), not always the shiba. Re-scoped to the three GLBs already bundled in the
  *    APK (shiba, fox, toy car) instead of the original branch's two new ~7 MB binary assets
@@ -522,27 +518,15 @@ fun PointAndAskDemo(onBack: () -> Unit) {
     // (see `askCaptureRegion`). Null before the first tap.
     var tapFocus by remember { mutableStateOf<Offset?>(null) }
 
-    // Voice input (#3083): the question field's optional mic button. Same zero-permission
-    // `ACTION_RECOGNIZE_SPEECH` intent `BugReportSheet` already ships for its own dictation
-    // shortcut (#3292) — the system recognizer app does the listening, this demo only reads
-    // back its result, so there is no RECORD_AUDIO grant to request or lose across rotation.
-    val speechAvailable = remember {
-        Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).resolveActivity(context.packageManager) != null
-    }
-    val voicePrompt = stringResource(R.string.demo_point_and_ask_voice_prompt)
-    val speechLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult(),
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val spoken = result.data
-                ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
-                ?.firstOrNull()
-                ?.takeIf { it.isNotBlank() }
-            if (spoken != null) {
-                questionText = spoken
-            }
-        }
-    }
+    // Voice input (#3083, #4618): the question field's optional mic button. The shared
+    // dictation chains the zero-permission system dialog through pauses and replaces the
+    // field with what it hears.
+    val dictation = rememberVoiceDictation(
+        prompt = stringResource(R.string.demo_point_and_ask_voice_prompt),
+        text = questionText,
+        onTextChange = { questionText = it },
+        append = false,
+    )
 
     // -- One ask round -----------------------------------------------------------------
     // Keyed by `captureToken`, not by the state: two rounds in a row produce the same
@@ -693,28 +677,19 @@ fun PointAndAskDemo(onBack: () -> Unit) {
                     label = { Text(stringResource(R.string.demo_point_and_ask_question_label)) },
                     placeholder = { Text(defaultQuestion) },
                     singleLine = true,
-                    trailingIcon = if (speechAvailable) {
+                    trailingIcon = if (dictation.available) {
                         {
-                            IconButton(
-                                onClick = {
-                                    val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                                        putExtra(
-                                            RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                                            RecognizerIntent.LANGUAGE_MODEL_FREE_FORM,
-                                        )
-                                        putExtra(RecognizerIntent.EXTRA_PROMPT, voicePrompt)
-                                        putVoiceSilenceExtras()
-                                    }
-                                    runCatching { speechLauncher.launch(intent) }
-                                },
-                            ) {
-                                Icon(
-                                    Icons.Outlined.Mic,
-                                    contentDescription =
-                                        stringResource(R.string.demo_point_and_ask_voice_cd),
-                                )
-                            }
+                            VoiceDictationButton(
+                                dictation = dictation,
+                                idleContentDescription =
+                                    stringResource(R.string.demo_point_and_ask_voice_cd),
+                            )
                         }
+                    } else {
+                        null
+                    },
+                    supportingText = if (dictation.listening) {
+                        { VoiceDictationListeningHint() }
                     } else {
                         null
                     },
@@ -1019,8 +994,8 @@ fun PointAndAskDemo(onBack: () -> Unit) {
                     cameraReady = true
                     isTracking = frame.camera.trackingState == TrackingState.TRACKING
                     // Keep the camera world position fresh so every anchored answer card can
-                    // billboard toward the viewer (#3276) — same pattern as `ARMLObjectLabelDemo`'s
-                    // `cameraPosition`. The pose translation is the camera eye position in world
+                    // billboard toward the viewer (#3276) — same pattern as the ML Kit Object
+                    // Labels fallback's `cameraPosition`. The pose translation is the camera eye position in world
                     // space, all a billboard needs to orient toward.
                     val camPose = frame.camera.pose.position
                     cameraPosition[0] = camPose.x
