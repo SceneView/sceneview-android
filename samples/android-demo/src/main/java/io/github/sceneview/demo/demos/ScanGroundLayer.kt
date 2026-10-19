@@ -10,6 +10,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 import com.google.android.filament.Engine
 import com.google.android.filament.Material
 import com.google.android.filament.MaterialInstance
@@ -28,18 +29,21 @@ import io.github.sceneview.material.setColor
  */
 internal data class ScanGroundColors(val slab: Color, val edge: Color, val missing: Color, val hatch: Color) {
     companion object {
-        /** How much darker the slab's edge is than its top: the dollhouse plinth's shade. */
+        /** How far the slab's edge is shaded from its top: the dollhouse plinth's shade. */
         const val EDGE_SHADE = 0.28f
 
         /** How much amber a missing tile takes: a tint, so the hatching reads on it. */
         const val MISSING_TINT = 0.2f
+
+        private const val HALF = 0.5f
 
         fun of(card: Color, ground: Color): ScanGroundColors {
             val slab = card.compositeOver(ground)
             val amber = SceneViewTokens.ArOverlay.accentGuidance
             return ScanGroundColors(
                 slab = slab,
-                edge = lerp(slab, Color.Black, EDGE_SHADE),
+                // Darker on a light stage, lighter on a dark one: the slab's side reads in both.
+                edge = lerp(slab, if (slab.luminance() < HALF) Color.White else Color.Black, EDGE_SHADE),
                 missing = lerp(slab, amber, MISSING_TINT),
                 hatch = amber,
             )
