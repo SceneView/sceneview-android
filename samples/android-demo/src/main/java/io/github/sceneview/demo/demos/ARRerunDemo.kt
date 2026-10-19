@@ -349,8 +349,10 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
         opening = null
         screen = RerunScreen.Landing
     }
-    // The floor plan opens from the result's export sheet (#4540) and goes back to it.
-    val leavePlan = { screen = if (hasResult) RerunScreen.Model else RerunScreen.Replay }
+    // The floor plan opens from an export sheet (#4540) and Back returns to the screen whose sheet
+    // opened it: the replay's or the result's (#4599). QA opens it straight, with no opener.
+    var planOpener by remember { mutableStateOf<RerunScreen?>(null) }
+    val leavePlan = { screen = planReturnOf(planOpener, hasResult) }
     val leaveDollhouse = { dollhouseReturn?.let { screen = it } ?: onBack() }
     val leaveLive = {
         if (recordingForDollhouse) {
@@ -656,6 +658,7 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
             onFloorPlan = planMedia?.let {
                 {
                     exporting = false
+                    planOpener = screen
                     screen = RerunScreen.Plan
                 }
             },
@@ -667,7 +670,15 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
  * The demo's screens: the landing, the live AR session (Record), the replay, the dollhouse — a
  * session stood on a table in AR (#4075) — the scan's result, and its floor plan (#4540).
  */
-private enum class RerunScreen { Landing, Live, Replay, Dollhouse, Model, Plan }
+internal enum class RerunScreen { Landing, Live, Replay, Dollhouse, Model, Plan }
+
+/**
+ * Where Back from the floor plan goes: the screen whose export sheet opened it ([opener]), or —
+ * opened with none, as QA does — the scan's result when it has one, else its replay.
+ */
+internal fun planReturnOf(opener: RerunScreen?, hasResult: Boolean): RerunScreen =
+    opener?.takeUnless { it == RerunScreen.Plan }
+        ?: if (hasResult) RerunScreen.Model else RerunScreen.Replay
 
 /** The replay's three views. */
 private enum class RerunMode { Scene, Map, Camera }

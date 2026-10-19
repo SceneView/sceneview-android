@@ -91,7 +91,6 @@ import io.github.sceneview.demo.demos.internal.DebugMesh
 import io.github.sceneview.demo.demos.internal.DebugPlaneKind
 import io.github.sceneview.demo.demos.internal.DebugPose
 import io.github.sceneview.demo.demos.internal.IntervalGate
-import io.github.sceneview.demo.demos.internal.MeasureUnitSystem
 import io.github.sceneview.demo.demos.internal.OrbitPose
 import io.github.sceneview.demo.demos.internal.CameraRig
 import io.github.sceneview.demo.demos.internal.PlaneLayering
@@ -99,6 +98,7 @@ import io.github.sceneview.demo.demos.internal.Vec3
 import io.github.sceneview.demo.demos.internal.ReplayGeometry
 import io.github.sceneview.demo.demos.internal.ReplayIntro
 import io.github.sceneview.demo.demos.internal.RoomMeasure
+import io.github.sceneview.demo.demos.internal.scanSummary
 import io.github.sceneview.demo.demos.internal.ScanPlanes
 import io.github.sceneview.demo.demos.internal.ScanFollow
 import io.github.sceneview.demo.theme.DebugPalette
@@ -462,12 +462,21 @@ internal fun paintOf(layer: DebugLayer, palette: DebugPalette): LayerPaint = whe
     DebugLayer.FrustumFace -> LayerPaint(palette.frustumFace, priority = 5)
     DebugLayer.Anchors -> LayerPaint(palette.anchor, glow = palette.anchorGlow)
     else -> {
-        // Trail0 … Trail7: the brand ramp, oldest to newest, through tint-soft.
+        // Trail0 … Trail7: one blue, faint to strong, oldest to newest.
         val f = DebugLayer.trailSteps.indexOf(layer).toFloat() / (DebugLayer.trailSteps.size - 1)
-        val color = if (f < 0.5f) lerp(palette.trailOld, palette.trailMid, f * 2f)
-        else lerp(palette.trailMid, palette.trailNew, (f - 0.5f) * 2f)
-        LayerPaint(color)
+        LayerPaint(trailColorAt(palette, f))
     }
+}
+
+/**
+ * The camera path's colour at [age] along it, `0` the oldest and `1` now: one hue, the palette's
+ * camera blue, from faint to strong (#4597) — the path and the frusta it leaves read as the same
+ * thing, and the ramp needs no legend beyond "stronger is later".
+ */
+internal fun trailColorAt(palette: DebugPalette, age: Float): Color {
+    val f = age.coerceIn(0f, 1f)
+    return if (f < 0.5f) lerp(palette.trailOld, palette.trailMid, f * 2f)
+    else lerp(palette.trailMid, palette.trailNew, (f - 0.5f) * 2f)
 }
 
 private fun MaterialLoader.createLayerMaterial(paint: LayerPaint): MaterialInstance =
@@ -524,7 +533,7 @@ private enum class Part(val layers: List<DebugLayer>, val group: DebugGroup) {
     Map(listOf(DebugLayer.MapPoints), DebugGroup.Points),
     Live(listOf(DebugLayer.LivePoints), DebugGroup.Points),
     Trail(DebugLayer.trailSteps + DebugLayer.TrailHead, DebugGroup.Trail),
-    Camera(listOf(DebugLayer.Keyframes, DebugLayer.Frustum, DebugLayer.FrustumFace), DebugGroup.Trail),
+    Camera(listOf(DebugLayer.Keyframes, DebugLayer.Frustum, DebugLayer.FrustumFace), DebugGroup.Cameras),
     Anchors(listOf(DebugLayer.Anchors), DebugGroup.Anchors),
 }
 
@@ -861,6 +870,7 @@ internal fun ArDebugSceneView(
                         points = visible(DebugGroup.Points),
                         anchors = visible(DebugGroup.Anchors),
                         trail = visible(DebugGroup.Trail),
+                        cameras = visible(DebugGroup.Cameras),
                         measure = !compact,
                         measureOnTop = orbit.overhead,
                     ),
@@ -879,8 +889,7 @@ internal fun ArDebugSceneView(
                 // draw ([ReplayLayers.measure]), so the two never disagree — and on the frame the
                 // floor redraws them, rather than a stats tick later.
                 if (replayLayers != null) {
-                    val locale = Locale.getDefault()
-                    val room = replayLayers.measure?.summary(MeasureUnitSystem.forLocale(locale), locale)
+                    val room = replayLayers.measure?.scanSummary(Locale.getDefault())
                     if (session.stats.room != room) session.stats = session.stats.copy(room = room)
                 }
                 // onFrame only fires for a frame that reached the surface (#3444): counting them is
@@ -1092,7 +1101,11 @@ internal fun ArDebugLegend(session: ArDebugSession, modifier: Modifier = Modifie
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
             val path = ArDebugFormat.distance(stats.pathMetres)
-            LegendChip("Path", path, palette.trailNew, session, DebugGroup.Trail, Modifier.weight(1f))
+            // The live view keeps one Path chip: its frusta go with it.
+            LegendChip(
+                "Path", path, palette.trailNew, session, DebugGroup.Trail, Modifier.weight(1f),
+                linked = DebugGroup.Cameras,
+            )
             val points = ArDebugFormat.count(stats.mapPoints)
             LegendChip("Points", points, palette.livePoint, session, DebugGroup.Points, Modifier.weight(1f))
         }
@@ -1113,6 +1126,7 @@ private fun LegendChip(
     session: ArDebugSession,
     group: DebugGroup,
     modifier: Modifier = Modifier,
+    linked: DebugGroup? = null,
 ) {
     val on = session.isVisible(group)
     val shape = CircleShape
@@ -1122,7 +1136,10 @@ private fun LegendChip(
             .clip(shape)
             .background(if (on) ArOverlay.scrimDark else Glass.surface, shape)
             .overMediaEdge(shape)
-            .clickable(role = Role.Switch) { session.toggle(group) }
+            .clickable(role = Role.Switch) {
+                session.toggle(group)
+                linked?.let { if (session.isVisible(it) != session.isVisible(group)) session.toggle(it) }
+            }
             .semantics { stateDescription = if (on) "Shown" else "Hidden" }
             .padding(horizontal = Glass.pillPaddingHorizontal),
         verticalAlignment = Alignment.CenterVertically,

@@ -15,6 +15,13 @@ import kotlin.math.roundToInt
 
 /** How a survey's figures are written: metric, rounded to what a phone's scan can stand behind. */
 object SurveyFormat {
+    /**
+     * The plan's one unit system: a floor plan is drawn to scale in metres, whatever the locale.
+     * Every 3D Scan dimension reads it, so the replay's figures and the plan's never mix feet
+     * with metres.
+     */
+    val UNITS = MeasureUnitSystem.Metric
+
     /** Lengths are given to the nearest 5 cm. */
     const val LENGTH_STEP_M = 0.05f
 
