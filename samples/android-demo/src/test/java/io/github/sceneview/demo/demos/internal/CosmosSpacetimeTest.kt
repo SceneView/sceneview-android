@@ -421,6 +421,31 @@ class CosmosSpacetimeTest {
     }
 
     @Test
+    fun `the grid glows over a dark sheet and fades out before the rim`() {
+        // #4623: the grey base read as a washed disc. The ground is dark now, the lines bright.
+        val base = CosmosSpacetime.luminance(CosmosSpacetime.SHEET_BASE_SRGB)
+        val grid = CosmosSpacetime.luminance(CosmosSpacetime.SHEET_GRID_SRGB)
+        assertTrue("base L $base", base < 0.03f)
+        // A line at plane gain against the flat sheet under the same gain: well over 4.5 to 1.
+        val plane = CosmosSpacetime.SHADE_GAIN
+        val line = CosmosSpacetime.GRID_CORE + CosmosSpacetime.GRID_HALO
+        val contrast = CosmosSpacetime.contrast(base * plane + grid * line * CosmosSpacetime.gridGlow(5f), base * plane)
+        assertTrue("line contrast $contrast", contrast >= 4.5f)
+        // Brightest at the star's well, then a monotonic fade to nothing at the rim.
+        assertEquals(1f + CosmosSpacetime.GRID_WELL_GAIN, CosmosSpacetime.gridGlow(0f), 1e-5f)
+        assertEquals(0f, CosmosSpacetime.gridGlow(CosmosSpacetime.GRID_FADE_END), 1e-6f)
+        var last = Float.MAX_VALUE
+        for (i in 0..120) {
+            val glow = CosmosSpacetime.gridGlow(i / 10f)
+            assertTrue("glow at ${i / 10f}", glow <= last + 1e-6f)
+            last = glow
+        }
+        // The token values DESIGN.md lists, `cosmos-sheet` and `cosmos-sheet-grid`.
+        assertEquals(0xFF1C2638.toInt(), CosmosSpacetime.SHEET_BASE_SRGB)
+        assertEquals(0xFFA4C1FF.toInt(), CosmosSpacetime.SHEET_GRID_SRGB)
+    }
+
+    @Test
     fun `the entry sequence runs its windows`() {
         assertEquals(0f, CosmosSpacetime.wellDepth(0.6f), 0f)
         assertEquals(1.05f, CosmosSpacetime.wellDepth(1.75f), 1e-4f)
