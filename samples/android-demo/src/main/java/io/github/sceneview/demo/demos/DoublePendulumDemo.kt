@@ -123,24 +123,17 @@ fun DoublePendulumDemo(onBack: () -> Unit) {
     // that the longest possible swing (both arms hanging straight down) still clears the base.
     val pivot = remember { Position(0f, PIVOT_HEIGHT, 0f) }
 
-    // The mutable simulation state. Re-seeded whenever a slider or Release
-    // changes the parameters: both arms start cocked to one side so the very
-    // first frame already shows dramatic, asymmetric motion.
-    var state by remember(length1, length2, gravity, generation) {
-        mutableStateOf(
-            DoublePendulumState(
-                link1 = DoublePendulumLink(
-                    length = length1, mass = PENDULUM_JOINT_MASS, angle = PENDULUM_RELEASE_ANGLE_1,
-                ),
-                link2 = DoublePendulumLink(
-                    length = length2, mass = PENDULUM_TIP_MASS, angle = PENDULUM_RELEASE_ANGLE_2,
-                ),
-                pivot = pivot,
-                gravity = gravity,
-                damping = PENDULUM_DAMPING,
-            )
-        )
+    // Keep the immutable release pose separate from the frame-driven state. The scene nodes use
+    // this pose at construction, before the first rendered frame; previously they were created at
+    // the world origin and only moved after the frame loop had yielded twice, so the tip bob read
+    // as a stray ball rolling into the pendulum on launch (#4650).
+    val releaseState = remember(length1, length2, gravity, generation) {
+        pendulumReleaseState(length1, length2, gravity, pivot)
     }
+    var state by remember(releaseState) { mutableStateOf(releaseState) }
+    val releaseLeadArm = remember(releaseState) { armTransform(releaseState.pivot, releaseState.joint) }
+    val releaseTrailArm = remember(releaseState) { armTransform(releaseState.joint, releaseState.tip) }
+    val (releaseJoint, releaseTip) = remember(releaseState) { pendulumInitialBodyPositions(releaseState) }
 
     val engine = rememberEngine()
     val view = rememberView(engine)
@@ -407,6 +400,9 @@ fun DoublePendulumDemo(onBack: () -> Unit) {
                 CubeNode(
                     size = Size(x = 0.032f, y = 1f, z = 0.032f),
                     materialInstance = leadArmMaterial,
+                    position = releaseLeadArm.position,
+                    rotation = releaseLeadArm.rotation,
+                    scale = releaseLeadArm.scale,
                     apply = {
                         isShadowCaster = true
                         leadArmRef = this
@@ -415,6 +411,9 @@ fun DoublePendulumDemo(onBack: () -> Unit) {
                 CubeNode(
                     size = Size(x = 0.046f, y = 1f, z = 0.046f),
                     materialInstance = trailArmMaterial,
+                    position = releaseTrailArm.position,
+                    rotation = releaseTrailArm.rotation,
+                    scale = releaseTrailArm.scale,
                     apply = {
                         isShadowCaster = true
                         trailArmRef = this
@@ -424,6 +423,7 @@ fun DoublePendulumDemo(onBack: () -> Unit) {
                 SphereNode(
                     radius = JOINT_BOB_RADIUS,
                     materialInstance = leadBobMaterial,
+                    position = releaseJoint,
                     apply = {
                         isShadowCaster = true
                         jointBobRef = this
@@ -433,6 +433,7 @@ fun DoublePendulumDemo(onBack: () -> Unit) {
                 SphereNode(
                     radius = TIP_BOB_RADIUS,
                     materialInstance = trailBobMaterial,
+                    position = releaseTip,
                     apply = {
                         isShadowCaster = true
                         tipBobRef = this
@@ -448,11 +449,10 @@ fun DoublePendulumDemo(onBack: () -> Unit) {
                 // The tip's recent path. Seeded as a short stub at the release point
                 // and rewritten in place every frame by the loop below — same point
                 // count every time, so the upload reuses its index buffer.
-                // The seed hangs off the hinge (never read from `state`, which changes every
-                // frame and would recompose the scene with it); the loop replaces it on its
-                // first frame.
+                // The immutable release pose, rather than frame-driven `state`, keeps the first
+                // picture correct without recomposing the scene on every simulation step.
                 if (showTrail) {
-                    val seed = remember { trailSeed(pivot) }
+                    val seed = remember(releaseState) { trailSeed(releaseState.tip) }
                     TubeNode(
                         points = seed,
                         radius = TRAIL_RADIUS,
@@ -579,6 +579,32 @@ internal const val PENDULUM_DEFAULT_LENGTH_1 = 0.52f
 internal const val PENDULUM_DEFAULT_LENGTH_2 = 0.34f
 internal const val PENDULUM_DEFAULT_GRAVITY = 11.2f
 
+/** The exact state both the first rendered frame and the simulation loop start from. */
+internal fun pendulumReleaseState(
+    length1: Float,
+    length2: Float,
+    gravity: Float,
+    pivot: Position = Position(0f, PIVOT_HEIGHT, 0f),
+) = DoublePendulumState(
+    link1 = DoublePendulumLink(
+        length = length1,
+        mass = PENDULUM_JOINT_MASS,
+        angle = PENDULUM_RELEASE_ANGLE_1,
+    ),
+    link2 = DoublePendulumLink(
+        length = length2,
+        mass = PENDULUM_TIP_MASS,
+        angle = PENDULUM_RELEASE_ANGLE_2,
+    ),
+    pivot = pivot,
+    gravity = gravity,
+    damping = PENDULUM_DAMPING,
+)
+
+/** Dynamic bodies present in the pendulum scene before its frame loop starts. */
+internal fun pendulumInitialBodyPositions(state: DoublePendulumState): List<Position> =
+    listOf(state.joint, state.tip)
+
 /** What the Settings sliders can set them to. */
 internal val PENDULUM_LENGTH_1_RANGE = 0.3f..0.65f
 internal val PENDULUM_LENGTH_2_RANGE = 0.2f..0.5f
@@ -646,7 +672,9 @@ private fun trailSeed(at: Position): List<Position> =
  * +Y points from [from] toward [to]. (The pendulum swings in the XY plane, so
  * Z rotation alone fully orients the arm.)
  */
-private fun applyArmTransform(node: CubeNodeImpl, from: Position, to: Position) {
+private data class ArmTransform(val position: Position, val rotation: Rotation, val scale: Scale)
+
+private fun armTransform(from: Position, to: Position): ArmTransform {
     val dx = to.x - from.x
     val dy = to.y - from.y
     val length = kotlin.math.sqrt(dx * dx + dy * dy)
@@ -654,11 +682,20 @@ private fun applyArmTransform(node: CubeNodeImpl, from: Position, to: Position) 
     // atan2(dx, dy) gives 0° when the arm points straight up (+Y); negate so
     // an arm hanging down-and-to-the-right rotates the expected way.
     val angleDeg = Math.toDegrees(atan2(dx.toDouble(), dy.toDouble())).toFloat()
-    node.position = Position(
-        x = (from.x + to.x) * 0.5f,
-        y = (from.y + to.y) * 0.5f,
-        z = from.z,
+    return ArmTransform(
+        position = Position(
+            x = (from.x + to.x) * 0.5f,
+            y = (from.y + to.y) * 0.5f,
+            z = from.z,
+        ),
+        rotation = Rotation(x = 0f, y = 0f, z = -angleDeg),
+        scale = Scale(x = 1f, y = length.coerceAtLeast(0.001f), z = 1f),
     )
-    node.rotation = Rotation(x = 0f, y = 0f, z = -angleDeg)
-    node.scale = Scale(x = 1f, y = length.coerceAtLeast(0.001f), z = 1f)
+}
+
+private fun applyArmTransform(node: CubeNodeImpl, from: Position, to: Position) {
+    val transform = armTransform(from, to)
+    node.position = transform.position
+    node.rotation = transform.rotation
+    node.scale = transform.scale
 }
