@@ -17,7 +17,7 @@ import kotlin.math.ln
  * A coast **replays the gesture** rather than integrating the node on its own:
  *
  * - a drag moves a synthetic pointer along the release velocity, in screen space, and hands it to
- *   the touched node's own `onMove` — the hit test, the parent delegation, an AR `PoseNode`'s
+ *   the node that accepted `onMoveBegin` — the hit test, an AR `PoseNode`'s
  *   plane hit and the app's `onMove` veto all run as for the finger. The node therefore stays on
  *   the surface it was dragged on, and the coast stops the first time that surface is missed;
  * - a twist / pinch feeds the editing node's `onRotate` / `onScale` the step the release velocity
@@ -56,24 +56,33 @@ internal class NodeEditingInertia(
 
     private var moveX = 0f
     private var moveY = 0f
+    /** The node that accepted `onMoveBegin`, set by the detector once the node has answered. */
+    var moveOwner: Node? = null
     private var moveCoast: MoveCoast? = null
 
     private var rotateAngle = 0f
+    /** The node that accepted `onRotateBegin`, set by the detector once the node has answered. */
+    var rotateOwner: Node? = null
     private var rotateCoast: Coast<RotateGestureDetector>? = null
 
     private var scaleLog = 0f
+    /** The node that accepted `onScaleBegin`, set by the detector once the node has answered. */
+    var scaleOwner: Node? = null
     private var scaleCoast: Coast<ScaleGestureDetector>? = null
 
     private class MoveCoast(
         val node: Node,
+        val owner: Node,
         val detector: MoveGestureDetector,
         val event: MotionEvent,
-    )
+    ) {
+        val isGone: Boolean get() = node.isDestroyed || owner.isDestroyed
+    }
 
     private class Coast<D>(
         /** The node the gesture was dispatched to, which receives the deferred `…End`. */
         val node: Node,
-        /** The node that owns the edit — the first editable one up the chain. */
+        /** The node that accepted the edit after any editable child vetoed it. */
         val owner: Node,
         val detector: D,
         val event: MotionEvent,
@@ -97,6 +106,7 @@ internal class NodeEditingInertia(
 
     fun onMoveBegin(e: MotionEvent) {
         finishMove()
+        moveOwner = null
         move.reset()
         onMoveSample(e)
     }
@@ -113,28 +123,27 @@ internal class NodeEditingInertia(
      */
     fun onMoveEnd(detector: MoveGestureDetector, e: MotionEvent, node: Node?): Boolean {
         // A second finger landing also ends a move: the user is still touching, nothing coasts.
-        if (node == null || e.actionMasked != MotionEvent.ACTION_UP) return false
-        val owner = generateSequence(node) { it.parent }.firstOrNull { it.isPositionEditable }
-            ?: return false
+        val owner = moveOwner.also { moveOwner = null }
+        if (node == null || owner == null || e.actionMasked != MotionEvent.ACTION_UP) return false
         move.inertia = owner.editingInertia
         if (!move.release(e.eventTime.seconds)) return false
         val synthetic = MotionEvent.obtain(e).apply {
             action = MotionEvent.ACTION_MOVE
             setLocation(moveX, moveY)
         }
-        moveCoast = MoveCoast(node, detector, synthetic)
+        moveCoast = MoveCoast(node, owner, detector, synthetic)
         return true
     }
 
     private fun advanceMove(deltaSeconds: Float) {
         val coast = moveCoast ?: return
-        if (coast.node.isDestroyed) return finishMove()
+        if (coast.isGone) return finishMove()
         val going = move.advance(deltaSeconds, step)
         moveX += step[0]
         moveY += step[1]
         coast.event.setLocation(moveX, moveY)
-        // The node's own drag path: a surface missed under the coasting point ends the coast.
-        val moved = runCatching { coast.node.onMove(coast.detector, coast.event) }.getOrDefault(false)
+        // The owner's drag path: a surface missed under the coasting point ends the coast.
+        val moved = runCatching { coast.owner.onMove(coast.detector, coast.event) }.getOrDefault(false)
         if (!going || !moved) finishMove()
     }
 
@@ -154,6 +163,7 @@ internal class NodeEditingInertia(
 
     fun onRotateBegin(e: MotionEvent) {
         finishRotate()
+        rotateOwner = null
         rotate.reset()
         rotateAngle = 0f
         rotate.addSample(e.eventTime.seconds, rotateAngle)
@@ -166,9 +176,8 @@ internal class NodeEditingInertia(
 
     /** As [onMoveEnd], for a twist. */
     fun onRotateEnd(detector: RotateGestureDetector, e: MotionEvent, node: Node?): Boolean {
-        if (node == null || e.actionMasked == MotionEvent.ACTION_CANCEL) return false
-        val owner = generateSequence(node) { it.parent }.firstOrNull { it.isRotationEditable }
-            ?: return false
+        val owner = rotateOwner.also { rotateOwner = null }
+        if (node == null || owner == null || e.actionMasked == MotionEvent.ACTION_CANCEL) return false
         rotate.inertia = owner.editingInertia
         if (!rotate.release(e.eventTime.seconds)) return false
         rotateCoast = Coast(node, owner, detector, MotionEvent.obtain(e))
@@ -204,6 +213,7 @@ internal class NodeEditingInertia(
 
     fun onScaleBegin(e: MotionEvent) {
         finishScale()
+        scaleOwner = null
         scale.reset()
         scaleLog = 0f
         scale.addSample(e.eventTime.seconds, scaleLog)
@@ -217,9 +227,8 @@ internal class NodeEditingInertia(
 
     /** As [onMoveEnd], for a pinch. */
     fun onScaleEnd(detector: ScaleGestureDetector, e: MotionEvent, node: Node?): Boolean {
-        if (node == null || e.actionMasked == MotionEvent.ACTION_CANCEL) return false
-        val owner = generateSequence(node) { it.parent }.firstOrNull { it.isScaleEditable }
-            ?: return false
+        val owner = scaleOwner.also { scaleOwner = null }
+        if (node == null || owner == null || e.actionMasked == MotionEvent.ACTION_CANCEL) return false
         scale.inertia = owner.editingInertia
         if (!scale.release(e.eventTime.seconds)) return false
         scaleCoast = Coast(node, owner, detector, MotionEvent.obtain(e))
