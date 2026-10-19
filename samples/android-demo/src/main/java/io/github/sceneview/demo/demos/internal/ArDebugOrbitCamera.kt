@@ -3,6 +3,7 @@ package io.github.sceneview.demo.demos.internal
 import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.cross
 import dev.romainguy.kotlin.math.dot
+import dev.romainguy.kotlin.math.length
 import dev.romainguy.kotlin.math.lookAt
 import dev.romainguy.kotlin.math.normalize
 import io.github.sceneview.camera.CameraShot
@@ -380,7 +381,11 @@ class ArDebugOrbitCamera(
      */
     override fun takeOver(shot: CameraShot, velocity: CameraShotVelocity) {
         // The same limits as a gesture: the coast that follows goes through them on its first frame.
-        pose = bounded(shot.toOrbitPose())
+        val landed = bounded(shot.toOrbitPose())
+        // A move that ends on its own is handed over too, at rest: when it lands where the camera
+        // is already following (ScanResultCinematics hands the orbit its framing first), it stays.
+        if (following && velocity.isZero && landed.isNear(pose)) return
+        pose = landed
         takeOver()
         val spin = maxSpin
         azimuthVelocity = velocity.azimuthDegreesPerSecond.coerceIn(-spin, spin)
@@ -398,6 +403,12 @@ class ArDebugOrbitCamera(
         home = home.copy(azimuthDegrees = heading)
         pivot?.let { pose = repivoted(it) }
     }
+
+    private fun OrbitPose.isNear(other: OrbitPose): Boolean =
+        length(target - other.target) < LANDED_EPSILON &&
+            abs(azimuthDegrees - other.azimuthDegrees) < LANDED_EPSILON &&
+            abs(elevationDegrees - other.elevationDegrees) < LANDED_EPSILON &&
+            abs(distance - other.distance) < LANDED_EPSILON
 
     /**
      * The fastest a release coasts at, in degrees per second: [MAX_SPIN], or the speed whose
@@ -456,6 +467,9 @@ class ArDebugOrbitCamera(
 
         /** The degrees of drag over which the orbit's centre slides onto [pivot]. */
         const val PIVOT_SLIDE_DEGREES = 30f
+
+        /** How close, in degrees and metres, a finished move must land to count as already there. */
+        private const val LANDED_EPSILON = 1e-3f
     }
 }
 
