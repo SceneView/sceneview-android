@@ -85,3 +85,9 @@ fun rememberCameraManipulator(
     inertia = Inertia.Default,
     creator = creator,
 )
+
+/** Sets [inertia] on the manipulator when it is the stock one (a plain property write). */
+internal fun CameraGestureDetector.CameraManipulator.applyInertia(inertia: Inertia) {
+    val stock = this as? CameraGestureDetector.DefaultCameraManipulator ?: return
+    if (stock.inertia != inertia) stock.inertia = inertia
+}
