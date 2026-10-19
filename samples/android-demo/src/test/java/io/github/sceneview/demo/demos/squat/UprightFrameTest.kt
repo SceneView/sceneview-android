@@ -105,6 +105,27 @@ class UprightFrameTest {
     }
 
     @Test
+    fun portraitFrontCameraIsTheMirrorOfTheBackCamera() {
+        // The selfie feed is drawn as a mirror: ARCore's transform is the back camera's
+        // quarter turn followed by a left-right flip, so raw (0,0) lands top-left and raw u
+        // runs down the left edge. The pose model must see that same mirrored picture so
+        // the skeleton lands on the body drawn on screen, with no extra flip in the overlay.
+        val front = UprightFrame.fromTransformedCorners(floatArrayOf(0f, 0f, 0f, 1f, 1f, 0f))!!
+        assertTrue(front.swapAxes)
+        assertFalse(front.flipX)
+        assertFalse(front.flipY)
+        // Upright x maps straight to view x: a landmark on the left of the image is drawn on
+        // the left of the screen, where the mirrored preview shows it.
+        assertEquals(0.2f, front.toViewX(0.2f), 1e-6f)
+
+        val back = UprightFrame.fromTransformedCorners(floatArrayOf(1f, 0f, 1f, 1f, 0f, 0f))!!
+        val (_, frontPx) = convert(front)
+        val (_, backPx) = convert(back)
+        // Each upright row of the front picture is the back picture's row reversed.
+        assertArrayEquals(intArrayOf(backPx[1], backPx[0], backPx[3], backPx[2]), frontPx)
+    }
+
+    @Test
     fun colourConversionIsBt601() {
         // Pure red in BT.601 limited range: Y=81, Cb=90, Cr=240.
         val y = ByteArray(4) { 81.toByte() }
