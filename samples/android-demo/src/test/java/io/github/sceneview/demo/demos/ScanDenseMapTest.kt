@@ -52,6 +52,23 @@ class ScanDenseMapTest {
     }
 
     @Test
+    fun `the HUD's count never drops when the map makes room (#4717)`() {
+        val dense = map(maxPoints = 2_000)
+        val walk = ScanWalkthrough(yawSteps = YAW_STEPS)
+        var shown = 0
+        var frame = 0
+        while (dense.fusion.compactions < 2 && frame < walk.frameCount) {
+            now += ScanCapture.DEPTH_INTERVAL_NS
+            dense.add(dense.project(walk.frame(frame++), now))
+            assertTrue("${dense.captured} after $shown", dense.captured >= shown)
+            shown = dense.captured
+        }
+        assertTrue("the map did make room", dense.fusion.compactions >= 1)
+        // What the saved scan keeps can be fewer: the coarsened regions merged their points.
+        assertTrue(dense.captured >= dense.count)
+    }
+
+    @Test
     fun `"Adjusting detail" shows for a few seconds after the map makes room, then goes`() {
         val dense = map(maxPoints = 2_000)
         assertEquals(ScanDetail.Fine, dense.detail())

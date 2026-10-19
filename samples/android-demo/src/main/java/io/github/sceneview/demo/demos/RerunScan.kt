@@ -8,6 +8,7 @@ import android.util.Log
 import com.google.ar.core.CameraIntrinsics
 import com.google.ar.core.Frame
 import com.google.ar.core.Pose
+import io.github.sceneview.demo.demos.internal.AdaptiveConfidence
 import io.github.sceneview.demo.demos.internal.ArDebugEvent
 import io.github.sceneview.demo.demos.internal.ArDebugTrace
 import io.github.sceneview.demo.demos.internal.DebugPose
@@ -86,6 +87,8 @@ internal class ScanCapture private constructor(
         journal = ArrayList()
         // #4683: an object keeps arm's length in its sparse points and planes too, depth or not.
         cutoff = ScanCutoff.of(preset)
+        // #4717: without depth, the feature points are the capture; a plain surface relaxes them.
+        if (!rawDepth) pointConfidence = AdaptiveConfidence.sparse()
     }
 
     private val gate = KeyframeGate(preset.photoStepM, preset.photoTurnDegrees, preset.maxPhotos)
@@ -142,6 +145,18 @@ internal class ScanCapture private constructor(
      * `0` without raw depth.
      */
     val denseCount: Int get() = dense?.count ?: 0
+
+    /**
+     * The HUD's count on a depth scan (#4717): the points confirmed so far, which never drops
+     * when the map coarsens. `0` without raw depth.
+     */
+    val denseCaptured: Int get() = dense?.captured ?: 0
+
+    /**
+     * Whether the surface in view gives nothing at the usual confidence, or only relaxed samples
+     * (#4717): the coaching line says to move closer.
+     */
+    val lowTexture: Boolean get() = (dense?.confidence ?: trace.pointConfidence)?.lowTexture == true
 
     /** What the coaching line says of the dense map now: fine, adjusting its detail, or full. */
     val denseDetail: ScanDetail get() = dense?.detail() ?: ScanDetail.Fine
@@ -243,7 +258,7 @@ internal class ScanCapture private constructor(
         lastDepthNanos = depth.timestamp
         depthGate.mark(frame.timestamp)
         val confidence = runCatching { frame.acquireRawDepthConfidenceImage() }.getOrNull()
-        return ScanDepth(depth, confidence, frame.camera.pose.toScanPose())
+        return ScanDepth(depth, confidence, frame.camera.pose.toScanPose(), frame.timestamp)
     }
 
     /** Which lens the depth is read with, once a scan: the proof on a device's log. */
@@ -302,7 +317,7 @@ internal class ScanCapture private constructor(
             intake.count(Outcome.NoImage)
             return
         }
-        val frame = depth.copy(textureIntrinsics, intrinsics, image.yuv)
+        val frame = depth.copy(textureIntrinsics, intrinsics, image.yuv, dense.confidence.threshold.toInt())
         if (frame == null) {
             intake.count(Outcome.Unreadable)
             return
@@ -311,7 +326,7 @@ internal class ScanCapture private constructor(
         fusing.set(true)
         fuseJob = scope.launch(Dispatchers.Default) {
             try {
-                val samples = DepthBackProjection.project(frame, farM = preset.farM)
+                val samples = dense.project(frame, depth.nanos, farM = preset.farM)
                 val stats = dense.add(samples)
                 intake.count(
                     when {
@@ -465,8 +480,13 @@ internal class ScanImage(private val image: Image, val yuv: YuvFrame, val sensor
  * ARCore's raw depth for one frame — DEPTH16 millimetres and, when ARCore gives one, its Y8
  * confidence — with the pose of the camera that took it. Close it before the frame ends.
  */
-internal class ScanDepth(private val depth: Image, private val confidence: Image?, val sensor: DebugPose) :
-    AutoCloseable {
+internal class ScanDepth(
+    private val depth: Image,
+    private val confidence: Image?,
+    val sensor: DebugPose,
+    /** The frame's timestamp: the clock [AdaptiveConfidence] waits on. */
+    val nanos: Long,
+) : AutoCloseable {
     /**
      * The depth copied out of ARCore's buffers, its lens the one of the image it is aligned with
      * ([DepthAlignment.depthLens]: the GPU [texture]'s, scaled to it), each pixel coloured from
@@ -474,7 +494,12 @@ internal class ScanDepth(private val depth: Image, private val confidence: Image
      * cannot be read, that no lens frames, or that comes without its confidence image.
      */
     @Suppress("ReturnCount", "LoopWithTooManyJumpStatements") // one skip per unusable pixel
-    fun copy(texture: ScanIntrinsics?, image: ScanIntrinsics, yuv: YuvFrame): DepthFrame? {
+    fun copy(
+        texture: ScanIntrinsics?,
+        image: ScanIntrinsics,
+        yuv: YuvFrame,
+        minConfidence: Int = DepthBackProjection.MIN_CONFIDENCE,
+    ): DepthFrame? {
         val w = depth.width
         val h = depth.height
         if (w <= 1 || h <= 1) return null
@@ -510,7 +535,7 @@ internal class ScanDepth(private val depth: Image, private val confidence: Image
         for (i in 0 until w * h) {
             val d = mm[i].toInt() and 0xFFFF
             if (d == 0) continue
-            if ((conf[i].toInt() and 0xFF) < DepthBackProjection.MIN_CONFIDENCE) continue
+            if ((conf[i].toInt() and 0xFF) < minConfidence) continue
             val u = map[0] * (i % w) + map[1]
             val v = map[2] * (i / w) + map[3]
             colors[i] = yuv.argb((u + 0.5f).toInt(), (v + 0.5f).toInt())
