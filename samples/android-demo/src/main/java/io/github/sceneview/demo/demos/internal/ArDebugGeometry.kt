@@ -4,6 +4,7 @@ import kotlin.math.atan2
 import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.floor
+import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
@@ -22,6 +23,13 @@ import kotlin.math.sqrt
  * [ArDebugStyle.metresPerPixel] of the current orbit distance, which is what keeps a point a
  * point and a line a line at any zoom — the Rerun viewer's look.
  */
+
+/**
+ * Where the floor grid fades out ([ArDebugGeometry.gridFade]): radii on the floor, in metres, from
+ * the room's centre ([centreX], [centreZ]) — whole inside [start], gone at [end]. What
+ * `replay_grid.mat`'s `fade` parameter is fed.
+ */
+data class GridFade(val centreX: Float, val centreZ: Float, val start: Float, val end: Float)
 
 /** A growable triangle list: xyz positions and triangle indices. */
 class DebugMesh(initialVertices: Int = 64) {
@@ -159,8 +167,8 @@ data class ArDebugStyle(
     val frustumEdge get() = px(1.3f, 0.002f, 0.03f)
     val keyframeEdge get() = px(0.9f, 0.0015f, 0.02f)
     val outlineHalfWidth get() = px(1.3f, 0.002f, 0.03f)
-    val gridMinorHalfWidth get() = px(0.55f, 0.001f, 0.015f)
-    val gridMajorHalfWidth get() = px(0.9f, 0.0015f, 0.025f)
+    val gridMinorHalfWidth get() = px(0.6f, 0.001f, 0.015f)
+    val gridMajorHalfWidth get() = px(1.2f, 0.002f, 0.03f)
     val axisRadius get() = px(1.6f, 0.003f, 0.04f)
     val anchorHalfWidth get() = px(1.8f, 0.003f, 0.04f)
 
@@ -589,30 +597,53 @@ object ArDebugGeometry {
         }
     }
 
-    /** Grid cell size: half a metre, a unit that reads as room scale. */
-    const val GRID_CELL_M = 0.5f
+    /** Grid cell size: a quarter of a metre — four minor squares to the metre (#4040). */
+    const val GRID_CELL_M = 0.25f
 
     /** Every n-th grid line is a major (1 m) line. */
-    const val GRID_MAJOR_EVERY = 2
+    const val GRID_MAJOR_EVERY = 4
+
+    /** Past the room's corners, how far the grid stays whole before it starts to fade. */
+    const val GRID_FADE_START_M = 0.5f
+
+    /** Over how many metres the grid fades out, from whole to gone ([gridFade]). */
+    const val GRID_FADE_M = 3f
 
     /** Axis gizmo arm length at the session origin. */
     const val AXIS_LENGTH_M = 0.3f
 
     /**
-     * The floor grid at height [y], covering [bounds] (`[minX, _, minZ, maxX, _, maxZ]`) plus a
-     * metre of margin, snapped to [GRID_CELL_M] so it does not crawl as the bounds grow, and the
-     * RGB axis gizmo at the world origin — where the session started.
+     * Where the floor grid fades out round [bounds] (`[minX, _, minZ, maxX, _, maxZ]`). Whole up
+     * to a little past the room's corners, gone [GRID_FADE_M] further — the grid of Polycam or
+     * Reality Composer, which gives the room its scale and has no edge.
+     */
+    fun gridFade(bounds: FloatArray): GridFade {
+        val corner = hypot((bounds[3] - bounds[0]) / 2f, (bounds[5] - bounds[2]) / 2f)
+        val start = corner + GRID_FADE_START_M
+        return GridFade(
+            centreX = (bounds[0] + bounds[3]) / 2f,
+            centreZ = (bounds[2] + bounds[5]) / 2f,
+            start = start,
+            end = start + GRID_FADE_M,
+        )
+    }
+
+    /**
+     * The floor grid at height [y] round [bounds] (`[minX, _, minZ, maxX, _, maxZ]`): a line every
+     * [GRID_CELL_M], a major one every metre, out to where [gridFade] has faded it — on whole
+     * cells, so it does not crawl as the bounds grow — and the RGB axis gizmo at the world
+     * origin, where the session started.
      */
     fun buildStage(bounds: FloatArray, y: Float, style: ArDebugStyle, out: (DebugLayer) -> DebugMesh) {
         val cell = GRID_CELL_M
-        val margin = 1f
-        val minX = floor((bounds[0] - margin) / cell).toInt()
-        val maxX = ceil((bounds[3] + margin) / cell).toInt()
-        val minZ = floor((bounds[2] - margin) / cell).toInt()
-        val maxZ = ceil((bounds[5] + margin) / cell).toInt()
+        val fade = gridFade(bounds)
+        val minX = floor((fade.centreX - fade.end) / cell).toInt()
+        val maxX = ceil((fade.centreX + fade.end) / cell).toInt()
+        val minZ = floor((fade.centreZ - fade.end) / cell).toInt()
+        val maxZ = ceil((fade.centreZ + fade.end) / cell).toInt()
         val up = Vec3.Up
         for (i in minX..maxX) {
-            val major = i % GRID_MAJOR_EVERY == 0
+            val major = Math.floorMod(i, GRID_MAJOR_EVERY) == 0
             addRibbon(
                 out(if (major) DebugLayer.GridMajor else DebugLayer.GridMinor),
                 Vec3(i * cell, y, minZ * cell), Vec3(i * cell, y, maxZ * cell), up,
@@ -620,7 +651,7 @@ object ArDebugGeometry {
             )
         }
         for (k in minZ..maxZ) {
-            val major = k % GRID_MAJOR_EVERY == 0
+            val major = Math.floorMod(k, GRID_MAJOR_EVERY) == 0
             addRibbon(
                 out(if (major) DebugLayer.GridMajor else DebugLayer.GridMinor),
                 Vec3(minX * cell, y, k * cell), Vec3(maxX * cell, y, k * cell), up,

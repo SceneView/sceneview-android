@@ -1,0 +1,2 @@
+<!-- category: Fixed -->
+- **The 3D Scan replay's floor grid reads at a glance ([#4040](https://github.com/sceneview/sceneview/issues/4040)).** A line every 25 cm and a stronger one every metre, about twice as wide and two to three times as opaque as before, on the light and the dark stage alike. The grid stays whole under the room and fades out over 3 m past its corners, like the ground grid of Polycam or Reality Composer, so it gives the camera path its scale with no hard edge, and still sits under the points, the path and the dimensions.

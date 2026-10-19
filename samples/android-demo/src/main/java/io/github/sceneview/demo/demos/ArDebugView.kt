@@ -509,8 +509,16 @@ private fun MaterialInstance.paint(paint: LayerPaint) {
  * opaque or translucent in every palette alike, so the material it was created on always fits.
  */
 private class LayerMaterials(private val materialLoader: MaterialLoader, private var palette: DebugPalette) {
-    val instances: Map<DebugLayer, MaterialInstance> =
-        DebugLayer.entries.associateWith { materialLoader.createLayerMaterial(paintOf(it, palette)) }
+    /** `replay_grid.mat`: the grid's flat colour, fading out round the room (#4040). */
+    private val gridMaterial = materialLoader.createMaterial(GRID_MATERIAL)
+
+    val instances: Map<DebugLayer, MaterialInstance> = DebugLayer.entries.associateWith { layer ->
+        if (layer in GRID_LAYERS) {
+            materialLoader.createInstance(gridMaterial).apply { paint(paintOf(layer, palette)) }
+        } else {
+            materialLoader.createLayerMaterial(paintOf(layer, palette))
+        }
+    }
 
     /** Takes [palette]'s colours; nothing is done while it is the one already shown. */
     fun paint(palette: DebugPalette) {
@@ -520,7 +528,16 @@ private class LayerMaterials(private val materialLoader: MaterialLoader, private
     }
 
     /** On the main thread, after the nodes that draw them left the scene. */
-    fun destroy() = instances.values.forEach { materialLoader.destroyMaterialInstance(it) }
+    fun destroy() {
+        instances.values.forEach { materialLoader.destroyMaterialInstance(it) }
+        // After its instances: a view opened again loads its own.
+        materialLoader.destroyMaterial(gridMaterial)
+    }
+
+    companion object {
+        const val GRID_MATERIAL = "materials/replay_grid.filamat"
+        val GRID_LAYERS = setOf(DebugLayer.GridMinor, DebugLayer.GridMajor)
+    }
 }
 
 /** The parts rebuilt independently, each when its own inputs change. */
@@ -541,7 +558,7 @@ private enum class Part(val layers: List<DebugLayer>, val group: DebugGroup) {
  * Keeps the layer nodes in step with an [ArDebugFrame]: each [Part] is rebuilt only when its
  * key — the inputs its geometry depends on — changes, so a steady view uploads nothing.
  */
-private class ArDebugLayers(engine: Engine, materials: Map<DebugLayer, MaterialInstance>) {
+private class ArDebugLayers(engine: Engine, private val materials: Map<DebugLayer, MaterialInstance>) {
     val nodes: Map<DebugLayer, DebugLayerNode> = DebugLayer.entries.associateWith { layer ->
         // Draw priorities do not depend on the palette.
         DebugLayerNode(engine, materials.getValue(layer), paintOf(layer, DebugView.Dark).priority)
@@ -574,7 +591,13 @@ private class ArDebugLayers(engine: Engine, materials: Map<DebugLayer, MaterialI
             keys[part] = key
             part.layers.forEach { meshes.getValue(it).clear() }
             when (part) {
-                Part.Stage -> ArDebugGeometry.buildStage(stageBounds, floorY, style, out)
+                Part.Stage -> {
+                    ArDebugGeometry.buildStage(stageBounds, floorY, style, out)
+                    val fade = ArDebugGeometry.gridFade(stageBounds)
+                    LayerMaterials.GRID_LAYERS.forEach {
+                        materials.getValue(it).setParameter("fade", fade.centreX, fade.centreZ, fade.start, fade.end)
+                    }
+                }
                 // Beside the replay's photos, at their depths: see [PlaneLayering].
                 Part.Planes -> ArDebugGeometry.buildPlanes(
                     frame.planes, style, out,

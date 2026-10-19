@@ -145,6 +145,35 @@ class ArDebugGeometryTest {
     }
 
     @Test
+    fun `the grid is whole under the room and reaches as far as it fades`() {
+        val room = floatArrayOf(-2f, 0f, -1.5f, 2f, 0f, 1.5f)
+        val fade = ArDebugGeometry.gridFade(room)
+        assertEquals(0f, fade.centreX, 1e-5f)
+        assertEquals(0f, fade.centreZ, 1e-5f)
+        // The corners (2.5 m out) stay whole; the lines are gone 3 m further.
+        assertTrue(fade.start > 2.5f)
+        assertEquals(ArDebugGeometry.GRID_FADE_M, fade.end - fade.start, 1e-4f)
+        val end = fade.end
+
+        val (meshes, out) = layers()
+        ArDebugGeometry.buildStage(room, 0f, style, out)
+        val b = meshes.getValue(DebugLayer.GridMinor).bounds()!!
+        assertTrue(b[0] <= -end && b[3] >= end)
+        assertTrue(b[2] <= -end && b[5] >= end)
+    }
+
+    @Test
+    fun `a major line every metre, three minor lines between`() {
+        val (meshes, out) = layers()
+        ArDebugGeometry.buildStage(floatArrayOf(-1f, 0f, -1f, 1f, 0f, 1f), 0f, style, out)
+        // Four vertices per ribbon: count the lines of each kind along x and z together.
+        val majors = meshes.getValue(DebugLayer.GridMajor).vertexCount / 4
+        val minors = meshes.getValue(DebugLayer.GridMinor).vertexCount / 4
+        assertTrue("$minors minor lines for $majors major", minors > 2 * majors && minors <= 3 * majors)
+        assertEquals(1f, ArDebugGeometry.GRID_CELL_M * ArDebugGeometry.GRID_MAJOR_EVERY, 1e-6f)
+    }
+
+    @Test
     fun `the floor is the lowest floor plane, else below the first pose`() {
         val withFloor = frame(
             planes = listOf(
