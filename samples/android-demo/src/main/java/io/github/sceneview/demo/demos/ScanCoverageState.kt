@@ -75,7 +75,7 @@ import kotlin.math.roundToInt
  * What the scan has, fed frame by frame from the 3D view's `observe` (#4631): the floor
  * [grid], the phone and its trail for the map, and the [coach]'s line. Plain fields for the
  * draw, read only in the draw phase through [tick]; the two figures the chrome shows,
- * [floorPercent] and [coachLine], are Compose state that changes only when their value does.
+ * [coveredSquareMetres] and [coachLine], are Compose state that changes only when their value does.
  */
 internal class ScanCoverageState {
     val grid = CoverageGrid()
@@ -103,6 +103,7 @@ internal class ScanCoverageState {
     /** The map's scale, pixels per metre, `0` until the first draw fits it ([fitScale]). */
     var pxPerMetre = 0f
         private set
+    private var lastHalf = 0f
 
     /** Bumped when the map has something new to draw: read in the draw phase only. */
     var tick by mutableIntStateOf(0)
@@ -205,7 +206,10 @@ internal class ScanCoverageState {
             }
         }
         target = max(target, half / MAX_HALF_RANGE_M)
-        val now = pxPerMetre
+        // Eased in map half-sizes per metre, not pixels: the card opening into the map to
+        // complete (#4718) draws the same framing at once, larger, instead of zooming in to it.
+        val now = pxPerMetre * lastHalf.let { if (it > 0f) half / it else 1f }
+        lastHalf = half
         pxPerMetre = if (now == 0f || target < now) target else now + (target - now) * ZOOM_IN_RATE
         return pxPerMetre
     }
@@ -288,7 +292,7 @@ internal fun ScanCoverageMap(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = stringResource(R.string.scan_coverage_title),
-                    style = SceneViewTokens.Type.title,
+                    style = SceneViewTokens.Type.card,
                     color = ArOverlay.onScrim,
                     modifier = Modifier.weight(1f),
                 )

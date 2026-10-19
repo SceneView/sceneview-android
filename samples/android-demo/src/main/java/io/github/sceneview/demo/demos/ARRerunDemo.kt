@@ -154,7 +154,11 @@ import io.github.sceneview.demo.demos.internal.RoomDollhouse
 import io.github.sceneview.demo.demos.internal.ScanBack
 import io.github.sceneview.demo.demos.internal.ScanClock
 import io.github.sceneview.demo.demos.internal.ScanCopy
+import io.github.sceneview.demo.demos.internal.DebugPose
 import io.github.sceneview.demo.demos.internal.ScanDetail
+import io.github.sceneview.demo.demos.internal.turnedBy
+import kotlin.math.PI
+import kotlin.math.sin
 import io.github.sceneview.demo.demos.internal.ScanFollow
 import io.github.sceneview.demo.demos.internal.ScanPhase
 import io.github.sceneview.demo.demos.internal.ScanCutoff
@@ -1357,8 +1361,13 @@ private fun RerunLiveScreen(
         // The take is cut as a real scan of this scope is (#4683): an object keeps arm's length.
         player.trace.cutoff = ScanCutoff.of(scanScope.preset)
         debugSession.trace = player.trace
-        val long = qaState.takeIf { it in LONG_QA_STATES }
-            ?.let { QaLongScan.over(source.trace, fixed = it == QA_STATE_RECORD_LONG_FIXED) }
+        val long = qaState.takeIf { it in LONG_QA_STATES }?.let {
+            QaLongScan.over(
+                source.trace,
+                fixed = it == QA_STATE_RECORD_LONG_FIXED,
+                plain = it == QA_STATE_RECORD_LOW_TEXTURE,
+            )
+        }
         qaLong = long
         qaScan = RerunReplayMedia(
             player.trace, source.manifest, emptyMap(), source.thumbnails, ByteArray(0), growing = true,
@@ -1385,6 +1394,21 @@ private fun RerunLiveScreen(
     val scanFollow = remember(scanMedia) { ScanFollow() }
     // What the capture has covered (#4631): the live map and the coach read it, frame by frame.
     val scanCoverage = remember(scanMedia) { ScanCoverageState() }
+    // Tapped open, the live map is the map to complete (#4718).
+    var scanMapExpanded by remember(scanMedia) { mutableStateOf(false) }
+    // The phone now, written each AR frame (#4718): paused, the trace records nothing, and the
+    // live view and the map follow this instead, so the cloud stays put in the room.
+    val livePose = remember { LivePose() }
+    // While it scans, the view follows the trace, which the overlay is drawn from; otherwise the
+    // phone now. The emulator's phone never moves: a QA capture paused turns it slowly instead.
+    val pausedSince = remember(phase.integrates) { SystemClock.elapsedRealtimeNanos() }
+    val scanLivePose: (DebugPose?) -> DebugPose? = { traced ->
+        when {
+            phase.integrates -> traced
+            qaRecord -> traced?.turnedBy(QaPausedTurn.degreesAt(SystemClock.elapsedRealtimeNanos() - pausedSince))
+            else -> livePose.pose ?: traced
+        }
+    }
     val scanOrbit = remember(scanMedia) {
         ArDebugOrbitCamera(
             drift = false,
@@ -1606,9 +1630,32 @@ private fun RerunLiveScreen(
     // ARCore's feature points otherwise. Zero at the start, never shown against a cap.
     val stats = debugSession.stats
     val capturedPoints = when {
-        scan?.rawDepth == true -> scan?.denseCount ?: 0
+        // The count that only grows (#4717): a coarsened region moves nothing on screen.
+        scan?.rawDepth == true -> scan?.denseCaptured ?: 0
         qaLong != null -> qaLong?.shownCount ?: 0
         else -> stats.mapPoints
+    }
+    // #4717: whether the surface in view gives too little to read, and whether the photos ran
+    // out. Plain fields of the scan, read on the HUD's tick.
+    val lowTexture by produceState(false, scan, qaLong) {
+        while (true) {
+            value = scan?.lowTexture ?: qaLong?.shownLowTexture ?: false
+            delay(HUD_TICK_MS)
+        }
+    }
+    val photoLimitReached by produceState(false, scan, qaLong) {
+        while (true) {
+            value = scan?.isPhotoLimitReached ?: qaLong?.shownPhotoLimit ?: false
+            delay(HUD_TICK_MS)
+        }
+    }
+    // The photo limit is said once, in the coaching line, then stays as a small HUD line.
+    var photoNoticeOver by remember(scanMedia) { mutableStateOf(false) }
+    LaunchedEffect(photoLimitReached) {
+        if (photoLimitReached && !photoNoticeOver) {
+            delay(PHOTO_NOTICE_MS)
+            photoNoticeOver = true
+        }
     }
     val capturedPhotos = debugSession.trace.imageCount
     val captureEmpty = capturedPoints == 0 && capturedPhotos == 0 && stats.planes == 0
@@ -1645,6 +1692,7 @@ private fun RerunLiveScreen(
                     seconds = scan?.elapsedSeconds(now) ?: qaLong?.shownSeconds ?: stats.duration,
                     points = capturedPoints,
                     label = ScanScopeCopy.label(scanScope, roomNumber),
+                    photoLimit = photoLimitReached && photoNoticeOver,
                 )
             } else if (debugFullScreen) {
                 ArDebugLegend(debugSession)
@@ -1698,10 +1746,16 @@ private fun RerunLiveScreen(
                 if (recording && scanMedia != null && mapsFloor) {
                     ScanCoverageMap(
                         state = scanCoverage,
-                        modifier = Modifier.align(Alignment.Start).padding(start = Space.md),
+                        modifier = Modifier
+                            .align(if (scanMapExpanded) Alignment.CenterHorizontally else Alignment.Start)
+                            .padding(horizontal = Space.md),
+                        expanded = scanMapExpanded,
+                        onToggle = { scanMapExpanded = !scanMapExpanded },
                     )
                 }
-                if (recording && !scanFollowing && phase != ScanPhase.Saving) {
+                // Only when it does something: the view was dragged off the phone, on a capture
+                // still open (#4718).
+                if (recording && !scanFollowing && phase in SCAN_MAP_PHASES) {
                     ScanRecenterPill(onRecenter = { scanOrbit.recenter() })
                 }
                 if (arCoreAvailability == null || qaState != null) {
@@ -1742,9 +1796,10 @@ private fun RerunLiveScreen(
                                 line = ScanCopy.coaching(
                                     phase = phase,
                                     trackingLost = trackingLost,
-                                    photoLimitReached = scan?.isPhotoLimitReached == true,
+                                    photoLimitReached = photoLimitReached && !photoNoticeOver,
                                     detail = scan?.denseDetail ?: qaLong?.shownDetail ?: ScanDetail.Fine,
                                     coach = scanCoverage.coachLine,
+                                    lowTexture = lowTexture,
                                 ),
                                 nextRoom = roomNumber.takeIf { betweenRooms },
                             ),
@@ -1817,6 +1872,9 @@ private fun RerunLiveScreen(
                     if (frame.timestamp > 0L) cameraReady = true
                     latestFrame = frame
                     isTracking = frame.camera.trackingState == TrackingState.TRACKING
+                    if (isTracking) livePose.pose = frame.camera.displayOrientedPose.let {
+                        DebugPose(it.tx(), it.ty(), it.tz(), it.qx(), it.qy(), it.qz(), it.qw())
+                    }
                     // Bridge gates on its own enabled + connection state, so this
                     // is safe whether or not the recorder is reachable.
                     bridge.logFrame(session, frame)
@@ -1877,11 +1935,11 @@ private fun RerunLiveScreen(
                     orbit = scanOrbit,
                     follow = scanFollow,
                     coverage = scanCoverage,
-                    following = scanFollowing,
                     media = scanMedia,
                     engine = engine,
                     modelLoader = modelLoader,
                     materialLoader = materialLoader,
+                    livePose = scanLivePose,
                 )
             }
 
@@ -2196,7 +2254,9 @@ private const val QA_STATE_RECORD_SAVE_FAILED = "record-save-failed"
 /** QA only (#4629): the capture screen fed a whole flat's depth, and the same with the old fixed cap. */
 private const val QA_STATE_RECORD_LONG = "record-long"
 private const val QA_STATE_RECORD_LONG_FIXED = "record-long-fixed"
-private val LONG_QA_STATES = setOf(QA_STATE_RECORD_LONG, QA_STATE_RECORD_LONG_FIXED)
+// #4717: the long walk started on a plain surface, for "Move closer" and the relaxed threshold.
+private const val QA_STATE_RECORD_LOW_TEXTURE = "record-low-texture"
+private val LONG_QA_STATES = setOf(QA_STATE_RECORD_LONG, QA_STATE_RECORD_LONG_FIXED, QA_STATE_RECORD_LOW_TEXTURE)
 
 /** QA only (#4647): the capture screen as an object's scan, and as a room of a whole home. */
 private const val QA_STATE_RECORD_OBJECT = "record-object"
@@ -2353,3 +2413,19 @@ internal const val RERUN_STATUS_CARD_TAG = "ar_rerun_status_card"
 
 /** The capture phases that show its coverage map (#4631): while it is open, not under a card. */
 private val SCAN_MAP_PHASES = setOf(ScanPhase.Scanning, ScanPhase.Paused)
+
+/** The phone now, off the AR frame: a plain field, read in the 3D view's frame loop (#4718). */
+private class LivePose {
+    @Volatile var pose: DebugPose? = null
+}
+
+/** QA only (#4718): a paused emulator capture swings its still phone 40° either way, every 8 s. */
+internal object QaPausedTurn {
+    fun degreesAt(nanos: Long): Float = AMPLITUDE_DEGREES * sin(2f * PI.toFloat() * nanos / PERIOD_NS)
+
+    private const val AMPLITUDE_DEGREES = 40f
+    private const val PERIOD_NS = 8e9f
+}
+
+/** How long the photo limit's notice holds the coaching line before it becomes the HUD's line. */
+private const val PHOTO_NOTICE_MS = 4_000L

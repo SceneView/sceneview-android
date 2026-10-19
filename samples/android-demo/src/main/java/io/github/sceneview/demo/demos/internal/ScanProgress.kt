@@ -1,6 +1,8 @@
 package io.github.sceneview.demo.demos.internal
 
+import kotlin.math.cos
 import kotlin.math.roundToInt
+import kotlin.math.sin
 
 /**
  * The capture's one count as the user reads it (#4717): it only grows. A raw count that drops —
@@ -181,4 +183,22 @@ object ScanAreaCopy {
     private const val DECIMAL_UNDER = 10f
     private const val TENTHS = 10f
     private const val TENTHS_INT = 10
+}
+
+/**
+ * This pose turned by [degrees] about the vertical, in place: what a phone held still and swung
+ * round does. QA only (#4718): the emulator's phone never moves, so a paused capture turns it
+ * this way to show the live view follow it while the cloud stays where it is in the room.
+ */
+internal fun DebugPose.turnedBy(degrees: Float): DebugPose {
+    val half = Math.toRadians(degrees.toDouble()).toFloat() / 2f
+    val s = sin(half)
+    val c = cos(half)
+    // q' = yaw * q, with yaw = (0, s, 0, c): the turn is about the world's vertical.
+    return copy(
+        qx = c * qx + s * qz,
+        qy = c * qy + s * qw,
+        qz = c * qz - s * qx,
+        qw = c * qw - s * qy,
+    )
 }
