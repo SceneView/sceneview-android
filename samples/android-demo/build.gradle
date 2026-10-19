@@ -243,6 +243,11 @@ android {
         compose = true
         buildConfig = true
     }
+    lint {
+        checkDependencies = true
+        checkTestSources = false
+        ignoreTestSources = true
+    }
     androidResources {
         // The demo apps ship in en-US only: source strings live in `values/`
         // and there are no translated `values-<locale>/` folders. This filter
