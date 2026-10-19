@@ -286,6 +286,7 @@ internal fun ScanLiveView(
     session: ArDebugSession,
     orbit: ArDebugOrbitCamera,
     follow: ScanFollow,
+    coverage: ScanCoverageState,
     following: Boolean,
     media: RerunReplayMedia,
     engine: Engine,
@@ -306,6 +307,7 @@ internal fun ScanLiveView(
             transparent = true,
             visible = { it in SCAN_LIVE_GROUPS },
             follow = { frame -> follow.poseFor(frame.camera) },
+            observe = coverage::observe,
         )
         if (following) {
             val youAreHere = stringResource(R.string.demo_ar_rerun_you_are_here)

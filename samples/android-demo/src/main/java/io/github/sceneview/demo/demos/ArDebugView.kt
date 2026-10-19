@@ -674,7 +674,9 @@ private fun skyboxAlpha(transparent: Boolean): Float = if (transparent) 0f else 
  * [transparent] draws no ground: the layers over whatever is under the view (3D Scan's live view
  * draws them over the dimmed camera, #4628). [visible] picks the layers drawn, the session's own
  * choice by default. [follow], when set, is where following mode heads for each frame instead of
- * framing the content's bounds — `null` keeps the last home.
+ * framing the content's bounds — `null` keeps the last home. [observe] hears each frame's
+ * [ArDebugFrame] after it is drawn and changes nothing of the view: 3D Scan's coverage map
+ * reads the cloud and the trail off it (#4631).
  */
 @Composable
 @Suppress("LongParameterList") // the demo's shared engine, handed down once, and one flag per reading
@@ -691,8 +693,10 @@ internal fun ArDebugSceneView(
     transparent: Boolean = false,
     visible: (DebugGroup) -> Boolean = session::isVisible,
     follow: ((ArDebugFrame) -> OrbitPose?)? = null,
+    observe: ((ArDebugFrame) -> Unit)? = null,
 ) {
     val shown by rememberUpdatedState(onShown)
+    val observer by rememberUpdatedState(observe)
     // The ground and palette of the stage this view is drawn on (#4080): the dark stage under
     // media chrome, the light one on a themed stage in light theme.
     val chrome = LocalStageChrome.current
@@ -863,6 +867,7 @@ internal fun ArDebugSceneView(
                     eye = CameraRig.eye(orbit.pose).let { Vec3(it.x, it.y, it.z) },
                 )
 
+                observer?.invoke(frame)
                 if (frame.anchors != anchors) anchors = frame.anchors
                 if (frameTimeNanos - clock.statsAtNanos >= STATS_INTERVAL_NS) {
                     clock.statsAtNanos = frameTimeNanos

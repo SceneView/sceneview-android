@@ -5,6 +5,9 @@ import dev.romainguy.kotlin.math.cross
 import dev.romainguy.kotlin.math.dot
 import dev.romainguy.kotlin.math.lookAt
 import dev.romainguy.kotlin.math.normalize
+import io.github.sceneview.camera.CameraShot
+import io.github.sceneview.camera.CameraShotSink
+import io.github.sceneview.camera.CameraShotVelocity
 import io.github.sceneview.gesture.CameraGestureDetector
 import io.github.sceneview.gesture.zoomedDistanceForPinch
 import io.github.sceneview.math.Position
@@ -64,7 +67,7 @@ class ArDebugOrbitCamera(
      * The fling is kept everywhere; 3D Scan bounds it so a flick cannot spin its cloud away.
      */
     val maxCoastDegrees: Float? = null,
-) : CameraGestureDetector.CameraManipulator {
+) : CameraGestureDetector.CameraManipulator, CameraShotSink {
 
     /**
      * Where a touch that takes the camera over should orbit around, `null` for the pose's own
@@ -369,6 +372,20 @@ class ArDebugOrbitCamera(
     /** [candidate] kept inside [limits]: what every gesture's result goes through. */
     private fun bounded(candidate: OrbitPose): OrbitPose =
         ArDebugFraming.clamp(candidate, limits, lift, verticalFovDegrees)
+
+    /**
+     * A cinematic move was cut short by a touch or a button (#4631): the camera takes over on the
+     * move's last [shot], free, and coasts on at the move's speed — capped like a fling, so the
+     * view never stops dead nor spins away.
+     */
+    override fun takeOver(shot: CameraShot, velocity: CameraShotVelocity) {
+        // The same limits as a gesture: the coast that follows goes through them on its first frame.
+        pose = bounded(shot.toOrbitPose())
+        takeOver()
+        val spin = maxSpin
+        azimuthVelocity = velocity.azimuthDegreesPerSecond.coerceIn(-spin, spin)
+        elevationVelocity = velocity.elevationDegreesPerSecond.coerceIn(-spin, spin)
+    }
 
     private fun takeOver() {
         following = false
