@@ -1,5 +1,6 @@
 package io.github.sceneview.demo.demos
 
+import android.os.SystemClock
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -123,12 +124,12 @@ fun ARPointCloudDemo(onBack: () -> Unit) {
     var trackingFailureReason by remember { mutableStateOf<TrackingFailureReason?>(null) }
 
     // "Stuck at zero points" chip state (#3270) — same shape as ARRawDepthPointCloudDemo's.
-    var zeroPointsSince by remember { mutableStateOf<Long?>(System.currentTimeMillis()) }
-    var now by remember { mutableStateOf(System.currentTimeMillis()) }
+    var zeroPointsSince by remember { mutableStateOf<Long?>(SystemClock.elapsedRealtime()) }
+    var now by remember { mutableStateOf(SystemClock.elapsedRealtime()) }
     LaunchedEffect(Unit) {
         while (true) {
             delay(1.seconds)
-            now = System.currentTimeMillis()
+            now = SystemClock.elapsedRealtime()
         }
     }
     val zeroPointsStuck = PointCloudFeedback.zeroPointsStuck(
@@ -171,7 +172,7 @@ fun ARPointCloudDemo(onBack: () -> Unit) {
         renderer.node?.isVisible = false
         renderer.lastUploadMs = 0L
         pointCount = 0
-        zeroPointsSince = System.currentTimeMillis()
+        zeroPointsSince = SystemClock.elapsedRealtime()
     }
 
     DemoScaffold(
@@ -277,16 +278,18 @@ fun ARPointCloudDemo(onBack: () -> Unit) {
                     cameraReady = true
                     isTracking = frame.camera.trackingState == TrackingState.TRACKING
                     if (isTracking) {
-                        val nowMs = System.currentTimeMillis()
+                        val nowMs = SystemClock.elapsedRealtime()
                         frameScratch.ingest(frame, cloud, nowMs)
                         if (nowMs - renderer.lastUploadMs >= REBUILD_INTERVAL_MS && viewHeightPx > 0) {
                             val pose = frame.camera.pose
+                            val zAxis = pose.zAxis
                             renderer.rebuild(
                                 engine = engine,
                                 cloud = cloud,
                                 minConfidence = minConfidence,
                                 nowMs = nowMs,
                                 camera = floatArrayOf(pose.tx(), pose.ty(), pose.tz()),
+                                cameraForward = floatArrayOf(-zAxis[0], -zAxis[1], -zAxis[2]),
                                 focalPx = renderer.focalPx(frame, viewHeightPx),
                                 radiusPx = DOT_RADIUS_DP * density,
                                 palette = palette,
@@ -413,6 +416,7 @@ private class PointCloudRenderer(private val maxPoints: Int) {
         minConfidence: Float,
         nowMs: Long,
         camera: FloatArray,
+        cameraForward: FloatArray,
         focalPx: Float,
         radiusPx: Float,
         palette: PointCloudSprites.Palette,
@@ -428,6 +432,9 @@ private class PointCloudRenderer(private val maxPoints: Int) {
             camX = camera[0],
             camY = camera[1],
             camZ = camera[2],
+            camForwardX = cameraForward[0],
+            camForwardY = cameraForward[1],
+            camForwardZ = cameraForward[2],
             focalPx = focalPx,
             radiusPx = radiusPx,
             palette = palette,

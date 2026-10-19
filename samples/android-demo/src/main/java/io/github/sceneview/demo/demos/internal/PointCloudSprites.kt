@@ -14,8 +14,8 @@ import kotlin.math.sqrt
  * - custom0  — float4 (corner.x, corner.y, radius in metres, unused).
  *
  * The radius is chosen per point so the dot keeps a constant size **on screen**:
- * `radiusMetres = radiusPx × distance / focalPx`. It is recomputed on every rebuild, so a point
- * stays the same size as the user walks towards or away from it.
+ * `radiusMetres = radiusPx × viewDepth / focalPx`. It is recomputed on every rebuild, so a point
+ * stays the same size as the user walks towards or away from it, including off the view axis.
  *
  * Colour carries meaning (DESIGN.md "Only the present glows"): a point ARCore saw this instant
  * is [Palette.fresh]; as it ages it settles into the confidence ramp [Palette.low] →
@@ -79,6 +79,7 @@ internal object PointCloudSprites {
      * camera are skipped (they would fill the screen).
      *
      * @param camX camera position, world space.
+     * @param camForwardX camera forward unit vector, world space.
      * @param focalPx vertical focal length in pixels (`projection[1][1] × viewportHeight / 2`).
      * @param radiusPx on-screen radius of a fully confident, settled point.
      * @param out at least `cloud.size × VERTICES_PER_POINT × STRIDE` floats.
@@ -91,6 +92,9 @@ internal object PointCloudSprites {
         camX: Float,
         camY: Float,
         camZ: Float,
+        camForwardX: Float,
+        camForwardY: Float,
+        camForwardZ: Float,
         focalPx: Float,
         radiusPx: Float,
         palette: Palette,
@@ -118,7 +122,9 @@ internal object PointCloudSprites {
             // Low-confidence points draw a little smaller, fresh ones a little bigger.
             val sizeFactor = (MIN_SIZE_FACTOR + (1f - MIN_SIZE_FACTOR) * confidence) *
                 (1f + FRESH_SIZE_BOOST * (1f - s))
-            val radius = radiusPx * sizeFactor * distance / focalPx
+            val viewDepth = (dx * camForwardX + dy * camForwardY + dz * camForwardZ)
+                .coerceAtLeast(MIN_VIEW_DEPTH_M)
+            val radius = radiusPx * sizeFactor * viewDepth / focalPx
 
             var o = written * VERTICES_PER_POINT * STRIDE
             for (c in 0 until VERTICES_PER_POINT) {
@@ -147,6 +153,7 @@ internal object PointCloudSprites {
     private fun lerp(a: Float, b: Float, t: Float): Float = a + (b - a) * t
 
     private const val MIN_DISTANCE_M = 0.05f
+    private const val MIN_VIEW_DEPTH_M = 0.001f
     private const val MIN_SIZE_FACTOR = 0.8f
     private val CORNER_X = floatArrayOf(-1f, 1f, 1f, -1f)
     private val CORNER_Y = floatArrayOf(-1f, -1f, 1f, 1f)
