@@ -33,7 +33,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.mandatorySystemGestures
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
@@ -86,6 +89,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -99,15 +103,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -119,6 +127,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.sceneview.demo.common.DemoSheetDefaults
@@ -2367,6 +2376,71 @@ private fun DemoSettingsSheet(
     modifier: Modifier = Modifier,
     recording: Boolean = false,
     onRecord: (() -> Unit)? = null,
+) {
+    // #4504: the sheet's glass runs down to the window's bottom edge at every detent, but its
+    // content only ends above the navigation bar once the sheet is fully up (the
+    // `navigationBarsPadding` below). At the low detent, or mid-drag, whatever row the window
+    // edge happened to cut — a slider, a button row — sat on the gesture bar or under the
+    // 3-button bar. So the content is clipped at the top of the navigation bar wherever the
+    // sheet rests, and a guard over that strip takes the touches meant for the system: nothing
+    // interactive lies in the inset, and the glass still reads as one sheet down to the edge.
+    // With gesture navigation the band the system keeps for its swipe (mandatory gestures,
+    // 32 dp on a Pixel) is taller than the bar it draws (24 dp): the taller of the two counts.
+    val density = LocalDensity.current
+    val navigationBarPx = maxOf(
+        WindowInsets.navigationBars.getBottom(density),
+        WindowInsets.mandatorySystemGestures.getBottom(density),
+    )
+    // Bottom of the part of the sheet above that band, in the sheet's own pixels.
+    var clearBottomPx by remember { mutableFloatStateOf(Float.MAX_VALUE) }
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .onGloballyPositioned { coordinates ->
+                val windowHeight = coordinates.findRootCoordinates().size.height
+                clearBottomPx = windowHeight - coordinates.positionInRoot().y - navigationBarPx
+            },
+    ) {
+        DemoSettingsSheetColumn(
+            controlsContent = controlsContent,
+            haptic = haptic,
+            onReset = onReset,
+            onResetSettings = onResetSettings,
+            onClose = onClose,
+            recording = recording,
+            onRecord = onRecord,
+            modifier = Modifier.drawWithContent {
+                clipRect(bottom = clearBottomPx) { this@drawWithContent.drawContent() }
+            },
+        )
+        if (navigationBarPx > 0) {
+            Box(
+                modifier = Modifier
+                    // Until the first placement the bound is "no bound": keep the guard
+                    // off-screen without overflowing an Int.
+                    .offset { IntOffset(0, clearBottomPx.coerceAtMost(Short.MAX_VALUE.toFloat()).toInt()) }
+                    .fillMaxWidth()
+                    .height(with(density) { navigationBarPx.toDp() })
+                    .pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) awaitPointerEvent().changes.forEach { it.consume() }
+                        }
+                    },
+            )
+        }
+    }
+}
+
+@Composable
+private fun DemoSettingsSheetColumn(
+    controlsContent: (@Composable ColumnScope.() -> Unit)?,
+    haptic: SceneViewHaptic,
+    onReset: (() -> Unit)?,
+    onResetSettings: (() -> Unit)?,
+    onClose: () -> Unit,
+    recording: Boolean,
+    onRecord: (() -> Unit)?,
+    modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier

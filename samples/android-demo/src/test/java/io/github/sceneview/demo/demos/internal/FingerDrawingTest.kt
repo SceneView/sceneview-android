@@ -433,25 +433,47 @@ class FingerDrawingTest {
     fun `a single tap is a single point`() {
         val dot = listOf(StrokePoint(Position(1f, 2f, 3f), 0.05f))
         assertSame(dot, FingerDrawing.centerline(dot, spacing))
-        assertSame(dot, FingerDrawing.tapered(dot))
     }
 
     @Test
-    fun `both ends taper to the tip factor and the middle keeps its thickness`() {
-        val straight = (0..100).map { StrokePoint(Position(x = it * 0.01f), 0.02f) }
-        val tapered = FingerDrawing.tapered(straight)
-        assertEquals(0.02f * FingerDrawing.TAPER_TIP_FACTOR, tapered.first().radius, 1e-6f)
-        assertEquals(0.02f * FingerDrawing.TAPER_TIP_FACTOR, tapered.last().radius, 1e-6f)
-        assertEquals(0.02f, tapered[50].radius, 1e-6f)
-        for (i in 1..50) {
-            assertTrue("the taper is not monotonic at $i", tapered[i].radius >= tapered[i - 1].radius - 1e-7f)
+    fun `a stroke keeps its thickness right to both ends`() {
+        // #4504: the ends used to taper to half the thickness. A stroke drawn at one speed is
+        // one thickness from its first ring to its last.
+        val stroke = Drawing()
+            .penDown(Position(), radius = 0.02f, colorIndex = 0, frameHint = towardsViewer, spacing = spacing)
+            .let { drawing ->
+                (1..60).fold(drawing) { d, i -> d.penMove(Position(x = i * 0.01f), targetRadius = 0.02f) }
+            }
+            .penUp()
+            .strokes.single()
+        val line = FingerDrawing.line(stroke)
+        assertTrue(line.size > 10)
+        for ((i, point) in line.withIndex()) {
+            assertEquals("ring $i of ${line.size} thinned", 0.02f, point.radius, 1e-6f)
         }
     }
 
     @Test
-    fun `a stroke shorter than two tapers still reaches its thickness in the middle`() {
-        val short = (0..10).map { StrokePoint(Position(x = it * 0.004f), 0.02f) }
-        assertEquals(0.02f, FingerDrawing.tapered(short)[5].radius, 1e-6f)
+    fun `both ends close in a full half-sphere of the stroke's radius`() {
+        val radius = 0.02f
+        val line = FingerDrawing.centerline(
+            (0..100).map { StrokePoint(Position(x = it * 0.01f), radius) },
+            spacing = 0.01f,
+        )
+        val vertices = FingerDrawing.vertices(line, towardsViewer)
+        // Start pole one radius behind the first point, end pole one radius past the last.
+        val startPole = vertices.first().position
+        val endPole = vertices.last().position
+        assertEquals(line.first().position.x - radius, startPole.x, 1e-5f)
+        assertEquals(line.last().position.x + radius, endPole.x, 1e-5f)
+        // Every cap vertex lies on the sphere of the end's radius: a round cap, not a point.
+        val perCap = FingerDrawing.CAP_RINGS * FingerDrawing.RADIAL_SEGMENTS
+        for (vertex in vertices.take(perCap)) {
+            assertEquals(radius, length(vertex.position - line.first().position), 1e-5f)
+        }
+        for (vertex in vertices.takeLast(perCap)) {
+            assertEquals(radius, length(vertex.position - line.last().position), 1e-5f)
+        }
     }
 
     // ── Frames ────────────────────────────────────────────────────────────────
@@ -516,7 +538,7 @@ class FingerDrawingTest {
     @Test
     fun `vertex and index counts match the announced grid`() {
         for (path in paths) {
-            val line = FingerDrawing.tapered(FingerDrawing.centerline(path, spacing = 0.05f))
+            val line = (FingerDrawing.centerline(path, spacing = 0.05f))
             val vertices = FingerDrawing.vertices(line, towardsViewer)
             assertEquals(FingerDrawing.vertexCount(line.size), vertices.size)
             val indices = FingerDrawing.triangleIndices(line.size)
@@ -528,7 +550,7 @@ class FingerDrawingTest {
     @Test
     fun `every normal is a unit vector`() {
         for (path in paths) {
-            val line = FingerDrawing.tapered(FingerDrawing.centerline(path, spacing = 0.05f))
+            val line = (FingerDrawing.centerline(path, spacing = 0.05f))
             for ((i, vertex) in FingerDrawing.vertices(line, towardsViewer).withIndex()) {
                 assertEquals("normal $i", 1f, length(requireNotNull(vertex.normal)), 1e-3f)
             }
@@ -540,7 +562,7 @@ class FingerDrawingTest {
         // Winding and normals must agree, or the paint is lit from inside on one material
         // side — invisible on a double-sided material until the light moves.
         for (path in paths) {
-            val line = FingerDrawing.tapered(FingerDrawing.centerline(path, spacing = 0.05f))
+            val line = (FingerDrawing.centerline(path, spacing = 0.05f))
             val vertices = FingerDrawing.vertices(line, towardsViewer)
             val indices = FingerDrawing.triangleIndices(line.size)
             var checked = 0
@@ -560,7 +582,7 @@ class FingerDrawingTest {
 
     @Test
     fun `each ring sits at its radius around its centreline point`() {
-        val line = FingerDrawing.tapered(FingerDrawing.centerline(helix(), spacing = 0.05f))
+        val line = (FingerDrawing.centerline(helix(), spacing = 0.05f))
         val vertices = FingerDrawing.vertices(line, towardsViewer)
         val firstBodyRing = FingerDrawing.CAP_RINGS
         for ((i, point) in line.withIndex()) {
@@ -635,7 +657,7 @@ class FingerDrawingTest {
         val capacity = 96
         var previousSize = -1
         for (count in 2..path.size) {
-            val line = FingerDrawing.tapered(FingerDrawing.centerline(path.take(count), spacing = 0.08f))
+            val line = (FingerDrawing.centerline(path.take(count), spacing = 0.08f))
             assertTrue(line.size <= capacity)
             val vertices = FingerDrawing.vertices(line, towardsViewer, capacity)
             assertEquals(FingerDrawing.vertexCount(capacity), vertices.size)
@@ -646,7 +668,7 @@ class FingerDrawingTest {
 
     @Test
     fun `padding is drawn as nothing`() {
-        val line = FingerDrawing.tapered(FingerDrawing.centerline(zigzag(), spacing = 0.2f))
+        val line = (FingerDrawing.centerline(zigzag(), spacing = 0.2f))
         val capacity = line.size + 20
         val vertices = FingerDrawing.vertices(line, towardsViewer, capacity)
         val indices = FingerDrawing.triangleIndices(capacity)
@@ -827,7 +849,7 @@ class FingerDrawingTest {
         val before = FingerDrawing.line(finished)
         val after = FingerDrawing.line(continued)
 
-        // Same point, same thickness: no taper on either side of the join.
+        // Same point, same thickness on either side of the join.
         assertEquals(0f, length(before.last().position - after.first().position), 0f)
         assertEquals(finished.points.last().radius, before.last().radius, 0f)
         assertEquals(before.last().radius, after.first().radius, 0f)
@@ -839,7 +861,7 @@ class FingerDrawingTest {
         )
         val joined = before + after.drop(1)
         assertEquals(whole.size, joined.size)
-        // The ends of the whole stroke taper; compare the rings around the join only.
+        // Compare the rings around the join.
         val join = before.size - 1
         for (i in join - 20..join + 10) {
             assertEquals("ring $i left the curve", 0f, length(whole[i].position - joined[i].position), 1e-6f)
