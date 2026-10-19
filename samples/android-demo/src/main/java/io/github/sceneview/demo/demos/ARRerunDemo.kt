@@ -774,6 +774,7 @@ private fun RerunReplayScreen(
                 ScanCoverageMap(
                     state = coverage,
                     modifier = Modifier
+                        .align(Alignment.Start)
                         .padding(start = Space.md)
                         // Measured outside the reveal: where the card rests, not where it rises from.
                         .onGloballyPositioned { headerBottom = it.boundsInRoot().bottom }
