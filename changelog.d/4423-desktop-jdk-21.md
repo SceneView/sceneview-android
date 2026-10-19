@@ -1,2 +1,0 @@
-<!-- category: Changed -->
-- **`sceneview-compose` on desktop now runs on JDK 21, down from JDK 22, with no JVM flag ([#4423](https://github.com/sceneview/sceneview/issues/4423)).** filament-kmp 0.7+ calls Filament over JNI instead of Project Panama (FFM), so the desktop viewer no longer needs JDK 22 or `--enable-native-access=ALL-UNNAMED`. The new floor is JDK 21, not 17: the `kotlin-math` library that `sceneview-compose` exposes ships JDK 21 bytecode, and on JDK 17 it fails with `UnsupportedClassVersionError`. The desktop demo and CI now use the repo's single JDK 21.

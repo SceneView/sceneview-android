@@ -1,2 +1,0 @@
-<!-- category: Fixed -->
-- **Demo app: Settings opens a visible sheet on demos without their own controls ([#4539](https://github.com/sceneview/sceneview/issues/4539)).** On AR Surfaces, the AR View tab, AR Face, Hand Tracking, Object Labels and Orbital AR, the sheet held only Send feedback and QA mode, so Material 3 kept a single open position and the sheet stayed below the bottom edge. It now opens fully.

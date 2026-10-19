@@ -1,6 +1,6 @@
 <!--
   GENERATED FILE — DO NOT EDIT.
-  Source of truth: /llms.txt  (SceneView 4.57.0)
+  Source of truth: /llms.txt  (SceneView 4.58.0)
   Regenerate:      node tools/generate-gpt-knowledge.js
   Drift is caught in CI (ci.yml -> repo-hygiene). Edit llms.txt instead.
   See issue #2724.
@@ -9,7 +9,7 @@
 # SceneView — API Reference
 
 > Composables, node types, resource loading, camera, math, and per-platform APIs.
-> Auto-generated from `llms.txt` (SceneView 4.57.0). This is a slice of the machine-readable API reference — the same content an AI reads to generate SceneView code.
+> Auto-generated from `llms.txt` (SceneView 4.58.0). This is a slice of the machine-readable API reference — the same content an AI reads to generate SceneView code.
 
 ## Docs
 
@@ -428,7 +428,7 @@ When `sceneUnderstanding` is non-null, its four flags override the individual on
 
 Shape differs as well as colour, so a wall reads as a wall in a dark room, in daylight and for a colour-blind user; a soft dark halo around every mark (material parameter `contrast`, 0.80 by default) keeps it readable over a white wall or a sunlit floor. A new surface is revealed by a front sweeping out from its centre; the floor under the centre of the screen is highlighted (it is the reticle); marks fade at the surface's edges and with distance. Small slivers are not drawn until they grow (walls under 0.40 m × 0.20 m, horizontals under 0.20 m × 0.10 m), and planes subsumed by a larger one are skipped.
 
-There is no second renderer and no version switch. Since 4.57.0 `planeRendererVersion` is **deprecated and ignored** (both values draw with `PlaneRenderer`): omit it. `PlaneRendererV2` and `PlaneVisualizerV2` are deprecated aliases of `PlaneRenderer` and `PlaneVisualizer`, and `PlaneRendererBase` is deprecated: write the new names. The textured grid is gone: `PlaneRenderer.planeTexture` is always `null`, `MATERIAL_TEXTURE` and `MATERIAL_COLOR` are no longer material parameters (tint with `MATERIAL_GRID_TINT`), and `maxHitTestPerSecond` is now `maxUpdatesPerSecond`.
+There is no second renderer and no version switch. Since 4.57.0 `planeRendererVersion` is **deprecated and ignored** (both values draw with `PlaneRenderer`): omit it. `PlaneRendererV2` and `PlaneVisualizerV2` are deprecated aliases of `PlaneRenderer` and `PlaneVisualizer`, and `PlaneRendererBase` is deprecated: write the new names. The textured grid is gone: `PlaneRenderer.planeTexture` is a deprecated 1 × 1 placeholder that nothing samples, `MATERIAL_TEXTURE` and `MATERIAL_COLOR` are no longer material parameters (tint with `MATERIAL_GRID_TINT`), and `maxHitTestPerSecond` is now `maxUpdatesPerSecond`.
 
 **After placement — fade the surfaces, keep the object editable.** `planeRenderer = false` fades the surfaces out; plane *detection* keeps running, so an editable `AnchorNode` still drags, twists, pinches and re-anchors exactly as before:
 
@@ -4906,7 +4906,7 @@ cube.updateCollisionShape()              // opt back in: re-derive, and resume t
 ## Compose Multiplatform (sceneview-compose)
 
 One composable from `commonMain`, several renderers underneath. Artifact:
-`io.github.sceneview:sceneview-compose:4.57.0` — on Maven Central since 4.27.0, released
+`io.github.sceneview:sceneview-compose:4.58.0` — on Maven Central since 4.27.0, released
 in lock-step with `sceneview`. 4.26.0 and earlier do NOT contain this module — never
 emit a version below 4.27.0 for it.
 
@@ -5111,7 +5111,7 @@ Full rationale: `docs/docs/compose-multiplatform.md`.
 
 ## SceneView Web (Kotlin/JS + Filament.js)
 
-Package: `sceneview-web` v4.57.0 — npm `sceneview-web`
+Package: `sceneview-web` v4.58.0 — npm `sceneview-web`
 Renderer: **Filament.js (WebGL2/WASM)** — same Filament engine as SceneView Android, compiled to WebAssembly.
 Requires: Chrome 79+, Edge 79+, Firefox 78+ (WebGL2). Safari 15+ (WebGL2).
 
@@ -5746,7 +5746,7 @@ Renderer: **RealityKit**. Requires iOS 18+ / macOS 15+ / visionOS 2+.
 
 SPM dependency (Package.swift or Xcode):
 ```swift
-.package(url: "https://github.com/sceneview/sceneview.git", from: "4.57.0")
+.package(url: "https://github.com/sceneview/sceneview.git", from: "4.58.0")
 ```
 
 Import: `import SceneViewSwift`
