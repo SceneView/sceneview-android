@@ -130,7 +130,9 @@ fun DoublePendulumDemo(onBack: () -> Unit) {
     val releaseState = remember(length1, length2, gravity, generation) {
         pendulumReleaseState(length1, length2, gravity, pivot)
     }
-    var state by remember(releaseState) { mutableStateOf(releaseState) }
+    // Keyed on generation too: a Release with unchanged sliders builds a release pose equal to the
+    // last one, so `releaseState` alone would keep the swing going instead of letting go again.
+    var state by remember(releaseState, generation) { mutableStateOf(releaseState) }
     val releaseLeadArm = remember(releaseState) { armTransform(releaseState.pivot, releaseState.joint) }
     val releaseTrailArm = remember(releaseState) { armTransform(releaseState.joint, releaseState.tip) }
     val (releaseJoint, releaseTip) = remember(releaseState) { pendulumInitialBodyPositions(releaseState) }
@@ -452,7 +454,7 @@ fun DoublePendulumDemo(onBack: () -> Unit) {
                 // The immutable release pose, rather than frame-driven `state`, keeps the first
                 // picture correct without recomposing the scene on every simulation step.
                 if (showTrail) {
-                    val seed = remember(releaseState) { trailSeed(releaseState.tip) }
+                    val seed = remember(releaseState, generation) { trailSeed(releaseState.tip) }
                     TubeNode(
                         points = seed,
                         radius = TRAIL_RADIUS,
