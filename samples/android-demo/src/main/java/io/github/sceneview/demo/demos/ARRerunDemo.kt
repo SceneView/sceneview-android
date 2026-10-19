@@ -88,6 +88,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
 import com.google.android.filament.Engine
@@ -869,6 +870,8 @@ private fun RerunReplayScreen(
     materialLoader: MaterialLoader,
 ) {
     val thumbnails = remember(media) { media?.thumbnails?.mapValues { it.value.asImageBitmap() }.orEmpty() }
+    // The object tapped in the 3D view or the map is still the one picked back from the Camera view.
+    val selection = remember(media) { ScanSelection() }
     val title = if (isScan) scanTitle else ScanCopy.SAMPLE_TITLE
     // The stage the chrome really leaves, measured on screen: the room is fitted between the
     // header above and the timeline bar below, whatever the phone or the font scale. A phone on
@@ -1078,6 +1081,16 @@ private fun RerunReplayScreen(
                 modifier = Modifier.fillMaxSize().onGloballyPositioned { stage = it.boundsInRoot() },
                 replay = media,
                 onShown = onRevealed,
+                selection = selection,
+                // The Camera card of the 3D view, with the padding that hangs it in its corner.
+                cornerCard = if (mode == RerunMode.Scene) {
+                    DpSize(
+                        SceneViewTokens.DebugView.pipWidth + Space.md,
+                        SceneViewTokens.DebugView.pipHeight + Space.sm * 2,
+                    )
+                } else {
+                    DpSize.Zero
+                },
                 observe = { frame ->
                     coverage.observe(frame, media.dense?.cloud?.positions, media.pointCountAt(frame.time))
                 },

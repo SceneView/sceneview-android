@@ -50,6 +50,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpSize
 import com.google.android.filament.ColorGrading
 import com.google.android.filament.Colors
 import com.google.android.filament.Engine
@@ -120,6 +121,7 @@ import io.github.sceneview.model.Model
 import io.github.sceneview.model.ModelInstance
 import io.github.sceneview.node.MeshNode
 import io.github.sceneview.rememberModelInstance
+import io.github.sceneview.rememberOnGestureListener
 import io.github.sceneview.rememberRenderer
 import io.github.sceneview.rememberView
 import io.github.sceneview.safeDestroyEnvironment
@@ -709,6 +711,9 @@ private fun skyboxAlpha(transparent: Boolean): Float = if (transparent) 0f else 
  * framing the content's bounds — `null` keeps the last home. [observe] hears each frame's
  * [ArDebugFrame] after it is drawn and changes nothing of the view: 3D Scan's coverage map
  * reads the cloud and the trail off it (#4631).
+ *
+ * [selection] keeps the object tapped in a [replay] while this view is away, and [cornerCard] is
+ * the card the caller hangs in its top end corner, which a tapped object is kept clear of (#4505).
  */
 @Composable
 @Suppress("LongParameterList") // the demo's shared engine, handed down once, and one flag per reading
@@ -726,6 +731,8 @@ internal fun ArDebugSceneView(
     visible: (DebugGroup) -> Boolean = session::isVisible,
     follow: ((ArDebugFrame) -> OrbitPose?)? = null,
     observe: ((ArDebugFrame) -> Unit)? = null,
+    selection: ScanSelection? = null,
+    cornerCard: DpSize = DpSize.Zero,
 ) {
     val shown by rememberUpdatedState(onShown)
     val observer by rememberUpdatedState(observe)
@@ -761,6 +768,9 @@ internal fun ArDebugSceneView(
         materials.paint(palette)
         replayLayers?.setMeasureColors(measureInk, measureHalo)
     }
+    // A tap on an object of the scan boxes it (#4485); the picture-in-picture takes no touch.
+    val objectPick =
+        rememberScanObjectPick(replay.takeUnless { compact }, session, orbit, engine, materialLoader, selection)
     var anchors by remember { mutableStateOf(emptyList<DebugAnchor>()) }
     val clock = remember { FrameClock() }
 
@@ -781,6 +791,10 @@ internal fun ArDebugSceneView(
             autoCenterContent = false,
             environment = environment,
             cameraManipulator = orbit,
+            onGestureListener = rememberOnGestureListener(
+                onDown = { _, _ -> objectPick?.down() },
+                onSingleTapConfirmed = { event, _ -> objectPick?.tap(event.x, event.y) },
+            ),
             onFrame = { frameTimeNanos ->
                 val dt = clock.tick(frameTimeNanos)
                 if (!clock.configured) {
@@ -853,8 +867,13 @@ internal fun ArDebugSceneView(
                     fill = if (finished) 1f else ArDebugFraming.GROWING_FILL,
                 )
                 val followed = follow?.invoke(frame)
+                // Following, the view frames the room — moved by what a picked box needs to be seen.
                 if (orbit.following) {
-                    if (follow == null) orbit.home = home else if (followed != null) orbit.followTo(followed)
+                    if (follow == null) {
+                        orbit.home = objectPick?.framed(home) ?: home
+                    } else if (followed != null) {
+                        orbit.followTo(followed)
+                    }
                 }
                 // A followed view stands inside the room it scans, so the room's walls cannot hold
                 // its gestures: it keeps the empty-session reach (#4628).
@@ -899,6 +918,7 @@ internal fun ArDebugSceneView(
                     ),
                     eye = CameraRig.eye(orbit.pose).let { Vec3(it.x, it.y, it.z) },
                 )
+                objectPick?.sync(style)
 
                 observer?.invoke(frame)
                 if (frame.anchors != anchors) anchors = frame.anchors
@@ -932,6 +952,9 @@ internal fun ArDebugSceneView(
             // its material instances are destroyed, and the next set's nodes are attached.
             key(layers) { Node(apply = { layers.nodes.values.forEach { addChildNode(it) } }) }
             key(replayLayers) { Node(apply = { replayLayers?.nodes?.forEach { addChildNode(it) } }) }
+            // The picked object's tint and box are rebuilt with the replay, so they get the same
+            // treatment.
+            key(objectPick) { Node(apply = { objectPick?.nodes?.forEach { addChildNode(it) } }) }
             if (visible(DebugGroup.Anchors)) {
                 anchors.forEach { anchor ->
                     // One instance per anchor: a Filament model instance can only hang off one node.
@@ -949,6 +972,7 @@ internal fun ArDebugSceneView(
                 }
             }
         }
+        ScanObjectOverlay(objectPick, Modifier.matchParentSize(), cornerCard)
     }
 }
 
