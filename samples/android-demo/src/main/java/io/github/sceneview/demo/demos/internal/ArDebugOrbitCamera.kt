@@ -13,6 +13,7 @@ import io.github.sceneview.verticalFovDegreesForFocalLength
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.exp
+import kotlin.math.ln
 import kotlin.math.max
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -53,8 +54,11 @@ class ArDebugOrbitCamera(
     /** The elevations a drag can reach, inside [ArDebugFraming.MIN_ELEVATION]…[ArDebugFraming.MAX_ELEVATION]. */
     val elevationRange: ClosedFloatingPointRange<Float> =
         ArDebugFraming.MIN_ELEVATION..ArDebugFraming.MAX_ELEVATION,
-    /** Whether a released drag coasts on. Off where a drag must land exactly where the finger left it. */
-    val inertia: Boolean = true,
+    /**
+     * The furthest a released drag coasts on, in degrees, `null` for the coast [MAX_SPIN] allows.
+     * The fling is kept everywhere; 3D Scan bounds it so a flick cannot spin its cloud away.
+     */
+    val maxCoastDegrees: Float? = null,
 ) : CameraGestureDetector.CameraManipulator {
 
     /**
@@ -257,9 +261,10 @@ class ArDebugOrbitCamera(
 
     override fun update(deltaTime: Float) {
         val dt = deltaTime.takeIf { it.isFinite() && it > 0f && it < 0.25f } ?: return
-        if (grabbing && !panning && inertia) {
-            azimuthVelocity = (dragAzimuth / dt).coerceIn(-MAX_SPIN, MAX_SPIN)
-            elevationVelocity = (dragElevation / dt).coerceIn(-MAX_SPIN, MAX_SPIN)
+        if (grabbing && !panning) {
+            val spin = maxSpin
+            azimuthVelocity = (dragAzimuth / dt).coerceIn(-spin, spin)
+            elevationVelocity = (dragElevation / dt).coerceIn(-spin, spin)
         }
         dragAzimuth = 0f
         dragElevation = 0f
@@ -285,12 +290,17 @@ class ArDebugOrbitCamera(
         }
 
         if (azimuthVelocity != 0f || elevationVelocity != 0f) {
-            pose = clampDrag(
+            val next = clampDrag(
                 pose.copy(
                     azimuthDegrees = pose.azimuthDegrees + azimuthVelocity * dt,
                     elevationDegrees = pose.elevationDegrees + elevationVelocity * dt,
                 )
             )
+            // A coast into the pitch limit stops there instead of pressing on it.
+            if (next.elevationDegrees != pose.elevationDegrees + elevationVelocity * dt) elevationVelocity = 0f
+            val turned = abs(next.azimuthDegrees - pose.azimuthDegrees) +
+                abs(next.elevationDegrees - pose.elevationDegrees)
+            pose = slidTowardsPivot(next, turned)
             azimuthVelocity = CameraRig.decayInertia(azimuthVelocity, dt)
             elevationVelocity = CameraRig.decayInertia(elevationVelocity, dt)
         }
@@ -306,6 +316,13 @@ class ArDebugOrbitCamera(
         home = home.copy(azimuthDegrees = pose.azimuthDegrees)
         pivot?.let { pose = repivoted(it) }
     }
+
+    /**
+     * The fastest a release coasts at, in degrees per second: [MAX_SPIN], or the speed whose
+     * decay ([CameraRig.decayInertia]) covers [maxCoastDegrees] in all.
+     */
+    val maxSpin: Float
+        get() = maxCoastDegrees?.let { minOf(MAX_SPIN, it * -ln(CameraRig.INERTIA_DECAY_PER_SECOND)) } ?: MAX_SPIN
 
     /** The orbit's degrees per pixel of drag: [degreesPerViewWidth] over the width, or the fixed rate. */
     val degreesPerPixel: Float

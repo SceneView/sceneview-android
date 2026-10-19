@@ -173,10 +173,11 @@ class ScanFollowTest {
         approachRate = ScanFollow.APPROACH_RATE,
         degreesPerViewWidth = ScanFollow.DRAG_DEGREES_PER_VIEW_WIDTH,
         elevationRange = ScanFollow.DRAG_ELEVATION_RANGE,
-        inertia = false,
+        maxCoastDegrees = ScanFollow.MAX_COAST_DEGREES,
     ).apply { setViewport(width, height) }
 
-    private fun drag(orbit: ArDebugOrbitCamera, dx: Int, dy: Int = 0) {
+    /** Drags by ([dx], [dy]) over 24 frames, then lets it coast for [coastSeconds]. */
+    private fun drag(orbit: ArDebugOrbitCamera, dx: Int, dy: Int = 0, coastSeconds: Float = 0f) {
         orbit.grabBegin(400, 1400, strafe = false)
         // A finger's drag arrives as many small moves, each a frame apart.
         val steps = 24
@@ -185,7 +186,7 @@ class ScanFollowTest {
             orbit.update(1f / 60f)
         }
         orbit.grabEnd()
-        orbit.update(1f / 60f)
+        repeat((coastSeconds * 60).toInt()) { orbit.update(1f / 60f) }
     }
 
     /**
@@ -219,22 +220,36 @@ class ScanFollowTest {
     }
 
     @Test
-    fun `a released drag stops where the finger left it`() {
+    fun `a flick coasts on after release, smoothly and no further than a quarter turn`() {
         val orbit = scanOrbit()
         orbit.snapTo(ScanFollow.poseAt(phone(0f), 0f))
-        drag(orbit, dx = 300)
-        val released = orbit.pose
-        repeat(30) { orbit.update(1f / 60f) }
-        assertEquals(released, orbit.pose)
+        // A fast flick: the whole width in 24 frames, 450°/s, well over the coast's top speed.
+        drag(orbit, dx = 1280)
+        val released = orbit.pose.azimuthDegrees
+        var previousStep = Float.MAX_VALUE
+        var coasted = 0f
+        repeat(600) {
+            val before = orbit.pose.azimuthDegrees
+            orbit.update(1f / 60f)
+            val step = abs(CameraRig.shortestDelta(before, orbit.pose.azimuthDegrees))
+            // It decays: never speeds up, frame after frame.
+            assertTrue("step $step after $previousStep", step <= previousStep + 1e-4f)
+            previousStep = step
+            coasted += step
+        }
+        assertTrue("coasted $coasted", coasted > 30f)
+        assertTrue("coasted $coasted", coasted <= ScanFollow.MAX_COAST_DEGREES + 5f)
+        assertTrue(abs(CameraRig.shortestDelta(released, orbit.pose.azimuthDegrees)) > 0f)
+        assertEquals(0f, previousStep, 0f)
     }
 
     @Test
     fun `the pitch of a drag stops short of the floor and of straight down`() {
         val orbit = scanOrbit()
         orbit.snapTo(ScanFollow.poseAt(phone(0f), 0f))
-        drag(orbit, dx = 0, dy = -5000)
+        drag(orbit, dx = 0, dy = -5000, coastSeconds = 5f)
         assertEquals(ScanFollow.DRAG_ELEVATION_RANGE.endInclusive, orbit.pose.elevationDegrees, 1e-3f)
-        drag(orbit, dx = 0, dy = 5000)
+        drag(orbit, dx = 0, dy = 5000, coastSeconds = 5f)
         assertEquals(ScanFollow.DRAG_ELEVATION_RANGE.start, orbit.pose.elevationDegrees, 1e-3f)
         assertTrue(CameraRig.eye(orbit.pose).y > orbit.pose.target.y)
     }
@@ -268,7 +283,8 @@ class ScanFollowTest {
             val orbit = scanOrbit()
             orbit.snapTo(ScanFollow.poseAt(phone(0f, position = Float3(0f, 1.4f, 0f)), 0f))
             orbit.pivot = cloud
-            drag(orbit, dx, dy)
+            // Checked once the coast has died out, after the flick has carried it furthest.
+            drag(orbit, dx, dy, coastSeconds = 10f)
             val drawn = projected(orbit, cloud)
             assertNotNull("dx $dx dy $dy: behind the camera", drawn)
             val (x, y) = drawn!!

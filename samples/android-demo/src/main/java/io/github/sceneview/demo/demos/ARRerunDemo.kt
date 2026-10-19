@@ -917,7 +917,7 @@ private fun RerunLiveScreen(
             approachRate = ScanFollow.APPROACH_RATE,
             degreesPerViewWidth = ScanFollow.DRAG_DEGREES_PER_VIEW_WIDTH,
             elevationRange = ScanFollow.DRAG_ELEVATION_RANGE,
-            inertia = false,
+            maxCoastDegrees = ScanFollow.MAX_COAST_DEGREES,
         )
             .apply { onFollowingChange = { scanFollowing = it } }
     }

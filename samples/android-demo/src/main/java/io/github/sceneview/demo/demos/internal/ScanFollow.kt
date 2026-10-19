@@ -72,6 +72,12 @@ class ScanFollow {
         val DRAG_ELEVATION_RANGE = 10f..85f
 
         /**
+         * The furthest a flick coasts on after the finger lifts: a quarter turn, smooth and
+         * decaying like every orbit in the demo, never far enough to lose the room.
+         */
+        const val MAX_COAST_DEGREES = 90f
+
+        /**
          * The heading of [camera], in the [OrbitPose.azimuthDegrees] convention: the azimuth at
          * which an [OrbitPose] looks the way the phone does. The phone looks down its local −Z;
          * an orbit camera at azimuth `a` looks along `(−sin a, ·, −cos a)`. [previous] comes
