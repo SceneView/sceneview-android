@@ -94,6 +94,22 @@ class DictationSessionTest {
     }
 
     @Test
+    fun theWatchdogEndsASegmentHeldOpenBySilence() {
+        session.start()
+        session.onPartialResult("still here")
+        now += 7_000
+        session.onTick()
+        assertTrue(session.listening)
+        now += 1_000
+        session.onTick()
+        assertFalse(session.listening)
+        assertEquals(1, engine.cancels)
+        assertEquals("still here", updates.last().transcript)
+        session.onError(SpeechRecognizer.ERROR_CLIENT)
+        assertEquals(1, engine.starts)
+    }
+
+    @Test
     fun userStopEndsListeningAndTakesTheFinalResult() {
         session.start()
         session.onPartialResult("tap stop")

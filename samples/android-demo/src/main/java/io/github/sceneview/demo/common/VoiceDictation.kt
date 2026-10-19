@@ -210,7 +210,16 @@ private class AndroidSpeechEngine(context: Context) : SpeechEngine {
     // Restarting from inside a recognizer callback races the service ("busy"); post it.
     private val startNow = Runnable { runCatching { recognizer.startListening(intent) } }
 
+    private var tick: Runnable? = null
+
     fun bind(session: DictationSession) {
+        // Silence watchdog: one check a second, see DictationSession.onTick.
+        tick = object : Runnable {
+            override fun run() {
+                session.onTick()
+                handler.postDelayed(this, TICK_MILLIS)
+            }
+        }.also { handler.postDelayed(it, TICK_MILLIS) }
         recognizer.setRecognitionListener(object : RecognitionListener {
             override fun onReadyForSpeech(params: Bundle?) = Unit
             override fun onBeginningOfSpeech() = Unit
@@ -245,9 +254,12 @@ private class AndroidSpeechEngine(context: Context) : SpeechEngine {
 
     fun destroy() {
         handler.removeCallbacks(startNow)
+        tick?.let(handler::removeCallbacks)
         runCatching { recognizer.destroy() }
     }
 }
+
+private const val TICK_MILLIS = 1_000L
 
 private fun Bundle?.firstResult(): String? =
     this?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()

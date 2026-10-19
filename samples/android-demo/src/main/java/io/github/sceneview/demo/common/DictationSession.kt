@@ -91,6 +91,20 @@ class DictationSession(
         engine.cancel()
     }
 
+    /**
+     * Periodic silence check. The recognizer can hold one segment open for a long time on
+     * background noise without producing words, so the session cannot rely on segment ends
+     * alone to notice a long silence.
+     */
+    fun onTick() {
+        if (!listening) return
+        if (clock() - lastSpeechAt < maxSilenceMillis) return
+        commitPartial()
+        listening = false
+        engine.cancel()
+        emit()
+    }
+
     fun onPartialResult(text: String?) {
         if (!listening && !finishing) return
         if (text.isNullOrBlank()) return
