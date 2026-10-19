@@ -61,6 +61,7 @@ import io.github.sceneview.environment.Environment
 import io.github.sceneview.gesture.CameraGestureDetector
 import io.github.sceneview.gesture.CameraViewportSeed
 import io.github.sceneview.gesture.GestureDetector
+import io.github.sceneview.gesture.Inertia
 import io.github.sceneview.gesture.MoveGestureDetector
 import io.github.sceneview.gesture.RotateGestureDetector
 import io.github.sceneview.gesture.ScaleGestureDetector
@@ -926,6 +927,10 @@ fun SceneView(
                 gestureDetector.onTouchEvent(event, hitResult)
                 if (!absorbedByEditableNode) {
                     cameraGestureDetectorRef.get()?.onTouchEvent(event)
+                } else if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+                    // The camera detector never sees this touch, but a finger on the screen still
+                    // stops a camera that is coasting from the previous flick.
+                    cameraGestureDetectorRef.get()?.stopInertia()
                 }
             }
         }
@@ -1102,7 +1107,9 @@ fun SceneView(
                             val active = isSceneFrameActive(
                                 gestureInFlight = gestureInFlightRef.get(),
                                 cameraMoved = cameraMoved,
-                                cameraPending = cameraPending,
+                                // A node edit coasting after release moves the scene with no
+                                // finger down and, in a scene with no manipulator, no camera.
+                                cameraPending = cameraPending || gestureDetector.isCoasting,
                                 hasActiveNode = frameActivity.hasActiveNode,
                                 // Not `progress < 1f`: Filament reports 0 for a loader that was
                                 // never asked for an async load, which read as "loading" for the
@@ -1156,6 +1163,10 @@ fun SceneView(
                             frameTimeNanos,
                             lastFrameTimeNanosRef.get().takeIf { it != 0L }
                         ).toFloat()
+
+                        // A node drag / twist / pinch still coasting after release takes its step
+                        // here, with the same capped time step as the camera.
+                        gestureDetector.advanceInertia(frameDelta)
 
                         // Library-level auto-center (#1026). No-op once the content union has settled
                         // and the gate latched, and skipped while the content bounds are still empty
@@ -2158,8 +2169,33 @@ fun rememberOnGestureListener(
  *                          `SceneView` forwards to your code and never wires to the camera.
  * @param targetPosition    Point in world space the camera orbits around and initially looks at
  *                          (optional; defaults to the origin). Does not affect the distance.
+ * @param inertia           How orbit, pan and pinch coast after the finger lifts.
+ *                          [Inertia.Default] (the default) coasts like a native fling;
+ *                          [Inertia.None] stops the camera dead on release. Applied to the
+ *                          manipulator [creator] returns when it is a
+ *                          [CameraGestureDetector.DefaultCameraManipulator].
  * @param creator           Factory for the manipulator. Override to set a custom orbit speed, etc.
  */
+@Composable
+fun rememberCameraManipulator(
+    orbitHomePosition: Position? = null,
+    targetPosition: Position? = null,
+    inertia: Inertia = Inertia.Default,
+    creator: () -> CameraGestureDetector.CameraManipulator = {
+        createDefaultCameraManipulator(orbitHomePosition, targetPosition)
+    }
+): CameraGestureDetector.CameraManipulator = remember(creator).also { it.applyInertia(inertia) }
+
+/**
+ * Binary-compatibility shim for the pre-`inertia` descriptor of [rememberCameraManipulator]. The
+ * Compose compiler puts every parameter in the JVM signature, so the new parameter retyped the
+ * function: this keeps a library compiled against the old signature linking, with the default
+ * [Inertia].
+ */
+@Deprecated(
+    "Binary-compatibility overload. Use the rememberCameraManipulator overload that takes `inertia`.",
+    level = DeprecationLevel.HIDDEN,
+)
 @Composable
 fun rememberCameraManipulator(
     orbitHomePosition: Position? = null,
@@ -2167,7 +2203,12 @@ fun rememberCameraManipulator(
     creator: () -> CameraGestureDetector.CameraManipulator = {
         createDefaultCameraManipulator(orbitHomePosition, targetPosition)
     }
-) = remember(creator)
+) = rememberCameraManipulator(
+    orbitHomePosition = orbitHomePosition,
+    targetPosition = targetPosition,
+    inertia = Inertia.Default,
+    creator = creator,
+)
 
 /**
  * Creates and remembers a [ViewNode.WindowManager] required by [SceneScope.ViewNode].
