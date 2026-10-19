@@ -407,7 +407,8 @@ private fun ReportPreview(
             val text = remember(info, note) { formatReportFile(info, note) }
             Surface(
                 shape = RoundedCornerShape(SceneViewTokens.Radius.sm),
-                color = MaterialTheme.colorScheme.surfaceContainer,
+                // Highest, not the screenshot card's tone: a code block reads as one against the sheet.
+                color = MaterialTheme.colorScheme.surfaceContainerHighest,
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(max = 280.dp),
