@@ -115,10 +115,14 @@ object DemoPreviews {
 /**
  * The captured preview for this demo in the current colour scheme, or `null`
  * when the pipeline has not produced one — callers draw the icon tile instead.
+ *
+ * [dark] picks the capture explicitly. A surface that is dark in both themes — the
+ * home hero band over the live stage — passes `true`, so its white copy never sits
+ * on a light-theme still (#4622).
  */
 @Composable
-fun DemoEntry.previewPainter(): Painter? =
-    DemoPreviews.resourceFor(id, dark = isSystemInDarkTheme())?.let { res ->
+fun DemoEntry.previewPainter(dark: Boolean = isSystemInDarkTheme()): Painter? =
+    DemoPreviews.resourceFor(id, dark = dark)?.let { res ->
         val resources = LocalContext.current.resources
         remember(res, resources) { BitmapPainter(DemoPreviews.bitmap(resources, res)) }
     }
