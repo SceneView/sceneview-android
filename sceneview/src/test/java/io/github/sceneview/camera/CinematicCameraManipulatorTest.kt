@@ -211,6 +211,16 @@ class CinematicCameraManipulatorTest {
     }
 
     @Test
+    fun aTouchDownStopsTheInnerCoast() {
+        val inner = object : FixedInner(home) {
+            var stops = 0
+            override fun stopInertia() { stops++ }
+        }
+        CinematicCameraManipulator(CameraAnimator(home), inner).stopInertia()
+        assertTrue(inner.stops == 1)
+    }
+
+    @Test
     fun isFrameActiveWhilePlayingGlidingOrWhenTheInnerOwesFrames() {
         val inner = object : FixedInner(home) {
             var pending = false

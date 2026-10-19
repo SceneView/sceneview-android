@@ -93,6 +93,9 @@ class CinematicCameraManipulator(
         return glide.sample(live)
     }
 
+    /** A touch-down stops [inner]'s coast too, as it would without the cinematic wrapper. */
+    override fun stopInertia() = inner.stopInertia()
+
     override fun grabBegin(x: Int, y: Int, strafe: Boolean) {
         interrupt()
         inner.grabBegin(x, y, strafe)
