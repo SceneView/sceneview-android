@@ -151,6 +151,12 @@ import io.github.sceneview.demo.demos.internal.ScanCopy
 import io.github.sceneview.demo.demos.internal.ScanDetail
 import io.github.sceneview.demo.demos.internal.ScanFollow
 import io.github.sceneview.demo.demos.internal.ScanPhase
+import io.github.sceneview.demo.demos.internal.ScanScope
+import io.github.sceneview.demo.demos.internal.ScanScopeCopy
+import io.github.sceneview.demo.demos.internal.HomeScan
+import io.github.sceneview.demo.demos.internal.HomeRoom
+import io.github.sceneview.demo.demos.internal.RerunSyntheticBedroom
+import io.github.sceneview.demo.theme.SceneViewTokens.Type
 import io.github.sceneview.demo.demos.internal.of
 import io.github.sceneview.demo.demos.internal.parseArDebugLog
 import io.github.sceneview.demo.demos.internal.rerunSaveActionUx
@@ -221,6 +227,8 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
         mutableStateOf(
             when {
                 startInDollhouse || qaState in DOLLHOUSE_QA_STATES -> RerunScreen.Dollhouse
+                qaState == QA_STATE_CHOOSE -> RerunScreen.Choose
+                qaState == QA_STATE_HOME_SUMMARY -> RerunScreen.Home
                 qaState in MODEL_QA_STATES -> RerunScreen.Model
                 qaReplay != null -> RerunScreen.Replay
                 arPlaybackDataset != null || qaState in LIVE_QA_STATES -> RerunScreen.Live
@@ -309,6 +317,21 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
     var dollhouseFailed by remember { mutableStateOf(false) }
     // Record, opened from the dollhouse's empty state, comes back to it with the new room.
     var recordingForDollhouse by remember { mutableStateOf(false) }
+    // What is scanned (#4647): asked before each scan, the last choice remembered.
+    var scanScope by remember {
+        mutableStateOf(
+            when (qaState) {
+                QA_STATE_RECORD_OBJECT -> ScanScope.Object
+                QA_STATE_RECORD_HOME, QA_STATE_HOME_SUMMARY -> ScanScope.Home
+                QA_STATE_RECORD -> ScanScope.Room
+                else -> ScanScopeStore.last(context)
+            },
+        )
+    }
+    // A whole home in progress: the rooms saved in this session, each measured on its own.
+    var home by remember { mutableStateOf(HomeScan()) }
+    // The room of the home whose plan is open full screen.
+    var homePlanRoom by remember { mutableStateOf<HomeRoom?>(null) }
     val dollhouseSession = if (qaState == QA_STATE_DOLLHOUSE_EMPTY) {
         null
     } else {
@@ -358,6 +381,9 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
         if (recordingForDollhouse) {
             recordingForDollhouse = false
             screen = RerunScreen.Dollhouse
+        } else if (scanScope.roomByRoom && home.rooms.isNotEmpty()) {
+            // A home with rooms saved ends on their summary, whichever way the capture is left.
+            screen = RerunScreen.Home
         } else {
             toLanding()
         }
@@ -368,6 +394,7 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
             RerunScreen.Live -> leaveLive()
             RerunScreen.Replay -> if (showingScan && hasResult) screen = RerunScreen.Model else toLanding()
             RerunScreen.Plan -> leavePlan()
+            RerunScreen.HomePlan -> screen = RerunScreen.Home
             else -> toLanding()
         }
     }
@@ -475,6 +502,44 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
             screen = RerunScreen.Plan
         }
     }
+    // QA's whole home (#4647): two ray-cast rooms, measured each on its own.
+    if (qaState == QA_STATE_HOME_SUMMARY) {
+        LaunchedEffect(Unit) {
+            val rooms = listOf<suspend () -> RerunCapturePack>(
+                { syntheticPlanCapture(partial = false) },
+                {
+                    syntheticPlanCapture(partial = false, RerunSyntheticBedroom.scene) {
+                        RerunSyntheticBedroom.poses()
+                    }
+                },
+            )
+            // Each room shows as soon as it is saved, then its figures once measured, as on a phone.
+            rooms.forEach { capture ->
+                val opened = loadRerunSession(capture()) ?: return@LaunchedEffect
+                val number = home.nextNumber
+                home = home.add(null, "${ScanScopeCopy.label(ScanScope.Home, number)} · $QA_PLAN_TITLE")
+                // One survey at a time: each holds its own grid (#4675).
+                home = home.measured(number, withContext(Dispatchers.Default) { surveyOf(opened) })
+            }
+        }
+    }
+    // A room of the home just saved: kept in the summary, then measured off the main thread.
+    val onRoomSaved = { scan: RerunReplayMedia, title: String, id: String? ->
+        sessionsVersion++
+        val number = home.nextNumber
+        home = home.add(id, title)
+        scope.launch {
+            val survey = withContext(Dispatchers.Default) { surveyOf(scan) }
+            home = home.measured(number, survey)
+        }
+        Unit
+    }
+    val startScan = { picked: ScanScope ->
+        scanScope = picked
+        ScanScopeStore.remember(context, picked)
+        home = HomeScan()
+        screen = RerunScreen.Live
+    }
     val inbox = DemoSettings.rerunInbox
     LaunchedEffect(inbox) {
         val uri = inbox ?: return@LaunchedEffect
@@ -491,7 +556,7 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
             actions = RerunLandingActions(
                 onRecord = {
                     notice = null
-                    screen = RerunScreen.Live
+                    screen = RerunScreen.Choose
                 },
                 onWatchSample = {
                     notice = null
@@ -520,6 +585,46 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
                 onDismissNotice = { notice = null },
             ),
         )
+        RerunScreen.Choose -> DemoScaffold(
+            title = stringResource(R.string.demo_ar_rerun_title),
+            onBack = toLanding,
+            controls = { RerunSheet() },
+            dock = emptyList(),
+            themedStage = true,
+        ) {
+            ScanScopePage(selected = scanScope, onSelect = { scanScope = it }, onStart = { startScan(scanScope) })
+        }
+        RerunScreen.Home -> DemoScaffold(
+            title = stringResource(R.string.demo_ar_rerun_title),
+            onBack = toLanding,
+            controls = { RerunSheet() },
+            dock = emptyList(),
+            themedStage = true,
+        ) {
+            HomeSummaryPage(
+                home = home,
+                onOpenPlan = { room ->
+                    homePlanRoom = room
+                    screen = RerunScreen.HomePlan
+                },
+                onScanAnother = { screen = RerunScreen.Live },
+            )
+        }
+        RerunScreen.HomePlan -> DemoScaffold(
+            title = stringResource(R.string.demo_ar_rerun_plan_export_title),
+            onBack = { screen = RerunScreen.Home },
+            controls = { Text(stringResource(R.string.demo_ar_rerun_plan_about), style = Type.body) },
+            themedStage = true,
+            opaqueSheet = true,
+            hasScene = false,
+        ) {
+            val room = homePlanRoom
+            RerunPlanView(
+                survey = room?.survey,
+                title = room?.title.orEmpty(),
+                date = planDate(sessions?.firstOrNull { it.id == room?.id }?.info?.createdAt),
+            )
+        }
         // Capture is the camera, and so is ARCore's MP4 playback as the library runs it:
         // `ARCore.checkPermissionAndInstall` holds every session back without the permission.
         // The landing page, the replays and the shared files around it never ask (#4139).
@@ -543,6 +648,10 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
                 },
                 store = store,
                 sample = sample,
+                scanScope = if (recordingForDollhouse) ScanScope.Room else scanScope,
+                roomNumber = home.nextNumber,
+                onRoomSaved = onRoomSaved,
+                onFinishHome = { screen = RerunScreen.Home },
                 engine = engine,
                 modelLoader = modelLoader,
                 materialLoader = materialLoader,
@@ -668,9 +777,10 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
 
 /**
  * The demo's screens: the landing, the live AR session (Record), the replay, the dollhouse — a
- * session stood on a table in AR (#4075) — the scan's result, and its floor plan (#4540).
+ * session stood on a table in AR (#4075) — the scan's result, and its floor plan (#4540). Before a
+ * capture, what is scanned (#4647); after a whole home, its summary and each room's plan.
  */
-internal enum class RerunScreen { Landing, Live, Replay, Dollhouse, Model, Plan }
+internal enum class RerunScreen { Landing, Choose, Live, Replay, Dollhouse, Model, Plan, Home, HomePlan }
 
 /**
  * Where Back from the floor plan goes: the screen whose export sheet opened it ([opener]), or —
@@ -679,6 +789,9 @@ internal enum class RerunScreen { Landing, Live, Replay, Dollhouse, Model, Plan 
 internal fun planReturnOf(opener: RerunScreen?, hasResult: Boolean): RerunScreen =
     opener?.takeUnless { it == RerunScreen.Plan }
         ?: if (hasResult) RerunScreen.Model else RerunScreen.Replay
+
+/** What follows a save: the scan's result, or for a room of a home the next room or the summary. */
+private enum class SaveNext { Open, NextRoom, FinishHome }
 
 /** The replay's three views. */
 private enum class RerunMode { Scene, Map, Camera }
@@ -1050,6 +1163,10 @@ private fun RerunLiveScreen(
     onScanned: (RerunReplayMedia, String, RerunCapturePack, String?) -> Unit,
     store: RerunSessionStore,
     sample: RerunReplayMedia?,
+    scanScope: ScanScope,
+    roomNumber: Int,
+    onRoomSaved: (RerunReplayMedia, String, String?) -> Unit,
+    onFinishHome: () -> Unit,
     engine: Engine,
     modelLoader: ModelLoader,
     materialLoader: MaterialLoader,
@@ -1122,7 +1239,11 @@ private fun RerunLiveScreen(
     val qaSaveFails = qaState == QA_STATE_RECORD_SAVE_FAILED
     // #4629: `record-long` feeds the dense map a whole flat; `-fixed` runs it with the old cap.
     var qaLong by remember { mutableStateOf<QaLongScan?>(null) }
-    LaunchedEffect(qaRecord, sample) {
+    // Each room of a home is a take of its own: the QA take restarts for the next room.
+    var take by remember { mutableIntStateOf(0) }
+    // Between two rooms of a home: the new capture waits, paused, until Start.
+    var betweenRooms by remember { mutableStateOf(false) }
+    LaunchedEffect(qaRecord, sample, take) {
         val source = sample?.takeIf { qaRecord } ?: return@LaunchedEffect
         val events = withContext(Dispatchers.IO) {
             context.assets.open(RerunReplayAssets.LOG).bufferedReader().useLines { parseArDebugLog(it) }
@@ -1236,7 +1357,7 @@ private fun RerunLiveScreen(
     // Record starts on the frame on screen, whose camera gives the scan its lens.
     val onStartScan = start@{
         val frame = latestFrame ?: return@start
-        val capture = ScanCapture.start(frame, scope, rawDepth) ?: return@start
+        val capture = ScanCapture.start(frame, scope, rawDepth, scanScope.preset) ?: return@start
         debugFullScreen = false
         debugSession.trace = capture.trace
         debugSession.goLive()
@@ -1273,7 +1394,10 @@ private fun RerunLiveScreen(
     // Save scan builds the capture — no more photos, the last ones encoded, its planes painted
     // from its photos — writes it on the phone and opens it, read back from what was saved. A
     // failed write keeps the built scan on screen for Try again; nothing claims it was saved.
-    val onSaveScan = save@{
+    // What follows a save: the result screen, or — for a room of a home — the next room or the summary.
+    var saveNext by remember { mutableStateOf(SaveNext.Open) }
+    val saveScan: (SaveNext) -> Unit = save@{ next ->
+        saveNext = next
         val qaTrace = qaScan?.trace
         val capture = scan
         val nothingToSave = builtPack == null && qaTrace == null && capture == null
@@ -1297,7 +1421,7 @@ private fun RerunLiveScreen(
                 return@launch
             }
             val pack = built.getOrNull()?.also {
-                if (builtPack == null) builtTitle = recordingTitle(now)
+                if (builtPack == null) builtTitle = recordingTitle(now, scanScope, roomNumber)
                 builtPack = it
             }
             if (pack == null) {
@@ -1319,9 +1443,25 @@ private fun RerunLiveScreen(
             }
             val opened = runCatching { loadRerunSession(pack) }.getOrNull()
             dropCapture()
-            if (opened != null) onScanned(opened, title, pack, savedId)
+            if (opened == null) return@launch
+            when (next) {
+                SaveNext.Open -> onScanned(opened, title, pack, savedId)
+                SaveNext.FinishHome -> {
+                    onRoomSaved(opened, title, savedId)
+                    onFinishHome()
+                }
+                SaveNext.NextRoom -> {
+                    onRoomSaved(opened, title, savedId)
+                    // The next room's capture opens paused, in the same AR session: nothing is
+                    // captured on the way there, and Start begins it.
+                    betweenRooms = true
+                    if (qaRecord) take++ else onStartScan()
+                    phase = ScanPhase.Paused
+                }
+            }
         }
     }
+    val onSaveScan = { saveScan(if (scanScope.roomByRoom) SaveNext.FinishHome else SaveNext.Open) }
     val onDiscardScan = {
         dropCapture()
         onBack()
@@ -1330,6 +1470,10 @@ private fun RerunLiveScreen(
     // while it asks, so nothing is recorded behind the dialog. While it saves, Back waits.
     val onBackFromLive: () -> Unit = {
         if (!recording) {
+            onBack()
+        } else if (betweenRooms && phase == ScanPhase.Paused) {
+            // Nothing captured since the last room was saved: Back goes to the home's summary.
+            dropCapture()
             onBack()
         } else if (phase != ScanPhase.Saving) {
             moveTo(phase.leaveAsked())
@@ -1380,6 +1524,7 @@ private fun RerunLiveScreen(
                     phase = if (trackingLost && phase.integrates) ScanPhase.Paused else phase,
                     seconds = scan?.elapsedSeconds(now) ?: qaLong?.shownSeconds ?: stats.duration,
                     points = capturedPoints,
+                    label = ScanScopeCopy.label(scanScope, roomNumber),
                 )
             } else if (debugFullScreen) {
                 ArDebugLegend(debugSession)
@@ -1428,7 +1573,9 @@ private fun RerunLiveScreen(
                     sharing = sharing,
                     onSaveAndShare = onSaveAndShare,
                 )
-                if (recording && scanMedia != null && phase in SCAN_MAP_PHASES) {
+                // The floor map is room guidance: an object has no floor to cover (#4647).
+                val mapsFloor = phase in SCAN_MAP_PHASES && scanScope.hasFloorPlan
+                if (recording && scanMedia != null && mapsFloor) {
                     ScanCoverageMap(
                         state = scanCoverage,
                         modifier = Modifier.align(Alignment.Start).padding(start = Space.md),
@@ -1440,6 +1587,22 @@ private fun RerunLiveScreen(
                 if (arCoreAvailability == null || qaState != null) {
                     when {
                         !recording -> ScanShutter(startEnabled = isTracking, onStart = onStartScan)
+                        phase == ScanPhase.Reviewing && scanScope.roomByRoom -> HomeReviewCard(
+                            roomNumber = roomNumber,
+                            empty = captureEmpty,
+                            figures = ScanCopy.reviewFigures(capturedPoints, capturedPhotos, capturedClock),
+                            onKeepScanning = { moveTo(ScanPhase.Scanning) },
+                            onNextRoom = { saveScan(SaveNext.NextRoom) },
+                            onSaveAndFinish = { saveScan(SaveNext.FinishHome) },
+                            onFinish = if (roomNumber > 1) {
+                                {
+                                    dropCapture()
+                                    onFinishHome()
+                                }
+                            } else {
+                                null
+                            },
+                        )
                         phase == ScanPhase.Reviewing -> ScanReviewCard(
                             empty = captureEmpty,
                             figures = ScanCopy.reviewFigures(capturedPoints, capturedPhotos, capturedClock),
@@ -1450,19 +1613,30 @@ private fun RerunLiveScreen(
                         phase == ScanPhase.SaveFailed -> ScanSaveFailedCard(
                             // The scan was never written: discarding it asks first.
                             onDiscard = { discardAsked = true },
-                            onRetry = onSaveScan,
+                            onRetry = { saveScan(saveNext) },
                         )
                         else -> ScanControls(
                             phase = phase,
-                            coaching = ScanCopy.coaching(
-                                phase = phase,
-                                trackingLost = trackingLost,
-                                photoLimitReached = scan?.isPhotoLimitReached == true,
-                                detail = scan?.denseDetail ?: qaLong?.shownDetail ?: ScanDetail.Fine,
-                                coach = scanCoverage.coachLine,
+                            coaching = ScanScopeCopy.coaching(
+                                scope = scanScope,
+                                line = ScanCopy.coaching(
+                                    phase = phase,
+                                    trackingLost = trackingLost,
+                                    photoLimitReached = scan?.isPhotoLimitReached == true,
+                                    detail = scan?.denseDetail ?: qaLong?.shownDetail ?: ScanDetail.Fine,
+                                    coach = scanCoverage.coachLine,
+                                ),
+                                nextRoom = roomNumber.takeIf { betweenRooms },
                             ),
-                            onTogglePause = { moveTo(phase.togglePause()) },
-                            onFinish = { moveTo(phase.finish()) },
+                            onTogglePause = {
+                                betweenRooms = false
+                                moveTo(phase.togglePause())
+                            },
+                            onFinish = {
+                                betweenRooms = false
+                                moveTo(phase.finish())
+                            },
+                            resumeLabel = if (betweenRooms) ScanScopeCopy.START_ROOM else ScanCopy.RESUME,
                         )
                     }
                 }
@@ -1904,8 +2078,22 @@ private const val QA_STATE_RECORD_LONG = "record-long"
 private const val QA_STATE_RECORD_LONG_FIXED = "record-long-fixed"
 private val LONG_QA_STATES = setOf(QA_STATE_RECORD_LONG, QA_STATE_RECORD_LONG_FIXED)
 
+/** QA only (#4647): the capture screen as an object's scan, and as a room of a whole home. */
+private const val QA_STATE_RECORD_OBJECT = "record-object"
+private const val QA_STATE_RECORD_HOME = "record-home"
+
+/** QA only (#4647): what 3D Scan asks first, and a whole home of two ray-cast rooms, summed up. */
+private const val QA_STATE_CHOOSE = "choose"
+private const val QA_STATE_HOME_SUMMARY = "home-summary"
+
 private val RECORD_QA_STATES =
-    setOf(QA_STATE_RECORD, QA_STATE_RECORD_TRACKING_LOST, QA_STATE_RECORD_SAVE_FAILED) + LONG_QA_STATES
+    setOf(
+        QA_STATE_RECORD,
+        QA_STATE_RECORD_TRACKING_LOST,
+        QA_STATE_RECORD_SAVE_FAILED,
+        QA_STATE_RECORD_OBJECT,
+        QA_STATE_RECORD_HOME,
+    ) + LONG_QA_STATES
 
 /** The QA scan plays the sample once and holds on its end, as a scan in progress would. */
 private const val QA_RECORD_NEVER_LOOP_S = 3_600f

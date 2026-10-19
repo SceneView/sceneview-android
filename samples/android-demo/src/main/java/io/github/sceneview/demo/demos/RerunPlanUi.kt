@@ -67,6 +67,7 @@ import io.github.sceneview.demo.R
 import io.github.sceneview.demo.SETTINGS_FAB_RESERVED_SPACE
 import io.github.sceneview.demo.demos.internal.ArDebugEvent
 import io.github.sceneview.demo.demos.internal.DenseCloud
+import io.github.sceneview.demo.demos.internal.DebugPose
 import io.github.sceneview.demo.demos.internal.DenseFusion
 import io.github.sceneview.demo.demos.internal.DepthBackProjection
 import io.github.sceneview.demo.demos.internal.PlanLine
@@ -76,6 +77,7 @@ import io.github.sceneview.demo.demos.internal.PlanTextRole
 import io.github.sceneview.demo.demos.internal.ReplayLens
 import io.github.sceneview.demo.demos.internal.RerunCapturePack
 import io.github.sceneview.demo.demos.internal.RerunSyntheticRoom
+import io.github.sceneview.demo.demos.internal.SyntheticScene
 import io.github.sceneview.demo.demos.internal.RoomPlanDrawing
 import io.github.sceneview.demo.demos.internal.RoomPlanLayout
 import io.github.sceneview.demo.demos.internal.RoomSurvey
@@ -136,7 +138,7 @@ internal class PlanWords(
 )
 
 @Composable
-private fun rememberPlanWords(): PlanWords = PlanWords(
+internal fun rememberPlanWords(): PlanWords = PlanWords(
     survey = SurveyWording(
         heading = stringResource(R.string.demo_ar_rerun_plan_heading),
         area = stringResource(R.string.demo_ar_rerun_plan_area),
@@ -195,16 +197,15 @@ internal fun rememberRoomSurvey(media: RerunReplayMedia?, wanted: Boolean): Room
     produceState<RoomSurvey?>(null, media, wanted) {
     value = null
     if (media == null || !wanted) return@produceState
-    value = withContext(Dispatchers.Default) {
-        val cloud = media.dense?.cloud
-        if (cloud == null) {
-            RoomSurvey.empty(SurveyGap.NoDepth)
-        } else {
-            val trail = media.trace.let { it.frameAt(it.duration) }.trail
-            RoomSurveyor.survey(RoomSurveyInput(cloud.positions, cloud.normals, trail))
-        }
-    }
+    value = withContext(Dispatchers.Default) { surveyOf(media) }
 }.value
+
+/** [media]'s survey, measured on the calling thread: call it off the main one. */
+internal fun surveyOf(media: RerunReplayMedia): RoomSurvey {
+    val cloud = media.dense?.cloud ?: return RoomSurvey.empty(SurveyGap.NoDepth)
+    val trail = media.trace.let { it.frameAt(it.duration) }.trail
+    return RoomSurveyor.survey(RoomSurveyInput(cloud.positions, cloud.normals, trail))
+}
 
 /**
  * A scan's floor plan as a screen of its own, opened from the export sheet: the scan's [media]
@@ -325,7 +326,7 @@ internal fun RerunPlanView(survey: RoomSurvey?, title: String, date: String?, mo
  * @param hint a line above the drawing, for a card that does not show whole.
  */
 @Composable
-private fun PlanCard(
+internal fun PlanCard(
     survey: RoomSurvey,
     words: PlanWords,
     modifier: Modifier = Modifier,
@@ -461,7 +462,7 @@ private fun SurveyDetails(
 }
 
 @Composable
-private fun PlanSection(
+internal fun PlanSection(
     title: String?,
     caption: String? = null,
     testTag: String? = null,
@@ -485,7 +486,7 @@ private fun PlanSection(
 }
 
 @Composable
-private fun FigureRow(row: SurveyRow) {
+internal fun FigureRow(row: SurveyRow) {
     Row(
         modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {},
         horizontalArrangement = Arrangement.spacedBy(Space.md),
@@ -882,13 +883,18 @@ private fun sharePlanText(context: Context, text: String, title: String) {
 /**
  * A scan of the ray-cast room ([RerunSyntheticRoom]) as the recorder would save it: the camera's
  * path and the dense cloud its depth frames fuse into. The emulator cannot scan, and no real
- * room belongs in a capture. With [partial] the scan never saw one wall nor the ceiling.
+ * room belongs in a capture. With [partial] the scan never saw one wall nor the ceiling. Another
+ * [scene], walked along [walk], is a second room of a whole home (#4647).
  */
-internal suspend fun syntheticPlanCapture(partial: Boolean): RerunCapturePack {
+internal suspend fun syntheticPlanCapture(
+    partial: Boolean,
+    scene: SyntheticScene = RerunSyntheticRoom.scene,
+    walk: () -> List<DebugPose> = { RerunSyntheticRoom.poses() },
+): RerunCapturePack {
     val (events, cloud) = withContext(Dispatchers.Default) {
-        val poses = RerunSyntheticRoom.poses()
+        val poses = walk()
         val fusion = DenseFusion()
-        poses.forEach { fusion.add(DepthBackProjection.project(RerunSyntheticRoom.scene.render(it))) }
+        poses.forEach { fusion.add(DepthBackProjection.project(scene.render(it))) }
         val whole = fusion.cloud()
         val events = poses.mapIndexed { i, pose -> ArDebugEvent.CameraPose(i * QA_FRAME_NANOS, pose) }
         events to if (partial) whole.without { x, y, _ -> x > QA_HIDDEN_WALL_X || y > QA_HIDDEN_ABOVE_Y } else whole

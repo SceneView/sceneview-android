@@ -45,6 +45,7 @@ import io.github.sceneview.demo.demos.internal.ArDebugOrbitCamera
 import io.github.sceneview.demo.demos.internal.ArDebugSession
 import io.github.sceneview.demo.demos.internal.ScanCopy
 import io.github.sceneview.demo.demos.internal.ScanPhase
+import io.github.sceneview.demo.demos.internal.ScanScopeCopy
 import io.github.sceneview.demo.theme.SceneViewTokens
 import io.github.sceneview.demo.theme.SceneViewTokens.ArOverlay
 import io.github.sceneview.demo.theme.SceneViewTokens.Space
@@ -65,7 +66,7 @@ import io.github.sceneview.loaders.ModelLoader
  * points captured, counted off the scan from zero and never shown against a cap.
  */
 @Composable
-internal fun ScanHud(phase: ScanPhase, seconds: Float, points: Int) {
+internal fun ScanHud(phase: ScanPhase, seconds: Float, points: Int, label: String? = null) {
     val clock = ArDebugFormat.clock(seconds)
     OverlayCard(testTag = SCAN_HUD_TAG) {
         Row(
@@ -81,7 +82,13 @@ internal fun ScanHud(phase: ScanPhase, seconds: Float, points: Int) {
                     ),
             )
             Spacer(Modifier.width(Space.sm))
-            Text(text = ScanCopy.status(phase, clock), style = OnScrimTitle, modifier = Modifier.weight(1f))
+            // What is being scanned leads (#4647): `Room 2 · Scanning · 0:42`.
+            val status = ScanCopy.status(phase, clock)
+            Text(
+                text = label?.let { "$it · $status" } ?: status,
+                style = OnScrimTitle,
+                modifier = Modifier.weight(1f),
+            )
         }
         Text(
             text = ScanCopy.pointsCaptured(points),
@@ -102,6 +109,7 @@ internal fun ScanControls(
     coaching: String?,
     onTogglePause: () -> Unit,
     onFinish: () -> Unit,
+    resumeLabel: String = ScanCopy.RESUME,
 ) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(horizontal = Space.md).testTag(SCAN_CONTROLS_TAG),
@@ -117,7 +125,7 @@ internal fun ScanControls(
                 onClick = onTogglePause,
                 modifier = Modifier.weight(1f).heightIn(min = SceneViewTokens.Layout.touchTarget),
             ) {
-                Text(if (phase == ScanPhase.Paused) ScanCopy.RESUME else ScanCopy.PAUSE)
+                Text(if (phase == ScanPhase.Paused) resumeLabel else ScanCopy.PAUSE)
             }
             Button(
                 onClick = onFinish,
@@ -153,6 +161,66 @@ internal fun ScanReviewCard(
                     Text(ScanCopy.KEEP_SCANNING)
                 }
                 Button(onClick = onSave, modifier = Modifier.weight(1f)) { Text(ScanCopy.SAVE_SCAN) }
+            }
+        }
+    }
+}
+
+/**
+ * Finish's review for one room of a whole home (#4647): Keep scanning returns to the same room,
+ * Next room saves it and waits, paused, for the next one, Save and finish saves it and shows the
+ * plan of every room. A room with nothing in it is not saved: Finish shows the rooms already
+ * saved, when there are some.
+ */
+@Composable
+@Suppress("LongParameterList") // the review's four answers
+internal fun HomeReviewCard(
+    roomNumber: Int,
+    empty: Boolean,
+    figures: String,
+    onKeepScanning: () -> Unit,
+    onNextRoom: () -> Unit,
+    onSaveAndFinish: () -> Unit,
+    onFinish: (() -> Unit)?,
+) {
+    OverlayCard(testTag = SCAN_REVIEW_TAG) {
+        Text(
+            text = if (empty) ScanCopy.EMPTY_TITLE else ScanScopeCopy.reviewTitle(roomNumber),
+            style = OnScrimTitle,
+        )
+        Text(
+            text = when {
+                !empty -> figures
+                onFinish != null -> ScanScopeCopy.EMPTY_DETAIL
+                else -> ScanCopy.EMPTY_DETAIL
+            },
+            style = OnScrimBody,
+        )
+        if (!empty) Text(text = ScanScopeCopy.REVIEW_DETAIL, style = OnScrimBody)
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+            val keepScanning = Modifier.weight(1f).heightIn(min = SceneViewTokens.Layout.touchTarget)
+            when {
+                !empty -> {
+                    FilledTonalButton(onClick = onKeepScanning, modifier = keepScanning) {
+                        Text(ScanCopy.KEEP_SCANNING)
+                    }
+                    Button(onClick = onNextRoom, modifier = keepScanning) { Text(ScanScopeCopy.NEXT_ROOM) }
+                }
+                onFinish != null -> {
+                    FilledTonalButton(onClick = onKeepScanning, modifier = keepScanning) {
+                        Text(ScanCopy.KEEP_SCANNING)
+                    }
+                    Button(onClick = onFinish, modifier = keepScanning) { Text(ScanScopeCopy.FINISH_HOME) }
+                }
+                else -> Button(onClick = onKeepScanning, modifier = keepScanning) { Text(ScanCopy.KEEP_SCANNING) }
+            }
+        }
+        if (!empty) {
+            FilledTonalButton(
+                onClick = onSaveAndFinish,
+                modifier = Modifier.fillMaxWidth().heightIn(min = SceneViewTokens.Layout.touchTarget),
+            ) {
+                Text(ScanScopeCopy.SAVE_AND_FINISH)
             }
         }
     }
