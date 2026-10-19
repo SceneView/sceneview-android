@@ -11,6 +11,7 @@ import android.util.Log
 import android.view.MotionEvent
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -461,11 +462,11 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
     }
     // A file opened here ("Open file") or handed over by another app: kept as a session, then
     // replayed — or, when it is not one this app reads, the landing says why.
-    val importFile = { uri: Uri ->
+    val importFile = { uri: Uri, done: () -> Unit ->
         notice = null
         openingFile = true
         scope.launch {
-            val result = importSession(context, store, uri)
+            val result = try { importSession(context, store, uri) } finally { done() }
             openingFile = false
             sessionsVersion++
             result
@@ -478,7 +479,7 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
         Unit
     }
     val pickFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        uri?.let(importFile)
+        uri?.let { importFile(it) {} }
     }
     // QA's floor plan: the ray-cast room, kept as a scan would be, then opened on its plan.
     if (qaState in PLAN_QA_STATES) {
@@ -540,13 +541,16 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
         home = HomeScan()
         screen = RerunScreen.Live
     }
+    // A file handed to this activity only: another MainActivity still showing 3D Scan behind it
+    // must not import it too (#4680).
     val inbox = DemoSettings.rerunInbox
+    val activity = LocalActivity.current
     LaunchedEffect(inbox) {
-        val uri = inbox ?: return@LaunchedEffect
-        DemoSettings.rerunInbox = null
+        val delivery = inbox ?: return@LaunchedEffect
+        if (!RerunInbox.claim(delivery, activity)) return@LaunchedEffect
         opening?.cancel()
         screen = RerunScreen.Landing
-        importFile(uri)
+        importFile(delivery.uri) { RerunInbox.read(delivery) }
     }
 
     when (screen) {

@@ -118,9 +118,10 @@ object DemoSettings {
 
     /**
      * A SceneView scan file (`.svscan`) handed over by another app ("Open with" / Share), for the
-     * Rerun demo to read into "Your sessions" and replay. The demo clears it once read.
+     * Rerun demo to read into "Your sessions" and replay. Addressed to the one activity the
+     * intent reached, which clears it once read ([io.github.sceneview.demo.demos.RerunInbox]).
      */
-    var rerunInbox: android.net.Uri? by mutableStateOf(null)
+    var rerunInbox: io.github.sceneview.demo.demos.RerunInboxDelivery? by mutableStateOf(null)
 
     /**
      * Optional camera-to-model distance, in metres, the 3D demos should frame the model at

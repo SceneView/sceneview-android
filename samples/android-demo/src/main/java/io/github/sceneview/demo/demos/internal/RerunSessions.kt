@@ -9,6 +9,7 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.put
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.security.MessageDigest
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -344,14 +345,39 @@ class RerunSessionStore(val root: File) {
      * Reads a file the user opened — a scan file, named [fileName] — and keeps it as a new session
      * titled after the file. [readRrd] turns a `.rrd`'s bytes into a capture, or throws.
      *
+     * Idempotent (#4680): the same bytes opened again return the session they made the first time
+     * — as it stands now, renamed or not — instead of listing a second copy. The file's SHA-256 is
+     * kept beside the session ([SOURCE_HASH]), and two imports racing each other are serialised,
+     * so the second finds the first.
+     *
      * @throws RerunImportFailure
      */
-    @Suppress("ThrowsCount") // one throw per way a file fails, each renamed after the file
     fun import(
         fileName: String,
         bytes: ByteArray,
         readRrd: (ByteArray) -> RerunCapturePack,
         nowMillis: Long = System.currentTimeMillis(),
+    ): RerunStoredSession {
+        val hash = sha256Of(bytes)
+        return synchronized(IMPORT_LOCK) {
+            importedFrom(hash) ?: importNew(fileName, bytes, readRrd, nowMillis).also { session ->
+                // Written last: a session whose hash did not write still lists, it only dedupes less.
+                runCatching { writeAtomically(File(directoryOf(session.id), SOURCE_HASH), hash.toByteArray()) }
+            }
+        }
+    }
+
+    /** The kept session imported from a file whose SHA-256 is [hash]; `null` when there is none. */
+    fun importedFrom(hash: String): RerunStoredSession? = list().firstOrNull { session ->
+        runCatching { File(directoryOf(session.id), SOURCE_HASH).readText().trim() }.getOrNull() == hash
+    }
+
+    @Suppress("ThrowsCount") // one throw per way a file fails, each renamed after the file
+    private fun importNew(
+        fileName: String,
+        bytes: ByteArray,
+        readRrd: (ByteArray) -> RerunCapturePack,
+        nowMillis: Long,
     ): RerunStoredSession {
         val kind = RerunFileKind.of(fileName, bytes) ?: throw RerunImportFailure.Unsupported(fileName)
         val capture = when (kind) {
@@ -391,7 +417,17 @@ class RerunSessionStore(val root: File) {
         /** The scan's result, [RerunScanModel]: its `.glb`, and what it is (written last). */
         const val MODEL_GLB = "model.glb"
         const val MODEL_INFO = "model.json"
+
+        /** An imported session's source file: the lowercase hex SHA-256 of its bytes. */
+        const val SOURCE_HASH = "source.sha256"
         private const val PARTIAL = ".partial"
+
+        /** Every store of the process imports one file at a time: two racing copies become one. */
+        private val IMPORT_LOCK = Any()
+
+        /** [bytes]' SHA-256, lowercase hex. */
+        fun sha256Of(bytes: ByteArray): String =
+            MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
 
         /** How long a directory without `session.json` is left alone: far longer than any save. */
         const val ORPHAN_GRACE_MS = 60L * 60 * 1000
