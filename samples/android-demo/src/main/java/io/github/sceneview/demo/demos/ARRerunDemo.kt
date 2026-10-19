@@ -643,6 +643,8 @@ private fun RerunReplayScreen(
     materialLoader: MaterialLoader,
 ) {
     val thumbnails = remember(media) { media?.thumbnails?.mapValues { it.value.asImageBitmap() }.orEmpty() }
+    // What the recording covers at the replay's time (#4631), drawn as the corner map.
+    val coverage = remember(media) { ScanCoverageState() }
     // The camera frames are pictures, ready with the files; the 3D view says when it has drawn.
     val ready = media != null && (revealed || mode == RerunMode.Camera)
     LaunchedEffect(ready) { if (ready) onRevealed() }
@@ -683,8 +685,14 @@ private fun RerunReplayScreen(
                     .reveal(cardIn, rise = -Space.md)
                 when (mode) {
                     // The map is a floor plan and needs the whole width: the camera card would sit
-                    // on the room's far corner. The dock's Camera button stays one tap away.
-                    RerunMode.Map -> Unit
+                    // on the room's far corner. The dock's Camera button stays one tap away. The
+                    // coverage map is small and stays in its corner.
+                    RerunMode.Map -> ScanCoverageMap(
+                        state = coverage,
+                        modifier = Modifier
+                            .padding(top = Space.sm, start = Space.md)
+                            .reveal(cardIn, rise = -Space.md),
+                    )
                     RerunMode.Camera -> ArDebugPip(
                         session = session,
                         orbit = pipOrbit,
@@ -695,13 +703,23 @@ private fun RerunReplayScreen(
                         modifier = corner,
                         replay = media,
                     )
-                    RerunMode.Scene -> RerunCameraCard(
-                        media = media,
-                        thumbnails = thumbnails,
-                        session = session,
-                        onOpen = { onMode(RerunMode.Camera) },
-                        modifier = corner,
-                    )
+                    // What is scanned and what is not on the left, what the camera saw on the right.
+                    RerunMode.Scene -> Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = Space.sm, start = Space.md, end = Space.md)
+                            .reveal(cardIn, rise = -Space.md),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top,
+                    ) {
+                        ScanCoverageMap(state = coverage)
+                        RerunCameraCard(
+                            media = media,
+                            thumbnails = thumbnails,
+                            session = session,
+                            onOpen = { onMode(RerunMode.Camera) },
+                        )
+                    }
                 }
             }
         },
@@ -769,6 +787,7 @@ private fun RerunReplayScreen(
                 modifier = Modifier.fillMaxSize(),
                 replay = media,
                 onShown = onRevealed,
+                observe = coverage::observe,
             )
         }
     }
@@ -918,6 +937,8 @@ private fun RerunLiveScreen(
     // pinch takes it over and shows Recenter, which hands it back to the phone.
     var scanFollowing by remember(scanMedia) { mutableStateOf(true) }
     val scanFollow = remember(scanMedia) { ScanFollow() }
+    // What the capture has covered (#4631): the live map and the coach read it, frame by frame.
+    val scanCoverage = remember(scanMedia) { ScanCoverageState() }
     val scanOrbit = remember(scanMedia) {
         ArDebugOrbitCamera(
             drift = false,
@@ -1186,6 +1207,12 @@ private fun RerunLiveScreen(
                     sharing = sharing,
                     onSaveAndShare = onSaveAndShare,
                 )
+                if (recording && scanMedia != null && phase in SCAN_MAP_PHASES) {
+                    ScanCoverageMap(
+                        state = scanCoverage,
+                        modifier = Modifier.align(Alignment.Start).padding(start = Space.md),
+                    )
+                }
                 if (recording && !scanFollowing && phase != ScanPhase.Saving) {
                     ScanRecenterPill(onRecenter = { scanOrbit.recenter() })
                 }
@@ -1211,6 +1238,7 @@ private fun RerunLiveScreen(
                                 trackingLost = trackingLost,
                                 photoLimitReached = scan?.isPhotoLimitReached == true,
                                 detail = scan?.denseDetail ?: qaLong?.shownDetail ?: ScanDetail.Fine,
+                                coach = scanCoverage.coachLine,
                             ),
                             onTogglePause = { moveTo(phase.togglePause()) },
                             onFinish = { moveTo(phase.finish()) },
@@ -1333,6 +1361,7 @@ private fun RerunLiveScreen(
                     session = debugSession,
                     orbit = scanOrbit,
                     follow = scanFollow,
+                    coverage = scanCoverage,
                     following = scanFollowing,
                     media = scanMedia,
                     engine = engine,
@@ -1776,3 +1805,6 @@ private val QA_SHARE_RESULT = RerunBridge.ShareResult(
 )
 
 internal const val RERUN_STATUS_CARD_TAG = "ar_rerun_status_card"
+
+/** The capture phases that show its coverage map (#4631): while it is open, not under a card. */
+private val SCAN_MAP_PHASES = setOf(ScanPhase.Scanning, ScanPhase.Paused)

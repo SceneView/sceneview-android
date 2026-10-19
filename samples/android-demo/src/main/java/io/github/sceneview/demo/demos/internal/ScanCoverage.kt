@@ -148,7 +148,7 @@ internal class CoverageGrid(
  *
  * A line holds [holdSeconds] once shown so it can be read, and goes when its cause has gone.
  */
-internal class ScanCoach(private val holdSeconds: Float = HOLD_SECONDS) {
+class ScanCoach(private val holdSeconds: Float = HOLD_SECONDS) {
 
     enum class Line { Slower, NothingNew }
 

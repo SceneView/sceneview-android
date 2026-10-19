@@ -87,18 +87,36 @@ internal class ScanResultCinematics(
     /** Flies to [home] — the framing of the moment — and leaves the orbit camera there, following. */
     private fun recenter(home: OrbitPose) {
         touring = false
-        val target = ArDebugFraming.clamp(home)
-        orbit.recenter()
-        orbit.snapTo(target)
-        animator.flyTo(target.toShot(), flyOver = 0f)
+        animator.flyTo(handOff(home).toShot(), flyOver = 0f)
     }
 
+    /**
+     * The tour, from the framing: played at once when the camera is on it, after a fly onto it
+     * when the user had taken the camera somewhere else — a tour never starts with a cut.
+     */
     private fun tour(home: OrbitPose) {
+        val atHome = orbit.following && orbit.pose == ArDebugFraming.clamp(home)
+        val target = handOff(home)
+        val lap = CameraPath.tour(target.toShot())
+        if (atHome && !animator.isPlaying) {
+            animator.play(lap)
+        } else {
+            animator.flyTo(target.toShot(), flyOver = 0f, onFinished = { animator.play(lap) })
+        }
+        touring = true
+    }
+
+    /**
+     * Starts the animator from the picture on screen and hands the orbit camera [home], following:
+     * where every move of the animator lands, so its end is seamless. Returns the clamped [home].
+     */
+    private fun handOff(home: OrbitPose): OrbitPose {
         val target = ArDebugFraming.clamp(home)
+        // A camera the user moved is where the move starts, not where the last move stopped.
+        if (!animator.isPlaying) animator.snapTo(orbit.pose.toShot())
         orbit.recenter()
         orbit.snapTo(target)
-        animator.play(CameraPath.tour(target.toShot()))
-        touring = true
+        return target
     }
 
     private fun stopTour() {
