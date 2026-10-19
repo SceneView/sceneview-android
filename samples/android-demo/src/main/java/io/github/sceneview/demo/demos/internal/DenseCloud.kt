@@ -296,18 +296,18 @@ object DepthBackProjection {
         Vec3((px - cx) * depthM / fx, -(py - cy) * depthM / fy, -depthM)
 
     /**
-     * The surfels of [frame]: every pixel with depth in [[NEAR_M], [FAR_M]], confidence ≥
+     * The surfels of [frame]: every pixel with depth in [[NEAR_M], [farM]], confidence ≥
      * [minConfidence] and a normal — from its neighbours, none across a depth jump
      * ([EDGE_FRACTION]) — facing the camera by at least [MIN_VIEW_COSINE].
      */
     @Suppress("CyclomaticComplexMethod", "LoopWithTooManyJumpStatements", "NestedBlockDepth")
-    fun project(frame: DepthFrame, minConfidence: Int = MIN_CONFIDENCE): DenseSamples {
+    fun project(frame: DepthFrame, minConfidence: Int = MIN_CONFIDENCE, farM: Float = FAR_M): DenseSamples {
         val w = frame.width
         val h = frame.height
         val depth = FloatArray(w * h)
         for (i in 0 until w * h) {
             val d = (frame.depthMm[i].toInt() and 0xFFFF) / 1000f
-            depth[i] = if (d in NEAR_M..FAR_M) d else 0f
+            depth[i] = if (d in NEAR_M..farM) d else 0f
         }
         val capacity = w * h
         val positions = FloatArray(capacity * 3)

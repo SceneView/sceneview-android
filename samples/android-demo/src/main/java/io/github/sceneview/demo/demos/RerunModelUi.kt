@@ -89,6 +89,7 @@ import io.github.sceneview.demo.demos.internal.RerunScanModel
 import io.github.sceneview.demo.demos.internal.RerunSessionStore
 import io.github.sceneview.demo.demos.internal.RerunSyntheticRoom
 import io.github.sceneview.demo.demos.internal.RerunTsdf
+import io.github.sceneview.demo.demos.internal.ScanPreset
 import io.github.sceneview.demo.demos.internal.ScanResultCinematics
 import io.github.sceneview.demo.isDemoCompactHeight
 import io.github.sceneview.demo.theme.LocalStageChrome
@@ -172,8 +173,8 @@ internal sealed interface RerunModelSource {
  * lens, fresh depth only — on its own worker: a frame that arrives while one integrates is left
  * to the surfel map alone, so neither slows the other.
  */
-internal class RerunLiveModel {
-    val tsdf = RerunTsdf()
+internal class RerunLiveModel(private val preset: ScanPreset = ScanPreset.ROOM) {
+    val tsdf = RerunTsdf(voxelM = preset.modelVoxelM)
     private val busy = AtomicBoolean(false)
 
     @Volatile
@@ -184,7 +185,7 @@ internal class RerunLiveModel {
         if (!busy.compareAndSet(false, true)) return
         job = scope.launch(Dispatchers.Default) {
             try {
-                val step = tsdf.integrate(frame)
+                val step = tsdf.integrate(frame, farM = preset.farM)
                 if (tsdf.frames % LOG_EVERY_FRAMES == 1 || step.dropped > 0) {
                     Log.i(
                         TAG,

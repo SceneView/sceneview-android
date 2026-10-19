@@ -283,3 +283,44 @@ object RerunSyntheticRoom {
     private const val CABINET_DARK = 0xFFC7B79C.toInt()
     private const val BALL = 0xFFE39A2D.toInt()
 }
+
+/**
+ * A second room for the whole-home QA state (#4647): a bedroom, 3 × 2.8 m and 2.5 m high, with a
+ * low bed and a chest of drawers, so its plan and figures differ from [RerunSyntheticRoom]'s.
+ * Walked the same way: [RerunSyntheticRoom.poses] from [STOPS].
+ */
+object RerunSyntheticBedroom {
+    val MIN = Vec3(-1.5f, 0f, -1.4f)
+    val MAX = Vec3(1.5f, 2.5f, 1.4f)
+
+    val scene: SyntheticScene by lazy {
+        SyntheticScene(
+            listOf(
+                SyntheticShape.Room(MIN, MAX) { _, y, _ ->
+                    when {
+                        y < SURFACE -> CARPET
+                        y > MAX.y - SURFACE -> CEILING
+                        else -> WALL
+                    }
+                },
+                // The bed, its head against the back wall.
+                SyntheticShape.Box(Vec3(-0.8f, 0f, -1.4f), Vec3(0.8f, 0.5f, 0.6f)) { _, _, _ -> LINEN },
+                // A chest of drawers in the corner.
+                SyntheticShape.Box(Vec3(1.0f, 0f, 0.6f), Vec3(1.5f, 0.9f, 1.4f)) { _, _, _ -> WOOD },
+            ),
+        )
+    }
+
+    val STOPS = listOf(Vec3(0f, 1.4f, 1.0f), Vec3(-1.0f, 1.3f, 0.9f), Vec3(0.9f, 1.5f, -0.2f))
+
+    fun poses(): List<DebugPose> = RerunSyntheticRoom.poses(stops = STOPS)
+
+    private const val SURFACE = 1e-3f
+
+    // Scene content, not UI: the colours of the things in the room.
+    private const val CARPET = 0xFF8C8478.toInt()
+    private const val WALL = 0xFFDCE3E8.toInt()
+    private const val CEILING = 0xFFF4F2EE.toInt()
+    private const val LINEN = 0xFFE9E4DA.toInt()
+    private const val WOOD = 0xFF7A5234.toInt()
+}
