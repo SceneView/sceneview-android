@@ -1,0 +1,2 @@
+<!-- category: Fixed -->
+- **Android demo render tests: the emulator references match the demos as they ship again (refs [#4448](https://github.com/sceneview/sceneview/issues/4448)).** Nine CI references under `render-goldens-swangle/` predated changes merged since 2026-10-17. Those changes are the full-screen button (#4596), the PBR Neutral tone mapper (#4595), the studio finishes on Geometry Primitives (#4666) and the "Performance Test" title on the Debug Overlay demo (#4626). Each new reference was checked by eye before it replaced the old one.
