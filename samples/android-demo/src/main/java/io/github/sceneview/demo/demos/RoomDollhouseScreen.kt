@@ -63,9 +63,11 @@ import io.github.sceneview.ar.rememberArGuidanceState
 import io.github.sceneview.demo.ARCameraInitScrim
 import io.github.sceneview.demo.AR_CAMERA_INIT_SCRIM_TIMEOUT_MS
 import io.github.sceneview.demo.DemoScaffold
+import io.github.sceneview.demo.DemoTopOverlayScope
 import io.github.sceneview.demo.LocalDemoChromeBottomInset
 import io.github.sceneview.demo.DockItem
 import io.github.sceneview.demo.R
+import io.github.sceneview.demo.isDemoCompactHeight
 import io.github.sceneview.demo.SETTINGS_FAB_RESERVED_SPACE
 import io.github.sceneview.demo.common.ArCameraStagePermissionGate
 import io.github.sceneview.demo.common.DemoStatusBanner
@@ -247,6 +249,9 @@ internal fun RoomDollhouseScreen(
     val fit = room?.fit
     // The scale pill shows once the room stands: in the 3D view, or placed in AR.
     val showsScale = hasSurfaces && (stage == DollhouseStage.Preview || canAdjust)
+    // A phone held sideways: the chip goes to the top end corner, the room to the band beside
+    // the chrome (DollhousePreview, #4527).
+    val compactHeight = isDemoCompactHeight()
     val card =when (state.phase) {
         PlacementPhase.NO_SURFACE -> PlacementCard.NO_SURFACE
         PlacementPhase.RECOVERY_FAILED -> PlacementCard.RECOVERY_FAILED
@@ -264,7 +269,9 @@ internal fun RoomDollhouseScreen(
         themedStage = !inRoom,
         // The mode pill belongs to 3D Scan's landing, not to a session opened from it.
         modeSwitch = null,
-        peekHeader = if (fit != null && showsScale) {
+        // Held sideways, the pill above the dock would stand in the middle of the room's band:
+        // the scale moves into the recording's chip, in the top end corner (#4527).
+        peekHeader = if (fit != null && showsScale && !compactHeight) {
             DollhouseCopy.peek(title, fit, realSize && inRoom)
         } else null,
         onReset = if (inRoom) ::reset else null,
@@ -274,6 +281,13 @@ internal fun RoomDollhouseScreen(
                 DollhouseRecordingChip(
                     title = session?.title ?: title,
                     origin = origin,
+                    scale = if (fit != null && showsScale && compactHeight) {
+                        DollhouseCopy.size(fit, realSize && inRoom)
+                    } else null,
+                    corner = compactHeight,
+                    note = if (compactHeight && stage == DollhouseStage.Preview && !arAvailable) {
+                        DollhouseCopy.NO_AR
+                    } else null,
                     choices = choices,
                     current = session,
                     onPick = pickSession,
@@ -329,7 +343,10 @@ internal fun RoomDollhouseScreen(
             )
             else -> emptyList()
         },
-        bottomOverlay = {
+        // Held sideways, nothing stands above the dock outside AR: the room's band runs beside
+        // the dock, measured, and the "no AR" note moves into the chip (#4527).
+        bottomOverlay = if (!compactHeight || stage == DollhouseStage.InRoom) {
+            {
             when (stage) {
                 // Without the camera the stage is the permission card, which says it all.
                 DollhouseStage.InRoom -> if (camera.granted) {
@@ -367,7 +384,8 @@ internal fun RoomDollhouseScreen(
                     if (!arAvailable) DemoStatusBanner(DollhouseCopy.NO_AR, tone = DemoStatusTone.Guidance)
                 else -> Unit
             }
-        },
+            }
+        } else null,
     ) {
         val chrome = LocalStageChrome.current
         when (stage) {
@@ -462,20 +480,25 @@ internal fun RoomDollhouseScreen(
  * newest first, with how many surfaces each kept — picking one stands it instead.
  */
 @Composable
-private fun DollhouseRecordingChip(
+private fun DemoTopOverlayScope.DollhouseRecordingChip(
     title: String,
     origin: String?,
     choices: List<LandingSession>,
     current: RerunStoredSession?,
     onPick: (RerunStoredSession) -> Unit,
+    scale: String? = null,
+    corner: Boolean = false,
+    note: String? = null,
 ) {
     val chrome = LocalStageChrome.current
     var menu by remember { mutableStateOf(false) }
     val canChange = choices.any { it.id != current?.id }
-    Box(modifier = Modifier.padding(horizontal = Space.md)) {
+    // In the top end corner, as wide as the replay's corner card at most (#4527).
+    val placement = if (corner) Modifier.align(Alignment.End) else Modifier
+    Box(modifier = placement.padding(horizontal = Space.md)) {
         Row(
             modifier = Modifier
-                .widthIn(max = MessageMaxWidth)
+                .widthIn(max = if (corner) DOLLHOUSE_CORNER_CARD_WIDTH else MessageMaxWidth)
                 .clip(RoundedCornerShape(Radius.md))
                 .background(chrome.glass)
                 .clickable(enabled = canChange, role = Role.Button, onClickLabel = DollhouseCopy.CHANGE_RECORDING) {
@@ -504,6 +527,23 @@ private fun DollhouseRecordingChip(
                         style = Type.caption.copy(color = chrome.onGlassMuted),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                if (scale != null) {
+                    Text(
+                        text = scale,
+                        style = Type.caption.copy(color = chrome.onGlass),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                if (note != null) {
+                    Text(
+                        text = note,
+                        style = Type.caption.copy(color = chrome.onGlassMuted),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = Space.xs),
                     )
                 }
             }
