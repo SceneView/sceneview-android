@@ -54,6 +54,7 @@ import com.google.android.filament.Renderer
 import com.google.android.filament.Scene
 import com.google.android.filament.View
 import com.google.android.filament.View.BlendMode
+import io.github.sceneview.camera.CinematicCameraManipulator
 import io.github.sceneview.collision.CollisionSystem
 import io.github.sceneview.collision.HitResult
 import io.github.sceneview.environment.Environment
@@ -514,6 +515,12 @@ fun SceneView(
     DisposableEffect(frameRateGate, renderInvalidator) {
         renderInvalidator?.attach(frameRateGate)
         onDispose { renderInvalidator?.detach(frameRateGate) }
+    }
+    // A cinematic move started from outside the loop — a button, a `LaunchedEffect` — must wake a
+    // parked scene: once parked, nothing polls `cameraManipulator.isFrameActive` (#4652).
+    DisposableEffect(cameraManipulator, sceneInvalidator) {
+        val stop = (cameraManipulator as? CinematicCameraManipulator)?.wakeOnMoves(sceneInvalidator)
+        onDispose { stop?.invoke() }
     }
 
     // ── Filament wiring — one keyed effect per parameter, each asking for the frame it needs ──────
