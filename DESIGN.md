@@ -705,6 +705,22 @@ themed surface — so it is theme-independent and uses the "Button glass" row.
     Browsing sheets (model picker, credits, what's new) stay opaque and modal — you
     read those, you do not watch something change behind them.
 
+### Cosmos Spacetime Sheet (Android demo)
+
+The rubber sheet of Cosmos › Star › Spacetime (`cosmos_spacetime.mat`). The scene is deep
+space in both themes, so light and dark share one value; the shader writes the inverse of the
+Filmic tone mapper, so these are the colours on screen.
+
+| Token | Light | Dark | Usage |
+|---|---|---|---|
+| `cosmos-sheet` | #1C2638 | #1C2638 | The lit sheet on the flat plane, before the key light's shading (the far wall of the star's well reaches 1.25×) |
+| `cosmos-sheet-grid` | #A4C1FF | #A4C1FF | A grid line at full glow (`primary`, dark): 0.8 core + 0.22 halo, 1.6× at the star's well, fading out (squared) from 2 to 11, inside the rim at 12 |
+
+- **The grid carries the curvature.** Lines are straight on the flat XZ plane, so the wells
+  bend them; a lit grey surface alone read as a flat disc (#4623).
+- **No sheet colour in the bloom.** Every channel stays under the tone mapper's white, so
+  the star alone blooms.
+
 ### Floating Dock (Android demo)
 
 | Token | Value |
