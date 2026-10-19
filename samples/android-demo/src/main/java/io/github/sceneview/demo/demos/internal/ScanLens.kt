@@ -58,6 +58,15 @@ class ScanLens {
     companion object {
         const val MATRIX_SIZE = 16
 
+        /**
+         * Whether the live view should see through the phone in [phase]: whenever ARCore tracks,
+         * paused included — the frames keep coming, so the cloud stays put in the room and
+         * resuming does not move the view — except while saving, when the saving orbit round the
+         * whole cloud (#4719) owns the view.
+         */
+        fun seesThroughPhone(tracking: Boolean, phase: ScanPhase): Boolean =
+            tracking && phase != ScanPhase.Saving
+
         /** [pose] as a column-major model matrix, the layout `Pose.toMatrix` writes, into [out]. */
         fun poseMatrix(pose: DebugPose, out: FloatArray) {
             val x = pose.qx

@@ -1449,6 +1449,11 @@ private fun RerunLiveScreen(
         var shown = -1
         while (true) {
             val index = withFrameNanos { media.trace.imageIndexAt(media.trace.duration) }
+            if (!ScanLens.seesThroughPhone(tracking = true, phase)) {
+                scanLens.invalidate()
+                shown = -1
+                continue
+            }
             if (index < 0 || index == shown) continue
             val path = media.trace.imagePath(index)
             val photo = media.thumbnails[path] ?: continue
@@ -1925,17 +1930,18 @@ private fun RerunLiveScreen(
                     isTracking = frame.camera.trackingState == TrackingState.TRACKING
                     // The live view's eye (#4716): this very frame's pose and projection, for the
                     // AR view's display geometry, which the live view shares, full screen. Paused,
-                    // the frames keep coming, so the eye stays on the phone and the cloud in the room.
-                    if (isTracking) {
+                    // the frames keep coming, so the eye stays on the phone and the cloud in the room;
+                    // saving, the saving orbit owns the view ([ScanLens.seesThroughPhone]).
+                    if (ScanLens.seesThroughPhone(isTracking, phase)) {
                         scanLens.update { cameraToWorld, projection ->
                             frame.camera.displayOrientedPose.toMatrix(cameraToWorld, 0)
                             frame.camera.getProjectionMatrix(projection, 0, ScanLens.NEAR_M, ScanLens.FAR_M)
                         }
-                        livePose.pose = frame.camera.displayOrientedPose.let {
-                            DebugPose(it.tx(), it.ty(), it.tz(), it.qx(), it.qy(), it.qz(), it.qw())
-                        }
                     } else {
                         scanLens.invalidate()
+                    }
+                    if (isTracking) livePose.pose = frame.camera.displayOrientedPose.let {
+                        DebugPose(it.tx(), it.ty(), it.tz(), it.qx(), it.qy(), it.qz(), it.qw())
                     }
                     // Bridge gates on its own enabled + connection state, so this
                     // is safe whether or not the recorder is reachable.

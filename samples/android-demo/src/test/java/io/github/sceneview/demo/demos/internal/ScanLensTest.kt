@@ -108,6 +108,23 @@ class ScanLensTest {
     }
 
     @Test
+    fun `paused, the view keeps the phone's eye, saving hands it to the saving orbit`() {
+        assertTrue(ScanLens.seesThroughPhone(tracking = true, ScanPhase.Scanning))
+        // Paused, the eye stays the live phone: the cloud stays put and resuming does not jump.
+        assertTrue(ScanLens.seesThroughPhone(tracking = true, ScanPhase.Paused))
+        assertTrue(ScanLens.seesThroughPhone(tracking = true, ScanPhase.Reviewing))
+        assertFalse(ScanLens.seesThroughPhone(tracking = true, ScanPhase.Saving))
+        assertFalse(ScanLens.seesThroughPhone(tracking = false, ScanPhase.Scanning))
+
+        // Invalidated as the save starts, the orbit's own pose takes over again.
+        val lens = lens()
+        val orbit = following(lens)
+        assertTrue(orbit.inFirstPerson)
+        lens.invalidate()
+        assertFalse(orbit.inFirstPerson)
+    }
+
+    @Test
     fun `a cropped photo's projection puts its kept edges on the view's edges`() {
         // A 3:4 portrait photo filling a 9:20 view: the full height stays, the sides are cropped.
         val out = FloatArray(ScanLens.MATRIX_SIZE)
