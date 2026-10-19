@@ -161,17 +161,17 @@ class DemoSmokeTest {
 
     @Test
     fun a06_arRerun_smokeOpen() {
-        openDemoTolerant("ar-rerun", "Rerun AR Replay")
+        openDemoTolerant("ar-rerun", "3D Scan")
         screenshot("s06_ar_rerun")
     }
 
-    // Record mode: the landing's "Record your room" opens the live room scan. The emulator
+    // Record mode: the landing's "Start scanning" opens the live scan. The emulator
     // cannot track (#2754), so this only proves the switch into the camera screen survives
     // without a crash; the scan itself is checked on a Pixel from the PR's needs-device list.
     @Test
     fun a06b_arRerun_recordSmokeOpen() {
-        openDemoTolerant("ar-rerun", "Rerun AR Replay")
-        device.wait(Until.findObject(By.text("Record your room")), timeout)?.click()
+        openDemoTolerant("ar-rerun", "3D Scan")
+        device.wait(Until.findObject(By.text("Start scanning")), timeout)?.click()
         Thread.sleep(5000)
         screenshot("s06b_ar_rerun_record")
         check(device.currentPackageName == pkg) { "The demo left the foreground after opening Record" }

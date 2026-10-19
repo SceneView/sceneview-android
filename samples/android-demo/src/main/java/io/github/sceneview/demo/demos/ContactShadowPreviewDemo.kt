@@ -134,7 +134,7 @@ import java.util.Locale
  * ### Why this exists as a non-AR preview
  *
  * The contact shadow is a pure shader effect — an elliptical gradient drawn from the quad's
- * UVs — so nothing about it depends on ARCore. Like [PlaneGridPreviewDemo] (#2224),
+ * UVs — so nothing about it depends on ARCore. Like `PlaneGridPreviewDemo` (#2224),
  * reproducing the exact geometry + material in a plain
  * `SceneView` makes it visually reviewable on any emulator, with **no ARCore session and no
  * physical AR device** (#2754).

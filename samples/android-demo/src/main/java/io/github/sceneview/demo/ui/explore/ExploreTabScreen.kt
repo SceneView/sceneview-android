@@ -83,6 +83,7 @@ import io.github.sceneview.demo.sources.FeedKind
 import io.github.sceneview.demo.sources.GalleryModel
 import io.github.sceneview.demo.sources.ModelSource
 import io.github.sceneview.demo.sources.ModelSourceId
+import io.github.sceneview.demo.sources.ModelSourcesState
 import io.github.sceneview.demo.sources.rememberModelSources
 import io.github.sceneview.demo.ui.explore.components.FeaturedModelCard
 import io.github.sceneview.demo.ui.explore.components.SpatialHero
@@ -102,21 +103,80 @@ import kotlinx.coroutines.delay
  *
  * The iOS `ExploreTab` still shows the previous layout; it catches up in the
  * iOS leg of the demo-app redesign plan.
+ *
+ * The first frame is cheap on purpose (#4622): the header and the loading stage
+ * show at once, while the sources are built off the main thread. The rails below
+ * the stage, whose demo previews take a long frame to decode on a cold process,
+ * wait for [enterSettled] — the screen's enter transition having finished — so
+ * that long frame never freezes the transition on an empty page.
  */
 @Composable
 fun ExploreTabScreen(
     curatedSamples: List<DemoEntry>,
     onSampleClick: (DemoEntry) -> Unit,
     onBack: () -> Unit = {},
+    enterSettled: Boolean = true,
 ) {
-    val scroll = rememberScrollState()
-    val recentSearches = rememberRecentSearches()
-
+    var showRails by remember { mutableStateOf(enterSettled) }
+    LaunchedEffect(enterSettled) {
+        if (enterSettled) showRails = true
+    }
     // Multi-source resilience (#2645): the tab browses whichever catalog the
     // user picks (Sketchfab | Icosa | Poly Haven), remembering the last choice.
     // A single degraded source never blanks the tab — the samples row + the
     // picker + the other sources stay usable.
     val sources = rememberModelSources()
+    if (sources == null) {
+        ExploreLoadingPage(onBack = onBack)
+    } else {
+        ExploreTabContent(
+            sources = sources,
+            showRails = showRails,
+            curatedSamples = curatedSamples,
+            onSampleClick = onSampleClick,
+            onBack = onBack,
+        )
+    }
+}
+
+/**
+ * What the gallery shows until its sources are built: the same header and the
+ * same loading stage as the loaded page, at the same place, so nothing moves
+ * when the content arrives.
+ */
+@Composable
+private fun ExploreLoadingPage(onBack: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(
+                start = SceneViewTokens.Home.contentPadding,
+                end = SceneViewTokens.Home.contentPadding,
+            ),
+        verticalArrangement = Arrangement.spacedBy(SceneViewTokens.Space.lg),
+    ) {
+        ExploreHeader(onBack = onBack)
+        ExploreStage(
+            hero = null,
+            feedsStatus = FeedsStatus.Loading,
+            sourceName = "",
+            sketchfabUnavailable = false,
+            onRetry = {},
+            onModelClick = {},
+        )
+    }
+}
+
+@Composable
+private fun ExploreTabContent(
+    sources: ModelSourcesState,
+    showRails: Boolean,
+    curatedSamples: List<DemoEntry>,
+    onSampleClick: (DemoEntry) -> Unit,
+    onBack: () -> Unit,
+) {
+    val scroll = rememberScrollState()
+    val recentSearches = rememberRecentSearches()
     val selectedSource = sources.selected
 
     var searchQuery by remember { mutableStateOf("") }
@@ -282,6 +342,7 @@ fun ExploreTabScreen(
         ExploreBody(
             onBack = onBack,
             scroll = scroll,
+            showRails = showRails,
             sources = sources.sources,
             selectedSource = selectedSource,
             onSelectSource = onSelectSource,
@@ -358,6 +419,7 @@ fun ExploreTabScreen(
 private fun ExploreBody(
     onBack: () -> Unit,
     scroll: androidx.compose.foundation.ScrollState,
+    showRails: Boolean,
     sources: List<ModelSource>,
     selectedSource: ModelSource,
     onSelectSource: (ModelSource) -> Unit,
@@ -402,41 +464,7 @@ private fun ExploreBody(
             ),
         verticalArrangement = Arrangement.spacedBy(SceneViewTokens.Space.lg),
     ) {
-        // Home's header, glyph for glyph: `Home.headerHeight` tall from the top of
-        // the page, `Home.contentPadding` in, the back glyph in the slot Home gives
-        // its mark and the same gap before `type-title` — switching between the two
-        // screens leaves the title where it was. The 48 dp touch target overflows
-        // the 24 dp slot evenly, so the glyph sits on the content edge.
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(SceneViewTokens.Home.headerHeight),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier.size(SceneViewTokens.Home.markSize),
-                contentAlignment = Alignment.Center,
-            ) {
-                IconButton(
-                    onClick = onBack,
-                    modifier = Modifier.requiredSize(SceneViewTokens.Layout.touchTarget),
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = stringResource(R.string.cd_back_button),
-                        tint = MaterialTheme.colorScheme.onSurface,
-                    )
-                }
-            }
-            Spacer(Modifier.width(SceneViewTokens.Home.markGap))
-            Text(
-                text = stringResource(R.string.home_browse_title),
-                style = SceneViewTokens.Type.title,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
+        ExploreHeader(onBack = onBack)
         if (searchExpanded || isSearching) {
             SearchField(
                 value = searchQuery,
@@ -492,7 +520,9 @@ private fun ExploreBody(
             SketchfabDisabledBanner(keyRejected = true)
         }
 
-        if (isSearching) {
+        if (!showRails) {
+            // Nothing below the stage until the enter transition settles (#4622).
+        } else if (isSearching) {
             // Active search (#1239): render the results section, hide the feeds.
             // searchResults == null ⇒ still loading; empty ⇒ ran but 0 hits;
             // non-empty ⇒ render carousel.
@@ -850,6 +880,48 @@ private fun SketchfabDisabledBanner(keyRejected: Boolean = false) {
                     Text(stringResource(R.string.explore_sketchfab_disabled_dismiss))
                 }
             },
+        )
+    }
+}
+
+/**
+ * The gallery's header, shared by the loaded page and its loading state.
+ */
+@Composable
+private fun ExploreHeader(onBack: () -> Unit) {
+    // Home's header, glyph for glyph: `Home.headerHeight` tall from the top of
+    // the page, `Home.contentPadding` in, the back glyph in the slot Home gives
+    // its mark and the same gap before `type-title` — switching between the two
+    // screens leaves the title where it was. The 48 dp touch target overflows
+    // the 24 dp slot evenly, so the glyph sits on the content edge.
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(SceneViewTokens.Home.headerHeight),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier.size(SceneViewTokens.Home.markSize),
+            contentAlignment = Alignment.Center,
+        ) {
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.requiredSize(SceneViewTokens.Layout.touchTarget),
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(R.string.cd_back_button),
+                    tint = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        }
+        Spacer(Modifier.width(SceneViewTokens.Home.markGap))
+        Text(
+            text = stringResource(R.string.home_browse_title),
+            style = SceneViewTokens.Type.title,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }

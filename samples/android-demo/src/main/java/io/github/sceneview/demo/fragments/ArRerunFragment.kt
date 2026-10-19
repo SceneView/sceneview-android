@@ -35,10 +35,10 @@ object ArRerunFragment : DemoFragment {
         icon = Icons.Filled.Polyline,
         order = 12,
         addedIn = "4.0.1",
-        updatedIn = "4.52.0",
+        updatedIn = "4.57.0",
         tags = setOf(
             "ar", "rerun", "replay", "3d", "streaming", "pose", "plane", "point cloud", "debug",
-            "recording", "playback", "session",
+            "recording", "playback", "session", "3d scan", "scan", "scanner", "capture",
         ),
     )
 

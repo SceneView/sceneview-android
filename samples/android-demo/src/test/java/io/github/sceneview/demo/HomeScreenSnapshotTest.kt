@@ -6,6 +6,8 @@ import androidx.compose.ui.platform.LocalInspectionMode
 import com.dropbox.differ.SimpleImageComparator
 import com.github.takahirom.roborazzi.RoborazziOptions
 import com.github.takahirom.roborazzi.captureRoboImage
+import io.github.sceneview.demo.labs.LabsAccess
+import io.github.sceneview.demo.labs.LabsHomeCard
 import io.github.sceneview.demo.theme.SceneViewDemoTheme
 import io.github.sceneview.demo.ui.home.HomeScreen
 import org.junit.Assert.assertTrue
@@ -130,6 +132,18 @@ class HomeScreenSnapshotTest {
                     onDemoClick = {},
                     onBrowseOnlineClick = {},
                     buildVersion = PINNED_BUILD_VERSION,
+                    // A fresh install: the SceneView Labs invitation under the hero.
+                    labsCard = { modifier ->
+                        LabsHomeCard(
+                            access = LabsAccess.NotJoined,
+                            labsDemos = emptyList(),
+                            onJoinClick = {},
+                            onEnabledChange = {},
+                            onDemoClick = {},
+                            onOpenCollectiveClick = {},
+                            modifier = modifier,
+                        )
+                    },
                 )
             }
         }

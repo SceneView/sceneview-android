@@ -38,7 +38,7 @@ final class ViewerEntranceTests: XCTestCase {
         XCTAssertNotEqual(flight.pose, rest)
         for _ in 0..<200 { flight.advance(by: 1.0 / 60) }
         XCTAssertEqual(flight.pose, rest)
-        XCTAssertEqual(flight.settleDrop, 0)
+        XCTAssertEqual(flight.settleLift, 0)
         XCTAssertTrue(flight.isFinished)
     }
 
@@ -68,12 +68,12 @@ final class ViewerEntranceTests: XCTestCase {
         XCTAssertLessThan(curve.value(at: 0.1), 0.25)
     }
 
-    func testModelSettlesFromSixPercentOfTheCameraDistanceBelow() {
+    func testModelSettlesFromTwoPercentOfTheCameraDistanceAbove() {
         let flight = ViewerEntranceFlight(rest: rest, start: .arrival)
-        XCTAssertEqual(flight.settleDrop, rest.distance * 0.06, accuracy: 1e-5)
+        XCTAssertEqual(flight.settleLift, rest.distance * 0.02, accuracy: 1e-5)
         var later = flight
         for _ in 0..<3 { later.advance(by: 1.0 / 20) }
-        XCTAssertLessThan(later.settleDrop, flight.settleDrop)
+        XCTAssertLessThan(later.settleLift, flight.settleLift)
     }
 
     @MainActor
@@ -171,7 +171,7 @@ final class ViewerEntranceTests: XCTestCase {
         XCTAssertEqual(ViewerEntranceFlight.startDistanceScale, 1.55)
         XCTAssertEqual(ViewerEntranceFlight.startYawDegrees, 24)
         XCTAssertEqual(ViewerEntranceFlight.startLiftFraction, 0.22)
-        XCTAssertEqual(ViewerEntranceFlight.settleDropFraction, 0.06)
+        XCTAssertEqual(ViewerEntranceFlight.settleLiftFraction, 0.02)
     }
 
     // MARK: - Toy Car sheen
