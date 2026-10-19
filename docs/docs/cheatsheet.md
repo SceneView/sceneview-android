@@ -16,8 +16,8 @@ A quick reference for SceneView's most-used APIs. Print it, pin it, keep it next
 
 ```kotlin
 // build.gradle
-implementation("io.github.sceneview:sceneview:4.56.0")     // 3D
-implementation("io.github.sceneview:arsceneview:4.56.0")    // AR + 3D
+implementation("io.github.sceneview:sceneview:4.59.0")     // 3D
+implementation("io.github.sceneview:arsceneview:4.59.0")    // AR + 3D
 ```
 
 ---
@@ -36,7 +36,7 @@ val env = rememberEnvironment(environmentLoader) {
         ?: createEnvironment(environmentLoader)
 }
 
-val cameraManipulator = rememberCameraManipulator()
+val cameraManipulator = rememberCameraManipulator()  // flicks coast; inertia = Inertia.None stops dead
 val mainLight = rememberMainLightNode(engine) { intensity = 100_000f }
 val cameraNode = rememberCameraNode(engine) { position = Position(0f, 2f, 5f) }
 val viewNodeManager = rememberViewNodeManager()
@@ -309,6 +309,7 @@ node.rotation = Rotation(x, y, z)      // degrees
 node.scale = Scale(x, y, z)            // multiplier
 node.isVisible = true
 node.isEditable = true                 // pinch-scale, drag-move, rotate
+node.editingInertia = Inertia.None     // stop dead on release (default: a flick coasts)
 node.isTouchable = true
 node.onSingleTapConfirmed = { event -> true }
 node.onFrame = { frameTimeNanos -> }

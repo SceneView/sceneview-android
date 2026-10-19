@@ -1,6 +1,6 @@
 <!--
   GENERATED FILE — DO NOT EDIT.
-  Source of truth: /llms.txt  (SceneView 4.56.0)
+  Source of truth: /llms.txt  (SceneView 4.59.0)
   Regenerate:      node tools/generate-gpt-knowledge.js
   Drift is caught in CI (ci.yml -> repo-hygiene). Edit llms.txt instead.
   See issue #2724.
@@ -9,7 +9,7 @@
 # SceneView — API Reference
 
 > Composables, node types, resource loading, camera, math, and per-platform APIs.
-> Auto-generated from `llms.txt` (SceneView 4.56.0). This is a slice of the machine-readable API reference — the same content an AI reads to generate SceneView code.
+> Auto-generated from `llms.txt` (SceneView 4.59.0). This is a slice of the machine-readable API reference — the same content an AI reads to generate SceneView code.
 
 ## Docs
 
@@ -93,7 +93,7 @@ fun SceneView(
 )
 ```
 
-**Defaults changed in v4.0.10+:** shadows ON (mainLight + fillLight), SSAO + bloom enabled, neutral exposure (~1.0), dual-light setup out-of-the-box. No more "flat-lit chrome look" — drop a model in and it renders cinematic by default.
+**Defaults changed in v4.0.10+:** shadows ON (mainLight + fillLight), SSAO + bloom enabled, neutral exposure (~1.0), dual-light setup out-of-the-box. Tone mapper: Khronos PBR Neutral (#4595 — identity up to 0.76, so base colours display as authored; `rememberARView` keeps Filmic). Old look: `view.colorGrading = ColorGrading.Builder().toneMapper(ToneMapper.Filmic()).build(engine)`. No more "flat-lit chrome look" — drop a model in and it renders cinematic by default.
 
 **`frameRatePolicy` (default `FrameRatePolicy.OnDemand()`, v4.38.0+ / #3108) — breaking change:** it replaces the `isRendering: Boolean` parameter, which is **removed, with no deprecated overload**. Before v4.38.0 a `SceneView` drew every vsync for as long as it was composed, whether or not anything had changed; a static 3D screen therefore kept the GPU redrawing an identical frame 60 or 120 times a second, which reads to the user as battery drain and thermal throttling on devices whose Choreographer keeps ticking a visually static UI.
 
@@ -204,8 +204,7 @@ fun ARSceneView(
     updateMode: Config.UpdateMode = Config.UpdateMode.LATEST_CAMERA_IMAGE,
     focusMode: Config.FocusMode = Config.FocusMode.AUTO,
     sessionConfiguration: ((session: Session, Config) -> Unit)? = null,  // Escape hatch — runs AFTER all typed params above.
-    planeRenderer: Boolean = true,
-    planeRendererVersion: PlaneRendererBase.Version = PlaneRendererBase.Version.V1,  // v4.16.1: V1 restored as default — V2 (#2203) shipped briefly as default in v4.16.0 but visual output did not match design intent on real devices. V2 stays available as experimental opt-in (`Version.V2`) while it's polished.
+    planeRenderer: Boolean = true,  // The one plane renderer (#4307): dots on floors, dashes on walls, rings on ceilings. false FADES the surfaces out; detection, hit tests and gestures keep working.
     sceneUnderstanding: SceneUnderstanding? = null,  // v4.10.0+ — grouped occlusion/lighting/physics/planeVisualization (#1767, RealityKit parity). null = use the individual flags.
     cameraStream: ARCameraStream? = rememberARCameraStream(materialLoader),
     view: View = rememberARView(engine),
@@ -417,27 +416,47 @@ ARSceneView(
 
 When `sceneUnderstanding` is non-null, its four flags override the individual ones on every recomposition. When null, the individual flags retain their pre-#1767 defaults verbatim.
 
-### Plane rendering — V1 default (proven) + V2 opt-in experimental (#2203)
+### Plane rendering — one renderer, one mark per surface type (#4307)
 
-Two plane-renderer implementations ship side-by-side, selectable via the `planeRendererVersion` parameter on `ARSceneView` (and on the legacy `ARScene` alias). **V1 is the default** — flat polygon textured with a procedural soft grid, battle-tested. **V2 is opt-in experimental**: v4.16.0 briefly shipped V2 as the default but on-device QA showed the visual output not matching the design intent (washed-out grid sheet on real surfaces, missing the promised HDR reflection + relief). v4.16.1 reverted the default to V1 while V2 is polished. The V2 code remains in the codebase for early adopters who want to help shape the redesign.
+`ARSceneView(planeRenderer = true)` (the default) draws every surface ARCore tracks with a field of soft, world-anchored marks, and **the mark says what the surface is** (`Plane.type`):
+
+| `Plane.type`                 | role             | mark                                   |
+|------------------------------|------------------|----------------------------------------|
+| `HORIZONTAL_UPWARD_FACING`   | floor, table     | round white dots, the strongest        |
+| `VERTICAL`                   | wall             | upright blue dashes on staggered rows  |
+| `HORIZONTAL_DOWNWARD_FACING` | ceiling          | hollow warm rings, the quietest        |
+
+Shape differs as well as colour, so a wall reads as a wall in a dark room, in daylight and for a colour-blind user; a soft dark halo around every mark (material parameter `contrast`, 0.80 by default) keeps it readable over a white wall or a sunlit floor. A new surface is revealed by a front sweeping out from its centre; the floor under the centre of the screen is highlighted (it is the reticle); marks fade at the surface's edges and with distance. Small slivers are not drawn until they grow (walls under 0.40 m × 0.20 m, horizontals under 0.20 m × 0.10 m), and planes subsumed by a larger one are skipped.
+
+There is no second renderer and no version switch. Since 4.57.0 `planeRendererVersion` is **deprecated and ignored** (both values draw with `PlaneRenderer`): omit it. `PlaneRendererV2` and `PlaneVisualizerV2` are deprecated aliases of `PlaneRenderer` and `PlaneVisualizer`, and `PlaneRendererBase` is deprecated: write the new names. The textured grid is gone: `PlaneRenderer.planeTexture` is a deprecated 1 × 1 placeholder that nothing samples, `MATERIAL_TEXTURE` and `MATERIAL_COLOR` are no longer material parameters (tint with `MATERIAL_GRID_TINT`), and `maxHitTestPerSecond` is now `maxUpdatesPerSecond`.
+
+**After placement — fade the surfaces, keep the object editable.** `planeRenderer = false` fades the surfaces out; plane *detection* keeps running, so an editable `AnchorNode` still drags, twists, pinches and re-anchors exactly as before:
 
 ```kotlin
-ARSceneView(
-    modifier = Modifier.fillMaxSize(),
-    // Default is V1 — this line is redundant, shown for clarity.
-    planeRendererVersion = PlaneRendererBase.Version.V1,
-) { /* ... */ }
+var anchor by remember { mutableStateOf<Anchor?>(null) }
+var moving by remember { mutableStateOf(false) }
 
-// Opt in to the experimental V2:
 ARSceneView(
     modifier = Modifier.fillMaxSize(),
-    planeRendererVersion = PlaneRendererBase.Version.V2,
-) { /* ... */ }
+    planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL,
+    // Surfaces while scanning, and again for the length of a drag.
+    planeRenderer = anchor == null || moving,
+    onGestureListener = rememberOnGestureListener(
+        onMoveBegin = { _, _, node -> if (node != null) moving = true },
+        onMoveEnd = { _, _, _ -> moving = false },
+    ),
+) {
+    anchor?.let { placed ->
+        AnchorNode(anchor = placed, apply = { isEditable = true }) {
+            // ModelNode(...) — drag moves it along the surfaces, twist turns it, pinch scales it.
+        }
+    }
+}
 ```
 
-The V2 path (depth-driven mesh + PBR + HDR cubemap reflection + type-aware shading + scan-in) is implemented but its visual output does not yet match a polished AR product. See [#2203](https://github.com/sceneview/sceneview/issues/2203) for the umbrella + research notes (`.claude/plans/v2-references-study.md`, `v2-google-ar-catalog.md`, `v2-non-google-catalog.md` — the comparative study of how Google ARCore Depth Lab, Apple ARKit / RoomPlan, Niantic Lightship, Snap Lens Studio handle plane visualization). The honest finding: the industry minimizes plane decoration in favour of *making virtual content respect the real geometry*. The V2 redesign will likely follow that path rather than pushing PBR onto the plane itself.
+Never remove the node, drop `isEditable` or tear the session down to "hide the planes": that is what freezes the placed object. Occluding virtual content behind real geometry is a separate topic (depth occlusion, `sceneUnderstanding`), not something the plane marks do.
 
-Showcase demo: `sceneview://demo/ar-plane-renderer-v2` (live V1 ↔ V2 toggle) — kept so contributors can see the current V2 state and compare against V1.
+Showcase demo: `sceneview://demo/ar-surfaces` (the retired `ar-plane-renderer-v2` id still resolves to it).
 
 ### ARFogNode — environment-aware AR fog (v4.10.0+, #1717)
 
@@ -1401,6 +1420,11 @@ cannot fade).
 while rotating/scaling, and constrains dragging to supported plane geometry. Its
 0.3 m longest-dimension default is **Preview size**; `scaleToUnits = null` retains
 trustworthy authored units (**Actual size**). Scale limits are 25–400% of that base.
+For content that must stay at real size (furniture, a pool, a shed), set
+`placement.allowsScaling = false` — `remember { AutoPlacementState().apply { allowsScaling = false } }`:
+the pinch, the double-tap and `scaleTo` stop resizing it, drag and twist still move and turn
+it, and an object already resized animates back to 100 % (Quick Look's
+`allowsContentScaling = false`, Scene Viewer's `resizable=false`).
 
 For asynchronous selection, call `placement.selectModel()` before loading and attach
 only while `placement.acceptsAsset(ticket)` is true. Keep the previous rendered model
@@ -2100,7 +2124,7 @@ On a phone where `Session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)` is `
 depth from a monocular network: it runs a `MonocularDepthEstimator` on the CPU camera image,
 off the render thread, and scales the network's relative inverse depth to metres with a
 robust fit `1/z = s·d + t` on ARCore's own plane samples and feature points. The runtime
-lives in a separate module, `arsceneview-depth-ml` (LiteRT 2.1.5, in the repo, not yet on
+lives in a separate module, `arsceneview-depth-ml` (LiteRT 2.3.0, in the repo, not yet on
 Maven Central): `DepthAnythingV2Estimator` runs Depth Anything V2 **Small** (Apache-2.0;
 Base/Large/Giant are CC-BY-NC — never ship them). `arsceneview` itself never depends on
 LiteRT. iOS has the same pipeline (`ARDepthFrame.Source.ml`, see the SceneViewSwift section).
@@ -2189,7 +2213,8 @@ it came from: unproject with `frame.cameraPose`, never the current pose.
 
 Cost: a one-time **27.7 MB** download into `noBackupFilesDir/sceneview-depth-ml/`, checked
 against its SHA-256 (concurrent loads share one download). LiteRT native code per ABI:
-arm64-v8a ≈ 8 MB, x86_64 ≈ 10.7 MB, armeabi-v7a 3.5 MB (CPU only); an AAB serves one ABI.
+arm64-v8a ≈ 9.4 MB, x86_64 ≈ 12.2 MB, armeabi-v7a ≈ 6.3 MB (GPU accelerator included);
+an AAB serves one ABI.
 The network input is **518×686** (H×W, the whole CPU image stretched), output 518×686
 inverse depth. Inference runs at ≤ 5 Hz on one worker thread, halves at thermal MODERATE,
 pauses at SEVERE and skips frames while the camera holds still; expect each map to be
@@ -2837,6 +2862,47 @@ instead.
 Sample: `ARPeopleOcclusionDemo` (Android demo registry id `ar-people-occlusion`) — place a
 model, walk a person in front of it; a HUD shows the live `PERSON`-pixel fraction.
 
+### Occluder meshes — content dug into the real ground or cut into a wall
+
+An occluder mesh is geometry you model yourself with `materialLoader.createOcclusionInstance()`
+— not the real-world mesh ARKit reconstructs for its occlusion. It writes depth and no colour.
+In AR, set `ARCameraStream.isOccluderMeshEnabled = true` so the camera feed is drawn **first**:
+the mesh then shows the camera image through it and hides only the virtual content behind it.
+Without the flag the feed is drawn last, at the far plane, and the mesh leaves a black hole.
+
+For content below the ground (a pool, a pit, a trench), wrap it in an open-topped **hull**
+just outside its walls. Every line of sight that enters the ground outside the opening meets
+the hull first, so the real ground stays on screen there; through the opening, the content
+shows.
+
+```kotlin
+import io.github.sceneview.ar.camera.ARCameraStream
+
+val cameraStream = rememberARCameraStream(materialLoader) {
+    createARCameraStream(materialLoader).apply { isOccluderMeshEnabled = true }
+}
+val occluder = remember(materialLoader) { materialLoader.createOcclusionInstance() }
+// In the ARSceneView content, under the same anchor as the dug-in content:
+MeshNode(
+    primitiveType = RenderableManager.PrimitiveType.TRIANGLES,
+    vertexBuffer = hull.vertexBuffer, indexBuffer = hull.indexBuffer,
+    materialInstance = occluder,
+    apply = {
+        setPriority(ARCameraStream.OCCLUDER_PRIORITY) // after the feed, before the content
+        isTouchable = false                           // taps reach the ground behind it
+    },
+)
+```
+
+Leave `isDepthOcclusionEnabled` off for content below the ground: ARCore's depth is the ground
+surface, which is in front of everything dug under it, so it would hide the content. Depth and
+people occlusion already draw the feed first, so the flag changes nothing while either is on.
+Cost: one full-screen overdraw. Pair it with `allowsScaling = false` (see *Automatic
+placement*) when the size is the point.
+
+Sample: `ARPoolDemo` (Android demo registry id `ar-pool`) — an in-ground pool at real size,
+dug into the lawn.
+
 ### AugmentedImageNode — image tracking
 ```kotlin
 @Composable fun AugmentedImageNode(
@@ -3424,7 +3490,7 @@ ARSceneView(...) {
 }
 ```
 
-Demo: the **Streetscape** mode of `samples/android-demo/.../ARSceneGeometryDemo.kt` (the `ar-scene-mesh` card, "Scene Geometry"). Setup guide (Cloud project + API key): `samples/android-demo/ARCORE_CLOUD_SETUP.md`.
+Demo: the **Streetscape** mode of the `ar-geospatial-anchors` card (`samples/android-demo/.../ARSceneGeometryDemo.kt`), with its "Colour buildings & terrain" switch off. Setup guide (Cloud project + API key): `samples/android-demo/ARCORE_CLOUD_SETUP.md`.
 
 ### SceneMeshNode — classified building / terrain mesh (ARKit ARMeshAnchor parity)
 
@@ -3464,7 +3530,7 @@ ARSceneView(...) {
 }
 ```
 
-Demo: the **Mesh** mode of `samples/android-demo/.../ARSceneGeometryDemo.kt` (the `ar-scene-mesh` card, "Scene Geometry"). Its Streetscape mode renders the same trackables through the raw `StreetscapeGeometryNode`, so the two are one screen away from each other.
+Demo: the **Streetscape** mode of the `ar-geospatial-anchors` card (`samples/android-demo/.../ARSceneGeometryDemo.kt`), with its "Colour buildings & terrain" switch on (the default). Turning the switch off renders the same trackables through the raw `StreetscapeGeometryNode`, so the two are one tap away from each other.
 
 ### Geospatial Depth — extend environment depth accuracy to ~65 m
 
@@ -3707,6 +3773,13 @@ Key facts an AI codegen pass must get right:
 - These are plain `Node` properties, not composable parameters — to change them
   reactively after creation, re-push them from a `LaunchedEffect` keyed on the new
   values (the `apply` block runs only once at node creation).
+- A flick **coasts** after release (`Node.editingInertia`, default `Inertia.Default`): a
+  drag keeps sliding along the surface it was dragged on and stops where that surface ends
+  (an AR object stays on its plane), a twist keeps turning, a pinch keeps growing until
+  `editableScaleRange`. `onMoveEnd` / `onRotateEnd` / `onScaleEnd` and the editing
+  listeners' `onEditingEnd` fire **once the node is at rest**, so an `AnchorNode` re-anchors
+  where the coast ended. `editingInertia = Inertia.None` stops the node dead on release; a
+  new touch always stops a coast.
 
 The `camera-gestures` demo in `samples/android-demo` is the canonical end-to-end
 example. Its dock's **Move** item flips `isEditable` on whichever subject currently has
@@ -4039,12 +4112,12 @@ Most are default parameter values in `SceneView`/`ARSceneView` — call them exp
 | `rememberCameraNode(engine) { ... }` | `CameraNode` | Custom camera with apply block |
 | `rememberMainLightNode(engine) { ... }` | `LightNode` | Primary directional light (key) with apply block — shadows ON by default; apply block is reactive (re-runs on recomposition, so Compose-state-driven intensity/direction/color update live) |
 | `rememberFillLightNode(engine) { ... }` | `LightNode` | Soft fill light opposite the main light — lifts shadows so models don't look flat; apply block is reactive (same as `rememberMainLightNode`) |
-| `rememberCameraManipulator(orbitRadius, targetPosition?)` | `CameraManipulator?` | Orbit/pan/zoom camera controller, distance-first (recommended): the camera starts `orbitRadius` metres from the target along the default 3/4 viewing angle — `orbitRadius = 2.78f` is the stock framing. Keyed on `orbitRadius` and `targetPosition`: a new value rebuilds the manipulator and `SceneView` glides the camera there (~0.6 s) instead of cutting — derive the radius once, don't animate it. See "Camera" |
+| `rememberCameraManipulator(orbitRadius, targetPosition?, inertia?)` | `CameraManipulator?` | Orbit/pan/zoom camera controller, distance-first (recommended): the camera starts `orbitRadius` metres from the target along the default 3/4 viewing angle — `orbitRadius = 2.78f` is the stock framing. Keyed on `orbitRadius` and `targetPosition`: a new value rebuilds the manipulator and `SceneView` glides the camera there (~0.6 s) instead of cutting — derive the radius once, don't animate it. Optional `inertia` (default `Inertia.Default`; `Inertia.None` = no coast). See "Camera" |
 | `rememberCameraManipulator(orbitHomePosition?, targetPosition?)` | `CameraManipulator?` | Same, with an explicit eye position. `orbitHomePosition` is the camera's **absolute** eye position, never an offset from `targetPosition`; under the default `autoCenterContent = true` the subject is framed from `\|orbitHomePosition\|` — see "Camera". Name kept as-is (not `eyePosition`) to stay binary-compatible on major version 4 |
 | `rememberOnGestureListener(...)` | `OnGestureListener` | Gesture callbacks for tap/drag/pinch |
 | `rememberViewNodeManager()` | `ViewNode.WindowManager` | Required for ViewNode composables |
 | `rememberSurfaceMirrorer()` | `SurfaceMirrorer` | In-app video recording — mirror frames to a `MediaRecorder` surface, no MediaProjection (see "Record the scene to MP4") |
-| `rememberView(engine)` | `View` | Filament view (one per viewport) |
+| `rememberView(engine)` | `View` | Filament view (one per viewport), PBR Neutral tone mapper |
 | `rememberARView(engine)` | `View` | AR-tuned view (Filmic tone mapper — round-trips the camera background, #1434) |
 | `rememberRenderer(engine)` | `Renderer` | Filament renderer (one per window) |
 | `rememberScene(engine)` | `Scene` | Filament scene graph |
@@ -4154,6 +4227,38 @@ override fun update(deltaTime: Float) {          // already ticked every frame
 ``` Note that with an ORBIT manipulator the zoom is centred on the orbit pivot,
 not anchored under the finger: Filament's `OrbitManipulator::scroll` moves the eye along the gaze
 and ignores `x`/`y`.
+
+### Gesture inertia
+
+Every gesture that moves something coasts after the finger lifts, like a list fling: camera
+orbit, pan and pinch-zoom, and the drag / twist / pinch of an editable node (AR objects
+included). The release velocity is measured over the last 100 ms of the gesture (zero if the
+finger rested 40 ms before lifting), then decays exponentially with a 0.35 s time constant,
+integrated exactly so the coast is the same at any frame rate. A slow, deliberate drag stops
+where it is left; a new touch stops any coast on the spot; a pinch coast stops at the zoom or
+scale limit.
+
+```kotlin
+// Default: the camera coasts.
+SceneView(cameraManipulator = rememberCameraManipulator(orbitRadius = 3f))
+// A camera that stops dead on release.
+SceneView(cameraManipulator = rememberCameraManipulator(orbitRadius = 3f, inertia = Inertia.None))
+// A longer, floatier coast.
+SceneView(
+    cameraManipulator = rememberCameraManipulator(
+        orbitRadius = 3f,
+        inertia = Inertia(timeConstantSeconds = 0.6f),
+    )
+)
+```
+
+- `inertia` is applied to the stock `CameraGestureDetector.DefaultCameraManipulator` (also
+  settable as its `inertia` property); changing it does not rebuild the manipulator. A custom
+  manipulator gets `stopInertia()` on every touch-down (default no-op) and owns its own coast.
+- Node editing reads `Node.editingInertia` on the node that owns the edit — see "Editable nodes".
+- `InertiaTracker` (`sceneview-core`, package `io.github.sceneview.gesture`) is the shared
+  maths: `addSample` the cumulative position, `release` on finger up, `advance(dt, out)` per
+  frame.
 
 ### How far `orbitHomePosition` actually puts the camera
 
@@ -4366,6 +4471,54 @@ val manipulator = rememberCameraManipulator(orbitHomePosition = fit.eye, targetP
 On the axis that binds, the projected box spans exactly `±widthFill` (or `±heightFill`)
 of the half-view; on the other it is centred and spans less. The camera is assumed
 upright (world `+Y` up); looking straight down, "right" is world `+X`.
+
+### Cinematic camera — shots, transitions, paths, reveal, tour (`io.github.sceneview.camera`)
+
+Camera *moves* as a cinematographer calls them, pure Kotlin and JVM-tested (#4631). A
+`CameraShot` is an orbit around a target — azimuth from `+Z` towards `+X`, elevation above
+the horizon, distance — not an eye position, so two shots of one subject interpolate on an
+arc *around* it, never through it. Every move is a function of time: the same shot lands at
+30, 60 or 120 Hz, and a stalled frame advances by at most 50 ms (runs long, never jumps).
+
+```kotlin
+import io.github.sceneview.camera.*
+
+val home = CameraShot(target = Position(0f, 0.8f, 0f), azimuthDegrees = 35f, elevationDegrees = 32f, distance = 4f)
+val plan = home.copy(elevationDegrees = 84f)          // same room, seen as a floor plan
+val eye = home.eye                                     // derived; CameraShot.lookingAt(eye, target) inverts it
+
+// One animator owns the camera. Wrap any gesture manipulator with it: while a move plays the
+// camera is the animator's; the first touch interrupts and the gesture takes over without a cut.
+val animator = remember { CameraAnimator(initial = home) }
+SceneView(
+    cameraManipulator = rememberCinematicCameraManipulator(animator, inner = rememberCameraManipulator(orbitRadius = 4f)),
+) { … }
+
+LaunchedEffect(model) { animator.play(CameraPath.reveal(home)) }   // the entrance: high, wide, 75° round, cranes onto home in 2.8 s
+Button(onClick = { animator.flyTo(plan) }) { Text("Plan") }        // 700 ms, ease-expressive, no cut
+Button(onClick = { animator.play(CameraPath.tour(home)) }) { Text("Tour") }   // one slow lap, 18 s, loops seamlessly
+Button(onClick = { animator.flyTo(otherRoom) })                     // another subject: pulls back at mid-flight (fly-over), lands exactly
+```
+
+- `CameraTransition(from, to, durationSeconds, easing = CameraEasing.Expressive, flyOver = 0.5f)`
+  and the pure `cameraTransition(from, to, progress)` for a scroll or slider. `flyOver` adds
+  that share of the targets' separation to the distance at mid-flight (sine bump, exact ends);
+  `0f` is a straight carry. `CameraEasing.Expressive` is DESIGN.md's `cubic-bezier(0.2, 0, 0, 1)`.
+- `CameraPath(keyframes, easing, shortestArc = true, loop = false)` — Catmull-Rom over the
+  orbit parameters: the camera passes each `CameraKeyframe(shot, seconds)` on time with
+  continuous velocity across it. `shortestArc` unwraps azimuths the short way; a full turn is
+  spelled `azimuthDegrees + 360f` with it off. Builders: `reveal(home)`, `tour(around, turns)`,
+  `through(shots, secondsPerShot)`. A looping path's azimuth keeps counting (`home + 720°` on
+  lap two); `CameraShot.normalizeDegrees` wraps it for display.
+- `CameraAnimator`: `play(path, onFinished)`, `flyTo(to, durationSeconds = 0.7f)` from
+  wherever the camera is, `snapTo`, `advance(dt): CameraShot`, `interrupt(): CameraShotVelocity`.
+  Without a `SceneView`, drive it yourself: `cameraNode.transform = animator.advance(dt).transform()`.
+- Hand-off: an inner manipulator that implements `CameraShotSink` gets `takeOver(shot, velocity)`
+  on the first touch and carries on at that speed; any other manipulator (the default orbit one
+  included) gets a 350 ms glide from the move's last frame onto its own pose.
+
+`CinematicHero` (below) and `applyCinematicOrbit` stay as they are: a hero is scroll-driven,
+these are time-driven. Pick the animator when the move has a beginning and an end.
 
 ---
 
@@ -4753,7 +4906,7 @@ cube.updateCollisionShape()              // opt back in: re-derive, and resume t
 ## Compose Multiplatform (sceneview-compose)
 
 One composable from `commonMain`, several renderers underneath. Artifact:
-`io.github.sceneview:sceneview-compose:4.56.0` — on Maven Central since 4.27.0, released
+`io.github.sceneview:sceneview-compose:4.59.0` — on Maven Central since 4.27.0, released
 in lock-step with `sceneview`. 4.26.0 and earlier do NOT contain this module — never
 emit a version below 4.27.0 for it.
 
@@ -4778,7 +4931,7 @@ the host factory — it draws a visible "not available yet" notice until registe
 |---|---|---|
 | Android | Filament, delegates to `SceneView { }` | Implemented |
 | iOS | RealityKit via `SceneViewSwift` | Implemented — needs a one-time app registration, see below |
-| Desktop (JVM) | Filament via Maven filament-kmp (offscreen → Skia). JDK 22+ | Implemented |
+| Desktop (JVM) | Filament via Maven filament-kmp (offscreen → Skia). JDK 21+ | Implemented |
 
 **iOS requires one registration call.** A KMP module cannot depend on a Swift Package, so
 the app supplies the renderer:
@@ -4958,7 +5111,7 @@ Full rationale: `docs/docs/compose-multiplatform.md`.
 
 ## SceneView Web (Kotlin/JS + Filament.js)
 
-Package: `sceneview-web` v4.56.0 — npm `sceneview-web`
+Package: `sceneview-web` v4.59.0 — npm `sceneview-web`
 Renderer: **Filament.js (WebGL2/WASM)** — same Filament engine as SceneView Android, compiled to WebAssembly.
 Requires: Chrome 79+, Edge 79+, Firefox 78+ (WebGL2). Safari 15+ (WebGL2).
 
@@ -5274,8 +5427,11 @@ optional (default `1`); `a < 1` makes the canvas see-through so the page behind 
 covers the background.
 
 Tone mapping: the Kotlin/JS bundle (`sceneview-web.js`) and the hand-written website viewer
-(`website-static/js/sceneview.js`) grade with Filmic, the Android default
-(`SceneFactories.createView`), so a model is graded the same way on Android and on the web.
+(`website-static/js/sceneview.js`) grade with Filmic. Android's `SceneFactories.createView`
+grades with PBR Neutral, which keeps base colours as authored; Filament's JavaScript bindings
+expose no PBR Neutral tone mapper, so the web keeps Filmic and shows light, pastel base colours
+a little paler than Android does. Web primitives take linear colours (`createBox` etc. write
+`baseColorFactor` as given): convert an sRGB hex first, or it renders pastel.
 Neither grades the background: both show the colour they are given (hand-written viewer:
 sRGB 0-1, default `#333C57`), and a transparent canvas leaves the page behind it untouched.
 
@@ -5590,7 +5746,7 @@ Renderer: **RealityKit**. Requires iOS 18+ / macOS 15+ / visionOS 2+.
 
 SPM dependency (Package.swift or Xcode):
 ```swift
-.package(url: "https://github.com/sceneview/sceneview.git", from: "4.56.0")
+.package(url: "https://github.com/sceneview/sceneview.git", from: "4.59.0")
 ```
 
 Import: `import SceneViewSwift`

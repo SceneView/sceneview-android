@@ -26,8 +26,11 @@ import io.github.sceneview.demo.demos.internal.ReplayLens
 import io.github.sceneview.demo.demos.internal.ReplayManifest
 import io.github.sceneview.demo.demos.internal.RerunCapturePack
 import io.github.sceneview.demo.demos.internal.ScanArchive
+import io.github.sceneview.demo.demos.internal.ScanClock
 import io.github.sceneview.demo.demos.internal.ScanDevice
 import io.github.sceneview.demo.demos.internal.ScanIntrinsics
+import io.github.sceneview.demo.demos.internal.ScanDetail
+import io.github.sceneview.demo.demos.internal.ScanPreset
 import io.github.sceneview.demo.demos.internal.ScanProjection
 import io.github.sceneview.demo.demos.internal.YuvFrame
 import kotlinx.coroutines.CoroutineScope
@@ -73,6 +76,8 @@ internal class ScanCapture private constructor(
     private val scope: CoroutineScope,
     /** Whether the session runs ARCore's raw depth: the scan's tier. */
     val rawDepth: Boolean,
+    /** What is scanned decides the photo spacing, the depth kept and the model's voxel (#4647). */
+    val preset: ScanPreset = ScanPreset.ROOM,
 ) {
     /** The scan's trace; its journal is what [finish] saves. */
     val trace = ArDebugTrace().apply {
@@ -80,7 +85,7 @@ internal class ScanCapture private constructor(
         journal = ArrayList()
     }
 
-    private val gate = KeyframeGate()
+    private val gate = KeyframeGate(preset.photoStepM, preset.photoTurnDegrees, preset.maxPhotos)
     private val photoSize = ScanProjection.photoSize(lens, PHOTO_LONG_SIDE)
     private val jpegs = ConcurrentHashMap<String, ByteArray>()
     private val thumbnails = ConcurrentHashMap<String, Bitmap>()
@@ -92,11 +97,13 @@ internal class ScanCapture private constructor(
 
     // The dense map: one fusion at a time on Dispatchers.Default; a depth image that arrives while
     // one runs is skipped, never queued, so a slow phone thins the depth instead of lagging.
-    private val fusion = if (rawDepth) DenseFusion() else null
+    // The map keeps a whole flat or house within this phone's budget: past it, it coarsens the
+    // regions the camera has left instead of dropping what is new (#4629).
+    private val dense = if (rawDepth) ScanDenseMap() else null
     private val fusing = AtomicBoolean(false)
     private var fuseJob: Job? = null
     // The final model's TSDF, fed the same depth copies on its own worker (RerunModelUi.kt).
-    private val model = if (rawDepth) RerunLiveModel() else null
+    private val model = if (rawDepth) RerunLiveModel(preset) else null
     private var lastDepthNanos: Long? = null
     private var loggedSizes = false
     private val logGate = IntervalGate(LOG_INTERVAL_NS)
@@ -107,41 +114,53 @@ internal class ScanCapture private constructor(
     // At most ten depth keyframes a second: ARCore's own raw-depth pace on a Pixel, and a bound
     // on the camera-image reads the fusion adds to the main thread.
     private val depthGate = IntervalGate(DEPTH_INTERVAL_NS)
-    private val denseTotal = AtomicInteger(0)
     private val denseAdded = AtomicInteger(0)
     private val denseKept = AtomicInteger(0)
     private var recordedTotal = 0
 
+    // The dense frame count each DepthStats on the timeline was written at, in order: what
+    // [finish] turns into the saved cloud's prefix found by then (ScanDenseMap.revealed).
+    private val recordedFrames = ArrayList<Int>()
+
     // Why depth frames did or did not grow the map, logged every two seconds for a device run.
     private val intake = DepthIntake()
 
-    /** When Record started, on the monotonic clock: the HUD's clock runs from it (see [elapsedSeconds]). */
-    private val startedNanos = SystemClock.elapsedRealtimeNanos()
+    /**
+     * The HUD's clock, from when Record started on the monotonic clock (see [elapsedSeconds]). It
+     * stops while the scan is paused or in review (#4627).
+     */
+    private val clock = ScanClock(SystemClock.elapsedRealtimeNanos())
 
-    /** Surfels in the dense map so far: the HUD's "N surfaces" count. `0` without raw depth. */
-    val denseCount: Int get() = denseTotal.get()
+    /** The journal [finish] took, kept so Try again rebuilds from it after a build that threw. */
+    private var finishedEvents: List<ArDebugEvent>? = null
 
     /**
-     * The dense map as the live 3D card draws it: a snapshot taken after a fusion at most every
-     * [LIVE_DENSE_INTERVAL_NS], its first [LIVE_DENSE_MAX_SURFELS] surfels at least two depth
-     * frames saw, meshed and coloured off the main thread. `null` until the first one.
+     * Points the saved scan keeps so far: the HUD's count, the same figure the saved scan shows.
+     * `0` without raw depth.
      */
-    @Volatile
-    private var liveDense: ReplayDenseLayer? = null
-    private var liveDenseAtNanos = Long.MIN_VALUE
+    val denseCount: Int get() = dense?.count ?: 0
+
+    /** What the coaching line says of the dense map now: fine, adjusting its detail, or full. */
+    val denseDetail: ScanDetail get() = dense?.detail() ?: ScanDetail.Fine
 
     /**
      * Seconds since Record at [nowNanos] (`SystemClock.elapsedRealtimeNanos`). The HUD's clock:
      * the trace records nothing while tracking is lost, and a clock read off it froze for 2.4 s at
      * "Not enough detail" on a Pixel 9.
      */
-    fun elapsedSeconds(nowNanos: Long = SystemClock.elapsedRealtimeNanos()): Float =
-        ((nowNanos - startedNanos).coerceAtLeast(0L) / NANOS_PER_SECOND).toFloat()
+    fun elapsedSeconds(nowNanos: Long = SystemClock.elapsedRealtimeNanos()): Float = clock.elapsedSeconds(nowNanos)
+
+    /**
+     * The clock runs while [running] — scanning with tracking held — and stops otherwise: paused,
+     * in review, or with tracking lost. It runs on from where it stopped. Idempotent.
+     */
+    fun followClock(running: Boolean, nowNanos: Long = SystemClock.elapsedRealtimeNanos()) =
+        clock.follow(running, nowNanos)
 
     /** The scan as it grows. Its thumbnails fill in as the photos are encoded. */
     val live = RerunReplayMedia(
         trace, manifest(emptyMap()), emptyMap(), thumbnails, ByteArray(0), growing = true,
-        liveDense = if (rawDepth) ({ liveDense }) else null,
+        liveDense = dense?.let { map -> { map.live } },
     )
 
     /** No more photos: the path, the points and the planes keep recording. */
@@ -197,7 +216,7 @@ internal class ScanCapture private constructor(
      * and no fusion is running; `null` otherwise, or without [rawDepth]. Close it this frame.
      */
     fun acquireDepth(frame: Frame): ScanDepth? {
-        if (fusion == null || !depthGate.isDue(frame.timestamp)) return null
+        if (dense == null || !depthGate.isDue(frame.timestamp)) return null
         if (fusing.get()) {
             intake.count(Outcome.Busy)
             return null
@@ -263,7 +282,7 @@ internal class ScanCapture private constructor(
         } + listOfNotNull(
             unavailableReason?.takeIf { unavailableCount > 0 }?.let { "unavailable $unavailableCount ($it)" },
         )
-        Log.i(LOG_TAG, "depth verdicts: ${counts.joinToString()}; surfels ${denseTotal.get()}")
+        Log.i(LOG_TAG, "depth verdicts: ${counts.joinToString()}; points $denseCount")
         verdictCounts.fill(0)
         unavailableCount = 0
     }
@@ -275,7 +294,7 @@ internal class ScanCapture private constructor(
      * depth is let go, and counted as such.
      */
     fun fuseDepth(depth: ScanDepth, image: ScanImage?) {
-        val fusion = fusion ?: return
+        val dense = dense ?: return
         if (image == null) {
             intake.count(Outcome.NoImage)
             return
@@ -289,8 +308,8 @@ internal class ScanCapture private constructor(
         fusing.set(true)
         fuseJob = scope.launch(Dispatchers.Default) {
             try {
-                val samples = DepthBackProjection.project(frame)
-                val stats = fusion.add(samples)
+                val samples = DepthBackProjection.project(frame, farM = preset.farM)
+                val stats = dense.add(samples)
                 intake.count(
                     when {
                         samples.count == 0 -> Outcome.NoSamples
@@ -300,22 +319,10 @@ internal class ScanCapture private constructor(
                 )
                 denseAdded.addAndGet(stats.added)
                 denseKept.addAndGet(stats.kept)
-                denseTotal.set(stats.total)
-                snapshotLiveDense(fusion)
             } finally {
                 fusing.set(false)
             }
         }
-    }
-
-    /** Takes [liveDense] when it is due. On the fusion's thread, while it holds [fusing]. */
-    private fun snapshotLiveDense(fusion: DenseFusion) {
-        val now = System.nanoTime()
-        if (liveDenseAtNanos != Long.MIN_VALUE && now - liveDenseAtNanos < LIVE_DENSE_INTERVAL_NS) return
-        liveDenseAtNanos = now
-        val cloud = fusion.cloud(minViews = DenseFusion.MIN_VIEWS, maxPoints = LIVE_DENSE_MAX_SURFELS)
-        if (cloud.count == 0) return
-        liveDense = ReplayDenseLayer.of(cloud, fusion.voxelM)
     }
 
     /**
@@ -323,10 +330,12 @@ internal class ScanCapture private constructor(
      * the frame that learns of it — so a replay reveals the cloud as it was found. Main thread.
      */
     fun recordDepthStats(nanos: Long) {
-        val total = denseTotal.get()
-        intake.lineIfDue(nanos, total)?.let { Log.i(LOG_TAG, it) }
+        val dense = dense ?: return
+        val total = dense.count
+        intake.lineIfDue(nanos, total)?.let { Log.i(LOG_TAG, "$it; ${dense.logLine()}") }
         if (total == recordedTotal) return
         recordedTotal = total
+        recordedFrames += dense.frames
         trace.addDepthStats(nanos, denseAdded.getAndSet(0), denseKept.getAndSet(0), total)
     }
 
@@ -339,8 +348,12 @@ internal class ScanCapture private constructor(
         // The fusion under way finishes first, and its last growth goes on the timeline.
         fuseJob?.join()
         model?.join()
-        trace.journal?.lastOrNull()?.let { recordDepthStats(it.nanos) }
-        val events = trace.journal?.toList().orEmpty()
+        // The journal is taken once and kept: a build that threw (out of memory, painting the
+        // planes) is retried from the same events, not from a journal already let go.
+        val events = finishedEvents ?: run {
+            trace.journal?.lastOrNull()?.let { recordDepthStats(it.nanos) }
+            trace.journal?.toList().orEmpty().also { finishedEvents = it }
+        }
         trace.journal = null
         jobs.toList().joinAll()
         if (trace.isEmpty) return null
@@ -350,18 +363,26 @@ internal class ScanCapture private constructor(
             ScanPhoto(image.path, jpeg, pose)
         }
         val started = System.nanoTime()
-        val dense = fusion?.takeIf { it.count > 0 }
-            ?.let { f -> withContext(Dispatchers.Default) { f.cloud(minViews = DenseFusion.MIN_VIEWS) } }
+        val map = dense
+        val cloud = map?.takeIf { it.fusion.count > 0 }
+            ?.let { m -> withContext(Dispatchers.Default) { m.savedCloud() } }
             ?.takeIf { it.count > 0 }
+        // The live counts were the confirmed points as they stood; a later compaction merged some
+        // of them, so the replay's reveal is recomputed against the cloud really saved.
+        val timeline = if (map != null && cloud != null) {
+            withContext(Dispatchers.Default) { map.revealed(events, recordedFrames.toIntArray()) }
+        } else {
+            events
+        }
         val denseMs = (System.nanoTime() - started) / 1_000_000
         // The tier the scan really reached: raw depth on but no surfel is a sparse scan, said so.
         val device = ScanDevice(
             platform = "android",
             model = Build.MODEL.orEmpty(),
-            tier = if (dense != null) ScanDevice.TIER_DEPTH else ScanDevice.TIER_SPARSE,
-            depthSource = if (dense != null) ScanDevice.SOURCE_RAW_DEPTH else ScanDevice.SOURCE_FEATURE_POINTS,
+            tier = if (cloud != null) ScanDevice.TIER_DEPTH else ScanDevice.TIER_SPARSE,
+            depthSource = if (cloud != null) ScanDevice.SOURCE_RAW_DEPTH else ScanDevice.SOURCE_FEATURE_POINTS,
         )
-        return RerunCaptureBuilder.build(events, lens, photos, device, dense, DenseFusion.VOXEL_M, denseMs)
+        return RerunCaptureBuilder.build(timeline, lens, photos, device, cloud, DenseFusion.VOXEL_M, denseMs)
             .also { model?.keepFor(it) }
     }
 
@@ -379,7 +400,12 @@ internal class ScanCapture private constructor(
          * A scan for the camera of [frame], or `null` while ARCore does not know its lens yet.
          * The photos keep the frame's orientation, portrait or landscape, for the whole scan.
          */
-        fun start(frame: Frame, scope: CoroutineScope, rawDepth: Boolean = false): ScanCapture? {
+        fun start(
+            frame: Frame,
+            scope: CoroutineScope,
+            rawDepth: Boolean = false,
+            preset: ScanPreset = ScanPreset.ROOM,
+        ): ScanCapture? {
             val camera = frame.camera
             val intrinsics = camera.imageIntrinsics.toScan() ?: return null
             val lens = ScanProjection.displayLens(
@@ -387,7 +413,7 @@ internal class ScanCapture private constructor(
                 camera.pose.toScanPose(),
                 camera.displayOrientedPose.toScanPose(),
             )
-            return ScanCapture(intrinsics, camera.textureIntrinsics.toScan(), lens, scope, rawDepth)
+            return ScanCapture(intrinsics, camera.textureIntrinsics.toScan(), lens, scope, rawDepth, preset)
         }
 
         /** 100 ms between two fused depth keyframes. */
@@ -399,16 +425,6 @@ internal class ScanCapture private constructor(
         /** One depth-verdict line a second of frame time at most. */
         private const val LOG_INTERVAL_NS = 1_000_000_000L
         private const val NANOS_PER_MS = 1_000_000L
-        private const val NANOS_PER_SECOND = 1e9
-
-        /** A second between two snapshots of the dense map for the live 3D card. */
-        const val LIVE_DENSE_INTERVAL_NS = 1_000_000_000L
-
-        /**
-         * Surfels the live card draws at most: 600 k vertices, a seventh of what the replay may
-         * draw, so the card keeps its frame rate while the camera and the fusion run.
-         */
-        const val LIVE_DENSE_MAX_SURFELS = 150_000
 
         /** 240×320, the bundled replay's own frame size: ~15 KB of JPEG each. */
         private const val PHOTO_LONG_SIDE = 320

@@ -262,6 +262,8 @@ internal fun RoomDollhouseScreen(
         loadingLabel = DollhouseCopy.OPENING,
         // The camera feed is media; the 3D view, the empty state and the error follow the theme.
         themedStage = !inRoom,
+        // The mode pill belongs to 3D Scan's landing, not to a session opened from it.
+        modeSwitch = null,
         peekHeader = if (fit != null && showsScale) {
             DollhouseCopy.peek(title, fit, realSize && inRoom)
         } else null,
@@ -346,8 +348,8 @@ internal fun RoomDollhouseScreen(
                         ScanRoomStatus.MoveSlowly -> DollhouseCopy.PLACE_HINT
                         ScanRoomStatus.KeepOnSurface -> stringResource(R.string.ar_place_keep_on_surface)
                         ScanRoomStatus.TrackingPaused -> stringResource(R.string.ar_place_tracking_paused)
-                        ScanRoomStatus.TrackingPausedLowLight -> stringResource(R.string.ar_place_tracking_paused) +
-                            " " + stringResource(R.string.ar_place_try_brighter_area)
+                        ScanRoomStatus.TrackingPausedLowLight ->
+                            stringResource(R.string.ar_place_tracking_paused_low_light)
                         ScanRoomStatus.FindingPlacement -> stringResource(R.string.ar_place_finding_placement)
                         ScanRoomStatus.GestureHint -> DollhouseCopy.GESTURE_HINT
                         ScanRoomStatus.Scale -> fit?.let { DollhouseCopy.pinched(it, state.scaleFactor, realSize) }

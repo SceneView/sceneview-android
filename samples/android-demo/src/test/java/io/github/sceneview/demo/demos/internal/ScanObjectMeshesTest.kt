@@ -145,7 +145,7 @@ class ScanObjectMeshesTest {
             distance = 6f,
         ),
         drift = false,
-        lift = lift,
+        band = OrbitBand.CARD.copy(lift = lift),
     ).apply { setViewport(WIDTH, HEIGHT) }
 
     private companion object {

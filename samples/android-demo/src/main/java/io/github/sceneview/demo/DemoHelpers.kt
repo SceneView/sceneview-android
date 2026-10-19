@@ -31,6 +31,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.sceneview.ar.ARCoreAvailability
+import io.github.sceneview.demo.ui.viewer.ViewerOpeningMove
 import io.github.sceneview.math.Position
 import kotlinx.coroutines.flow.first
 import java.io.File
@@ -1670,6 +1671,39 @@ internal fun clampOrbitEyePitch(
 }
 
 /**
+ * Lifts an orbit [eye] around [target] so it never sinks under [minY] — nor under
+ * [minElevationDegrees] of elevation above the target — keeping its distance to the target and
+ * its azimuth: it slides up the orbit sphere. An eye already above [minY] is
+ * returned untouched; a sphere too small to reach [minY] puts the eye just under the pole.
+ */
+internal fun clampOrbitEyeHeight(
+    eye: Position,
+    target: Position,
+    minY: Float,
+    minElevationDegrees: Float = 0f,
+): Position {
+    if (!minY.isFinite()) return eye
+    val dx = eye.x - target.x
+    val dy = eye.y - target.y
+    val dz = eye.z - target.z
+    val radius = sqrt(dx * dx + dy * dy + dz * dz)
+    if (!radius.isFinite() || radius <= 1e-6f) return eye
+    // The elevation floor: the eye looks down at the target by at least this angle, whatever the
+    // zoom — at a fixed height a far eye still grazes the floor.
+    val angleFloor = target.y + radius * sin(Math.toRadians(minElevationDegrees.toDouble()).toFloat())
+    val limit = if (minElevationDegrees > 0f && angleFloor > minY) angleFloor else minY
+    if (eye.y >= limit) return eye
+    val newDy = (limit - target.y).coerceIn(-radius, ORBIT_HEIGHT_POLE_FRACTION * radius)
+    val newHorizontal = sqrt((radius * radius - newDy * newDy).coerceAtLeast(0f))
+    val horizontal = sqrt(dx * dx + dz * dz)
+    val hx = if (horizontal <= 1e-6f) 0f else dx / horizontal
+    val hz = if (horizontal <= 1e-6f) 1f else dz / horizontal
+    return Position(target.x + hx * newHorizontal, target.y + newDy, target.z + hz * newHorizontal)
+}
+
+private const val ORBIT_HEIGHT_POLE_FRACTION = 0.99f
+
+/**
  * Absolute yaw distance, in degrees, between an orbit eye and [referenceYawDegrees] around
  * [target] — the same convention [HeroOrbitCameraManipulator]'s authored path uses (`x =
  * sin(yaw) * radius`, `z = cos(yaw) * radius`, both relative to [target]). Returns `0` when the
@@ -1771,9 +1805,13 @@ class EntranceCameraManipulator(
     private val fitDistance: () -> Float = { 1f },
     private val distanceOverride: () -> Float? = { null },
     private val onDistanceChange: (Float) -> Unit = {},
-    private val startDistanceScale: Float = 1.55f,
-    private val startYawDegrees: Float = 24f,
-    private val startLiftFraction: Float = 0.22f,
+    private val startDistanceScale: Float = ViewerOpeningMove.START_DISTANCE_SCALE,
+    private val startYawDegrees: Float = ViewerOpeningMove.START_YAW_DEGREES,
+    private val startLiftFraction: Float = ViewerOpeningMove.START_LIFT_FRACTION,
+    /** The lowest the eye may orbit to, in world Y — `null` = only the polar clamp. */
+    private val minEyeHeight: () -> Float? = { null },
+    /** With [minEyeHeight]: the shallowest the eye may look down at the target, in degrees. */
+    private val minEyeElevationDegrees: Float = 0f,
 ) : io.github.sceneview.gesture.CameraGestureDetector.CameraManipulator {
     private var fallback: io.github.sceneview.gesture.CameraGestureDetector.DefaultCameraManipulator? =
         null
@@ -1826,22 +1864,14 @@ class EntranceCameraManipulator(
                 z = eye.z + (start.z - eye.z) * remaining,
             )
         }
-        val dx = eye.x - target.x
-        val dy = eye.y - target.y
-        val dz = eye.z - target.z
-        val radius = sqrt(dx * dx + dy * dy + dz * dz)
-        // Degenerate framing: nothing to fly along, sit at the resting pose.
-        if (!radius.isFinite() || radius <= 1e-6f) return eye
-        // Swing the offset around world +Y, push it out along itself, and lift it.
-        val yaw = Math.toRadians((startYawDegrees * remaining).toDouble()).toFloat()
-        val c = cos(yaw)
-        val s = sin(yaw)
-        val scale = 1f + (startDistanceScale - 1f) * remaining
-        val lift = radius * startLiftFraction * remaining
-        return Position(
-            x = target.x + (dx * c + dz * s) * scale,
-            y = target.y + (dy + lift) * scale,
-            z = target.z + (dz * c - dx * s) * scale,
+        // The shared opening move (#4651): swung round, pushed out and lifted by what is left.
+        return ViewerOpeningMove.eye(
+            rest = eye,
+            target = target,
+            progress = p,
+            startDistanceScale = startDistanceScale,
+            startYawDegrees = startYawDegrees,
+            startLiftFraction = startLiftFraction,
         )
     }
 
@@ -1910,7 +1940,14 @@ class EntranceCameraManipulator(
         // carry the eye onto the orbit pole, where `lookAt`'s fixed world-up collapses
         // and the model flips upside-down.
         val eyeNow = clampOrbitEyePitch(fb.getTransform().position, target())
-        return aimedAt(if (override == null) eyeNow else atDistance(eyeNow, override))
+        val zoomed = if (override == null) eyeNow else atDistance(eyeNow, override)
+        // Never under the floor's horizon: a drag that dips the eye there showed the seam
+        // between the floor and the backdrop.
+        val floor = minEyeHeight()
+        return aimedAt(
+            if (floor == null) zoomed
+            else clampOrbitEyeHeight(zoomed, target(), floor, minEyeElevationDegrees),
+        )
     }
 
     override fun grabBegin(x: Int, y: Int, strafe: Boolean) {
@@ -1989,8 +2026,9 @@ class EntranceCameraManipulator(
         if (zoomAnimationDuration > 0f) {
             zoomAnimationElapsed += deltaTime
             val progress = zoomAnimationElapsed / zoomAnimationDuration
+            // On the opening move's curve (#4651): a zoom lands the way the camera arrived.
             onDistanceChange(
-                io.github.sceneview.gesture.animatedZoomDistance(
+                ViewerOpeningMove.zoomDistance(
                     start = zoomAnimationStart,
                     target = zoomAnimationTarget,
                     progress = progress,

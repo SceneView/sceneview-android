@@ -88,7 +88,7 @@ on the slow ones it is taken before a model, or the environment, is in it:
 | `cameragestures_default` | all three models (4 runs of 7) |
 | `secondarycamera_default` | the helmet in both views (3 of 7), or only the environment's shading (1 of 7) |
 | `lighting_default` | the helmet and the sky (2 of 7), or the sky alone (1 of 7) |
-| `fog_default`, `lightinglab_default` | the helmet (5 of 7) — both slugs open the same Lighting Lab screen since #4282 |
+| `fog_default`, `lightinglab_default` | the helmet (5 of 7) — both slugs opened the same Lighting Lab screen since #4282; both cases retired by #4603, which folded the lab into `lighting` |
 | `customgeometry_default`, `geometry_default` | nothing visible to the eye: only the shading of the shapes differs, by 11.5 % and 5.4 % of pixels (4 runs of 7 in the early state) |
 | `materials_default` | the blurred sky behind the spheres (1 of 7) |
 

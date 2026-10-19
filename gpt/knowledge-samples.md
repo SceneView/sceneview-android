@@ -1,6 +1,6 @@
 <!--
   GENERATED FILE — DO NOT EDIT.
-  Source of truth: /llms.txt  (SceneView 4.56.0)
+  Source of truth: /llms.txt  (SceneView 4.59.0)
   Regenerate:      node tools/generate-gpt-knowledge.js
   Drift is caught in CI (ci.yml -> repo-hygiene). Edit llms.txt instead.
   See issue #2724.
@@ -9,7 +9,7 @@
 # SceneView — Recipes & Sample Index
 
 > Copy-paste recipes and the full demo/sample catalog.
-> Auto-generated from `llms.txt` (SceneView 4.56.0). This is a slice of the machine-readable API reference — the same content an AI reads to generate SceneView code.
+> Auto-generated from `llms.txt` (SceneView 4.59.0). This is a slice of the machine-readable API reference — the same content an AI reads to generate SceneView code.
 
 ## Recipes — "I want to..."
 
@@ -854,11 +854,11 @@ by `samples/android-demo/scripts/collate-demos.sh` — never edit between the ma
 ### Create & record
 
 - `cosmos` — Cosmos. Watch a galaxy, a star and particle storms glow.
-- `lighting-lab` — Lighting Lab. See how light and reflections shape a model.
 - `materials` — Materials. Compare metal, glass, fabric and glow.
-- `lighting` — Lighting. Compare studio light, daylight and reflections.
+- `lighting` — Lighting. Studio light, daylight, reflections, fog and shading.
 - `custom-geometry` — Custom Geometry. A knot generated vertex by vertex.
 - `lines-paths` — Lines & Paths. Follow animated curves and paths.
+- `finger-drawing` — Finger Drawing. Paint in the air, then walk around it.
 - `spatial-audio` — Spatial Audio. Positional sound that pans as you orbit.
 - `two-d-in-three-d` — 2D in 3D. Live UI, text, images and video in a 3D scene.
 - `contact-shadow-preview` — Contact Shadow Preview. Compare objects with and without a contact shadow.
@@ -866,8 +866,8 @@ by `samples/android-demo/scripts/collate-demos.sh` — never edit between the ma
 
 ### Developer tools
 
-- `ar-rerun` — Rerun AR Replay. Watch a real AR session rebuild itself in 3D.
-- `debug-overlay` — Debug Overlay. Find the node budget for smooth 3D rendering on your device.
+- `ar-rerun` — 3D Scan. Move around a space and watch it take shape in 3D.
+- `debug-overlay` — Performance Test. Find the node budget for smooth 3D rendering on your device.
 
 ### Place in AR
 
@@ -876,9 +876,10 @@ by `samples/android-demo/scripts/collate-demos.sh` — never edit between the ma
 - `ar-orbital` — Orbital AR. Catch four flyers circling you in AR.
 - `ar-geospatial-anchors` — Geospatial Anchors. Place objects at outdoor locations.
 - `ar-cloud-anchor` — Cloud Anchors. Persistent anchors shared across devices.
-- `ar-measure` — Measure. Add two points, read the distance.
+- `ar-pool` — Pool in the garden. A real-size pool dug into your lawn.
+- `ar-measure` — Measure. Distances, walls rising to their height, whole rooms.
 - `ar-plane-node` — Plane Lifecycle. Watch surfaces appear and update.
-- `ar-plane-renderer-v2` — Plane Renderer V2. Soft dots show each surface your phone finds.
+- `ar-surfaces` — Surfaces. Dots on floors, dashes on walls, rings on ceilings.
 
 ### View in 3D
 
@@ -892,21 +893,18 @@ by `samples/android-demo/scripts/collate-demos.sh` — never edit between the ma
 ### Understand the world
 
 - `ar-face` — Augmented Faces. Face mesh tracking with 3D overlays.
-- `ar-people-occlusion` — People Occlusion. Real people hide virtual objects.
+- `ar-people-occlusion` — People Occlusion. A person walking in front hides the model.
 - `ar-depth-occlusion` — Depth Occlusion. Real-world depth hides virtual objects.
 - `point-and-ask` — Point & Ask. On-device Gemini Nano explains the AR scene.
-- `ar-body-tracker` — AR Body Tracker. Follow a person with a live skeleton.
+- `ar-body-tracker` — Squat Coach. Counts your squats out loud and tells you when to go lower.
 - `ar-scene-semantics` — Scene Semantics. Recognize parts of the outdoor scene.
 - `ar-depth-visualization` — Depth Visualization. False-color depth map blended with camera.
 - `ar-image` — Image Tracking. Detect and track reference images.
-- `ar-depth-collider` — Depth Collider. Virtual balls bounce off the real floor.
-- `ar-fog` — AR Fog. Distance fog over real and virtual geometry.
-- `ar-depth-of-field` — AR Depth of Field. Tap to focus, real-world bokeh blur.
+- `ar-depth-of-field` — Portrait focus. Keep the sneaker sharp, blur the room behind it.
 - `ar-point-cloud` — Point Cloud. See the points your camera tracks.
 - `ar-raw-depth-point-cloud` — Raw Depth Point Cloud. Explore the shape of your surroundings.
 - `ar-ml-object-label` — ML Kit Object Labels. Recognize objects and label them in space.
-- `ar-image-stabilization` — Image Stabilization. Electronic stabilization of the AR feed.
-- `ar-scene-mesh` — Scene Geometry. Explore the shape of nearby buildings.
+- `ar-image-stabilization` — Image Stabilization. Steadies the camera feed. The difference is subtle.
 - `ar-xr` — Android XR (preview). Hand skeleton and face mesh on Android XR headsets.
 
 <!-- END GENERATED DEMOS -->

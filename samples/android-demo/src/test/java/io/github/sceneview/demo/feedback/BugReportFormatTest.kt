@@ -49,11 +49,11 @@ class BugReportFormatTest {
         assertTrue(title.length <= "[Demo app] ".length + 80)
     }
 
-    // ── Share text ───────────────────────────────────────────────────────────
+    // ── Report file ──────────────────────────────────────────────────────────
 
     @Test
-    fun `share text carries note, metadata and logcat`() {
-        val text = formatShareText(info(), "It crashed")
+    fun `report file carries note, metadata and logcat`() {
+        val text = formatReportFile(info(), "It crashed")
         assertTrue(text.contains("It crashed"))
         assertTrue(text.contains("App version: 4.19.0 (350)"))
         assertTrue(text.contains("Demo: model-viewer"))
@@ -61,29 +61,79 @@ class BugReportFormatTest {
     }
 
     @Test
-    fun `share text omits the log section when logcat is empty`() {
-        val text = formatShareText(info(logcat = emptyList()), "note")
+    fun `report file omits the log section when logcat is empty`() {
+        val text = formatReportFile(info(logcat = emptyList()), "note")
         assertFalse(text.contains("Recent app log"))
     }
 
     @Test
-    fun `share text carries the whole captured window, not the issue cap`() {
+    fun `report file carries the whole captured window, not the issue cap`() {
         // The share path has no URL budget: it is the one that must survive a
         // repeating warning long enough to measure its period (#3390).
         val lines = (1..LOGCAT_TAIL_LINES).map { "line $it" }
-        val text = formatShareText(info(logcat = lines), "")
+        val text = formatReportFile(info(logcat = lines), "")
         assertTrue(text.contains("last $LOGCAT_TAIL_LINES lines"))
         assertTrue(text.contains("line 1\n"))
         assertTrue(text.contains("line $LOGCAT_TAIL_LINES"))
     }
 
     @Test
-    fun `share text keeps the newest lines when the capture overflows`() {
+    fun `report file keeps the newest lines when the capture overflows`() {
         val lines = (1..SHARE_LOGCAT_MAX_LINES + 50).map { "line $it" }
-        val text = formatShareText(info(logcat = lines), "")
+        val text = formatReportFile(info(logcat = lines), "")
         assertTrue(text.contains("last $SHARE_LOGCAT_MAX_LINES lines"))
         assertFalse(text.contains("line 1\n"))                        // oldest dropped
         assertTrue(text.contains("line ${SHARE_LOGCAT_MAX_LINES + 50}")) // newest kept
+    }
+
+    // ── Share text (#4528) ───────────────────────────────────────────────────
+
+    @Test
+    fun `share text carries note and metadata, and points at the file instead of the log`() {
+        val text = formatShareText(info(), "It crashed")
+        assertTrue(text.contains("It crashed"))
+        assertTrue(text.contains("App version: 4.19.0 (350)"))
+        assertTrue(text.contains("Demo: model-viewer"))
+        assertFalse(text.contains("I/Demo: started"))
+        assertTrue(text.contains("app log (1 lines) attached: $REPORT_FILE_NAME"))
+    }
+
+    @Test
+    fun `share text says the log is missing when the file could not be written`() {
+        val text = formatShareText(info(), "", logAttached = false)
+        assertFalse(text.contains(REPORT_FILE_NAME))
+        assertTrue(text.contains("could not be attached"))
+    }
+
+    @Test
+    fun `share text stays under its budget whatever the log weighs`() {
+        // 1200 lines of ~500 characters: the ~600 KB extra that the chooser refused.
+        val heavy = (1..LOGCAT_TAIL_LINES).map { "06-01 12:00:00.000 I/Demo: " + "x".repeat(500) + " $it" }
+        val text = formatShareText(
+            BugReportInfo(metadata, logcat = heavy, arTracking = trackingLines(AR_TRACKING_MAX_LINES)),
+            "Stuck",
+        )
+        assertTrue("share text is ${text.length} chars", text.length <= SHARE_TEXT_MAX_CHARS)
+        assertTrue(text.contains("AR tracking (last $AR_TRACKING_MAX_LINES lines):"))
+    }
+
+    @Test
+    fun `share text stays under its budget with a pathological note, which the file keeps whole`() {
+        val note = "word ".repeat(20_000)
+        val info = BugReportInfo(metadata, logcat = listOf(appLine), arTracking = trackingLines(5))
+
+        val text = formatShareText(info, note)
+
+        assertTrue("share text is ${text.length} chars", text.length <= SHARE_TEXT_MAX_CHARS)
+        assertTrue(text.contains("[…]"))
+        assertTrue(text.contains("AR tracking (last 5 lines):"))
+        assertTrue(formatReportFile(info, note).contains(note.trim()))
+    }
+
+    @Test
+    fun `share text stays under its budget with an oversized metadata row`() {
+        val info = BugReportInfo(linkedMapOf("Labs" to "y".repeat(SHARE_TEXT_MAX_CHARS * 2)), logcat = emptyList())
+        assertTrue(formatShareText(info, "").length <= SHARE_TEXT_MAX_CHARS)
     }
 
     // ── Issue body ───────────────────────────────────────────────────────────
@@ -262,8 +312,8 @@ class BugReportFormatTest {
     }
 
     @Test
-    fun `share text puts the AR tracking lines ahead of the general log`() {
-        val text = formatShareText(
+    fun `report file puts the AR tracking lines ahead of the general log`() {
+        val text = formatReportFile(
             BugReportInfo(metadata, logcat = listOf(appLine), arTracking = trackingLines(3)),
             "Stuck on Getting ready",
         )
@@ -292,6 +342,7 @@ class BugReportFormatTest {
         val info = info()
 
         assertFalse(formatShareText(info, "note").contains("AR tracking"))
+        assertFalse(formatReportFile(info, "note").contains("AR tracking"))
         assertFalse(formatIssueBody(info, "note").contains("AR tracking"))
     }
 

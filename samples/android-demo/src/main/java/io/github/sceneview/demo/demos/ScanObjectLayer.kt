@@ -298,7 +298,7 @@ internal class ScanObjectPick(
      * or, while the camera slides to bring it out, where the slide ends: the label waits there.
      */
     private fun follow(box: ScanBox) {
-        val span = ScanObjectMeshes.drawnSpan(box, orbit.scanCamera(orbit.heading))
+        val span = ScanObjectMeshes.drawnSpan(box, orbit.scanCamera(orbit.restingPose))
         anchor = span?.let { (x, high, _) -> Offset(x, high) } ?: Offset.Unspecified
         foot = span?.let { (x, _, low) -> Offset(x, low) } ?: Offset.Unspecified
     }

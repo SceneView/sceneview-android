@@ -6,13 +6,13 @@ import android.content.Context
 import android.view.accessibility.AccessibilityManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -33,7 +33,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.mandatorySystemGestures
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
@@ -47,9 +50,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FiberManualRecord
-import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.outlined.Feedback
+import androidx.compose.material.icons.outlined.Fullscreen
 import androidx.compose.material.icons.outlined.Science
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.BottomSheetDefaults
@@ -66,13 +70,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Snackbar
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.SheetValue
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.minimumInteractiveComponentSize
@@ -80,12 +85,11 @@ import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
-import io.github.sceneview.demo.telemetry.LocalSampleId
-import io.github.sceneview.demo.telemetry.logSampleInteraction
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -99,15 +103,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -119,26 +127,29 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.sceneview.demo.common.DemoSheetDefaults
+import io.github.sceneview.demo.common.RequestLightStatusBarIcons
 import io.github.sceneview.demo.recording.SceneRecorderState
 import io.github.sceneview.demo.recording.formatElapsed
-import io.github.sceneview.demo.ui.GlassActionPill
-import androidx.compose.material3.SnackbarResult
-import kotlin.math.roundToInt
-import io.github.sceneview.demo.common.RequestLightStatusBarIcons
+import io.github.sceneview.demo.labs.LabsFeedbackPrompt
+import io.github.sceneview.demo.telemetry.LocalSampleId
+import io.github.sceneview.demo.telemetry.logSampleInteraction
 import io.github.sceneview.demo.theme.LocalStageChrome
 import io.github.sceneview.demo.theme.SceneViewTokens
 import io.github.sceneview.demo.theme.StageChrome
-import io.github.sceneview.demo.theme.themedStageChrome
 import io.github.sceneview.demo.theme.motionFade
+import io.github.sceneview.demo.theme.themedStageChrome
+import io.github.sceneview.demo.ui.GlassActionPill
 import io.github.sceneview.demo.ui.GlassIconButton
 import io.github.sceneview.demo.ui.GlassPill
 import io.github.sceneview.demo.ui.LocalGlassGround
 import io.github.sceneview.demo.ui.overMediaEdge
 import io.github.sceneview.haptic.SceneViewHaptic
 import io.github.sceneview.haptic.rememberHapticFeedback
+import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -389,6 +400,22 @@ internal fun Modifier.reportsDemoSceneBottomCard(): Modifier {
 val LocalDemoSheetCover = androidx.compose.runtime.compositionLocalOf { 0.dp }
 
 /**
+ * How much of the scene the scaffold's bottom chrome floats over, in dp above the bottom system
+ * inset: the dock reserve, plus the pills stacked on it (status, record, mode switch) when there
+ * are any.
+ *
+ * A scene that scrolls under the chrome ends its content this far up, or its last rows stay under
+ * the mode pill and the settings button with nothing left to scroll: 3D Scan's landing hid its
+ * fourth and fifth sessions that way. Unlike [LocalDemoChromeBottomInset] — the dock band alone,
+ * for something that rests a gutter above it — this is the whole stack. Unlike
+ * [LocalDemoSceneCover] — made for a `SceneView`'s `contentPadding` — it leaves out the system
+ * inset, which a scrolling screen has already padded for, and the settings sheet, which must not
+ * resize a list while it is dragged. Measured, so it lands one frame late; zero outside a
+ * [DemoScaffold].
+ */
+val LocalDemoBottomChromeCover = androidx.compose.runtime.compositionLocalOf { 0.dp }
+
+/**
  * What the scaffold draws **over the `scene` slot**, measured inwards from the slot's own top and
  * bottom edges: the identity row and the status bar at the top; at the bottom, whichever reaches
  * higher of the controls band above the dock and the settings sheet (#4310).
@@ -536,9 +563,19 @@ fun DemoScaffold(
     dockAccent: DockItem? = null,
     loadingLabel: String? = null,
     chromeToggleOnTap: Boolean = false,
+    // The demo's own overlays leave with the chrome on a scene tap (#4379). Off by default: a
+    // status pill or a capture button is not chrome, and stays when the dock goes.
+    overlaysFollowChrome: Boolean = false,
     dockHidden: Boolean = false,
     themedStage: Boolean = false,
+    // The settings sheet's glass lets a scene read through it. Over a stage of text — a table of
+    // figures — the rows behind would read through the sheet's own: such a stage asks for the
+    // opaque `surface-container` a browsing sheet has.
+    opaqueSheet: Boolean = false,
     recorder: SceneRecorderState? = null,
+    // The consolidated card's mode pill. A demo with screens of its own passes `null` on the ones
+    // past its landing: the pill switches the whole demo, which is not on offer mid-replay.
+    modeSwitch: DemoModeSwitch? = LocalDemoModeSwitch.current,
     // `FirstFrameState.contentIssue`: a model or environment the scene is held for failed to
     // load, or is taking long. Said over the stage, so neither is just an empty one (#4459).
     contentIssue: androidx.compose.runtime.State<DemoContentIssue?>? = null,
@@ -560,7 +597,6 @@ fun DemoScaffold(
     // "Record video" row in its settings sheet; while a recording runs, a Stop pill with the
     // elapsed time sits in the bottom band, and stopping offers Play in a snackbar. Opened
     // through the retired `video-recording` id, the Record pill shows in the band on arrival.
-    val modeSwitch = LocalDemoModeSwitch.current
     val recordSampleId = LocalSampleId.current
     val recordOpenedByLink = remember { recorder != null && DemoSettings.consumeOpenRecordAction() }
     val recordPillShown = recorder != null && (recorder.isRecording || recordOpenedByLink)
@@ -605,7 +641,29 @@ fun DemoScaffold(
             ?.isTouchExplorationEnabled == true
     }
     var chromeToggled by rememberSaveable { mutableStateOf(true) }
-    val chromeVisible = chromeToggled || touchExploration || DemoSettings.qaMode
+
+    // Full screen (#4558): the identity row's last button gives the scene the whole window —
+    // the chrome, the demo's own top and bottom bands, the scrims and the system bars step
+    // aside, and the scene slot loses its reserve. The one way back sits where the button
+    // was, and Back does the same. It wins over QA mode and TalkBack, which only keep the
+    // chrome from a scene *tap*: this is an explicit request.
+    var focused by rememberSaveable { mutableStateOf(false) }
+    DemoFullScreenSystemBars(focused)
+    val focusTelemetryId = LocalSampleId.current
+    val setFocused: (Boolean) -> Unit = { on ->
+        haptic.selection()
+        focused = on
+        if (on) logSampleInteraction(focusTelemetryId, "fullscreen")
+    }
+    val focusAlpha by animateFloatAsState(
+        targetValue = if (focused) 0f else 1f,
+        animationSpec = SceneViewTokens.Motion.fade(),
+        label = "demo-full-screen",
+    )
+
+    val chromeVisible = !focused && (chromeToggled || touchExploration || DemoSettings.qaMode)
+    // A demo that opted in (#4379) loses its overlays with the chrome: the scene gets the window.
+    val overlaysShown = !overlaysFollowChrome || chromeVisible
 
     // The top scrim (#3328) puts a 60 %-black ground under the status bar, so in light
     // mode the system icons — clock, wifi, battery — turn dark-on-dark and disappear.
@@ -696,7 +754,13 @@ fun DemoScaffold(
             // outlives the composition that launched it.
             val hasExpandedDetent =
                 settingsContentPx > rootHeightPx * SceneViewTokens.Glass.sheetPeekFraction
-            if (restored == SheetValue.Expanded && hasExpandedDetent) {
+            // #4539: a sheet no taller than the peek (a demo with no `controls`: Send
+            // feedback and QA mode only) has ONE open detent. Material 3 drops the
+            // PartiallyExpanded anchor when the peek equals the sheet height and keeps
+            // Expanded, at the very same place — so `partialExpand()` targeted an anchor that
+            // did not exist and left the sheet parked under the window's bottom edge:
+            // Settings hid the dock and showed nothing (AR Surfaces, the AR View tab, AR Face…).
+            if (!hasExpandedDetent || restored == SheetValue.Expanded) {
                 settingsSheetState.expand()
             } else {
                 settingsSheetState.partialExpand()
@@ -732,6 +796,10 @@ fun DemoScaffold(
         }
     }
     BackHandler(enabled = settingsExpanded) { settingsExpanded = false }
+    // Registered after the sheet's, so Back leaves full screen first.
+    BackHandler(enabled = focused) { setFocused(false) }
+    // The settings sheet is chrome too: full screen closes it.
+    LaunchedEffect(focused) { if (focused) settingsExpanded = false }
 
     // A phone held sideways has no band of scrim under the identity row nor under what a demo
     // stacks above the dock ([demoTopScrim], [demoBottomScrim]): each glass element then stands
@@ -798,7 +866,11 @@ fun DemoScaffold(
                     topStart = SceneViewTokens.Radius.xl,
                     topEnd = SceneViewTokens.Radius.xl,
                 ),
-                sheetContainerColor = DemoSheetDefaults.glassContainerColor(),
+                sheetContainerColor = if (opaqueSheet) {
+                    MaterialTheme.colorScheme.surfaceContainer
+                } else {
+                    DemoSheetDefaults.glassContainerColor()
+                },
                 sheetContentColor = MaterialTheme.colorScheme.onSurface,
                 // Tonal elevation would tint the glass towards primary and a shadow would draw a
                 // dark band over the scene along the sheet's edge; the glass carries the edge.
@@ -868,17 +940,29 @@ fun DemoScaffold(
                     SceneViewTokens.Layout.dockHeight + SceneViewTokens.Space.md,
                     dockBand,
                 )
-
                 // What the chrome covers of the window, top and bottom. A demo that reserves the
                 // scene gets its slot inset by exactly these — unless that would leave no scene at
                 // all (a phone in landscape), in which case the slot stays full-frame and the bands
                 // are only reported, through [LocalDemoSceneCover] (#4310).
-                val chromeTop = maxOf(identityRow + statusBarInset, topOverlayBand)
+                // In full screen nothing covers the scene: no bands to report, no reserve.
+                val chromeTop = if (focused) 0.dp else maxOf(identityRow + statusBarInset, topOverlayBand)
                 val navigationBarInset = with(density) {
                     WindowInsets.safeDrawing.getBottom(density).toDp()
                 }
-                val chromeBottom = maxOf(bottomOverlayBand, dockBandClearance + navigationBarInset)
-                val reservesScene = bottomOverlayReservesScene && demoSceneReserveFits(
+                val chromeBottom = if (focused) {
+                    0.dp
+                } else {
+                    maxOf(bottomOverlayBand, dockBandClearance + navigationBarInset)
+                }
+                // The whole bottom stack above the system inset, for a scene that scrolls under it.
+                // The measured band counts the inset (see `DemoBottomOverlay`), so it comes off here.
+                // In full screen nothing covers it.
+                val bottomChromeCover = if (focused) {
+                    0.dp
+                } else {
+                    maxOf(dockClearance, bottomOverlayBand - navigationBarInset)
+                }
+                val reservesScene = !focused && bottomOverlayReservesScene && demoSceneReserveFits(
                     windowHeight = with(density) { rootHeightPx.toDp() },
                     topBand = chromeTop,
                     bottomBand = bottomOverlayBand,
@@ -935,8 +1019,12 @@ fun DemoScaffold(
                             ),
                         content = {
                             androidx.compose.runtime.CompositionLocalProvider(
-                                LocalDemoChromeTopInset provides identityRow + SceneViewTokens.Space.sm,
-                                LocalDemoChromeBottomInset provides demoChromeBottomInset(
+                                LocalDemoChromeTopInset provides if (focused) {
+                                    0.dp
+                                } else {
+                                    identityRow + SceneViewTokens.Space.sm
+                                },
+                                LocalDemoChromeBottomInset provides if (focused) 0.dp else demoChromeBottomInset(
                                     dockBand = dockBandClearance,
                                     overlayBand = if (bottomBandShown) bottomOverlayBand else 0.dp,
                                     overlayContent = if (bottomBandShown) {
@@ -959,6 +1047,7 @@ fun DemoScaffold(
                                         ).toDp()
                                     }
                                 },
+                                LocalDemoBottomChromeCover provides bottomChromeCover,
                                 LocalDemoSheetCover provides settingsSheetCover,
                                 LocalDemoSceneBottomCard provides { sceneBottomCardTopPx = it },
                             ) {
@@ -1072,7 +1161,7 @@ fun DemoScaffold(
                         navigationBarInset = navigationBarInset,
                     )
                     AnimatedVisibility(
-                        visible = chromeVisible || (bottomStackShown && !compactHeight),
+                        visible = chromeVisible || (!focused && overlaysShown && bottomStackShown && !compactHeight),
                         enter = fadeIn(SceneViewTokens.Motion.fade()),
                         exit = fadeOut(SceneViewTokens.Motion.fade()),
                         modifier = Modifier.align(Alignment.BottomCenter),
@@ -1088,50 +1177,59 @@ fun DemoScaffold(
                     // Top band: the demo's own overlays below the identity row, then the
                     // chrome on top so scaffold controls always win the z-order.
                     if (topOverlay != null && !arSessionFailed && arOverlaysEnabled) {
-                        DemoTopOverlay(
-                            reservedTop = identityRow,
-                            onBandHeightChanged = { topOverlayBandPx = it },
-                            content = topOverlay,
-                        )
+                        Box(Modifier.matchParentSize().hiddenInFullScreen { focusAlpha }) {
+                            DemoTopOverlay(
+                                reservedTop = identityRow,
+                                shown = overlaysShown,
+                                onBandHeightChanged = { topOverlayBandPx = it },
+                                content = topOverlay,
+                            )
+                        }
                     }
 
                     // Bottom band: status pill + demo overlays stacked above the dock.
                     // The record pill and the consolidated card's mode pill close the stack,
                     // in that order, so the mode pill always sits just above the dock.
-                    if (!arSessionFailed && arOverlaysEnabled && bottomStackShown) {
-                        DemoBottomOverlay(
-                            reservedBottom = dockClearance,
-                            // Same rule as the dock (#3827): a floating pill seen through a glass
-                            // sheet reads as a live button inside it (#3985).
-                            faded = settingsExpanded || dockHidden,
-                            onBandHeightChanged = { bottomOverlayBandPx = it },
-                            status = peekHeader,
-                            content = bottomOverlay,
-                            footer = if (modeSwitch != null || recordPillShown) {
-                                {
-                                    if (recorder != null && recordPillShown) {
-                                        RecordPill(recorder, onClick = toggleRecording)
+                    Box(Modifier.matchParentSize().hiddenInFullScreen { focusAlpha }) {
+                        if (!arSessionFailed && arOverlaysEnabled && bottomStackShown) {
+                            DemoBottomOverlay(
+                                reservedBottom = dockClearance,
+                                dockGap = dockClearance - dockBandClearance,
+                                // Same rule as the dock (#3827): a floating pill seen through a glass
+                                // sheet reads as a live button inside it (#3985).
+                                faded = settingsExpanded || dockHidden,
+                                shown = overlaysShown,
+                                onBandHeightChanged = { bottomOverlayBandPx = it },
+                                status = peekHeader,
+                                content = bottomOverlay,
+                                footer = if (modeSwitch != null || recordPillShown) {
+                                    {
+                                        if (recorder != null && recordPillShown) {
+                                            RecordPill(recorder, onClick = toggleRecording)
+                                        }
+                                        if (modeSwitch != null) DemoModePill(modeSwitch)
                                     }
-                                    if (modeSwitch != null) DemoModePill(modeSwitch)
-                                }
-                            } else {
-                                null
-                            },
-                            onFooterWidthChanged = { bandFooterWidthPx = it },
-                            onContentHeightChanged = { bottomOverlayContentPx = it },
-                        )
-                    } else if (modeSwitch != null && arSessionFailed) {
-                        // An AR mode whose session failed still offers the way to the other mode.
-                        DemoBottomOverlay(
-                            reservedBottom = dockClearance,
-                            faded = settingsExpanded || dockHidden,
-                            onBandHeightChanged = { bottomOverlayBandPx = it },
-                            status = null,
-                            content = null,
-                            footer = { DemoModePill(modeSwitch) },
-                            onFooterWidthChanged = { bandFooterWidthPx = it },
-                            onContentHeightChanged = { bottomOverlayContentPx = it },
-                        )
+                                } else {
+                                    null
+                                },
+                                onFooterWidthChanged = { bandFooterWidthPx = it },
+                                onContentHeightChanged = { bottomOverlayContentPx = it },
+                            )
+                        } else if (modeSwitch != null && arSessionFailed) {
+                            // An AR mode whose session failed still offers the way to the other mode.
+                            DemoBottomOverlay(
+                                reservedBottom = dockClearance,
+                                dockGap = dockClearance - dockBandClearance,
+                                faded = settingsExpanded || dockHidden,
+                                shown = true,
+                                onBandHeightChanged = { bottomOverlayBandPx = it },
+                                status = null,
+                                content = null,
+                                footer = { DemoModePill(modeSwitch) },
+                                onFooterWidthChanged = { bandFooterWidthPx = it },
+                                onContentHeightChanged = { bottomOverlayContentPx = it },
+                            )
+                        }
                     }
 
                     DemoChrome(
@@ -1155,10 +1253,13 @@ fun DemoScaffold(
                             },
                             caption = stringResource(R.string.demo_settings_title),
                         ),
+                        onFullScreen = { setFocused(true) },
                         onIdentityRowHeight = { identityRowPx = maxOf(identityRowPx, it) },
                         onDockBandHeight = { dockBandPx = maxOf(dockBandPx, it) },
                         onDockWidth = { dockWidthPx = it },
                     )
+
+                    DemoFullScreenExit(visible = focused, onExit = { setFocused(false) })
                 }
             }
             // Above the sheet, not in the scaffold's content (#4019): the content is drawn
@@ -1179,7 +1280,9 @@ fun DemoScaffold(
                     0
                 },
                 sceneBottomCardTopPx = sceneBottomCardTopPx,
-                bottomStackHidden = dockHidden,
+                // The chrome a tap on the scene hides takes the band with it (the replay's
+                // timeline): hidden, it is no more there to rest above than under a full sheet.
+                bottomStackHidden = dockHidden || !overlaysShown,
                 sheetRequested = settingsExpanded,
             )
         }
@@ -1384,6 +1487,7 @@ private fun BoxScope.DemoChrome(
     dock: List<DockItem>,
     dockAccent: DockItem?,
     controlsItem: DockItem?,
+    onFullScreen: () -> Unit,
     onIdentityRowHeight: (Int) -> Unit,
     onDockBandHeight: (Int) -> Unit,
     onDockWidth: (Int) -> Unit,
@@ -1400,6 +1504,7 @@ private fun BoxScope.DemoChrome(
                 assetSource = assetSource,
                 onBack = onBack,
                 haptic = haptic,
+                onFullScreen = onFullScreen,
                 onHeightChanged = onIdentityRowHeight,
             )
             val items = dock.take(DOCK_MAX_ITEMS) + listOfNotNull(controlsItem)
@@ -1436,6 +1541,7 @@ private fun BoxScope.DemoIdentityRow(
     assetSource: AssetSourceState?,
     onBack: () -> Unit,
     haptic: SceneViewHaptic,
+    onFullScreen: () -> Unit,
     onHeightChanged: (Int) -> Unit,
 ) {
     Row(
@@ -1461,89 +1567,103 @@ private fun BoxScope.DemoIdentityRow(
             contentDescription = stringResource(R.string.cd_back_button),
             onClick = onBack,
         )
-        // The identity pill: full title in the tree, one line on screen.
-        val sourceLabel = assetSource?.let {
-            stringResource(
-                when (it) {
-                    AssetSourceState.Streamed -> R.string.demo_source_streamed
-                    AssetSourceState.Streaming -> R.string.demo_source_streaming
-                    AssetSourceState.Bundled -> R.string.demo_source_bundled
-                }
-            )
-        }
-        GlassPill(
-            modifier = Modifier
-                .weight(1f, fill = false)
-                .then(
-                    if (sourceLabel != null) {
-                        Modifier
-                            .testTag(DemoScaffoldTestTags.ASSET_SOURCE_CHIP)
-                            .semantics { contentDescription = "Asset source: $sourceLabel" }
-                    } else Modifier
-                ),
+        // Title and QA pill share what the back and full-screen buttons leave, so the
+        // full-screen button keeps the trailing corner on every demo (#4558).
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(SceneViewTokens.Space.sm),
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelMedium.copy(fontSize = 13.sp),
-                color = LocalStageChrome.current.onGlass,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                // Measured first, so the title — the screen's name — takes the room it needs
-                // and the source label gets what is left. The other way round, a 14-letter
-                // label at 200 % text left "AR …" for a title on a 320 dp window (#4503).
-                modifier = if (sourceLabel != null) Modifier else Modifier.weight(1f, fill = false),
-            )
-            if (sourceLabel != null) {
-                // A label that does not fit whole is not drawn at all: half a word next to
-                // the title says less than nothing. It stays in the pill's content description.
-                var sourceLabelCut by remember { mutableStateOf(false) }
-                Text(
-                    text = sourceLabel,
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                    color = LocalStageChrome.current.onGlassMuted,
-                    maxLines = 1,
-                    softWrap = false,
-                    onTextLayout = { sourceLabelCut = it.hasVisualOverflow },
-                    modifier = Modifier
-                        .weight(1f, fill = false)
-                        .layout { measurable, constraints ->
-                            val placeable = measurable.measure(constraints)
-                            if (sourceLabelCut) {
-                                layout(0, 0) {}
-                            } else {
-                                layout(placeable.width, placeable.height) {
-                                    placeable.place(0, 0)
-                                }
-                            }
-                        }
-                        // The gap to the title belongs to the label: it goes when the label does.
-                        .padding(start = SceneViewTokens.Space.sm),
+            // The identity pill: full title in the tree, one line on screen.
+            val sourceLabel = assetSource?.let {
+                stringResource(
+                    when (it) {
+                        AssetSourceState.Streamed -> R.string.demo_source_streamed
+                        AssetSourceState.Streaming -> R.string.demo_source_streaming
+                        AssetSourceState.Bundled -> R.string.demo_source_bundled
+                    }
                 )
             }
-        }
-        if (DemoSettings.qaMode) {
-            // Tappable QA pill: tap to disable — a single-tap escape hatch for a
-            // user who toggled QA mode from the settings sheet by accident (#951).
-            // Text is exactly `" QA ×"`: the rendering suite keys on it.
             GlassPill(
                 modifier = Modifier
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                    ) {
-                        haptic.medium()
-                        DemoSettings.qaMode = false
-                    }
-                    .testTag(DemoScaffoldTestTags.QA_PILL),
+                    .weight(1f, fill = false)
+                    .then(
+                        if (sourceLabel != null) {
+                            Modifier
+                                .testTag(DemoScaffoldTestTags.ASSET_SOURCE_CHIP)
+                                .semantics { contentDescription = "Asset source: $sourceLabel" }
+                        } else Modifier
+                    ),
             ) {
                 Text(
-                    text = " QA ×",
-                    style = MaterialTheme.typography.labelSmall,
+                    text = title,
+                    style = MaterialTheme.typography.labelMedium.copy(fontSize = 13.sp),
                     color = LocalStageChrome.current.onGlass,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    // Measured first, so the title — the screen's name — takes the room it needs
+                    // and the source label gets what is left. The other way round, a 14-letter
+                    // label at 200 % text left "AR …" for a title on a 320 dp window (#4503).
+                    modifier = if (sourceLabel != null) Modifier else Modifier.weight(1f, fill = false),
                 )
+                if (sourceLabel != null) {
+                    // A label that does not fit whole is not drawn at all: half a word next to
+                    // the title says less than nothing. It stays in the pill's content description.
+                    var sourceLabelCut by remember { mutableStateOf(false) }
+                    Text(
+                        text = sourceLabel,
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                        color = LocalStageChrome.current.onGlassMuted,
+                        maxLines = 1,
+                        softWrap = false,
+                        onTextLayout = { sourceLabelCut = it.hasVisualOverflow },
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .layout { measurable, constraints ->
+                                val placeable = measurable.measure(constraints)
+                                if (sourceLabelCut) {
+                                    layout(0, 0) {}
+                                } else {
+                                    layout(placeable.width, placeable.height) {
+                                        placeable.place(0, 0)
+                                    }
+                                }
+                            }
+                            // The gap to the title belongs to the label: it goes when the label does.
+                            .padding(start = SceneViewTokens.Space.sm),
+                    )
+                }
+            }
+            if (DemoSettings.qaMode) {
+                // Tappable QA pill: tap to disable — a single-tap escape hatch for a
+                // user who toggled QA mode from the settings sheet by accident (#951).
+                // Text is exactly `" QA ×"`: the rendering suite keys on it.
+                GlassPill(
+                    modifier = Modifier
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                        ) {
+                            haptic.medium()
+                            DemoSettings.qaMode = false
+                        }
+                        .testTag(DemoScaffoldTestTags.QA_PILL),
+                ) {
+                    Text(
+                        text = " QA ×",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = LocalStageChrome.current.onGlass,
+                        maxLines = 1,
+                    )
+                }
             }
         }
+        GlassIconButton(
+            icon = Icons.Outlined.Fullscreen,
+            contentDescription = stringResource(R.string.demo_full_screen_cd),
+            onClick = onFullScreen,
+            modifier = Modifier.testTag(DemoScaffoldTestTags.FULL_SCREEN),
+        )
     }
 }
 
@@ -1891,6 +2011,9 @@ internal const val FIRST_FRAME_SCRIM_TIMEOUT_MS = 12_000L
  * without relying on accessibility-tree heuristics.
  */
 object DemoScaffoldTestTags {
+    /** The identity row's full-screen button, and the one way back from full screen (#4558). */
+    const val FULL_SCREEN = "demo-full-screen"
+    const val FULL_SCREEN_EXIT = "demo-full-screen-exit"
     /** The dock's Controls item — historically the settings FAB; the name is the contract. */
     const val SETTINGS_FAB = "demo-settings-fab"
     const val SETTINGS_SHEET = "demo-settings-sheet"
@@ -1974,6 +2097,14 @@ class DemoBottomOverlayScope internal constructor(
      * call sites keep compiling and laying out identically.
      */
     val settingsFabReservedSpace: Dp,
+    /**
+     * The air the scaffold keeps between the slot's bottom edge and the dock: the reserve under
+     * the slot is deliberately taller than the dock band, so a card reads as stacked above the
+     * dock. A thin bar that belongs *with* the dock — a timeline, a scrubber — sinks by
+     * `dockGap - Space.sm` (`Modifier.offset`) and rests one small gutter above it instead
+     * (#4379). `0.dp` once a large font has grown the dock into the reserve.
+     */
+    val dockGap: Dp = 0.dp,
 ) : ColumnScope by columnScope
 
 /**
@@ -1994,9 +2125,12 @@ class DemoBottomOverlayScope internal constructor(
  * reports does not jump while the sheet is up, and the demo's overlay state survives.
  */
 @Composable
+@Suppress("LongParameterList") // one private slot renderer, every argument named at its two call sites
 private fun BoxScope.DemoBottomOverlay(
     reservedBottom: Dp,
+    dockGap: Dp,
     faded: Boolean,
+    shown: Boolean,
     onBandHeightChanged: (Int) -> Unit,
     status: String?,
     content: (@Composable DemoBottomOverlayScope.() -> Unit)?,
@@ -2009,12 +2143,46 @@ private fun BoxScope.DemoBottomOverlay(
         animationSpec = SceneViewTokens.Motion.fade(),
         label = "bottom-overlay-under-sheet",
     )
+    // Hidden with the chrome (#4379), the band leaves the composition: nothing invisible takes a
+    // tap. The scaffold keeps the last height it measured, so the scene does not reflow.
+    AnimatedVisibility(
+        visible = shown,
+        enter = fadeIn(SceneViewTokens.Motion.fade()),
+        exit = fadeOut(SceneViewTokens.Motion.fade()),
+        modifier = Modifier.align(Alignment.BottomCenter),
+    ) {
+        DemoBottomOverlayBand(
+            reservedBottom = reservedBottom,
+            dockGap = dockGap,
+            bandAlpha = { bandAlpha },
+            onBandHeightChanged = onBandHeightChanged,
+            status = status,
+            content = content,
+            footer = footer,
+            onFooterWidthChanged = onFooterWidthChanged,
+            onContentHeightChanged = onContentHeightChanged,
+        )
+    }
+}
+
+@Composable
+@Suppress("LongParameterList") // the band of [DemoBottomOverlay], split off its visibility wrapper
+private fun DemoBottomOverlayBand(
+    reservedBottom: Dp,
+    dockGap: Dp,
+    bandAlpha: () -> Float,
+    onBandHeightChanged: (Int) -> Unit,
+    status: String?,
+    content: (@Composable DemoBottomOverlayScope.() -> Unit)?,
+    footer: (@Composable ColumnScope.() -> Unit)?,
+    onFooterWidthChanged: (Int) -> Unit,
+    onContentHeightChanged: (Int) -> Unit,
+) {
     Column(
         modifier = Modifier
-            .align(Alignment.BottomCenter)
             .fillMaxWidth()
             .onSizeChanged { onBandHeightChanged(it.height) }
-            .graphicsLayer { alpha = bandAlpha }
+            .graphicsLayer { alpha = bandAlpha() }
             .windowInsetsPadding(
                 WindowInsets.safeDrawing.only(
                     WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom
@@ -2043,7 +2211,7 @@ private fun BoxScope.DemoBottomOverlay(
                 }
             }
             if (content != null) {
-                DemoBottomOverlayScope(this, 0.dp).content()
+                DemoBottomOverlayScope(this, 0.dp, dockGap).content()
             }
             if (footer != null) {
                 // A Column of its own only so the scaffold's pills can be measured apart from
@@ -2151,25 +2319,32 @@ class DemoTopOverlayScope internal constructor(
 @Composable
 private fun BoxScope.DemoTopOverlay(
     reservedTop: Dp,
+    shown: Boolean,
     onBandHeightChanged: (Int) -> Unit,
     content: @Composable DemoTopOverlayScope.() -> Unit,
 ) {
-    Column(
-        modifier = Modifier
-            .align(Alignment.TopCenter)
-            .fillMaxWidth()
-            .onSizeChanged { onBandHeightChanged(it.height) }
-            .windowInsetsPadding(
-                WindowInsets.safeDrawing.only(
-                    WindowInsetsSides.Horizontal + WindowInsetsSides.Top
-                )
-            )
-            .padding(top = reservedTop)
-            .testTag(DemoScaffoldTestTags.TOP_OVERLAY),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(OVERLAY_STACK_SPACING),
+    AnimatedVisibility(
+        visible = shown,
+        enter = fadeIn(SceneViewTokens.Motion.fade()),
+        exit = fadeOut(SceneViewTokens.Motion.fade()),
+        modifier = Modifier.align(Alignment.TopCenter),
     ) {
-        DemoTopOverlayScope(this, 0.dp).content()
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .onSizeChanged { onBandHeightChanged(it.height) }
+                .windowInsetsPadding(
+                    WindowInsets.safeDrawing.only(
+                        WindowInsetsSides.Horizontal + WindowInsetsSides.Top
+                    )
+                )
+                .padding(top = reservedTop)
+                .testTag(DemoScaffoldTestTags.TOP_OVERLAY),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(OVERLAY_STACK_SPACING),
+        ) {
+            DemoTopOverlayScope(this, 0.dp).content()
+        }
     }
 }
 
@@ -2201,6 +2376,71 @@ private fun DemoSettingsSheet(
     modifier: Modifier = Modifier,
     recording: Boolean = false,
     onRecord: (() -> Unit)? = null,
+) {
+    // #4504: the sheet's glass runs down to the window's bottom edge at every detent, but its
+    // content only ends above the navigation bar once the sheet is fully up (the
+    // `navigationBarsPadding` below). At the low detent, or mid-drag, whatever row the window
+    // edge happened to cut — a slider, a button row — sat on the gesture bar or under the
+    // 3-button bar. So the content is clipped at the top of the navigation bar wherever the
+    // sheet rests, and a guard over that strip takes the touches meant for the system: nothing
+    // interactive lies in the inset, and the glass still reads as one sheet down to the edge.
+    // With gesture navigation the band the system keeps for its swipe (mandatory gestures,
+    // 32 dp on a Pixel) is taller than the bar it draws (24 dp): the taller of the two counts.
+    val density = LocalDensity.current
+    val navigationBarPx = maxOf(
+        WindowInsets.navigationBars.getBottom(density),
+        WindowInsets.mandatorySystemGestures.getBottom(density),
+    )
+    // Bottom of the part of the sheet above that band, in the sheet's own pixels.
+    var clearBottomPx by remember { mutableFloatStateOf(Float.MAX_VALUE) }
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .onGloballyPositioned { coordinates ->
+                val windowHeight = coordinates.findRootCoordinates().size.height
+                clearBottomPx = windowHeight - coordinates.positionInRoot().y - navigationBarPx
+            },
+    ) {
+        DemoSettingsSheetColumn(
+            controlsContent = controlsContent,
+            haptic = haptic,
+            onReset = onReset,
+            onResetSettings = onResetSettings,
+            onClose = onClose,
+            recording = recording,
+            onRecord = onRecord,
+            modifier = Modifier.drawWithContent {
+                clipRect(bottom = clearBottomPx) { this@drawWithContent.drawContent() }
+            },
+        )
+        if (navigationBarPx > 0) {
+            Box(
+                modifier = Modifier
+                    // Until the first placement the bound is "no bound": keep the guard
+                    // off-screen without overflowing an Int.
+                    .offset { IntOffset(0, clearBottomPx.coerceAtMost(Short.MAX_VALUE.toFloat()).toInt()) }
+                    .fillMaxWidth()
+                    .height(with(density) { navigationBarPx.toDp() })
+                    .pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) awaitPointerEvent().changes.forEach { it.consume() }
+                        }
+                    },
+            )
+        }
+    }
+}
+
+@Composable
+private fun DemoSettingsSheetColumn(
+    controlsContent: (@Composable ColumnScope.() -> Unit)?,
+    haptic: SceneViewHaptic,
+    onReset: (() -> Unit)?,
+    onResetSettings: (() -> Unit)?,
+    onClose: () -> Unit,
+    recording: Boolean,
+    onRecord: (() -> Unit)?,
+    modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier
@@ -2267,6 +2507,20 @@ private fun DemoSettingsSheet(
                 .navigationBarsPadding()
                 .padding(bottom = SceneViewTokens.Space.lg),
         ) {
+            // A Labs demo leads its sheet with the ask: testers are why it ships at all.
+            val labsDemo = LocalSampleId.current in LABS_DEMO_IDS
+            if (labsDemo) {
+                LabsFeedbackPrompt(
+                    onClick = {
+                        haptic.selection()
+                        io.github.sceneview.demo.feedback.FeedbackOpenRequest.request()
+                    },
+                    modifier = Modifier
+                        .padding(horizontal = SceneViewTokens.Space.md)
+                        .padding(bottom = SceneViewTokens.Space.md)
+                        .testTag(DemoScaffoldTestTags.FEEDBACK_ACTION),
+                )
+            }
             if (controlsContent != null) {
                 // A demo's controls grow and shrink on their own — a section expands,
                 // a slider appears only once its toggle is on. Without this the sheet
@@ -2313,7 +2567,7 @@ private fun DemoSettingsSheet(
                 )
             }
             val feedbackCd = stringResource(R.string.feedback_action_cd)
-            SheetActionRow(
+            if (!labsDemo) SheetActionRow(
                 icon = Icons.Outlined.Feedback,
                 label = feedbackCd,
                 contentDescription = feedbackCd,

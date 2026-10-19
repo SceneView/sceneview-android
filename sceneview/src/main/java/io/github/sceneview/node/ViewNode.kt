@@ -40,6 +40,7 @@ import com.google.android.filament.Texture
 import io.github.sceneview.EngineDestroyQueue
 import io.github.sceneview.collision.HitResult
 import io.github.sceneview.loaders.MaterialLoader
+import io.github.sceneview.matchToneMapInverse
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Size
 import io.github.sceneview.math.worldToLocalDirection
@@ -250,6 +251,7 @@ class ViewNode(
             val old = field
             field = value
             setMaterialInstanceAt(0, value)
+            value.matchToneMapInverse(collisionSystem?.view)
             materialLoader.destroyMaterialInstance(old)
         }
 

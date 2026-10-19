@@ -172,18 +172,18 @@ class ArDebugFramingRevealTest {
         val pose = OrbitPose(Position(0f, 0f, 0f), 0f, ArDebugFraming.MAP_ELEVATION, distance = 9f)
         val box = ScanBox(0.3f, -3.2f, baseY = 0f, yaw = 0f, length = 1.4f, depth = 0.6f, height = 0.8f)
         val orbit = orbit(pose).apply { hold() }
-        assertEquals("no slide: where the camera is", pose, orbit.heading)
+        assertEquals("no slide: where the camera is", pose, orbit.restingPose)
         val to = reveal(pose, box, listOf(CHROME))
         orbit.glideTo(to)
-        assertEquals(to, orbit.heading)
+        assertEquals(to, orbit.restingPose)
 
         // Placed for the slide's end from its first frame: the same pixels until it is over.
-        val born = ScanObjectMeshes.drawnSpan(box, orbit.scanCamera(orbit.heading))!!
+        val born = ScanObjectMeshes.drawnSpan(box, orbit.scanCamera(orbit.restingPose))!!
         val now = ScanObjectMeshes.drawnSpan(box, orbit.scanCamera())!!
         assertTrue("it would have jumped ${born.second - now.second} px", born.second - now.second > PIXELS)
         orbit.update(FRAME)
         assertTrue("under way", orbit.pose != to)
-        assertEquals(born, ScanObjectMeshes.drawnSpan(box, orbit.scanCamera(orbit.heading)))
+        assertEquals(born, ScanObjectMeshes.drawnSpan(box, orbit.scanCamera(orbit.restingPose)))
         repeat(GLIDE_FRAMES) { orbit.update(FRAME) }
         assertEquals(to, orbit.pose)
         assertEquals(born, ScanObjectMeshes.drawnSpan(box, orbit.scanCamera()))
@@ -319,7 +319,8 @@ class ArDebugFramingRevealTest {
     }
 
     private fun orbit(pose: OrbitPose) =
-        ArDebugOrbitCamera(initialPose = pose, drift = false, lift = LIFT).apply { setViewport(WIDTH, HEIGHT) }
+        ArDebugOrbitCamera(initialPose = pose, drift = false, band = OrbitBand.CARD.copy(lift = LIFT))
+            .apply { setViewport(WIDTH, HEIGHT) }
 
     private fun camera(pose: OrbitPose) = orbit(pose).scanCamera()
 

@@ -28,6 +28,7 @@ import io.github.sceneview.collision.CollisionSystem
 import io.github.sceneview.collision.HitResult
 import io.github.sceneview.collision.Matrix
 import io.github.sceneview.collision.TransformProvider
+import io.github.sceneview.gesture.Inertia
 import io.github.sceneview.gesture.MoveGestureDetector
 import io.github.sceneview.gesture.RotateGestureDetector
 import io.github.sceneview.gesture.ScaleGestureDetector
@@ -215,6 +216,26 @@ open class Node protected constructor(
      * delta, giving a noticeably smoother and more controlled feel.
      */
     var scaleGestureSensitivity: Float = 0.5f
+
+    /**
+     * How a drag, twist or pinch editing this node coasts once the finger lifts.
+     *
+     * [Inertia.Default] (the default): a flick keeps the node sliding, turning or growing at the
+     * finger's speed and slows down to a stop — a drag keeps following the surface under its
+     * coasting point, so an AR object stays on its plane and stops where the plane ends.
+     * [Inertia.None]: the node stops dead on release. A new touch always stops a coast.
+     *
+     * The node's `onMoveEnd` / `onRotateEnd` / `onScaleEnd` (and the editing listeners'
+     * `onEditingEnd`) fire when the coast is over, i.e. once the node is at rest — an AR anchor is
+     * re-created where the node stopped, not where the finger lifted.
+     *
+     * Read on the node that owns the edit (the first editable one up the parent chain).
+     *
+     * ```kotlin
+     * ModelNode(modelInstance, isEditable = true, apply = { editingInertia = Inertia.None })
+     * ```
+     */
+    var editingInertia: Inertia = Inertia.Default
 
     /**
      * The visible state of this node.
