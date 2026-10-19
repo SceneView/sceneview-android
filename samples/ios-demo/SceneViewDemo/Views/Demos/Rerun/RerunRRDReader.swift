@@ -196,10 +196,8 @@ extension RerunRRDReader {
                         denseColors = nil
                     }
                     if let colors = try Self.last(chunk.uint32s("Points3D:colors")) { denseColors = colors }
-                    if let radii = try Self.last(chunk.floats("Points3D:radii")) {
-                        guard radii.count <= 1 else { throw Failure.malformed("dense radius count") }
-                        denseRadius = radii.first
-                    }
+                    // Android keeps the first radius of a multi-radius row (RerunRrdContents.kt).
+                    if let radius = try Self.last(chunk.floats("Points3D:radii"))?.first { denseRadius = radius }
 
                 case "world/points/live":
                     let positions = try chunk.floatVectors("Points3D:positions", size: 3)
@@ -442,12 +440,11 @@ extension RerunRRDReader {
             )
         }
 
-        /// Static dense data, with non-finite points omitted and mismatched colours refused.
+        /// Static dense data, with non-finite points omitted. Colours whose count differs from
+        /// the point count are ignored (every point white), as Android does.
         private func denseCloud() throws -> RerunDenseCloud? {
             guard let positions = densePositions else { return nil }
-            if let colors = denseColors, colors.count != positions.count {
-                throw Failure.malformed("dense color count")
-            }
+            let denseColors = self.denseColors.flatMap { $0.count == positions.count ? $0 : nil }
             let kept = positions.indices.filter { Self.isFinite(positions[$0]) }
             guard !kept.isEmpty else { return nil }
             let colors: [SIMD3<UInt8>] = kept.map { i in

@@ -62,7 +62,12 @@ final class RerunRRDReaderTests: XCTestCase {
         let pack = try RerunPack.load(manifest: scan.manifest, log: scan.log, media: scan.media, title: "Dense")
         XCTAssertTrue(pack.trace.isEmpty)
         let dense = try XCTUnwrap(pack.dense)
-        XCTAssertEqual(dense.positions, [SIMD3(0, 0, 0), SIMD3(1, 2, 3)])
+        // `.svscan` v2 quantizes positions to the millimetre grid: compare within half a step.
+        let expected: [SIMD3<Float>] = [SIMD3(0, 0, 0), SIMD3(1, 2, 3)]
+        XCTAssertEqual(dense.positions.count, expected.count)
+        for (got, want) in zip(dense.positions, expected) {
+            XCTAssertLessThanOrEqual(simd_reduce_max(simd_abs(got - want)), 0.0005, "\(got) vs \(want)")
+        }
         XCTAssertEqual(dense.colors, [SIMD3(10, 20, 30), SIMD3(255, 0, 0)])
         XCTAssertEqual(dense.voxelM / 2, 0.015, accuracy: 1e-7)
         let root = try XCTUnwrap(JSONSerialization.jsonObject(with: scan.manifest) as? [String: Any])
@@ -90,14 +95,21 @@ final class RerunRRDReaderTests: XCTestCase {
         XCTAssertEqual(reopened.dense, pack.dense)
     }
 
-    func testMalformedDenseColumnsFailWithoutCrashing() throws {
-        for chunk in [denseChunk(colors: [0xFFFFFFFF]), denseChunk(radii: [0.01, 0.02])] {
-            XCTAssertThrowsError(try RerunRRDReader.recording(from: denseStream([chunk]))) { error in
-                guard let failure = error as? RerunRRDReader.Failure, case .malformed = failure else {
-                    return XCTFail("Expected a typed malformed error, got \(error)")
-                }
-            }
-        }
+    func testDenseWithSeveralRadiiKeepsTheFirstLikeAndroid() throws {
+        let dense = try XCTUnwrap(densePack(denseStream([denseChunk(radii: [0.01, 0.02])])).dense)
+        XCTAssertEqual(dense.positions.count, 2)
+        XCTAssertEqual(dense.voxelM / 2, 0.01, accuracy: 1e-7)
+        XCTAssertEqual(dense.colors, [SIMD3(10, 20, 30), SIMD3(255, 0, 0)])
+    }
+
+    func testDenseWithMismatchedColorCountIgnoresColorsLikeAndroid() throws {
+        let dense = try XCTUnwrap(densePack(denseStream([denseChunk(colors: [0xFFFFFFFF])])).dense)
+        XCTAssertEqual(dense.positions.count, 2)
+        XCTAssertEqual(dense.colors, [SIMD3(255, 255, 255), SIMD3(255, 255, 255)])
+        XCTAssertEqual(dense.voxelM / 2, 0.015, accuracy: 1e-7)
+    }
+
+    func testDenseWithoutPointsHasNothingToReplay() throws {
         XCTAssertThrowsError(try RerunRRDReader.recording(from: denseStream([denseChunk(positions: [], colors: [])]))) {
             XCTAssertEqual($0 as? RerunRRDReader.Failure, .nothingToReplay)
         }
