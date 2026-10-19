@@ -58,6 +58,7 @@ class RoomMeasure(val corners: FloatArray, val width: Float, val depth: Float, v
             val c = cos(yaw)
             val s = sin(yaw)
             val box = floatArrayOf(Float.MAX_VALUE, -Float.MAX_VALUE, Float.MAX_VALUE, -Float.MAX_VALUE)
+            val floorBox = floatArrayOf(Float.MAX_VALUE, -Float.MAX_VALUE, Float.MAX_VALUE, -Float.MAX_VALUE)
             for (plane in walls + floors) for (i in 0 until plane.vertexCount) {
                 val x = plane.polygon[i * 3]
                 val z = plane.polygon[i * 3 + 2]
@@ -67,7 +68,15 @@ class RoomMeasure(val corners: FloatArray, val width: Float, val depth: Float, v
                 box[0] = minOf(box[0], a); box[1] = maxOf(box[1], a)
                 box[2] = minOf(box[2], b); box[3] = maxOf(box[3], b)
             }
-            clampToWalls(box, walls, c, s)
+            for (floor in floors) for (i in 0 until floor.vertexCount) {
+                val x = floor.polygon[i * 3]
+                val z = floor.polygon[i * 3 + 2]
+                val a = x * c + z * s
+                val b = -x * s + z * c
+                floorBox[0] = minOf(floorBox[0], a); floorBox[1] = maxOf(floorBox[1], a)
+                floorBox[2] = minOf(floorBox[2], b); floorBox[3] = maxOf(floorBox[3], b)
+            }
+            clampToWalls(box, if (floors.isEmpty()) box else floorBox, walls, c, s)
             val minA = box[0]
             val minB = box[2]
             val width = box[1] - minA
@@ -101,11 +110,22 @@ class RoomMeasure(val corners: FloatArray, val width: Float, val depth: Float, v
          * `b = -x·s + z·c`) in to the outermost wall standing on that side, when one stands
          * inside the box's outer half there: what lies past the walls is floor ARCore grew
          * through them. A wall is read as the line it stands on — its mean across, over its
-         * length along — and only a wall at least [MIN_SIDE_M] long counts.
+         * length along — and only a wall at least [MIN_SIDE_M] long counts. A wall is boundary
+         * evidence only when its line is near that side of [floorBox], or it covers at least
+         * [BOUNDARY_WALL_SPAN_SHARE] of the perpendicular floor side; short interior partitions
+         * therefore do not cut the room.
          */
-        private fun clampToWalls(box: FloatArray, walls: List<DebugPlane>, c: Float, s: Float) {
-            val midA = (box[0] + box[1]) / 2f
-            val midB = (box[2] + box[3]) / 2f
+        private fun clampToWalls(
+            box: FloatArray,
+            floorBox: FloatArray,
+            walls: List<DebugPlane>,
+            c: Float,
+            s: Float,
+        ) {
+            val midA = (floorBox[0] + floorBox[1]) / 2f
+            val midB = (floorBox[2] + floorBox[3]) / 2f
+            val extentA = floorBox[1] - floorBox[0]
+            val extentB = floorBox[3] - floorBox[2]
             var lowA = Float.NaN
             var highA = Float.NaN
             var lowB = Float.NaN
@@ -128,16 +148,25 @@ class RoomMeasure(val corners: FloatArray, val width: Float, val depth: Float, v
                     sumB += b
                 }
                 val n = wall.vertexCount
-                val alongA = a1 - a0 >= b1 - b0
-                // A wall shorter than a room's side is a stub, not the room's edge.
-                if (maxOf(a1 - a0, b1 - b0) < MIN_SIDE_M) continue
+                val spanA = a1 - a0
+                val spanB = b1 - b0
+                val alongA = spanA >= spanB
+                val at = if (alongA) sumB / n else sumA / n
+                val axisMin = if (alongA) floorBox[2] else floorBox[0]
+                val axisMax = if (alongA) floorBox[3] else floorBox[1]
+                val axisExtent = if (alongA) extentB else extentA
+                val perpendicularExtent = if (alongA) extentA else extentB
+                val wallSpan = if (alongA) spanA else spanB
+                val nearEdge = minOf(abs(at - axisMin), abs(at - axisMax)) <=
+                    maxOf(BOUNDARY_WALL_TOLERANCE_M, axisExtent * BOUNDARY_WALL_TOLERANCE_SHARE)
+                val spansSide = wallSpan >= perpendicularExtent * BOUNDARY_WALL_SPAN_SHARE
+                // A short wall away from the floor's edge is a partition, not the room's edge.
+                if (wallSpan < MIN_SIDE_M || (!nearEdge && !spansSide)) continue
                 if (alongA) {
                     // Along a: a wall across b, on the line b = its mean.
-                    val at = sumB / n
                     if (at < midB) lowB = if (lowB.isNaN()) at else minOf(lowB, at)
                     else highB = if (highB.isNaN()) at else maxOf(highB, at)
                 } else {
-                    val at = sumA / n
                     if (at < midA) lowA = if (lowA.isNaN()) at else minOf(lowA, at)
                     else highA = if (highA.isNaN()) at else maxOf(highA, at)
                 }
@@ -171,6 +200,15 @@ class RoomMeasure(val corners: FloatArray, val width: Float, val depth: Float, v
 
         /** The floor is looked for up to this far over the lowest floor patch: under a seat. */
         const val GROUND_RISE_M = 0.6f
+
+        /** Absolute leeway for treating a wall line as lying on the floor polygon's boundary. */
+        private const val BOUNDARY_WALL_TOLERANCE_M = 0.5f
+
+        /** Large floors scale the wall-to-edge leeway to this share of the clamped axis. */
+        private const val BOUNDARY_WALL_TOLERANCE_SHARE = 0.15f
+
+        /** A wall away from an edge is boundary evidence only when it spans this share of the side. */
+        private const val BOUNDARY_WALL_SPAN_SHARE = 0.5f
 
         /**
          * The direction [planes] stand square to, in `[-π/4, π/4]`: each plane's edges vote

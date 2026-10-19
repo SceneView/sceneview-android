@@ -33,6 +33,8 @@ import io.github.sceneview.demo.demos.internal.RerunRrdReader
 import io.github.sceneview.demo.demos.internal.RerunSessionStore
 import io.github.sceneview.demo.demos.internal.RerunShareCopy
 import io.github.sceneview.demo.demos.internal.RerunStoredSession
+import io.github.sceneview.demo.demos.internal.ScanScope
+import io.github.sceneview.demo.demos.internal.ScanScopeCopy
 import io.github.sceneview.demo.demos.internal.ScanArchive
 import io.github.sceneview.demo.demos.internal.ScanDevice
 import io.github.sceneview.demo.demos.internal.SvpcCodec
@@ -184,11 +186,17 @@ internal suspend fun RerunSessionStore.landingSessions(): List<LandingSession> =
 
 /**
  * "Room · Sep 28, 2:32 PM": in English like the rest of the demo, whatever the phone's language —
- * a French phone wrote "Room · 30 sept., 13:56" into an English screen.
+ * a French phone wrote "Room · 30 sept., 13:56" into an English screen. Named after what was
+ * scanned (#4647): "Object · …", "Room 2 · …" for the second room of a home.
  */
-internal fun recordingTitle(nowMillis: Long, locale: Locale = Locale.US): String {
+internal fun recordingTitle(
+    nowMillis: Long,
+    scope: ScanScope = ScanScope.Room,
+    roomNumber: Int = 1,
+    locale: Locale = Locale.US,
+): String {
     val pattern = DateFormat.getBestDateTimePattern(locale, "MMMd jmm")
-    return RerunStoredSession.recordingTitle(SimpleDateFormat(pattern, locale).format(Date(nowMillis)))
+    return ScanScopeCopy.sessionTitle(scope, roomNumber, SimpleDateFormat(pattern, locale).format(Date(nowMillis)))
 }
 
 /** "Sep 28, 2:32 PM · Recorded", in English like [recordingTitle]. */

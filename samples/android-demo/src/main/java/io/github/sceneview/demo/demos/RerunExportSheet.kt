@@ -89,7 +89,10 @@ import io.github.sceneview.demo.demos.internal.formatFileSize
 import io.github.sceneview.demo.theme.SceneViewTokens
 import io.github.sceneview.demo.theme.SceneViewTokens.Space
 import io.github.sceneview.demo.theme.SceneViewTokens.Type
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -113,11 +116,14 @@ internal fun sampleCapturePack(context: Context): RerunCapturePack {
     )
 }
 
-/** Where one file stands: not asked for yet, being written, written, or failed. */
+/**
+ * Where one file stands: not asked for yet, being written, written, or failed. [Ready.note] and
+ * [Failed.note] say what happened to the model's light copy ([sharedRerunModel]).
+ */
 private sealed interface Prepared {
     data object Preparing : Prepared
-    data class Ready(val file: File) : Prepared
-    data object Failed : Prepared
+    data class Ready(val file: File, val note: RerunShareNote? = null) : Prepared
+    data class Failed(val note: RerunShareNote = RerunShareNote.Failed) : Prepared
 }
 
 /**
@@ -155,9 +161,13 @@ internal fun RerunExportSheet(
     suspend fun prepare(format: RerunExportFormat): File? {
         (states[format] as? Prepared.Ready)?.let { return it.file }
         states[format] = Prepared.Preparing
-        val file = runCatching { files.write(format) }.getOrNull()
-        states[format] = if (file != null) Prepared.Ready(file) else Prepared.Failed
-        return file
+        val written = runCatching { files.write(format) }
+            .onFailure { if (it is CancellationException) throw it }
+        states[format] = written.fold(
+            onSuccess = { Prepared.Ready(it.first, it.second) },
+            onFailure = { Prepared.Failed(RerunShareNote.of(it)) },
+        )
+        return written.getOrNull()?.first
     }
     var saving by remember { mutableStateOf<File?>(null) }
     val saved = stringResource(R.string.scan_export_saved)
@@ -198,8 +208,9 @@ internal fun RerunExportSheet(
                 val modelTitle = stringResource(R.string.scan_export_model)
                 ModelRow(
                     thumbnail = thumbnail,
-                    size = model?.glb?.size?.toLong() ?: (states[RerunExportFormat.Model] as? Prepared.Ready)
-                        ?.file?.length(),
+                    // The file written once it is, lighter than the model on screen; until then, the model.
+                    size = (states[RerunExportFormat.Model] as? Prepared.Ready)?.file?.length()
+                        ?: model?.glb?.size?.toLong(),
                     state = states[RerunExportFormat.Model],
                     onRetry = { scope.launch { prepare(RerunExportFormat.Model) } },
                 )
@@ -318,6 +329,14 @@ private fun ModelRow(thumbnail: ImageBitmap?, size: Long?, state: Prepared?, onR
                 style = Type.caption,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            (state as? Prepared.Ready)?.note?.let { note ->
+                Text(
+                    text = stringResource(note.message),
+                    style = Type.caption,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testTag(EXPORT_MODEL_NOTE_TAG),
+                )
+            }
             PreparedLine(state = state, onRetry = onRetry)
         }
     }
@@ -338,9 +357,9 @@ private fun PreparedLine(state: Prepared?, onRetry: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Prepared.Failed -> Row(verticalAlignment = Alignment.CenterVertically) {
+        is Prepared.Failed -> Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = stringResource(R.string.scan_export_failed),
+                text = stringResource(state.note.message),
                 style = Type.caption,
                 color = MaterialTheme.colorScheme.error,
             )
@@ -440,7 +459,7 @@ private fun FormatRow(format: RerunExportFormat, title: String, state: Prepared?
         }
         when (state) {
             Prepared.Preparing -> Unit
-            Prepared.Failed -> Icon(
+            is Prepared.Failed -> Icon(
                 Icons.Rounded.ErrorOutline,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.error,
@@ -483,21 +502,27 @@ private class RerunExportFiles(private val context: Context, private val source:
     private var capture: RerunCapturePack? = null
     private var scene: RerunExportScene? = null
 
-    suspend fun write(format: RerunExportFormat): File = lock.withLock {
-        // Encoding (JPEG, glTF, zip) is heavy: never on the main thread the sheet launches from.
+    /** [format]'s file, and — for the model — what there is to say about its light copy. */
+    suspend fun write(format: RerunExportFormat): Pair<File, RerunShareNote?> = lock.withLock {
+        var note: RerunShareNote? = null
+        // Encoding (JPEG, glTF, zip) and simplifying are heavy: never on the main thread the sheet
+        // launches from. Closing the sheet stops the simplification at its next progress step.
         val bytes = withContext(Dispatchers.Default) {
+            val job = coroutineContext.job
             when (format) {
-                RerunExportFormat.Model -> source.model?.invoke()?.glb
+                RerunExportFormat.Model -> source.model?.invoke()
+                    ?.let { model -> sharedRerunModel(model) { job.ensureActive() }.also { note = it.note }.glb }
                     ?: RerunGlbWriter.write(scene(), anchorModels(context, scene()), BitmapRerunImageCodec)
                 RerunExportFormat.Points -> RerunPlyWriter.write(scene())
                 RerunExportFormat.Scan -> RerunScanFile.write(capture())
                 RerunExportFormat.Recording -> RerunRrdWriter.write(scene(), BitmapRerunImageCodec)
             }
         }
-        withContext(Dispatchers.IO) {
+        val file = withContext(Dispatchers.IO) {
             val into = dir ?: freshExportDirectory(context).also { dir = it }
             File(into, format.fileName(source.title)).apply { writeBytes(bytes) }
         }
+        file to note
     }
 
     private suspend fun capture(): RerunCapturePack = capture
@@ -547,6 +572,7 @@ internal const val EXPORT_SHEET_TAG = "ar_rerun_export_sheet"
 internal const val EXPORT_SAVE_TAG = "ar_rerun_export_save"
 internal const val EXPORT_SHARE_TAG = "ar_rerun_export_share"
 internal const val EXPORT_MORE_TAG = "ar_rerun_export_more"
+internal const val EXPORT_MODEL_NOTE_TAG = "ar_rerun_export_model_note"
 internal const val EXPORT_FLOOR_PLAN_TAG = "ar_rerun_export_floor_plan"
 internal const val EXPORT_ROW_TAG_PREFIX = "ar_rerun_export_"
 

@@ -82,7 +82,6 @@ import io.github.sceneview.ar.arcore.hitTestDepth
 import io.github.sceneview.ar.rememberARCameraNode
 import io.github.sceneview.ar.rememberARCameraStream
 import io.github.sceneview.ar.rememberArGuidanceState
-import io.github.sceneview.ar.scene.PlaneRendererBase
 import io.github.sceneview.demo.ARCameraInitScrim
 import io.github.sceneview.demo.DemoScaffold
 import io.github.sceneview.demo.DockItem
@@ -446,9 +445,8 @@ fun ARMeasureDemo(onBack: () -> Unit) {
                 cameraStream = if (qaBackdrop) null else cameraStream,
                 cameraNode = cameraNode,
                 playbackDataset = arPlaybackDataset,
-                // The same V2 planes as every other AR demo, while the first point is sought.
+                // The same surface marks as every other AR demo, while the first point is sought.
                 planeRenderer = board.isEmpty,
-                planeRendererVersion = PlaneRendererBase.Version.V2,
                 sessionConfiguration = { configuredSession: Session, config: Config ->
                     config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
                     val supported = configuredSession.isDepthModeSupported(Config.DepthMode.AUTOMATIC)

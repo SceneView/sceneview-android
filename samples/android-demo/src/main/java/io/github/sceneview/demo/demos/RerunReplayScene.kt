@@ -32,7 +32,6 @@ import io.github.sceneview.demo.demos.internal.DenseCloud
 import io.github.sceneview.demo.demos.internal.DenseSurfels
 import io.github.sceneview.demo.demos.internal.MeasureDrawing
 import io.github.sceneview.demo.demos.internal.MeasureSize
-import io.github.sceneview.demo.demos.internal.MeasureUnitSystem
 import io.github.sceneview.demo.demos.internal.PlaneLayering
 import io.github.sceneview.demo.demos.internal.PointColorAtlas
 import io.github.sceneview.demo.demos.internal.ReplayGeometry
@@ -40,10 +39,10 @@ import io.github.sceneview.demo.demos.internal.ReplayManifest
 import io.github.sceneview.demo.demos.internal.RerunCapturePack
 import io.github.sceneview.demo.demos.internal.RerunReplayAssets
 import io.github.sceneview.demo.demos.internal.RoomMeasure
+import io.github.sceneview.demo.demos.internal.scanLabels
 import io.github.sceneview.demo.demos.internal.SteadyRoomMeasure
 import io.github.sceneview.demo.demos.internal.SvpcCodec
 import io.github.sceneview.demo.demos.internal.Vec3
-import io.github.sceneview.demo.demos.internal.formatMeasureLength
 import io.github.sceneview.demo.demos.internal.of
 import io.github.sceneview.demo.demos.internal.parseArDebugLog
 import io.github.sceneview.loaders.MaterialLoader
@@ -418,7 +417,7 @@ internal class ReplayLayers(
         val denseDrawn = denseNode != null && (media.liveDense == null || liveDenseShown != null)
         syncPoints(frame, pointStyle, show.points && !denseDrawn)
         syncShadows(frame, show.anchors)
-        syncPhotos(frame, show.trail)
+        syncPhotos(frame, show.cameras)
     }
 
     /**
@@ -455,11 +454,8 @@ internal class ReplayLayers(
         measure = room
         measureNode.isVisible = shown && room != null
         if (!measureNode.isVisible || room == null) return
-        // The same units and format as the Measure demo: metres or feet from the locale.
-        val locale = Locale.getDefault()
-        val units = MeasureUnitSystem.forLocale(locale)
-        val labels = formatMeasureLength(room.width, units, locale) to
-            formatMeasureLength(room.depth, units, locale)
+        // The floor plan's units (#4599): the plan this scan opens is in metres, so its replay is too.
+        val labels = room.scanLabels(Locale.getDefault())
         if (labels != measureLabels) {
             measureLabels = labels
             drawMeasureLabels(labels)
@@ -742,6 +738,8 @@ internal data class ReplayVisibility(
     val points: Boolean,
     val anchors: Boolean,
     val trail: Boolean,
+    /** The photos in the frusta the phone looked from ([DebugGroup.Cameras]). */
+    val cameras: Boolean = trail,
     /** The room's floor-plan dimensions ([RoomMeasure]), drawn with the planes. */
     val measure: Boolean = false,
     /** The dimensions over everything else: the map, where the room is read as a plan. */

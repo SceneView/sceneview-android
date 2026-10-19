@@ -121,6 +121,28 @@ class RoomMeasureTest {
     }
 
     @Test
+    fun `a short interior partition does not clamp the floor`() {
+        val ground = floor(1, 0f, 0f, 5f, 4f, 0f)
+        val partition = wall(2, 3f, 1.5f, 3f, 2.5f, 0f)
+
+        val measure = RoomMeasure.of(listOf(ground, partition), floorY)!!
+
+        assertEquals(5f, measure.width, 0.02f)
+        assertEquals(4f, measure.depth, 0.02f)
+    }
+
+    @Test
+    fun `a short outer wall slightly inside the floor still clamps it`() {
+        val ground = floor(1, 0f, 0f, 5f, 4f, 0f)
+        val outer = wall(2, 4.7f, 1.5f, 4.7f, 2.5f, 0f)
+
+        val measure = RoomMeasure.of(listOf(ground, outer), floorY)!!
+
+        assertEquals(4.7f, measure.width, 0.02f)
+        assertEquals(4f, measure.depth, 0.02f)
+    }
+
+    @Test
     fun `the room reads in the Measure units, metric or imperial`() {
         val measure = RoomMeasure.of(room(0f), floorY)!!
         // One format for every Measure figure: the same strings MeasureUnits gives a segment.

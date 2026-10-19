@@ -30,6 +30,7 @@ import io.github.sceneview.demo.demos.internal.ScanClock
 import io.github.sceneview.demo.demos.internal.ScanDevice
 import io.github.sceneview.demo.demos.internal.ScanIntrinsics
 import io.github.sceneview.demo.demos.internal.ScanDetail
+import io.github.sceneview.demo.demos.internal.ScanPreset
 import io.github.sceneview.demo.demos.internal.ScanProjection
 import io.github.sceneview.demo.demos.internal.YuvFrame
 import kotlinx.coroutines.CoroutineScope
@@ -75,6 +76,8 @@ internal class ScanCapture private constructor(
     private val scope: CoroutineScope,
     /** Whether the session runs ARCore's raw depth: the scan's tier. */
     val rawDepth: Boolean,
+    /** What is scanned decides the photo spacing, the depth kept and the model's voxel (#4647). */
+    val preset: ScanPreset = ScanPreset.ROOM,
 ) {
     /** The scan's trace; its journal is what [finish] saves. */
     val trace = ArDebugTrace().apply {
@@ -82,7 +85,7 @@ internal class ScanCapture private constructor(
         journal = ArrayList()
     }
 
-    private val gate = KeyframeGate()
+    private val gate = KeyframeGate(preset.photoStepM, preset.photoTurnDegrees, preset.maxPhotos)
     private val photoSize = ScanProjection.photoSize(lens, PHOTO_LONG_SIDE)
     private val jpegs = ConcurrentHashMap<String, ByteArray>()
     private val thumbnails = ConcurrentHashMap<String, Bitmap>()
@@ -100,7 +103,7 @@ internal class ScanCapture private constructor(
     private val fusing = AtomicBoolean(false)
     private var fuseJob: Job? = null
     // The final model's TSDF, fed the same depth copies on its own worker (RerunModelUi.kt).
-    private val model = if (rawDepth) RerunLiveModel() else null
+    private val model = if (rawDepth) RerunLiveModel(preset) else null
     private var lastDepthNanos: Long? = null
     private var loggedSizes = false
     private val logGate = IntervalGate(LOG_INTERVAL_NS)
@@ -305,7 +308,7 @@ internal class ScanCapture private constructor(
         fusing.set(true)
         fuseJob = scope.launch(Dispatchers.Default) {
             try {
-                val samples = DepthBackProjection.project(frame)
+                val samples = DepthBackProjection.project(frame, farM = preset.farM)
                 val stats = dense.add(samples)
                 intake.count(
                     when {
@@ -397,7 +400,12 @@ internal class ScanCapture private constructor(
          * A scan for the camera of [frame], or `null` while ARCore does not know its lens yet.
          * The photos keep the frame's orientation, portrait or landscape, for the whole scan.
          */
-        fun start(frame: Frame, scope: CoroutineScope, rawDepth: Boolean = false): ScanCapture? {
+        fun start(
+            frame: Frame,
+            scope: CoroutineScope,
+            rawDepth: Boolean = false,
+            preset: ScanPreset = ScanPreset.ROOM,
+        ): ScanCapture? {
             val camera = frame.camera
             val intrinsics = camera.imageIntrinsics.toScan() ?: return null
             val lens = ScanProjection.displayLens(
@@ -405,7 +413,7 @@ internal class ScanCapture private constructor(
                 camera.pose.toScanPose(),
                 camera.displayOrientedPose.toScanPose(),
             )
-            return ScanCapture(intrinsics, camera.textureIntrinsics.toScan(), lens, scope, rawDepth)
+            return ScanCapture(intrinsics, camera.textureIntrinsics.toScan(), lens, scope, rawDepth, preset)
         }
 
         /** 100 ms between two fused depth keyframes. */

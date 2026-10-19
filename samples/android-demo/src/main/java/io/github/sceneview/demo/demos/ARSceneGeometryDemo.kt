@@ -67,6 +67,7 @@ import io.github.sceneview.demo.common.toCloudServiceStatus
 import io.github.sceneview.demo.common.trackingFailureMessage
 import io.github.sceneview.demo.demos.internal.friendlyArSessionError
 import io.github.sceneview.demo.rememberArPlaybackDataset
+import io.github.sceneview.demo.demos.internal.rememberArMeshTintInstance
 import io.github.sceneview.demo.theme.SceneViewTokens
 import io.github.sceneview.demo.ui.overMediaEdge
 import io.github.sceneview.rememberEngine
@@ -81,12 +82,6 @@ private const val TAG = "ARStreetscapeDemo"
 // 15 s is long enough for a genuine outdoor VPS lookup to start returning meshes,
 // short enough that an indoor QA pass isn't left guessing for a full minute.
 private const val NO_GEOMETRY_HINT_DELAY_MS = 15_000L
-
-/**
- * Overlay opacity for the classified colours — semi-transparent so the camera feed and the
- * real-world structure remain visible through the coloured geometry.
- */
-private const val MESH_OVERLAY_ALPHA = 0.55f
 
 /**
  * The Streetscape mode of the `ar-geospatial-anchors` card: the Geospatial API's
@@ -131,24 +126,12 @@ fun ARStreetscapeDemo(onBack: () -> Unit) = GeospatialPermissionGate(
     // and the retired `ar-scene-mesh` link lands here expecting them.
     var colourByClassification by rememberSaveable { mutableStateOf(true) }
 
-    // Per-classification material instances — colour coded so TERRAIN and BUILDING read
-    // at a glance from the mesh overlay. Both hues come from the brand ramp
-    // (`SceneViewColors`, mirrored from DESIGN.md): they are the two ends of it, which is
-    // the pair that stays distinguishable over an arbitrary camera frame.
-    val terrainMaterial = rememberMaterialInstance(
-        materialLoader,
-        color = SceneViewColors.Primary.copy(alpha = MESH_OVERLAY_ALPHA),
-        metallic = 0.0f,
-        roughness = 1.0f,
-        reflectance = 0.0f,
-    )
-    val buildingMaterial = rememberMaterialInstance(
-        materialLoader,
-        color = SceneViewColors.TintSoft.copy(alpha = MESH_OVERLAY_ALPHA),
-        metallic = 0.0f,
-        roughness = 1.0f,
-        reflectance = 0.0f,
-    )
+    // Per-classification overlays — TERRAIN and BUILDING read at a glance. They tint the
+    // camera image instead of covering it (#4623): the old 55 %-alpha brand blue and lilac
+    // turned pastel over a bright wall once the AR view's Filmic tone mapper had its say.
+    // Blue ground, orange structure: the pair stays apart under colour-vision deficiencies.
+    val terrainMaterial = rememberArMeshTintInstance(materialLoader, SceneViewTokens.ArOverlay.meshGround)
+    val buildingMaterial = rememberArMeshTintInstance(materialLoader, SceneViewTokens.ArOverlay.meshStructure)
     // Switch off: one semi-transparent material for every geometry — the raw node carries
     // no classification, and pretending otherwise would erase what the switch shows.
     val plainMaterial = rememberMaterialInstance(
@@ -602,7 +585,7 @@ private fun GeospatialPermissionGate(
  * only its opacity moves with the theme.
  */
 @Composable
-private fun MeshClassificationLegend(modifier: Modifier = Modifier) {
+internal fun MeshClassificationLegend(modifier: Modifier = Modifier) {
     val shape = RoundedCornerShape(SceneViewTokens.Radius.lg)
     Column(
         modifier = modifier
@@ -623,11 +606,11 @@ private fun MeshClassificationLegend(modifier: Modifier = Modifier) {
             color = SceneViewTokens.ArOverlay.onScrimMuted,
         )
         LegendRow(
-            color = SceneViewColors.Primary,
+            color = SceneViewTokens.ArOverlay.meshGround,
             label = stringResource(R.string.demo_ar_scene_mesh_legend_terrain),
         )
         LegendRow(
-            color = SceneViewColors.TintSoft,
+            color = SceneViewTokens.ArOverlay.meshStructure,
             label = stringResource(R.string.demo_ar_scene_mesh_legend_building),
         )
     }

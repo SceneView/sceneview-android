@@ -47,8 +47,14 @@ fun rerunStatusUx(isConnected: Boolean, eventsSent: Long, eventsPerSecond: Float
         )
     }
 
-/** Heading of the settings-sheet section that holds [RERUN_SETUP_STEPS]. */
-const val RERUN_SETUP_TITLE: String = "Advanced: stream to a computer"
+/**
+ * The folded row that holds [RERUN_SETUP_TITLE] in debug builds (#4619): shell commands are for
+ * the people who build the app, never for the store app's settings sheet.
+ */
+const val RERUN_DEVELOPER_TITLE: String = "Developer tools"
+
+/** Heading of the section, under [RERUN_DEVELOPER_TITLE], that holds [RERUN_SETUP_STEPS]. */
+const val RERUN_SETUP_TITLE: String = "Stream to a computer"
 
 /** One numbered step of "Connect your computer"; [command] is shown in a mono block. */
 data class RerunSetupStep(val text: String, val command: String? = null)

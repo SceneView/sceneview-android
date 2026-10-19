@@ -82,12 +82,16 @@ class RerunTsdf(
     /**
      * Fuses [frame] — raw depth in millimetres, its confidence, a colour per pixel, the depth
      * image's own lens and the pose of the camera that took it — into the field. Pixels outside
-     * [[DepthBackProjection.NEAR_M], [DepthBackProjection.FAR_M]] or under [minConfidence] are
+     * [[DepthBackProjection.NEAR_M], [farM]] (by default [DepthBackProjection.FAR_M]) or under [minConfidence] are
      * skipped. Voxel-centric: every voxel of every block a ray ends in is projected into the
      * depth image, and takes the projective distance `depth − z` of the pixel it lands on.
      */
     @Suppress("CyclomaticComplexMethod", "LongMethod", "NestedBlockDepth", "LoopWithTooManyJumpStatements")
-    fun integrate(frame: DepthFrame, minConfidence: Int = DepthBackProjection.MIN_CONFIDENCE): TsdfIntegration {
+    fun integrate(
+        frame: DepthFrame,
+        minConfidence: Int = DepthBackProjection.MIN_CONFIDENCE,
+        farM: Float = DepthBackProjection.FAR_M,
+    ): TsdfIntegration {
         val w = frame.width
         val h = frame.height
         val depth = FloatArray(w * h)
@@ -95,7 +99,7 @@ class RerunTsdf(
         for (i in 0 until w * h) {
             val d = (frame.depthMm[i].toInt() and 0xFFFF) / MM_PER_M
             val c = frame.confidence?.let { it[i].toInt() and 0xFF } ?: FULL_CONFIDENCE
-            if (d in DepthBackProjection.NEAR_M..DepthBackProjection.FAR_M && c >= minConfidence) {
+            if (d in DepthBackProjection.NEAR_M..farM && c >= minConfidence) {
                 depth[i] = d
                 conf[i] = c / FULL_CONFIDENCE.toFloat()
             }

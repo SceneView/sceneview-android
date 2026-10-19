@@ -10,10 +10,10 @@
 # version than the runtime expected). See CLAUDE.md "Filament runtime ↔
 # .filamat ABI invariant" and CONTRIBUTING.md.
 #
-# Inventory (43 mats → 43 filamats), across THREE pinned toolchains:
+# Inventory (44 mats → 44 filamats), across THREE pinned toolchains:
 #   sceneview/src/main/materials/         (15) → sceneview/src/main/assets/materials/
-#   arsceneview/src/main/materials/        (9) → arsceneview/src/main/assets/materials/
-#   samples/android-demo/src/main/materials/ (15) → samples/android-demo/src/main/assets/materials/
+#   arsceneview/src/main/materials/        (8) → arsceneview/src/main/assets/materials/
+#   samples/android-demo/src/main/materials/ (17) → samples/android-demo/src/main/assets/materials/
 #   website-static/materials/              (3) → website-static/materials/     [filamentWebsite]
 #   sceneview-web/materials/               (1) → sceneview-web/materials/      [filamentWeb]
 #
@@ -31,8 +31,8 @@
 # fetch — both artifacts are committed and --check-diffed (#2646 P2).
 #
 # Usage:
-#   bash tools/GenerateFilamat.sh                 # regenerate all 43 filamats
-#   bash tools/GenerateFilamat.sh --check         # diff all 43 against committed blobs; exit 1 on drift
+#   bash tools/GenerateFilamat.sh                 # regenerate all 44 filamats
+#   bash tools/GenerateFilamat.sh --check         # diff all 44 against committed blobs; exit 1 on drift
 #   bash tools/GenerateFilamat.sh --mat <name>    # regenerate one (e.g. --mat opaque_colored)
 #   bash tools/GenerateFilamat.sh --ci-tolerant   # treat matc download failure as WARN, not FAIL
 #   bash tools/GenerateFilamat.sh --help
@@ -181,13 +181,13 @@ MATS=(
     "android-demo:pool_night_veil:samples/android-demo/src/main/materials/pool_night_veil.mat:samples/android-demo/src/main/assets/materials/pool_night_veil.filamat:--optimize-size -p mobile -a opengl -a vulkan"
     "android-demo:showroom_floor:samples/android-demo/src/main/materials/showroom_floor.mat:samples/android-demo/src/main/assets/materials/showroom_floor.filamat:--optimize-size -p mobile -a opengl -a vulkan"
     "android-demo:viewer_grid:samples/android-demo/src/main/materials/viewer_grid.mat:samples/android-demo/src/main/assets/materials/viewer_grid.filamat:--optimize-size -p mobile -a opengl -a vulkan"
+    "android-demo:ar_mesh_tint:samples/android-demo/src/main/materials/ar_mesh_tint.mat:samples/android-demo/src/main/assets/materials/ar_mesh_tint.filamat:--optimize-size -p mobile -a opengl -a vulkan"
     "arsceneview:camera_stream_depth:arsceneview/src/main/materials/camera_stream_depth.mat:arsceneview/src/main/assets/materials/camera_stream_depth.filamat:--optimize-size -p mobile -a opengl -a vulkan"
     "arsceneview:camera_stream_person_occlusion:arsceneview/src/main/materials/camera_stream_person_occlusion.mat:arsceneview/src/main/assets/materials/camera_stream_person_occlusion.filamat:--optimize-size -p mobile -a opengl -a vulkan"
     "arsceneview:camera_stream_flat:arsceneview/src/main/materials/camera_stream_flat.mat:arsceneview/src/main/assets/materials/camera_stream_flat.filamat:--optimize-size -p mobile -a opengl -a vulkan"
     "arsceneview:face_mesh:arsceneview/src/main/materials/face_mesh.mat:arsceneview/src/main/assets/materials/face_mesh.filamat:--optimize-size -p mobile -a opengl -a vulkan"
     "arsceneview:face_mesh_occluder:arsceneview/src/main/materials/face_mesh_occluder.mat:arsceneview/src/main/assets/materials/face_mesh_occluder.filamat:--optimize-size -p mobile -a opengl -a vulkan"
     "arsceneview:plane_renderer:arsceneview/src/main/materials/plane_renderer.mat:arsceneview/src/main/assets/materials/plane_renderer.filamat:--optimize-size -p mobile -a opengl -a vulkan"
-    "arsceneview:plane_renderer_v2:arsceneview/src/main/materials/plane_renderer_v2.mat:arsceneview/src/main/assets/materials/plane_renderer_v2.filamat:--optimize-size -p mobile -a opengl -a vulkan"
     "arsceneview:plane_renderer_shadow:arsceneview/src/main/materials/plane_renderer_shadow.mat:arsceneview/src/main/assets/materials/plane_renderer_shadow.filamat:--optimize-size -p mobile -a opengl -a vulkan"
     "arsceneview:shadow_receiver:arsceneview/src/main/materials/shadow_receiver.mat:arsceneview/src/main/assets/materials/shadow_receiver.filamat:--optimize-size -p mobile -a opengl -a vulkan"
 )
