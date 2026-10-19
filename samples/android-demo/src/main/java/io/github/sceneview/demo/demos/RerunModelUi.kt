@@ -1,88 +1,168 @@
 package io.github.sceneview.demo.demos
 
-import android.content.ClipData
-import android.content.Context
-import android.content.Intent
 import android.util.Log
-import androidx.annotation.StringRes
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.IosShare
+import androidx.compose.material.icons.rounded.Map
+import androidx.compose.material.icons.rounded.Replay
+import androidx.compose.material.icons.rounded.Stop
+import androidx.compose.material.icons.rounded._360
+import androidx.compose.material.icons.rounded.ViewInAr
+import androidx.compose.material.icons.rounded._3dRotation
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.core.content.FileProvider
+import com.google.android.filament.ColorGrading
+import com.google.android.filament.Engine
+import com.google.android.filament.Skybox
+import com.google.android.filament.ToneMapper
+import com.google.android.filament.utils.KTX1Loader
+import io.github.sceneview.DEFAULT_IBL_INTENSITY
+import io.github.sceneview.FrameRatePolicy
+import io.github.sceneview.SceneView
+import io.github.sceneview.SurfaceType
+import io.github.sceneview.createEnvironment
+import io.github.sceneview.demo.DemoScaffold
+import io.github.sceneview.demo.DockItem
+import io.github.sceneview.demo.LocalDemoSceneRestingCover
 import io.github.sceneview.demo.R
+import io.github.sceneview.demo.demoContentPadding
+import io.github.sceneview.demo.demos.internal.ArDebugFraming
+import io.github.sceneview.demo.demos.internal.ArDebugOrbitCamera
 import io.github.sceneview.demo.demos.internal.DenseCloud
+import io.github.sceneview.demo.demos.internal.DenseFusion
+import io.github.sceneview.demo.demos.internal.DepthBackProjection
 import io.github.sceneview.demo.demos.internal.DepthFrame
+import io.github.sceneview.demo.demos.internal.DollhouseFraming
+import io.github.sceneview.demo.demos.internal.DollhouseOpening
+import io.github.sceneview.demo.demos.internal.FramingInsets
 import io.github.sceneview.demo.demos.internal.RerunCapturePack
 import io.github.sceneview.demo.demos.internal.RerunMarchingCubes
 import io.github.sceneview.demo.demos.internal.RerunMeshGlb
+import io.github.sceneview.demo.demos.internal.RerunPointsMesh
+import io.github.sceneview.demo.demos.internal.RerunResultView
+import io.github.sceneview.demo.demos.internal.RerunScanModel
+import io.github.sceneview.demo.demos.internal.RerunSessionStore
 import io.github.sceneview.demo.demos.internal.RerunSyntheticRoom
 import io.github.sceneview.demo.demos.internal.RerunTsdf
+import io.github.sceneview.demo.demos.internal.ScanResultCinematics
+import io.github.sceneview.demo.isDemoCompactHeight
+import io.github.sceneview.demo.theme.LocalStageChrome
 import io.github.sceneview.demo.theme.SceneViewTokens
 import io.github.sceneview.demo.theme.SceneViewTokens.Space
-import io.github.sceneview.demo.ui.ConnectedChoiceRow
+import io.github.sceneview.demo.ui.overMediaEdge
+import io.github.sceneview.environment.Environment
+import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
-import java.io.File
-import java.util.UUID
-import java.util.concurrent.atomic.AtomicBoolean
+import io.github.sceneview.math.colorOf
+import io.github.sceneview.math.toLinearSpace
+import io.github.sceneview.model.model
+import io.github.sceneview.rememberEnvironment
+import io.github.sceneview.rememberRenderer
+import io.github.sceneview.rememberView
+import io.github.sceneview.utils.readBuffer
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.util.concurrent.atomic.AtomicBoolean
 
 /*
- * The scan's surface: the room as one meshed, coloured 3D model — its raw depth fused into a TSDF
- * ([RerunTsdf]) while it recorded, meshed by marching cubes ([RerunMarchingCubes]) on demand, drawn
- * by the replay's own 3D view (Points | Surface) and shared as a `.glb` ([RerunMeshGlb]).
+ * The 3D Scan's result: at the end of a scan, the space as one meshed, coloured 3D model — its raw
+ * depth fused into a TSDF ([RerunTsdf]) while it recorded, meshed by marching cubes
+ * ([RerunMarchingCubes]) when the scan stops, kept next to the scan ([RerunSessionStore.saveModel])
+ * and shown here, still, on the themed stage. Exported as a `.glb` ([RerunMeshGlb]).
  */
 
-/** What a room model is built from. */
+/** What a scan's model is built from. */
 internal sealed interface RerunModelSource {
-    /** The TSDF the recording fused from ARCore's raw depth, frame by frame: the full model. */
-    class Live(val tsdf: RerunTsdf) : RerunModelSource
+    /**
+     * The TSDF the recording fused from ARCore's raw depth, frame by frame: the full model.
+     * [cloud], the recording's coloured points, is the fallback when meshing finds no surface.
+     */
+    class Live(tsdf: RerunTsdf, val cloud: DenseCloud?) : RerunModelSource {
+        @Volatile
+        private var held: RerunTsdf? = tsdf
+
+        /** The fused depth; `null` once [release]d. */
+        val tsdf: RerunTsdf? get() = held
+
+        /**
+         * Lets the TSDF go (up to [RerunTsdf.MAX_BYTES]) once the model built from it is kept with
+         * its scan: reopened, the scan reads that model instead of meshing again.
+         */
+        fun release() {
+            held?.let(RerunLiveModels::forget)
+            held = null
+        }
+    }
 
     /** A kept scan's surfel cloud, when its raw depth is gone: the scan reopened later. */
     class Surfels(val cloud: DenseCloud) : RerunModelSource
 
-    /** QA only: the ray-cast room, the emulator's stand-in for a camera (it cannot run AR). */
-    data object Synthetic : RerunModelSource
+    /**
+     * QA only: the ray-cast room, the emulator's stand-in for a camera (it cannot run AR). With
+     * [meshFails], meshing is skipped, as if it had found no surface: the points fallback.
+     */
+    data class Synthetic(val meshFails: Boolean = false) : RerunModelSource
 
     companion object {
         /** The model [pack] can build: its live TSDF when this process recorded it, else [media]'s surfels. */
-        fun of(pack: RerunCapturePack?, media: RerunReplayMedia?): RerunModelSource? =
-            RerunLiveModels.find(pack)?.let(::Live)
-                ?: media?.dense?.cloud?.takeIf { it.normals != null && it.count > 0 }?.let(::Surfels)
+        fun of(pack: RerunCapturePack?, media: RerunReplayMedia?): RerunModelSource? {
+            val cloud = media?.dense?.cloud?.takeIf { it.count > 0 }
+            return RerunLiveModels.find(pack)?.let { Live(it, cloud) }
+                ?: cloud?.takeIf { it.normals != null }?.let(::Surfels)
+        }
     }
 }
 
@@ -122,7 +202,7 @@ internal class RerunLiveModel {
         job?.join()
     }
 
-    /** Keeps this TSDF for [pack], the scan it recorded, so its replay can build the model. */
+    /** Keeps this TSDF for [pack], the scan it recorded, so its result can build the model. */
     fun keepFor(pack: RerunCapturePack?) {
         if (pack != null && tsdf.frames > 0) RerunLiveModels.keep(pack, tsdf)
     }
@@ -144,9 +224,14 @@ internal object RerunLiveModels {
         pack ?: return null
         return kept?.takeIf { it.first.contentEquals(pack.manifest) }?.second
     }
+
+    /** Empties the slot when it holds [tsdf]. */
+    fun forget(tsdf: RerunTsdf) {
+        if (kept?.second === tsdf) kept = null
+    }
 }
 
-/** A built model: its `.glb`, its size, and what building it took. */
+/** A built mesh: its `.glb`, its size, and what building it took. */
 internal class RerunModelBuild(
     val glb: ByteArray,
     val bounds: FloatArray,
@@ -157,16 +242,15 @@ internal class RerunModelBuild(
     val budgetReached: Boolean,
 )
 
-/** Builds the model of [source] — fuse (unless done), mesh, write — reporting its share done to [progress]. */
+/** Meshes [source] — fuse (unless done), mesh, write — reporting its share done to [progress]. */
 internal fun buildRerunModel(source: RerunModelSource, progress: (Float) -> Unit): RerunModelBuild {
     val started = System.nanoTime()
-    Log.i(TAG, "model (${source::class.simpleName}): building")
     val (tsdf, minWeight) = when (source) {
-        is RerunModelSource.Live -> source.tsdf to LIVE_MIN_WEIGHT
+        is RerunModelSource.Live -> checkNotNull(source.tsdf) { "TSDF released" } to LIVE_MIN_WEIGHT
         is RerunModelSource.Surfels -> RerunTsdf().also { t ->
             t.integrateSurfels(source.cloud) { progress(it * FUSE_SHARE) }
         } to RerunMarchingCubes.DEFAULT_MIN_WEIGHT
-        RerunModelSource.Synthetic -> RerunTsdf().also { t ->
+        is RerunModelSource.Synthetic -> RerunTsdf().also { t ->
             val poses = RerunSyntheticRoom.poses()
             poses.forEachIndexed { i, pose ->
                 t.integrate(RerunSyntheticRoom.scene.render(pose))
@@ -203,265 +287,527 @@ internal fun buildRerunModel(source: RerunModelSource, progress: (Float) -> Unit
 }
 
 /**
- * The room's surface in the replay (#4306): asked for with the Points | Surface switch, built off
- * the main thread the first time, then kept — switching back and forth costs nothing. It is drawn
- * by the replay's own 3D view, under the same camera: there is no second screen to open.
+ * The scan's model: the meshed surface, or — when meshing finds none — the scan's coloured points
+ * as small squares ([RerunPointsMesh]). `null` when there is neither. Off the main thread.
+ *
+ * [progress] is also where a cancelled build stops: it may throw [CancellationException], which
+ * goes through untouched — a screen left mid-build stops meshing instead of racing the next one.
  */
-@Immutable
-internal class RerunSurfaceState(
-    /** Surface is the view asked for. */
-    val wanted: Boolean,
-    /** The build's share done, 0–1. */
-    val progress: Float,
-    /** The model on screen; `null` while it builds and when there is none to show. */
-    val build: RerunModelBuild?,
-    /** Why there is no surface, in the words shown: the points stay on screen. `null` while there may be one. */
-    val failure: String?,
-    /** The mesh, once built; on screen while [ReplaySurface.shown]. */
-    val surface: ReplaySurface?,
-) {
-    /** There is no surface to show, and [failure] says why. */
-    val failed: Boolean get() = failure != null
-
-    val building: Boolean get() = wanted && build == null && !failed
-
-    /** What the timeline card says instead of its gesture hint, while Surface is asked for. */
-    val caption: String?
-        get() = when {
-            !wanted -> null
-            failure != null -> failure
-            build == null -> ModelCopy.BUILDING
-            else -> ModelCopy.stats(build)
-        }
+internal fun buildScanModel(source: RerunModelSource, progress: (Float) -> Unit): RerunScanModel? {
+    val skipMesh = source is RerunModelSource.Synthetic && source.meshFails
+    val mesh = if (skipMesh) {
+        null
+    } else {
+        runCatching { buildRerunModel(source) { progress(it * MESH_PART) } }
+            .onFailure { if (it is CancellationException) throw it }
+            .onFailure { Log.w(TAG, "meshing failed", it) }
+            .getOrNull()
+            ?.takeIf { it.triangles > 0 }
+    }
+    if (mesh != null) {
+        progress(1f)
+        return RerunScanModel(
+            kind = RerunScanModel.Kind.Mesh,
+            glb = mesh.glb,
+            bounds = mesh.bounds,
+            triangles = mesh.triangles,
+            vertices = mesh.vertices,
+            budgetReached = mesh.budgetReached,
+        )
+    }
+    val cloud = when (source) {
+        is RerunModelSource.Live -> source.cloud
+        is RerunModelSource.Surfels -> source.cloud
+        is RerunModelSource.Synthetic -> syntheticCloud()
+    }?.takeIf { it.count > 0 }
+    val points = cloud?.let { RerunPointsMesh.of(it) }?.takeIf { it.triangleCount > 0 }
+    progress(1f)
+    points ?: return null
+    Log.i(TAG, "model: points fallback, ${cloud.count} points, ${points.triangleCount} triangles")
+    return RerunScanModel(
+        kind = RerunScanModel.Kind.Points,
+        glb = RerunMeshGlb.write(points),
+        bounds = RerunPointsMesh.framingBounds(points),
+        triangles = points.triangleCount,
+        vertices = points.vertexCount,
+    )
 }
 
-/** Why a replay has no surface to show. */
-internal enum class RerunSurfaceFailure(@StringRes val message: Int) {
-    /** The scan left nothing to mesh. */
-    PoorScan(R.string.demo_ar_rerun_surface_poor_scan),
+/** QA only: the ray-cast room's depth, fused into coloured points as a recording fuses them. */
+internal fun syntheticCloud(): DenseCloud {
+    val fusion = DenseFusion()
+    RerunSyntheticRoom.frames().forEach { fusion.add(DepthBackProjection.project(it)) }
+    return fusion.cloud(minViews = DenseFusion.MIN_VIEWS)
+}
 
-    /** Building the mesh, or loading it into the 3D view, ran out of memory. */
-    OutOfMemory(R.string.demo_ar_rerun_surface_out_of_memory),
+/** Where the result screen is: opening the model, showing it, or with none to show. */
+private sealed interface ModelState {
+    data object Loading : ModelState
 
-    /** The build failed, or the 3D view could not load what it built. */
-    Unavailable(R.string.demo_ar_rerun_surface_unavailable);
+    class Ready(val model: RerunScanModel) : ModelState
 
-    companion object {
-        /**
-         * The failure [error] is — `null` when nothing was thrown and the mesh simply came out
-         * empty. Only that one is the scan's doing: telling someone to scan more slowly when the
-         * phone ran out of memory sends them to redo a scan that was fine.
-         */
-        fun of(error: Throwable?): RerunSurfaceFailure = when (error) {
-            null -> PoorScan
-            is OutOfMemoryError -> OutOfMemory
-            else -> Unavailable
-        }
-    }
+    data object Failed : ModelState
 }
 
 /**
- * The surface of [source], built the first time it is [wanted] and once only: going back to Points
- * while it runs and asking again waits for the same build instead of starting a second one beside
- * it. Leaving the replay stops the build at its next progress step.
+ * A scan's result: its model, full screen and still on the themed stage, opened at a three-quarter
+ * angle that fits the geometry whole. Kept with the scan ([store], [id]) — reopened, it shows the
+ * same model without building it again; never kept, it is built from [source] and saved.
  *
- * What it keeps is the parsed model ([ReplaySurfaceModel]), loaded through [modelLoader] once the
- * build is done and freed with the replay: a 3D view that left the screen — Camera mode — comes
- * back with an instance of it instead of parsing the `.glb` again. A model instance cannot be kept
- * that way: the node that drew it takes it along.
+ * [onModel] hears the model once it is known (`null` when there is none), for the export sheet.
+ * [opened] is the kept model when the caller has already read it, so it is not read twice.
  */
 @Composable
-internal fun rememberRerunSurface(
+@Suppress("LongMethod", "LongParameterList", "CyclomaticComplexMethod")
+internal fun RerunModelScreen(
     source: RerunModelSource?,
-    wanted: Boolean,
+    title: String,
+    store: RerunSessionStore?,
+    id: String?,
+    onModel: (RerunScanModel?) -> Unit,
+    onBack: () -> Unit,
+    onRename: ((String) -> Unit)?,
+    onReplay: (() -> Unit)?,
+    onViewInAr: (() -> Unit)?,
+    onExport: () -> Unit,
+    engine: Engine,
     modelLoader: ModelLoader,
-): RerunSurfaceState {
-    var progress by remember(source, modelLoader) { mutableFloatStateOf(0f) }
-    var result by remember(source, modelLoader) { mutableStateOf<Result<RerunModelBuild>?>(null) }
-    var loaded by remember(source, modelLoader) { mutableStateOf<Result<ReplaySurfaceModel>?>(null) }
-    val asked by rememberUpdatedState(wanted)
-    LaunchedEffect(source, modelLoader) {
-        val from = source ?: return@LaunchedEffect
-        snapshotFlow { asked }.first { it }
-        val built = withContext(Dispatchers.Default) {
-            val job = coroutineContext.job
-            // The build is one blocking call. Once this screen is gone it is stopped at its next
-            // progress step, so leaving mid-build and coming back does not run two builds at once.
-            runCatching {
-                buildRerunModel(from) {
+    materialLoader: MaterialLoader,
+    hintStays: Boolean = false,
+    opened: RerunScanModel? = null,
+) {
+    var progress by remember(source, id) { mutableFloatStateOf(0f) }
+    val state by produceState<ModelState>(ModelState.Loading, source, id) {
+        val kept = opened ?: if (store != null && id != null) {
+            withContext(Dispatchers.IO) { runCatching { store.model(id) }.getOrNull() }
+        } else {
+            null
+        }
+        val model = kept ?: source?.let { from ->
+            withContext(Dispatchers.Default) {
+                val job = coroutineContext.job
+                val report = { share: Float ->
+                    progress = share
                     job.ensureActive()
-                    progress = it
                 }
-            }.onFailure {
-                if (it is CancellationException) {
-                    Log.i(TAG, "model: build stopped at ${(progress * PERCENT).toInt()} %, its screen left")
-                    throw it
-                }
+                runCatching { buildScanModel(from, report) }
+                    .onFailure { if (it is CancellationException) throw it }
+                    .onFailure { Log.w(TAG, "model build failed", it) }
+                    .getOrNull()
             }
         }
-        // Parsed here, once, on the main thread: not in the composition of the view that draws it,
-        // where every Camera → 3D return paid for it again.
-        val parsed = built.getOrNull()?.takeIf { it.triangles > 0 }?.let { build ->
-            runCatching { ReplaySurfaceModel(modelLoader, build.glb) }
+        // A model built now is kept with its scan, so the next open reads it instead of meshing again.
+        val keepAs = id?.takeIf { kept == null && store != null }
+        if (keepAs != null && model != null) {
+            val saved = withContext(Dispatchers.IO) {
+                runCatching { checkNotNull(store).saveModel(keepAs, model) }
+                    .onFailure { Log.w(TAG, "model not saved", it) }
+                    .isSuccess
+            }
+            if (saved) (source as? RerunModelSource.Live)?.release()
         }
-        (built.exceptionOrNull() ?: parsed?.exceptionOrNull())?.let { Log.w(TAG, "no surface", it) }
-        loaded = parsed
-        result = built
+        value = if (model != null) ModelState.Ready(model) else ModelState.Failed
     }
-    // Keyed like the state above: a new source, or leaving the replay, frees the model it kept.
-    DisposableEffect(source, modelLoader) { onDispose { loaded?.getOrNull()?.destroy() } }
+    val model = (state as? ModelState.Ready)?.model
+    LaunchedEffect(state) { if (state != ModelState.Loading) onModel(model) }
+    // Created before the SceneView, so released after its node (Compose forgets in reverse).
+    // On the main thread, as every Filament call (CLAUDE.md).
+    val instance = remember(model) {
+        model?.let { built ->
+            val buffer = ByteBuffer.allocateDirect(built.glb.size).order(ByteOrder.nativeOrder()).put(built.glb)
+            buffer.rewind()
+            runCatching { modelLoader.createModelInstance(buffer) }.getOrNull()
+        }
+    }
+    DisposableEffect(instance) { onDispose { instance?.let { modelLoader.destroyModel(it.model) } } }
+    // No drift: the camera holds still once the reveal has landed, until the user moves it.
+    val orbit = remember(source, id) { ArDebugOrbitCamera(drift = false) }
+    // The reveal, the 3D ↔ Plan crane and the tour (#4631), every one cut short by a touch.
+    val cinematics = remember(orbit) { ScanResultCinematics(orbit) }
+    // Read live by the framing below, so a toggle and the frame that flies to it agree.
+    var plan by remember(model) { mutableStateOf(false) }
+    var touring by remember(model) { mutableStateOf(false) }
+    var shown by remember(model) { mutableStateOf(false) }
+    var hintVisible by remember(model) { mutableStateOf(true) }
+    LaunchedEffect(shown, hintStays) {
+        if (shown && !hintStays) {
+            delay(HINT_MS)
+            hintVisible = false
+        }
+    }
+    var renaming by remember { mutableStateOf(false) }
+    val rename = onRename?.let { { renaming = true } }
 
-    val error = result?.exceptionOrNull() ?: loaded?.exceptionOrNull()
-    val model = loaded?.getOrNull()?.takeUnless { it.lost }
-    val failure = when {
-        result == null || model != null -> null
-        error != null -> RerunSurfaceFailure.of(error)
-        // Built and parsed, yet the view could draw no instance of it.
-        loaded != null -> RerunSurfaceFailure.Unavailable
-        else -> RerunSurfaceFailure.PoorScan
+    DemoScaffold(
+        title = stringResource(R.string.demo_ar_rerun_title),
+        onBack = onBack,
+        controls = {
+            Text(stringResource(R.string.scan_result_about), style = SceneViewTokens.Type.body)
+            if (rename != null) {
+                TextButton(onClick = rename) { Text(stringResource(R.string.scan_result_rename)) }
+            }
+        },
+        themedStage = true,
+        topOverlay = { ScanNameCard(title = title, saved = id != null, onRename = rename) },
+        bottomOverlay = {
+            when {
+                state == ModelState.Loading -> ModelStatusCard(
+                    text = stringResource(R.string.scan_result_creating),
+                    progress = { progress },
+                )
+                state == ModelState.Failed -> ModelStatusCard(text = stringResource(R.string.scan_result_failed))
+                model?.kind == RerunScanModel.Kind.Points ->
+                    ModelStatusCard(text = stringResource(R.string.scan_result_partial))
+                else -> Unit
+            }
+            // Laid out from the start and only faded: the model is framed above this slot, and a
+            // hint that came and went would move the model when it goes.
+            val hintShown = shown && hintVisible
+            val hintAlpha by animateFloatAsState(if (hintShown) 1f else 0f, label = "hint")
+            // Laid out from the start too, for the same reason; usable once the model is seen.
+            val tourReady = shown && instance != null
+            ScanTourPill(
+                touring = touring,
+                enabled = tourReady,
+                onClick = { cinematics.request(ScanResultCinematics.Request.ToggleTour) },
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .alpha(if (tourReady) 1f else 0f)
+                    .then(if (tourReady) Modifier else Modifier.clearAndSetSemantics { }),
+            )
+            ModelHint(
+                text = stringResource(R.string.scan_result_hint),
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .alpha(hintAlpha)
+                    .then(if (hintShown) Modifier else Modifier.clearAndSetSemantics { }),
+            )
+        },
+        dock = listOfNotNull(
+            // 3D and Plan are one camera move apart (Matterport's dollhouse ↔ floor plan); the
+            // selected one recenters, as the replay's 3D view does.
+            DockItem(
+                icon = Icons.Rounded._3dRotation,
+                label = stringResource(R.string.scan_result_3d_label),
+                caption = stringResource(R.string.scan_result_3d),
+                onClick = {
+                    plan = false
+                    cinematics.request(ScanResultCinematics.Request.Recenter)
+                },
+                enabled = instance != null,
+                selected = !plan,
+            ),
+            DockItem(
+                icon = Icons.Rounded.Map,
+                label = stringResource(R.string.scan_result_plan_label),
+                caption = stringResource(R.string.scan_result_plan),
+                onClick = {
+                    plan = true
+                    cinematics.request(ScanResultCinematics.Request.Recenter)
+                },
+                enabled = instance != null,
+                selected = plan,
+            ),
+            onReplay?.let {
+                DockItem(
+                    icon = Icons.Rounded.Replay,
+                    label = stringResource(R.string.scan_result_replay_label),
+                    caption = stringResource(R.string.scan_result_replay),
+                    onClick = it,
+                )
+            },
+            onViewInAr?.let {
+                DockItem(
+                    icon = Icons.Rounded.ViewInAr,
+                    label = stringResource(R.string.scan_place),
+                    onClick = it,
+                )
+            },
+        ),
+        dockAccent = DockItem(
+            icon = Icons.Rounded.IosShare,
+            label = stringResource(R.string.scan_result_export_label),
+            caption = stringResource(R.string.scan_result_export),
+            onClick = onExport,
+            enabled = state != ModelState.Loading,
+        ),
+    ) {
+        val chrome = LocalStageChrome.current
+        val environment = rememberModelEnvironment(engine, chrome.ground)
+        val view = rememberView(engine)
+        val colorGrading = remember(engine) { ColorGrading.Builder().toneMapper(ToneMapper.Linear()).build(engine) }
+        DisposableEffect(colorGrading) { onDispose { engine.destroyColorGrading(colorGrading) } }
+        // Before the first frame, not on it: the tone mapping is part of the first picture.
+        DisposableEffect(view, colorGrading) {
+            view.configureForDebug(colorGrading)
+            onDispose { }
+        }
+        val framing = remember(model, orbit) {
+            model?.let { DollhouseFraming(it.bounds, RerunResultView.ELEVATION, orbit.verticalFovDegrees) }
+        }
+        // The floor plan: the same room, the same turn, straight down from the map's elevation.
+        val planFraming = remember(model, orbit) {
+            model?.let { DollhouseFraming(it.bounds, ArDebugFraming.MAP_ELEVATION, orbit.verticalFovDegrees) }
+        }
+        val opening = remember(model, orbit) { DollhouseOpening() }
+        BoxWithConstraints(Modifier.fillMaxSize().background(chrome.ground)) {
+            // What the chrome leaves of the view at rest — below the name, above the dock, between
+            // the window's safe sides — less a gutter: the model opens whole in there (#4492). Held
+            // sideways there is no such band: the model takes the safe area, the glass over it.
+            val direction = LocalLayoutDirection.current
+            val safe = WindowInsets.safeDrawing.asPaddingValues()
+            val cover = if (isDemoCompactHeight()) {
+                safe
+            } else {
+                demoContentPadding(
+                    cover = LocalDemoSceneRestingCover.current,
+                    sceneHeight = maxHeight,
+                    left = safe.calculateLeftPadding(direction),
+                    right = safe.calculateRightPadding(direction),
+                )
+            }
+            val gutter = Space.md
+            val insets = FramingInsets(
+                left = (cover.calculateLeftPadding(direction) + gutter) / maxWidth,
+                top = (cover.calculateTopPadding() + gutter) / maxHeight,
+                right = (cover.calculateRightPadding(direction) + gutter) / maxWidth,
+                bottom = (cover.calculateBottomPadding() + gutter) / maxHeight,
+            )
+            // The view's shape from its constraints: the surface reports its size after composing.
+            val aspect = constraints.maxWidth.toFloat() / constraints.maxHeight.coerceAtLeast(1)
+            val home = rememberUpdatedState {
+                (if (plan) planFraming else framing)?.home(RerunResultView.AZIMUTH, aspect, insets)
+            }
+            SideEffect { home.value()?.let { opening.aim(orbit, it) } }
+            SceneView(
+                modifier = Modifier.matchParentSize(),
+                engine = engine,
+                modelLoader = modelLoader,
+                materialLoader = materialLoader,
+                surfaceType = SurfaceType.TextureSurface,
+                view = view,
+                renderer = rememberRenderer(engine),
+                isOpaque = true,
+                frameRatePolicy = FrameRatePolicy.Continuous(),
+                autoCenterContent = false,
+                environment = environment,
+                cameraManipulator = cinematics.manipulator,
+                onFrame = {
+                    val framed = home.value() ?: return@SceneView
+                    // The reveal starts on the frame the model is drawn on its framing, and the
+                    // view is let to be seen on its first frame, not the still one before it.
+                    if (cinematics.frameDrawn(opening, framed, ready = instance != null)) shown = true
+                    if (touring != cinematics.touring) touring = cinematics.touring
+                },
+            ) {
+                // The scan in its own world space, metres, Y up: framed by its bounds, not moved.
+                instance?.let { ModelNode(modelInstance = it, autoAnimate = false) }
+            }
+            // The ground until the model is drawn on its framing: no pose but that one is seen.
+            if (!shown) Box(Modifier.matchParentSize().background(chrome.ground).testTag(RERUN_MODEL_VEIL_TAG))
+        }
     }
-    val build = result?.getOrNull()?.takeIf { model != null }
-    val shown = wanted && source != null
-    val surface = remember(build, model, shown) {
-        if (build == null || model == null) return@remember null
-        // The synthetic room is not the sample's room: it stands alone, framed by its own box.
-        ReplaySurface(model, build.bounds, aligned = source !is RerunModelSource.Synthetic, shown = shown)
+    if (renaming && onRename != null) {
+        RenameDialog(
+            title = title,
+            onDismiss = { renaming = false },
+            onRename = {
+                renaming = false
+                onRename(it)
+            },
+        )
     }
-    return RerunSurfaceState(
-        wanted = shown,
-        progress = progress,
-        build = build,
-        failure = failure?.let { stringResource(it.message) },
-        surface = surface,
+}
+
+/** The scan's name, and where it is kept; a tap renames it. */
+@Composable
+private fun ScanNameCard(title: String, saved: Boolean, onRename: (() -> Unit)?) {
+    val chrome = LocalStageChrome.current
+    val shape = RoundedCornerShape(SceneViewTokens.Radius.lg)
+    val label = stringResource(R.string.scan_result_rename)
+    Box(Modifier.fillMaxWidth().padding(horizontal = Space.md), contentAlignment = Alignment.Center) {
+        Row(
+            modifier = Modifier
+                .widthIn(max = SceneViewTokens.ArOverlay.maxWidth)
+                .heightIn(min = SceneViewTokens.Layout.touchTarget)
+                .clip(shape)
+                .background(chrome.card, shape)
+                .overMediaEdge(shape, chrome.edgeRing, chrome.edgeHalo)
+                .then(
+                    if (onRename != null) {
+                        Modifier.clickable(role = Role.Button, onClickLabel = label, onClick = onRename)
+                    } else {
+                        Modifier
+                    },
+                )
+                .padding(horizontal = Space.md, vertical = Space.sm)
+                .testTag(RERUN_MODEL_NAME_TAG),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Space.sm),
+        ) {
+            Column(Modifier.weight(1f, fill = false)) {
+                Text(
+                    title,
+                    style = SceneViewTokens.Type.card,
+                    color = chrome.onCard,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (saved) {
+                    Text(
+                        stringResource(R.string.scan_result_saved),
+                        style = SceneViewTokens.Type.caption,
+                        color = chrome.onCardMuted,
+                    )
+                }
+            }
+            if (onRename != null) {
+                Icon(
+                    Icons.Rounded.Edit,
+                    contentDescription = null,
+                    tint = chrome.onCardMuted,
+                    modifier = Modifier.size(Space.lg),
+                )
+            }
+        }
+    }
+}
+
+/** What the model screen is doing, or why it shows less than a surface. */
+@Composable
+private fun ModelStatusCard(text: String, progress: (() -> Float)? = null) {
+    val chrome = LocalStageChrome.current
+    OverlayCard(testTag = RERUN_MODEL_CARD_TAG) {
+        Text(text, style = SceneViewTokens.Type.card, color = chrome.onCard)
+        if (progress != null) {
+            LinearProgressIndicator(
+                progress = progress,
+                modifier = Modifier.fillMaxWidth(),
+                color = chrome.accent,
+                trackColor = chrome.track,
+                drawStopIndicator = {},
+            )
+        }
+    }
+}
+
+/** The one-line gesture hint, a pill that leaves after a few seconds. */
+@Composable
+private fun ModelHint(text: String, modifier: Modifier = Modifier) {
+    val chrome = LocalStageChrome.current
+    val shape = RoundedCornerShape(SceneViewTokens.Radius.full)
+    Text(
+        text = text,
+        style = SceneViewTokens.Type.caption,
+        color = chrome.onCard,
+        modifier = modifier
+            .padding(top = Space.sm)
+            .clip(shape)
+            .background(chrome.card, shape)
+            .overMediaEdge(shape, chrome.edgeRing, chrome.edgeHalo)
+            .padding(horizontal = Space.md, vertical = Space.sm)
+            .testTag(RERUN_MODEL_HINT_TAG),
     )
 }
 
 /**
- * Points | Surface, a row of the replay's settings sheet (#4379): what the 3D view draws. The
- * surface builds on the first tap (its progress runs under the switch), its `.glb` is shared
- * from the button beside it, and a line under it says what the surface is doing — building,
- * failed, or its size.
- *
- * It headed a card over the stage; in the sheet it wears the sheet's own colours.
+ * Tour, and Stop while it plays (#4631): a pill in the stage's chrome over the model, beside
+ * which the hint is read — the one camera move the user asks for, never one that starts alone.
  */
 @Composable
-internal fun RerunSurfaceSwitch(
-    state: RerunSurfaceState,
-    onWanted: (Boolean) -> Unit,
-    title: String,
-    modifier: Modifier = Modifier,
-) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var sharing by remember { mutableStateOf(false) }
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(Space.xs)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
-            ConnectedChoiceRow(
-                options = listOf(false, true),
-                selected = state.wanted,
-                onSelect = onWanted,
-                label = { if (it) ModelCopy.SURFACE else ModelCopy.POINTS },
-                modifier = Modifier.weight(1f).testTag(RERUN_SURFACE_SWITCH_TAG),
-                optionTestTag = { if (it) RERUN_BUILD_MODEL_TAG else RERUN_POINTS_TAG },
-            )
-            val built = state.build
-            if (state.wanted && built != null) {
-                IconButton(
-                    onClick = {
-                        if (sharing) return@IconButton
-                        sharing = true
-                        scope.launch {
-                            shareModelFile(context, title, built.glb)
-                            sharing = false
-                        }
-                    },
-                    enabled = !sharing,
-                    modifier = Modifier.size(SceneViewTokens.Layout.touchTarget).testTag(RERUN_SHARE_MODEL_TAG),
-                ) {
-                    Icon(Icons.Rounded.IosShare, contentDescription = ModelCopy.SHARE)
-                }
-            }
-        }
-        if (state.building) {
-            LinearProgressIndicator(
-                progress = { state.progress },
+private fun ScanTourPill(touring: Boolean, enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val chrome = LocalStageChrome.current
+    val shape = RoundedCornerShape(SceneViewTokens.Radius.full)
+    val label = stringResource(R.string.scan_result_tour_label)
+    Row(
+        modifier = modifier
+            .heightIn(min = SceneViewTokens.Layout.touchTarget)
+            .clip(shape)
+            .background(chrome.card, shape)
+            .overMediaEdge(shape, chrome.edgeRing, chrome.edgeHalo)
+            .clickable(enabled = enabled, role = Role.Button, onClickLabel = label, onClick = onClick)
+            .padding(horizontal = Space.md, vertical = Space.sm)
+            .testTag(RERUN_MODEL_TOUR_TAG),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Space.sm),
+    ) {
+        Icon(
+            imageVector = if (touring) Icons.Rounded.Stop else Icons.Rounded._360,
+            contentDescription = null,
+            tint = chrome.onCard,
+            modifier = Modifier.size(SceneViewTokens.Layout.dockIconSize),
+        )
+        Text(
+            text = stringResource(if (touring) R.string.scan_result_tour_stop else R.string.scan_result_tour),
+            style = SceneViewTokens.Type.caption,
+            color = chrome.onCard,
+        )
+    }
+}
+
+@Composable
+private fun RenameDialog(title: String, onDismiss: () -> Unit, onRename: (String) -> Unit) {
+    var draft by remember { mutableStateOf(title) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.scan_result_rename_title)) },
+        text = {
+            OutlinedTextField(
+                value = draft,
+                onValueChange = { draft = it.take(NAME_MAX_LENGTH) },
+                singleLine = true,
+                label = { Text(stringResource(R.string.scan_result_rename_field)) },
                 modifier = Modifier.fillMaxWidth(),
-                drawStopIndicator = {},
             )
-        }
-        state.caption?.let { caption ->
-            Text(
-                caption,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.testTag(RERUN_SURFACE_CAPTION_TAG),
-            )
-        }
+        },
+        confirmButton = {
+            TextButton(onClick = { onRename(draft.trim()) }, enabled = draft.isNotBlank()) {
+                Text(stringResource(R.string.scan_result_rename_save))
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.scan_result_cancel)) } },
+    )
+}
+
+@Composable
+private fun rememberModelEnvironment(engine: Engine, ground: androidx.compose.ui.graphics.Color): Environment {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    return rememberEnvironment(engine, key = ground) {
+        val stage = colorOf(ground).toLinearSpace()
+        val bundle = KTX1Loader.createIndirectLight(
+            engine,
+            context.assets.readBuffer("environments/neutral/neutral_ibl.ktx"),
+        )
+        createEnvironment(
+            engine = engine,
+            indirectLight = bundle.indirectLight?.also { it.intensity = DEFAULT_IBL_INTENSITY },
+            skybox = Skybox.Builder().color(stage.x, stage.y, stage.z, 1f).build(engine),
+            // The bundle's cubemap leaves with the environment, after the light (#4358).
+            textures = listOfNotNull(bundle.cubemap),
+        )
     }
 }
 
-/** [glb] as `<title> model.glb` in a fresh cache directory, handed to the share sheet. */
-private suspend fun shareModelFile(context: Context, title: String, glb: ByteArray) {
-    val file = withContext(Dispatchers.IO) {
-        val shareRoot = rerunShareDirectory(context, RERUN_SHARE_MODEL)
-        // Only the latest shared file is kept: the share sheet has read it by the next share.
-        shareRoot.deleteRecursively()
-        val dir = File(shareRoot, UUID.randomUUID().toString()).apply { mkdirs() }
-        File(dir, ModelCopy.fileName(title)).apply { writeBytes(glb) }
-    }
-    val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-    val send = Intent(Intent.ACTION_SEND).apply {
-        type = RerunMeshGlb.MIME_TYPE
-        putExtra(Intent.EXTRA_STREAM, uri)
-        clipData = ClipData.newRawUri(file.name, uri)
-        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-    }
-    context.startActivity(Intent.createChooser(send, title).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-}
-
-/** The surface's words. */
-internal object ModelCopy {
-    const val POINTS = "Points"
-    const val SURFACE = "Surface"
-    const val BUILDING = "Building the surface of your room…"
-    const val SHARE = "Share"
-
-    /**
-     * What was built, on one line. It is named a preview — a short scan gives a coarse, patchy
-     * mesh — and it carries no size: the figures above measure the room squared to its walls, and
-     * the mesh's world-axis box beside them read as a second, different room.
-     */
-    fun stats(model: RerunModelBuild): String {
-        val triangles = if (model.triangles >= THOUSAND) "${model.triangles / THOUSAND}k" else "${model.triangles}"
-        return if (model.budgetReached) "$PREVIEW · partial, memory was full" else "$PREVIEW · $triangles triangles"
-    }
-
-    private const val PREVIEW = "Surface preview"
-
-    fun fileName(title: String): String {
-        val safe = title.replace(Regex("[^\\p{L}\\p{N} _-]"), "").trim().ifEmpty { "Room" }
-        return "$safe model.glb"
-    }
-
-    private const val THOUSAND = 1000
-}
-
-internal const val RERUN_SURFACE_SWITCH_TAG = "rerun_surface_switch"
-internal const val RERUN_POINTS_TAG = "rerun_points"
-internal const val RERUN_BUILD_MODEL_TAG = "rerun_build_model"
-internal const val RERUN_SHARE_MODEL_TAG = "rerun_share_model"
-internal const val RERUN_SURFACE_CAPTION_TAG = "rerun_surface_caption"
+internal const val RERUN_MODEL_CARD_TAG = "rerun_model_card"
+internal const val RERUN_MODEL_NAME_TAG = "rerun_model_name"
+internal const val RERUN_MODEL_HINT_TAG = "rerun_model_hint"
+internal const val RERUN_MODEL_TOUR_TAG = "rerun_model_tour"
+internal const val RERUN_MODEL_VEIL_TAG = "rerun_model_veil"
 
 private const val TAG = "RerunModel"
 private const val LOG_EVERY_FRAMES = 30
 private const val MB = 1024L * 1024L
 private const val KB = 1024
 private const val NS_PER_MS = 1_000_000L
-private const val PERCENT = 100
 
 /** A live TSDF voxel meshes once two medium-confidence views (or one sure one) agree on it. */
 private const val LIVE_MIN_WEIGHT = 1f
 private const val FUSE_SHARE = 0.5f
 private const val MESH_SHARE = 0.95f
+
+/** The mesh's share of the progress bar; the points fallback, when needed, takes the rest. */
+private const val MESH_PART = 0.9f
+
+/** How long the gesture hint stays once the model is on screen. */
+private const val HINT_MS = 4_000L
+private const val NAME_MAX_LENGTH = 80

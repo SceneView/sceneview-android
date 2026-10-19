@@ -173,6 +173,7 @@ internal class LandingSession(val info: RerunStoredSession, val thumbnail: Image
 
 /** Every kept session with its thumbnail, newest first. IO. */
 internal suspend fun RerunSessionStore.landingSessions(): List<LandingSession> = withContext(Dispatchers.IO) {
+    runCatching { sweepOrphans() }
     list().map { info ->
         val thumbnail = thumbnail(info.id)?.let { file ->
             runCatching { BitmapFactory.decodeFile(file.path)?.asImageBitmap() }.getOrNull()

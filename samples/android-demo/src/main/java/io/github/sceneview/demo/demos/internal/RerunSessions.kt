@@ -228,6 +228,20 @@ class RerunSessionStore(val root: File) {
         .sortedByDescending { it.createdAt }
 
     /**
+     * Deletes the directories a save cut short left behind — capture files, maybe a model, but no
+     * `session.json` — which [list] never shows and nothing else would ever free. Only those
+     * untouched for [graceMillis], so a save under way (its `session.json` comes last) is spared.
+     * Returns how many went.
+     */
+    fun sweepOrphans(nowMillis: Long = System.currentTimeMillis(), graceMillis: Long = ORPHAN_GRACE_MS): Int =
+        root.listFiles { file -> file.isDirectory }.orEmpty()
+            .filter { dir -> !File(dir, INFO).isFile && nowMillis - dir.lastTouched() >= graceMillis }
+            .count { it.deleteRecursively() }
+
+    private fun File.lastTouched(): Long =
+        maxOf(lastModified(), listFiles().orEmpty().maxOfOrNull { it.lastModified() } ?: 0L)
+
+    /**
      * A dense scan kept before its `session.json` counted the dense cloud (it counted ARCore's
      * sparse map, capped at 12k, while the scan HUD showed the cloud): its points read again from
      * its manifest, so the list says what the scan and its replay say.
@@ -251,6 +265,7 @@ class RerunSessionStore(val root: File) {
         title: String,
         source: RerunSessionSource,
         nowMillis: Long = System.currentTimeMillis(),
+        model: RerunScanModel? = null,
     ): RerunStoredSession {
         val opened = capture.open() ?: throw RerunImportFailure.Unreadable(title)
         // Whole seconds: `session.json` stores ISO 8601, so what `save` returns equals what `list` reads.
@@ -260,8 +275,49 @@ class RerunSessionStore(val root: File) {
         dir.mkdirs()
         for ((name, bytes) in capture.files()) writeAtomically(File(dir, name), bytes)
         opened.firstPhoto()?.let { runCatching { writeAtomically(File(dir, THUMBNAIL), it) } }
+        model?.let { writeModel(dir, it) }
         writeAtomically(File(dir, INFO), session.toJson().toByteArray())
         return session
+    }
+
+    /**
+     * Keeps [model] as session [id]'s result, next to its capture: `model.glb`, then `model.json`,
+     * so a model only reads back once it is whole.
+     *
+     * @throws IllegalStateException when the session is gone, or a file does not write.
+     */
+    fun saveModel(id: String, model: RerunScanModel) {
+        val dir = directoryOf(id)
+        check(File(dir, INFO).isFile) { "No session $id" }
+        writeModel(dir, model)
+    }
+
+    /**
+     * Session [id]'s result model; `null` when it has none — a scan kept before results were
+     * saved, or a save cut short — and the scan builds it again.
+     */
+    fun model(id: String): RerunScanModel? {
+        val dir = directoryOf(id)
+        return runCatching {
+            val info = File(dir, MODEL_INFO).takeIf { it.isFile }?.readText() ?: return null
+            val glb = File(dir, MODEL_GLB).takeIf { it.isFile }?.readBytes() ?: return null
+            RerunScanModel.parse(info, glb)
+        }.getOrNull()
+    }
+
+    /** Renames session [id] to [title] (trimmed); `null` when it is gone or [title] is blank. */
+    fun rename(id: String, title: String): RerunStoredSession? {
+        val name = title.trim().takeIf { it.isNotEmpty() } ?: return null
+        val info = File(directoryOf(id), INFO)
+        val session = runCatching { RerunStoredSession.parse(info.readText()) }.getOrNull() ?: return null
+        return session.copy(title = name).also { writeAtomically(info, it.toJson().toByteArray()) }
+    }
+
+    private fun writeModel(dir: File, model: RerunScanModel) {
+        // A stale `model.json` must never describe a new `model.glb` half-written next to it.
+        File(dir, MODEL_INFO).delete()
+        writeAtomically(File(dir, MODEL_GLB), model.glb)
+        writeAtomically(File(dir, MODEL_INFO), model.infoJson().toByteArray())
     }
 
     /** Session [id]'s capture; `null` when one of its three files is gone. */
@@ -331,7 +387,14 @@ class RerunSessionStore(val root: File) {
     companion object {
         const val INFO = "session.json"
         const val THUMBNAIL = "thumbnail.jpg"
+
+        /** The scan's result, [RerunScanModel]: its `.glb`, and what it is (written last). */
+        const val MODEL_GLB = "model.glb"
+        const val MODEL_INFO = "model.json"
         private const val PARTIAL = ".partial"
+
+        /** How long a directory without `session.json` is left alone: far longer than any save. */
+        const val ORPHAN_GRACE_MS = 60L * 60 * 1000
         private const val MILLIS = 1000L
     }
 }

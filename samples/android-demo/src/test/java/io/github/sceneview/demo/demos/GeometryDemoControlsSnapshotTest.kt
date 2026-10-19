@@ -14,6 +14,7 @@ import com.dropbox.differ.SimpleImageComparator
 import com.github.takahirom.roborazzi.RoborazziOptions
 import com.github.takahirom.roborazzi.captureRoboImage
 import io.github.sceneview.demo.demos.internal.GeometryDemoState
+import io.github.sceneview.demo.demos.internal.GeometryFinish
 import io.github.sceneview.demo.demos.internal.GeometryShape
 import io.github.sceneview.demo.theme.SceneViewDemoTheme
 import io.github.sceneview.demo.theme.SceneViewTokens
@@ -47,6 +48,7 @@ class GeometryDemoControlsSnapshotTest {
     @Composable
     private fun Controls(
         darkTheme: Boolean = false,
+        finish: GeometryFinish = GeometryFinish.Studio,
         metallic: Float = GeometryDemoState.DEFAULT_METALLIC,
         roughness: Float = GeometryDemoState.DEFAULT_ROUGHNESS,
     ) {
@@ -54,6 +56,7 @@ class GeometryDemoControlsSnapshotTest {
             Surface {
                 Box(modifier = Modifier.padding(SceneViewTokens.Space.md)) {
                     GeometryDemoControls(
+                        finish = finish, onFinishChange = {},
                         metallic = metallic, onMetallicChange = {},
                         roughness = roughness, onRoughnessChange = {},
                     )
@@ -64,7 +67,10 @@ class GeometryDemoControlsSnapshotTest {
 
     /** The chips as they stand on screen: over the dark stage, whatever the theme. */
     @Composable
-    private fun Chips(visibleShapes: Set<GeometryShape>) {
+    private fun Chips(
+        visibleShapes: Set<GeometryShape>,
+        finish: GeometryFinish = GeometryFinish.Studio,
+    ) {
         SceneViewDemoTheme(darkTheme = true) {
             Box(
                 modifier = Modifier
@@ -73,7 +79,7 @@ class GeometryDemoControlsSnapshotTest {
                     .padding(SceneViewTokens.Space.md),
                 contentAlignment = Alignment.Center,
             ) {
-                GeometryShapeChips(visibleShapes = visibleShapes, onToggle = {})
+                GeometryShapeChips(visibleShapes = visibleShapes, finish = finish, onToggle = {})
             }
         }
     }
@@ -96,7 +102,7 @@ class GeometryDemoControlsSnapshotTest {
         // slider-range change (e.g. swapping the upper bound from 1f to 100f) would
         // produce a visibly different slider thumb position and fail this snapshot.
         captureRoboImage("src/test/snapshots/geometry_controls_mirror.png") {
-            Controls(metallic = 1f, roughness = 0f)
+            Controls(finish = GeometryFinish.Uniform, metallic = 1f, roughness = 0f)
         }
     }
 
@@ -104,7 +110,7 @@ class GeometryDemoControlsSnapshotTest {
     fun controls_chalky_matte() {
         // metallic=0, roughness=1 = the "chalky matte" extreme.
         captureRoboImage("src/test/snapshots/geometry_controls_matte.png") {
-            Controls(metallic = 0f, roughness = 1f)
+            Controls(finish = GeometryFinish.Uniform, metallic = 0f, roughness = 1f)
         }
     }
 
@@ -125,6 +131,17 @@ class GeometryDemoControlsSnapshotTest {
             roborazziOptions = HOST_TOLERANT,
         ) {
             Chips(GeometryDemoState.ALL_SHAPES)
+        }
+    }
+
+    @Test
+    fun shapeChips_one_material() {
+        // In "One material" every dot is back to the shape's stage tone.
+        captureRoboImage(
+            "src/test/snapshots/geometry_shape_chips_uniform.png",
+            roborazziOptions = HOST_TOLERANT,
+        ) {
+            Chips(GeometryDemoState.ALL_SHAPES, finish = GeometryFinish.Uniform)
         }
     }
 

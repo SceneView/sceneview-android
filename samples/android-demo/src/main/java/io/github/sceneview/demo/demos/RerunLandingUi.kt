@@ -180,7 +180,7 @@ private fun LandingPage(state: RerunLandingState, actions: RerunLandingActions) 
 }
 
 /**
- * The landing's primary action: the camera in its well, "Record your room" and the privacy
+ * The landing's primary action: the camera in its well, "Start scanning" and the privacy
  * promise under it, on the accent fill.
  */
 @Composable
@@ -240,14 +240,14 @@ private fun GlassAction(icon: ImageVector, label: String, onClick: () -> Unit, m
     }
 }
 
-/** "Your sessions": the notice, the file being opened, then the cards — or the empty state. */
+/** "Your scans": the notice, the file being opened, then the cards — or the empty state. */
 @Composable
 private fun SessionsSection(state: RerunLandingState, actions: RerunLandingActions) {
     var confirming by remember { mutableStateOf<LandingSession?>(null) }
     var sharing by remember { mutableStateOf<LandingSession?>(null) }
     val context = LocalContext.current
     // A scan copy handed to Android earlier stays in the cache for the app that reads it; the
-    // next visit to Room Scan removes it, so no photo of a room outlives its share.
+    // next visit to 3D Scan removes it, so no photo of a room outlives its share.
     LaunchedEffect(Unit) { discardSharedScan(context) }
     val sessions = state.sessions
     Column(verticalArrangement = Arrangement.spacedBy(Space.sm)) {
@@ -310,7 +310,7 @@ private fun NoticeCard(text: String, onDismiss: () -> Unit) {
         IconButton(onClick = onDismiss) {
             Icon(
                 Icons.Rounded.Close,
-                contentDescription = stringResource(R.string.room_scan_close),
+                contentDescription = stringResource(R.string.scan_close),
                 tint = stage.onGlassMuted,
             )
         }
@@ -445,7 +445,7 @@ private fun SessionCard(
             }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.room_scan_place)) },
+                    text = { Text(stringResource(R.string.scan_place)) },
                     leadingIcon = { Icon(Icons.Outlined.ViewInAr, contentDescription = null) },
                     onClick = {
                         menu = false
@@ -454,7 +454,7 @@ private fun SessionCard(
                     modifier = Modifier.testTag(SESSION_VIEW_IN_AR_TAG),
                 )
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.room_scan_share)) },
+                    text = { Text(stringResource(R.string.scan_share)) },
                     leadingIcon = { Icon(Icons.Outlined.Share, contentDescription = null) },
                     onClick = {
                         menu = false

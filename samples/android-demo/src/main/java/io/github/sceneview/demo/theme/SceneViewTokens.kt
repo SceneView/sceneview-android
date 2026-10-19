@@ -24,14 +24,61 @@ import androidx.compose.ui.unit.sp
  * the translation it is.
  *
  * An immutable object fits these application-wide constants better than a
- * CompositionLocal: none of the source tokens varies with theme or composition.
+ * CompositionLocal: none of the source tokens varies with composition. The few that differ
+ * between light and dark ([Showroom], [DebugView]) are pairs of constants, and the screen
+ * that draws them picks one from the theme it is in.
  */
 @Immutable
 object SceneViewTokens {
-    /** Model-viewer stage, deliberately identical in light and dark themes. */
+    /**
+     * `stage-background`: the clear colour of a full-screen 3D stage, deliberately identical in
+     * light and dark themes. The Model Viewer draws a themed [Showroom] instead.
+     */
     object Stage {
         val background = Color(0xFF0B0F16)
     }
+
+    /**
+     * `DESIGN.md` — the studio showroom (`stage-studio-*`), shared with the web viewer's `/view`
+     * studio: the room the Model Viewer stands every model in. A seamless cyclorama — the pool of
+     * light under the subject, the floor carried into the horizon by the distance, the wall
+     * darkening towards the top — so the subject is the only thing with an edge.
+     *
+     * [Light] is a white photo studio (Apple product pages, Sketchfab's light scenes); [Dark]
+     * is a charcoal car showroom. The studio's lighting map (`studio_showroom_{light,dark}_2k.hdr`,
+     * the web viewer's too) is the same room, so what the subject reflects is what the viewer
+     * sees around it.
+     */
+    object Showroom {
+        /** White studio: a near-white pool, the wall a step greyer towards the top. */
+        val Light = ShowroomPalette(
+            top = Color(0xFFCDD3DB),
+            horizon = Color(0xFFE7EAEF),
+            floor = Color(0xFFF2F4F7),
+            pool = Color(0xFFFDFDFE),
+        )
+
+        /** Charcoal showroom: a blue-grey pool of light, the room falling to near-black above. */
+        val Dark = ShowroomPalette(
+            top = Color(0xFF0B0E13),
+            horizon = Color(0xFF222833),
+            floor = Color(0xFF2B323E),
+            pool = Color(0xFF3A4250),
+        )
+    }
+
+    /**
+     * `DESIGN.md` — `stage-grid-minor` / `stage-grid-major`: the ground grid every 3D viewer of
+     * the demo shares (#4651, `ViewerGroundGrid`). Colour and alpha both: the grid is drawn over
+     * the floor, never instead of it.
+     */
+    object ViewerGrid {
+        val LightMinor = Color(0x735C6780)
+        val LightMajor = Color(0xBF5C6780)
+        val DarkMinor = Color(0x388B95A6)
+        val DarkMajor = Color(0x738B95A6)
+    }
+
     /** `DESIGN.md` — Spatial Gallery overlay colours. */
     object SpatialGalleryColor {
         val stageScrimStart = Color.Transparent
@@ -360,6 +407,13 @@ object SceneViewTokens {
         val heroSubtitleMaxWidth = 260.dp
         val heroPillHeight = 44.dp
         val heroPillPaddingHorizontal = 18.dp
+        /**
+         * The arrow after the hero pill's label (#4622): the pill is the page's one action,
+         * and a bare word on a busy live stage read as a caption, not a button.
+         */
+        val heroPillIconSize = 18.dp
+        /** Gap between the hero pill's label and its arrow — `space-sm`. */
+        val heroPillIconGap = 8.dp
         val heroTopGap = 8.dp
         val chipRowTopGap = 28.dp
         val chipRowHeight = 40.dp
@@ -541,6 +595,14 @@ object SceneViewTokens {
         val scrimLight = Color(0xF0000000)
         val scrimDark = Color(0xE0000000)
         val onScrim = Color(0xFFFFFFFF)
+
+        /**
+         * `ar-camera-dim` — the veil over the live camera under 3D Scan's coloured cloud
+         * (#4628): dark enough that the cloud's own colours lead, light enough that what is
+         * not scanned yet still reads on the camera behind and guides the next move. Black
+         * at 55 % in both themes: the ground is the camera, not a `surface`.
+         */
+        val cameraDim = Color(0x8C000000)
 
         /**
          * `on-ar-scrim-dim` — secondary text on an AR overlay (labels, captions, the
@@ -735,21 +797,14 @@ object SceneViewTokens {
         /**
          * A phone on its side (#4306, #4379): under [compactStageHeight] the window has no height
          * to give a row above or under the room. The replay's timeline bar stands in the top
-         * corner, [compactCardWidth] wide; a scan in progress puts its 3D card on one side and
-         * its line on the other, the same width, and the shutter keeps the middle.
+         * corner, [compactCardWidth] wide, and the room keeps the middle.
          */
         val compactStageHeight = 500.dp
         val compactCardWidth = 280.dp
 
-        /**
-         * A scan in progress: the room being rebuilt is drawn on glass, over the camera it is
-         * made with. [liveGlass] is the stage's own ground at 60 % — the camera shows through
-         * it, and white on it still reads at 5:1 over a white wall. The card opens
-         * [liveCardShare] of the row wide, beside the scan's line, and grows to the whole row
-         * when tapped.
-         */
-        val liveGlass = Color(0x990B0F16)
-        const val liveCardShare = 0.44f
+        /** Picture-in-picture over the camera: portrait 3:4, like the phone it shows. */
+        val pipWidth = 128.dp
+        val pipHeight = 170.dp
     }
 
     /** `DESIGN.md` — Spacing scale (`space-*`). */

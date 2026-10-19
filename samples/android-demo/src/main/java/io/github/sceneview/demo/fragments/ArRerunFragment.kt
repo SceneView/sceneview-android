@@ -17,8 +17,6 @@ import io.github.sceneview.demo.demos.ARRerunDemo
  * Samples step 0 added `ar-record-playback` as the Session MP4 mode (`?tab=session-mp4`):
  * the ARCore session recorder and its replay, next to the Rerun stream of a session.
  *
- * Shown as "Room Scan" since #4306; the id, the mode keys and the deep link are unchanged.
- *
  * The card shows no mode switch: it opens on its first mode, and Session MP4 is reached by
  * deep link only (`?tab=session-mp4`, or the retired `ar-record-playback` id) — which is how
  * the replay harness and the instrumented playback tests open it.
@@ -37,11 +35,10 @@ object ArRerunFragment : DemoFragment {
         icon = Icons.Filled.Polyline,
         order = 12,
         addedIn = "4.0.1",
-        updatedIn = "4.52.0",
+        updatedIn = "4.57.0",
         tags = setOf(
-            "ar", "room", "scan", "mesh", "rerun", "replay", "3d", "streaming", "pose", "plane", "point cloud",
-            "debug",
-            "recording", "playback", "session",
+            "ar", "rerun", "replay", "3d", "streaming", "pose", "plane", "point cloud", "debug",
+            "recording", "playback", "session", "3d scan", "scan", "scanner", "capture",
         ),
     )
 

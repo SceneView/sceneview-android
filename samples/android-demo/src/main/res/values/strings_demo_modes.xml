@@ -10,8 +10,9 @@
     <string name="demo_mode_pip">PiP</string>
     <string name="demo_mode_balls">Balls</string>
     <string name="demo_mode_pendulum">Pendulum</string>
+    <string name="demo_mode_table">On your table</string>
     <!-- The demo's own name (`demo_ar_rerun_title`), written as it is everywhere else. -->
-    <string name="demo_mode_rerun">Room Scan</string>
+    <string name="demo_mode_rerun">3D Scan</string>
     <string name="demo_mode_session_mp4">Session MP4</string>
     <string name="demo_mode_cloud_anchors">Cloud anchors</string>
     <string name="demo_mode_collaborative">Collaborative</string>
@@ -21,4 +22,6 @@
     <string name="demo_mode_face">Face</string>
     <string name="demo_mode_inspect">Inspect</string>
     <string name="demo_mode_media">Media</string>
+    <string name="demo_mode_3d">3D</string>
+    <string name="demo_mode_ar">AR</string>
 </resources>

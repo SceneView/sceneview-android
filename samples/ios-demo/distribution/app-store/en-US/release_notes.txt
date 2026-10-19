@@ -1,5 +1,1 @@
-Turn your phone and your zoom stays: the camera keeps the distance you chose, and returns to it when you turn back.
-
-In Model Viewer, a model you pick lands at the right size, even while the picker is still closing.
-
-The Cosmos loading hint stays readable over the lit star.
+This update keeps the app in step with the latest SceneView release. Nothing changes in how you use it.

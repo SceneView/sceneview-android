@@ -78,7 +78,7 @@ import io.github.sceneview.demo.theme.SceneViewTokens.Space
 import io.github.sceneview.demo.ui.overMediaEdge
 
 /*
- * The chrome of the Room Scan replay (#4379): the room has the screen. One thin glass bar over
+ * The chrome of the 3D Scan replay (#4379): the room has the screen. One thin glass bar over
  * the dock carries the timeline — play, a filmstrip of the recorded frames that scrubs the 3D
  * view, the clock — and everything that is read once, the figures and the layer toggles, lives
  * in the settings sheet. The replay is a themed stage (#4080): the bar takes its card, text and
@@ -207,7 +207,7 @@ internal fun RerunCameraView(
         if (media.trace.imageCount == 0) {
             // A scan shared without its photos: the view says so instead of staying blank.
             Text(
-                text = stringResource(R.string.room_scan_no_photos),
+                text = stringResource(R.string.scan_no_photos),
                 style = SceneViewTokens.Type.body.copy(color = LocalStageChrome.current.onGlass),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.align(Alignment.Center).padding(Space.lg).testTag(RERUN_CAMERA_EMPTY_TAG),

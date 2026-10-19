@@ -99,15 +99,15 @@ internal fun RerunShareSheet(session: RerunStoredSession, onDismiss: () -> Unit)
             verticalArrangement = Arrangement.spacedBy(Space.md),
         ) {
             Text(
-                text = stringResource(R.string.room_scan_share),
+                text = stringResource(R.string.scan_share),
                 style = Type.title,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.semantics { heading() },
             )
             Text(
                 text = stringResource(
-                    if (includePhotos) R.string.room_scan_share_privacy
-                    else R.string.room_scan_share_privacy_without_photos,
+                    if (includePhotos) R.string.scan_share_privacy
+                    else R.string.scan_share_privacy_without_photos,
                 ),
                 style = Type.body,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -129,7 +129,7 @@ internal fun RerunShareSheet(session: RerunStoredSession, onDismiss: () -> Unit)
                         horizontalArrangement = Arrangement.spacedBy(Space.md),
                     ) {
                         Text(
-                            text = stringResource(R.string.room_scan_include_photos),
+                            text = stringResource(R.string.scan_share_include_photos),
                             style = Type.body,
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.weight(1f),
@@ -155,7 +155,7 @@ internal fun RerunShareSheet(session: RerunStoredSession, onDismiss: () -> Unit)
                     horizontalArrangement = Arrangement.spacedBy(Space.md),
                 ) {
                     Text(
-                        text = stringResource(R.string.room_scan_file_size),
+                        text = stringResource(R.string.scan_share_file_size),
                         style = Type.body,
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f),
@@ -163,8 +163,8 @@ internal fun RerunShareSheet(session: RerunStoredSession, onDismiss: () -> Unit)
                     Text(
                         text = when {
                             ready != null -> formatFileSize(ready.bytes)
-                            failed -> stringResource(R.string.room_scan_file_size_unknown)
-                            else -> stringResource(R.string.room_scan_share_preparing)
+                            failed -> stringResource(R.string.scan_share_file_size_unknown)
+                            else -> stringResource(R.string.scan_share_preparing)
                         },
                         style = Type.body,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -174,7 +174,7 @@ internal fun RerunShareSheet(session: RerunStoredSession, onDismiss: () -> Unit)
             }
             if (failed) {
                 Text(
-                    text = stringResource(R.string.room_scan_share_failed),
+                    text = stringResource(R.string.scan_share_failed),
                     style = Type.body,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -198,7 +198,7 @@ internal fun RerunShareSheet(session: RerunStoredSession, onDismiss: () -> Unit)
                 ) {
                     Icon(Icons.Outlined.Share, contentDescription = null)
                     Text(
-                        text = stringResource(R.string.room_scan_share),
+                        text = stringResource(R.string.scan_share),
                         style = Type.body.copy(fontWeight = FontWeight.SemiBold),
                         modifier = Modifier.padding(start = Space.sm),
                     )
@@ -210,7 +210,7 @@ internal fun RerunShareSheet(session: RerunStoredSession, onDismiss: () -> Unit)
                         .heightIn(min = SceneViewTokens.Layout.touchTarget),
                 ) {
                     Text(
-                        text = stringResource(R.string.room_scan_close),
+                        text = stringResource(R.string.scan_close),
                         style = Type.body.copy(fontWeight = FontWeight.SemiBold),
                     )
                 }

@@ -1,0 +1,2 @@
+<!-- category: Added -->
+- **Gestures coast after release ([#4653](https://github.com/sceneview/sceneview/pull/4653)).** A flick keeps the camera orbiting, panning or zooming, and keeps an edited node sliding along its surface, turning or growing, then slows to a stop like a native list fling; a new touch stops it. `rememberCameraManipulator(inertia = Inertia.None)` and `Node.editingInertia = Inertia.None` opt out. AR objects stay on their plane while coasting and re-anchor where they come to rest.
