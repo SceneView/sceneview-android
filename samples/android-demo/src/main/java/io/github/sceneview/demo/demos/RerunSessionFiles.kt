@@ -208,8 +208,8 @@ internal class PreparedScan(val includePhotos: Boolean, val file: File, val byte
  *
  * One copy at a time: each call replaces the previous one, and a call made while another is still
  * writing waits for it, so a switch flipped twice in a row never deletes a file being written.
- * The copy lives in its own directory of the share root ([RERUN_SHARE_SCAN]): the model and the
- * exports are written next to it, never over it.
+ * The copy lives in its own directory of the share root ([RERUN_SHARE_SCAN]): the exports and the
+ * plan are written next to it, never over it.
  */
 internal suspend fun prepareSharedScan(
     context: Context,
@@ -327,10 +327,10 @@ private fun InputStream.readBounded(): ByteArray {
 private const val SCAN_MIME_TYPE = "application/octet-stream"
 /** Scan files and exports handed to the share sheet; the FileProvider exposes only this. */
 internal const val RERUN_SHARE_DIR = "rerun-share"
-/** One directory per writer under [RERUN_SHARE_DIR]: the scan copy, the model, the exports. */
+/** One directory per writer under [RERUN_SHARE_DIR]: the scan copy, the exports, the plan. */
 internal const val RERUN_SHARE_SCAN = "scan"
-internal const val RERUN_SHARE_MODEL = "model"
 internal const val RERUN_SHARE_EXPORT = "export"
+internal const val RERUN_SHARE_PLAN = "plan"
 private const val MILLIS = 1000L
 private const val HEAD_BYTES = 64
 private const val BUFFER_BYTES = 64 * 1024
