@@ -137,6 +137,25 @@ class ScanObjectMeshesTest {
         assertEquals(1f, ray.dot(toPivot), 1e-5f)
     }
 
+    @Test
+    fun `with the settings sheet over the stage, a tap is cast through the squeezed picture`() {
+        val orbit = orbit(lift = LIFT)
+        // The sheet risen over the stage (#4564): the picture drawn smaller and higher (#4696).
+        orbit.squeeze = OrbitBand(halfWidth = 0.43f, halfHeight = 0.43f, lift = SQUEEZED_LIFT)
+        orbit.snapTo(orbit.pose)
+        assertTrue(orbit.shownScale < 1f)
+        val camera = orbit.scanCamera()
+
+        val eye = orbit.getTransform().position
+        assertEquals(eye.x, camera.eye.x, EPSILON)
+        assertEquals(eye.y, camera.eye.y, EPSILON)
+        assertEquals(eye.z, camera.eye.z, EPSILON)
+        // The pivot is drawn at the squeeze's lift, not the band's.
+        val (x, y) = camera.project(TARGET)!!
+        assertEquals(WIDTH / 2f, x, PIXEL)
+        assertEquals(HEIGHT / 2f - SQUEEZED_LIFT * HEIGHT, y, PIXEL)
+    }
+
     private fun orbit(lift: Float) = ArDebugOrbitCamera(
         initialPose = OrbitPose(
             target = Position(TARGET.x, TARGET.y, TARGET.z),
@@ -155,6 +174,7 @@ class ScanObjectMeshesTest {
         const val WIDTH = 1080
         const val HEIGHT = 2400
         const val LIFT = 0.12f
+        const val SQUEEZED_LIFT = 0.3f
         const val LABEL = 150
         const val GAP = 20
         val BAND = 600..1800

@@ -55,6 +55,7 @@ import io.github.sceneview.demo.demos.internal.ScanObjectMeshes
 import io.github.sceneview.demo.demos.internal.ScanObjects
 import io.github.sceneview.demo.demos.internal.ScanPick
 import io.github.sceneview.demo.demos.internal.ScanReveal
+import io.github.sceneview.demo.demos.internal.ScanTaps
 import io.github.sceneview.demo.demos.internal.scanCamera
 import io.github.sceneview.demo.theme.DebugPalette
 import io.github.sceneview.demo.theme.LocalStageChrome
@@ -113,8 +114,15 @@ internal class ScanObjectPick(
     engine: Engine,
     private val materialLoader: MaterialLoader,
     palette: DebugPalette,
-    private val scope: CoroutineScope,
+    parent: CoroutineScope,
 ) {
+    /**
+     * This picker's own coroutines, under the composition's [parent] scope: [destroy] cancels them,
+     * and a tap answered after it is dropped instead of uploaded into destroyed nodes (#4696).
+     */
+    private val taps = ScanTaps(parent)
+    private val scope = taps.scope
+
     // The selection wears the view's "present" colour, the live frustum's, in the two strengths
     // the palette already has: full for the box in view, the keyframes' faint one for the tint
     // and for the edges behind the room.
@@ -142,7 +150,6 @@ internal class ScanObjectPick(
 
     /** [ScanObjects.pick] keeps its scratch buffers: one tap at a time. */
     private val picking = Mutex()
-    private var taps = 0
     private var hintJob: Job? = null
 
     private var found: ScanPick.Found? = null
@@ -202,27 +209,29 @@ internal class ScanObjectPick(
     /** A single tap at ([x], [y]) of the view, in pixels: picks what is drawn under it. */
     fun tap(x: Float, y: Float) {
         orbit.hold()
-        val tap = ++taps
         hintJob?.cancel()
         tooLargeAt = Offset.Unspecified
         val shown = shownSurfels()
         if (shown == 0) {
+            taps.answered()
             show(ScanPick.Empty, Offset(x, y))
             return
         }
         val camera = orbit.scanCamera()
         val ray = camera.ray(x, y)
-        scope.launch {
-            val started = SystemClock.elapsedRealtimeNanos()
-            val pick = withContext(Dispatchers.Default) {
-                picking.withLock { objects.await()?.pick(camera.eye, ray, shown) }
-            } ?: ScanPick.Empty
-            // A later tap answers for this one.
-            if (tap != taps) return@launch
-            val millis = (SystemClock.elapsedRealtimeNanos() - started) / NANOS_PER_MILLI
-            Log.d(TAG, "tap answered in $millis ms: ${describe(pick)}")
-            show(pick, Offset(x, y))
-        }
+        val started = SystemClock.elapsedRealtimeNanos()
+        taps.tap(
+            work = {
+                withContext(Dispatchers.Default) {
+                    picking.withLock { objects.await()?.pick(camera.eye, ray, shown) }
+                } ?: ScanPick.Empty
+            },
+            show = { pick ->
+                val millis = (SystemClock.elapsedRealtimeNanos() - started) / NANOS_PER_MILLI
+                Log.d(TAG, "tap answered in $millis ms: ${describe(pick)}")
+                show(pick, Offset(x, y))
+            },
+        )
     }
 
     private fun show(pick: ScanPick, at: Offset) {
@@ -251,9 +260,11 @@ internal class ScanObjectPick(
      */
     fun sync(style: ArDebugStyle) {
         val found = found
-        // Said again here: the pick this one replaced let go of the turntable as it left.
-        orbit.steady = found != null
         val visible = found != null && found.surfels.isNotEmpty() && found.surfels.last() < shownSurfels()
+        // Said again here: the pick this one replaced let go of the turntable as it left. And held
+        // only while the box is drawn: with Points off, or scrubbed back to before the scan had
+        // found the object, nothing is on screen to be read, and the room turns again (#4696).
+        orbit.steady = visible
         if (visible != drawn) {
             drawn = visible
             nodes.forEach { it.isVisible = visible }
@@ -314,8 +325,8 @@ internal class ScanObjectPick(
     /** The material instances, once the nodes are gone; the [selection] stays with the replay. */
     fun destroy() {
         orbit.steady = false
-        hintJob?.cancel()
-        objects.cancel()
+        // The pick under way, the cloud's sort and the hint: none of them shows anything any more.
+        taps.cancel()
         listOf(tintMaterial, hiddenMaterial, edgeMaterial).forEach { materialLoader.destroyMaterialInstance(it) }
     }
 

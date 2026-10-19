@@ -209,14 +209,19 @@ data class ScanChrome(
  * eye and pedestal drop: where a tap's ray starts, and where a point of the room lands on screen.
  * With another [pose], the pinhole it would draw through from there — [ArDebugOrbitCamera.heading],
  * for what must already be where a slide ends.
+ *
+ * Drawn as [ArDebugOrbitCamera.getTransform] draws: from [ArDebugOrbitCamera.shownScale] times
+ * further back and at [ArDebugOrbitCamera.shownLift] — the settings sheet risen over the stage
+ * draws the room smaller and higher, and a tap there picks what is under the finger (#4696).
  */
 fun ArDebugOrbitCamera.scanCamera(pose: OrbitPose = this.pose): ScanCamera {
-    val at = CameraRig.eye(pose)
+    val drawn = pose.copy(distance = pose.distance / shownScale)
+    val at = CameraRig.eye(drawn)
     val eye = Vec3(at.x, at.y, at.z)
     val forward = (Vec3(pose.target.x, pose.target.y, pose.target.z) - eye).normalized()
     val up = forward.cross(Vec3.Up).normalized().cross(forward)
-    val metresPerPixel = CameraRig.worldPerPixel(pose.distance, verticalFovDegrees, viewportHeight)
-    val drop = up * (lift * viewportHeight * metresPerPixel)
+    val metresPerPixel = CameraRig.worldPerPixel(drawn.distance, verticalFovDegrees, viewportHeight)
+    val drop = up * (shownLift * viewportHeight * metresPerPixel)
     return ScanCamera(
         eye = eye - drop,
         forward = forward,
