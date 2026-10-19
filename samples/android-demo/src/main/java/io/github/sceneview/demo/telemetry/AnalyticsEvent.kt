@@ -8,8 +8,10 @@ package io.github.sceneview.demo.telemetry
  * Event and parameter names are snake_case and at most [MAX_NAME] characters, user-property
  * names at most [MAX_USER_PROPERTY_NAME] (GA4's limits); string values are cut to [MAX_VALUE]
  * characters by [params]. No event carries a model file, a pose, a camera
- * frame, free text typed by the user or anything else that could identify a person — the funnel
- * needs counts, not content.
+ * frame or anything else that could identify a person — the funnel needs counts, not content.
+ * The one piece of typed text is [Search]'s `search_term`, and only after [SearchTerm.normalize]
+ * has lowercased it, cut it to [SearchTerm.MAX_LENGTH] characters and redacted anything that
+ * looks like an email address, a link or a long number.
  * `sample_open`: `sample_id`, received `entry_id`, category slug, `source`, and optional umbrella `mode`.
  *
  * This is demo-app instrumentation. The SceneView SDK itself ships no telemetry
@@ -111,6 +113,18 @@ sealed class AnalyticsEvent(val name: String) {
         override fun rawParams() = mapOf("key" to key, "value" to value)
     }
 
+    /**
+     * A search the user settled on, as GA4's recommended `search` event so the term lands in the
+     * built-in "Search term" dimension. [term] comes out of [SearchTerm.normalize] (use
+     * [SearchLogger], never this constructor, from a screen); [resultBucket] is
+     * [SearchTerm.resultBucket].
+     */
+    data class Search(val term: String, val surface: SearchSurface, val resultBucket: String) :
+        AnalyticsEvent("search") {
+        override fun rawParams() =
+            mapOf("search_term" to term, "surface" to surface.value, "result_bucket" to resultBucket)
+    }
+
     companion object {
         /** GA4's cap on event and parameter names. */
         const val MAX_NAME = 40
@@ -186,4 +200,22 @@ enum class UserProperty(val key: String) {
 
     /** `true` | `false` — the Notifications setting AND the system permission. */
     NotifEnabled("notif_enabled"),
+}
+
+/**
+ * Crash-report keys: what the device renders with, read once at launch. Device facts only —
+ * never anything about the user or what they opened.
+ */
+enum class CrashKey(val key: String) {
+    /** `GL_RENDERER`, for example `Adreno (TM) 740`; `none` when no ES 3 context exists. */
+    GlRenderer("gl_renderer"),
+
+    /** `GL_VERSION`. */
+    GlVersion("gl_version"),
+
+    /** The ABIs the device supports, preferred first, for example `x86_64,arm64-v8a`. */
+    Abi("abi"),
+
+    /** `live` | `still` — whether the home hero renders or shows its picture. */
+    HeroSurface("hero_surface"),
 }

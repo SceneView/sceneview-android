@@ -191,14 +191,14 @@
       margin-bottom: 8px;
     }
 
-    .companies-content a:not(.adoption-org__link):not(.companies-button) {
+    .companies-content a:not(.companies-button) {
       color: var(--color-primary);
       text-decoration: underline;
       text-decoration-thickness: 1px;
       text-underline-offset: 2px;
     }
 
-    .companies-content a:not(.adoption-org__link):not(.companies-button):hover {
+    .companies-content a:not(.companies-button):hover {
       opacity: 0.85;
     }
 
@@ -280,30 +280,7 @@
     [data-theme="dark"] .companies-status--stable { background: rgba(86, 211, 100, 0.14); }
     [data-theme="dark"] .companies-status--alpha { background: rgba(188, 140, 255, 0.14); }
 
-    .companies-orgs {
-      background: var(--color-surface-container-lowest);
-      border-radius: 16px;
-      box-shadow: var(--shadow-card);
-      padding: 24px;
-      margin-top: 8px;
-    }
 
-    /* The shared org list keeps the home-page look, not the article's bullets. */
-    .companies-content .adoption__org-list {
-      list-style: none;
-      padding-left: 0;
-    }
-
-    .companies-content .adoption__org-list li {
-      margin-bottom: 0;
-      line-height: normal;
-    }
-
-    .companies-content .adoption__orgs-note {
-      font-size: 0.8125rem;
-      line-height: 1.5;
-      margin-bottom: 0;
-    }
 
     .companies-sponsor {
       display: flex;
@@ -351,7 +328,6 @@
       .companies-table { font-size: 0.8125rem; }
       .companies-table th,
       .companies-table td { padding: 8px 10px; }
-      .companies-orgs { padding: 18px; }
     }
   </style>
   <link href="assets/fonts/fonts.css" rel="stylesheet">
@@ -527,13 +503,8 @@
 
       <section id="adoption" aria-labelledby="adoption-title">
         <h2 id="adoption-title"><span class="material-symbols-outlined" aria-hidden="true">apartment</span>Where it shows up</h2>
-        <p>Private code is invisible from the outside, so this list only shows what teams published themselves.</p>
-        <div class="companies-orgs">
-          <h3 class="adoption__orgs-title">Found in public code and posts from teams at</h3>
-          <ul class="adoption__org-list" data-adoption-orgs></ul>
-          <p class="adoption__orgs-note">Each name links to that team&rsquo;s own public repository, library or blog post. A name here is not an endorsement.</p>
-        </div>
-        <p class="companies-source" style="margin-top:16px">More public numbers, with their sources, are on the <a href="/#metrics">home page</a>.</p>
+        <p>More than 700 public repositories on GitHub declare SceneView or its Sceneform predecessor. Private apps are invisible from the outside, and a team that ships SceneView under its Apache 2.0 license has not endorsed it, so this page names no company.</p>
+        <p class="companies-source">Source: GitHub code search, owners sceneview and ThomasGorisse excluded, checked on September 26, 2026. Stars, contributors, releases and npm downloads, with their links, are on the <a href="/#metrics">home page</a>.</p>
       </section>
 
       <section id="contact" aria-labelledby="contact-title">
@@ -548,7 +519,7 @@
 
       <section id="sponsor" aria-labelledby="sponsor-title">
         <h2 id="sponsor-title"><span class="material-symbols-outlined" aria-hidden="true">volunteer_activism</span>Support the project</h2>
-        <p>If SceneView is part of your product, a sponsorship helps keep releases frequent. Contributions are public on Open Collective.</p>
+        <p>If SceneView is part of your product, a sponsorship helps keep releases frequent. Contributions are public on Open Collective. <a href="/sponsors.html">How sponsorship works</a>: the tiers, what each one includes, and what a sponsorship does not buy.</p>
         <div class="companies-sponsor">
           <a class="companies-button" href="https://opencollective.com/sceneview" target="_blank" rel="noopener">Sponsor on Open Collective</a>
           <a href="https://github.com/sponsors/sceneview" target="_blank" rel="noopener">or through GitHub Sponsors</a>
@@ -582,6 +553,7 @@
             <li><a href="https://github.com/sceneview/sceneview" target="_blank" rel="noopener">GitHub</a></li>
             <li><a href="https://discord.gg/UbNDDBTNqb" target="_blank" rel="noopener">Discord</a></li>
             <li><a href="/companies.html">For companies</a></li>
+            <li><a href="/sponsors.html">Sponsors</a></li>
           </ul>
         </div>
         <div class="footer__col">
@@ -597,7 +569,6 @@
     </div>
   </footer>
 
-  <script src="assets/adoption-orgs.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

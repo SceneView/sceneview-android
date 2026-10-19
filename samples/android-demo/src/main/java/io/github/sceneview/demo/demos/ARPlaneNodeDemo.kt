@@ -40,6 +40,8 @@ import io.github.sceneview.demo.common.DemoStatusTone
 import io.github.sceneview.demo.common.ForceTrackingFailureMenu
 import io.github.sceneview.demo.common.ForcedTrackingFailure
 import io.github.sceneview.demo.rememberArPlaybackDataset
+import io.github.sceneview.demo.demos.internal.rememberArMeshTintInstance
+import io.github.sceneview.demo.theme.SceneViewTokens
 import io.github.sceneview.math.Size
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberMaterialLoader
@@ -102,11 +104,10 @@ fun ARPlaneNodeDemo(onBack: () -> Unit) {
         trackingFailureReason = failure,
     )
 
-    // Marker cube material — allocated once so toggling recompositions never leak a fresh
-    // MaterialInstance. Semi-opaque amber so it reads against most real-world surfaces.
-    val markerMaterial = remember(materialLoader) {
-        materialLoader.createColorInstance(Color(0xFF_FF_B3_00))
-    }
+    // Marker cube material — allocated once so recompositions never leak a fresh
+    // MaterialInstance. `ar-mesh-ground`, tinting the camera image (#4623): the plane is the
+    // ground ARCore found, and the colour holds over a white floor as over a dark one.
+    val markerMaterial = rememberArMeshTintInstance(materialLoader, SceneViewTokens.ArOverlay.meshGround)
 
     DemoScaffold(
         title = stringResource(R.string.demo_ar_plane_node_title),

@@ -406,6 +406,9 @@ fun AutoPlacementScene(
     // old glyph kept sweeping over that card's copy and its Try again button (#3986).
     // DESIGN.md: the coaching is silent whenever a card explains the state.
     var availability by remember { mutableStateOf<ARCoreAvailability?>(null) }
+    // Same rule for the "Camera access needed" card: with the camera refused the session
+    // never starts, so the coaching sat on "Getting ready" over that card for good (#4452).
+    var cameraDenied by remember { mutableStateOf(false) }
     // The coaching card names the reason ("Too dark", "Too fast") while tracking struggles.
     var trackingFailure by remember { mutableStateOf<TrackingFailureReason?>(null) }
     DisposableEffect(state) {
@@ -438,6 +441,7 @@ fun AutoPlacementScene(
                 availability = it
                 onARCoreAvailability?.invoke(it)
             },
+            onCameraPermissionStateChanged = { cameraDenied = it != null },
             onTrackingFailureChanged = {
                 trackingFailure = it
                 onTrackingFailureChanged?.invoke(it)
@@ -472,7 +476,7 @@ fun AutoPlacementScene(
         if (coaching) {
             val guidance = rememberArGuidanceState(state, surface, trackingFailureReason = trackingFailure)
             ARCoachingOverlay(
-                cue = if (availability == null) guidance.cue else ArGuidanceCue.NONE,
+                cue = if (availability == null && !cameraDenied) guidance.cue else ArGuidanceCue.NONE,
                 surface = guidance.surface,
                 hint = guidance.hint,
                 scanLingering = guidance.scanLingering,
@@ -817,6 +821,15 @@ private fun ARSceneScope.AutomaticPlacementPivot(
             /** The last size the user pinched to away from 100 % — what a double-tap restores. */
             var rememberedScale: Float? = null
 
+            /**
+             * This pinch opened an adjustment. The detector ends a pinch on the node it began
+             * on even when the begin was refused, so only a pinch that opened one closes one.
+             */
+            var pinching = false
+
+            /** This twist opened an adjustment — same rule as [pinching]. */
+            var rotating = false
+
             /** Visual scale the double-tap animation started from, `null` when none runs. */
             private var tweenFrom: Float? = null
             private var tweenStartNanos = 0L
@@ -870,17 +883,26 @@ private fun ARSceneScope.AutomaticPlacementPivot(
 
             override fun onRotateEnd(detector: RotateGestureDetector, e: MotionEvent) {
                 super.onRotateEnd(detector, e)
-                state.endAdjustment()
+                if (rotating) {
+                    rotating = false
+                    state.endAdjustment()
+                }
             }
             override fun onScaleEnd(detector: ScaleGestureDetector, e: MotionEvent) {
                 super.onScaleEnd(detector, e)
-                state.endAdjustment()
+                if (pinching) {
+                    pinching = false
+                    state.endAdjustment()
+                }
             }
         }.apply {
             isEditable = true
             isPositionEditable = false
             editableScaleRange = ScaleSnap.MIN..ScaleSnap.MAX
-            onRotateBegin = { _, _ -> state.beginAdjustment() }
+            onRotateBegin = { _, _ ->
+                rotating = state.beginAdjustment()
+                rotating
+            }
             // The pinch is measured against the moment two fingers landed — the scale then,
             // times the span ratio since — never accumulated event by event: 1:1 with the
             // fingers (Scene Viewer / Quick Look / the iOS controller), path-independent, and
@@ -888,14 +910,23 @@ private fun ARSceneScope.AutomaticPlacementPivot(
             var pinchStartScale = 1f
             var pinchStartSpan = 0f
             onScaleBegin = { detector, _ ->
-                cancelRebound()
-                pinchStartScale = logicalScale
-                pinchStartSpan = detector.currentSpan
-                state.beginAdjustment()
+                if (!state.allowsScaling) {
+                    // Real size is locked: keep the pinch (refusing it would hand it to the
+                    // anchor, which would resize instead) and do nothing with it.
+                    pinching = false
+                    true
+                } else {
+                    cancelRebound()
+                    pinchStartScale = logicalScale
+                    pinchStartSpan = detector.currentSpan
+                    pinching = state.beginAdjustment()
+                    pinching
+                }
             }
-            onRotate = { _, _, _ -> state.isAdjusting }
+            onRotate = { _, _, _ -> rotating && state.isAdjusting }
             onScale = { detector, _, _ ->
-                if (state.isAdjusting) {
+                // Locking real size mid-pinch stops it at once, not at the next pinch.
+                if (pinching && state.allowsScaling && state.isAdjusting) {
                     val previous = logicalScale
                     val rawScale = ScaleSnap.pinchRaw(pinchStartScale, pinchStartSpan, detector.currentSpan)
                         .coerceIn(ScaleSnap.MIN, ScaleSnap.MAX)
@@ -958,6 +989,15 @@ private fun ARSceneScope.AutomaticPlacementPivot(
                 state.rotateAction = null
                 state.scaleAction = null
                 state.scaleToggleAction = null
+            }
+        }
+        // Locking the size brings an already-resized object back to real size.
+        LaunchedEffect(pivot, state.allowsScaling) {
+            if (!state.allowsScaling && pivot.logicalScale != 1f) {
+                pivot.rememberedScale = null
+                pivot.animateTo(1f)
+                state.scaleFactor = 1f
+                scaleChanged(100, true, false)
             }
         }
         NodeLifecycle(pivot, content)

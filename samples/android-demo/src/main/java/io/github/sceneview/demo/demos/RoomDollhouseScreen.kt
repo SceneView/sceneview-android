@@ -67,9 +67,11 @@ import io.github.sceneview.demo.LocalDemoChromeBottomInset
 import io.github.sceneview.demo.DockItem
 import io.github.sceneview.demo.R
 import io.github.sceneview.demo.SETTINGS_FAB_RESERVED_SPACE
+import io.github.sceneview.demo.common.ArCameraStagePermissionGate
 import io.github.sceneview.demo.common.DemoStatusBanner
 import io.github.sceneview.demo.common.DemoStatusTone
 import io.github.sceneview.demo.common.placement.PlacementActionCard
+import io.github.sceneview.demo.common.rememberArCameraPermission
 import io.github.sceneview.demo.common.placement.PlacementCard
 import io.github.sceneview.demo.demos.internal.ArDebugOrbitCamera
 import io.github.sceneview.demo.demos.internal.DollhouseArControl
@@ -203,8 +205,12 @@ internal fun RoomDollhouseScreen(
         if (state.phase == PlacementPhase.ADJUSTING) showHint = false
         if (state.phase != PlacementPhase.PLACED && state.phase != PlacementPhase.ADJUSTING) invalidMove = false
     }
-    LaunchedEffect(state.phase, availability, inRoom) {
-        if (inRoom && state.phase == PlacementPhase.INITIALIZING && availability == null) {
+    // Only the AR view needs the camera: the 3D view, the list and the messages never ask.
+    val camera = rememberArCameraPermission()
+    LaunchedEffect(state.phase, availability, inRoom, camera.granted) {
+        // No camera yet is a permission card, not a camera that failed to start.
+        val starting = inRoom && camera.granted
+        if (starting && state.phase == PlacementPhase.INITIALIZING && availability == null) {
             delay(AR_CAMERA_INIT_SCRIM_TIMEOUT_MS)
             state.cameraFailed()
         }
@@ -251,9 +257,13 @@ internal fun RoomDollhouseScreen(
         title = stringResource(R.string.demo_ar_splat_room_title),
         onBack = onBack,
         firstFrameRendered = ready,
+        // The permission card stands where the camera view would be: no scene to call ready.
+        hasScene = !(inRoom && !camera.granted),
         loadingLabel = DollhouseCopy.OPENING,
         // The camera feed is media; the 3D view, the empty state and the error follow the theme.
         themedStage = !inRoom,
+        // The mode pill belongs to 3D Scan's landing, not to a session opened from it.
+        modeSwitch = null,
         peekHeader = if (fit != null && showsScale) {
             DollhouseCopy.peek(title, fit, realSize && inRoom)
         } else null,
@@ -321,7 +331,8 @@ internal fun RoomDollhouseScreen(
         },
         bottomOverlay = {
             when (stage) {
-                DollhouseStage.InRoom -> {
+                // Without the camera the stage is the permission card, which says it all.
+                DollhouseStage.InRoom -> if (camera.granted) {
                     val status = scanRoomStatus(
                         phase = state.phase,
                         scanReady = true,
@@ -337,8 +348,8 @@ internal fun RoomDollhouseScreen(
                         ScanRoomStatus.MoveSlowly -> DollhouseCopy.PLACE_HINT
                         ScanRoomStatus.KeepOnSurface -> stringResource(R.string.ar_place_keep_on_surface)
                         ScanRoomStatus.TrackingPaused -> stringResource(R.string.ar_place_tracking_paused)
-                        ScanRoomStatus.TrackingPausedLowLight -> stringResource(R.string.ar_place_tracking_paused) +
-                            " " + stringResource(R.string.ar_place_try_brighter_area)
+                        ScanRoomStatus.TrackingPausedLowLight ->
+                            stringResource(R.string.ar_place_tracking_paused_low_light)
                         ScanRoomStatus.FindingPlacement -> stringResource(R.string.ar_place_finding_placement)
                         ScanRoomStatus.GestureHint -> DollhouseCopy.GESTURE_HINT
                         ScanRoomStatus.Scale -> fit?.let { DollhouseCopy.pinched(it, state.scaleFactor, realSize) }
@@ -393,7 +404,8 @@ internal fun RoomDollhouseScreen(
                     onShown = { previewShown = true },
                 )
             }
-            DollhouseStage.InRoom -> if (build != null && room != null) key(ar.sceneKey) {
+            DollhouseStage.InRoom -> if (build != null && room != null) ArCameraStagePermissionGate(camera) {
+                key(ar.sceneKey) {
                 // Leaving AR (3D view, another recording) retires this placement state: its
                 // AutoPlacementScene dismisses it on the way out, and a dismissed state never
                 // places again — coming back to AR opened on a camera that never placed the room.
@@ -439,6 +451,7 @@ internal fun RoomDollhouseScreen(
                     }
                 }
                 ARCameraInitScrim(state.phase == PlacementPhase.INITIALIZING && !state.hasCameraFrame, availability)
+                }
             }
         }
     }

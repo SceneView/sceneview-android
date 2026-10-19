@@ -7,6 +7,9 @@
 
 import XCTest
 import SceneViewSwift
+#if canImport(UIKit)
+import UIKit
+#endif
 @testable import SceneViewDemo
 
 private final class RecordingBackend: AnalyticsBackend, @unchecked Sendable {
@@ -210,6 +213,23 @@ final class DemoAnalyticsTests: XCTestCase {
         XCTAssertEqual(OutboundTarget.classify(URL(string: "https://sketchfab.com/3d-models/x")!), .other)
     }
 
+    /// Every row of About's "More apps built with SceneView" group opens an App Store
+    /// listing — never another store's — is logged as a `store` outbound link, and
+    /// ships the app's own icon.
+    func testMoreAppsOpenAppStoreListings() throws {
+        XCTAssertFalse(MoreApp.all.isEmpty)
+        XCTAssertEqual(Set(MoreApp.all.map(\.appStoreId)).count, MoreApp.all.count)
+        for app in MoreApp.all {
+            let url = try XCTUnwrap(app.storeURL)
+            XCTAssertEqual(url.scheme, "https")
+            XCTAssertEqual(url.host, "apps.apple.com")
+            XCTAssertEqual(OutboundTarget.classify(url), .store)
+            #if canImport(UIKit)
+            XCTAssertNotNil(UIImage(named: app.icon), "\(app.name) has no icon in the asset catalog")
+            #endif
+        }
+    }
+
     @MainActor
     func testCategoriesMatchAndroidSlugs() {
         let expected: [DemoSection: String] = [
@@ -308,5 +328,103 @@ final class DemoAnalyticsTests: XCTestCase {
         XCTAssertEqual(DemoAnalytics.modelLoadReason(for: CocoaError(.fileNoSuchFile)), "asset_missing")
         XCTAssertEqual(DemoAnalytics.modelLoadReason(for: CocoaError(.fileReadCorruptFile)), "decode_failed")
         XCTAssertEqual(DemoAnalytics.modelLoadReason(for: NSError(domain: "Elsewhere", code: 1)), "unknown")
+    }
+
+    // MARK: search — shared rule for rule with Android's SearchTelemetryTest
+
+    func testSearchTermIsTrimmedCollapsedAndLowercased() {
+        XCTAssertEqual(SearchTerm.normalize("  Damaged \t  HELMET \n"), "damaged helmet")
+        XCTAssertEqual(SearchTerm.normalize("AR"), "ar")
+    }
+
+    func testSingleCharacterIsAKeystrokeNotASearch() {
+        XCTAssertNil(SearchTerm.normalize(""))
+        XCTAssertNil(SearchTerm.normalize("   "))
+        XCTAssertNil(SearchTerm.normalize(" a "))
+    }
+
+    func testLongSearchTermIsCutTo50Characters() {
+        let term = SearchTerm.normalize(String(repeating: "word ", count: 30))
+        XCTAssertLessThanOrEqual(term?.count ?? 0, SearchTerm.maximumLength)
+        XCTAssertEqual(term, term?.trimmingCharacters(in: .whitespaces))
+        XCTAssertEqual(SearchTerm.normalize(String(repeating: "x", count: 80))?.count, 50)
+    }
+
+    func testSearchTermCutNeverSplitsAnEmoji() {
+        XCTAssertEqual(SearchTerm.normalize(String(repeating: "a", count: 49) + "🚗🚗"),
+                       String(repeating: "a", count: 49) + "🚗")
+        let family = "👩\u{200D}👧"
+        XCTAssertEqual(SearchTerm.normalize(String(repeating: "b", count: 49) + family + "zz"),
+                       String(repeating: "b", count: 49) + family)
+        XCTAssertNil(SearchTerm.normalize("🚗"))
+        XCTAssertEqual(SearchTerm.normalize("🚗🚗"), "🚗🚗")
+    }
+
+    func testContactDetailsAreRedacted() {
+        for raw in ["me@example.com", "https://example.com/model.glb", "www.example.com",
+                    "call 0612345678", "order 12345"] {
+            XCTAssertEqual(SearchTerm.normalize(raw), SearchTerm.redacted, raw)
+        }
+        XCTAssertEqual(SearchTerm.normalize("Porsche 911"), "porsche 911")
+        XCTAssertEqual(SearchTerm.normalize("RTX 4090"), "rtx 4090")
+    }
+
+    func testPhoneNumberWithSeparatorsIsRedacted() {
+        for raw in ["06 12 34 56 78", "+33 6 12 34 56 78", "06.12.34.56.78", "06-12-34-56-78",
+                    "(06) 12 34 56 78", "call +33 (0)6 12 34", "123 456"] {
+            XCTAssertEqual(SearchTerm.normalize(raw), SearchTerm.redacted, raw)
+        }
+        XCTAssertEqual(SearchTerm.normalize("iPhone 15 Pro"), "iphone 15 pro")
+        XCTAssertEqual(SearchTerm.normalize("PS5 2020"), "ps5 2020")
+    }
+
+    func testSearchResultBucketsMatchAndroid() {
+        XCTAssertEqual(SearchTerm.resultBucket(nil), "error")
+        XCTAssertEqual(SearchTerm.resultBucket(0), "0")
+        XCTAssertEqual(SearchTerm.resultBucket(1), "1")
+        XCTAssertEqual(SearchTerm.resultBucket(2), "2-5")
+        XCTAssertEqual(SearchTerm.resultBucket(5), "2-5")
+        XCTAssertEqual(SearchTerm.resultBucket(6), "6-20")
+        XCTAssertEqual(SearchTerm.resultBucket(20), "6-20")
+        XCTAssertEqual(SearchTerm.resultBucket(24), "21+")
+    }
+
+    func testSettledSearchLogsOneSearchEventLikeAndroid() {
+        analytics.install(backend)
+        XCTAssertTrue(analytics.searchSettled(" Cosmos ", surface: .samples, resultCount: 1))
+        XCTAssertFalse(analytics.searchSettled("cosmos", surface: .samples, resultCount: 1))
+        XCTAssertEqual(backend.calls.last, .log("search", [
+            "search_term": "cosmos", "surface": "samples", "result_bucket": "1",
+        ]))
+        XCTAssertEqual(backend.eventNames.filter { $0 == "search" }.count, 1)
+    }
+
+    func testGoingBackToAFieldDoesNotCountItsLastSearchAgain() {
+        analytics.install(backend)
+        analytics.searchSettled("helmet", surface: .models, resultCount: 24)
+        analytics.searchSettled("cosmos", surface: .samples, resultCount: 1)
+        XCTAssertFalse(analytics.searchSettled("helmet", surface: .models, resultCount: 24))
+        XCTAssertFalse(analytics.searchSettled("cosmos", surface: .samples, resultCount: 1))
+        XCTAssertEqual(backend.eventNames.filter { $0 == "search" }.count, 2)
+    }
+
+    func testRetryThatAnswersAfterAnErrorCounts() {
+        analytics.install(backend)
+        analytics.searchSettled("helmet", surface: .models, resultCount: nil)
+        XCTAssertFalse(analytics.searchSettled("helmet", surface: .models, resultCount: nil))
+        XCTAssertTrue(analytics.searchSettled("helmet", surface: .models, resultCount: 24))
+        XCTAssertFalse(analytics.searchSettled("helmet", surface: .models, resultCount: 24))
+        XCTAssertEqual(backend.eventNames.filter { $0 == "search" }.count, 2)
+    }
+
+    func testNewTermOtherFieldOrClearedFieldCountsAgain() {
+        analytics.install(backend)
+        analytics.searchSettled("helmet", surface: .models, resultCount: 24)
+        analytics.searchSettled("chair", surface: .models, resultCount: 3)
+        analytics.searchSettled("chair", surface: .samples, resultCount: 0)
+        analytics.searchCleared(.samples)
+        analytics.searchSettled("chair", surface: .samples, resultCount: 0)
+        XCTAssertFalse(analytics.searchSettled("a", surface: .samples, resultCount: 12))
+        XCTAssertEqual(backend.eventNames.filter { $0 == "search" }.count, 4)
     }
 }

@@ -1,0 +1,3 @@
+<!-- category: Fixed -->
+- **AR Placement: the "No surface found" card keeps its side margins in Wall mode ([#4531](https://github.com/sceneview/sceneview/issues/4531)).** In Wall mode, the room dollhouse, the pool, Cloud Anchors and the comparison screens, the card went from one edge of the screen to the other. It now keeps the same margin as in Place mode, in light and dark.
+- **AR Placement: "Place" in the mode selector reopens the Place session ([#4531](https://github.com/sceneview/sceneview/issues/4531)).** Coming back from Free pose or One call used to open the model picker again, with the first model selected. Place now opens its camera with the model and the surface you had chosen. The picker is still under Back and the Models button.
