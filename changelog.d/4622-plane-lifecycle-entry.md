@@ -1,0 +1,2 @@
+<!-- category: Fixed -->
+- **Plane Lifecycle no longer opens on a black panel when AR cannot start ([#4622](https://github.com/sceneview/sceneview/issues/4622)).** The demo now reports a failed ARCore session to its scaffold, as Surfaces does: the "AR could not start" card shows on the stage ground, and the plane counter and the "Scanning for surfaces" banner no longer sit over it. The counter uses the glass-over-media tokens and its labels are plural resources.
