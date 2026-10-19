@@ -338,6 +338,9 @@
     <string name="feedback_report_no_app">No app available to send the report</string>
     <string name="feedback_report_voice_cd">Dictate description</string>
     <string name="feedback_report_voice_prompt">Describe the issue</string>
+    <!-- Voice dictation while listening (#4618), shared by every dictating field. -->
+    <string name="voice_dictation_listening">Dictating… pause any time, tap outside the dialog to finish</string>
+    <string name="voice_dictation_stop_cd">Stop dictation</string>
 
     <!-- "Open with SceneView" (#3482): the label Android shows in the app chooser and the
          share sheet when another app hands over a supported model file. -->
