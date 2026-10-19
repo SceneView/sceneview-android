@@ -5,8 +5,10 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -156,6 +158,8 @@ fun ARDepthOfFieldDemo(onBack: () -> Unit) {
                     color = MaterialTheme.colorScheme.error,
                 )
             }
+            // Same breathing room as the other demo sheets between the explainer and the controls.
+            Spacer(Modifier.height(SceneViewTokens.Space.md))
             LabeledSlider(
                 label = stringResource(R.string.portrait_blur),
                 value = blurStrength,
