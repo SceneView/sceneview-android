@@ -7,4 +7,9 @@
 <resources>
     <string name="demo_ar_rerun_title">3D Scan</string>
     <string name="demo_ar_rerun_subtitle">Move around a space and watch it take shape in 3D</string>
+    <!-- 3D Scan live view (#4628): it follows the phone; after a drag or pinch, this brings it back. -->
+    <string name="demo_ar_rerun_recenter">Recenter</string>
+    <string name="demo_ar_rerun_recenter_description">Recenter the view on you</string>
+    <!-- The marker for the phone in the live view, read out by TalkBack. -->
+    <string name="demo_ar_rerun_you_are_here">You are here</string>
 </resources>
