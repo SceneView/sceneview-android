@@ -7,9 +7,10 @@ import simd
 /// in pure Swift: no Rerun SDK, no protobuf or Arrow library.
 ///
 /// Targets the `.rrd` format of Rerun **0.38.1** (`RRF2` framing, sorbet `0.1.3` chunks),
-/// uncompressed, without the optional footer — viewers read such a file with a full scan,
-/// the way they read a live stream. What the viewer shows, on the `time` timeline
-/// (seconds since the session started):
+/// uncompressed, opened by a default layout (``RerunRRDBlueprint``) and closed by the footer
+/// `rerun rrd verify` asks for (``RerunRRDFooter``): the same bytes as Android's
+/// `RerunRrdWriter`, the store source label aside (`SceneView iOS`). What the viewer shows,
+/// on the `time` timeline (seconds since the session started):
 ///
 /// - `world` — Y-up, right-handed (`ViewCoordinates` RUB), static.
 /// - `world/points` — the coloured map (`Points3D`), static.
@@ -24,6 +25,9 @@ import simd
 ///   the textured polygon (`Mesh3D`), static.
 /// - `world/anchors/<id>` — the pose (`Transform3D`) and a small labelled box
 ///   (`Boxes3D`), static.
+///
+/// The file opens on that layout: the room in 3D beside the camera's photos, instead of
+/// whatever views the viewer would guess.
 enum RerunRRDWriter {
     /// The Rerun release whose format this writer emits.
     static let rerunVersion: (major: UInt8, minor: UInt8, patch: UInt8) = (0, 38, 1)
@@ -34,16 +38,23 @@ enum RerunRRDWriter {
     /// The row ids' clock: TUIDs are deterministic, so they count from a fixed instant
     /// (2026-01-01T00:00:00Z) instead of the wall clock.
     static let tuidEpochNanos: UInt64 = 1_767_225_600_000_000_000
+    /// What the store info names as the recording's source.
+    static let storeSource = "SceneView iOS"
+    /// The 16-byte `MessageHeader` before every payload.
+    static let messageHeaderSize = 16
 
     enum Failure: Error, Equatable {
         case pointColorCountMismatch(points: Int, colors: Int)
         case malformedDense
     }
 
+    /// The `.rrd` file for `scene`. One scene and one `recordingId` always give the same
+    /// bytes; `source` is only overridden by the tests that compare against Android's file.
     static func data(
         for scene: RerunExportScene,
         applicationId: String = "sceneview_ar_replay",
-        recordingId: UUID = UUID()
+        recordingId: UUID = UUID(),
+        source: String = storeSource
     ) throws -> Data {
         if !scene.pointColors.isEmpty, scene.pointColors.count != scene.points.count {
             throw Failure.pointColorCountMismatch(points: scene.points.count, colors: scene.pointColors.count)
@@ -56,14 +67,46 @@ enum RerunRRDWriter {
         }
         var ids = RerunTuidSequence(recordingId: recordingId)
         let store = StoreIdentity(applicationId: applicationId, recordingId: recordingId.uuidString.lowercased())
+        let blueprint = StoreIdentity(
+            applicationId: applicationId, recordingId: RerunRRDBlueprint.storeId(recordingId), kind: 2
+        )
+        let chunks = chunks(for: scene)
+        let hasPhotos = chunks.contains { $0.components.contains { $0.fieldName == "EncodedImage:blob" } }
+        let footer = RerunRRDFooter()
 
         var out = Data()
         out.append(streamHeader())
-        appendMessage(kind: 1, payload: setStoreInfo(store, rowId: ids.next()), to: &out) // SetStoreInfo
-        for chunk in chunks(for: scene) {
-            appendMessage(kind: 2, payload: arrowMessage(chunk, store: store, ids: &ids), to: &out) // ArrowMsg
+        // The blueprint first, as the Rerun SDKs write it, so the viewer has the layout before data.
+        appendMessage(kind: 1, payload: setStoreInfo(blueprint, rowId: ids.next(), source: source), to: &out)
+        let layout = footer.manifest(storeId: encodedStoreId(blueprint))
+        for chunk in RerunRRDBlueprint.chunks(recordingId: recordingId, hasPhotos: hasPhotos) {
+            appendChunk(chunk, store: blueprint, ids: &ids, manifest: layout, to: &out)
         }
+        appendMessage(kind: 3, payload: blueprintActivation(blueprint), to: &out) // BlueprintActivationCommand
+        appendMessage(kind: 1, payload: setStoreInfo(store, rowId: ids.next(), source: source), to: &out)
+        let recording = footer.manifest(storeId: encodedStoreId(store))
+        for chunk in chunks {
+            appendChunk(chunk, store: store, ids: &ids, manifest: recording, to: &out)
+        }
+        // Last, and nothing above depends on it: a file cut before here still reads by full scan.
+        footer.append(to: &out)
         return out
+    }
+
+    /// Writes `chunk` as an `ArrowMsg` and records where it went in its store's `manifest`.
+    private static func appendChunk(
+        _ chunk: RerunChunk,
+        store: StoreIdentity,
+        ids: inout RerunTuidSequence,
+        manifest: RerunRRDFooter.Manifest,
+        to out: inout Data
+    ) {
+        let (message, chunkId, ipcSize) = arrowMessageParts(chunk, store: store, ids: &ids)
+        manifest.add(
+            chunk: chunk, chunkId: chunkId,
+            byteOffset: out.count + messageHeaderSize, byteSize: message.count, uncompressedSize: ipcSize
+        )
+        appendMessage(kind: 2, payload: message, to: &out)
     }
 
     // MARK: - Framing
@@ -82,14 +125,34 @@ enum RerunRRDWriter {
 
     struct StoreIdentity {
         var applicationId: String
+        /// The store's id: the recording's UUID, or the blueprint's derived one.
         var recordingId: String
+        /// `StoreKind`: 1 for a recording, 2 for a blueprint.
+        var kind: UInt64 = 1
     }
 
-    /// `rerun.common.v1alpha1.StoreId`: a recording (kind 1), its id and application.
+    /// `rerun.common.v1alpha1.StoreId`: a recording (kind 1) or a blueprint (2), its id and application.
     private static func writeStoreId(_ store: StoreIdentity, into proto: inout RerunProtobufWriter) {
-        proto.uint64(1, 1)
+        proto.uint64(1, store.kind)
         proto.string(2, store.recordingId)
         proto.message(3) { $0.string(1, store.applicationId) }
+    }
+
+    /// The `StoreId` message alone, as a footer manifest names its store.
+    static func encodedStoreId(_ store: StoreIdentity) -> Data {
+        var proto = RerunProtobufWriter()
+        writeStoreId(store, into: &proto)
+        return proto.data
+    }
+
+    /// `rerun.log_msg.v1alpha1.BlueprintActivationCommand`: `blueprint` becomes the
+    /// application's default (`make_default`), without overriding a layout the user saved
+    /// (`make_active` unset).
+    static func blueprintActivation(_ blueprint: StoreIdentity) -> Data {
+        var proto = RerunProtobufWriter()
+        proto.message(1) { writeStoreId(blueprint, into: &$0) }
+        proto.bool(3, true)
+        return proto.data
     }
 
     private static func writeTuid(_ tuid: RerunTuid, into proto: inout RerunProtobufWriter) {
@@ -98,14 +161,14 @@ enum RerunRRDWriter {
     }
 
     /// `rerun.log_msg.v1alpha1.SetStoreInfo`.
-    static func setStoreInfo(_ store: StoreIdentity, rowId: RerunTuid) -> Data {
+    static func setStoreInfo(_ store: StoreIdentity, rowId: RerunTuid, source sourceLabel: String = storeSource) -> Data {
         var proto = RerunProtobufWriter()
         proto.message(1) { writeTuid(rowId, into: &$0) }
         proto.message(2) { info in
             info.message(2) { writeStoreId(store, into: &$0) }
             info.message(5) { source in
                 source.uint64(1, 6) // STORE_SOURCE_KIND_OTHER: `extra` is a UTF-8 string.
-                source.message(2) { $0.string(1, "SceneView iOS") }
+                source.message(2) { $0.string(1, sourceLabel) }
             }
             info.message(6) { version in
                 let bits = UInt32(rerunVersion.major) | UInt32(rerunVersion.minor) << 8 | UInt32(rerunVersion.patch) << 16
@@ -117,6 +180,13 @@ enum RerunRRDWriter {
 
     /// `rerun.log_msg.v1alpha1.ArrowMsg` carrying one chunk as an uncompressed IPC stream.
     static func arrowMessage(_ chunk: RerunChunk, store: StoreIdentity, ids: inout RerunTuidSequence) -> Data {
+        arrowMessageParts(chunk, store: store, ids: &ids).message
+    }
+
+    /// The `ArrowMsg`, its chunk id and the size of its IPC stream: what a footer row needs.
+    private static func arrowMessageParts(
+        _ chunk: RerunChunk, store: StoreIdentity, ids: inout RerunTuidSequence
+    ) -> (message: Data, chunkId: RerunTuid, ipcSize: Int) {
         let chunkId = ids.next()
         let rowIds = (0..<chunk.rowCount).map { _ in ids.next() }
         let payload = chunk.arrowIPC(chunkId: chunkId, rowIds: rowIds)
@@ -129,7 +199,7 @@ enum RerunRRDWriter {
         proto.bytes(5, payload)
         proto.message(6) { writeTuid(chunkId, into: &$0) }
         proto.bool(7, chunk.times == nil)
-        return proto.data
+        return (proto.data, chunkId, payload.count)
     }
 
     // MARK: - Scene → chunks
@@ -353,12 +423,35 @@ enum RerunRRDWriter {
 
 // MARK: - Chunks
 
-/// One Rerun chunk: rows of components on one entity, on the `time` timeline or static.
+/// A timeline a chunk's rows are indexed on: its name and its Arrow type.
+enum RerunTimeline: Sendable, Hashable {
+    /// The recording's clock: a duration, in nanoseconds since the session started.
+    case time
+    /// A blueprint's own sequence, which Rerun's SDKs write as `0`.
+    case blueprint
+
+    var name: String {
+        switch self {
+        case .time: return RerunRRDWriter.timeline
+        case .blueprint: return RerunRRDBlueprint.timeline
+        }
+    }
+
+    var type: RerunArrowType {
+        switch self {
+        case .time: return .durationNanoseconds
+        case .blueprint: return .int64
+        }
+    }
+}
+
+/// One Rerun chunk: rows of components on one entity, on a timeline or static.
 struct RerunChunk {
     var entityPath: String
-    /// Nanoseconds on ``RerunRRDWriter/timeline``, one per row; `nil` for static data.
+    /// One index value per row on ``timeline`` (nanoseconds on `time`); `nil` for static data.
     var times: [Int64]?
     var components: [RerunComponentColumn]
+    var timeline: RerunTimeline = .time
 
     var rowCount: Int { times?.count ?? 1 }
 
@@ -381,11 +474,11 @@ struct RerunChunk {
         if let times {
             let sorted = zip(times, times.dropFirst()).allSatisfy { $0 <= $1 }
             fields.append(RerunArrowField(
-                name: RerunRRDWriter.timeline,
-                type: .durationNanoseconds,
+                name: timeline.name,
+                type: timeline.type,
                 nullable: true,
                 metadata: [
-                    "rerun:index_name": RerunRRDWriter.timeline,
+                    "rerun:index_name": timeline.name,
                     "rerun:is_sorted": sorted ? "true" : "false",
                     "rerun:kind": "index",
                 ]
@@ -411,6 +504,11 @@ struct RerunChunk {
 }
 
 /// One component column: a list per row, each list holding that row's instances.
+///
+/// `archetype` and `componentType` are short names in Rerun's `rerun.archetypes` and
+/// `rerun.components` (`Points3D`, `Color`), or full names when they hold a dot: a
+/// blueprint's columns live in `rerun.blueprint.archetypes` and mostly
+/// `rerun.blueprint.components`.
 struct RerunComponentColumn {
     var archetype: String
     var name: String
@@ -419,15 +517,24 @@ struct RerunComponentColumn {
     var item: RerunArrowField
     var array: RerunArrowArray
 
-    var fieldName: String { "\(archetype):\(name)" }
+    /// The archetype's full name (`rerun.archetypes.Points3D`).
+    var archetypeName: String { Self.qualified(archetype, "rerun.archetypes") }
+    /// The component type's full name (`rerun.components.Position3D`).
+    var componentTypeName: String { Self.qualified(componentType, "rerun.components") }
+
+    var fieldName: String { "\(archetype.split(separator: ".").last.map(String.init) ?? archetype):\(name)" }
 
     var field: RerunArrowField {
         RerunArrowField(name: fieldName, type: .list(item), nullable: true, metadata: [
-            "rerun:archetype": "rerun.archetypes.\(archetype)",
+            "rerun:archetype": archetypeName,
             "rerun:component": fieldName,
-            "rerun:component_type": "rerun.components.\(componentType)",
+            "rerun:component_type": componentTypeName,
             "rerun:kind": "data",
         ])
+    }
+
+    private static func qualified(_ name: String, _ namespace: String) -> String {
+        name.contains(".") ? name : "\(namespace).\(name)"
     }
 
     private init(_ archetype: String, _ name: String, _ componentType: String,
@@ -452,6 +559,12 @@ struct RerunComponentColumn {
              item: .item(.fixedSizeList(.item(.uint8, nullable: false), size), nullable: true),
              counts: rows.map { $0.count / size },
              values: .fixedSizeList(size: size, child: .primitive(rows.flatMap { $0 })))
+    }
+
+    /// `uint8` instances, one list per row: a blueprint's enums (container kind, panel state).
+    static func u8s(_ archetype: String, _ name: String, _ type: String, _ rows: [[UInt8]]) -> Self {
+        Self(archetype, name, type, item: .item(.uint8, nullable: true),
+             counts: rows.map(\.count), values: .primitive(rows.flatMap { $0 }))
     }
 
     static func u32Vectors(_ archetype: String, _ name: String, _ type: String, _ rows: [[UInt32]], size: Int) -> Self {
