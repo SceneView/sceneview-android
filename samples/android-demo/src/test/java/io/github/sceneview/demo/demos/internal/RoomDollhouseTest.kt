@@ -328,9 +328,9 @@ class RoomDollhouseTest {
     @Test
     fun `the copy names the scale and the size on the table`() {
         val fit = DollhouseFit(0f, 0f, 0f, width = 4f, height = 2.5f, depth = 3f, denominator = 12)
-        assertEquals("Room · 1:12", DollhouseCopy.peek("Room", fit, realSize = false))
+        assertEquals("Room · Scale 1:12", DollhouseCopy.peek("Room", fit, realSize = false))
         assertEquals("Room · Real size", DollhouseCopy.peek("Room", fit, realSize = true))
-        assertEquals("1:12 · 33 × 25 cm on the table", DollhouseCopy.size(fit, realSize = false))
+        assertEquals("Scale 1:12 · 33 × 25 cm on the table", DollhouseCopy.size(fit, realSize = false))
     }
 
     @Test
@@ -344,7 +344,7 @@ class RoomDollhouseTest {
             // Lit exactly when the pill says real size; unlit, the pill names the miniature's scale.
             assertEquals(toggle.selected, DollhouseCopy.peek("Room", fit, realSize).endsWith(toggle.label))
         }
-        assertEquals("Room · 1:12", DollhouseCopy.peek("Room", fit, DollhouseCopy.scaleToggle(false).selected))
+        assertEquals("Room · Scale 1:12", DollhouseCopy.peek("Room", fit, DollhouseCopy.scaleToggle(false).selected))
     }
 
     @Test
@@ -385,9 +385,9 @@ class RoomDollhouseTest {
     @Test
     fun `a pinch reads as the scale the room now stands at`() {
         val fit = DollhouseFit(0f, 0f, 0f, width = 4f, height = 2.5f, depth = 3f, denominator = 12)
-        assertEquals("1:12", DollhouseCopy.pinched(fit, 1f, realSize = false))
-        assertEquals("1:6", DollhouseCopy.pinched(fit, 2f, realSize = false))
-        assertEquals("1:48", DollhouseCopy.pinched(fit, 0.25f, realSize = false))
+        assertEquals("Scale 1:12", DollhouseCopy.pinched(fit, 1f, realSize = false))
+        assertEquals("Scale 1:6", DollhouseCopy.pinched(fit, 2f, realSize = false))
+        assertEquals("Scale 1:48", DollhouseCopy.pinched(fit, 0.25f, realSize = false))
         assertEquals("50% of real size", DollhouseCopy.pinched(fit, 0.5f, realSize = true))
     }
 
@@ -681,5 +681,28 @@ class RoomDollhouseTest {
     private fun requireFit(fit: DollhouseFit?): DollhouseFit {
         assertNotNull("expected the room to stand", fit)
         return fit!!
+    }
+
+    /** "Room · Oct 19, 11:58 AM · 1:40" read as a 1:40 scan of a 3:57 one (#4720): the scale says it is one. */
+    @Test
+    fun `a miniature's scale never reads as a duration`() {
+        val fit = DollhouseFit(0f, 0f, 0f, 4f, 2.5f, 3f, denominator = 40)
+        val peek = DollhouseCopy.peek("Room · Oct 19, 11:58 AM", fit, realSize = false)
+        assertEquals("Room · Oct 19, 11:58 AM · Scale 1:40", peek)
+        assertFalse(peek, Regex("· \\d+:\\d+$").containsMatchIn(peek))
+    }
+
+    /** Real size stood the room's floor on the table the miniature was placed on (#4720). */
+    @Test
+    fun `a room at real size drops from the table to the floor`() {
+        // Placed on a table 0.74 m over a floor tracked at -1.30 m.
+        assertEquals(-0.74f, RoomDollhouse.floorDrop(floorY = -1.30f, placedY = -0.56f, scaleFactor = 1f), 1e-4f)
+        // Pinched to half its size, it drops twice as far in its own units: the same 0.74 m.
+        assertEquals(-1.48f, RoomDollhouse.floorDrop(-1.30f, -0.56f, scaleFactor = 0.5f), 1e-4f)
+        // Placed on the floor itself, or before a floor is tracked, it stays where it is.
+        assertEquals(0f, RoomDollhouse.floorDrop(-1.30f, -1.28f, 1f))
+        assertEquals(0f, RoomDollhouse.floorDrop(null, -0.56f, 1f))
+        // A plane tracked above the placement is not a floor under it.
+        assertEquals(0f, RoomDollhouse.floorDrop(-0.20f, -0.56f, 1f))
     }
 }

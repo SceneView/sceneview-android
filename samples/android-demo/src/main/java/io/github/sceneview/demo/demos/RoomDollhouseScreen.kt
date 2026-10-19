@@ -446,8 +446,13 @@ internal fun RoomDollhouseScreen(
                         // The side the recording started from faces the user; at real size the
                         // room reaches away from where the miniature stood instead of being
                         // centred on it, around the camera (DollhouseOrientation).
+                        // At real size the room rests on the floor, not on the table the
+                        // miniature stood on (#4720).
+                        val drop = if (realSize) {
+                            RoomDollhouse.floorDrop(state.floorHeight, placement.pose.ty(), state.scaleFactor)
+                        } else 0f
                         Node(
-                            position = Position(z = orientation.offsetZ(realSize, scale)),
+                            position = Position(y = drop, z = orientation.offsetZ(realSize, scale)),
                             rotation = Rotation(y = orientation.yawDegrees),
                         ) {
                             DollhouseModel(

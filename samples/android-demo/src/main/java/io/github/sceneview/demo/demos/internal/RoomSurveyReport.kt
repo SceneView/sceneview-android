@@ -11,6 +11,35 @@ import kotlin.math.max
  * measured figure, with the note that says it is the scan's scatter and not an accuracy.
  */
 
+/**
+ * What the export sheet offers for a room's floor plan (#4714): the plan once the survey has one,
+ * and otherwise why not — never a PDF that says nothing was measured.
+ */
+enum class PlanOffer {
+    /** The survey is still being read: the row waits, disabled. */
+    Measuring,
+
+    /** The survey drew a plan: the row opens it. */
+    Ready,
+
+    /** The scan has no depth to measure: no plan, whatever is scanned again on this phone. */
+    NoDepth,
+
+    /** The scan has depth but too few walls for a plan. */
+    NoWalls,
+    ;
+
+    companion object {
+        /** The offer for [survey], `null` while it is being read. */
+        fun of(survey: RoomSurvey?): PlanOffer = when {
+            survey == null -> Measuring
+            survey.hasPlan -> Ready
+            SurveyGap.NoDepth in survey.gaps -> NoDepth
+            else -> NoWalls
+        }
+    }
+}
+
 /** The survey's words, read from the app's resources: this file holds none of its own. */
 class SurveyWording(
     /** `%1$s` the scan's title, `%2$s` its date. */

@@ -18,20 +18,35 @@ enum class ScanScope(val key: String) {
 
     /** Several rooms in one session, one after the other, each with its own plan. */
     Home("home"),
+
+    /**
+     * Outside (#4720): a garden, a yard, a terrace. The ground and what stands on it, with no
+     * ceiling to look for and no walls to close a plan: a map of the ground, never a floor plan.
+     */
+    Area("area"),
     ;
 
     /** How this scope's capture is taken and rebuilt. */
     val preset: ScanPreset
         get() = when (this) {
             Object -> ScanPreset.OBJECT
-            Room, Home -> ScanPreset.ROOM
+            Room, Home, Area -> ScanPreset.ROOM
         }
 
     /** Whether a finished capture is one room of several: Next room, then a summary. */
     val roomByRoom: Boolean get() = this == Home
 
-    /** Whether the capture is surveyed into a floor plan: rooms are, an object is not. */
-    val hasFloorPlan: Boolean get() = this != Object
+    /**
+     * Whether the capture is surveyed into a floor plan — walls, area, ceiling height: rooms are;
+     * an object is not, nor an outdoor area, which has no walls to close one nor a ceiling.
+     */
+    val hasFloorPlan: Boolean get() = this == Room || this == Home
+
+    /**
+     * Whether the capture maps the ground it covered, seen from above (the Map view and its
+     * coverage): rooms and an outdoor area do; an object stands on a few square centimetres.
+     */
+    val mapsGround: Boolean get() = this != Object
 
     companion object {
         /** The scope asked first when nothing was chosen before: what 3D Scan always did. */
@@ -145,12 +160,14 @@ object ScanScopeCopy {
         ScanScope.Object -> "An object"
         ScanScope.Room -> "A room"
         ScanScope.Home -> "A whole home"
+        ScanScope.Area -> "An outdoor area"
     }
 
     fun detail(scope: ScanScope): String = when (scope) {
         ScanScope.Object -> "One item on a table or the floor, like a chair or a vase."
         ScanScope.Room -> "One room, with its walls, floor and ceiling."
         ScanScope.Home -> "Several rooms, one after the other, without stopping."
+        ScanScope.Area -> "A garden, a yard or a terrace: the ground and what stands on it."
     }
 
     /** How the scan goes, and what it gives: what a tradesperson needs to know before starting. */
@@ -158,6 +175,7 @@ object ScanScopeCopy {
         ScanScope.Object -> "Walk around it at arm's length. Anything further than 1.5 m is left out."
         ScanScope.Room -> "Walk along the walls. You get a 3D model and a floor plan with measurements."
         ScanScope.Home -> "Finish a room, then start the next. You get a plan of each room and the total."
+        ScanScope.Area -> "Walk slowly across it. You get a 3D model and a map of the ground."
     }
 
     /** The chooser's primary action. */
@@ -165,6 +183,7 @@ object ScanScopeCopy {
         ScanScope.Object -> "Scan an object"
         ScanScope.Room -> "Scan a room"
         ScanScope.Home -> "Scan your home"
+        ScanScope.Area -> "Scan an area"
     }
 
     /** What the capture's status line calls the scan: `Object`, `Room`, `Room 2`. */
@@ -172,21 +191,24 @@ object ScanScopeCopy {
         ScanScope.Object -> "Object"
         ScanScope.Room -> "Room"
         ScanScope.Home -> "Room $roomNumber"
+        ScanScope.Area -> "Area"
     }
 
-    /** The name a capture is kept under: `Object · Oct 19, 3:12 PM`, `Room 2 · Oct 19, 3:12 PM`. */
+    /** The name a capture is kept under: `Object · Oct 19, 3:12 PM`, `Room 2 · Oct 19, 3:12 PM`, `Area · …`. */
     fun sessionTitle(scope: ScanScope, roomNumber: Int, date: String): String = "${label(scope, roomNumber)} · $date"
 
     /** The coaching line while nothing else needs saying. */
     fun scanning(scope: ScanScope): String = when (scope) {
         ScanScope.Object -> "Circle the object slowly, at arm's length"
         ScanScope.Room, ScanScope.Home -> "Walk slowly along the walls, with some floor in view"
+        ScanScope.Area -> "Walk slowly, with the ground in view"
     }
 
     /** The coaching line when the last seconds added nothing. */
     fun nothingNew(scope: ScanScope): String = when (scope) {
         ScanScope.Object -> "Point at the object, 30 cm to 1.5 m away"
         ScanScope.Room, ScanScope.Home -> ScanCopy.COACH_NOTHING_NEW
+        ScanScope.Area -> "Point at the ground or what stands on it, 1 to 3 m away"
     }
 
     /**

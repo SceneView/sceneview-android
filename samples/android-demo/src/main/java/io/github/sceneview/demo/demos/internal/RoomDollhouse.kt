@@ -422,6 +422,23 @@ object RoomDollhouse {
     }
 
     /**
+     * How far a room stood at real size drops, in its own units at [scaleFactor], from where it
+     * was placed ([placedY]) to rest on the floor ARCore tracks ([floorY]) (#4720). The miniature
+     * is placed on a table; switched to Real size it stayed there, its floor at the table's
+     * height, and the room floated. Placed on the floor already — or no floor tracked yet — it
+     * does not move.
+     */
+    fun floorDrop(floorY: Float?, placedY: Float, scaleFactor: Float): Float {
+        val drop = (floorY ?: return 0f) - placedY
+        if (drop > -MIN_FLOOR_DROP_M) return 0f
+        return drop / scaleFactor.coerceAtLeast(MIN_DROP_SCALE)
+    }
+
+    /** A floor less than this under the placement is the plane it stands on, seen again. */
+    const val MIN_FLOOR_DROP_M = 0.05f
+    private const val MIN_DROP_SCALE = 0.05f
+
+    /**
      * How the [room] is turned and where it stands around the anchor (see [DollhouseOrientation]).
      *
      * The side the recording started from — where the path walked begins, the doorway more often
@@ -633,9 +650,17 @@ object DollhouseCopy {
     /** The settings switch that draws the path the phone walked; off, so the room shows first. */
     const val SHOW_PATH = "Show the path you walked"
 
-    /** `Room · Sep 28, 2:32 PM · 1:20`. */
+    /**
+     * What a miniature's scale is called: `Scale 1:40`. A bare `1:40` after a scan's title and
+     * time read as the scan's duration — "1:40" for a 3:57 scan (#4720).
+     */
+    fun scale(fit: DollhouseFit): String = scale(fit.denominator)
+
+    private fun scale(denominator: Int): String = "Scale 1:$denominator"
+
+    /** `Room · Sep 28, 2:32 PM · Scale 1:20`. */
     fun peek(title: String, fit: DollhouseFit, realSize: Boolean): String =
-        "$title · ${if (realSize) REAL_SIZE else fit.label}"
+        "$title · ${if (realSize) REAL_SIZE else scale(fit)}"
 
     /**
      * The dock's scale toggle: always named [REAL_SIZE] and lit while the room stands at real
@@ -658,18 +683,18 @@ object DollhouseCopy {
         return parts.joinToString(" · ")
     }
 
-    /** `1:20 · 30 × 22 cm on the table`, or `Real size` when the room stands at its own size. */
+    /** `Scale 1:20 · 30 × 22 cm on the table`, or `Real size` when the room stands at its own size. */
     fun size(fit: DollhouseFit, realSize: Boolean): String {
         if (realSize) return "$REAL_SIZE · the room at its own size"
         val (w, d) = fit.footprintCentimetres().let { it[0] to it[1] }
-        return "${fit.label} · $w × $d cm on the table"
+        return "${scale(fit)} · $w × $d cm on the table"
     }
 
     /**
-     * The status pill while pinching: the scale the miniature now stands at (`1:6` once a 1:12
+     * The status pill while pinching: the scale the miniature now stands at (`Scale 1:6` once a 1:12
      * room is pinched to twice its size), or, at real size, how much of it is left.
      */
     fun pinched(fit: DollhouseFit, scaleFactor: Float, realSize: Boolean): String =
         if (realSize) "${(scaleFactor * 100f).roundToInt()}% of real size"
-        else "1:${max(1, (fit.denominator / scaleFactor).roundToInt())}"
+        else scale(max(1, (fit.denominator / scaleFactor).roundToInt()))
 }
