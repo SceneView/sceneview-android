@@ -4,11 +4,13 @@ package io.github.sceneview.demo.demos.internal
  * What the export sheet writes: the scan's [title], its 3D [model] when it has one (the result
  * screen's), and how to read its [capture] — the recording behind it. Either may be missing:
  * the sheet offers only the formats its source can make. Both are read off the main thread.
+ * [scope] is what was scanned: the scan file carries it, so an object opens as one (#4683).
  */
 class RerunExportSource(
     val title: String,
     val capture: (suspend () -> RerunCapturePack?)? = null,
     val model: (suspend () -> RerunScanModel?)? = null,
+    val scope: ScanScope = ScanScope.Room,
 )
 
 /**

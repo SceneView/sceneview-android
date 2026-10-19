@@ -156,6 +156,7 @@ import io.github.sceneview.demo.demos.internal.ScanCopy
 import io.github.sceneview.demo.demos.internal.ScanDetail
 import io.github.sceneview.demo.demos.internal.ScanFollow
 import io.github.sceneview.demo.demos.internal.ScanPhase
+import io.github.sceneview.demo.demos.internal.ScanCutoff
 import io.github.sceneview.demo.demos.internal.ScanScope
 import io.github.sceneview.demo.demos.internal.ScanScopeCopy
 import io.github.sceneview.demo.demos.internal.HomeScan
@@ -271,6 +272,8 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
     var scanTitle by remember { mutableStateOf(ScanCopy.REPLAY_TITLE) }
     // The scan's own files, for the export sheet; the sample's are read from the assets there.
     var scanPack by remember { mutableStateOf<RerunCapturePack?>(null) }
+    // What the scan shows (#4683), kept with it: an object's has no floor plan and no room figures.
+    var scanKind by remember { mutableStateOf(ScanScope.Room) }
     // The kept session the replay shows, when it was opened from the list: Place stands that one.
     var scanId by remember { mutableStateOf<String?>(null) }
     var exporting by remember {
@@ -340,10 +343,9 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
             },
         )
     }
-    // A whole home in progress: the rooms saved in this session, each measured on its own.
+    // A whole home in progress: the rooms saved in this session, each measured on its own. Its id
+    // tells it from the next: a room saved, or measured, after its home was left joins only that one.
     var home by remember { mutableStateOf(HomeScan()) }
-    // Which home [home] is: a room saved after its screen was left joins only the home it was scanned for.
-    var homeSession by remember { mutableIntStateOf(0) }
     // The room of the home whose plan is open full screen.
     var homePlanRoom by remember { mutableStateOf<HomeRoom?>(null) }
     val dollhouseSession = if (qaState == QA_STATE_DOLLHOUSE_EMPTY) {
@@ -421,8 +423,10 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
     }
     // A scan, just recorded or reopened: its result when it has one (a model kept with it, or the
     // depth to build one), else its replay. [kept]: the store already holds its model.
-    val openResult = { media: RerunReplayMedia, title: String, pack: RerunCapturePack, id: String?, kept: Boolean ->
+    val openResult = { media: RerunReplayMedia, title: String, pack: RerunCapturePack, id: String?, kept: Boolean,
+            kind: ScanScope ->
         scanId = id
+        scanKind = kind
         scanMedia = media
         scanTitle = title
         scanPack = pack
@@ -435,7 +439,8 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
         resultModel = null
         screen = if (hasResult) RerunScreen.Model else RerunScreen.Replay
     }
-    val openStored = { id: String, title: String ->
+    val openStored = { id: String, title: String, kind: ScanScope ->
+        scanKind = kind
         scanMedia = null
         scanTitle = title
         scanPack = null
@@ -463,7 +468,7 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
                     scanPack = capture
                     openCount++
                 } else {
-                    openResult(opened, title, capture, id, kept)
+                    openResult(opened, title, capture, id, kept, kind)
                 }
                 kept -> Unit
                 else -> {
@@ -483,7 +488,7 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
             openingFile = false
             sessionsVersion++
             result
-                .onSuccess { openStored(it.id, it.title) }
+                .onSuccess { openStored(it.id, it.title, it.scope) }
                 .onFailure { failure ->
                     notice = (failure as? RerunImportFailure)?.let { ScanCopy.importFailure(it, it.message.orEmpty()) }
                         ?: ScanCopy.OPEN_FAILED
@@ -512,6 +517,7 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
             scanMedia = opened
             scanTitle = kept.title
             scanPack = pack
+            scanKind = ScanScope.Room
             showingScan = true
             screen = RerunScreen.Plan
         }
@@ -542,17 +548,18 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
         sessionsVersion++
         val number = home.nextNumber
         home = home.add(id, title)
+        val measuring = home.id
         scope.launch {
             val survey = withContext(Dispatchers.Default) { surveyOf(scan) }
-            home = home.measured(number, survey)
+            // A new home started meanwhile: this survey is the old one's, never the new Room's.
+            home = home.measuredIn(measuring, number, survey)
         }
         Unit
     }
     val startScan = { picked: ScanScope ->
         scanScope = picked
         ScanScopeStore.remember(context, picked)
-        home = HomeScan()
-        homeSession++
+        home = home.next()
         screen = RerunScreen.Live
     }
     // A file handed to this activity only: another MainActivity still showing 3D Scan behind it
@@ -588,7 +595,7 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
                 onOpenFile = { pickFile.launch(arrayOf("*/*")) },
                 onOpen = {
                     notice = null
-                    openStored(it.id, it.info.title)
+                    openStored(it.id, it.info.title, it.info.scope)
                 },
                 onViewInAr = { session ->
                     notice = null
@@ -661,7 +668,7 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
                         openDollhouse(null, title, scan)
                     } else {
                         // Save scan lands on the model, built here and kept with the scan.
-                        openResult(scan, title, pack, id, false)
+                        openResult(scan, title, pack, id, false, scanScope)
                     }
                 },
                 store = store,
@@ -669,11 +676,11 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
                 scanScope = if (recordingForDollhouse) ScanScope.Room else scanScope,
                 roomNumber = home.nextNumber,
                 onRoomSaved = onRoomSaved,
-                homeSession = homeSession,
+                homeSession = home.id,
                 onSavedAway = { scan, title, id, homeOf ->
                     sessionsVersion++
                     // A room of the home still open joins its summary, measured as any other.
-                    if (scan != null && homeOf != null && homeOf == homeSession) onRoomSaved(scan, title, id)
+                    if (scan != null && homeOf != null && homeOf == home.id) onRoomSaved(scan, title, id)
                 },
                 onSaveFailedAway = { notice = ScanCopy.SAVE_FAILED_AWAY },
                 onFinishHome = { screen = RerunScreen.Home },
@@ -690,6 +697,7 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
             onMode = { mode = it },
             media = media,
             isScan = showingScan,
+            measuresRoom = !showingScan || scanKind.hasFloorPlan,
             scanTitle = scanTitle,
             session = replaySession,
             orbit = replayOrbit,
@@ -767,7 +775,7 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
     }
     if (exporting && exportable) {
         val onModel = screen == RerunScreen.Model
-        val source = remember(showingScan, scanTitle, scanPack, onModel, resultModel) {
+        val source = remember(showingScan, scanTitle, scanPack, onModel, resultModel, scanKind) {
             val pack = scanPack
             val model = resultModel
             when {
@@ -775,6 +783,7 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
                     title = scanTitle,
                     capture = pack?.let { { it } },
                     model = model?.let { { it } },
+                    scope = scanKind,
                 )
                 // QA: the synthetic room's model, and no recording to go with it.
                 onModel -> RerunExportSource(title = ScanCopy.REPLAY_TITLE, model = model?.let { { it } })
@@ -785,7 +794,8 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
             }
         }
         // The floor plan is a scan's: it is measured on the depth the scan recorded (#4540).
-        val planMedia = scanMedia?.takeIf { showingScan }
+        // An object has none (#4683): it is not a room, whatever its points.
+        val planMedia = scanMedia?.takeIf { showingScan && scanKind.hasFloorPlan }
         RerunExportSheet(
             source = source,
             onDismiss = { exporting = false },
@@ -857,6 +867,8 @@ private fun RerunReplayScreen(
     onMode: (RerunMode) -> Unit,
     media: RerunReplayMedia?,
     isScan: Boolean,
+    /** Whether the scan is a room's, measured as one: an object's draws no room dimensions (#4683). */
+    measuresRoom: Boolean,
     scanTitle: String,
     revealed: Boolean,
     onRevealed: () -> Unit,
@@ -915,7 +927,10 @@ private fun RerunReplayScreen(
     // What the recording covers at the replay's time (#4631): the map card in the top corner, in
     // the 3D and Map views, which feed it.
     val coverage = remember(media) { ScanCoverageState() }
-    val showsCoverage = media != null && mode != RerunMode.Camera
+    // The floor's coverage is a room's figure: an object's scan has no floor to cover (#4683).
+    val showsCoverage = media != null && mode != RerunMode.Camera && measuresRoom
+    // An object's scan has no map: one opened while the map was showing opens in 3D.
+    LaunchedEffect(measuresRoom, mode) { if (!measuresRoom && mode == RerunMode.Map) onMode(RerunMode.Scene) }
     // The camera frames are pictures, ready with the files; the 3D view says when it has drawn.
     val ready = media != null && (revealed || mode == RerunMode.Camera)
     LaunchedEffect(ready) { if (ready) onRevealed() }
@@ -1040,13 +1055,15 @@ private fun RerunReplayScreen(
                 onClick = { if (mode == RerunMode.Scene) orbit.recenter() else onMode(RerunMode.Scene) },
                 selected = mode == RerunMode.Scene,
             ),
+            // The map is the floor plan seen from above: an object's scan has no floor plan, and its
+            // top view is what the 3D view's orbit already shows (#4683).
             DockItem(
                 icon = Icons.Rounded.Map,
                 label = "Map view",
                 caption = "Map",
                 onClick = { onMode(RerunMode.Map) },
                 selected = mode == RerunMode.Map,
-            ),
+            ).takeIf { measuresRoom },
             DockItem(
                 icon = Icons.Rounded.Movie,
                 label = "Camera frames",
@@ -1080,6 +1097,7 @@ private fun RerunReplayScreen(
                 materialLoader = materialLoader,
                 modifier = Modifier.fillMaxSize().onGloballyPositioned { stage = it.boundsInRoot() },
                 replay = media,
+                measuresRoom = measuresRoom,
                 onShown = onRevealed,
                 selection = selection,
                 // The Camera card of the 3D view, with the padding that hangs it in its corner.
@@ -1329,6 +1347,8 @@ private fun RerunLiveScreen(
         val player = ArDebugLogPlayer(events, loopPauseSeconds = QA_RECORD_NEVER_LOOP_S)
         player.trace.keyframeSpacing = ReplayGeometry.KEYFRAME_SPACING_M
         player.trace.journal = ArrayList()
+        // The take is cut as a real scan of this scope is (#4683): an object keeps arm's length.
+        player.trace.cutoff = ScanCutoff.of(scanScope.preset)
         debugSession.trace = player.trace
         val long = qaState.takeIf { it in LONG_QA_STATES }
             ?.let { QaLongScan.over(source.trace, fixed = it == QA_STATE_RECORD_LONG_FIXED) }
@@ -1491,7 +1511,7 @@ private fun RerunLiveScreen(
             // lands on the same "Couldn't save" card as a failed write, and Try again rebuilds.
             val built = runCatching {
                 builtPack ?: when {
-                    qaTrace != null && sample != null -> qaSessionOf(qaTrace, sample)
+                    qaTrace != null && sample != null -> qaSessionOf(qaTrace, sample, scanScope)
                     capture != null -> capture.finish()
                     else -> null
                 }
@@ -1516,7 +1536,7 @@ private fun RerunLiveScreen(
             val savedId = withContext(Dispatchers.IO) {
                 runCatching {
                     check(!qaSaveFails) { "QA: forced save failure" }
-                    store.save(pack, title, RerunSessionSource.Recorded, now).id
+                    store.save(pack, title, RerunSessionSource.Recorded, now, scope = scanScope).id
                 }.getOrNull()
             }
             if (savedId == null) {
@@ -2208,7 +2228,7 @@ private const val NANOS_PER_SECOND = 1e9f
  * QA only: the take the Record screen played from the sample, built into a session like a real
  * scan — its journal, and the sample's photos taken from where the trace's camera stood.
  */
-private suspend fun qaSessionOf(trace: ArDebugTrace, sample: RerunReplayMedia): RerunCapturePack? {
+private suspend fun qaSessionOf(trace: ArDebugTrace, sample: RerunReplayMedia, scope: ScanScope): RerunCapturePack? {
     val events = trace.journal?.toList().orEmpty()
     trace.journal = null
     if (events.isEmpty()) return null
@@ -2219,6 +2239,12 @@ private suspend fun qaSessionOf(trace: ArDebugTrace, sample: RerunReplayMedia): 
             val pose = trace.frameAt(trace.imageTime(index)).camera ?: return@mapNotNull null
             ScanPhoto(path, jpeg, pose)
         }
+    }
+    // An object's take is a phone without raw depth (#4683): its sparse points and planes only,
+    // cut to arm's length as they were recorded.
+    if (scope == ScanScope.Object) {
+        val sparse = ScanDevice("android", Build.MODEL, ScanDevice.TIER_SPARSE, ScanDevice.SOURCE_FEATURE_POINTS)
+        return RerunCaptureBuilder.build(events, sample.manifest.lens, photos, device = sparse)
     }
     // The emulator has no depth: the ray-cast room stands in for a scan's fused points, so the
     // result the QA take opens on is built, kept and reopened as a real scan's is.

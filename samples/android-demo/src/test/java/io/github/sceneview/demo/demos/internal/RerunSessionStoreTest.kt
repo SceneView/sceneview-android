@@ -140,6 +140,30 @@ class RerunSessionStoreTest {
     }
 
     @Test
+    fun `a session keeps what was scanned, and one kept before reads as a room`() {
+        val store = RerunSessionStore(folder.newFolder("scoped"))
+        val vase = store.save(bundled(), "Object · Oct 19", RerunSessionSource.Recorded, scope = ScanScope.Object)
+        assertEquals(ScanScope.Object, vase.scope)
+        assertEquals(ScanScope.Object, store.list().single().scope)
+        assertTrue(File(store.directoryOf(vase.id), "session.json").readText().contains("\"scope\": \"object\""))
+        // A rename keeps it.
+        assertEquals(ScanScope.Object, store.rename(vase.id, "Vase")!!.scope)
+        assertEquals(ScanScope.Object, store.list().single().scope)
+
+        // A session.json from before #4683 — or the iOS demo's — has no scope: it is a room.
+        val old = """{"id":"A","title":"t","createdAt":"2026-09-28T12:32:05Z","source":"recorded",""" +
+            """"duration":1,"pathMetres":1,"points":1,"planes":1,"photos":1}"""
+        assertEquals(ScanScope.Room, RerunStoredSession.parse(old)!!.scope)
+        // A scope a later build adds reads as a room too, rather than not at all.
+        val later = old.replace("\"photos\":1}", "\"photos\":1,\"scope\":\"garden\"}")
+        assertEquals(ScanScope.Room, RerunStoredSession.parse(later)!!.scope)
+        for (scope in ScanScope.entries) {
+            val session = RerunStoredSession.parse(old)!!.copy(scope = scope)
+            assertEquals(session, RerunStoredSession.parse(session.toJson()))
+        }
+    }
+
+    @Test
     fun `a session json missing a key, or from nowhere, does not read`() {
         assertNull(RerunStoredSession.parse("""{"id":"A","title":"t","source":"recorded"}"""))
         assertNull(RerunStoredSession.parse("not json"))
@@ -214,6 +238,38 @@ class RerunSessionStoreTest {
             store.import("bad.rrd", "RRF2".toByteArray(), readRrd = { error("boom") })
         }
         assertEquals(1, store.list().size)
+    }
+
+    @Test
+    fun `an object scan shared as a file opens as an object, and an old file as a room (#4683)`() {
+        val noRrd: (ByteArray) -> RerunCapturePack = { fail("not a .rrd"); error("") }
+        val shareRoot = folder.newFolder("share")
+        for (photos in listOf(true, false)) {
+            val sent = RerunShareCopy.write(bundled(), "Mug", shareRoot, photos, ScanScope.Object)
+            val store = RerunSessionStore(folder.newFolder("object-$photos"))
+            val opened = store.import(sent.name, sent.readBytes(), noRrd)
+            assertEquals(ScanScope.Object, opened.scope)
+            assertEquals(ScanScope.Object, store.list().single().scope)
+            // Shared on again from the phone it was opened on, it is still an object.
+            val again = RerunShareCopy.write(store.capture(opened.id)!!, opened.title, shareRoot, photos, opened.scope)
+            val other = RerunSessionStore(folder.newFolder("again-$photos"))
+            assertEquals(ScanScope.Object, other.import(again.name, again.readBytes(), noRrd).scope)
+        }
+
+        // A room's file is the stored capture byte for byte, and opens as a room.
+        val room = RerunShareCopy.write(bundled(), "Kitchen", shareRoot, true, ScanScope.Room)
+        assertArrayEquals(RerunScanFile.write(bundled()), room.readBytes())
+        val rooms = RerunSessionStore(folder.newFolder("rooms"))
+        assertEquals(ScanScope.Room, rooms.import(room.name, room.readBytes(), noRrd).scope)
+        // A file written before the key — or with one this version does not know — opens as a room.
+        val unknown = RerunCapturePack(
+            String(bundled().manifest).replaceFirst("{", "{\"scope\":\"galaxy\",").toByteArray(),
+            bundled().log,
+            bundled().media,
+        )
+        assertEquals(ScanScope.Room, RerunScanFile.scopeOf(bundled()))
+        assertEquals(ScanScope.Room, RerunScanFile.scopeOf(unknown))
+        assertEquals(ScanScope.Object, RerunScanFile.scopeOf(RerunScanFile.withScope(unknown, ScanScope.Object)))
     }
 
     @Test

@@ -714,6 +714,9 @@ private fun skyboxAlpha(transparent: Boolean): Float = if (transparent) 0f else 
  *
  * [selection] keeps the object tapped in a [replay] while this view is away, and [cornerCard] is
  * the card the caller hangs in its top end corner, which a tapped object is kept clear of (#4505).
+ *
+ * [measuresRoom] off — an object's scan (#4683) — the replay neither draws nor names a room's
+ * dimensions, nor frames room for them.
  */
 @Composable
 @Suppress("LongParameterList") // the demo's shared engine, handed down once, and one flag per reading
@@ -726,6 +729,7 @@ internal fun ArDebugSceneView(
     modifier: Modifier = Modifier,
     compact: Boolean = false,
     replay: RerunReplayMedia? = null,
+    measuresRoom: Boolean = true,
     onShown: (() -> Unit)? = null,
     transparent: Boolean = false,
     visible: (DebugGroup) -> Boolean = session::isVisible,
@@ -851,7 +855,7 @@ internal fun ArDebugSceneView(
                 val bounds = subject.bounds
                 // The room's dimensions are written outside its walls: where they are drawn, the
                 // framing leaves them their room, so no figure is cut by the screen's edge.
-                val measured = subject.room.takeIf { !compact }
+                val measured = subject.room.takeIf { !compact && measuresRoom }
                 orbit.roomYawDegrees = subject.roomYawDegrees
                 val firstContent = !orbit.hasFramedContent && bounds != null
                 if (firstContent) {
@@ -913,7 +917,7 @@ internal fun ArDebugSceneView(
                         anchors = visible(DebugGroup.Anchors),
                         trail = visible(DebugGroup.Trail),
                         cameras = visible(DebugGroup.Cameras),
-                        measure = !compact,
+                        measure = !compact && measuresRoom,
                         measureOnTop = orbit.overhead,
                     ),
                     eye = CameraRig.eye(orbit.pose).let { Vec3(it.x, it.y, it.z) },
@@ -932,7 +936,7 @@ internal fun ArDebugSceneView(
                 // draw ([ReplayLayers.measure]), so the two never disagree — and on the frame the
                 // floor redraws them, rather than a stats tick later.
                 if (replayLayers != null) {
-                    val room = replayLayers.measure?.scanSummary(Locale.getDefault())
+                    val room = replayLayers.measure?.takeIf { measuresRoom }?.scanSummary(Locale.getDefault())
                     if (session.stats.room != room) session.stats = session.stats.copy(room = room)
                 }
                 // onFrame only fires for a frame that reached the surface (#3444): counting them is

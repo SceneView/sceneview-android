@@ -175,6 +175,12 @@ class ArDebugTrace {
      */
     var journal: MutableList<ArDebugEvent>? = null
 
+    /**
+     * An object scan's distance cutoff (#4683): set, the points further than it from the phone
+     * and the parts of planes away from the phone's path are never kept — nor journaled.
+     */
+    var cutoff: ScanCutoff? = null
+
     /** Bumped on every change, so a reader can tell "same trace" without comparing contents. */
     var version: Int = 0
         private set
@@ -237,6 +243,7 @@ class ArDebugTrace {
      * still would otherwise fill the cap in minutes.
      */
     fun addPose(nanos: Long, pose: DebugPose) {
+        cutoff?.follow(pose)
         journal?.add(ArDebugEvent.CameraPose(nanos, pose))
         val t = secondsOf(nanos)
         val last = poses.lastOrNull()
@@ -292,8 +299,17 @@ class ArDebugTrace {
      * given, so a point does not flicker as later views of it disagree by a shade.
      */
     // Low-confidence and non-finite points skip early.
-    @Suppress("LoopWithTooManyJumpStatements", "CyclomaticComplexMethod")
     fun addPoints(nanos: Long, positions: FloatArray, confidences: FloatArray? = null, colors: IntArray? = null) {
+        val kept = cutoff?.points(positions, confidences, colors)
+        if (kept == null) {
+            addPointsKept(nanos, positions, confidences, colors)
+        } else {
+            addPointsKept(nanos, kept.positions, kept.confidences, kept.colors)
+        }
+    }
+
+    @Suppress("LoopWithTooManyJumpStatements", "CyclomaticComplexMethod")
+    private fun addPointsKept(nanos: Long, positions: FloatArray, confidences: FloatArray?, colors: IntArray?) {
         val t = secondsOf(nanos)
         val count = positions.size / 3
         val seen = IntArray(count)
@@ -344,14 +360,18 @@ class ArDebugTrace {
 
     /** Adds a snapshot of plane [id]. An empty [polygon] records that the plane went away. */
     fun addPlane(nanos: Long, id: Int, kind: DebugPlaneKind, polygon: FloatArray) {
+        val kept = cutoff?.takeIf { polygon.isNotEmpty() }?.clip(polygon) ?: polygon
+        // A plane cut to nothing before it was ever kept is not one of this scan's.
+        if (kept.isEmpty() && polygon.isNotEmpty() && id !in planeHistory) return
         val t = secondsOf(nanos)
         val history = planeHistory.getOrPut(id) { mutableListOf() }
         val last = history.lastOrNull()?.second
-        if (last != null && last.kind == kind && last.polygon.contentEquals(polygon)) return
-        history.add(t to DebugPlane(id, kind, polygon))
-        journal?.add(ArDebugEvent.Plane(nanos, id, kind, polygon))
+        if (last != null && last.kind == kind && last.polygon.contentEquals(kept)) return
+        history.add(t to DebugPlane(id, kind, kept))
+        journal?.add(ArDebugEvent.Plane(nanos, id, kind, kept))
         touch(t)
     }
+
 
     /**
      * Every plane the session found, as it last stood with a boundary: a plane ARCore merged
