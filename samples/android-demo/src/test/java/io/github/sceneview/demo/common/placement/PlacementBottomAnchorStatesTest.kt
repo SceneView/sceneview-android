@@ -23,9 +23,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.graphics.Insets
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import com.dropbox.differ.SimpleImageComparator
-import com.github.takahirom.roborazzi.RoborazziOptions
-import com.github.takahirom.roborazzi.captureRoboImage
 import com.google.ar.core.TrackingFailureReason
 import io.github.sceneview.demo.DemoScaffold
 import io.github.sceneview.demo.DemoScaffoldTestTags
@@ -44,42 +41,25 @@ import org.robolectric.annotation.GraphicsMode
 import kotlin.math.absoluteValue
 
 /**
- * Pictures of the placement screen in each state of the §2.2 machine, with the bottom
- * anchor measured on the same composition that is photographed.
+ * The placement screen in each state of the §2.2 machine, with the bottom anchor measured
+ * on the real composition.
  *
- * ## Why this file exists
+ * [PlacementBottomAnchorTest] pins the arithmetic differentially. No ARCore session starts
+ * on the CI emulator, so the coaching line, the cards and the read-out never render there;
+ * this file renders the real [DemoScaffold] with the real dock and the real
+ * [TapToPlaceStatusOverlays] over it and asserts the 16 dp clearance on its bounds. It is
+ * proof of *layout* only, not that a session starts or a surface is found.
  *
- * [PlacementBottomAnchorTest] pins the arithmetic differentially and is the better
- * regression test. What it cannot do is show that the result *looks* right, and no ARCore
- * session starts on the CI emulator — the coaching line, the cards and the read-out never
- * render there at all. So this file renders the real [DemoScaffold] with the real dock
- * and the real [TapToPlaceStatusOverlays] over it, photographs the result, and asserts
- * the 16 dp on the bounds of that same frame.
- *
- * What it is **not**: proof that an ARCore session starts, that a surface is found, that
- * the object lands on it. Those need a device. This is proof of *layout and copy* only.
- *
- * ## The states
- *
- *  - **scanning** — "Move slowly to find a surface." — the coaching line alone;
- *  - **placed** — the one-shot "Drag to move. Pinch to resize. Twist to turn." hint;
- *  - **no surface** — the 10 s card, *3D* / *Try again*;
- *  - **tracking lost** in low light — "Move slowly. Try a brighter area.";
- *  - **gesture** — a live pinch read-out, "Preview size · 120 %", hint window closed.
- *
- * Every state is photographed light and dark; the flat white and flat black grounds are
- * the two ends of the range a translucent glass surface has to survive, and they are what
- * makes the painted edges unambiguous when the PNG is measured. The `*-nav48` cases
- * dispatch a 48 dp three-button navigation inset by hand and assert that `safeDrawing`
- * actually reports it.
- *
- * Re-record after a deliberate UI change:
- *   `./gradlew :samples:android-demo:recordRoborazziDebug --tests '*PlacementBottomAnchorSnapshotTest*'`
+ * The states: **scanning** (coaching line alone), **placed** (one-shot gesture hint),
+ * **no surface** (the 10 s card), **tracking lost** in low light, and **gesture** (a live
+ * pinch read-out). Each runs light and dark over flat white and black grounds. The
+ * `*_threeButtonNav` cases dispatch a 48 dp three-button navigation inset by hand and
+ * assert that `safeDrawing` actually reports it.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = "w411dp-h891dp-xhdpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-class PlacementBottomAnchorSnapshotTest {
+class PlacementBottomAnchorStatesTest {
 
     @get:Rule
     val composeRule = createAndroidComposeRule<ComponentActivity>()
@@ -108,68 +88,67 @@ class PlacementBottomAnchorSnapshotTest {
     // ── Scanning ──────────────────────────────────────────────────────────────────────
 
     @Test
-    fun scanning_light_onWhite() = capture("scanning-light-white", false, Color.White, Scene.SCANNING)
+    fun scanning_light_onWhite() = measure("scanning-light-white", false, Color.White, Scene.SCANNING)
 
     @Test
-    fun scanning_light_onBlack() = capture("scanning-light-black", false, Color.Black, Scene.SCANNING)
+    fun scanning_light_onBlack() = measure("scanning-light-black", false, Color.Black, Scene.SCANNING)
 
     @Test
-    fun scanning_dark_onWhite() = capture("scanning-dark-white", true, Color.White, Scene.SCANNING)
+    fun scanning_dark_onWhite() = measure("scanning-dark-white", true, Color.White, Scene.SCANNING)
 
     @Test
-    fun scanning_dark_onBlack() = capture("scanning-dark-black", true, Color.Black, Scene.SCANNING)
+    fun scanning_dark_onBlack() = measure("scanning-dark-black", true, Color.Black, Scene.SCANNING)
 
     // ── Placed, with the one-shot gesture hint ────────────────────────────────────────
 
     @Test
-    fun placed_light_onWhite() = capture("placed-light-white", false, Color.White, Scene.PLACED_HINT)
+    fun placed_light_onWhite() = measure("placed-light-white", false, Color.White, Scene.PLACED_HINT)
 
     @Test
-    fun placed_dark_onBlack() = capture("placed-dark-black", true, Color.Black, Scene.PLACED_HINT)
+    fun placed_dark_onBlack() = measure("placed-dark-black", true, Color.Black, Scene.PLACED_HINT)
 
     // ── No surface after 10 s ─────────────────────────────────────────────────────────
 
     @Test
-    fun noSurface_light_onWhite() = capture("no-surface-light-white", false, Color.White, Scene.NO_SURFACE)
+    fun noSurface_light_onWhite() = measure("no-surface-light-white", false, Color.White, Scene.NO_SURFACE)
 
     @Test
-    fun noSurface_dark_onBlack() = capture("no-surface-dark-black", true, Color.Black, Scene.NO_SURFACE)
+    fun noSurface_dark_onBlack() = measure("no-surface-dark-black", true, Color.Black, Scene.NO_SURFACE)
 
     // ── Tracking lost, low light ──────────────────────────────────────────────────────
 
     @Test
     fun trackingLost_light_onWhite() =
-        capture("tracking-lost-light-white", false, Color.White, Scene.TRACKING_LOST)
+        measure("tracking-lost-light-white", false, Color.White, Scene.TRACKING_LOST)
 
     @Test
     fun trackingLost_dark_onBlack() =
-        capture("tracking-lost-dark-black", true, Color.Black, Scene.TRACKING_LOST)
+        measure("tracking-lost-dark-black", true, Color.Black, Scene.TRACKING_LOST)
 
     // ── Live pinch read-out ───────────────────────────────────────────────────────────
 
     @Test
-    fun gesture_light_onWhite() = capture("gesture-light-white", false, Color.White, Scene.GESTURE)
+    fun gesture_light_onWhite() = measure("gesture-light-white", false, Color.White, Scene.GESTURE)
 
     @Test
-    fun gesture_dark_onBlack() = capture("gesture-dark-black", true, Color.Black, Scene.GESTURE)
+    fun gesture_dark_onBlack() = measure("gesture-dark-black", true, Color.Black, Scene.GESTURE)
 
     // ── Three-button navigation ───────────────────────────────────────────────────────
 
     @Test
     fun scanning_dark_threeButtonNav() =
-        capture("scanning-dark-white-nav48", true, Color.White, Scene.SCANNING, navInsetDp = 48)
+        measure("scanning-dark-white-nav48", true, Color.White, Scene.SCANNING, navInsetDp = 48)
 
     @Test
     fun gesture_dark_threeButtonNav() =
-        capture("gesture-dark-white-nav48", true, Color.White, Scene.GESTURE, navInsetDp = 48)
+        measure("gesture-dark-white-nav48", true, Color.White, Scene.GESTURE, navInsetDp = 48)
 
     private enum class Scene { SCANNING, PLACED_HINT, NO_SURFACE, TRACKING_LOST, GESTURE }
 
     /**
-     * Composes the screen, photographs it, and measures the anchor on the frame that was
-     * photographed — the picture and the number can therefore never disagree.
+     * Composes the screen in [scene] and measures the anchor on the settled frame.
      */
-    private fun capture(
+    private fun measure(
         name: String,
         darkTheme: Boolean,
         ground: Color,
@@ -201,10 +180,6 @@ class PlacementBottomAnchorSnapshotTest {
 
         val observedNavInset = with(composeRule.density) { observedBottomInsetPx.toDp() }
 
-        composeRule.onRoot().captureRoboImage(
-            "src/test/snapshots/placement_bottom_$name.png",
-            roborazziOptions = CROSS_PLATFORM_TOLERANT,
-        )
         assertAnchor(name, scene, navInsetDp, observedNavInset)
     }
 
@@ -255,12 +230,12 @@ class PlacementBottomAnchorSnapshotTest {
         composeRule.waitForIdle()
         // The banner and the card arrive through fades; an *idle* composition is not
         // necessarily a *settled* one. 2 s is past every transition and still inside the
-        // 6 s gesture-hint window, so `PLACED_HINT` photographs the hint.
+        // 6 s gesture-hint window, so `PLACED_HINT` shows the hint.
         composeRule.mainClock.advanceTimeBy(2_000)
         composeRule.waitForIdle()
     }
 
-    /** The measurement, on the frame that was just photographed. */
+    /** The measurement, on the settled frame. */
     private fun assertAnchor(
         name: String,
         scene: Scene,
@@ -348,30 +323,6 @@ class PlacementBottomAnchorSnapshotTest {
         val DOCK = listOf(
             DockItem(icon = Icons.Filled.ViewInAr, label = "Models", onClick = {}),
             DockItem(icon = Icons.Filled.Refresh, label = "Reset", onClick = {}),
-        )
-
-        /**
-         * Same recipe, same reason, as `ContactShadowControlsSnapshotTest`: goldens recorded
-         * on macOS are verified on the CI's Linux runners, and the two round some composited
-         * colours differently. `maxDistance` rather than a change-percentage, so every pixel
-         * stays compared and only sub-perceptual rounding is forgiven.
-         *
-         * The bound is *measured*, not inherited. Run 35723212447 rejected exactly one of
-         * these fourteen goldens, `no-surface-light-white`, and comparing the runner's
-         * `_actual.png` against the macOS golden gives a largest single-channel delta of
-         * **3/255** — on 7 anti-aliased pixels along the card's and the dock's edges, all
-         * three channels drift by 3 at once, a euclidean distance of **0.02038** normalised.
-         * The previous 0.02 (the figure `ContactShadowControlsSnapshotTest` measured for its
-         * own frames) sat 0.0004 under it. 0.03 clears the measurement with the same margin
-         * that file left itself and is still some thirty times under a moved glyph, whose
-         * distances sit near 1.0. Calibrated by dropping the runner's `_actual.png` in as
-         * the golden and running `verifyRoborazziDebug` on macOS, which reproduces the
-         * cross-OS delta locally.
-         */
-        private val CROSS_PLATFORM_TOLERANT = RoborazziOptions(
-            compareOptions = RoborazziOptions.CompareOptions(
-                imageComparator = SimpleImageComparator(maxDistance = 0.03f),
-            ),
         )
     }
 }

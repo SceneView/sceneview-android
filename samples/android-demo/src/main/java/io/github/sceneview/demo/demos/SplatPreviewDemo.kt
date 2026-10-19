@@ -70,7 +70,7 @@ private const val TAG = "SplatPreviewDemo"
  */
 @Composable
 fun SplatPreviewDemo(onBack: () -> Unit) {
-    // Inspection mode (AS @Preview pane, Roborazzi): bypass the Filament-backed body BEFORE any
+    // Inspection mode (AS @Preview pane, Robolectric tests): bypass the Filament-backed body BEFORE any
     // rememberEngine() call — LayoutLib does not ship the native .so files. See GeometryDemo.
     if (LocalInspectionMode.current) {
         DemoPreviewPlaceholder(
@@ -206,7 +206,7 @@ private data class LoadedScan(
 )
 
 /**
- * Stateless controls panel for [SplatPreviewDemo]. Kept separate so a Roborazzi snapshot test can
+ * Stateless controls panel for [SplatPreviewDemo]. Kept separate so a Robolectric test can
  * capture it in pure JVM (no Filament). See GeometryDemo.
  */
 @Composable

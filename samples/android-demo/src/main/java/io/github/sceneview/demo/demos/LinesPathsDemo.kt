@@ -107,7 +107,7 @@ private const val LAP_DURATION_NANOS = 9_000_000_000.0
  */
 @Composable
 fun LinesPathsDemo(onBack: () -> Unit) {
-    // Inspection mode (Android Studio @Preview pane, Roborazzi snapshot tests): bypass the
+    // Inspection mode (Android Studio @Preview pane, Robolectric tests): bypass the
     // Filament-backed body BEFORE rememberEngine(), which needs .so files LayoutLib lacks.
     if (LocalInspectionMode.current) {
         DemoPreviewPlaceholder(title = "Lines & Paths", onBack = onBack)

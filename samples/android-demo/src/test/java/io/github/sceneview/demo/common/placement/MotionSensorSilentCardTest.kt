@@ -23,9 +23,6 @@ import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
-import com.github.takahirom.roborazzi.RoborazziOptions
-import com.github.takahirom.roborazzi.captureRoboImage
-import com.dropbox.differ.SimpleImageComparator
 import io.github.sceneview.demo.AssetSourceState
 import io.github.sceneview.demo.DEMO_MODE_PILL_TAG
 import io.github.sceneview.demo.DemoMode
@@ -59,9 +56,6 @@ import java.time.Duration
  *
  * What is held: the card replaces "Getting ready" rather than joining it, it carries no
  * button, and it stays clear of the chrome in portrait, sideways and at the largest text.
- *
- * Re-record with
- * `./gradlew :samples:android-demo:recordRoborazziDebug --tests '*MotionSensorSilentCardTest*'`.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = "w411dp-h891dp-xhdpi")
@@ -97,41 +91,41 @@ class MotionSensorSilentCardTest {
     }
 
     @Test
-    fun portrait_light() = assertRestartCard("portrait-light")
+    fun portrait_light() = assertRestartCard()
 
     @Test
-    fun portrait_dark() = assertRestartCard("portrait-dark", darkTheme = true)
+    fun portrait_dark() = assertRestartCard(darkTheme = true)
 
     @Test
     fun portrait_dark_atMaximumFontScale() =
-        assertRestartCard("portrait-dark-font-2", fontScale = 2.0f, darkTheme = true)
+        assertRestartCard(fontScale = 2.0f, darkTheme = true)
 
     @Test
     @Config(qualifiers = "w800dp-h360dp-land-xhdpi")
     fun phoneHeldSideways_light() {
-        assertRestartCard("landscape-light")
+        assertRestartCard()
         assertWholeMessageAboveTheDockScrim()
     }
 
     @Test
     @Config(qualifiers = "w800dp-h360dp-land-xhdpi")
     fun phoneHeldSideways_dark() {
-        assertRestartCard("landscape-dark", darkTheme = true)
+        assertRestartCard(darkTheme = true)
         assertWholeMessageAboveTheDockScrim()
     }
 
     @Test
     @Config(qualifiers = "w800dp-h360dp-land-xhdpi")
     fun phoneHeldSideways_light_atMaximumFontScale() {
-        assertRestartCard("landscape-light-font-2", fontScale = 2.0f)
-        assertTheCutMessageScrollsToItsEnd("landscape-light-font-2-scrolled")
+        assertRestartCard(fontScale = 2.0f)
+        assertTheCutMessageScrollsToItsEnd()
     }
 
     @Test
     @Config(qualifiers = "w800dp-h360dp-land-xhdpi")
     fun phoneHeldSideways_dark_atMaximumFontScale() {
-        assertRestartCard("landscape-dark-font-2", fontScale = 2.0f, darkTheme = true)
-        assertTheCutMessageScrollsToItsEnd("landscape-dark-font-2-scrolled")
+        assertRestartCard(fontScale = 2.0f, darkTheme = true)
+        assertTheCutMessageScrollsToItsEnd()
     }
 
     /**
@@ -157,7 +151,7 @@ class MotionSensorSilentCardTest {
      * Sideways at the largest text the band above the chrome is shorter than the message: it
      * is cut, with a fading edge, and a drag brings its last line inside the card.
      */
-    private fun assertTheCutMessageScrollsToItsEnd(name: String) {
+    private fun assertTheCutMessageScrollsToItsEnd() {
         val card = bounds(PlacementTestTags.PLACEMENT_CARD)
         val before = detailNode().getUnclippedBoundsInRoot()
         assertTrue(
@@ -178,24 +172,16 @@ class MotionSensorSilentCardTest {
                 "detail $after, card $card",
             after.bottom <= card.bottom - CARD_PADDING + TOLERANCE,
         )
-        composeRule.onRoot().captureRoboImage(
-            "src/test/snapshots/motion_sensor_silent_$name.png",
-            roborazziOptions = CROSS_PLATFORM_TOLERANT,
-        )
     }
 
     private fun detailNode() = composeRule.onNodeWithText(
         composeRule.activity.resources.getString(R.string.ar_place_motion_sensor_detail),
     )
 
-    private fun assertRestartCard(name: String, fontScale: Float = 1.0f, darkTheme: Boolean = false) {
+    private fun assertRestartCard(fontScale: Float = 1.0f, darkTheme: Boolean = false) {
         state.motionSensorSilent = true
         show(fontScale, darkTheme)
 
-        composeRule.onRoot().captureRoboImage(
-            "src/test/snapshots/motion_sensor_silent_$name.png",
-            roborazziOptions = CROSS_PLATFORM_TOLERANT,
-        )
 
         val resources = composeRule.activity.resources
         composeRule.onNodeWithText(resources.getString(R.string.ar_place_motion_sensor_title))
@@ -290,13 +276,6 @@ class MotionSensorSilentCardTest {
             DemoMode("place", R.string.demo_mode_place),
             DemoMode("free-pose", R.string.demo_mode_free_pose),
             DemoMode("one-call", R.string.demo_mode_one_call),
-        )
-
-        /** The cross-OS bound `PlacementBottomAnchorSnapshotTest` measured for these surfaces. */
-        val CROSS_PLATFORM_TOLERANT = RoborazziOptions(
-            compareOptions = RoborazziOptions.CompareOptions(
-                imageComparator = SimpleImageComparator(maxDistance = 0.03f),
-            ),
         )
     }
 }

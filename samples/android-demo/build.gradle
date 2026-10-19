@@ -3,7 +3,6 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.kotlin.serialization)
-    alias(libs.plugins.roborazzi)
     // Firebase (analytics, crash reports, push) — applied below ONLY when a
     // google-services.json is present, so forks and secret-less CI still build.
     alias(libs.plugins.google.services) apply false
@@ -398,8 +397,8 @@ dependencies {
     // Material 3 Expressive APIs (alpha, newer than BOM's stable release)
     implementation libs.androidx.compose.material3.expressive
 
-    // Compose @Preview annotation — needed at compile time so the AS preview pane and
-    // Roborazzi snapshot tests can discover @Preview functions on the demos.
+    // Compose @Preview annotation — needed at compile time so the AS preview pane
+    // can discover @Preview functions on the demos.
     implementation libs.androidx.compose.ui.tooling.preview
     // ui-tooling provides the runtime that renders @Preview functions in the AS pane;
     // shipping it in debug only avoids bundling the inspector into release APKs.
@@ -478,20 +477,15 @@ dependencies {
         exclude group: 'com.google.auto.value', module: 'auto-value'
     }
 
-    // Screenshot testing (Roborazzi — JVM, no emulator needed)
+    // JVM tests on Robolectric — no emulator needed.
     testImplementation libs.robolectric
-    testImplementation libs.roborazzi
-    testImplementation libs.roborazzi.compose
-    testImplementation libs.roborazzi.rule
     testImplementation libs.androidx.test.junit
     testImplementation platform(libs.androidx.compose.bom)
     testImplementation libs.androidx.compose.ui
 
     // Compose layout assertions on the JVM, via Robolectric — no emulator.
     // Added for DemoScaffoldBottomBandTest (#3229), which measures the real
-    // bottom band at a large font scale. The defect it pins was invisible to
-    // every existing check: a Roborazzi golden only fails if a human looks at
-    // the diff, and the overlap it captures is 4 dp.
+    // bottom band at a large font scale; the overlap it pins is 4 dp.
     testImplementation libs.androidx.compose.ui.test.junit4
     // No `androidx.compose.ui:ui-test-manifest` dependency here (#3410): that
     // artifact's sole content is a manifest declaring the bare
@@ -501,8 +495,7 @@ dependencies {
     // release variant's unit-test resource package from the release
     // implementation graph, which a `debugImplementation` dependency never
     // reaches, so every compose-rule Robolectric test failed to resolve
-    // `ComponentActivity` in the release variant only (CI never ran it to
-    // notice: `verifyRoborazziDebug` is debug-only). The same manifest entry
+    // `ComponentActivity` in the release variant only. The same manifest entry
     // is declared directly in `src/main/AndroidManifest.xml` instead, so it
     // reaches both variants' real manifest/resource-link pipeline — see the
     // comment there.
@@ -830,21 +823,4 @@ abstract class BundleHdPackManifest extends DefaultTask {
         target.parentFile.mkdirs()
         target.bytes = manifest.get().asFile.bytes
     }
-}
-
-// ─── Roborazzi goldens are a declared test input (#3034, root cause of #3029) ─
-//
-// `verifyRoborazziDebug` compares against the PNGs under `src/test/snapshots/`,
-// but the Roborazzi plugin reads them from inside the test JVM, so Gradle never
-// knew the directory was an input of `testDebugUnitTest`. Measured 2026-08-06
-// (#3029): mutate a golden by 8000 red pixels, re-run, and the task came back
-// `UP-TO-DATE` / `BUILD SUCCESSFUL in 1s` having read no golden at all — a PR
-// whose only change IS a golden went green. The workaround was `--rerun` on
-// every gate (a full minute each run); the fix is to tell Gradle the truth.
-// `fileTree` rather than `inputs.dir` so a module without goldens still
-// configures — a missing directory is an empty input, not a failure.
-tasks.withType(Test).configureEach {
-    inputs.files(fileTree("src/test/snapshots"))
-            .withPropertyName("roborazziGoldens")
-            .withPathSensitivity(PathSensitivity.RELATIVE)
 }

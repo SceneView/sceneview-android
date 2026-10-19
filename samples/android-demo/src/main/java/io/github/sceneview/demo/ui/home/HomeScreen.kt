@@ -737,8 +737,8 @@ private const val LABS_ITEM_KEY = "labs"
  * left the viewport the layer is fully transparent and [active] is false, so the loop
  * is parked on its last frame — the frame that shows again, unchanged, on the way back.
  *
- * In inspection mode (goldens) the sky is painted and the circuit is not: Roborazzi has
- * no GPU, and a still of a rendered frame would tie the goldens to a driver.
+ * In inspection mode the sky is painted and the circuit is not: `@Preview` and Robolectric
+ * have no GPU to render it with.
  */
 @Composable
 private fun HomeHeroStage(

@@ -121,7 +121,7 @@ private val SIDE_BY_SIDE_CONTROLS_MIN_WIDTH = 560.dp
  */
 @Composable
 fun GeometryDemo(onBack: () -> Unit) {
-    // Inspection mode (Android Studio @Preview pane, Roborazzi snapshot tests): leave before any
+    // Inspection mode (Android Studio @Preview pane, Robolectric tests): leave before any
     // rememberEngine() call — LayoutLib does not ship Filament's native libraries.
     if (LocalInspectionMode.current) {
         DemoPreviewPlaceholder(title = stringResource(R.string.demo_geometry_title), onBack = onBack)

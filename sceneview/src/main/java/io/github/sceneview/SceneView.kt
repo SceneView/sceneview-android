@@ -2284,8 +2284,8 @@ fun rememberViewNodeManager(
  * gradient panel with a hint pointing the developer at Android Studio's Live Edit feature —
  * which DOES iterate on the live device with the real Filament renderer.
  *
- * The placeholder also makes Roborazzi snapshot tests of demos containing a [SceneView]
- * deterministic in pure JVM (Robolectric inspection mode = true) — they capture this panel
+ * The placeholder also makes Robolectric tests of demos containing a [SceneView]
+ * deterministic in pure JVM (Robolectric inspection mode = true) — they compose this panel
  * instead of crashing on the missing Filament JNI.
  */
 @Composable

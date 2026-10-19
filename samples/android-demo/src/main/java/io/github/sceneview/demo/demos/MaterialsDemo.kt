@@ -160,7 +160,7 @@ import kotlin.math.sin
  */
 @Composable
 fun MaterialsDemo(onBack: () -> Unit) {
-    // Inspection mode (Android Studio @Preview pane, Roborazzi snapshot tests): bypass the
+    // Inspection mode (Android Studio @Preview pane, Robolectric tests): bypass the
     // Filament-backed body BEFORE rememberEngine(), which needs .so files LayoutLib lacks.
     if (LocalInspectionMode.current) {
         DemoPreviewPlaceholder(title = "Materials", onBack = onBack)
