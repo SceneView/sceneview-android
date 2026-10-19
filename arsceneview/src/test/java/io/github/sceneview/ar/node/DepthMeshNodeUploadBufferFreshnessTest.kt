@@ -28,7 +28,10 @@ class DepthMeshNodeUploadBufferFreshnessTest {
             "acquireDirectBuffer",
             "MIN_UPLOAD_BUFFER_BYTES",
         ).forEach { cachedBufferSymbol ->
-            assertFalse("$cachedBufferSymbol would violate Filament's buffer lifetime", source.contains(cachedBufferSymbol))
+            assertFalse(
+                "$cachedBufferSymbol would violate Filament's buffer lifetime",
+                source.contains(cachedBufferSymbol),
+            )
         }
     }
 }

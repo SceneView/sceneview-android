@@ -23,6 +23,9 @@ class AugmentedFaceCameraTrackingVisibilityTest {
             .replace(Regex("""\s+"""), "")
         val policy = source.indexOf("visibleCameraTrackingStates=kFaceVisibleCameraTrackingStates")
         val trackable = source.indexOf("trackable=augmentedFace", startIndex = policy.coerceAtLeast(0))
-        assertTrue("The camera policy must be installed before trackable dispatch builds the mesh", policy >= 0 && trackable > policy)
+        assertTrue(
+            "The camera policy must be installed before trackable dispatch builds the mesh",
+            policy >= 0 && trackable > policy,
+        )
     }
 }
