@@ -416,6 +416,13 @@ NON_CATALOG_BUNDLED = {
         "sourceUrl": "https://github.com/sceneview/sceneview/blob/main/LICENSE",
         "note": "Compiled from `samples/android-demo/src/main/materials/showroom_floor.mat` (Model Viewer showroom floor)",
     },
+    "viewer_grid.filamat": {
+        "name": "viewer_grid.filamat",
+        "author": "SceneView project",
+        "license": "Apache-2.0",
+        "sourceUrl": "https://github.com/sceneview/sceneview/blob/main/LICENSE",
+        "note": "Compiled from `samples/android-demo/src/main/materials/viewer_grid.mat` (3D viewers' ground grid, #4651)",
+    },
     # Hand-authored 1 kB 3MF fixtures for the web /open page (#3512).
     "printed-icosahedron.3mf": {
         "name": "printed-icosahedron.3mf",
