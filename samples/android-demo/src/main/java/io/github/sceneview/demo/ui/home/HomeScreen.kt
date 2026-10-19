@@ -310,6 +310,12 @@ fun HomeScreen(
                             // still (#3948). `preview_hero_model_viewer` stays bundled;
                             // no page draws it.
                             heroArt = null,
+                            // The flagship's page says what it opens (#4622).
+                            titleRes = if (entry.id == HERO_DEMO_ID) {
+                                R.string.demo_model_viewer_screen_title
+                            } else {
+                                null
+                            },
                         ),
                     )
                 }
@@ -858,12 +864,16 @@ internal val FEATURED_IDS = listOf("cosmos", "ar-placement", "model-viewer", "ar
 /**
  * The featured pager's demo pages (#3567), in page order: [HERO_DEMO_ID] first — it is the
  * demo the store listing, the deep link and the app icon all point at — then Cosmos, the
- * first of [FEATURED_IDS]. Two pages on purpose: a carousel nobody reaches the end of is a
- * list, and what the pager shows the "Featured" banners under it do not repeat
- * ([homeTopSections], #4304). The rest of [FEATURED_IDS] is therefore the banner group; a
- * page added here takes its demo out of the banners.
+ * first of [FEATURED_IDS], then the two newest showpieces that are not Labs experiments,
+ * Real-World Scan (a Gaussian-splat capture, 4.57) and Rolling Balls (4.55) (#4622: "one or
+ * two more cards"; a Labs id here would change the page count when Labs flips, see
+ * `LabsTest`). Four pages, not more: a carousel nobody
+ * reaches the end of is a list. What the pager shows the "Featured" banners under it do not
+ * repeat ([homeTopSections], #4304), which is why the two new pages are demos outside
+ * [FEATURED_IDS]: the banners keep the other three featured demos. A page added from
+ * [FEATURED_IDS] would take its demo out of the banners.
  */
-internal val FEATURED_PAGER_IDS = listOf(HERO_DEMO_ID, "cosmos")
+internal val FEATURED_PAGER_IDS = listOf(HERO_DEMO_ID, "cosmos", "splat-preview", "rolling-balls")
 
 @Composable
 private fun HomeHeader(

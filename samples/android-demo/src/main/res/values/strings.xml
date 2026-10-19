@@ -72,6 +72,10 @@
     <string name="sketchfab_could_not_open">Couldn\'t open this model</string>
     <string name="sketchfab_download_failed">Download failed</string>
     <string name="sketchfab_heavy_model_warning">Heavy model (%dk polys) — may take a moment</string>
+    <!-- The gallery viewer's one action towards the 3D AR Model Viewer app (#4622): open this
+         model there when the app is installed, its Play listing when it is not. -->
+    <string name="gallery_open_in_model_viewer_app">Open in 3D AR Model Viewer</string>
+    <string name="gallery_get_model_viewer_app">Get 3D AR Model Viewer</string>
 
     <!-- AR screen -->
 

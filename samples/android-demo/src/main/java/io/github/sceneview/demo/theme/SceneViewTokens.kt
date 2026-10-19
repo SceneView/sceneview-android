@@ -395,6 +395,13 @@ object SceneViewTokens {
         val heroSubtitleMaxWidth = 260.dp
         val heroPillHeight = 44.dp
         val heroPillPaddingHorizontal = 18.dp
+        /**
+         * The arrow after the hero pill's label (#4622): the pill is the page's one action,
+         * and a bare word on a busy live stage read as a caption, not a button.
+         */
+        val heroPillIconSize = 18.dp
+        /** Gap between the hero pill's label and its arrow — `space-sm`. */
+        val heroPillIconGap = 8.dp
         val heroTopGap = 8.dp
         val chipRowTopGap = 28.dp
         val chipRowHeight = 40.dp

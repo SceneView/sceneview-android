@@ -89,6 +89,9 @@
         <!-- Point & Ask tells "no AICore on this device" from "AICore present but Gemini Nano
              unavailable" and only offers the AICore Play listing in the second case (#4028). -->
         <package android:name="com.google.android.aicore" />
+        <!-- "Browse online models" offers "Open in 3D AR Model Viewer" when that app is
+             installed, and its Play listing when it is not (#4622). -->
+        <package android:name="com.gorisse.thomas.arcamera" />
     </queries>
 
     <application
