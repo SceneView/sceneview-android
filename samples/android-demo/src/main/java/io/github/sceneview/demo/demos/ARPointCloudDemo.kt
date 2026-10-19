@@ -49,7 +49,6 @@ import io.github.sceneview.ar.rememberARCameraStream
 import io.github.sceneview.demo.DemoScaffold
 import io.github.sceneview.demo.DockItem
 import io.github.sceneview.demo.R
-import io.github.sceneview.demo.SceneViewColors
 import io.github.sceneview.demo.common.DemoStatusBanner
 import io.github.sceneview.demo.common.DemoStatusTone
 import io.github.sceneview.demo.common.ForceTrackingFailureMenu
@@ -145,10 +144,12 @@ fun ARPointCloudDemo(onBack: () -> Unit) {
     val renderer = remember { PointCloudRenderer(cloud.capacity) }
     val density = LocalDensity.current.density
     var viewHeightPx by remember { mutableIntStateOf(0) }
+    // Saturated ends (`ar-mesh-ground` → `ar-points-settled`, #4623): the brand purple and
+    // the pale #a4c1ff it ran to blended into a white wall and read as grey dust.
     val palette = remember {
         PointCloudSprites.Palette(
-            low = SceneViewColors.Accent.linearRgb(),
-            high = SceneViewColors.TintLight.linearRgb(),
+            low = SceneViewTokens.ArOverlay.meshGround.linearRgb(),
+            high = SceneViewTokens.ArOverlay.pointsSettled.linearRgb(),
             fresh = SceneViewTokens.ArOverlay.accentGuidance.linearRgb(),
         )
     }

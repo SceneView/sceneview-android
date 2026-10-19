@@ -640,6 +640,35 @@ object SceneViewTokens {
          */
         val accentRecord = Color(0xFFEA4335)
 
+        /**
+         * `ar-mesh-ground` — the ground ARCore found (Streetscape terrain, a floor plane
+         * marker) drawn **into** the camera image (#4623). A saturated azure rather than the
+         * brand `primary`: #005bc1 sinks into a dim room and the dark-scheme #a4c1ff turns to
+         * milk once blended over a white wall. Theme-independent, like every accent here —
+         * the ground is the camera. Paired with [meshStructure], blue against orange: the one
+         * hue pair that stays apart under every common colour-vision deficiency.
+         */
+        val meshGround = Color(0xFF1F8BFF)
+
+        /**
+         * `ar-mesh-structure` — what stands on the ground (Streetscape buildings, walls), drawn
+         * into the camera image (#4623). Saturated orange, the complement of [meshGround]. Filmic
+         * pushes it red over mid-grey and amber over a white wall; this hue sits in the middle.
+         */
+        val meshStructure = Color(0xFFFF7A1A)
+
+        /**
+         * `ar-mesh-fill-alpha` — the strength of a mesh overlay's tint (#4623): strong enough
+         * that the colour leads on a bright wall, light enough that the room still reads.
+         */
+        const val MESH_FILL_ALPHA = 0.6f
+
+        /**
+         * `ar-points-settled` — a feature point ARCore is confident about (#4623). Vivid cyan;
+         * the low end of the confidence ramp is [meshGround], the fresh end `warning`.
+         */
+        val pointsSettled = Color(0xFF00E5FF)
+
         /** Widest a coaching pill may grow — a long line stays one readable column. */
         val maxWidth = 480.dp
 
