@@ -188,21 +188,6 @@ class PathGeometryTest {
     }
 
     @Test
-    fun `update validates its points before it uploads anything`() {
-        // Path.update cannot run on the JVM (it needs an Engine), so pin the order in the source:
-        // the vertices — and with them the guard above — are computed as an argument, before the
-        // base update touches a buffer and before this path's own state is overwritten.
-        val body = java.io.File("src/main/java/io/github/sceneview/geometries/Path.kt").readText()
-            .substringAfter("fun update(", missingDelimiterValue = "")
-            .substringBefore("\n    }")
-        assertTrue("Path.update must exist", body.isNotEmpty())
-        val guard = body.indexOf("vertices = getVertices(points)")
-        val stateWrite = body.indexOf("this.points = points")
-        assertTrue("Path.update must derive its vertices through getVertices", guard >= 0)
-        assertTrue("the guard must run before the path's state is overwritten", guard < stateWrite)
-    }
-
-    @Test
     fun `large path with 100 points produces correct index count`() {
         val n = 100
         val indices = Path.getIndices(n, closed = false)

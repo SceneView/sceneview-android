@@ -122,6 +122,8 @@ import io.github.sceneview.demo.demos.internal.RerunStatusUx
 import io.github.sceneview.demo.demos.internal.DollhouseCopy
 import io.github.sceneview.demo.demos.internal.RoomDollhouse
 import io.github.sceneview.demo.demos.internal.ScanCopy
+import io.github.sceneview.demo.demos.internal.ScanDetail
+import io.github.sceneview.demo.demos.internal.ScanFollow
 import io.github.sceneview.demo.demos.internal.ScanPhase
 import io.github.sceneview.demo.demos.internal.of
 import io.github.sceneview.demo.demos.internal.parseArDebugLog
@@ -879,6 +881,8 @@ private fun RerunLiveScreen(
     val qaRecord = qaState in RECORD_QA_STATES
     val qaTrackingLost = qaState == QA_STATE_RECORD_TRACKING_LOST
     val qaSaveFails = qaState == QA_STATE_RECORD_SAVE_FAILED
+    // #4629: `record-long` feeds the dense map a whole flat; `-fixed` runs it with the old cap.
+    var qaLong by remember { mutableStateOf<QaLongScan?>(null) }
     LaunchedEffect(qaRecord, sample) {
         val source = sample?.takeIf { qaRecord } ?: return@LaunchedEffect
         val events = withContext(Dispatchers.IO) {
@@ -888,9 +892,14 @@ private fun RerunLiveScreen(
         player.trace.keyframeSpacing = ReplayGeometry.KEYFRAME_SPACING_M
         player.trace.journal = ArrayList()
         debugSession.trace = player.trace
+        val long = qaState.takeIf { it in LONG_QA_STATES }
+            ?.let { QaLongScan.over(source.trace, fixed = it == QA_STATE_RECORD_LONG_FIXED) }
+        qaLong = long
         qaScan = RerunReplayMedia(
             player.trace, source.manifest, emptyMap(), source.thumbnails, ByteArray(0), growing = true,
+            liveDense = long?.let { { it.dense.live } },
         )
+        long?.let { launch { it.run { phase.integrates } } }
         var last = 0L
         var played = 0f
         while (true) {
@@ -905,7 +914,21 @@ private fun RerunLiveScreen(
     }
     val scanMedia = scan?.live ?: qaScan
     val recording = scanMedia != null
-    val scanOrbit = remember(scanMedia) { ArDebugOrbitCamera(drift = false, lift = SCAN_STAGE_LIFT) }
+    // #4628: the live view follows the phone heading-up, like a navigation app. A drag or a
+    // pinch takes it over and shows Recenter, which hands it back to the phone.
+    var scanFollowing by remember(scanMedia) { mutableStateOf(true) }
+    val scanFollow = remember(scanMedia) { ScanFollow() }
+    val scanOrbit = remember(scanMedia) {
+        ArDebugOrbitCamera(
+            drift = false,
+            lift = ScanFollow.LIFT,
+            approachRate = ScanFollow.APPROACH_RATE,
+            degreesPerViewWidth = ScanFollow.DRAG_DEGREES_PER_VIEW_WIDTH,
+            elevationRange = ScanFollow.DRAG_ELEVATION_RANGE,
+            maxCoastDegrees = ScanFollow.MAX_COAST_DEGREES,
+        )
+            .apply { onFollowingChange = { scanFollowing = it } }
+    }
 
     var isTracking by remember { mutableStateOf(false) }
     var cameraReady by remember { mutableStateOf(false) }
@@ -1076,7 +1099,11 @@ private fun RerunLiveScreen(
     // What the capture holds so far, counted off the scan itself: dense points on a depth scan,
     // ARCore's feature points otherwise. Zero at the start, never shown against a cap.
     val stats = debugSession.stats
-    val capturedPoints = if (scan?.rawDepth == true) scan?.denseCount ?: 0 else stats.mapPoints
+    val capturedPoints = when {
+        scan?.rawDepth == true -> scan?.denseCount ?: 0
+        qaLong != null -> qaLong?.shownCount ?: 0
+        else -> stats.mapPoints
+    }
     val capturedPhotos = debugSession.trace.imageCount
     val captureEmpty = capturedPoints == 0 && capturedPhotos == 0 && stats.planes == 0
     val capturedClock = ArDebugFormat.clock(scan?.elapsedSeconds() ?: stats.duration)
@@ -1109,16 +1136,8 @@ private fun RerunLiveScreen(
                 // reads "Scan paused", and a red "Scanning" dot above it would contradict it.
                 ScanHud(
                     phase = if (trackingLost && phase.integrates) ScanPhase.Paused else phase,
-                    seconds = scan?.elapsedSeconds(now) ?: stats.duration,
+                    seconds = scan?.elapsedSeconds(now) ?: qaLong?.shownSeconds ?: stats.duration,
                     points = capturedPoints,
-                )
-                ScanStage(
-                    session = debugSession,
-                    orbit = scanOrbit,
-                    media = scanMedia,
-                    engine = engine,
-                    modelLoader = modelLoader,
-                    materialLoader = materialLoader,
                 )
             } else if (debugFullScreen) {
                 ArDebugLegend(debugSession)
@@ -1167,6 +1186,9 @@ private fun RerunLiveScreen(
                     sharing = sharing,
                     onSaveAndShare = onSaveAndShare,
                 )
+                if (recording && !scanFollowing && phase != ScanPhase.Saving) {
+                    ScanRecenterPill(onRecenter = { scanOrbit.recenter() })
+                }
                 if (arCoreAvailability == null || qaState != null) {
                     when {
                         !recording -> ScanShutter(startEnabled = isTracking, onStart = onStartScan)
@@ -1188,6 +1210,7 @@ private fun RerunLiveScreen(
                                 phase = phase,
                                 trackingLost = trackingLost,
                                 photoLimitReached = scan?.isPhotoLimitReached == true,
+                                detail = scan?.denseDetail ?: qaLong?.shownDetail ?: ScanDetail.Fine,
                             ),
                             onTogglePause = { moveTo(phase.togglePause()) },
                             onFinish = { moveTo(phase.finish()) },
@@ -1301,6 +1324,21 @@ private fun RerunLiveScreen(
                         }
                     }
                 }
+            }
+
+            // A capture owns the screen (#4628): its cloud full screen over the dimmed camera,
+            // following the phone. The camera keeps tracking, and recording, under it.
+            if (recording && scanMedia != null) {
+                ScanLiveView(
+                    session = debugSession,
+                    orbit = scanOrbit,
+                    follow = scanFollow,
+                    following = scanFollowing,
+                    media = scanMedia,
+                    engine = engine,
+                    modelLoader = modelLoader,
+                    materialLoader = materialLoader,
+                )
             }
 
             // Full-screen 3D view over the camera, which keeps tracking (and recording) under it.
@@ -1601,8 +1639,6 @@ private const val QA_SEED = "ar-rerun"
 /** Where the replay stage draws the room: 7 % of the height above centre, clear of the filmstrip. */
 private const val REPLAY_STAGE_LIFT = 0.07f
 
-/** The Record screen's 3D card frames the room higher: its floor used to sit clipped at the card's foot. */
-private const val SCAN_STAGE_LIFT = 0.12f
 private const val QA_STATE_CONNECTED = "connected"
 private const val QA_STATE_SAVED = "saved"
 
@@ -1615,8 +1651,13 @@ private const val QA_STATE_RECORD_TRACKING_LOST = "record-tracking-lost"
 /** QA only (#4627): the capture screen whose write fails, to show the failure that stays. */
 private const val QA_STATE_RECORD_SAVE_FAILED = "record-save-failed"
 
+/** QA only (#4629): the capture screen fed a whole flat's depth, and the same with the old fixed cap. */
+private const val QA_STATE_RECORD_LONG = "record-long"
+private const val QA_STATE_RECORD_LONG_FIXED = "record-long-fixed"
+private val LONG_QA_STATES = setOf(QA_STATE_RECORD_LONG, QA_STATE_RECORD_LONG_FIXED)
+
 private val RECORD_QA_STATES =
-    setOf(QA_STATE_RECORD, QA_STATE_RECORD_TRACKING_LOST, QA_STATE_RECORD_SAVE_FAILED)
+    setOf(QA_STATE_RECORD, QA_STATE_RECORD_TRACKING_LOST, QA_STATE_RECORD_SAVE_FAILED) + LONG_QA_STATES
 
 /** The QA scan plays the sample once and holds on its end, as a scan in progress would. */
 private const val QA_RECORD_NEVER_LOOP_S = 3_600f

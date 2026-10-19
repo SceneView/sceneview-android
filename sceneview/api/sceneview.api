@@ -871,6 +871,210 @@ public final class io/github/sceneview/audio/SpatialAudioNodeKt {
 	public static final fun setSpatialAudioListenerPose (Ldev/romainguy/kotlin/math/Float3;Ldev/romainguy/kotlin/math/Float3;Ldev/romainguy/kotlin/math/Float3;)V
 }
 
+public final class io/github/sceneview/camera/CameraAnimator {
+	public static final field $stable I
+	public static final field Companion Lio/github/sceneview/camera/CameraAnimator$Companion;
+	public static final field FLY_TO_SECONDS F
+	public static final field MAX_STEP_SECONDS F
+	public fun <init> (Lio/github/sceneview/camera/CameraShot;)V
+	public final fun advance (F)Lio/github/sceneview/camera/CameraShot;
+	public final fun flyTo (Lio/github/sceneview/camera/CameraShot;FLkotlin/jvm/functions/Function1;FLkotlin/jvm/functions/Function0;)V
+	public static synthetic fun flyTo$default (Lio/github/sceneview/camera/CameraAnimator;Lio/github/sceneview/camera/CameraShot;FLkotlin/jvm/functions/Function1;FLkotlin/jvm/functions/Function0;ILjava/lang/Object;)V
+	public final fun getElapsed ()F
+	public final fun getShot ()Lio/github/sceneview/camera/CameraShot;
+	public final fun getVelocity ()Lio/github/sceneview/camera/CameraShotVelocity;
+	public final fun interrupt ()Lio/github/sceneview/camera/CameraShotVelocity;
+	public final fun isPlaying ()Z
+	public final fun play (Lio/github/sceneview/camera/CameraPath;Lkotlin/jvm/functions/Function0;)V
+	public static synthetic fun play$default (Lio/github/sceneview/camera/CameraAnimator;Lio/github/sceneview/camera/CameraPath;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)V
+	public final fun snapTo (Lio/github/sceneview/camera/CameraShot;)V
+}
+
+public final class io/github/sceneview/camera/CameraAnimator$Companion {
+}
+
+public final class io/github/sceneview/camera/CameraEasing {
+	public static final field $stable I
+	public static final field INSTANCE Lio/github/sceneview/camera/CameraEasing;
+	public final fun getExpressive ()Lkotlin/jvm/functions/Function1;
+	public final fun getInOut ()Lkotlin/jvm/functions/Function1;
+	public final fun getLinear ()Lkotlin/jvm/functions/Function1;
+}
+
+public final class io/github/sceneview/camera/CameraKeyframe {
+	public static final field $stable I
+	public fun <init> (Lio/github/sceneview/camera/CameraShot;F)V
+	public final fun component1 ()Lio/github/sceneview/camera/CameraShot;
+	public final fun component2 ()F
+	public final fun copy (Lio/github/sceneview/camera/CameraShot;F)Lio/github/sceneview/camera/CameraKeyframe;
+	public static synthetic fun copy$default (Lio/github/sceneview/camera/CameraKeyframe;Lio/github/sceneview/camera/CameraShot;FILjava/lang/Object;)Lio/github/sceneview/camera/CameraKeyframe;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getSeconds ()F
+	public final fun getShot ()Lio/github/sceneview/camera/CameraShot;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/sceneview/camera/CameraPath {
+	public static final field $stable I
+	public static final field Companion Lio/github/sceneview/camera/CameraPath$Companion;
+	public static final field MIN_DISTANCE F
+	public static final field REVEAL_DISTANCE_FACTOR F
+	public static final field REVEAL_SECONDS F
+	public static final field REVEAL_START_ELEVATION F
+	public static final field REVEAL_TURN_DEGREES F
+	public static final field THROUGH_SECONDS_PER_SHOT F
+	public static final field TOUR_RISE_DEGREES F
+	public static final field TOUR_SECONDS F
+	public fun <init> (Ljava/util/List;Lkotlin/jvm/functions/Function1;ZZ)V
+	public synthetic fun <init> (Ljava/util/List;Lkotlin/jvm/functions/Function1;ZZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getDurationSeconds ()F
+	public final fun getEasing ()Lkotlin/jvm/functions/Function1;
+	public final fun getEnd ()Lio/github/sceneview/camera/CameraShot;
+	public final fun getKeyframes ()Ljava/util/List;
+	public final fun getLoop ()Z
+	public final fun getShortestArc ()Z
+	public final fun getStart ()Lio/github/sceneview/camera/CameraShot;
+	public final fun isFinishedAt (F)Z
+	public final fun shotAt (F)Lio/github/sceneview/camera/CameraShot;
+}
+
+public final class io/github/sceneview/camera/CameraPath$Companion {
+	public final fun reveal (Lio/github/sceneview/camera/CameraShot;FFFFLkotlin/jvm/functions/Function1;)Lio/github/sceneview/camera/CameraPath;
+	public static synthetic fun reveal$default (Lio/github/sceneview/camera/CameraPath$Companion;Lio/github/sceneview/camera/CameraShot;FFFFLkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lio/github/sceneview/camera/CameraPath;
+	public final fun through (Ljava/util/List;FLkotlin/jvm/functions/Function1;)Lio/github/sceneview/camera/CameraPath;
+	public static synthetic fun through$default (Lio/github/sceneview/camera/CameraPath$Companion;Ljava/util/List;FLkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lio/github/sceneview/camera/CameraPath;
+	public final fun tour (Lio/github/sceneview/camera/CameraShot;FFFZ)Lio/github/sceneview/camera/CameraPath;
+	public static synthetic fun tour$default (Lio/github/sceneview/camera/CameraPath$Companion;Lio/github/sceneview/camera/CameraShot;FFFZILjava/lang/Object;)Lio/github/sceneview/camera/CameraPath;
+}
+
+public final class io/github/sceneview/camera/CameraShot {
+	public static final field $stable I
+	public static final field Companion Lio/github/sceneview/camera/CameraShot$Companion;
+	public static final field MAX_ELEVATION F
+	public fun <init> ()V
+	public fun <init> (Ldev/romainguy/kotlin/math/Float3;FFF)V
+	public synthetic fun <init> (Ldev/romainguy/kotlin/math/Float3;FFFILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ldev/romainguy/kotlin/math/Float3;
+	public final fun component2 ()F
+	public final fun component3 ()F
+	public final fun component4 ()F
+	public final fun copy (Ldev/romainguy/kotlin/math/Float3;FFF)Lio/github/sceneview/camera/CameraShot;
+	public static synthetic fun copy$default (Lio/github/sceneview/camera/CameraShot;Ldev/romainguy/kotlin/math/Float3;FFFILjava/lang/Object;)Lio/github/sceneview/camera/CameraShot;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAzimuthDegrees ()F
+	public final fun getDistance ()F
+	public final fun getElevationDegrees ()F
+	public final fun getEye ()Ldev/romainguy/kotlin/math/Float3;
+	public final fun getTarget ()Ldev/romainguy/kotlin/math/Float3;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+	public final fun transform (Ldev/romainguy/kotlin/math/Float3;)Ldev/romainguy/kotlin/math/Mat4;
+	public static synthetic fun transform$default (Lio/github/sceneview/camera/CameraShot;Ldev/romainguy/kotlin/math/Float3;ILjava/lang/Object;)Ldev/romainguy/kotlin/math/Mat4;
+}
+
+public final class io/github/sceneview/camera/CameraShot$Companion {
+	public final fun lerp (Lio/github/sceneview/camera/CameraShot;Lio/github/sceneview/camera/CameraShot;FZ)Lio/github/sceneview/camera/CameraShot;
+	public static synthetic fun lerp$default (Lio/github/sceneview/camera/CameraShot$Companion;Lio/github/sceneview/camera/CameraShot;Lio/github/sceneview/camera/CameraShot;FZILjava/lang/Object;)Lio/github/sceneview/camera/CameraShot;
+	public final fun lookingAt (Ldev/romainguy/kotlin/math/Float3;Ldev/romainguy/kotlin/math/Float3;)Lio/github/sceneview/camera/CameraShot;
+	public final fun normalizeDegrees (F)F
+	public final fun shortestDelta (FF)F
+}
+
+public abstract interface class io/github/sceneview/camera/CameraShotSink {
+	public abstract fun takeOver (Lio/github/sceneview/camera/CameraShot;Lio/github/sceneview/camera/CameraShotVelocity;)V
+}
+
+public final class io/github/sceneview/camera/CameraShotVelocity {
+	public static final field $stable I
+	public static final field Companion Lio/github/sceneview/camera/CameraShotVelocity$Companion;
+	public fun <init> ()V
+	public fun <init> (FFFLdev/romainguy/kotlin/math/Float3;)V
+	public synthetic fun <init> (FFFLdev/romainguy/kotlin/math/Float3;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()F
+	public final fun component2 ()F
+	public final fun component3 ()F
+	public final fun component4 ()Ldev/romainguy/kotlin/math/Float3;
+	public final fun copy (FFFLdev/romainguy/kotlin/math/Float3;)Lio/github/sceneview/camera/CameraShotVelocity;
+	public static synthetic fun copy$default (Lio/github/sceneview/camera/CameraShotVelocity;FFFLdev/romainguy/kotlin/math/Float3;ILjava/lang/Object;)Lio/github/sceneview/camera/CameraShotVelocity;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAzimuthDegreesPerSecond ()F
+	public final fun getDistancePerSecond ()F
+	public final fun getElevationDegreesPerSecond ()F
+	public final fun getTargetPerSecond ()Ldev/romainguy/kotlin/math/Float3;
+	public fun hashCode ()I
+	public final fun isZero ()Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/sceneview/camera/CameraShotVelocity$Companion {
+	public final fun between (Lio/github/sceneview/camera/CameraShot;Lio/github/sceneview/camera/CameraShot;F)Lio/github/sceneview/camera/CameraShotVelocity;
+	public final fun getZero ()Lio/github/sceneview/camera/CameraShotVelocity;
+}
+
+public final class io/github/sceneview/camera/CameraTransition {
+	public static final field $stable I
+	public static final field Companion Lio/github/sceneview/camera/CameraTransition$Companion;
+	public static final field DEFAULT_FLY_OVER F
+	public fun <init> (Lio/github/sceneview/camera/CameraShot;Lio/github/sceneview/camera/CameraShot;FLkotlin/jvm/functions/Function1;F)V
+	public synthetic fun <init> (Lio/github/sceneview/camera/CameraShot;Lio/github/sceneview/camera/CameraShot;FLkotlin/jvm/functions/Function1;FILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lio/github/sceneview/camera/CameraShot;
+	public final fun component2 ()Lio/github/sceneview/camera/CameraShot;
+	public final fun component3 ()F
+	public final fun component4 ()Lkotlin/jvm/functions/Function1;
+	public final fun component5 ()F
+	public final fun copy (Lio/github/sceneview/camera/CameraShot;Lio/github/sceneview/camera/CameraShot;FLkotlin/jvm/functions/Function1;F)Lio/github/sceneview/camera/CameraTransition;
+	public static synthetic fun copy$default (Lio/github/sceneview/camera/CameraTransition;Lio/github/sceneview/camera/CameraShot;Lio/github/sceneview/camera/CameraShot;FLkotlin/jvm/functions/Function1;FILjava/lang/Object;)Lio/github/sceneview/camera/CameraTransition;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDurationSeconds ()F
+	public final fun getEasing ()Lkotlin/jvm/functions/Function1;
+	public final fun getFlyOver ()F
+	public final fun getFrom ()Lio/github/sceneview/camera/CameraShot;
+	public final fun getTo ()Lio/github/sceneview/camera/CameraShot;
+	public fun hashCode ()I
+	public final fun isFinishedAt (F)Z
+	public final fun shotAt (F)Lio/github/sceneview/camera/CameraShot;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/sceneview/camera/CameraTransition$Companion {
+}
+
+public final class io/github/sceneview/camera/CameraTransitionKt {
+	public static final fun cameraTransition (Lio/github/sceneview/camera/CameraShot;Lio/github/sceneview/camera/CameraShot;FLkotlin/jvm/functions/Function1;F)Lio/github/sceneview/camera/CameraShot;
+	public static synthetic fun cameraTransition$default (Lio/github/sceneview/camera/CameraShot;Lio/github/sceneview/camera/CameraShot;FLkotlin/jvm/functions/Function1;FILjava/lang/Object;)Lio/github/sceneview/camera/CameraShot;
+}
+
+public final class io/github/sceneview/camera/CinematicCameraManipulator : io/github/sceneview/gesture/CameraGestureDetector$CameraManipulator {
+	public static final field $stable I
+	public static final field Companion Lio/github/sceneview/camera/CinematicCameraManipulator$Companion;
+	public static final field HANDOVER_SECONDS F
+	public fun <init> (Lio/github/sceneview/camera/CameraAnimator;Lio/github/sceneview/gesture/CameraGestureDetector$CameraManipulator;F)V
+	public synthetic fun <init> (Lio/github/sceneview/camera/CameraAnimator;Lio/github/sceneview/gesture/CameraGestureDetector$CameraManipulator;FILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun doubleTapZoom (IIZ)V
+	public final fun getAnimator ()Lio/github/sceneview/camera/CameraAnimator;
+	public final fun getInner ()Lio/github/sceneview/gesture/CameraGestureDetector$CameraManipulator;
+	public fun getTransform ()Ldev/romainguy/kotlin/math/Mat4;
+	public fun grabBegin (IIZ)V
+	public fun grabEnd ()V
+	public fun grabUpdate (II)V
+	public final fun interrupt ()V
+	public fun isFrameActive ()Z
+	public final fun isPlaying ()Z
+	public fun scrollBegin (IIF)V
+	public fun scrollEnd ()V
+	public fun scrollUpdate (IIFF)V
+	public fun setViewport (II)V
+	public fun update (F)V
+}
+
+public final class io/github/sceneview/camera/CinematicCameraManipulator$Companion {
+}
+
+public final class io/github/sceneview/camera/CinematicCameraManipulatorKt {
+	public static final fun rememberCinematicCameraManipulator (Lio/github/sceneview/camera/CameraAnimator;Lio/github/sceneview/gesture/CameraGestureDetector$CameraManipulator;Landroidx/compose/runtime/Composer;I)Lio/github/sceneview/camera/CinematicCameraManipulator;
+}
+
 public final class io/github/sceneview/collision/Collider {
 	public static final field $stable I
 	public field node Lio/github/sceneview/node/Node;
