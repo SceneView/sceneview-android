@@ -23,6 +23,9 @@
          export sheet and shared as a PDF. -->
     <string name="demo_ar_rerun_plan_export_title">Floor plan</string>
     <string name="demo_ar_rerun_plan_export_detail">PDF · to scale, with areas and volume</string>
+    <!-- The export sheet's Floor plan row when the scan has no plan yet (#4714): why, in one line. -->
+    <string name="demo_ar_rerun_plan_export_no_walls">No plan yet: scan the walls to get one</string>
+    <string name="demo_ar_rerun_plan_export_no_depth">No plan: this scan has no depth</string>
     <string name="demo_ar_rerun_plan_about">The room measured from your scan: wall lengths, floor area, ceiling height and volume. Share it as a PDF to scale.</string>
     <string name="demo_ar_rerun_plan_survey_title">Room survey</string>
     <string name="demo_ar_rerun_plan_measuring">Measuring the room…</string>

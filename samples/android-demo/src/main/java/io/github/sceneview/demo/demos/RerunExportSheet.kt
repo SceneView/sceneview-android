@@ -85,6 +85,7 @@ import io.github.sceneview.demo.demos.internal.RerunResultView
 import io.github.sceneview.demo.demos.internal.RerunRrdWriter
 import io.github.sceneview.demo.demos.internal.RerunScanFile
 import io.github.sceneview.demo.demos.internal.RerunScanModel
+import io.github.sceneview.demo.demos.internal.PlanOffer
 import io.github.sceneview.demo.demos.internal.formatFileSize
 import io.github.sceneview.demo.theme.SceneViewTokens
 import io.github.sceneview.demo.theme.SceneViewTokens.Space
@@ -128,7 +129,8 @@ private sealed interface Prepared {
 
 /**
  * The export sheet: the model's row with Save file and Share, a scan's floor plan when
- * [onFloorPlan] is given (#4540), then the other formats, folded.
+ * [onFloorPlan] is given (#4540), then the other formats, folded. [floorPlan] says whether the
+ * scan has a plan to open (#4714): without one the row stays, disabled, and says why.
  */
 @Composable
 @Suppress("LongMethod")
@@ -136,6 +138,7 @@ internal fun RerunExportSheet(
     source: RerunExportSource,
     onDismiss: () -> Unit,
     onFloorPlan: (() -> Unit)? = null,
+    floorPlan: PlanOffer = PlanOffer.Ready,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -254,7 +257,7 @@ internal fun RerunExportSheet(
             if (onFloorPlan != null) {
                 Column {
                     HorizontalDivider()
-                    FloorPlanRow(onClick = onFloorPlan)
+                    FloorPlanRow(offer = floorPlan, onClick = onFloorPlan)
                 }
             }
             if (more.isNotEmpty()) {
@@ -396,12 +399,15 @@ private fun MoreHeader(expanded: Boolean, onToggle: () -> Unit) {
 
 /** The scan's floor plan: a tap opens it, measured, with its PDF to share. */
 @Composable
-private fun FloorPlanRow(onClick: () -> Unit) {
+private fun FloorPlanRow(offer: PlanOffer, onClick: () -> Unit) {
+    val ready = offer == PlanOffer.Ready
+    // Without a plan the row is read, not tapped: muted, no chevron, the reason in its caption.
+    val ink = if (ready) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = SceneViewTokens.Layout.touchTarget)
-            .clickable(role = Role.Button, onClick = onClick)
+            .clickable(enabled = ready, role = Role.Button, onClick = onClick)
             .padding(vertical = Space.xs)
             .testTag(EXPORT_FLOOR_PLAN_TAG),
         verticalAlignment = Alignment.CenterVertically,
@@ -410,27 +416,42 @@ private fun FloorPlanRow(onClick: () -> Unit) {
         Icon(
             imageVector = Icons.Rounded.SquareFoot,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
+            tint = if (ready) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(SceneViewTokens.Layout.touchTarget).padding(Space.sm),
         )
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Space.xs)) {
             Text(
                 text = stringResource(R.string.demo_ar_rerun_plan_export_title),
                 style = Type.body.copy(fontWeight = FontWeight.SemiBold),
-                color = MaterialTheme.colorScheme.onSurface,
+                color = ink,
             )
             Text(
-                text = stringResource(R.string.demo_ar_rerun_plan_export_detail),
+                text = stringResource(
+                    when (offer) {
+                        PlanOffer.Ready -> R.string.demo_ar_rerun_plan_export_detail
+                        PlanOffer.Measuring -> R.string.demo_ar_rerun_plan_measuring
+                        PlanOffer.NoDepth -> R.string.demo_ar_rerun_plan_export_no_depth
+                        PlanOffer.NoWalls -> R.string.demo_ar_rerun_plan_export_no_walls
+                    },
+                ),
                 style = Type.caption,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Icon(
-            Icons.Rounded.ChevronRight,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(SceneViewTokens.Layout.touchTarget).padding(Space.sm),
-        )
+        if (ready) {
+            Icon(
+                Icons.Rounded.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(SceneViewTokens.Layout.touchTarget).padding(Space.sm),
+            )
+        } else if (offer == PlanOffer.Measuring) {
+            // The same small spinner as a format being prepared.
+            CircularProgressIndicator(
+                strokeWidth = Space.xs / 2,
+                modifier = Modifier.padding(horizontal = Space.md).size(Space.md),
+            )
+        }
     }
 }
 

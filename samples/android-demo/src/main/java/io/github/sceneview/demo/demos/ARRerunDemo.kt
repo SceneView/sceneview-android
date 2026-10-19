@@ -158,6 +158,7 @@ import io.github.sceneview.demo.demos.internal.ScanDetail
 import io.github.sceneview.demo.demos.internal.ScanFollow
 import io.github.sceneview.demo.demos.internal.ScanPhase
 import io.github.sceneview.demo.demos.internal.ScanCutoff
+import io.github.sceneview.demo.demos.internal.PlanOffer
 import io.github.sceneview.demo.demos.internal.ScanScope
 import io.github.sceneview.demo.demos.internal.ScanScopeCopy
 import io.github.sceneview.demo.demos.internal.HomeScan
@@ -339,7 +340,8 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
             when (qaState) {
                 QA_STATE_RECORD_OBJECT -> ScanScope.Object
                 QA_STATE_RECORD_HOME, QA_STATE_HOME_SUMMARY -> ScanScope.Home
-                QA_STATE_RECORD -> ScanScope.Room
+                QA_STATE_RECORD, QA_STATE_RECORD_NO_DEPTH -> ScanScope.Room
+                QA_STATE_RECORD_AREA -> ScanScope.Area
                 else -> ScanScopeStore.last(context)
             },
         )
@@ -645,11 +647,8 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
             hasScene = false,
         ) {
             val room = homePlanRoom
-            RerunPlanView(
-                survey = room?.survey,
-                title = room?.title.orEmpty(),
-                date = planDate(sessions?.firstOrNull { it.id == room?.id }?.info?.createdAt),
-            )
+            val heading = planHeading(room?.title.orEmpty(), sessions?.firstOrNull { it.id == room?.id }?.info?.createdAt)
+            RerunPlanView(survey = room?.survey, title = heading.title, date = heading.date)
         }
         // Capture is the camera, and so is ARCore's MP4 playback as the library runs it:
         // `ARCore.checkPermissionAndInstall` holds every session back without the permission.
@@ -699,6 +698,7 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
             media = media,
             isScan = showingScan,
             measuresRoom = !showingScan || scanKind.hasFloorPlan,
+            mapsGround = !showingScan || scanKind.mapsGround,
             scanTitle = scanTitle,
             session = replaySession,
             orbit = replayOrbit,
@@ -734,12 +734,10 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
             arPlaybackDataset = arPlaybackDataset,
             startIn3d = qaState == QA_STATE_DOLLHOUSE_3D,
         )
-        RerunScreen.Plan -> RerunPlanScreen(
-            media = scanMedia,
-            title = scanTitle,
-            date = planDate(sessions?.firstOrNull { it.id == scanId }?.info?.createdAt),
-            onBack = leavePlan,
-        )
+        RerunScreen.Plan -> {
+            val heading = planHeading(scanTitle, sessions?.firstOrNull { it.id == scanId }?.info?.createdAt)
+            RerunPlanScreen(media = scanMedia, title = heading.title, date = heading.date, onBack = leavePlan)
+        }
         RerunScreen.Model -> RerunModelScreen(
             source = modelSource,
             title = if (showingScan) scanTitle else ScanCopy.REPLAY_TITLE,
@@ -795,11 +793,14 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
             }
         }
         // The floor plan is a scan's: it is measured on the depth the scan recorded (#4540).
-        // An object has none (#4683): it is not a room, whatever its points.
+        // An object has none (#4683), nor an outdoor area (#4720): neither is a room, whatever
+        // its points. A room without a plan keeps the row, disabled, with why (#4714).
         val planMedia = scanMedia?.takeIf { showingScan && scanKind.hasFloorPlan }
+        val planSurvey = rememberRoomSurvey(planMedia, wanted = planMedia != null)
         RerunExportSheet(
             source = source,
             onDismiss = { exporting = false },
+            floorPlan = PlanOffer.of(planSurvey),
             onFloorPlan = planMedia?.let {
                 {
                     exporting = false
@@ -870,6 +871,8 @@ private fun RerunReplayScreen(
     isScan: Boolean,
     /** Whether the scan is a room's, measured as one: an object's draws no room dimensions (#4683). */
     measuresRoom: Boolean,
+    /** Whether the scan maps the ground it covered: a room's and an outdoor area's do, an object's not (#4720). */
+    mapsGround: Boolean,
     scanTitle: String,
     revealed: Boolean,
     onRevealed: () -> Unit,
@@ -928,10 +931,10 @@ private fun RerunReplayScreen(
     // What the recording covers at the replay's time (#4631): the map card in the top corner, in
     // the 3D and Map views, which feed it.
     val coverage = remember(media) { ScanCoverageState() }
-    // The floor's coverage is a room's figure: an object's scan has no floor to cover (#4683).
-    val showsCoverage = media != null && mode != RerunMode.Camera && measuresRoom
+    // The ground's coverage is a room's or an area's figure: an object's scan has none (#4683, #4720).
+    val showsCoverage = media != null && mode != RerunMode.Camera && mapsGround
     // An object's scan has no map: one opened while the map was showing opens in 3D.
-    LaunchedEffect(measuresRoom, mode) { if (!measuresRoom && mode == RerunMode.Map) onMode(RerunMode.Scene) }
+    LaunchedEffect(mapsGround, mode) { if (!mapsGround && mode == RerunMode.Map) onMode(RerunMode.Scene) }
     // The camera frames are pictures, ready with the files; the 3D view says when it has drawn.
     val ready = media != null && (revealed || mode == RerunMode.Camera)
     LaunchedEffect(ready) { if (ready) onRevealed() }
@@ -1056,15 +1059,15 @@ private fun RerunReplayScreen(
                 onClick = { if (mode == RerunMode.Scene) orbit.recenter() else onMode(RerunMode.Scene) },
                 selected = mode == RerunMode.Scene,
             ),
-            // The map is the floor plan seen from above: an object's scan has no floor plan, and its
-            // top view is what the 3D view's orbit already shows (#4683).
+            // The map is the ground seen from above: an object's scan has none, and its top view is
+            // what the 3D view's orbit already shows (#4683). An outdoor area keeps it (#4720).
             DockItem(
                 icon = Icons.Rounded.Map,
                 label = "Map view",
                 caption = "Map",
                 onClick = { onMode(RerunMode.Map) },
                 selected = mode == RerunMode.Map,
-            ).takeIf { measuresRoom },
+            ).takeIf { mapsGround },
             DockItem(
                 icon = Icons.Rounded.Movie,
                 label = "Camera frames",
@@ -1518,7 +1521,8 @@ private fun RerunLiveScreen(
             // lands on the same "Couldn't save" card as a failed write, and Try again rebuilds.
             val built = runCatching {
                 builtPack ?: when {
-                    qaTrace != null && sample != null -> qaSessionOf(qaTrace, sample, scanScope)
+                    qaTrace != null && sample != null ->
+                        qaSessionOf(qaTrace, sample, scanScope, depth = qaState != QA_STATE_RECORD_NO_DEPTH)
                     capture != null -> capture.finish()
                     else -> null
                 }
@@ -1693,8 +1697,8 @@ private fun RerunLiveScreen(
                     sharing = sharing,
                     onSaveAndShare = onSaveAndShare,
                 )
-                // The floor map is room guidance: an object has no floor to cover (#4647).
-                val mapsFloor = phase in SCAN_MAP_PHASES && scanScope.hasFloorPlan
+                // The floor map is room guidance, and an area's: an object has no ground to cover (#4647).
+                val mapsFloor = phase in SCAN_MAP_PHASES && scanScope.mapsGround
                 if (recording && scanMedia != null && mapsFloor) {
                     ScanCoverageMap(
                         state = scanCoverage,
@@ -2202,6 +2206,10 @@ private val LONG_QA_STATES = setOf(QA_STATE_RECORD_LONG, QA_STATE_RECORD_LONG_FI
 private const val QA_STATE_RECORD_OBJECT = "record-object"
 private const val QA_STATE_RECORD_HOME = "record-home"
 
+/** QA only (#4714, #4720): a room taken without depth — no floor plan — and an outdoor area's take. */
+private const val QA_STATE_RECORD_NO_DEPTH = "record-no-depth"
+private const val QA_STATE_RECORD_AREA = "record-area"
+
 /** QA only (#4647): what 3D Scan asks first, and a whole home of two ray-cast rooms, summed up. */
 private const val QA_STATE_CHOOSE = "choose"
 private const val QA_STATE_HOME_SUMMARY = "home-summary"
@@ -2213,6 +2221,8 @@ private val RECORD_QA_STATES =
         QA_STATE_RECORD_SAVE_FAILED,
         QA_STATE_RECORD_OBJECT,
         QA_STATE_RECORD_HOME,
+        QA_STATE_RECORD_NO_DEPTH,
+        QA_STATE_RECORD_AREA,
     ) + LONG_QA_STATES
 
 /** The QA scan plays the sample once and holds on its end, as a scan in progress would. */
@@ -2235,7 +2245,12 @@ private const val NANOS_PER_SECOND = 1e9f
  * QA only: the take the Record screen played from the sample, built into a session like a real
  * scan — its journal, and the sample's photos taken from where the trace's camera stood.
  */
-private suspend fun qaSessionOf(trace: ArDebugTrace, sample: RerunReplayMedia, scope: ScanScope): RerunCapturePack? {
+private suspend fun qaSessionOf(
+    trace: ArDebugTrace,
+    sample: RerunReplayMedia,
+    scope: ScanScope,
+    depth: Boolean = true,
+): RerunCapturePack? {
     val events = trace.journal?.toList().orEmpty()
     trace.journal = null
     if (events.isEmpty()) return null
@@ -2248,8 +2263,8 @@ private suspend fun qaSessionOf(trace: ArDebugTrace, sample: RerunReplayMedia, s
         }
     }
     // An object's take is a phone without raw depth (#4683): its sparse points and planes only,
-    // cut to arm's length as they were recorded.
-    if (scope == ScanScope.Object) {
+    // cut to arm's length as they were recorded. So is a room taken without depth (#4714).
+    if (scope == ScanScope.Object || !depth) {
         val sparse = ScanDevice("android", Build.MODEL, ScanDevice.TIER_SPARSE, ScanDevice.SOURCE_FEATURE_POINTS)
         return RerunCaptureBuilder.build(events, sample.manifest.lens, photos, device = sparse)
     }

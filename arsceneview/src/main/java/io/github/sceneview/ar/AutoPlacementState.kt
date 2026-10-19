@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 
+import kotlin.math.abs
 import kotlin.math.sqrt
 
 /** Observable automatic-placement phases shared with the Apple placement controller. */
@@ -180,6 +181,26 @@ class AutoPlacementState {
      */
     var hasCameraFrame: Boolean by mutableStateOf(false)
         private set
+
+    /**
+     * The floor's height in ARCore world space (metres): the lowest tracked upward-facing
+     * plane, `null` before one is tracked; a floor that stops tracking for a while keeps its last
+     * height. [AutoPlacementScene] keeps it up to date. An object
+     * placed on a table that should stand on the floor instead — a scanned room at its real
+     * size — drops by `floorHeight - placement.pose.ty()`.
+     *
+     * It moves only when the floor does by [FLOOR_STEP_M] or more, so the plane's frame-to-frame
+     * jitter does not recompose whoever reads it.
+     */
+    var floorHeight: Float? by mutableStateOf(null)
+        private set
+
+    /** The floor [AutoPlacementScene] tracks this frame ([floorHeight]); `null` while there is none. */
+    internal fun onFloor(height: Float?) {
+        if (height == null) return
+        val current = floorHeight
+        if (current == null || abs(height - current) >= FLOOR_STEP_M) floorHeight = height
+    }
 
     private var searchStartedAt: Long? = null
     private var recoveringSince: Long? = null
@@ -413,6 +434,9 @@ class AutoPlacementState {
     }
 
     companion object {
+        /** How far the floor moves before [floorHeight] follows it: under its frame-to-frame jitter. */
+        internal const val FLOOR_STEP_M = 0.01f
+
         /** Scanning without a usable surface for this long shows the help card (§2.2). */
         const val NO_SURFACE_TIMEOUT_MS = 10_000L
 

@@ -737,6 +737,7 @@ public final class io/github/sceneview/ar/AutoPlacementState {
 	public final fun dismiss ()V
 	public final fun endAdjustment ()V
 	public final fun getAllowsScaling ()Z
+	public final fun getFloorHeight ()Ljava/lang/Float;
 	public final fun getHasCameraFrame ()Z
 	public final fun getHasPlacement ()Z
 	public final fun getPhase ()Lio/github/sceneview/ar/PlacementPhase;
