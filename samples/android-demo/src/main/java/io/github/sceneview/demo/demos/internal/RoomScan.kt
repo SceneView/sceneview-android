@@ -343,6 +343,9 @@ object ScanCopy {
     const val SAVE_FAILED = "Couldn't save your scan"
     const val SAVE_FAILED_DETAIL = "Your scan is still here, not saved yet. Try again, or discard it."
 
+    /** A save that failed after its capture screen was left (#4500): said on the landing. */
+    const val SAVE_FAILED_AWAY = "Couldn't save your last scan."
+
     /** `Delete "Room · Sep 28, 2:32 PM"?` */
     fun deleteTitle(title: String): String = "Delete “$title”?"
 
