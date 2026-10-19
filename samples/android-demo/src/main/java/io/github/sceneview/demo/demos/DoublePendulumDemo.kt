@@ -187,11 +187,12 @@ fun DoublePendulumDemo(onBack: () -> Unit) {
     // The swing waits for the scene to be on screen. The loop used to start as soon as the nodes
     // existed, under the loading cover, so on a slow first frame the pendulum was already mid-swing
     // when the cover lifted and the release pose was never seen. It now holds that pose until the
-    // cover has gone and a short beat has passed, then lets go. Only the cold open waits: a
-    // Release or a slider change later lets go at once.
+    // scene is ready — the cover gone and the studio light applied, so the swing does not start
+    // under the fallback light and stall when the HDR lands — then a short beat, then lets go.
+    // Only the cold open waits: a Release or a slider change later lets go at once.
     var letGo by remember { mutableStateOf(false) }
     LaunchedEffect(firstFrame) {
-        snapshotFlow { firstFrame.rendered.value }.first { it }
+        snapshotFlow { firstFrame.sceneReady.value }.first { it }
         delay(PENDULUM_RELEASE_BEAT_MS)
         letGo = true
     }
@@ -594,8 +595,8 @@ internal const val PENDULUM_TIP_MASS = 1.6f
 internal const val PENDULUM_DAMPING = 0.035f
 
 /**
- * How long the pendulum rests at its release pose once the loading cover has lifted, in
- * milliseconds: the cover's crossfade, then long enough to read the pose before it lets go.
+ * How long the pendulum rests at its release pose once the scene is ready, in milliseconds: the
+ * loading cover's crossfade, then long enough to read the pose before it lets go.
  */
 internal const val PENDULUM_RELEASE_BEAT_MS = 650L
 
