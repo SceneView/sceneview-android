@@ -43,7 +43,13 @@ object RerunGlbMesh {
             val b = SRGB[glb[colorAt + v * 4 + 2].toInt() and 0xFF]
             (0xFF shl 24) or (r shl 16) or (g shl 8) or b
         }
-        val indices = IntArray(indexCount) { buffer.getInt(offsetOf(3) + it * 4) }
+        val indexAt = offsetOf(3)
+        // 16-bit when the mesh has few enough vertices ([RerunMeshGlb]), 32-bit otherwise.
+        val indices = if (accessors[3].int("componentType") == UNSIGNED_SHORT) {
+            IntArray(indexCount) { buffer.getShort(indexAt + it * 2).toInt() and 0xFFFF }
+        } else {
+            IntArray(indexCount) { buffer.getInt(indexAt + it * 4) }
+        }
         if (indices.any { it !in 0 until n }) return null
         RerunMesh(positions, normals, colors, indices)
     }.getOrNull()
@@ -64,6 +70,7 @@ object RerunGlbMesh {
     private const val HEADER = 12
     private const val CHUNK_HEADER = 8
     private const val GLB_MAGIC = 0x46546C67
+    private const val UNSIGNED_SHORT = 5123
 }
 
 /**

@@ -273,7 +273,8 @@ class RerunScanModelTest {
         assertEquals(0x004E4942, head.getInt(24 + jsonLength))
         assertEquals(glb.size, 28 + jsonLength + binLength)
         val vertices = mesh.vertexCount
-        assertEquals(vertices * 28 + mesh.indices.size * 4, binLength)
+        // 16-bit indices: the mesh has fewer than 65,535 vertices.
+        assertEquals(vertices * 28 + mesh.indices.size * 2, binLength)
         val json = String(glb, 20, jsonLength, Charsets.UTF_8)
         assertTrue(json, json.contains("\"byteLength\":$binLength"))
     }

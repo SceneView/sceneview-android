@@ -42,6 +42,10 @@
     <string name="scan_export_recording">Recording — RRD</string>
     <string name="scan_export_preparing">Preparing file…</string>
     <string name="scan_export_failed">Couldn\'t create this file</string>
+    <!-- The model's row once its file is written, when it is not the light copy as planned (#4334). -->
+    <string name="scan_export_out_of_memory">Not enough memory to create this file</string>
+    <string name="scan_export_model_whole">Full detail: not enough memory to lighten it</string>
+    <string name="scan_export_model_heavy">Lightened, but still larger than planned</string>
     <string name="scan_export_retry">Try again</string>
     <string name="scan_export_saved">File saved</string>
     <string name="scan_export_privacy">Everything stays on your phone until you save or share it.</string>

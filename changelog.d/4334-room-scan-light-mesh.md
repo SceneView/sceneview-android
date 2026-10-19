@@ -1,0 +1,2 @@
+<!-- category: Changed -->
+- **Demo app: an exported 3D Scan model is lighter and rests on its floor ([#4334](https://github.com/sceneview/sceneview/pull/4334)).** The 3D model you save or share from Export scan is now a lighter copy of the scan's surface — about 100,000 triangles, resting on its floor and centred — so other 3D viewers open it. Preparing it takes a few seconds the first time; the model on screen keeps its full detail. On a phone too short of memory to lighten it, the full model is written instead, and the sheet says so.
