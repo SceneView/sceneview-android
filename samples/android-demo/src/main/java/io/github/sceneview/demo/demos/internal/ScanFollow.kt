@@ -60,6 +60,18 @@ class ScanFollow {
         const val MIN_HORIZONTAL = 0.17f
 
         /**
+         * The orbit of a drag across the whole width of the view: half a turn, so a third of the
+         * screen looks 60° round the cloud and no flick spins it out of sight (#4628).
+         */
+        const val DRAG_DEGREES_PER_VIEW_WIDTH = 180f
+
+        /**
+         * The pitch a drag can reach: never level with the cloud or under it, where the floor
+         * hides it, and never past straight down, where the view would flip over.
+         */
+        val DRAG_ELEVATION_RANGE = 10f..85f
+
+        /**
          * The heading of [camera], in the [OrbitPose.azimuthDegrees] convention: the azimuth at
          * which an [OrbitPose] looks the way the phone does. The phone looks down its local −Z;
          * an orbit camera at azimuth `a` looks along `(−sin a, ·, −cos a)`. [previous] comes

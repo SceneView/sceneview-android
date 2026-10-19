@@ -1,6 +1,8 @@
 package io.github.sceneview.demo.demos.internal
 
 import dev.romainguy.kotlin.math.Float3
+import dev.romainguy.kotlin.math.dot
+import dev.romainguy.kotlin.math.length
 import dev.romainguy.kotlin.math.normalize
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -12,6 +14,7 @@ import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
+import kotlin.math.tan
 
 /**
  * Pins the heading-up follow view of 3D Scan's live capture (#4628): the heading read off the
@@ -161,5 +164,115 @@ class ScanFollowTest {
         orbit.scrollBegin(0, 0, 100f)
         orbit.scrollBegin(0, 0, 100f)
         assertEquals(listOf(false), changes)
+    }
+
+    /** The scan's own orbit camera, as `RerunLiveScreen` builds it, on a Pixel 7a-sized view. */
+    private fun scanOrbit(width: Int = 1280, height: Int = 2856) = ArDebugOrbitCamera(
+        drift = false,
+        lift = ScanFollow.LIFT,
+        approachRate = ScanFollow.APPROACH_RATE,
+        degreesPerViewWidth = ScanFollow.DRAG_DEGREES_PER_VIEW_WIDTH,
+        elevationRange = ScanFollow.DRAG_ELEVATION_RANGE,
+        inertia = false,
+    ).apply { setViewport(width, height) }
+
+    private fun drag(orbit: ArDebugOrbitCamera, dx: Int, dy: Int = 0) {
+        orbit.grabBegin(400, 1400, strafe = false)
+        // A finger's drag arrives as many small moves, each a frame apart.
+        val steps = 24
+        for (step in 1..steps) {
+            orbit.grabUpdate(400 + dx * step / steps, 1400 + dy * step / steps)
+            orbit.update(1f / 60f)
+        }
+        orbit.grabEnd()
+        orbit.update(1f / 60f)
+    }
+
+    /**
+     * Where [point] lands on the drawn view, in normalised device coordinates (−1…1 on both axes
+     * is the screen), or `null` behind the camera.
+     */
+    private fun projected(orbit: ArDebugOrbitCamera, point: Float3): Pair<Float, Float>? {
+        val m = orbit.getTransform()
+        val v = point - Float3(m.w.x, m.w.y, m.w.z)
+        val depth = dot(v, -Float3(m.z.x, m.z.y, m.z.z))
+        if (depth <= 0f) return null
+        val tanVertical = tan(Math.toRadians(orbit.verticalFovDegrees / 2.0)).toFloat()
+        val x = dot(v, Float3(m.x.x, m.x.y, m.x.z)) / depth / (tanVertical * orbit.aspect)
+        val y = dot(v, Float3(m.y.x, m.y.y, m.y.z)) / depth / tanVertical
+        return x to y
+    }
+
+    @Test
+    fun `a drag across the whole width turns the view half round, a third of it 60 degrees`() {
+        for (width in listOf(1080, 1280, 1440)) {
+            val full = scanOrbit(width = width)
+            full.snapTo(ScanFollow.poseAt(phone(0f), 0f))
+            drag(full, dx = width)
+            assertAngle(-180f, full.pose.azimuthDegrees)
+
+            val third = scanOrbit(width = width)
+            third.snapTo(ScanFollow.poseAt(phone(0f), 0f))
+            drag(third, dx = -width / 3)
+            assertEquals("width $width", 60f, third.pose.azimuthDegrees, 0.2f)
+        }
+    }
+
+    @Test
+    fun `a released drag stops where the finger left it`() {
+        val orbit = scanOrbit()
+        orbit.snapTo(ScanFollow.poseAt(phone(0f), 0f))
+        drag(orbit, dx = 300)
+        val released = orbit.pose
+        repeat(30) { orbit.update(1f / 60f) }
+        assertEquals(released, orbit.pose)
+    }
+
+    @Test
+    fun `the pitch of a drag stops short of the floor and of straight down`() {
+        val orbit = scanOrbit()
+        orbit.snapTo(ScanFollow.poseAt(phone(0f), 0f))
+        drag(orbit, dx = 0, dy = -5000)
+        assertEquals(ScanFollow.DRAG_ELEVATION_RANGE.endInclusive, orbit.pose.elevationDegrees, 1e-3f)
+        drag(orbit, dx = 0, dy = 5000)
+        assertEquals(ScanFollow.DRAG_ELEVATION_RANGE.start, orbit.pose.elevationDegrees, 1e-3f)
+        assertTrue(CameraRig.eye(orbit.pose).y > orbit.pose.target.y)
+    }
+
+    @Test
+    fun `taking the view over moves its pivot onto the cloud without moving the picture`() {
+        val phoneAt = Float3(0f, 1.4f, 0f)
+        val orbit = scanOrbit()
+        orbit.snapTo(ScanFollow.poseAt(phone(0f, position = phoneAt), 0f))
+        // The cloud lies ahead of the phone, down its -Z.
+        val cloud = Float3(0.3f, 0.6f, -2.5f)
+        orbit.pivot = cloud
+        val before = orbit.getTransform()
+
+        orbit.grabBegin(400, 1400, strafe = false)
+        val after = orbit.getTransform()
+        for ((b, a) in listOf(before.x to after.x, before.y to after.y, before.z to after.z, before.w to after.w)) {
+            assertEquals(b.x, a.x, 1e-3f)
+            assertEquals(b.y, a.y, 1e-3f)
+            assertEquals(b.z, a.z, 1e-3f)
+        }
+        // The orbit now turns round a point at the cloud's depth, no longer round the phone.
+        assertTrue(length(orbit.pose.target - cloud) < length(phoneAt - cloud))
+        orbit.grabEnd()
+    }
+
+    @Test
+    fun `whatever the drag, the cloud stays on screen`() {
+        val cloud = Float3(0.3f, 0.6f, -2.5f)
+        for (dx in listOf(-2560, -1280, -900, -427, 427, 900, 1280, 2560)) for (dy in listOf(-3000, 0, 3000)) {
+            val orbit = scanOrbit()
+            orbit.snapTo(ScanFollow.poseAt(phone(0f, position = Float3(0f, 1.4f, 0f)), 0f))
+            orbit.pivot = cloud
+            drag(orbit, dx, dy)
+            val drawn = projected(orbit, cloud)
+            assertNotNull("dx $dx dy $dy: behind the camera", drawn)
+            val (x, y) = drawn!!
+            assertTrue("dx $dx dy $dy at ($x, $y)", abs(x) < 1f && abs(y) < 1f)
+        }
     }
 }

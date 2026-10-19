@@ -911,7 +911,14 @@ private fun RerunLiveScreen(
     var scanFollowing by remember(scanMedia) { mutableStateOf(true) }
     val scanFollow = remember(scanMedia) { ScanFollow() }
     val scanOrbit = remember(scanMedia) {
-        ArDebugOrbitCamera(drift = false, lift = ScanFollow.LIFT, approachRate = ScanFollow.APPROACH_RATE)
+        ArDebugOrbitCamera(
+            drift = false,
+            lift = ScanFollow.LIFT,
+            approachRate = ScanFollow.APPROACH_RATE,
+            degreesPerViewWidth = ScanFollow.DRAG_DEGREES_PER_VIEW_WIDTH,
+            elevationRange = ScanFollow.DRAG_ELEVATION_RANGE,
+            inertia = false,
+        )
             .apply { onFollowingChange = { scanFollowing = it } }
     }
 

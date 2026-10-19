@@ -735,6 +735,10 @@ internal fun ArDebugSceneView(
                     if (follow == null) orbit.home = home else if (followed != null) orbit.home = followed
                 }
                 if (follow != null) {
+                    // A drag orbits the cloud, not the phone behind it (#4628).
+                    orbit.pivot = bounds?.let {
+                        Position((it[0] + it[3]) / 2f, (it[1] + it[4]) / 2f, (it[2] + it[5]) / 2f)
+                    }
                     if (!orbit.hasFramedContent && followed != null) {
                         orbit.hasFramedContent = true
                         orbit.snapTo(followed)
