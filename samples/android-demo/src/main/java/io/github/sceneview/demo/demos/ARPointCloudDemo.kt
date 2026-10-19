@@ -167,6 +167,8 @@ fun ARPointCloudDemo(onBack: () -> Unit) {
 
     val startOver = {
         cloud.clear()
+        // Hide the old dots now: the next rebuild waits for tracking, which may be lost.
+        renderer.node?.isVisible = false
         renderer.lastUploadMs = 0L
         pointCount = 0
         zeroPointsSince = System.currentTimeMillis()
