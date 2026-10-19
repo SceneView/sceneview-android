@@ -31,7 +31,7 @@ An honest comparison for developers evaluating 3D and AR options.
 
     ```kotlin
     // build.gradle
-    implementation("io.github.sceneview:sceneview:4.59.0")
+    implementation("io.github.sceneview:sceneview:4.60.0")
 
     // One composable
     @Composable
