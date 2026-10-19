@@ -4,7 +4,11 @@ import io.github.sceneview.demo.demos.internal.ArDebugEvent
 import io.github.sceneview.demo.demos.internal.DenseCloud
 import io.github.sceneview.demo.demos.internal.DenseFuseStats
 import io.github.sceneview.demo.demos.internal.DenseFusion
+import io.github.sceneview.demo.demos.internal.AdaptiveConfidence
 import io.github.sceneview.demo.demos.internal.DenseSamples
+import io.github.sceneview.demo.demos.internal.DepthBackProjection
+import io.github.sceneview.demo.demos.internal.DepthFrame
+import io.github.sceneview.demo.demos.internal.MonotonicCount
 import io.github.sceneview.demo.demos.internal.ScanDetail
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -51,8 +55,40 @@ internal class ScanDenseMap(
     var maxAddMs = 0f
         private set
 
-    /** The points the saved scan keeps so far: the HUD's one count. */
+    /** The points the saved scan keeps so far: what the review and the saved scan say. */
     val count: Int get() = points.get()
+
+    /**
+     * The HUD's one count (#4717): every point the capture confirmed, which only grows — a
+     * compaction merges points the map held, and the figure on screen does not drop for it.
+     */
+    val captured: Int get() = shown.get()
+    private val rising = MonotonicCount()
+    private val shown = AtomicInteger(0)
+
+    /** The depth confidence a pixel needs, relaxed on a plain surface (#4717). */
+    val confidence = AdaptiveConfidence.dense()
+
+    /**
+     * [frame]'s surfels at the [confidence] threshold now, which the frame then feeds back. A
+     * relaxed frame keeps its depth to [AdaptiveConfidence.RELAXED_FAR_M] at most, where
+     * [farM] is the scan's own reach. On the worker, before [add].
+     */
+    fun project(frame: DepthFrame, nanos: Long, farM: Float = DepthBackProjection.FAR_M): DenseSamples {
+        val relaxed = confidence.relaxed
+        val threshold = confidence.threshold.toInt()
+        val reach = if (relaxed) minOf(farM, AdaptiveConfidence.RELAXED_FAR_M) else farM
+        val samples = DepthBackProjection.project(frame, minConfidence = threshold, farM = reach)
+        var atBase = samples.count
+        if (relaxed) {
+            atBase = 0
+            for (i in 0 until samples.count) {
+                if ((samples.confidences[i].toInt() and 0xFF) >= confidence.base) atBase++
+            }
+        }
+        confidence.record(nanos, samples.count, atBase)
+        return samples
+    }
 
     /** The depth frames merged so far ([DenseFusion.frames]). */
     val frames: Int get() = frame.get()
@@ -65,6 +101,7 @@ internal class ScanDenseMap(
         if (fusion.compactions != compactions) adjustedAtNanos = clock()
         full = fusion.saturated
         points.set(stats.confirmed)
+        shown.set(rising.update(stats.confirmed))
         frame.set(fusion.frames)
         snapshotLive()
         val ms = (clock() - started) / NANOS_PER_MS
