@@ -34,6 +34,8 @@ import io.github.sceneview.demo.DemoScaffold
 import io.github.sceneview.demo.DockItem
 import io.github.sceneview.demo.LocalDemoChromeBottomInset
 import io.github.sceneview.demo.R
+import io.github.sceneview.demo.common.ArAvailabilityStage
+import io.github.sceneview.demo.common.arSessionFailedUnexplained
 import io.github.sceneview.demo.common.CatalogueProductPill
 import io.github.sceneview.demo.common.CatalogueProducts
 import io.github.sceneview.demo.common.DemoStatusBanner
@@ -110,7 +112,9 @@ fun ARSurfacesDemo(onBack: () -> Unit) {
     )
 
     DemoScaffold(
-        arSessionFailed = arSessionFailed,
+        // The SDK's "Couldn't start AR" card keeps its in-place "Try again" (#4622); the
+        // scaffold's card, which has none, is only for a failure the SDK does not explain.
+        arSessionFailed = arSessionFailedUnexplained(arSessionFailed, arCoreAvailability),
         arOverlaysEnabled = arCoreAvailability == null,
         title = stringResource(R.string.demo_ar_surfaces_title),
         onBack = onBack,
@@ -190,7 +194,13 @@ fun ARSurfacesDemo(onBack: () -> Unit) {
                 sessionConfiguration = { _: Session, config: Config ->
                     config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
                 },
-                onARCoreAvailability = { arCoreAvailability = it },
+                onARCoreAvailability = {
+                    arCoreAvailability = it
+                    // Back to null is a retry starting: a retry that works must not then land on
+                    // the scaffold's failure card.
+                    if (it == null) arSessionFailed = false
+                },
+                arCoreAvailabilityOverlay = { ArAvailabilityStage(it) },
                 onTrackingFailureChanged = { reason -> trackingFailureReason = reason },
                 onSessionUpdated = { _, frame ->
                     latestFrame.frame = frame
