@@ -47,6 +47,25 @@ class FovZoomInertiaTest {
         assertFalse("stopInertia must end the FOV coast", manipulator.isFrameActive)
     }
 
+    @Test
+    fun `a pinch over a manipulator that predates stopInertia does not crash`() {
+        val engine = Engine::class.java
+            .getDeclaredConstructor(Long::class.javaPrimitiveType, Engine.Config::class.java)
+            .apply { isAccessible = true }
+            .newInstance(1L, null)
+        val manipulator = FovZoomCameraManipulator(
+            inner = PreStopInertiaManipulator,
+            cameraNode = CameraNode(engine, 1),
+        )
+
+        // scrollBegin stops the previous coast first, which reaches the inner manipulator.
+        manipulator.scrollBegin(0, 0, 100f)
+        manipulator.scrollUpdate(0, 0, 100f, 200f)
+        manipulator.scrollEnd()
+        manipulator.stopInertia()
+        assertFalse("the FOV coast still stops", manipulator.isFrameActive)
+    }
+
     private fun FovZoomCameraManipulator.currentFovForTest(): Double =
         javaClass.getDeclaredField("currentFov").apply { isAccessible = true }.getDouble(this)
 
@@ -65,5 +84,14 @@ class FovZoomInertiaTest {
         ) = Unit
         override fun scrollEnd() = Unit
         override fun update(deltaTime: Float) = Unit
+    }
+
+    /**
+     * What a Java manipulator compiled before `stopInertia()` existed looks like at runtime: the
+     * default lives in Kotlin's `DefaultImpls`, which such a class never got.
+     */
+    private object PreStopInertiaManipulator :
+        CameraGestureDetector.CameraManipulator by NoOpManipulator {
+        override fun stopInertia(): Unit = throw AbstractMethodError("stopInertia")
     }
 }
