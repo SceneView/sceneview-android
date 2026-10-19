@@ -194,6 +194,48 @@ class ScanObjectTest {
     }
 
     @Test
+    fun `a long low sideboard against a wall scanned in two passes is one object, whichever half is tapped`() {
+        val scene = Scene()
+        scene.room(HALF_ROOM, HALF_ROOM, ROOM_HEIGHT)
+        // #4565: 1.7 m long, 23 cm deep, against the back wall; the two passes meet end to end
+        // with one empty voxel between them, at x cell -1 — each half a slat of its own.
+        val z = -HALF_ROOM + 0.02f + 0.115f
+        scene.box(-0.45f, z, yawDeg = 0f, length = 0.85f, depth = 0.23f, height = 0.27f)
+        scene.box(0.43f, z, yawDeg = 0f, length = 0.84f, depth = 0.23f, height = 0.27f)
+        val objects = ScanObjects.of(scene.cloud())
+        for (x in floatArrayOf(-0.5f, 0.5f)) {
+            val box = (objects.pick(EYE, toward(Vec3(x, 0.27f, z))) as ScanPick.Found).box
+            assertEquals("tapped at x = $x", 1.725f, box.length, 2 * VOXEL)
+            // Its back, 2 cm off the wall, goes with the wall's band: as the half alone did.
+            assertEquals(0.23f, box.depth, 2 * VOXEL)
+            assertEquals(0.27f, box.height, VOXEL)
+            assertEquals(-0.0125f, box.centerX, VOXEL)
+        }
+    }
+
+    @Test
+    fun `two low benches end to end with a real gap between them are two objects, stray points or not`() {
+        fun benches(withThread: Boolean) {
+            val scene = Scene()
+            scene.room(HALF_ROOM, HALF_ROOM, ROOM_HEIGHT)
+            val z = -HALF_ROOM + 0.02f + 0.115f
+            // 12 cm apart: past any seam a two-pass scan leaves.
+            scene.box(-0.48f, z, yawDeg = 0f, length = 0.84f, depth = 0.23f, height = 0.27f)
+            scene.box(0.48f, z, yawDeg = 0f, length = 0.84f, depth = 0.23f, height = 0.27f)
+            // The thread of depth noise a scan throws across the gap, along the benches' tops.
+            if (withThread) scene.line(Vec3(-0.07f, 0.26f, z), Vec3(0.07f, 0.26f, z))
+            val objects = ScanObjects.of(scene.cloud())
+            for (x in floatArrayOf(-0.5f, 0.5f)) {
+                val box = (objects.pick(EYE, toward(Vec3(x, 0.27f, z))) as ScanPick.Found).box
+                assertEquals("tapped at x = $x, thread $withThread", 0.84f, box.length, 2 * VOXEL)
+                assertEquals(x * 0.96f, box.centerX, 2 * VOXEL)
+            }
+        }
+        benches(withThread = false)
+        benches(withThread = true)
+    }
+
+    @Test
     fun `a thin console standing alone keeps its own box, next to a cupboard or not`() {
         fun console(withCupboard: Boolean): ScanPick.Found {
             val scene = Scene()

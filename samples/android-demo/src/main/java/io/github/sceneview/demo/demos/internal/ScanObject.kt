@@ -347,6 +347,10 @@ class ScanObjects private constructor(
      * [SPARSE_MAX_SIDE_M] — or than the slat itself, made [SLAT_DEPTH_M] longer at most, when the
      * slat is already past that. A small object next to larger furniture came back as one box
      * round the lot; past that length it keeps its own.
+     *
+     * Past that length, what the net brings back is still the answer when it only carries the slat
+     * on along its own length ([carriesOn]): a sideboard, a TV unit or a bench against a wall,
+     * scanned in two passes, is one long low piece whose halves meet end to end (#4565).
      */
     private fun judge(seed: Int, cast: Cast, loose: Boolean): ScanPick? {
         val answer = regionAt(seed, cast, loose)
@@ -354,7 +358,50 @@ class ScanObjects private constructor(
         val whole = regionAt(seed, cast, loose = true) as? ScanPick.Found ?: return slat
         val longest = max(SPARSE_MAX_SIDE_M, slat.box.length + SLAT_DEPTH_M)
         val more = whole.surfels.size - slat.surfels.size
-        return if (more >= minVoxels && whole.box.length <= longest) whole else slat
+        val one = whole.box.length <= longest || carriesOn(slat.box, whole)
+        return if (more >= minVoxels && one) whole else slat
+    }
+
+    /**
+     * Whether [whole] is [slat] carried on along its own length, and nothing else: turned the same
+     * way, no deeper nor taller than the slat by more than a seam's slack ([IN_LINE_SLACK_M]), and
+     * solid all along — the seam a two-pass scan leaves is a voxel or two of nothing, where two
+     * pieces of furniture standing apart leave a gap that only stray points cross.
+     */
+    private fun carriesOn(slat: ScanBox, whole: ScanPick.Found): Boolean {
+        val box = whole.box
+        val turn = abs(slat.yaw - box.yaw).mod(PI.toFloat())
+        val parallel = min(turn, PI.toFloat() - turn) <= IN_LINE_TURN_RAD
+        val fits = box.depth <= slat.depth + IN_LINE_SLACK_M && box.height <= slat.height + IN_LINE_SLACK_M
+        return parallel && fits && solidAlong(whole.surfels, box)
+    }
+
+    /**
+     * Whether [surfels] fill [box] along its length with no gap wider than the looser net's reach:
+     * a stretch counts as filled when it holds a [SOLID_SHARE] of what a typical stretch holds,
+     * so the thread of stray points across a gap does not fill it.
+     */
+    private fun solidAlong(surfels: IntArray, box: ScanBox): Boolean {
+        val ux = cos(box.yaw)
+        val uz = sin(box.yaw)
+        val start = -box.length / 2
+        val bins = IntArray(ceil(box.length / voxelM).toInt() + 1)
+        for (i in surfels) {
+            val along = (cloud.positions[i * 3] - box.centerX) * ux + (cloud.positions[i * 3 + 2] - box.centerZ) * uz
+            val bin = ((along - start) / voxelM).toInt()
+            if (bin in bins.indices) bins[bin]++
+        }
+        val typical = bins.filter { it > 0 }.sorted().let { if (it.isEmpty()) 0 else it[it.size / 2] }
+        val least = max(1, (typical * SOLID_SHARE).toInt())
+        val first = bins.indexOfFirst { it >= least }
+        val last = bins.indexOfLast { it >= least }
+        if (first < 0) return false
+        var gap = 0
+        for (bin in first..last) {
+            gap = if (bins[bin] >= least) 0 else gap + 1
+            if (gap > LOOSE_REACH) return false
+        }
+        return true
     }
 
     /** [judge], of the region one growth from [seed] gives. */
@@ -677,6 +724,17 @@ class ScanObjects private constructor(
 
         /** A thing found with the looser net is a plant, a lamp, a chair: never longer than this. */
         const val SPARSE_MAX_SIDE_M = 1.5f
+
+        /**
+         * A slat carried on along its length by the looser net (#4565): the rest may stand this
+         * much deeper or taller than the half that was tapped — two passes do not see one piece
+         * of furniture to the centimetre — and be turned this far from it.
+         */
+        const val IN_LINE_SLACK_M = 0.08f
+        private const val IN_LINE_TURN_RAD = 0.1745f
+
+        /** A stretch of a long piece holds at least this share of what a typical stretch of it holds. */
+        private const val SOLID_SHARE = 0.25f
 
         /**
          * A piece of wall seen alone: at least a metre long and 1.2 m tall, and no deeper than
