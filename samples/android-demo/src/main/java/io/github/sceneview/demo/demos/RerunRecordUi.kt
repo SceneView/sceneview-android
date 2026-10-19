@@ -17,6 +17,7 @@ import io.github.sceneview.demo.R
 import io.github.sceneview.demo.demos.internal.DebugGroup
 import io.github.sceneview.demo.demos.internal.DebugPose
 import io.github.sceneview.demo.demos.internal.ScanFollow
+import io.github.sceneview.demo.demos.internal.ScanSavingOrbit
 import io.github.sceneview.demo.ui.GlassActionPill
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -390,6 +391,8 @@ private fun ScanHint(text: String) {
  *
  * [saving] (#4719): the camera fades out under an opaque veil and the view leaves the phone for a
  * slow orbit round the whole cloud ([ScanFollow.savingPose]) while the scan is fused and written.
+ * It sets out from the phone's own eye ([ScanSavingOrbit], [EyeHandoff]): the first frame after the
+ * stop tap is the camera's view of the frame before, eased from there onto the orbit.
  */
 @Composable
 @Suppress("LongParameterList") // the demo's shared engine, handed down once
@@ -412,7 +415,7 @@ internal fun ScanLiveView(
         animationSpec = tween(SceneViewTokens.Duration.longMillis, easing = SceneViewTokens.Ease.expressive),
         label = "scanVeil",
     )
-    val savingOrbit = remember(saving) { if (saving) SavingOrbit() else null }
+    val savingOrbit = remember(saving) { if (saving) ScanSavingOrbit() else null }
     Box(modifier = Modifier.fillMaxSize().testTag(SCAN_STAGE_TAG)) {
         // Only the camera is dimmed: the cloud is drawn by its own view, above the veil.
         Box(Modifier.fillMaxSize().background(veil))
@@ -434,32 +437,6 @@ internal fun ScanLiveView(
         )
     }
 }
-
-/**
- * The saving orbit of one save (#4719): started on its first frame from the follow pose of the
- * moment, round the cloud's centre and reach read once — the cloud no longer grows while saving.
- */
-private class SavingOrbit {
-    private var from: OrbitPose? = null
-    private var started = 0L
-    private var centre: Position? = null
-    private var radius = 0f
-
-    fun poseFor(phone: OrbitPose?, points: FloatArray, orbit: ArDebugOrbitCamera): OrbitPose? {
-        val start = from ?: (phone ?: orbit.pose).also {
-            from = it
-            started = System.nanoTime()
-        }
-        val around = centre ?: (ScanFollow.cloudCentre(points) ?: return phone).also {
-            centre = it
-            radius = ScanFollow.cloudRadius(points, it)
-        }
-        val seconds = (System.nanoTime() - started) / NS_PER_S
-        return ScanFollow.savingPose(start, around, radius, seconds, orbit.verticalFovDegrees)
-    }
-}
-
-private const val NS_PER_S = 1e9f
 
 /** Shown once a drag or a pinch has left the follow view: back to following the phone. */
 @Composable

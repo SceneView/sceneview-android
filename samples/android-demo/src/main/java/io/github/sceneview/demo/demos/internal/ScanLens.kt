@@ -28,6 +28,13 @@ class ScanLens {
     var ready: Boolean = false
         private set
 
+    /**
+     * Whether the matrices hold a tracked eye: from the first [ready] frame on, and kept once
+     * [invalidate]d — the last eye ARCore gave, which the saving orbit sets out from (#4719).
+     */
+    var held: Boolean = false
+        private set
+
     /** Bumped on each [update], so a reader applies a new projection once, not every frame. */
     var version: Long = 0L
         private set
@@ -45,6 +52,7 @@ class ScanLens {
     internal fun markUpdated() {
         ready = cameraToWorld.all { it.isFinite() } && projection.all { it.isFinite() } &&
             projection[PERSPECTIVE_TERM] != 0f
+        if (ready) held = true
         version++
     }
 
