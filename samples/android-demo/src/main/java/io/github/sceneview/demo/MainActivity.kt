@@ -361,7 +361,7 @@ class MainActivity : ComponentActivity() {
                 io.github.sceneview.demo.demos.RerunInbox.accepts(this@MainActivity, uri)
             }
             if (isScan) {
-                DemoSettings.rerunInbox = uri
+                io.github.sceneview.demo.demos.RerunInbox.post(this@MainActivity, uri)
                 pendingDemoId.value = DeepLinkRouter.validate(io.github.sceneview.demo.demos.RerunInbox.DEMO_ID)
                 return@launch
             }

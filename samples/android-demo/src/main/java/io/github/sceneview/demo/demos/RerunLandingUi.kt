@@ -1,5 +1,6 @@
 package io.github.sceneview.demo.demos
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -51,7 +52,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -404,21 +408,7 @@ private fun SessionCard(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Space.md),
     ) {
-        Box(
-            modifier = Modifier
-                .size(ThumbnailSize)
-                .clip(RoundedCornerShape(Radius.sm))
-                .background(stage.ground),
-        ) {
-            session.thumbnail?.let {
-                Image(
-                    bitmap = it,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.size(ThumbnailSize),
-                )
-            }
-        }
+        SessionThumbnail(session)
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Space.xs / 2)) {
             Text(
                 text = info.title,
@@ -475,6 +465,66 @@ private fun SessionCard(
     }
 }
 
+/**
+ * A kept session's thumbnail: its first photo; for a scan kept without photos, its points seen
+ * from above on the accent's tonal well, the path walked over them (#4680); the 3D Scan glyph on
+ * that same well when there is nothing to draw. Never an empty square.
+ */
+@Composable
+private fun SessionThumbnail(session: LandingSession) {
+    val photo = session.thumbnail
+    val footprint = session.footprint
+    val chrome = stage
+    Box(
+        modifier = Modifier
+            .size(ThumbnailSize)
+            .clip(RoundedCornerShape(Radius.sm))
+            .background(if (photo != null) chrome.ground else chrome.accent.copy(alpha = WELL_ALPHA)),
+        contentAlignment = Alignment.Center,
+    ) {
+        when {
+            photo != null -> Image(
+                bitmap = photo,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.size(ThumbnailSize),
+            )
+            footprint != null -> Canvas(modifier = Modifier.size(ThumbnailSize)) {
+                val side = size.minDimension
+                val dot = FootprintDot.toPx()
+                val points = footprint.points
+                var i = 0
+                while (i < points.size) {
+                    drawRect(
+                        color = chrome.accent.copy(alpha = FOOTPRINT_POINT_ALPHA),
+                        topLeft = Offset(points[i] * side - dot / 2, points[i + 1] * side - dot / 2),
+                        size = Size(dot, dot),
+                    )
+                    i += 2
+                }
+                val path = footprint.path
+                if (path.size >= 4) {
+                    val line = Path().apply {
+                        moveTo(path[0] * side, path[1] * side)
+                        var j = 2
+                        while (j < path.size) {
+                            lineTo(path[j] * side, path[j + 1] * side)
+                            j += 2
+                        }
+                    }
+                    drawPath(line, color = chrome.onGlass, style = Stroke(width = FootprintPath.toPx()))
+                }
+            }
+            else -> Icon(
+                Icons.Outlined.ViewInAr,
+                contentDescription = null,
+                tint = chrome.accent,
+                modifier = Modifier.size(Space.lg),
+            )
+        }
+    }
+}
+
 /** The demo header's row — back button and title — which the page scrolls under. */
 /** What the header's pills take at the top of a Room Scan page: the landing's and the plan's. */
 internal val RerunHeaderClearance = SceneViewTokens.Layout.touchTarget + Space.md * 2
@@ -485,6 +535,11 @@ private val RecordCardHeight = Space.x4l
 private val RecordWellSize = 56.dp
 private val GlassActionHeight = 56.dp
 private val ThumbnailSize = Space.x3l
+
+/** A point of a footprint thumbnail, and the path walked over them (#4680). */
+private val FootprintDot = 1.5.dp
+private val FootprintPath = 1.5.dp
+private const val FOOTPRINT_POINT_ALPHA = 0.7f
 private val ProgressSize = 20.dp
 private val ProgressStroke = 2.dp
 private val DASH = 6.dp

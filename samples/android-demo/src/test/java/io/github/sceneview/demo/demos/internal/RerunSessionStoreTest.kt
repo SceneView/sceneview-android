@@ -216,6 +216,54 @@ class RerunSessionStoreTest {
         assertEquals(1, store.list().size)
     }
 
+    @Test
+    fun `the same file opened twice is one session, a different file is another (#4680)`() {
+        val store = RerunSessionStore(folder.newFolder("sessions"))
+        val noRrd: (ByteArray) -> RerunCapturePack = { fail("not a .rrd"); error("") }
+        val file = RerunScanFile.write(bundled())
+
+        val first = store.import("Example scan.svscan", file, noRrd, nowMillis = 1_000L)
+        val renamed = store.rename(first.id, "Kitchen")!!
+        // Same bytes, another name, later: it opens the session the first import made, as it is now.
+        val again = store.import("Example scan (1).svscan", file.copyOf(), noRrd, nowMillis = 9_000L)
+        assertEquals(renamed, again)
+        assertEquals(listOf(renamed), store.list())
+
+        // One byte different is another file.
+        val pack = bundled()
+        val other = RerunScanFile.write(RerunCapturePack(pack.manifest, pack.log + '\n'.code.toByte(), pack.media))
+        val second = store.import("Example scan.svscan", other, noRrd, nowMillis = 2_000L)
+        assertFalse(second.id == first.id)
+        assertEquals(2, store.list().size)
+
+        // Deleted, it imports anew.
+        store.delete(first.id)
+        val back = store.import("Example scan.svscan", file, noRrd)
+        assertFalse(back.id == first.id)
+        assertEquals(2, store.list().size)
+    }
+
+    @Test
+    fun `two imports of one file racing each other keep one session (#4680)`() {
+        val root = folder.newFolder("sessions")
+        val noRrd: (ByteArray) -> RerunCapturePack = { error("not a .rrd") }
+        val file = RerunScanFile.write(bundled())
+        // Two stores on one directory, as two activities each hold one.
+        val stores = listOf(RerunSessionStore(root), RerunSessionStore(root))
+        val start = java.util.concurrent.CountDownLatch(1)
+        val ids = java.util.Collections.synchronizedList(mutableListOf<String>())
+        val threads = stores.map { store ->
+            Thread {
+                start.await()
+                ids += store.import("Example scan.svscan", file, noRrd).id
+            }.apply { start() }
+        }
+        start.countDown()
+        threads.forEach { it.join() }
+        assertEquals(1, ids.toSet().size)
+        assertEquals(1, RerunSessionStore(root).list().size)
+    }
+
     private inline fun <reified T : Throwable> assertThrows(block: () -> Unit) {
         try {
             block()

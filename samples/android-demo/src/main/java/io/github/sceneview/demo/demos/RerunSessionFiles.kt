@@ -1,5 +1,6 @@
 package io.github.sceneview.demo.demos
 
+import android.app.Activity
 import android.content.ClipData
 import android.content.Context
 import android.content.Intent
@@ -10,6 +11,7 @@ import android.text.format.DateFormat
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.content.FileProvider
+import io.github.sceneview.demo.DemoSettings
 import io.github.sceneview.demo.OpenedModelIntent
 import io.github.sceneview.demo.demos.internal.ArDebugEvent
 import io.github.sceneview.demo.demos.internal.ArDebugLogWriter
@@ -37,6 +39,7 @@ import io.github.sceneview.demo.demos.internal.ScanScope
 import io.github.sceneview.demo.demos.internal.ScanScopeCopy
 import io.github.sceneview.demo.demos.internal.ScanArchive
 import io.github.sceneview.demo.demos.internal.ScanDevice
+import io.github.sceneview.demo.demos.internal.ScanFootprint
 import io.github.sceneview.demo.demos.internal.SvpcCodec
 import io.github.sceneview.demo.demos.internal.Vec3
 import io.github.sceneview.demo.demos.internal.of
@@ -168,8 +171,15 @@ internal object RerunCaptureBuilder {
 /** The sessions kept on this phone: `filesDir/rerun/sessions/<id>/`. */
 internal fun rerunSessionStore(context: Context) = RerunSessionStore(File(context.filesDir, "rerun/sessions"))
 
-/** A kept session as the landing shows it: its `session.json` and its first photo. */
-internal class LandingSession(val info: RerunStoredSession, val thumbnail: ImageBitmap?) {
+/**
+ * A kept session as the landing shows it: its `session.json` and its first photo — or, for a scan
+ * kept without photos, its [footprint] seen from above (#4680).
+ */
+internal class LandingSession(
+    val info: RerunStoredSession,
+    val thumbnail: ImageBitmap?,
+    val footprint: ScanFootprint? = null,
+) {
     val id: String get() = info.id
 }
 
@@ -180,9 +190,22 @@ internal suspend fun RerunSessionStore.landingSessions(): List<LandingSession> =
         val thumbnail = thumbnail(info.id)?.let { file ->
             runCatching { BitmapFactory.decodeFile(file.path)?.asImageBitmap() }.getOrNull()
         }
-        LandingSession(info, thumbnail)
+        val footprint = if (thumbnail != null) null else footprintOf(info.id)
+        LandingSession(info, thumbnail, footprint)
     }
 }
+
+/**
+ * Session [id] from above, read once per process: a capture never changes once kept, and reading
+ * one back (its log, its dense cloud) is too slow to repeat on every visit to the list.
+ */
+private fun RerunSessionStore.footprintOf(id: String): ScanFootprint? =
+    footprints.getOrPut(File(root, id).path) {
+        Optional(runCatching { capture(id)?.open()?.let { ScanFootprint.of(it) } }.getOrNull())
+    }.value
+
+private class Optional(val value: ScanFootprint?)
+private val footprints = java.util.concurrent.ConcurrentHashMap<String, Optional>()
 
 /**
  * "Room · Sep 28, 2:32 PM": in English like the rest of the demo, whatever the phone's language —
@@ -246,7 +269,10 @@ internal fun discardSharedScan(context: Context) {
     val root = rerunShareDirectory(context, RERUN_SHARE_SCAN)
     val asked = shareCopyRequests.get()
     shareCleanup.launch {
-        shareCopyLock.withLock { if (shareCopyRequests.get() == asked) root.deleteRecursively() }
+        shareCopyLock.withLock {
+            // A copy sent to this very app ("Open in SceneView") is kept until it is read (#4680).
+            if (shareCopyRequests.get() == asked && !RerunInbox.reading) root.deleteRecursively()
+        }
     }
 }
 
@@ -303,7 +329,51 @@ internal object RerunInbox {
         // Both kinds: a scan file, and a Rerun recording (this demo's export, or one from Rerun).
         return RerunFileKind.of(name, head) != null
     }
+
+    /**
+     * Hands [uri] to the 3D Scan of [activity] — the activity the intent reached — and to no
+     * other. The process can hold more than one MainActivity: "Open in SceneView" picked from the
+     * demo's own share sheet starts a second one in its own task, the first one still showing
+     * 3D Scan behind it. Both compose 3D Scan; with a process-wide inbox both read the file in the
+     * same frame and it was imported twice (#4680).
+     */
+    fun post(activity: Activity, uri: Uri) {
+        val delivery = RerunInboxDelivery(uri, System.identityHashCode(activity))
+        // One file waits at a time: the one it replaces will never be read.
+        DemoSettings.rerunInbox?.let { unread.remove(it) }
+        unread += delivery
+        DemoSettings.rerunInbox = delivery
+    }
+
+    /**
+     * [delivery]'s file is read (or failed to read). Until then the scan copy this app shared
+     * stays in the cache: the 3D Scan landing that opens to import it would otherwise clear the
+     * share cache ([discardSharedScan]) under the import's feet.
+     */
+    fun read(delivery: RerunInboxDelivery) {
+        unread.remove(delivery)
+    }
+
+    /** Whether a file handed over is still waiting to be read. */
+    val reading: Boolean get() = unread.isNotEmpty()
+
+    private val unread: MutableSet<RerunInboxDelivery> =
+        java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap())
+
+    /**
+     * `true` once, for the 3D Scan of the activity [delivery] was posted to: it clears the inbox
+     * and imports. Any other caller, or a second call, gets `false`. Main thread.
+     */
+    fun claim(delivery: RerunInboxDelivery, activity: Activity?): Boolean {
+        if (activity == null || delivery.owner != System.identityHashCode(activity)) return false
+        if (DemoSettings.rerunInbox !== delivery) return false
+        DemoSettings.rerunInbox = null
+        return true
+    }
 }
+
+/** A scan file waiting for the 3D Scan of one activity ([RerunInbox.post]). */
+class RerunInboxDelivery(val uri: Uri, val owner: Int)
 
 private fun InputStream.readNBytesCompat(count: Int): ByteArray {
     val out = ByteArray(count)
