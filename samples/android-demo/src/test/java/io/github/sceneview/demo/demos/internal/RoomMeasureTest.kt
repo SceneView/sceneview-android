@@ -4,6 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.Locale
 import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.sin
@@ -44,7 +45,7 @@ class RoomMeasureTest {
         assertEquals(yaw, measure.yaw, 1e-3f)
         assertEquals(3.4f, measure.width, 1e-3f)
         assertEquals(4.1f, measure.depth, 1e-3f)
-        assertEquals("3.4 × 4.1 m · 14 m²", measure.summary)
+        assertEquals("3.40 m × 4.10 m · 13.9 m²", measure.summary(MeasureUnitSystem.Metric, Locale.US))
     }
 
     @Test
@@ -120,11 +121,18 @@ class RoomMeasureTest {
     }
 
     @Test
-    fun `figures read as a plan writes them`() {
-        assertEquals("3.4 m", RoomMeasure.metres(3.43f))
-        assertEquals("12 m", RoomMeasure.metres(12.4f))
-        assertEquals("2.5 m²", RoomMeasure.squareMetres(2.5f))
-        assertEquals("14 m²", RoomMeasure.squareMetres(13.94f))
+    fun `the room reads in the Measure units, metric or imperial`() {
+        val measure = RoomMeasure.of(room(0f), floorY)!!
+        // One format for every Measure figure: the same strings MeasureUnits gives a segment.
+        val metric = measure.summary(MeasureUnitSystem.Metric, Locale.FRANCE)
+        assertEquals(
+            "${formatMeasureLength(3.4f, MeasureUnitSystem.Metric, Locale.FRANCE)} × " +
+                "${formatMeasureLength(4.1f, MeasureUnitSystem.Metric, Locale.FRANCE)} · " +
+                formatMeasureArea(3.4f * 4.1f, MeasureUnitSystem.Metric, Locale.FRANCE),
+            metric,
+        )
+        assertEquals("3,40 m × 4,10 m · 13,9 m²", metric)
+        assertEquals("11 ft 2 in × 13 ft 5 in · 150 ft²", measure.summary(MeasureUnitSystem.Imperial, Locale.US))
     }
 
     @Test

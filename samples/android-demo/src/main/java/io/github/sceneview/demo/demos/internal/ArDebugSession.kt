@@ -58,7 +58,10 @@ class ArDebugSession(initial: ArDebugTrace = ArDebugTrace()) {
      */
     fun count(frame: ArDebugFrame, points: Int = frame.mapPointCount, floorY: Float? = null) {
         val counted = ArDebugStats.of(frame, trace.duration, points)
-        stats = if (floorY == null) counted else counted.copy(room = RoomMeasure.of(frame.planes, floorY)?.summary)
+        stats = if (floorY == null) counted else counted.copy(room = RoomMeasure.of(frame.planes, floorY)?.let { room ->
+            val locale = Locale.getDefault()
+            room.summary(MeasureUnitSystem.forLocale(locale), locale)
+        })
     }
 
     /**

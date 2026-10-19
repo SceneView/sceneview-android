@@ -79,23 +79,6 @@ class RerunReplayControlsTest {
         (DebugLayer.trailSteps + DebugLayer.TrailHead).forEach { assertEquals("$it", DebugGroup.Trail, it.group) }
     }
 
-    // ── Points | Surface ────────────────────────────────────────────────────────────────────
-
-    @Test
-    fun `a scan that can be meshed opens on its surface`() {
-        assertTrue(RerunReplayControls.surfaceByDefault(canMesh = true))
-        assertFalse(RerunReplayControls.surfaceByDefault(canMesh = false))
-    }
-
-    @Test
-    fun `the reading control stands on the 3D and map views only`() {
-        assertTrue(RerunReplayControls.showsReadingControl(true, RerunMode.Scene))
-        assertTrue(RerunReplayControls.showsReadingControl(true, RerunMode.Map))
-        assertFalse(RerunReplayControls.showsReadingControl(true, RerunMode.Camera))
-        assertFalse(RerunReplayControls.showsReadingControl(true, RerunMode.Plan))
-        assertFalse(RerunReplayControls.showsReadingControl(false, RerunMode.Scene))
-    }
-
     // ── 3D over the camera frame ────────────────────────────────────────────────────────────
 
     private val lens = ReplayLens(halfWidthPerDepth = 0.5f, halfHeightPerDepth = 0.75f)

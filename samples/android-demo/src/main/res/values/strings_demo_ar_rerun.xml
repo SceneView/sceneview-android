@@ -3,34 +3,15 @@
      `ArRerunFragment.kt`). Android's resource merger
      fans every `res/values/*.xml` file in, so `R.string.demo_ar_rerun_title` etc.
      remains globally resolvable. Adding a new demo never needs to touch
-     this file or `strings.xml` — see #1870.
-
-     The name says what the user does — scan a room, then look at it again in 3D — not the
-     tool behind it (#4306). The demo id, the string keys, the `rerun` mode key and the
-     `sceneview://demo/ar-rerun` deep link keep their names: links and analytics stay valid. -->
+     this file or `strings.xml` — see #1870. -->
 <resources>
-    <string name="demo_ar_rerun_title">Room Scan</string>
-    <string name="demo_ar_rerun_subtitle">Scan your room, then replay it in 3D</string>
-
-    <!-- Why the replay has no surface to show; the points stay on screen. One line each: the
-         timeline card's caption has room for one. -->
-    <!-- The scan gave nothing to mesh. -->
-    <string name="demo_ar_rerun_surface_poor_scan">No surface yet: scan slowly, 1–3 m from the walls.</string>
-    <!-- Building the mesh, or loading it into the 3D view, ran out of memory. -->
-    <string name="demo_ar_rerun_surface_out_of_memory">Not enough memory to build the surface.</string>
-    <!-- The build failed, or the 3D view could not load what it built. -->
-    <string name="demo_ar_rerun_surface_unavailable">The surface could not be shown.</string>
-
-    <!-- Back during a scan that already holds points: asked before the scan is dropped. The
-         scan keeps recording under the dialog. -->
-    <string name="demo_ar_rerun_discard_title">Discard this scan?</string>
-    <string name="demo_ar_rerun_discard_detail">What you have scanned so far will be lost.</string>
-    <string name="demo_ar_rerun_discard_confirm">Discard</string>
-    <string name="demo_ar_rerun_discard_dismiss">Keep scanning</string>
-
-    <!-- The Plan view of a scan (#4540): the room's survey and its dimensioned floor plan. -->
-    <string name="demo_ar_rerun_plan_dock_label">Floor plan</string>
-    <string name="demo_ar_rerun_plan_dock_caption">Plan</string>
+    <string name="demo_ar_rerun_title">3D Scan</string>
+    <string name="demo_ar_rerun_subtitle">Move around a space and watch it take shape in 3D</string>
+    <!-- A scan's floor plan (#4540): the room's survey and its dimensioned plan, opened from the
+         export sheet and shared as a PDF. -->
+    <string name="demo_ar_rerun_plan_export_title">Floor plan</string>
+    <string name="demo_ar_rerun_plan_export_detail">PDF · to scale, with areas and volume</string>
+    <string name="demo_ar_rerun_plan_about">The room measured from your scan: wall lengths, floor area, ceiling height and volume. Share it as a PDF to scale.</string>
     <string name="demo_ar_rerun_plan_survey_title">Room survey</string>
     <string name="demo_ar_rerun_plan_measuring">Measuring the room…</string>
     <!-- %1$s the scan's title, %2$s its date. -->
@@ -39,6 +20,13 @@
     <string name="demo_ar_rerun_plan_dimensions">Length × width</string>
     <string name="demo_ar_rerun_plan_perimeter">Perimeter</string>
     <string name="demo_ar_rerun_plan_height">Ceiling height</string>
+    <!-- The floor area times the ceiling height. -->
+    <string name="demo_ar_rerun_plan_volume">Volume</string>
+    <!-- The rooms' table: each room's floor area and volume, then the plan's total. -->
+    <string name="demo_ar_rerun_plan_rooms">Rooms</string>
+    <!-- %1$d the room's number on the plan. -->
+    <string name="demo_ar_rerun_plan_room">Room %1$d</string>
+    <string name="demo_ar_rerun_plan_total">Total</string>
     <string name="demo_ar_rerun_plan_span">Between facing walls</string>
     <string name="demo_ar_rerun_plan_walls">Walls</string>
     <!-- %1$s the wall's letter on the plan. -->
@@ -73,6 +61,4 @@
     <string name="demo_ar_rerun_plan_pdf_page">Page %1$d of %2$d</string>
     <string name="demo_ar_rerun_plan_pdf_walls_continued">Walls (continued)</string>
     <string name="demo_ar_rerun_plan_content_description">Floor plan of the room</string>
-    <!-- A scan's settings sheet: its files (.rrd, .glb, .ply), whatever view is on screen. -->
-    <string name="demo_ar_rerun_export_files">Export 3D files</string>
 </resources>

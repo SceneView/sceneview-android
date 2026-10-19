@@ -62,7 +62,7 @@ ids, so do not pass them to `gen.py --only` for Android (the iOS imagesets still
 | `debug-overlay` | — | Superseded 2026-09-30: the card is now the iOS pair, see "Cards shared with Android" below. Was 540, 800, 1400, black-padded — the stats HUD over its sphere |
 | `camera-gestures` | `cameragestures_default.png` | 575, 1065, 1000 — the whole stage. Dark card only since #4351: the demo follows the theme, so the light card is its own capture — Pixel_7a (1280×2856) in light mode, `--ez qa_mode true`, window x 74–1280, y 910–1875, framed like the dark one |
 | `lighting` | `lighting_default.png` | 540, 1080, 1080 — helmet and probes under the photo environment |
-| `lighting-lab` | `lightinglab_default.png` | 540, 990, 1080 — the lit floor with its sun disc |
+| `lighting-lab` | — | Retired on Android by #4603: the card folded into `lighting` and its golden went with it. Was `lightinglab_default.png`, 540, 990, 1080 — the lit floor with its sun disc |
 | `secondary-camera` | — | Superseded 2026-09-30: generated from a real capture, see "Cards generated from real captures" below. Was `secondarycamera_default.png`, 540, 870, 1600, black-padded — the picture-in-picture inset |
 | `animation-physics` | `animationphysics_default.png` | Light card superseded 2026-09-30: generated from this golden crop (500, 1414, 760), see "Cards generated from real captures" below. The dark card is still its own capture: Pixel_7a in night mode, `--ez qa_mode true`, crop 500, 1508, 760 (the screen is 96 px taller than the golden); since #4223 its stage is the dark stage (`SceneViewTokens.Stage.background`), so the dark card is the fox on that dark stage |
 | `splat-preview` | `splatpreview_default.png` | 540, 1010, 1500, black-padded, then an elliptical vignette to black (radii 600 × 900 px, fade from 0.62) so the splat's soft fringe does not end on a hard crop edge (#4073) |
@@ -86,6 +86,14 @@ room as a miniature: an emulator capture (Pixel_7a, 1080×2400) of the dollhouse
 (`dollhouse-3d` QA state) after a `record` QA take of the bundled session, one per theme — the
 AR half cannot run on the emulator (#2754). Crop: the full-width 1080×864 band from y = 958
 (5:4), resized to 800×640, WebP q82.
+
+`ar-pool` cannot run its AR session on the emulator either (#2754), so its card is the pool
+the `pool_preview` QA state draws without one: an emulator capture (Pixel_7a, 1280×2856) of
+`--es demo ar-pool --ez qa_mode true --es qa_state pool_preview`, the default 8 × 4 m pool
+with the white liner, one per theme. Crop: the full-width 1280×1024 band from y = 700 (5:4)
+— the far coping, the waterline mosaic, the Roman steps and the water with its caustics,
+none of the demo's chrome — resized to 800×640, WebP q80. The stage is the backdrop photo
+in both themes, so the two cards differ only by where the animated caustics were.
 
 `rolling-balls` became its own demo in #4083 and has no render golden: its card is an
 emulator capture (Pixel_7a, 1080×2400) of the opening shot a few seconds after launch — the
@@ -121,6 +129,15 @@ default framing fills a portrait band, hence the distance. Crop: the full-width 
 band from y = 794, resized to 800×640, WebP q85 (`cwebp -crop 0 794 1280 1024 -resize 800
 640`). One capture per theme: the stage and the card both follow the app theme, so the dark
 card is the dark stage with the dark card surface. Its prompt is gone from `prompts.json`.
+
+`finger-drawing` (#4082) has nothing to show until someone draws, so its card is a drawing:
+an emulator capture (Pixel_7a, 1280×2856) of `sceneview://demo/finger-drawing` after four
+strokes injected as touch events — an Azure spiral and an Amber star at the default 12 dp,
+then a Coral heart and a row of Mint loops at 21 dp — and, in Orbit, one 140 px drag to the
+left so the tubes show their volume. Crop: the full-width 1280×1024 band from y = 803,
+resized to 800×640, WebP q85 (`cwebp -crop 0 803 1280 1024 -resize 800 640`). One capture
+per theme of the same drawing: the stage follows the app theme, so the dark card is the dark
+stage. Android only until the iOS screen exists (#3907).
 
 ### Cards generated from real captures (2026-09-30)
 
@@ -341,11 +358,12 @@ draw no alpha.
 The sheet's "Scenes" row holds one card, the Park, in two files: the sheet shows the one this
 build will load (`SketchfabConfig.apiKey`), so the card is what the scene opens on (#4039).
 
-- `model_picker_park.webp`: the bundled fallback models only (soldier, sheen chair, lantern,
-  shiba), what a **keyless** build loads. Emulator capture (Pixel_7a, 1080×2400) of
-  `--es demo multi-model --ez qa_mode true` (orbit frozen) after `pm clear` with Wi-Fi and data
-  off, so a keyed build falls back too. Window x 0–1080, y 790–1654, resized to 600×480 and
-  encoded with `cwebp -q 85`.
+- `model_picker_park.webp`: the bundled fallback models only (Quaternius Ranger, sheen chair,
+  lantern, shiba), what a **keyless** build loads. Emulator capture (Pixel_7a, 1280×2856) of
+  `--es demo multi-model --ez qa_mode true` (orbit and animations frozen) after `pm clear` with
+  Wi-Fi and data off, so a keyed build falls back too. Full-width 5:4 window x 0–1280,
+  y 955–1979 (the Ranger's hood to the shiba), resized to 600×480 and encoded as WebP q85
+  (#4586).
 - `model_picker_park_streamed.webp`: a **keyed** debug build, so the four streamed `park`
   registry models. Same capture online, window x 0–1080, y 880–1744, same resize and encoding.
   The image shows CC-BY 4.0 models, credited where the app credits them, under "Park

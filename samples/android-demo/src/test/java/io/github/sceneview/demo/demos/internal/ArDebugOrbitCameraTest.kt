@@ -13,7 +13,7 @@ import kotlin.math.sin
 import kotlin.math.tan
 
 /**
- * Pins the free camera of the Room Scan demo's in-app 3D view (#3950, #4306): it frames the
+ * Pins the free camera of the 3D Scan demo's in-app 3D view (#3950, #4306): it frames the
  * session by itself until touched, a touch hands it to the finger, a double-tap hands it back —
  * and neither the automatic framing nor a gesture can lose the room.
  */
@@ -212,29 +212,6 @@ class ArDebugOrbitCameraTest {
         camera.snapTo(home)
         assertEquals(home.distance, camera.pose.distance, 1e-3f)
         assertFramed(camera.pose, band, camera.aspect, terrace)
-    }
-
-    @Test
-    fun `a surface shown in the room's place is framed on its own, with the path through it`() {
-        // The surface built from a scan: one corner of the room the cloud spreads over.
-        val surface = floatArrayOf(0.5f, 0f, -2f, 1.7f, 1.2f, -0.9f)
-        // The path walked: beside the surface, at the height of a hand.
-        val trail = floatArrayOf(-0.6f, 1.4f, 0.2f, 0.1f, 1.5f, 0.4f, 0.9f, 1.3f, -0.3f)
-        val band = OrbitBand.STAGE_PORTRAIT
-
-        val alone = ArDebugFraming.surfaceBounds(surface, trail = null)
-        assertArrayEquals(surface, alone, 0f)
-        val walked = ArDebugFraming.surfaceBounds(surface, trail)
-        assertArrayEquals(floatArrayOf(-0.6f, 0f, -2f, 1.7f, 1.5f, 0.4f), walked, 0f)
-        // The surface's own box is left as it was built.
-        assertArrayEquals(floatArrayOf(0.5f, 0f, -2f, 1.7f, 1.2f, -0.9f), surface, 0f)
-
-        // Framed on the room's cloud it was small; framed on itself it is as large as the room was.
-        val onRoom = ArDebugFraming.home(room, 35f, fov, 0.46f, band = band)
-        val onSurface = ArDebugFraming.home(alone, 35f, fov, 0.46f, band = band)
-        assertTrue("closer: ${onSurface.distance} < ${onRoom.distance}", onSurface.distance < onRoom.distance)
-        assertFramed(onSurface, band, 0.46f, alone)
-        assertFramed(ArDebugFraming.home(walked, 35f, fov, 0.46f, band = band), band, 0.46f, walked)
     }
 
     @Test

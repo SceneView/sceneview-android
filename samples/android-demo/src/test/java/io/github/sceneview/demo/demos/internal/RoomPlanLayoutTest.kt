@@ -163,7 +163,7 @@ class RoomPlanLayoutTest {
         )
 
         val rows = SurveyReport.rows(rough, WORDING).map { it.value }
-        assertEquals(listOf("≈ 20.0 m²", "≈ 5.00 × 4.00 m", "≈ 18.00 m", "≈ 2.50 m"), rows)
+        assertEquals(listOf("≈ 20.0 m²", "≈ 5.00 × 4.00 m", "≈ 18.00 m", "≈ 2.50 m", "≈ 50.0 m³"), rows)
         val texts = SurveyReport.planTexts(rough, WORDING)
         assertEquals("≈ 20.0 m²", texts.area)
         assertNull(texts.areaNote)
@@ -229,8 +229,11 @@ class RoomPlanLayoutTest {
         val text = SurveyReport.text(survey, WORDING, "Bedroom", "13 Oct 2026")
         val rows = SurveyReport.rows(survey, WORDING)
 
-        assertTrue(text.lines().size in 3..8)
+        // The rooms' line is one more: no total, since the room has no area.
+        assertTrue(text.lines().size in 3..9)
         assertTrue(text.contains("Floor area: not measured"))
+        assertTrue(text.contains("Volume: not measured"))
+        assertTrue(text.contains("Rooms: Room 1 not measured · not measured; Total not measured · not measured"))
         assertTrue(text.lines().contains("Scan the missing wall. Raise the phone to the ceiling."))
         assertTrue(text.contains("Ceiling height: not seen"))
         assertTrue(text.contains("B ≈ 4.00 m · not seen"))
@@ -261,6 +264,10 @@ class RoomPlanLayoutTest {
             dimensions = "Length × width",
             perimeter = "Perimeter",
             height = "Ceiling height",
+            volume = "Volume",
+            rooms = "Rooms",
+            room = "Room %1\$d",
+            total = "Total",
             span = "Between facing walls",
             walls = "Walls",
             wall = "Wall %1\$s",

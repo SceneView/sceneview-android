@@ -15,8 +15,6 @@
 
     <!-- Segmented-button labels. Order matches SceneGeometryMode and the
          DeepLinkRouter.ALIAS_INITIAL_TAB index (`ar-streetscape` = 1). -->
-    <string name="demo_ar_scene_mesh_mode_mesh">Mesh</string>
-    <string name="demo_ar_scene_mesh_mode_streetscape">Streetscape</string>
 
     <!-- One-line explainer per mode, shown above the toggle in the controls sheet. -->
     <string name="demo_ar_scene_mesh_mode_mesh_explainer">SceneMeshNode color-codes every geometry by its MeshClassification — one hue for terrain, another for buildings. The same enum labels an ARKit scene-reconstruction mesh, so classification-driven code runs unchanged on both platforms.</string>

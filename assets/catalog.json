@@ -3036,16 +3036,17 @@
       "cameraDistance": 1.5
     },
     {
-      "id": "threejs_soldier",
-      "name": "Soldier",
-      "source": "threejs",
-      "sourceUrl": "https://github.com/mrdoob/three.js/blob/dev/examples/models/gltf/Soldier.glb",
-      "author": "Tomás Laulhé (modified by Don McCurdy)",
+      "id": "quaternius_ranger",
+      "name": "Ranger",
+      "_comment": "Built for the demos from three free Standard packs by Quaternius, all CC0: the Male_Ranger outfit of 'Modular Character Outfits - Fantasy' (https://quaternius.com/packs/modularcharacteroutfitsfantasy.html) the head, eyes and eyebrows of Superhero_Male from 'Universal Base Characters' (https://quaternius.com/packs/universalbasecharacters.html), since the outfit ships without a head, and five clips of the 'Universal Animation Library' (https://quaternius.com/packs/universalanimationlibrary.html); all three packs share one skeleton. Clips renamed Idle, Walk, Run (Jog_Fwd_Loop), Sprint, Dance. Replaces threejs_soldier, a Mixamo character that was credited CC0 by mistake (#4586).",
+      "source": "quaternius",
+      "sourceUrl": "https://quaternius.com/packs/modularcharacteroutfitsfantasy.html",
+      "author": "Quaternius",
       "license": "CC0-1.0",
       "formats": {
         "glb": {
-          "file": "models/glb/threejs_soldier.glb",
-          "size": "1.3MB"
+          "file": "models/glb/quaternius_ranger.glb",
+          "size": "5.7MB"
         }
       },
       "tags": [
@@ -3056,10 +3057,33 @@
       ],
       "usedIn": [
         "android-demo",
-        "android-tv-demo",
-        "ios-demo"
+        "android-tv-demo"
       ],
-      "defaultScale": 0.3,
+      "defaultScale": 1.0,
+      "cameraDistance": 2.5
+    },
+    {
+      "id": "threejs_robot_expressive",
+      "name": "Expressive Robot",
+      "_comment": "Website-only: served from website-static/models/platforms, no demo bundles it. Licence stated in the folder's README.md.",
+      "source": "threejs",
+      "sourceUrl": "https://github.com/mrdoob/three.js/tree/dev/examples/models/gltf/RobotExpressive",
+      "author": "Tomás Laulhé (Quaternius), modified by Don McCurdy",
+      "license": "CC0-1.0",
+      "shippedAs": [
+        "threejs_robot_expressive.glb"
+      ],
+      "formats": {},
+      "tags": [
+        "character",
+        "animated",
+        "robot",
+        "reference"
+      ],
+      "usedIn": [
+        "website"
+      ],
+      "defaultScale": 1.0,
       "cameraDistance": 2.5
     },
     {
@@ -3612,6 +3636,7 @@
       "id": "kitchenaid_stand_mixer",
       "name": "KitchenAid stand mixer",
       "_comment": "Real-product catalogue (#4560): website gallery (view.html) and Android HD pack, real-world scale, base at the origin.",
+      "note": "Modified derivative (CC-BY-4.0 indicate-changes): the hosted copy removes the power cord trailing on the counter, its plug and the strain relief hanging on it (#4614), so the bounds are the mixer's own (23 x 36 x 39 cm instead of 32 x 36 x 53 cm), and re-centres the footprint on the origin. The cord's entry on the motor head, every other mesh and every material are untouched.",
       "source": "sketchfab",
       "sourceId": "716dfa11eb8f4020833584a3c3d09d5d",
       "sourceUrl": "https://sketchfab.com/3d-models/kitchenaid-stand-mixer-716dfa11eb8f4020833584a3c3d09d5d",
@@ -3924,7 +3949,12 @@
       "shippedAs": [
         "nintendo_switch_oled.glb"
       ],
-      "formats": {},
+      "formats": {
+        "glb": {
+          "file": "models/glb/nintendo_switch_oled.glb",
+          "size": "2.5MB"
+        }
+      },
       "tags": [
         "electronics",
         "tech",
@@ -3933,7 +3963,8 @@
       ],
       "usedIn": [
         "website",
-        "android-demo"
+        "android-demo",
+        "web-demo"
       ],
       "defaultScale": 1.0
     },

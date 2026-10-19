@@ -77,7 +77,7 @@ import io.github.sceneview.demo.theme.SceneViewTokens.Space
 import io.github.sceneview.demo.ui.overMediaEdge
 
 /*
- * The chrome of the Room Scan replay (#4379): the room has the screen. One thin glass bar over
+ * The chrome of the 3D Scan replay (#4379): the room has the screen. One thin glass bar over
  * the dock carries the timeline — play, a filmstrip of the recorded frames that scrubs the 3D
  * view, the clock — and everything that is read once, the figures and the layer toggles, lives
  * in the settings sheet. The replay is a themed stage (#4080): the bar takes its card, text and
@@ -376,7 +376,6 @@ internal fun RerunTimelineBar(
     thumbnails: Map<String, ImageBitmap>,
     session: ArDebugSession,
     modifier: Modifier = Modifier,
-    header: (@Composable () -> Unit)? = null,
 ) {
     val duration = media.trace.duration
     val shape = RoundedCornerShape(SceneViewTokens.Radius.lg)
@@ -396,11 +395,6 @@ internal fun RerunTimelineBar(
             .pointerInput(Unit) {}
             .testTag(RERUN_FILMSTRIP_TAG),
     ) {
-        // The view's own controls head the card (#4597): what the view draws and when, in one
-        // place, as Rerun groups a view's settings with its time panel.
-        header?.let {
-            Box(Modifier.padding(start = Space.sm, end = Space.sm, top = Space.sm)) { it() }
-        }
         Row(
             modifier = Modifier.height(SceneViewTokens.Layout.touchTarget).padding(end = Space.md),
             verticalAlignment = Alignment.CenterVertically,

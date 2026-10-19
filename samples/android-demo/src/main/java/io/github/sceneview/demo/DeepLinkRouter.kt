@@ -123,10 +123,14 @@ internal object DeepLinkRouter {
         // `post-processing` stay on the lab — which no longer has tabs, so they
         // carry no [ALIAS_INITIAL_TAB] entry. Every one of the four deep links
         // still resolves, each to the half that now hosts its subject.
+        // #4603 then folded the lab itself into `lighting` (its reflections and
+        // frame switches sit under every rig), so `lighting-lab` and the two ids
+        // it had kept resolve there too — on the default rig, no tab pre-selected.
         "dynamic-sky" to "lighting",
         "environment" to "lighting",
-        "reflection-probes" to "lighting-lab",
-        "post-processing" to "lighting-lab",
+        "lighting-lab" to "lighting",
+        "reflection-probes" to "lighting",
+        "post-processing" to "lighting",
         // #2239 Batch 3 — the retired `animation` and `physics` demos merged into
         // `animation-physics`. #4083 then split the Physics tab back out as its own
         // `rolling-balls` demo, so `animation-physics` has no tabs any more and
@@ -161,8 +165,9 @@ internal object DeepLinkRouter {
         // card with no modes of its own under the card literally named "Lighting
         // Lab". Since #3496 fog is a switch on the lab's one bench rather than a
         // mode, so the alias no longer pre-selects anything. `ARFogNode` keeps
-        // `FogNode` demonstrated in AR (`ar-fog`).
-        "fog" to "lighting-lab",
+        // `FogNode` demonstrated in AR (`ar-fog`). Since #4603 that switch lives
+        // in `lighting`, so the alias follows it.
+        "fog" to "lighting",
         // #2239 catalogue regroup — `gesture-feedback-preview` merged into
         // `camera-gestures` as its third mode. The Gestures mode flips `isEditable`
         // and draws no affordance; the preview drew the affordance with no controls.
@@ -297,6 +302,8 @@ internal object DeepLinkRouter {
         "ar-cloud-anchor" to mapOf("cloud-anchors" to 0, "collaborative" to 1),
         "ar-geospatial-anchors" to mapOf("anchors" to 0, "terrain" to 0, "streetscape" to 2),
         "ar-xr" to mapOf("hands" to 0, "face" to 1),
+        // finger-drawing — [3D, AR] (#4082).
+        "finger-drawing" to mapOf("3d" to 0, "ar" to 1),
     )
 
     /**
@@ -329,6 +336,7 @@ internal object DeepLinkRouter {
         "ar-rerun",
         "ar-cloud-anchor",
         "ar-xr",
+        "finger-drawing",
     )
 
     /**
@@ -506,14 +514,23 @@ internal object DeepLinkRouter {
      *
      * One extra carries every demo's vocabulary — Cloud Anchors resolves its ids with
      * `cloudAnchorScenarioOf`, Point & Ask with `askStepForQaOverride` — and this is the
-     * single place the gate lives: the id is returned **only when [qaMode] is on**. A
-     * pinned state makes a screen claim something that never happened (a hosted anchor
-     * code, a streamed answer), so unlike `qa_backdrop`, which only changes what is behind
-     * the scene, an intent extra alone must never be enough to reach it. Blank ids are
-     * dropped so a demo never has to distinguish `""` from absent. Never throws.
+     * single place the gate lives: the id is returned **only in a debug build with [qaMode]
+     * on**. A pinned state makes a screen claim something that never happened (a hosted
+     * anchor code, a streamed answer), so unlike `qa_backdrop`, which only changes what is
+     * behind the scene, an intent extra alone must never be enough to reach it — and
+     * `qa_mode` is itself an intent extra any app on the phone can send to the exported
+     * launcher activity, so on the store build the id is dropped whatever `qa_mode` says
+     * (#4555). Blank ids are dropped so a demo never has to distinguish `""` from absent.
+     * Never throws.
+     *
+     * @param debugBuild `BuildConfig.DEBUG`; a parameter so the release answer is tested.
      */
-    fun resolveQaState(qaMode: Boolean, raw: String?): String? {
-        if (!qaMode) return null
+    fun resolveQaState(
+        qaMode: Boolean,
+        raw: String?,
+        debugBuild: Boolean = BuildConfig.DEBUG,
+    ): String? {
+        if (!debugBuild || !qaMode) return null
         return raw?.trim()?.takeIf { it.isNotBlank() }
     }
 

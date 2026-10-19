@@ -813,7 +813,7 @@ jobs:
       # samples/desktop-demo consumes sceneview-compose's real desktop
       # renderer since #2540 (filament-kmp, offscreen → Skia) — it stopped
       # being the Compose Canvas wireframe placeholder that #1396 dropped
-      # from CI. Compiling it here (JDK 22 toolchain comes from
+      # from CI. Compiling it here (JDK 21 toolchain comes from
       # setup-gradle) makes the sample a guarded surface: the `web` filter
       # includes samples/desktop-demo/** and sceneview-compose/** so this
       # step fires when the sample or the façade it consumes changes.

@@ -32,6 +32,7 @@ import io.github.sceneview.demo.demos.internal.DenseCloud
 import io.github.sceneview.demo.demos.internal.DenseSurfels
 import io.github.sceneview.demo.demos.internal.MeasureDrawing
 import io.github.sceneview.demo.demos.internal.MeasureSize
+import io.github.sceneview.demo.demos.internal.MeasureUnitSystem
 import io.github.sceneview.demo.demos.internal.PlaneLayering
 import io.github.sceneview.demo.demos.internal.PointColorAtlas
 import io.github.sceneview.demo.demos.internal.ReplayGeometry
@@ -42,6 +43,7 @@ import io.github.sceneview.demo.demos.internal.RoomMeasure
 import io.github.sceneview.demo.demos.internal.SteadyRoomMeasure
 import io.github.sceneview.demo.demos.internal.SvpcCodec
 import io.github.sceneview.demo.demos.internal.Vec3
+import io.github.sceneview.demo.demos.internal.formatMeasureLength
 import io.github.sceneview.demo.demos.internal.of
 import io.github.sceneview.demo.demos.internal.parseArDebugLog
 import io.github.sceneview.loaders.MaterialLoader
@@ -53,6 +55,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import java.nio.ByteBuffer
+import java.util.Locale
 
 /*
  * The Rerun demo's bundled replay, on Android: loading it from the assets (IO), and drawing its
@@ -451,7 +454,11 @@ internal class ReplayLayers(
         measure = room
         measureNode.isVisible = shown && room != null
         if (!measureNode.isVisible || room == null) return
-        val labels = RoomMeasure.metres(room.width) to RoomMeasure.metres(room.depth)
+        // The same units and format as the Measure demo: metres or feet from the locale.
+        val locale = Locale.getDefault()
+        val units = MeasureUnitSystem.forLocale(locale)
+        val labels = formatMeasureLength(room.width, units, locale) to
+            formatMeasureLength(room.depth, units, locale)
         if (labels != measureLabels) {
             measureLabels = labels
             drawMeasureLabels(labels)
@@ -459,7 +466,7 @@ internal class ReplayLayers(
         val sides = if (eye == null) intArrayOf(0, 1) else MeasureDrawing.sidesFacing(room, eye.x, eye.z)
         // Sized in pixels, and rebuilt only past a 5 % zoom step, not on every frame of a pinch.
         val step = kotlin.math.round(kotlin.math.ln(style.metresPerPixel.coerceAtLeast(1e-6f)) / MEASURE_ZOOM_STEP)
-        if (!changed(measureNode, listOf(room.summary, room.yaw, floorY, sides.toList(), step, labels))) return
+        if (!changed(measureNode, listOf(room.yaw, floorY, sides.toList(), step, labels))) return
         val size = MeasureSize.at(kotlin.math.exp(step * MEASURE_ZOOM_STEP))
         mesh.clear()
         for (side in sides) {

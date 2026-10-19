@@ -38,7 +38,7 @@ import androidx.core.view.WindowCompat
  * configuration changes the platform puts the theme's own icons back: dark ones in the light
  * theme, over a stage or a camera scrim that is dark. Nothing [ProvideStatusBarIcons] read had
  * changed, so it did not run again and the dark icons stayed until the screen was left (#4345;
- * seen on a phone on Room Scan's live screen). It now runs again on every configuration change
+ * seen on a phone on 3D Scan's live screen). It now runs again on every configuration change
  * and writes what it wants without asking the window first.
  */
 @Stable

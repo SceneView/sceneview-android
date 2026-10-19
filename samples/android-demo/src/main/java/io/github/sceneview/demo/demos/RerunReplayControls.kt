@@ -5,8 +5,8 @@ import io.github.sceneview.demo.demos.internal.DebugPose
 import io.github.sceneview.demo.demos.internal.ReplayLens
 
 /*
- * The pure rules behind the Room Scan replay's controls (#4597): which reading opens, which
- * layers the sheet lists, and where a world point lands on a recorded camera frame.
+ * The pure rules behind the Room Scan replay's controls (#4597): which layers the sheet
+ * lists, and where a world point lands on a recorded camera frame.
  */
 
 /** One layer row of the replay's settings sheet: the group it shows or hides, its name, and what it draws. */
@@ -24,16 +24,6 @@ internal object RerunReplayControls {
         RerunLayer(DebugGroup.Planes, "Planes", "Floors in blue, walls in lilac"),
         RerunLayer(DebugGroup.Points, "Points", "Everything the camera saw"),
     )
-
-    /**
-     * Whether the 3D view opens on the room's surface rather than its points: whenever the scan
-     * can be meshed. The surface is the reading people keep; the points stay one tap away.
-     */
-    fun surfaceByDefault(canMesh: Boolean): Boolean = canMesh
-
-    /** Whether the Points | Surface control stands on the view, beside the timeline. */
-    fun showsReadingControl(canMesh: Boolean, mode: RerunMode): Boolean =
-        canMesh && (mode == RerunMode.Scene || mode == RerunMode.Map)
 
     /**
      * Where the world point ([x], [y], [z]) lands on the upright picture taken from [pose]
