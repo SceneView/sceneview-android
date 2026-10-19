@@ -18,10 +18,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
@@ -33,6 +36,7 @@ import androidx.compose.ui.semantics.semantics
 import io.github.sceneview.demo.R
 import io.github.sceneview.demo.demos.internal.ArDebugFrame
 import io.github.sceneview.demo.demos.internal.CoverageGrid
+import io.github.sceneview.demo.demos.internal.DebugPlaneKind
 import io.github.sceneview.demo.demos.internal.DebugPose
 import io.github.sceneview.demo.demos.internal.ScanCoach
 import io.github.sceneview.demo.demos.internal.ScanFollow
@@ -40,8 +44,11 @@ import io.github.sceneview.demo.theme.SceneViewTokens
 import io.github.sceneview.demo.theme.SceneViewTokens.ArOverlay
 import io.github.sceneview.demo.theme.SceneViewTokens.Space
 import io.github.sceneview.demo.ui.overMediaEdge
-import kotlin.math.hypot
+import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.sin
 import kotlin.math.roundToInt
 
 /**
@@ -66,15 +73,22 @@ internal class ScanCoverageState {
     var headingDegrees = 0f
         private set
 
-    /** The map's half-width, in metres: grows with the scan, so nothing covered leaves the map. */
-    var halfRangeMetres = MIN_HALF_RANGE_M
+    /**
+     * The room's floor as far as the scan can tell ([CoverageGrid.floorExtent]): the map draws it
+     * hatched, so what lies inside it and is not covered reads as still to scan.
+     */
+    var extent: List<Pair<Float, Float>> = emptyList()
+        private set
+
+    /** The map's scale, pixels per metre, `0` until the first draw fits it ([fitScale]). */
+    var pxPerMetre = 0f
         private set
 
     /** Bumped when the map has something new to draw: read in the draw phase only. */
     var tick by mutableIntStateOf(0)
         private set
 
-    /** `Floor NN %`: the covered share of the scan's footprint. */
+    /** `Floor NN % covered`: the covered share of [extent]. */
     var floorPercent by mutableIntStateOf(0)
         private set
 
@@ -85,6 +99,8 @@ internal class ScanCoverageState {
     private var cellsPath: Path? = null
     private var edgesPath: Path? = null
     private var pathsVersion = -1
+    private var extentVersion = -1
+    private var floorKey = 0
 
     fun observe(frame: ArDebugFrame) {
         val grew = grid.update(frame.mapPoints)
@@ -94,13 +110,17 @@ internal class ScanCoverageState {
         trail = frame.trail
         frame.camera?.let { pose -> heading = ScanFollow.headingOf(pose, heading) }
         headingDegrees = heading ?: 0f
-        if (grew) {
-            // The map holds the farthest covered corner from the phone, never shrinking under it.
-            halfRangeMetres = max(halfRangeMetres, reachOf(frame.camera) * RANGE_MARGIN)
+        val floors = frame.planes.filter { it.kind == DebugPlaneKind.Floor && it.vertexCount >= 3 }
+        val key = floors.fold(floors.size) { acc, plane -> acc * KEY_PRIME + plane.polygon.contentHashCode() }
+        val reshaped = key != floorKey || grid.version != extentVersion
+        if (reshaped) {
+            floorKey = key
+            extentVersion = grid.version
+            extent = grid.floorExtent(floors.map { it.polygon })
+            val percent = (grid.coveredShareOf(extent) * PERCENT).roundToInt()
+            if (percent != floorPercent) floorPercent = percent
         }
-        if (grew || moved) tick++
-        val percent = (grid.coveredShare * PERCENT).roundToInt()
-        if (percent != floorPercent) floorPercent = percent
+        if (reshaped || moved) tick++
     }
 
     /** The covered cells as one path, and the outline of what is covered, in world metres (XZ). */
@@ -127,22 +147,51 @@ internal class ScanCoverageState {
         return fill to outline
     }
 
-    private fun reachOf(camera: DebugPose?): Float {
-        val x = camera?.x ?: 0f
-        val z = camera?.z ?: 0f
-        val size = grid.cellMetres
-        val dx = max(x - grid.minCx * size, (grid.maxCx + 1) * size - x)
-        val dz = max(z - grid.minCz * size, (grid.maxCz + 1) * size - z)
-        return hypot(dx, dz)
+    /**
+     * The scale that fits [extent] in a [width] × [height] map whose marker sits at
+     * (`width / 2`, [markerY]), turned heading-up, with [margin] pixels of air. It zooms out at
+     * once so nothing leaves the map, and back in gently so the map does not breathe with each step.
+     */
+    fun fitScale(width: Float, height: Float, markerY: Float, margin: Float): Float {
+        val pose = camera
+        val half = min(width, height) / 2f
+        var target = half / MIN_HALF_RANGE_M
+        if (pose != null && extent.isNotEmpty()) {
+            val turn = Math.toRadians(headingDegrees.toDouble())
+            val c = cos(turn).toFloat()
+            val s = sin(turn).toFloat()
+            val side = width / 2f - margin
+            val up = markerY - margin
+            val down = height - markerY - margin
+            for ((x, z) in extent) {
+                val dx = x - pose.x
+                val dz = z - pose.z
+                // Where Compose's rotate(headingDegrees) puts the vertex, relative to the marker.
+                val sx = dx * c - dz * s
+                val sy = dx * s + dz * c
+                if (abs(sx) > EPSILON) target = min(target, side / abs(sx))
+                if (sy < -EPSILON) target = min(target, up / -sy)
+                if (sy > EPSILON) target = min(target, down / sy)
+            }
+        }
+        target = max(target, half / MAX_HALF_RANGE_M)
+        val now = pxPerMetre
+        pxPerMetre = if (now == 0f || target < now) target else now + (target - now) * ZOOM_IN_RATE
+        return pxPerMetre
     }
 
     companion object {
-        /** A small room's width either side of the phone, before the scan has any. */
-        const val MIN_HALF_RANGE_M = 3f
+        /** The map never zooms in past a metre and a half either side of the phone. */
+        const val MIN_HALF_RANGE_M = 1.5f
 
-        /** A cell's width of air around what is covered. */
-        const val RANGE_MARGIN = 1.08f
+        /** Nor out past a hall's width. */
+        const val MAX_HALF_RANGE_M = 15f
 
+        /** The share of the way back in one draw zooms, so a tighter fit eases in. */
+        const val ZOOM_IN_RATE = 0.08f
+
+        private const val EPSILON = 1e-3f
+        private const val KEY_PRIME = 31
         private const val PERCENT = 100f
     }
 }
@@ -154,9 +203,9 @@ private fun Path.segment(x0: Float, z0: Float, x1: Float, z1: Float) {
 
 /**
  * The live footprint of a scan (#4631): the floor seen from above, heading-up like the 3D view,
- * the phone at its centre. Covered cells are filled, the edge of what is covered is outlined —
- * where to walk next — and the path walked is drawn under them. [showFloor] adds the
- * `Floor NN %` figure under the map.
+ * the phone fixed a little below its middle, the room turning and scaling under it. The room's
+ * estimated floor is hatched — still to scan — covered cells are filled over it, the edge of what is
+ * covered is outlined, the path walked is drawn under them. [showFloor] adds `Floor NN % covered`.
  */
 @Composable
 internal fun ScanCoverageMap(state: ScanCoverageState, modifier: Modifier = Modifier, showFloor: Boolean = true) {
@@ -181,14 +230,40 @@ internal fun ScanCoverageMap(state: ScanCoverageState, modifier: Modifier = Modi
             // Read here only: a new cell or a step redraws the map, never recomposes it.
             state.tick
             val camera = state.camera
-            val centre = Offset(size.width / 2f, size.height / 2f)
-            val pxPerMetre = size.minDimension / 2f / state.halfRangeMetres
+            // You stay put, below the middle like a navigation app's arrow: most of the map is
+            // ahead of you, where you are about to scan.
+            val centre = Offset(size.width / 2f, size.height * MARKER_HEIGHT)
+            val pxPerMetre = state.fitScale(size.width, size.height, centre.y, MapFitMargin.toPx())
             val (cells, edges) = state.paths()
+            val extent = state.extent
+            val floor = Path()
+            extent.forEachIndexed { i, (x, z) -> if (i == 0) floor.moveTo(x, z) else floor.lineTo(x, z) }
+            floor.close()
             translate(centre.x, centre.y) {
                 // Heading-up: the way the phone faces is the top of the map (see ScanFollow).
                 rotate(state.headingDegrees, pivot = Offset.Zero) {
                     scale(pxPerMetre, pxPerMetre, pivot = Offset.Zero) {
                         translate(-(camera?.x ?: 0f), -(camera?.z ?: 0f)) {
+                            if (extent.size >= 3) {
+                                // The floor still to scan: hatched inside the room's estimated
+                                // outline, so a gap reads as "not yet", not as "nothing there".
+                                clipPath(floor) {
+                                    // Never over what is covered: a covered cell reads solid.
+                                    clipPath(cells, ClipOp.Difference) {
+                                        drawHatch(extent, MapHatchStep.toPx() / pxPerMetre, pxPerMetre)
+                                    }
+                                }
+                                drawPath(
+                                    floor,
+                                    ArOverlay.onScrimMuted,
+                                    style = Stroke(
+                                        width = MapEdgeWidth.toPx() / pxPerMetre,
+                                        pathEffect = PathEffect.dashPathEffect(
+                                            floatArrayOf(MapDash.toPx() / pxPerMetre, MapDash.toPx() / pxPerMetre),
+                                        ),
+                                    ),
+                                )
+                            }
                             drawTrail(state.trail, ArOverlay.onScrimMuted, MapTrailWidth.toPx() / pxPerMetre)
                             drawPath(cells, ArOverlay.accentProgress.copy(alpha = COVERED_ALPHA))
                             drawPath(
@@ -238,6 +313,27 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawTrail(
     drawPath(path, color, style = Stroke(width = width, cap = StrokeCap.Round, join = StrokeJoin.Round))
 }
 
+/** Diagonal hatching over [extent]'s box, [step] metres apart; the caller clips it to the floor. */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawHatch(
+    extent: List<Pair<Float, Float>>,
+    step: Float,
+    pxPerMetre: Float,
+) {
+    val minX = extent.minOf { it.first }
+    val maxX = extent.maxOf { it.first }
+    val minZ = extent.minOf { it.second }
+    val maxZ = extent.maxOf { it.second }
+    val span = (maxX - minX) + (maxZ - minZ)
+    val color = ArOverlay.onScrimMuted.copy(alpha = HATCH_ALPHA)
+    val width = MapEdgeWidth.toPx() / pxPerMetre
+    var d = 0f
+    while (d <= span) {
+        // Lines at 45°: x + z = minX + minZ + d.
+        drawLine(color, Offset(minX + d, minZ), Offset(minX + d - span, minZ + span), strokeWidth = width)
+        d += step
+    }
+}
+
 /** `112 dp`: the map reads a room at a glance and leaves the live view its middle. */
 private val ScanMapSize = Space.x4l + Space.md
 
@@ -247,6 +343,16 @@ private val MapMarkerSize = Space.md - Space.xs / 2
 private val MapEdgeWidth = SceneViewTokens.Glass.edgeWidth
 private val MapTrailWidth = SceneViewTokens.Glass.edgeWidth * 2
 
+/** Air between the room's outline and the map's edge. */
+private val MapFitMargin = Space.sm
+
+/** The hatching's pitch and the outline's dash: fine enough to read as texture, not as lines. */
+private val MapHatchStep = Space.xs + Space.xs / 2
+private val MapDash = Space.xs
+
+/** The marker's height in the map: below the middle, most of the map ahead of you. */
+private const val MARKER_HEIGHT = 0.7f
+private const val HATCH_ALPHA = 0.45f
 private const val COVERED_ALPHA = 0.6f
 private const val LUMINANCE_MID = 0.5f
 private const val ARROW_TIP = 0.62f

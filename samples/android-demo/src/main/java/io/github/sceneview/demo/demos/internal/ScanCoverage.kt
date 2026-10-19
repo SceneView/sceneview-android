@@ -7,8 +7,8 @@ import kotlin.math.sqrt
  * plane (#4631). A cell with [minPoints] or more is **covered** — there is surface there; a
  * covered cell with an empty neighbour is the **frontier** — the edge of what the scan has,
  * where to walk next. This is the "what is scanned and what is not" of the live mini-map and
- * the `Floor NN %` figure, and it is what Polycam shows by presence: a surface the scan has is
- * drawn, one it has not is simply not there.
+ * the `Floor NN % covered` figure. What is not covered yet is the rest of [floorExtent]: the room's
+ * floor as the floor planes and the covered cells outline it, which the map hatches.
  *
  * Fed with [ArDebugFrame.mapPoints], which grows as a prefix of one array: only the points past
  * the last [update] are binned, so a frame costs its new points, not the whole cloud. A shorter
@@ -103,6 +103,53 @@ internal class CoverageGrid(
             return (coveredCells.size.toFloat() / box).coerceIn(0f, 1f)
         }
 
+    /**
+     * The room's floor as far as the scan can tell, (x, z) counter-clockwise: the convex hull of
+     * the floor planes' outlines ([floorPolygons], world xyz triples) and of every covered cell.
+     * What lies inside it and is not covered is what is still to scan. Empty before anything is
+     * covered or found.
+     */
+    fun floorExtent(floorPolygons: List<FloatArray>): List<Pair<Float, Float>> {
+        val points = ArrayList<Pair<Float, Float>>()
+        for (polygon in floorPolygons) {
+            for (i in 0 until polygon.size / 3) points += polygon[i * 3] to polygon[i * 3 + 2]
+        }
+        // A covered cell's corners only matter on the frontier: an inner cell's are shared.
+        forEachCovered { cx, cz ->
+            if (isFrontier(cx, cz)) {
+                val x = cx * cellMetres
+                val z = cz * cellMetres
+                points += x to z
+                points += x + cellMetres to z
+                points += x to z + cellMetres
+                points += x + cellMetres to z + cellMetres
+            }
+        }
+        return RoomDollhouse.convexHull(points)
+    }
+
+    /**
+     * The covered share of [extent] (see [floorExtent]), `0..1`: covered cells over the cells
+     * whose centre lies inside it. `0` for an extent with no area.
+     */
+    fun coveredShareOf(extent: List<Pair<Float, Float>>): Float {
+        if (extent.size < 3) return 0f
+        val minX = extent.minOf { it.first }
+        val maxX = extent.maxOf { it.first }
+        val minZ = extent.minOf { it.second }
+        val maxZ = extent.maxOf { it.second }
+        var inside = 0
+        var covered = 0
+        for (cx in cellOf(minX)..cellOf(maxX)) for (cz in cellOf(minZ)..cellOf(maxZ)) {
+            val x = (cx + HALF) * cellMetres
+            val z = (cz + HALF) * cellMetres
+            if (!insideConvex(extent, x, z)) continue
+            inside++
+            if (isCovered(cx, cz)) covered++
+        }
+        return if (inside == 0) 0f else (covered.toFloat() / inside).coerceIn(0f, 1f)
+    }
+
     /** The cell index of a world coordinate. */
     fun cellOf(metres: Float): Int = kotlin.math.floor(metres / cellMetres).toInt()
 
@@ -135,6 +182,18 @@ internal class CoverageGrid(
 
         @PublishedApi
         internal fun czOf(key: Long): Int = key.toInt()
+
+        private const val HALF = 0.5f
+
+        /** Whether (x, z) lies inside the counter-clockwise convex [polygon], its edge included. */
+        internal fun insideConvex(polygon: List<Pair<Float, Float>>, x: Float, z: Float): Boolean {
+            for (i in polygon.indices) {
+                val (ax, az) = polygon[i]
+                val (bx, bz) = polygon[(i + 1) % polygon.size]
+                if ((bx - ax) * (z - az) - (bz - az) * (x - ax) < 0f) return false
+            }
+            return true
+        }
     }
 }
 

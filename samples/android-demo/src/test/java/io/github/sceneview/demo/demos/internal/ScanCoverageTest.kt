@@ -92,6 +92,38 @@ class CoverageGridTest {
         grid.forEachCovered { cx, cz -> seen += cx to cz }
         assertEquals(listOf(3 to -2, -4 to 7), seen)
     }
+
+    /** A flat 2 m × 2 m floor plane from (0, 0), world xyz. */
+    private val floor2m = floatArrayOf(0f, 0f, 0f, 2f, 0f, 0f, 2f, 0f, 2f, 0f, 0f, 2f)
+
+    @Test
+    fun `the floor extent is the floor plane, and the share counts what is still to scan`() {
+        val grid = CoverageGrid()
+        // The first half-metre band of the 2 m floor covered: 16 of its 64 cells.
+        val covered = (0 until 8).flatMap { cx -> (0 until 2).map { cz -> cx to cz } }
+        grid.update(cells(*covered.toTypedArray()))
+        val extent = grid.floorExtent(listOf(floor2m))
+        assertEquals(0f, extent.minOf { it.first }, 1e-4f)
+        assertEquals(2f, extent.maxOf { it.first }, 1e-4f)
+        assertEquals(2f, extent.maxOf { it.second }, 1e-4f)
+        assertEquals(16f / 64f, grid.coveredShareOf(extent), 1e-4f)
+    }
+
+    @Test
+    fun `covered cells outside the floor plane widen the extent instead of overflowing it`() {
+        val grid = CoverageGrid()
+        grid.update(cells(10 to 0))
+        val extent = grid.floorExtent(listOf(floor2m))
+        assertEquals(11 * CoverageGrid.CELL_METRES, extent.maxOf { it.first }, 1e-4f)
+        assertTrue(CoverageGrid.insideConvex(extent, 10.5f * CoverageGrid.CELL_METRES, 0.1f))
+    }
+
+    @Test
+    fun `no floor and nothing covered is no extent and no share`() {
+        val grid = CoverageGrid()
+        assertTrue(grid.floorExtent(emptyList()).isEmpty())
+        assertEquals(0f, grid.coveredShareOf(emptyList()), 0f)
+    }
 }
 
 /** [ScanCoach] (#4631): one line, from the phone's own movement and whether the scan grows. */
