@@ -471,9 +471,12 @@ class ScanObjectTest {
 
     /** A scan drawn by hand: every surface sampled finer than a voxel, with its normal. */
     private class Scene {
-        private val positions = ArrayList<Float>()
-        private val normals = ArrayList<Float>()
-        val count: Int get() = positions.size / 3
+        // Primitive arrays, not boxed lists: a room is ~600k points, and this suite shares its
+        // test JVM's heap with every other class of the module.
+        private var positions = FloatArray(INITIAL_FLOATS)
+        private var normals = FloatArray(INITIAL_FLOATS)
+        private var floats = 0
+        val count: Int get() = floats / 3
 
         /** A room centred on the origin, floor at y = 0: every face looks in. */
         fun room(halfX: Float, halfZ: Float, height: Float) {
@@ -527,15 +530,20 @@ class ScanObjectTest {
         }
 
         private fun add(p: Vec3, normal: Vec3) {
-            positions += p.x
-            positions += p.y
-            positions += p.z
-            normals += normal.x
-            normals += normal.y
-            normals += normal.z
+            if (floats + 3 > positions.size) {
+                positions = positions.copyOf(positions.size * 2)
+                normals = normals.copyOf(normals.size * 2)
+            }
+            positions[floats] = p.x
+            positions[floats + 1] = p.y
+            positions[floats + 2] = p.z
+            normals[floats] = normal.x
+            normals[floats + 1] = normal.y
+            normals[floats + 2] = normal.z
+            floats += 3
         }
 
-        fun cloud() = DenseCloud(positions.toFloatArray(), IntArray(count) { GREY }, normals.toFloatArray())
+        fun cloud() = DenseCloud(positions.copyOf(floats), IntArray(count) { GREY }, normals.copyOf(floats))
     }
 
     private class Furnished(val cloud: DenseCloud, val roomCount: Int) {
@@ -545,6 +553,7 @@ class ScanObjectTest {
     private companion object {
         const val VOXEL = 0.02f
         const val STEP = 0.012f
+        const val INITIAL_FLOATS = 1 shl 16
         const val GREY = 0xFF808080.toInt()
         const val HALF_ROOM = 2f
         const val ROOM_HEIGHT = 2.6f
