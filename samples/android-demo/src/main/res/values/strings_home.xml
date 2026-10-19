@@ -11,8 +11,6 @@
     <string name="home_whats_new">What\'s new</string>
 
     <!-- Hero — routes to demo/model-viewer -->
-    <string name="home_hero_title">Model Viewer</string>
-    <string name="home_hero_subtitle">Any glTF, HDR lighting, one tap to AR</string>
     <string name="home_hero_open">Open</string>
     <!-- Featured pager, "What's new" page (#3566 / #3567). The title takes a
          major.minor such as "4.35"; the subtitle takes the number of samples

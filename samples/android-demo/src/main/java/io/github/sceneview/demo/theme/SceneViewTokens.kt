@@ -395,6 +395,13 @@ object SceneViewTokens {
         val heroSubtitleMaxWidth = 260.dp
         val heroPillHeight = 44.dp
         val heroPillPaddingHorizontal = 18.dp
+        /**
+         * The arrow after the hero pill's label (#4622): the pill is the page's one action,
+         * and a bare word on a busy live stage read as a caption, not a button.
+         */
+        val heroPillIconSize = 18.dp
+        /** Gap between the hero pill's label and its arrow — `space-sm`. */
+        val heroPillIconGap = 8.dp
         val heroTopGap = 8.dp
         val chipRowTopGap = 28.dp
         val chipRowHeight = 40.dp
@@ -770,21 +777,14 @@ object SceneViewTokens {
         /**
          * A phone on its side (#4306, #4379): under [compactStageHeight] the window has no height
          * to give a row above or under the room. The replay's timeline bar stands in the top
-         * corner, [compactCardWidth] wide; a scan in progress puts its 3D card on one side and
-         * its line on the other, the same width, and the shutter keeps the middle.
+         * corner, [compactCardWidth] wide, and the room keeps the middle.
          */
         val compactStageHeight = 500.dp
         val compactCardWidth = 280.dp
 
-        /**
-         * A scan in progress: the room being rebuilt is drawn on glass, over the camera it is
-         * made with. [liveGlass] is the stage's own ground at 60 % — the camera shows through
-         * it, and white on it still reads at 5:1 over a white wall. The card opens
-         * [liveCardShare] of the row wide, beside the scan's line, and grows to the whole row
-         * when tapped.
-         */
-        val liveGlass = Color(0x990B0F16)
-        const val liveCardShare = 0.44f
+        /** Picture-in-picture over the camera: portrait 3:4, like the phone it shows. */
+        val pipWidth = 128.dp
+        val pipHeight = 170.dp
     }
 
     /** `DESIGN.md` — Spacing scale (`space-*`). */

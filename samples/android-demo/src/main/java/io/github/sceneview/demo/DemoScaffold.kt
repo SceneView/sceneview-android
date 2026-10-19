@@ -396,7 +396,7 @@ val LocalDemoSheetCover = androidx.compose.runtime.compositionLocalOf { 0.dp }
  * are any.
  *
  * A scene that scrolls under the chrome ends its content this far up, or its last rows stay under
- * the mode pill and the settings button with nothing left to scroll: Room Scan's landing hid its
+ * the mode pill and the settings button with nothing left to scroll: 3D Scan's landing hid its
  * fourth and fifth sessions that way. Unlike [LocalDemoChromeBottomInset] — the dock band alone,
  * for something that rests a gutter above it — this is the whole stack. Unlike
  * [LocalDemoSceneCover] — made for a `SceneView`'s `contentPadding` — it leaves out the system

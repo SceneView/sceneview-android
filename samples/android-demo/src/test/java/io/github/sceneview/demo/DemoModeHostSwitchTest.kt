@@ -16,7 +16,7 @@ import org.robolectric.annotation.Config
  * Whether a [DemoModeHost] hands a switch to the scaffold of the demo it shows — the one
  * thing that puts a mode pill on screen.
  *
- * Room Scan (`ar-rerun`) publishes none: its Session MP4 mode was a pill over every screen
+ * 3D Scan (`ar-rerun`) publishes none: its Session MP4 mode was a pill over every screen
  * of the demo, in front of people who came to scan a room. The mode itself has to stay
  * reachable by deep link, because the replay harness and the instrumented playback tests
  * open it that way.

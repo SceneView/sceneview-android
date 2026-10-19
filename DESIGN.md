@@ -83,7 +83,7 @@ Glassmorphism adds depth and layering to surfaces that float over content (nav, 
 | `stage-tray-walnut-late` | #2E1B12 | #2E1B12 | Rings of the walnut frame and body (Android `TrayStage.WALNUT_LATE`): the dark edge that frames the pale field. Fixed in both themes |
 | `stage-tray-steel` | #D7DCE3 | #D7DCE3 | Chrome ball of the Rolling Balls demo (Android `TrayStage.STEEL_COLOR`, metallic, roughness 0.06): near-neutral so it mirrors the studio. Fixed in both themes |
 | `stage-tray-glass` | #BFE6EA | #BFE6EA | Glass marble of the Rolling Balls demo (Android `TrayStage.GLASS_COLOR`, full transmission, IOR 1.5): the aqua tint the light picks up through it, and its chip swatch. Fixed in both themes |
-| `stage-tray-rubber-1`…`-5` | #F2654B · #2E86F0 · #F5B029 · #2FBF8F · #9B5DE5 | same | Rubber balls of the Rolling Balls demo, in turn (Android `TrayStage.RUBBER_COLORS`, clear-coated): coral, azure, amber, mint, orchid — each holds on the maple and on the walnut. Fixed in both themes |
+| `stage-tray-rubber-1`…`-5` | #F2654B · #2E86F0 · #F5B029 · #2FBF8F · #9B5DE5 | same | Rubber balls of the Rolling Balls demo, in turn (Android `TrayStage.RUBBER_COLORS`, clear-coated): coral, azure, amber, mint, orchid — each holds on the maple and on the walnut. Fixed in both themes. Also the five paints of the Finger Drawing demo (#4082), where each holds on the light and on the dark stage |
 | `stage-pip-floor` | #E2E6EB | #161B22 | Floor of the iOS Secondary Camera (PiP) stage (iOS `Stage.pipFloor`; dark is Android's `StageSky.floor`). Light is a step under `surface-container-highest` so the ground reads against the backdrop (1.13:1 on `stage-pip-backdrop`, enough for a fill; the grid carries the edge) |
 | `stage-pip-grid` | #7A8494 | #5C6780 | Grid lines on `stage-pip-floor` (iOS `Stage.pipGrid`): 3.0:1 on the floor in both themes, where Android's `outline` / `outline-subtle` measured 1.18:1 / 2.18:1 |
 | `stage-pip-backdrop` | #F1F3F5 | #0B0F16 | Flat backdrop of the Secondary Camera stage (iOS `Stage.pipBackdrop`, = `surface-container-high` light / `stage-background` dark). The floor texture fades into exactly this colour at its rim, so no camera angle shows the floor's edge |
@@ -135,6 +135,7 @@ the surface ramp above, not the M3 tonal ramp.
 | `hero-subtitle` | rgba(255,255,255,0.80) | rgba(255,255,255,0.80) | Hero subtitle, max width 260dp |
 | `hero-pill-bg` | #ffffff | #ffffff | Hero CTA pill (44dp, `radius-full`) |
 | `hero-pill-text` | #1a1a2e | #1a1a2e | Hero CTA label |
+| `hero-pill-icon` | 18dp, `hero-pill-text` | 18dp, `hero-pill-text` | Arrow after the hero CTA label (`ArrowForward`, auto-mirrored), `hero-pill-icon-gap` 8dp (`space-sm`) |
 | `header-glass` | `surface` at 72 % over the list under it blurred `header-glass-blur` (24dp) | `surface` at 78 %, same blur | Sticky home header once the list scrolls under it (API 31+). The blurred copy is drawn over a `surface` ground, so no sharp title shows through: the rows read as colour moving behind frosted glass, never as an overlap. `on-surface` holds 8.7:1 (light) / 8.2:1 (dark) against the worst ground, `on-surface-variant` 4.9:1 / 4.2:1 (icons, 3:1 bar). The stage is a `TextureView`, so its frame is in the recorded copy too. iOS: the same `surface` veil over native Liquid Glass (`glassEffect(.regular)`) on iOS 26+, over `.ultraThinMaterial` below — bare glass let the row titles read through |
 | `header-overlay` | `surface` at 100 % | `surface` at 100 % | The same header below API 31 (no `RenderEffect`). Tried at the `glass-sheet` opacity: without a backdrop blur the card titles scrolling under the wordmark stay legible and read as an overlap bug, so without blur it stays opaque |
 | `card-glass` | `surface-container` (#ffffff) at 80 % over the card's own picture blurred 28dp — at 72 % a dark picture turned it a muddy grey | `surface-container` at 90 % (the `glass-sheet` value), same blur | Caption of a home card. Below API 31 (no `RenderEffect`) there is no blurred copy and the fill takes `glass-sheet` (88 % / 90 %) |
@@ -148,9 +149,14 @@ category.
 
 **Above the chips, a demo is pushed once.** The header pager, the "Featured" banners and
 the "What's new" row's picture are read in that order, and each only shows what the ones
-before it do not; a group left with nothing of its own is not drawn. The pager stays at two
-pages (Models, Cosmos) so the banners keep the other three featured demos: the banner is the
-card the Home is liked for. In the catalogue, a demo shown as a banner is not listed again
+before it do not; a group left with nothing of its own is not drawn. The pager has four
+pages (Model Viewer, Cosmos, Real-World Scan, Rolling Balls — #4622): the flagship and
+Cosmos, then the two newest showpieces that are not Labs experiments, outside the common Featured list so the
+banners keep the other three featured demos: the banner is the card the Home is liked for.
+The flagship's page is titled after the screen it opens, "Model Viewer", not the catalogue's
+"Models", which read as a section. Each page's one action is the `hero-pill`: label, then a
+`hero-pill-icon` arrow `hero-pill-icon-gap` after it — a bare "Open" over the live stage read
+as a caption. iOS still shows one band titled "Models" with a bare "Open" (`HomeHero.swift`); that is a parity item. In the catalogue, a demo shown as a banner is not listed again
 in its category; a search is a query and lists every match. The "What's new" row
 opens the "What's new" sheet over the whole catalogue: a tap on a home row must not make
 the catalogue look smaller than it is.
@@ -713,7 +719,7 @@ The dock replaces FABs and top app bars in demo screens; its Controls item opens
 settings sheet. Show/hide uses `motion-spring`; tap on the scene toggles the chrome
 with `motion-fade`. A demo's own overlays stay through that tap — a status pill or a
 capture button is not chrome — unless everything it lays over the scene *is* chrome (the
-Room Scan replay's timeline): it opts in with `overlaysFollowChrome`, and the tap gives
+3D Scan replay's timeline): it opts in with `overlaysFollowChrome`, and the tap gives
 the scene the whole window (#4379).
 
 - **A thin bar goes with the dock (#4379).** The bottom overlay slot ends 24dp above the
@@ -721,7 +727,7 @@ the scene the whole window (#4379).
   a timeline, a scrubber — sinks by `dockGap - space-sm` and rests `space-sm` above it.
 - **A mode that is a developer tool stays off the screen (#4397).** The mode pill is for
   two experiences of equal weight (Cosmos "Starlight | Spacetime"). When the second mode
-  is a tool the QA harness opens — Room Scan's "Session MP4" — the host sets
+  is a tool the QA harness opens — 3D Scan's "Session MP4" — the host sets
   `showSwitch = false`: no pill over the scene, no row in the settings sheet, and the
   mode opens by deep link only (`?tab=<key>`).
 
@@ -1029,8 +1035,8 @@ button is the only way out of the state the card explains.
 
 ### AR Debug View (Android demo)
 
-The in-app 3D view (#3950) of the **Room Scan** demo (`ar-rerun`; named for what the user
-does, not for the tool, since #4306): what ARCore understood of the room, drawn by a
+The in-app 3D view (#3950) of the **3D Scan** demo (`ar-rerun`; renamed for a clearer
+name): what ARCore understood of the room, drawn by a
 second `SceneView` from a free third-person camera. The layout borrows from three
 references: **Polycam** (live camera with a small 3D preview, one tap to the full 3D
 inspection), the **Rerun viewer** (a dark spatial view with entity toggles over a
@@ -1039,11 +1045,9 @@ the camera mode keeps `ARSceneView`'s own plane renderer).
 
 - **The scene first (#4379).** The room or the camera keeps the screen — 70 % of the
   window clear of chrome at rest in the replay. What is read once is a row of the settings
-  sheet, never a card over the scene: the layers and their figures, the room's size,
-  Points | Surface, a scan's counts and the computer stream's status. The replay has no
-  picture-in-picture and no corner card: the other view is one dock cell away. A scan in
-  progress keeps at least half of a portrait window's height clear, and is the one screen
-  with a second view over the first — on glass (below).
+  sheet, never a card over the scene: the layers and their figures, the room's size and
+  the computer stream's status. The replay has no picture-in-picture and no corner card:
+  the other view is one dock cell away.
 - **Two modes, one dock toggle.** *Camera*: the AR camera, bare. *3D view*: the debug view
   full screen, entity toggles on top, the timeline card at the bottom. Recenter is the
   dock's third item.
@@ -1058,7 +1062,7 @@ the camera mode keeps `ARSceneView`'s own plane renderer).
   `surface-container` at 88 %; text `on-surface` (13:1), secondary `on-surface-dim`
   (8.9:1); edge `on-surface` at 12 %, no halo; the chrome bands wash towards the ground
   instead of black; the one filled accent is the light scheme's `primary`; the status bar
-  keeps dark icons. The Room Scan and Camera & Gestures demos opt in — every other stage is
+  keeps dark icons. The 3D Scan and Camera & Gestures demos opt in — every other stage is
   media.
 - **Stage sky** (`StageSky`, #4089): the backdrop of a themed stage whose subjects stand on
   an open floor that the camera orbits. A flat skybox in the stage ground (the zenith) under
@@ -1109,13 +1113,6 @@ the camera mode keeps `ARSceneView`'s own plane renderer).
   stops at 1.6× the framed distance, a pan keeps its pivot in the room. Every automatic
   move is eased and capped at 150°/s, by the shortest way round; the opening is one short
   crane-in from the same side.
-- **One 3D view, two readings: Points | Surface (#4306).** A scan that can be meshed heads
-  its settings sheet with a full-width two-way switch (#4379 — it headed a card over the
-  stage). *Surface* draws the room's mesh in the same view, under the same camera, in place
-  of its points and planes — never a second screen. Under the switch, one line says what
-  the surface is doing (building, then "Surface preview" and its triangle count), and a
-  `.glb` share button stands beside it once built; a recording with nothing to mesh has no
-  switch. The surface is a preview — a short scan gives a coarse, patchy mesh.
 - **The room in front, the tracking aids behind it (#4306).** The glows are held low
   (trail head 2.0, live points and frustum 1.4), the history frusta are `primary` at 25 %
   on dark and 30 % on light, the live points are 3 px. What the scan *produced* — the
@@ -1126,9 +1123,7 @@ the camera mode keeps `ARSceneView`'s own plane renderer).
   stacked). The replay's timeline bar stands in the top corner, under the header's line,
   280 dp wide; the room stays centred and is fitted clear of the bar, under the status bar
   and `Space.lg` above the dock — its dimensions are written under its floor
-  (`OrbitBand.betweenSides`). A scan in progress puts its glass 3D card on one side, 280 dp
-  wide and at that one size, and its line in the opposite corner; the shutter keeps the
-  middle.
+  (`OrbitBand.betweenSides`).
 - **Replay timeline: one bar, one touch target tall (#4379).** Play/pause, a filmstrip of
   the recorded frames, the clock ("0:07 / 0:24"), on one `radius-lg` glass row `space-sm`
   above the dock, as wide as an AR overlay card (480 dp at most). The strip is the
@@ -1136,40 +1131,29 @@ the camera mode keeps `ARSceneView`'s own plane renderer).
   on the stage hides it with the header and the dock, and another brings them back.
 - **Live 3D view timeline**: play/pause, the time, a scrubber, the length, and a *Live*
   chip in `success` while the view follows the session. Scrubbing pauses; *Live* jumps back.
-- **A scan in progress: the camera is the screen, the room is rebuilt on glass.** Two
-  pieces of chrome share one row under the header, and nothing else stands over the camera
-  but the shutter. *The line* is one 36 dp glass pill at the start of the row: the `danger`
-  dot, the clock in `type-card` and the point count in `type-caption`, both in tabular
-  figures. *The live 3D card* stands at the end of the row, 44 % of it wide
-  (`DebugView.liveCardShare`), `radius-lg`, with the over-media edge and no shadow: the
-  same view the replay opens on, drawn with **no ground of its own** — a translucent
-  `SceneView` (no skybox, clear alpha 0) over `DebugView.liveGlass`, the stage ground at
-  60 %, so the camera shows through and white still reads at 5:1 over a white wall. Android
-  cannot blur a camera surface: the glass is a tint and an edge, never a fake blur. A tap
-  grows the card to the whole row, under the line; its corner button shrinks it back. Both
-  arrive with one `motionSpring` (fade, the card scaling from its own corner) and the card
-  grows with the same spring — no other motion. The only red is `danger` (the dot and the
-  shutter). While recording the dock is empty: nothing may leave a scan half-taken. The
-  privacy line ("Everything stays on your phone.") ends the idle copy.
-- **A scan's figures can be trusted, and a spent budget says so.** The pill counts points
-  as "246k points"; from 80 % of what the scan can hold it counts against it, "412k /
-  500k"; at the limit it reads "500k · full" in `accent-guidance` and one line in the same
-  colour stands under the pill until the scan ends: "Point limit reached — new areas add no
-  more points." (the photo limit and both limits have theirs). A count that has stopped
-  never reads as a frozen screen. The notice stays, so it stands beside the 3D card, in the
-  width the card leaves, and costs the camera no height; the stop hint over the shutter
-  ("Tap to stop and open your scan in 3D") leaves after 8 s. On its side, the notice stands
-  under the pill in its corner. The settings sheet holds what is read once: points and
-  photos against their budgets, the scan's kind, and **surfaces found as an area**
-  ("14 m²") — never ARCore's count of plane objects, which falls from 4 to 1 each time
-  patches of one floor merge.
+- **The capture says one thing at a time (#4627).** One compact card on top: the red dot
+  (`danger`, muted while paused) and "Scanning · 0:42" in `type-title`, then "124,300 points
+  captured" in `type-body` — counted from zero, never shown against a cap. The 3D card under
+  it is the same view the replay opens on, growing as the phone moves, framed to the scan
+  with no intro. At the bottom, one coaching line in a scrim pill ("Move slowly sideways";
+  on a lost track "Scan paused. Point at an area you already scanned.") over two 48 dp
+  buttons: tonal Pause (Resume) and filled Finish. Finish opens a review card ("Review your
+  scan", the figures, tonal Keep scanning and filled Save scan) that returns to the same
+  capture; only Save scan builds it. A failed write stays as a card ("Couldn't save your
+  scan", Discard, Try again), never a toast; its Discard asks "Discard this scan?" first.
+  Back during a capture pauses it and asks Keep scanning, Save scan or Discard (`error`) —
+  only Keep scanning and Discard when nothing was captured; Keep scanning scans again. A lost
+  track stops the clock with the capture. While capturing the dock is empty; the Settings
+  button still shows over a capture today, and hiding it is the next step of #4627. The
+  privacy line ("Saved on your phone. Nothing leaves it unless you share it.") ends the idle
+  copy.
 - **One flow, like a capture app (Polycam, Scaniverse, Reality Composer), laid out as the
   iOS demo's (#4068).** The demo opens on a scrolling page on the themed stage's ground, max width
-  560 dp, clear of the header and the settings button: `type-display` "Scan a room in 3D"
-  over one muted line; the one primary action, "Record your room", a 96 dp `radius-lg` card
-  in `accent-progress` with the camera in a 56 dp well, "Everything stays on your phone."
-  under it and a chevron; then a row of two glass actions, "Watch a sample session"
-  (weighted) and "Open file". "Your sessions" (`type-card`, "On this phone" on the right)
+  560 dp, clear of the header and the settings button: `type-display` "3D Scan" over one
+  muted line, "Move around a space and watch it take shape."; the one primary action, "Start
+  scanning", a 96 dp `radius-lg` card in `accent-progress` with the camera in a 56 dp well,
+  the privacy line under it and a chevron; then a row of two glass actions, "See an example"
+  (weighted) and "Open scan". "Your scans" (`type-card`, "On this phone" on the right)
   lists glass `radius-md` cards: the first photo (64 dp, `radius-sm`), the title, "date ·
   source", then "path · points · photos · duration", and a ⋮ menu with "Share scan file" and
   "Delete" — Delete in the theme's `error` colour, confirmed by a dialog whose confirm is

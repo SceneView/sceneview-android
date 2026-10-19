@@ -24,7 +24,7 @@ import kotlin.math.sqrt
 import kotlin.math.tan
 
 /**
- * The third-person camera of the Room Scan demo's in-app 3D view (#3950).
+ * The third-person camera of the 3D Scan demo's in-app 3D view (#3950).
  *
  * Two modes, and the switch between them is the whole design:
  *
@@ -593,26 +593,6 @@ object ArDebugFraming {
         val reach = (height / distance / sqrt(1.0 + k * k)).coerceIn(-1.0, 1.0)
         val elevation = Math.toDegrees(atan(k) + asin(reach)).toFloat()
         return elevation.coerceIn(MIN_ELEVATION, MAX_ELEVATION)
-    }
-
-    /**
-     * What the camera frames while a room's surface stands in for its points: the [surface]'s own
-     * box (`[minX, minY, minZ, maxX, maxY, maxZ]`) and, when the path walked through it is still
-     * drawn, that [trail] (flat xyz, `null` when it is not). Never the scan's whole cloud: hidden
-     * then, it reaches further than the surface built from it — a phone showed that surface on a
-     * third of the screen's width, and another cut by the screen's edge.
-     */
-    fun surfaceBounds(surface: FloatArray, trail: FloatArray?): FloatArray {
-        val box = surface.copyOf()
-        trail ?: return box
-        for (i in 0 until trail.size / 3) {
-            for (axis in 0 until 3) {
-                val v = trail[i * 3 + axis]
-                if (v < box[axis]) box[axis] = v
-                if (v > box[axis + 3]) box[axis + 3] = v
-            }
-        }
-        return box
     }
 
     /** What the gestures may do around [bounds], framed from [home], with its floor at [floorY]. */

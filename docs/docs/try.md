@@ -24,14 +24,8 @@ That's it. The script builds the demo app and installs it on your connected Andr
       for JSON UI dumps and LF/CRLF-safe screenshots. **Not for installing** —
       see the warning below.
 
-### Try a specific platform demo
-
-```bash
-./tools/try-demo.sh --sample android-demo       # Full showcase (51 demos: 20 non-AR + 31 AR)
-./tools/try-demo.sh --sample android-tv-demo    # D-pad controlled TV viewer
-```
-
-Run `./tools/try-demo.sh --help` for the full list.
+The script targets the full `:samples:android-demo` showcase. Run
+`./tools/try-demo.sh --help` for its download option.
 
 ---
 
