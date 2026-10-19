@@ -17,6 +17,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +26,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
@@ -35,6 +37,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.RestartAlt
+import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.IosShare
 import androidx.compose.material.icons.rounded.Map
 import androidx.compose.material.icons.rounded.Movie
@@ -42,6 +46,7 @@ import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material.icons.rounded._3dRotation
 import androidx.compose.material.icons.rounded.ViewInAr
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -59,6 +64,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -74,6 +80,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
@@ -120,6 +127,7 @@ import io.github.sceneview.demo.demos.internal.ArDebugOrbitCamera
 import io.github.sceneview.demo.demos.internal.OrbitBand
 import io.github.sceneview.demo.demos.internal.ArDebugSession
 import io.github.sceneview.demo.demos.internal.ArDebugTrace
+import io.github.sceneview.demo.demos.internal.RERUN_DEVELOPER_TITLE
 import io.github.sceneview.demo.demos.internal.RERUN_INTRO
 import io.github.sceneview.demo.demos.internal.RERUN_REPLAY_INTRO
 import io.github.sceneview.demo.demos.internal.RERUN_SETUP_STEPS
@@ -292,8 +300,9 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
 
     // The dollhouse (#4075): one of your sessions, stood on a table in AR. [dollhouseRequest] is
     // the session asked for (null: the newest), [dollhouseMedia] the one read, and Back returns to
-    // [dollhouseReturn] — or leaves the demo when it opened straight on the dollhouse.
-    val dollhouseReturn = if (startInDollhouse) null else RerunScreen.Landing
+    // [dollhouseReturn] — the screen it was opened from (#4619: the replay or the model, not the
+    // list) — or leaves the demo when it opened straight on the dollhouse.
+    var dollhouseReturn by remember { mutableStateOf(if (startInDollhouse) null else RerunScreen.Landing) }
     var dollhouseRequest by remember { mutableStateOf<String?>(null) }
     var dollhouseMedia by remember { mutableStateOf<RerunReplayMedia?>(null) }
     var dollhouseTitle by remember { mutableStateOf(ScanCopy.REPLAY_TITLE) }
@@ -328,6 +337,10 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
         dollhouseTitle = title
         dollhouseMedia = media
         dollhouseFailed = false
+        // Another session picked on the dollhouse, or one just recorded for it, keeps its way back.
+        if (screen == RerunScreen.Landing || screen == RerunScreen.Replay || screen == RerunScreen.Model) {
+            dollhouseReturn = screen
+        }
         screen = RerunScreen.Dollhouse
     }
 
@@ -856,7 +869,9 @@ private fun RerunReplayScreen(
                 modifier = Modifier.fillMaxSize().onGloballyPositioned { stage = it.boundsInRoot() },
                 replay = media,
                 onShown = onRevealed,
-                observe = coverage::observe,
+                observe = { frame ->
+                    coverage.observe(frame, media.dense?.cloud?.positions, media.pointCountAt(frame.time))
+                },
             )
         }
     }
@@ -926,12 +941,41 @@ private fun RerunSheet(head: (@Composable () -> Unit)? = null) {
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
-    if (BuildConfig.DEBUG) {
-        RerunSetupSection()
-        // Developer-only debug toggle — visible when QA mode is on. Lets QA force-emit each
-        // TrackingFailureReason so the actionable-message overlay can be validated without staging a
-        // real failure. See io.github.sceneview.demo.common.ForcedTrackingFailure / #1881.
-        ForceTrackingFailureMenu()
+    // Debug builds only, and folded (#4619): shell commands are for us, not for the sheet's reader.
+    if (BuildConfig.DEBUG) RerunDeveloperSection()
+}
+
+/** "Developer tools", folded by default: streaming to a computer and the forced tracking failures. */
+@Composable
+private fun RerunDeveloperSection() {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    Column(modifier = Modifier.padding(top = Space.md)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = SceneViewTokens.Layout.touchTarget)
+                .clickable(role = Role.Button, onClick = { expanded = !expanded }),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = RERUN_DEVELOPER_TITLE,
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.weight(1f).semantics { heading() },
+            )
+            Icon(
+                imageVector = if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        AnimatedVisibility(visible = expanded) {
+            Column {
+                RerunSetupSection()
+                // Lets QA force-emit each TrackingFailureReason so the actionable-message overlay can
+                // be validated without staging a real failure. See ForcedTrackingFailure / #1881.
+                ForceTrackingFailureMenu()
+            }
+        }
     }
 }
 
@@ -1645,7 +1689,7 @@ private fun DemoBottomOverlayScope.RerunCameraBottomOverlay(
 /** "Connect your computer", numbered, commands in mono blocks. Theme colours: it is the sheet. */
 @Composable
 private fun RerunSetupSection() {
-    // Space.md above: the sheet's intro paragraph sits right before this heading.
+    // Space.md above: it opens under the "Developer tools" row that folds it.
     Column(
         modifier = Modifier.padding(top = Space.md),
         verticalArrangement = Arrangement.spacedBy(Space.sm),
