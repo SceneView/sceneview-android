@@ -1065,6 +1065,7 @@ public final class io/github/sceneview/camera/CinematicCameraManipulator : io/gi
 	public fun scrollEnd ()V
 	public fun scrollUpdate (IIFF)V
 	public fun setViewport (II)V
+	public fun stopInertia ()V
 	public fun update (F)V
 }
 
