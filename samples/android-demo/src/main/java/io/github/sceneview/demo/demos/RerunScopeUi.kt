@@ -26,6 +26,7 @@ import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.MeetingRoom
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
+import androidx.compose.material.icons.rounded.Yard
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -77,7 +78,7 @@ internal object ScanScopeStore {
     }
 }
 
-/** The page of the scope choice: a heading, the three kinds, and the action that starts that scan. */
+/** The page of the scope choice: a heading, the four kinds, and the action that starts that scan. */
 @Composable
 internal fun ScanScopePage(selected: ScanScope, onSelect: (ScanScope) -> Unit, onStart: () -> Unit) {
     StagePage {
@@ -150,6 +151,7 @@ private val ScanScope.icon: ImageVector
         ScanScope.Object -> Icons.Rounded.Chair
         ScanScope.Room -> Icons.Rounded.MeetingRoom
         ScanScope.Home -> Icons.Rounded.Home
+        ScanScope.Area -> Icons.Rounded.Yard
     }
 
 /** The primary action on the accent fill, with the privacy promise under it, as the landing's. */

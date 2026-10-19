@@ -15,14 +15,16 @@
     <string name="demo_ar_rerun_title">3D Scan</string>
     <string name="demo_ar_rerun_subtitle">Move around a space and watch it take shape in 3D</string>
     <!-- 3D Scan live view (#4628): it follows the phone; after a drag or pinch, this brings it back. -->
-    <string name="demo_ar_rerun_recenter">Recenter</string>
-    <string name="demo_ar_rerun_recenter_description">Recenter the view on you</string>
+    <string name="demo_ar_rerun_recenter">Back to your position</string>
+    <string name="demo_ar_rerun_recenter_description">Follow your position again</string>
     <!-- The marker for the phone in the live view, read out by TalkBack. -->
-    <string name="demo_ar_rerun_you_are_here">You are here</string>
     <!-- A scan's floor plan (#4540): the room's survey and its dimensioned plan, opened from the
          export sheet and shared as a PDF. -->
     <string name="demo_ar_rerun_plan_export_title">Floor plan</string>
     <string name="demo_ar_rerun_plan_export_detail">PDF · to scale, with areas and volume</string>
+    <!-- The export sheet's Floor plan row when the scan has no plan yet (#4714): why, in one line. -->
+    <string name="demo_ar_rerun_plan_export_no_walls">No plan yet: scan the walls to get one</string>
+    <string name="demo_ar_rerun_plan_export_no_depth">No plan: this scan has no depth</string>
     <string name="demo_ar_rerun_plan_about">The room measured from your scan: wall lengths, floor area, ceiling height and volume. Share it as a PDF to scale.</string>
     <string name="demo_ar_rerun_plan_survey_title">Room survey</string>
     <string name="demo_ar_rerun_plan_measuring">Measuring the room…</string>

@@ -557,4 +557,20 @@ class AutoPlacementStateTest {
         assertEquals("no resize while the size is locked", 0, toggles)
         assertTrue("the double-tap still selects the object", state.isSelected)
     }
+
+    // ── The floor ─────────────────────────────────────────────────────────────────────
+
+    @Test
+    fun `the floor follows the lowest plane, not its jitter`() {
+        val state = AutoPlacementState()
+        assertEquals(null, state.floorHeight)
+        state.onFloor(-1.30f)
+        assertEquals(-1.30f, state.floorHeight)
+        state.onFloor(-1.305f)
+        assertEquals("half a centimetre is the plane's jitter", -1.30f, state.floorHeight)
+        state.onFloor(-1.42f)
+        assertEquals("a lower floor found replaces it", -1.42f, state.floorHeight)
+        state.onFloor(null)
+        assertEquals("a floor lost for a while keeps its height", -1.42f, state.floorHeight)
+    }
 }

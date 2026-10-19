@@ -226,25 +226,40 @@ private class Optional(val value: ScanFootprint?)
 private val footprints = java.util.concurrent.ConcurrentHashMap<String, Optional>()
 
 /**
- * "Room · Sep 28, 2:32 PM": in English like the rest of the demo, whatever the phone's language —
- * a French phone wrote "Room · 30 sept., 13:56" into an English screen. Named after what was
- * scanned (#4647): "Object · …", "Room 2 · …" for the second room of a home.
+ * A scan's date and time as every 3D Scan screen writes it (#4720): `Sep 28, 2:32 PM`. One
+ * format, the locale's own pattern for it — [Locale.US], because the demo is in English whatever
+ * the phone's language: a French phone wrote "Room · 30 sept., 13:56" into an English screen.
+ */
+internal fun scanDate(millis: Long, locale: Locale = Locale.US): String =
+    SimpleDateFormat(DateFormat.getBestDateTimePattern(locale, SCAN_DATE_SKELETON), locale).format(Date(millis))
+
+/**
+ * [scanDate] with its year, for a document that outlives the day — the floor plan's PDF:
+ * `Sep 28, 2026, 2:32 PM`.
+ */
+internal fun scanDateWithYear(millis: Long, locale: Locale = Locale.US): String =
+    SimpleDateFormat(DateFormat.getBestDateTimePattern(locale, "y$SCAN_DATE_SKELETON"), locale).format(Date(millis))
+
+private const val SCAN_DATE_SKELETON = "MMMd jmm"
+
+/**
+ * "Room · Sep 28, 2:32 PM" ([scanDate]). Named after what was scanned (#4647): "Object · …",
+ * "Room 2 · …" for the second room of a home.
  */
 internal fun recordingTitle(
     nowMillis: Long,
     scope: ScanScope = ScanScope.Room,
     roomNumber: Int = 1,
     locale: Locale = Locale.US,
-): String {
-    val pattern = DateFormat.getBestDateTimePattern(locale, "MMMd jmm")
-    return ScanScopeCopy.sessionTitle(scope, roomNumber, SimpleDateFormat(pattern, locale).format(Date(nowMillis)))
-}
+): String = ScanScopeCopy.sessionTitle(scope, roomNumber, scanDate(nowMillis, locale))
 
-/** "Sep 28, 2:32 PM · Recorded", in English like [recordingTitle]. */
+/**
+ * "Sep 28, 2:32 PM · Recorded" ([scanDate]); "Recorded" alone when the title already says when
+ * ("Room · Sep 28, 2:32 PM"), so a card never writes the same date twice (#4720).
+ */
 internal fun sessionOrigin(session: RerunStoredSession, locale: Locale = Locale.US): String {
-    val pattern = DateFormat.getBestDateTimePattern(locale, "MMMd jmm")
-    val date = SimpleDateFormat(pattern, locale).format(Date(session.createdAt * MILLIS))
-    return "$date · ${session.source.label}"
+    val date = scanDate(session.createdAt * MILLIS, locale)
+    return if (session.title.contains(date)) session.source.label else "$date · ${session.source.label}"
 }
 
 /** A scan file ready to share: the [file] in the cache and its weight, read off the main thread. */

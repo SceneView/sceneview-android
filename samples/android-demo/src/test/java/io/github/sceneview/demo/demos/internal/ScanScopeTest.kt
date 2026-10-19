@@ -187,4 +187,31 @@ class ScanScopeTest {
     private companion object {
         const val TOLERANCE = 0.05f
     }
+
+    @Test
+    fun `an outdoor area maps the ground and has no floor plan nor ceiling`() {
+        val area = ScanScope.Area
+        assertEquals(area, ScanScope.fromKey("area"))
+        assertEquals(ScanPreset.ROOM, area.preset)
+        assertFalse(area.roomByRoom)
+        assertFalse("no walls to close a plan", area.hasFloorPlan)
+        assertTrue("the Map view and its coverage stay", area.mapsGround)
+        assertFalse("an object has no ground to map", ScanScope.Object.mapsGround)
+        assertTrue(ScanScope.Room.mapsGround && ScanScope.Home.mapsGround)
+        assertEquals("Area · Oct 19, 3:12 PM", ScanScopeCopy.sessionTitle(area, 1, "Oct 19, 3:12 PM"))
+        val words = listOf(
+            ScanScopeCopy.title(area), ScanScopeCopy.detail(area), ScanScopeCopy.how(area),
+            ScanScopeCopy.start(area), ScanScopeCopy.scanning(area), ScanScopeCopy.nothingNew(area),
+        )
+        words.forEach { word ->
+            listOf("ceiling", "wall", "floor plan", "room").forEach { assertFalse(word, word.contains(it, ignoreCase = true)) }
+        }
+    }
+
+    @Test
+    fun `the export sheet offers a plan only once the survey drew one`() {
+        assertEquals(PlanOffer.Measuring, PlanOffer.of(null))
+        assertEquals(PlanOffer.NoDepth, PlanOffer.of(RoomSurvey.empty(SurveyGap.NoDepth)))
+        assertEquals(PlanOffer.NoWalls, PlanOffer.of(RoomSurvey.empty(SurveyGap.NoWalls)))
+    }
 }

@@ -99,8 +99,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.OutputStream
-import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 import java.util.UUID
 import kotlin.math.max
@@ -180,12 +178,21 @@ internal fun rememberPlanWords(): PlanWords = PlanWords(
     pdfFile = stringResource(R.string.demo_ar_rerun_plan_pdf_file),
 )
 
+/** The plan's heading: the scan's [title] and, once, its [date] — `null` when the title says it. */
+internal data class PlanHeading(val title: String, val date: String?)
+
 /**
- * A scan's date as the survey writes it: `13 Oct 2026`. A scan that does not say when it was
- * made has none: the day the plan is read is not the day the room was scanned.
+ * How the plan names scan [title], made at [epochSeconds] (#4714): the date written once, in the
+ * format of every other screen ([scanDate]) with its year, as a document wants. A title that
+ * already says when — "Room · Oct 19, 11:58 AM" — gets the year in place, "Room · Oct 19, 2026,
+ * 11:58 AM", rather than the date again after it. A scan that does not say when it was made has
+ * no date: the day the plan is read is not the day the room was scanned.
  */
-internal fun planDate(epochSeconds: Long?): String? = epochSeconds?.let {
-    SimpleDateFormat("d MMM yyyy", Locale.US).format(Date(it * MILLIS_PER_SECOND))
+internal fun planHeading(title: String, epochSeconds: Long?, locale: Locale = Locale.US): PlanHeading {
+    val millis = (epochSeconds ?: return PlanHeading(title, null)) * MILLIS_PER_SECOND
+    val full = scanDateWithYear(millis, locale)
+    val short = scanDate(millis, locale)
+    return if (title.contains(short)) PlanHeading(title.replace(short, full), null) else PlanHeading(title, full)
 }
 
 /**

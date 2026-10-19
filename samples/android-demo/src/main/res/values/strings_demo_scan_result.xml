@@ -22,8 +22,16 @@
     <string name="scan_result_tour_stop">Stop tour</string>
     <string name="scan_result_tour_label">Fly the camera around the scan</string>
     <!-- Live coverage map (#4631) -->
-    <string name="scan_coverage_floor">Floor %1$d %% covered</string>
-    <string name="scan_coverage_label">Scan map: %1$d %% of the floor found so far is covered. The hatched part is still to scan.</string>
+    <string name="scan_coverage_area">%1$s covered</string>
+    <string name="scan_coverage_label">Scan map: %1$s of floor covered. The hatched part is still to scan.</string>
+    <!-- Map to complete, the live map opened (#4718) -->
+    <string name="scan_coverage_title">Map to complete</string>
+    <string name="scan_coverage_covered">Covered · %1$s</string>
+    <string name="scan_coverage_missing">Still to scan</string>
+    <string name="scan_coverage_you">You</string>
+    <string name="scan_coverage_hint">Walk to the hatched areas to fill them in.</string>
+    <string name="scan_coverage_expand">Open the map</string>
+    <string name="scan_coverage_collapse">Close the map</string>
     <string name="scan_result_replay">Replay</string>
     <string name="scan_result_replay_label">Replay the recording</string>
     <string name="scan_result_export">Export</string>
