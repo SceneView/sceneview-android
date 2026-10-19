@@ -81,7 +81,8 @@ import kotlin.math.roundToInt
  * [io.github.sceneview.demo.demos.squat.UprightFrame] reads that mirror back from ARCore's
  * own display transform: the pose model sees the mirrored picture and the skeleton lands on
  * the mirrored body with no extra flip. The controls keep a Back option for filming someone
- * else; switching rebuilds the session (`key`), the pipeline and its count survive it.
+ * else; switching rebuilds the session (`key`), the pipeline and its count survive it. A
+ * phone whose ARCore cannot open the front camera falls back to the back one and says so.
  *
  * ### Why it used to lag
  * The previous Body Tracker ran the whole pose pipeline inside `onSessionUpdated`, on the
@@ -115,6 +116,9 @@ fun ARBodyTrackerDemo(onBack: () -> Unit) {
     val arPlaybackDataset = rememberArPlaybackDataset()
 
     var frontCamera by rememberSaveable { mutableStateOf(true) }
+    // Set when a front-camera session could not start (no FRONT config on this phone's ARCore
+    // profile, or the emulator): the demo falls back to the back camera instead of a dead end.
+    var frontUnavailable by rememberSaveable { mutableStateOf(false) }
     var voiceOn by rememberSaveable { mutableStateOf(true) }
 
     val shallowCue = stringResource(R.string.demo_squat_voice_shallow)
@@ -154,8 +158,11 @@ fun ARBodyTrackerDemo(onBack: () -> Unit) {
         controls = {
             SquatCoachControls(
                 frontCamera = frontCamera,
+                frontUnavailable = frontUnavailable,
                 onFrontCameraChange = {
                     frontCamera = it
+                    arSessionFailed = false
+                    if (it) frontUnavailable = false
                     // The new session starts from scratch: bring the init scrim back.
                     cameraReady = false
                     trackingFailureReason = null
@@ -201,7 +208,15 @@ fun ARBodyTrackerDemo(onBack: () -> Unit) {
             // A camera switch is a new ARCore session: rebuild it cleanly (ARSceneView KDoc).
             key(frontCamera) {
                 ARSceneView(
-                    onSessionFailure = { arSessionFailed = true },
+                    onSessionFailure = {
+                        if (frontCamera) {
+                            frontCamera = false
+                            frontUnavailable = true
+                            cameraReady = false
+                        } else {
+                            arSessionFailed = true
+                        }
+                    },
                     modifier = Modifier.fillMaxSize(),
                     engine = engine,
                     modelLoader = modelLoader,
@@ -250,6 +265,7 @@ fun ARBodyTrackerDemo(onBack: () -> Unit) {
 @Composable
 internal fun SquatCoachControls(
     frontCamera: Boolean,
+    frontUnavailable: Boolean,
     onFrontCameraChange: (Boolean) -> Unit,
     voiceOn: Boolean,
     onVoiceOnChange: (Boolean) -> Unit,
@@ -271,7 +287,11 @@ internal fun SquatCoachControls(
             )
             Text(
                 stringResource(
-                    if (frontCamera) R.string.demo_squat_camera_front_hint else R.string.demo_squat_camera_back_hint,
+                    when {
+                        frontCamera -> R.string.demo_squat_camera_front_hint
+                        frontUnavailable -> R.string.demo_squat_camera_front_unavailable
+                        else -> R.string.demo_squat_camera_back_hint
+                    },
                 ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

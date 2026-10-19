@@ -14,6 +14,7 @@
     <string name="demo_squat_camera_back">Back</string>
     <string name="demo_squat_camera_front_hint">You squat facing the screen and see the count.</string>
     <string name="demo_squat_camera_back_hint">For filming someone else squatting.</string>
+    <string name="demo_squat_camera_front_unavailable">The front camera could not start on this phone, so the back camera is on. Tap Front to try again.</string>
     <!-- Spoken-count switch in the controls sheet. -->
     <string name="demo_squat_voice">Spoken count</string>
     <string name="demo_squat_voice_hint">Says each rep out loud, and “Go lower” when a squat is too shallow</string>
