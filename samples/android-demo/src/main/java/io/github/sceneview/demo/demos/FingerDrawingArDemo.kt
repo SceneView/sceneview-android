@@ -88,7 +88,7 @@ import io.github.sceneview.utils.screenToRay
  */
 @Composable
 fun FingerDrawingArDemo(onBack: () -> Unit, brush: FingerBrush = rememberFingerBrush()) {
-    // Inspection mode (Android Studio @Preview pane, Roborazzi snapshot tests): bypass the
+    // Inspection mode (Android Studio @Preview pane, Robolectric tests): bypass the
     // Filament-backed body BEFORE any rememberEngine() call — LayoutLib ships no .so files.
     if (LocalInspectionMode.current) {
         DemoPreviewPlaceholder(title = "Finger Drawing", onBack = onBack)

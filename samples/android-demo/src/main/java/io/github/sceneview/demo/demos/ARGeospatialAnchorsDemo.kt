@@ -746,7 +746,7 @@ private fun ForcedGeospatialScreen(onBack: () -> Unit, scenario: GeospatialScena
 
 /**
  * The chrome both the live and the QA-forced screen share: scaffold, dock, bottom card.
- * Internal so `GeospatialScreenSnapshotTest` photographs this exact screen.
+ * Internal so `GeospatialScreenTest` renders this exact screen.
  */
 @Composable
 internal fun GeospatialScreen(

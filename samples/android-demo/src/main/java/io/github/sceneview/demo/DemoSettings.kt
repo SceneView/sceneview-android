@@ -160,7 +160,7 @@ object DemoSettings {
      * Incremented once per `onSessionUpdated` callback (one ARCore frame each).
      *
      * This is the **deterministic timing signal** for frame-indexed screenshot
-     * regression — `ARPlaybackScreenshotTest` polls this counter and fires a
+     * regression — `ar-replay-qa.sh` and `ARReplayHarnessTest` poll this counter and fire a
      * capture exactly when the desired frame index is reached, instead of
      * `Thread.sleep(...)` against wall-clock (which drifts with emulator load —
      * see issue [#1050](https://github.com/sceneview/sceneview/issues/1050),

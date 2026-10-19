@@ -538,7 +538,7 @@ private fun TakeScene(
     // QA camera backdrop (#3308): the emulator delivers no camera frame.
     val qaBackdrop = rememberQaCameraBackdropActive(take.cameraReady)
 
-    // Frame-indexed replay hook (#1050): ARPlaybackScreenshotTest and ar-replay-qa.sh wait
+    // Frame-indexed replay hook (#1050): ar-replay-qa.sh and ARReplayHarnessTest wait
     // on DemoSettings.arPlaybackFrameCount, zeroed each time a dataset is mounted.
     LaunchedEffect(replayFile) {
         if (replayFile != null) DemoSettings.arPlaybackFrameCount = 0

@@ -328,8 +328,8 @@ the full convention.
 as they should read in the release notes — every non-blank line must be a
 top-level `- ` bullet or an indented continuation of one, never a bare
 paragraph. `ci.yml`'s `changelog-lint` job runs
-`.claude/scripts/check-changelog-fragments.sh` on any PR touching
-`changelog.d/**` and fails on a malformed fragment; a paragraph fragment that
+`.claude/scripts/check-changelog-fragments.sh` on the fragments a PR adds or
+modifies (diffed against the merge base) and fails on a malformed one; a paragraph fragment that
 slips past this check would collate cleanly but produce zero highlights in the
 demo's "What's new" card, since it only recognises lines starting with `- `.
 
@@ -413,9 +413,9 @@ correct. Specifically:
   files runs the `android-library-render` job
   (`:sceneview:connectedDebugAndroidTest` on the emulator, #3216); a PR
   touching `samples/web-demo/**` or `sceneview-web/**` runs the advisory
-  `web-render` Playwright job. The demo screenshot and iOS legs are
-  push-to-main + nightly + `workflow_dispatch` only, and on a push each leg
-  runs only when its platform's paths changed. A docs-only PR matches none of
+  `web-render` Playwright job. The iOS leg is push-to-main + nightly +
+  `workflow_dispatch` only, and on a push each leg runs only when its
+  platform's paths changed. A docs-only PR matches none of
   the paths, so the workflow does not run at all.
 - The **`Path filter completed`** job (`changes-verdict` in `ci.yml`) runs
   on every PR whatever it touches, and it is the required check: it resolves

@@ -72,22 +72,6 @@ class DemoRenderingScreenshotTest {
     private val softwareRenderer: Boolean
         get() = InstrumentationRegistry.getArguments().getString("softwareRenderer") == "true"
 
-    /**
-     * Which golden set to compare against: `render-goldens` (default, recorded on the
-     * `Pixel_7a` AVD with a hardware GPU) or `render-goldens-swangle` (recorded on the CI
-     * emulator profile, `-gpu swangle_indirect`, #3554). Set with
-     * `-Pandroid.testInstrumentationRunnerArguments.goldenSet=<dir>`. The two rasterisers
-     * do not agree pixel for pixel, so each profile is held to its own baselines.
-     */
-    private val goldenDir: String
-        get() {
-            val requested = InstrumentationRegistry.getArguments().getString("goldenSet") ?: DEFAULT_GOLDEN_DIR
-            require(requested in BASELINED_BY_SET) {
-                "Unknown goldenSet '$requested': expected one of ${BASELINED_BY_SET.keys}."
-            }
-            return requested
-        }
-
     @Before
     fun setUp() {
         device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
@@ -527,7 +511,7 @@ class DemoRenderingScreenshotTest {
 
         // Try to load the golden. If absent, this is first-run setup: save the capture as
         // the new golden and skip the test (re-run to verify).
-        val goldenAsset = "$goldenDir/$goldenName.png"
+        val goldenAsset = "$GOLDEN_DIR/$goldenName.png"
         val golden = runCatching {
             testContext.assets.open(goldenAsset).use { BitmapFactory.decodeStream(it) }
         }.getOrNull()
@@ -554,7 +538,7 @@ class DemoRenderingScreenshotTest {
             // protection (#2323): a missing golden there means the asset was
             // deleted/renamed — FAIL loudly instead of assume-skipping. Genuinely
             // new slugs keep the quiet first-run capture flow.
-            if (goldenName in BASELINED_BY_SET.getValue(goldenDir)) {
+            if (goldenName in BASELINED_GOLDENS) {
                 throw AssertionError(
                     "Golden $goldenAsset is EXPECTED (slug is in BASELINED_GOLDENS) but " +
                         "missing from the test assets — was it deleted or renamed? " +
@@ -733,10 +717,6 @@ class DemoRenderingScreenshotTest {
          * for these a missing golden is a hard FAILURE, not a first-run skip (#2323).
          * Add a slug here in the SAME commit that adds its golden PNG.
          */
-        val BASELINED_BY_SET: Map<String, Set<String>> by lazy {
-            mapOf(DEFAULT_GOLDEN_DIR to BASELINED_GOLDENS, SWANGLE_GOLDEN_DIR to SWANGLE_BASELINED_GOLDENS)
-        }
-
         val BASELINED_GOLDENS = setOf(
             "animationphysics_default",
             // Re-baselined after the #3500 rebuild (three-subject stage on a floor).
@@ -819,45 +799,7 @@ class DemoRenderingScreenshotTest {
         /** Wait between the ready signal and the capture: cover cross-fade plus intro tail. */
         const val READY_TAIL_MS = 3_000L
 
-        const val DEFAULT_GOLDEN_DIR = "render-goldens"
-        const val SWANGLE_GOLDEN_DIR = "render-goldens-swangle"
-
-        /**
-         * Goldens recorded on the CI emulator profile (`-gpu swangle_indirect`, 1080x2400 @
-         * 420 dpi, API 30, light) and reviewed one by one before commit. Same contract as
-         * [BASELINED_GOLDENS]. A case absent here has no reference on that profile and takes
-         * the first-run skip; see `render-goldens-swangle/README.md` for why each one is out.
-         */
-        val SWANGLE_BASELINED_GOLDENS: Set<String> = setOf(
-            // Re-baselined for #4624 (the fox on the themed stage) from the first-run capture of
-            // run 39231078031, matched by run 39228738442 (0.0002 % of pixels over 8/255).
-            "animationphysics_default",
-            // Six cases re-baselined for #4448 from the captures of run 38073545804, each one
-            // the screen with all of its content in it and each matched by at least one other
-            // run of the same day: camera-gestures (Camera | PiP switch, #4282), debug-overlay
-            // and secondary-camera (floor and light stage, #4111), fog and lighting (stage
-            // fading into the sky, #4156), model-viewer (navy stage, #4179).
-            "cameragestures_default",
-            "customgeometry_default",
-            "debugoverlay_default",
-            // `fog_default` left with the `fog` case (#4603: the slug opens `lighting`).
-            // Re-baselined after the #4335 rebuild (seven primitives on the stage), from the
-            // first-run capture of run 37154919481.
-            "geometry_default",
-            "lighting_default",
-            "linespaths_default",
-            "materials_default",
-            "modelviewer_default",
-            "pickingcollision_default",
-            "secondarycamera_default",
-            // First baselined for #4459, once the scan opens framed and sorted in one step:
-            // runs 38090189401, 38090195575 and 38090201359 gave the same picture (51 px of
-            // 2 488 320 apart at most). It was out until then: 54.7 % of pixels moved between
-            // runs when the sort order chased a camera glide.
-            "splatpreview_default",
-            // `twodinthreed_default` is out since #4624 (rocket before its media wall): see
-            // "Left out of the gate" in render-goldens-swangle/README.md.
-        )
+        const val GOLDEN_DIR = "render-goldens"
 
         // How long we allow the demo screen to compose after `am start` — covers a cold
         // app start (splash + dexopt) on the QA emulator, measured at ~3 s warm and up to

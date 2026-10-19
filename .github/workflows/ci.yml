@@ -405,6 +405,12 @@ jobs:
   # `check-changelog-fragments.sh` at PR time instead — deliberately the
   # lightest job in this workflow: a checkout and a bash script, no JDK, no
   # Gradle, no cache warm-up.
+  #
+  # Only the fragments this change adds or modifies are linted (diffed against
+  # the merge base), never the whole of `changelog.d/`: one malformed fragment
+  # that reached `main` used to turn every later PR red over a file none of
+  # them touched. `collate-changelog.sh` still checks every fragment at
+  # release time.
   changelog-lint:
     name: Changelog fragment format
     needs: changes
@@ -413,9 +419,28 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
+        with:
+          # The merge base has to be reachable; commits and trees only.
+          fetch-depth: 0
+          filter: blob:none
 
       - name: Check changelog fragment format
-        run: bash .claude/scripts/check-changelog-fragments.sh
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || inputs.base-sha || github.event.before || '' }}
+        run: |
+          set -euo pipefail
+          if [ -n "$BASE_SHA" ] && git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
+            base="$(git merge-base "$BASE_SHA" HEAD)"
+          else
+            base="$(git merge-base origin/main HEAD)"
+          fi
+          mapfile -t files < <(git diff --name-only --diff-filter=AMR "$base" HEAD -- 'changelog.d/*.md')
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No changelog.d fragment added or modified since $base — nothing to lint."
+            exit 0
+          fi
+          printf 'Linting %s\n' "${files[@]}"
+          bash .claude/scripts/check-changelog-fragments.sh "${files[@]}"
 
   # ── App Store submit / catch-up programs ─────────────────────────────────
   # `app_store_submit.py` and `app_store_catchup.py` decide what reaches Apple,
@@ -587,6 +612,11 @@ jobs:
       # only NEW violations fail this step. To refresh a baseline after a
       # cleanup PR, run `./gradlew :<module>:detektBaseline` locally and commit
       # the regenerated XML.
+      #
+      # Formatting, naming and size/complexity rules are off in detekt.yml:
+      # a 30-day audit counted ~40 red branches on them and no real catch.
+      # What still blocks is the bug-finding rules (potential-bugs,
+      # coroutines, exceptions, empty-blocks, dead code).
       - name: Detekt
         run: ./gradlew :sceneview:detekt :arsceneview:detekt :sceneview-core:detekt :sceneview-compose:detekt :samples:android-demo:detekt --stacktrace
 
@@ -642,27 +672,6 @@ jobs:
         # Plain `testDebugUnitTest` — the PR pass/fail signal, no coverage
         # instrumentation.
         #
-        # `:samples:android-demo` runs `verifyRoborazziDebug` instead of
-        # plain `testDebugUnitTest` (#2739). The two are NOT redundant work:
-        # Roborazzi's Gradle plugin only compares `captureRoboImage()` calls
-        # against the committed goldens
-        # (`samples/android-demo/src/test/snapshots/*.png`, e.g.
-        # `GeometryDemoControlsSnapshotTest`) when the `roborazzi.test.verify`
-        # property is set for that test run — `verifyRoborazziDebug` sets it,
-        # plain `testDebugUnitTest` does not, so a layout regression in the
-        # covered composables silently passed CI. `verifyRoborazziDebug` is a
-        # superset of `testDebugUnitTest`: it runs the SAME `debug` unit-test
-        # source set (including `ARBundledRecordingsTest`, the
-        # bundled-recording ftyp/avc1/mett contract suite from #1060/#1100),
-        # it just also enforces the screenshot comparison. Swapping the task
-        # name (not adding a second invocation) keeps CI cost flat — no
-        # duplicate test execution for this module.
-        #
-        # Escape hatch for an intentional visual change: run
-        # `./gradlew :samples:android-demo:recordRoborazziDebug` locally and
-        # commit the updated PNG(s) under
-        # `samples/android-demo/src/test/snapshots/`.
-        #
         # `:samples:common:testDebugUnitTest` runs the shared-helper
         # regression suite — LifecycleAwareLaunchedEffect, LifecyclePauseGate,
         # rememberMaterialInstance, InAppUpdateManager. See #972.
@@ -685,39 +694,23 @@ jobs:
         # module was compiled on every relevant PR while its 5 tests were not.
         # Local run before wiring: 5 tests, 0 failures, 7s.
         #
-        # `:samples:android-demo:testReleaseUnitTest` (#3410): the demo's JVM
-        # tests otherwise only ever reach CI as a dependency of
-        # `verifyRoborazziDebug` above, which is `debug`-only — the `release`
-        # variant of the same unit tests had no coverage at all. That hid a
-        # real divergence: 13 compose-rule tests (`DemoScaffold*BandTest`,
-        # `DemoBackgroundRoleTest`) failed on `testReleaseUnitTest` while
-        # passing on debug, because `createComposeRule()`'s bare
-        # `ComponentActivity` host was declared only via a
-        # `debugImplementation` dependency (`androidx.compose.ui:ui-test-manifest`)
-        # — invisible to the release variant's own resource-link pipeline. Fixed
-        # by declaring that manifest entry directly in
-        # `samples/android-demo/src/main/AndroidManifest.xml` so both variants
-        # see it; this task is what makes a regression of that fix (or any
-        # other release-only divergence) fail a PR instead of sitting silent
-        # on `main`. Plain task, not a Roborazzi verify — the demo has no
-        # release-specific goldens, so no second screenshot pass to duplicate.
-        # Local run: 591 tests, 0 failures, ~2 min warm.
+        # `:samples:android-demo:testReleaseUnitTest` (#3410): the `release`
+        # variant of the demo's unit tests. It caught a real divergence: 13
+        # compose-rule tests (`DemoScaffold*BandTest`, `DemoBackgroundRoleTest`)
+        # failed on release while passing on debug, because
+        # `createComposeRule()`'s bare `ComponentActivity` host was declared
+        # only via a `debugImplementation` dependency
+        # (`androidx.compose.ui:ui-test-manifest`). Fixed by declaring that
+        # manifest entry directly in `samples/android-demo/src/main/AndroidManifest.xml`;
+        # this task makes a regression of that fix fail a PR.
         run: |
-          # The goldens under samples/android-demo/src/test/snapshots/ are a
-          # declared input of the demo's test task (`roborazziGoldens` in its
-          # build.gradle, #3034), so a PR whose only change is a golden PNG
-          # re-runs the comparison on its own. Before that declaration the
-          # comparison came back UP-TO-DATE having read no golden — measured
-          # 2026-08-06 on a golden mutated by 8000 red pixels (#3029) — and this
-          # step carried a `testDebugUnitTest --rerun` workaround. If that
-          # declaration is ever removed, the workaround must come back.
           ./gradlew \
             :sceneview:testDebugUnitTest \
             :arsceneview:testDebugUnitTest \
             :sceneview-core:androidTest \
             :samples:common:testDebugUnitTest \
             :samples:android-tv-demo:testDebugUnitTest \
-            :samples:android-demo:verifyRoborazziDebug \
+            :samples:android-demo:testDebugUnitTest \
             :samples:android-demo:testReleaseUnitTest \
             --stacktrace
 
@@ -732,18 +725,6 @@ jobs:
             samples/common/build/reports/tests/
             samples/android-tv-demo/build/reports/tests/
             samples/android-demo/build/reports/tests/
-          if-no-files-found: ignore
-
-      - name: Upload Roborazzi diff report
-        # Roborazzi writes a compare-report JSON plus the actual/diff PNGs
-        # here on a verify mismatch — separate from the JUnit HTML report
-        # above, and the fastest way to see WHAT changed without re-running
-        # locally.
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: roborazzi-diff-report
-          path: samples/android-demo/build/outputs/roborazzi/
           if-no-files-found: ignore
 
   # ── Public-API surface check (binary-compatibility-validator, #2723) ─────

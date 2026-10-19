@@ -156,7 +156,7 @@ import com.google.android.filament.Scene as FilamentScene
  */
 @Composable
 fun LightingDemo(onBack: () -> Unit) {
-    // Inspection mode (@Preview pane, Roborazzi snapshots): bail out BEFORE rememberEngine(),
+    // Inspection mode (@Preview pane, Robolectric tests): bail out BEFORE rememberEngine(),
     // which needs Filament .so files LayoutLib does not have.
     if (LocalInspectionMode.current) {
         DemoPreviewPlaceholder(title = stringResource(R.string.demo_lighting_title), onBack = onBack)

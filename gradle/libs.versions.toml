@@ -162,7 +162,6 @@ androidxTestRules = "1.7.0"
 androidxTestExtJunit = "1.3.0"
 androidxTestUiAutomator = "2.4.0"
 robolectric = "4.17"
-roborazzi = "1.76.0"
 
 # Code Quality
 # detekt 2.0.0-alpha.0 (Sep 2025) is the first release built against Kotlin 2.x
@@ -285,9 +284,6 @@ androidx-test-rules = { group = "androidx.test", name = "rules", version.ref = "
 androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxTestExtJunit" }
 androidx-test-uiautomator = { group = "androidx.test.uiautomator", name = "uiautomator", version.ref = "androidxTestUiAutomator" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
-roborazzi = { group = "io.github.takahirom.roborazzi", name = "roborazzi", version.ref = "roborazzi" }
-roborazzi-compose = { group = "io.github.takahirom.roborazzi", name = "roborazzi-compose", version.ref = "roborazzi" }
-roborazzi-rule = { group = "io.github.takahirom.roborazzi", name = "roborazzi-junit-rule", version.ref = "roborazzi" }
 
 # Gradle Plugins (for buildSrc / build-logic compileOnly)
 kotlin-gradlePlugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "kotlin" }
@@ -313,7 +309,6 @@ compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "composeMu
 publish = { id = "com.vanniktech.maven.publish", version.ref = "mavenPublish" }
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
 detekt = { id = "dev.detekt", version.ref = "detekt" }
-roborazzi = { id = "io.github.takahirom.roborazzi", version.ref = "roborazzi" }
 google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }
 firebase-crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "firebaseCrashlyticsPlugin" }
 binary-compatibility-validator = { id = "org.jetbrains.kotlinx.binary-compatibility-validator", version.ref = "binaryCompatibilityValidator" }

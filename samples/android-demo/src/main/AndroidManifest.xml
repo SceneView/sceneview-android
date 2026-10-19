@@ -417,8 +417,8 @@
             implementation graph, which never sees a `debugImplementation`
             dependency, so every compose-rule unit test failed with "Unable to
             resolve activity ... ComponentActivity" in the release variant only,
-            and CI never ran that variant to notice (`verifyRoborazziDebug` is
-            debug-only). Declaring the same entry here — main manifest, shipped
+            and CI never ran that variant to notice (it ran only
+            `testDebugUnitTest`). Declaring the same entry here — main manifest, shipped
             in every build type — puts it in both variants' real manifest and
             resource-link pipeline. It has no launcher intent-filter and nothing
             in the app calls it, so it never appears as an entry point.

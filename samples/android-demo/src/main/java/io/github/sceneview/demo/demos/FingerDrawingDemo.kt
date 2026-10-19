@@ -121,7 +121,7 @@ import kotlin.math.roundToInt
  */
 @Composable
 fun FingerDrawingDemo(onBack: () -> Unit, brush: FingerBrush = rememberFingerBrush()) {
-    // Inspection mode (Android Studio @Preview pane, Roborazzi snapshot tests): bypass the
+    // Inspection mode (Android Studio @Preview pane, Robolectric tests): bypass the
     // Filament-backed body BEFORE any rememberEngine() call — LayoutLib ships no .so files.
     if (LocalInspectionMode.current) {
         DemoPreviewPlaceholder(title = "Finger Drawing", onBack = onBack)
@@ -534,7 +534,7 @@ internal fun SceneScope.StrokeMesh(
 }
 
 /**
- * Settings sheet of both Finger Drawing modes — stateless, so a Roborazzi snapshot test can
+ * Settings sheet of both Finger Drawing modes — stateless, so a Robolectric test can
  * capture it in pure JVM with no Filament Engine.
  */
 @Composable
