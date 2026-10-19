@@ -34,6 +34,8 @@ import io.github.sceneview.demo.DemoScaffold
 import io.github.sceneview.demo.LocalDemoChromeBottomInset
 import io.github.sceneview.demo.DemoSettings
 import io.github.sceneview.demo.R
+import io.github.sceneview.demo.common.ArAvailabilityStage
+import io.github.sceneview.demo.common.arSessionFailedUnexplained
 import io.github.sceneview.demo.common.DemoStatusBanner
 import io.github.sceneview.demo.common.DemoStatusTone
 import io.github.sceneview.demo.common.ForceTrackingFailureMenu
@@ -91,9 +93,9 @@ fun ARPlaneNodeDemo(onBack: () -> Unit) {
     // it promises a scan under the SDK's "AR unavailable" card, forever.
     var arCoreAvailability by remember { mutableStateOf<ARCoreAvailability?>(null) }
 
-    // #4622: an ARCore session that cannot start. The scaffold then shows its "AR could not
-    // start" card on the stage ground in place of the black viewport, and drops the plane
-    // counter and the scanning banner, which would otherwise sit over the failure card.
+    // #4622: an ARCore session that failed. The SDK's "Couldn't start AR" card, with its
+    // "Try again", carries a session that could not be created (drawn on the stage ground by
+    // ArAvailabilityStage); the scaffold's card only takes a failure the SDK does not explain.
     var arSessionFailed by remember { mutableStateOf(false) }
 
     var trackingFailureReason by remember { mutableStateOf<TrackingFailureReason?>(null) }
@@ -115,7 +117,9 @@ fun ARPlaneNodeDemo(onBack: () -> Unit) {
     val markerMaterial = rememberArMeshTintInstance(materialLoader, SceneViewTokens.ArOverlay.meshGround)
 
     DemoScaffold(
-        arSessionFailed = arSessionFailed,
+        // The SDK's "Couldn't start AR" card keeps its in-place "Try again" (#4622); the
+        // scaffold's card, which has none, is only for a failure the SDK does not explain.
+        arSessionFailed = arSessionFailedUnexplained(arSessionFailed, arCoreAvailability),
         // #3341: the SDK's "AR unavailable" card speaks alone while ARCore rules the device out.
         arOverlaysEnabled = arCoreAvailability == null,
         title = stringResource(R.string.demo_ar_plane_node_title),
@@ -209,7 +213,13 @@ fun ARPlaneNodeDemo(onBack: () -> Unit) {
                 playbackDataset = arPlaybackDataset,
                 planeRenderer = true,
                 onSessionCreated = { session -> arSession = session },
-                onARCoreAvailability = { arCoreAvailability = it },
+                onARCoreAvailability = {
+                    arCoreAvailability = it
+                    // Back to null is a retry starting: a retry that works must not then land on
+                    // the scaffold's failure card.
+                    if (it == null) arSessionFailed = false
+                },
+                arCoreAvailabilityOverlay = { ArAvailabilityStage(it) },
                 onTrackingFailureChanged = { reason -> trackingFailureReason = reason },
                 onSessionUpdated = { _, frame ->
                     cameraReady = true
