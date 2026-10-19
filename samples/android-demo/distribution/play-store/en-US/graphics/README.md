@@ -140,7 +140,7 @@ The guard lesson stands unchanged, and is the reason this paragraph exists: a
 green capture of this demo is never evidence. Judge the mosaic by eye.
 
 On Android the v2 ids resolve through `ALIAS_INITIAL_TAB` to distinct umbrella
-tabs (`dynamic-sky` → Lighting Lab, `multi-model` → the Multi-Model tab), so no
+tabs (`dynamic-sky` → the Sun rig of Lighting, `multi-model` → the Multi-Model tab), so no
 two slots collapse onto the same screen. The script forces a **dark appearance**
 and neutralises the status bar.
 
@@ -217,7 +217,7 @@ bash .claude/scripts/capture-play-store-screenshots.sh \
 That demo renders whatever the Sketchfab resolver hands back. **With** a key
 (`SKETCHFAB_API_KEY`, or `sketchfab.api.key` in `local.properties`) it streams the
 `park` category — the photoreal scanned oaks the slot exists for. **Without** one it
-substitutes each slug's bundled fallback: a lantern, a lantern, a shiba, a soldier.
+substitutes each slug's bundled fallback: a lantern, a lantern, a shiba, a ranger.
 Same demo id, same layout, an entirely different picture — and nothing in the
 capture path can tell the two apart, because the frame renders fully, the foreground
 guard passes, and centre-variance is high either way. The script now WARNs when the
@@ -361,13 +361,15 @@ passes the variance check and is still unusable.
   margin per side (predicted left edge 187.2 px, measured 187 px), and
   `GeometryLayoutTest` pins the fit arithmetic.
 
-  Two capture-side reasons still argue against the slot, and neither is fixed by
-  the framing work. The 2 × 2 cluster leaves the frame **centre** empty, so the
-  3 × 3 centre-patch variance guard reads it as blank (measured 0.1, threshold
-  100) — a capture run on this id fails until either the layout or the guard
-  changes. And the shared Y-axis spin is free-running outside `qa_mode`, so the
-  flat plane is edge-on — invisible — at an unpredictable fraction of capture
-  instants. Judge a fresh mosaic before adding the id back.
+  Two capture-side reasons argued against the slot at that point: the 2 × 2
+  cluster left the frame **centre** empty, so the 3 × 3 centre-patch variance
+  guard read it as blank (measured 0.1, threshold 100), and the shared Y-axis
+  spin left the flat plane edge-on — invisible — at an unpredictable fraction of
+  capture instants. The scene has since been rebuilt: seven primitives in a
+  staggered 2-3-2 block with the cone at its centre, the plane turning in
+  its own plane, and the spin parked in `qa_mode`. Neither reason has been
+  re-measured against the guard since — judge a fresh mosaic before adding the id
+  back.
 - **#2785** — the `camera_distance` lever (#2652, `--ef camera_distance <f>`)
   is honoured only by demos built on `rememberHeroOrbitCameraManipulator`, and
   iOS has no equivalent launch argument at all. That gap is part of what blocks

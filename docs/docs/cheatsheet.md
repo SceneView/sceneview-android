@@ -16,8 +16,8 @@ A quick reference for SceneView's most-used APIs. Print it, pin it, keep it next
 
 ```kotlin
 // build.gradle
-implementation("io.github.sceneview:sceneview:4.52.0")     // 3D
-implementation("io.github.sceneview:arsceneview:4.52.0")    // AR + 3D
+implementation("io.github.sceneview:sceneview:4.59.0")     // 3D
+implementation("io.github.sceneview:arsceneview:4.59.0")    // AR + 3D
 ```
 
 ---
@@ -36,7 +36,7 @@ val env = rememberEnvironment(environmentLoader) {
         ?: createEnvironment(environmentLoader)
 }
 
-val cameraManipulator = rememberCameraManipulator()
+val cameraManipulator = rememberCameraManipulator()  // flicks coast; inertia = Inertia.None stops dead
 val mainLight = rememberMainLightNode(engine) { intensity = 100_000f }
 val cameraNode = rememberCameraNode(engine) { position = Position(0f, 2f, 5f) }
 val viewNodeManager = rememberViewNodeManager()
@@ -273,10 +273,10 @@ mechanism (EV-stop post-process via CIColorControls) — do not copy values acro
 | `PlaneNode` | `size: Size`, `materialInstance` |
 | `LightNode` | `type: LightManager.Type`, `apply = { intensity(); color(); castShadows() }` |
 | `ImageNode` | `imageFileLocation` / `imageResId` / `bitmap`, `size` |
-| `VideoNode` | `videoPath` (simple) / `player: MediaPlayer` (advanced), `chromaKeyColor`, `size` |
-| `ViewNode` | `windowManager`, content = `@Composable` |
-| `TextNode` | `text`, `fontSize`, `textColor`, `backgroundColor`, `widthMeters` |
-| `BillboardNode` | `bitmap`, `widthMeters`, `heightMeters` |
+| `VideoNode` | `videoPath` (asset path or URL, with `autoPlay`, `isLooping`, `onError`) / `player: MediaPlayer` (advanced), `chromaKeyColor`, `size` |
+| `ViewNode` | `windowManager`, `unlit`, `position`, `rotation`, `scale`, `isVisible`, `cameraPositionProvider`, content = `@Composable` |
+| `TextNode` | `text`, `fontSize`, `textColor`, `backgroundColor`, `typeface`, `widthMeters`, `heightMeters`, `cameraPositionProvider` |
+| `BillboardNode` | `bitmap`, `widthMeters`, `heightMeters`, `cameraPositionProvider` |
 | `LineNode` | `start`, `end`, `materialInstance` |
 | `PathNode` | `points: List<Position>`, `closed`, `materialInstance` |
 | `DynamicSkyNode` | `timeOfDay` (0-24), `turbidity`, `sunIntensity` |
@@ -309,6 +309,7 @@ node.rotation = Rotation(x, y, z)      // degrees
 node.scale = Scale(x, y, z)            // multiplier
 node.isVisible = true
 node.isEditable = true                 // pinch-scale, drag-move, rotate
+node.editingInertia = Inertia.None     // stop dead on release (default: a flick coasts)
 node.isTouchable = true
 node.onSingleTapConfirmed = { event -> true }
 node.onFrame = { frameTimeNanos -> }
@@ -412,8 +413,12 @@ bridge.requestSaveAndShare { result ->
 Drop the saved `.rrd` onto **<https://sceneview.github.io/rerun/>** to scrub
 the AR session frame-by-frame in any browser — no install required, no
 re-hosting needed for local inspection. To share with a remote teammate,
-re-host the file (R2, GitHub release, gist) and send them
-**`https://sceneview.github.io/rerun/?url=<encoded-public-url>`**.
+host the file at an https address that ends in `.rrd` and send them
+**`https://sceneview.github.io/rerun/?url=<encoded-public-url>`**. The host
+has to allow cross-origin requests (CORS): a public GitHub repository's
+`raw.githubusercontent.com` link and GitHub Pages do, a GitHub release asset
+does not (checked 2026-10-13); an R2 or S3 bucket does with a CORS rule that
+allows `https://sceneview.github.io`.
 
 ---
 

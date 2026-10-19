@@ -8,8 +8,10 @@ import com.google.android.filament.Engine
 import com.google.android.filament.Filament
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.LightManager
+import com.google.android.filament.MaterialInstance
 import com.google.android.filament.Renderer
 import com.google.android.filament.Skybox
+import com.google.android.filament.Texture
 import com.google.android.filament.ToneMapper
 import com.google.android.filament.View
 import com.google.android.filament.View.AntiAliasing
@@ -27,6 +29,8 @@ import io.github.sceneview.math.colorOf
 import io.github.sceneview.math.toColor
 import io.github.sceneview.node.CameraNode
 import io.github.sceneview.node.LightNode
+import io.github.sceneview.node.Node
+import io.github.sceneview.node.VideoNode
 import io.github.sceneview.node.ViewNode
 import io.github.sceneview.utils.OpenGL
 import io.github.sceneview.utils.readBuffer
@@ -116,12 +120,17 @@ fun createView(engine: Engine): View = engine.createView().apply {
         enabled = true
         strength = 0.1f
     }
-    // Keep Filmic tone mapper as default. ACES was tested on 2026-05-11 and shifts PBR
-    // hero shots (DamagedHelmet) toward a cooler/desaturated film grade — fine for cinema
-    // but not the SDK's job to impose. Users can opt into ACES via `view.colorGrading`.
-    // The demo's ViewerBackdrop inverts this exact curve: change the tone mapper, update it too.
+    // Khronos PBR Neutral tone mapper. It is the identity up to 0.76 and only
+    // compresses what is brighter, so a base colour displays as authored: measured on the
+    // demo's brand ramp, Filmic kept 40–57 % of the light blue's chroma and 45–65 % of the
+    // lilac's (its shoulder bleaches pastels, its toe crushes darks), PBR Neutral 90–99 %.
+    // ACES (tested 2026-05-11) grades toward a cooler, desaturated film look. Opt back into
+    // the old look with `view.colorGrading = ColorGrading.Builder()
+    // .toneMapper(ToneMapper.Filmic()).build(engine)`. AR keeps Filmic — see [createARView].
+    // SplatNode and the demo's ViewerBackdrop invert this exact curve: change the tone mapper,
+    // update them too.
     colorGrading = ColorGrading.Builder()
-        .toneMapper(ToneMapper.Filmic())
+        .toneMapper(ToneMapper.PBRNeutralToneMapper())
         .build(engine)
     // Shadows on by default — matches RealityKit on iOS and produces a more grounded look
     // out of the box. Disable via `View.setShadowingEnabled(false)` when not needed.
@@ -194,8 +203,36 @@ fun createARView(engine: Engine): View = engine.createView().apply {
     colorGrading = ColorGrading.Builder()
         .toneMapper(ToneMapper.Filmic())
         .build(engine)
+    filmicViews += this
     // Shadows on by default for AR: models casting shadows onto detected planes.
     setShadowingEnabled(true)
+}
+
+/**
+ * Views created by [createARView], whose tone mapper is Filmic rather than [createView]'s PBR
+ * Neutral. A material that pre-distorts its colour by the inverse of the view's tone mapper
+ * (`splat.mat`) reads it to pick the matching inverse. Weak: a destroyed view drops out.
+ */
+internal val filmicViews: MutableSet<View> =
+    java.util.Collections.synchronizedSet(java.util.Collections.newSetFromMap(java.util.WeakHashMap()))
+
+/**
+ * Points a material that pre-distorts its colour by the inverse of the view's tone mapper
+ * (`video_texture*.mat`, `view_texture_*.mat`) at the inverse matching [view]: Filmic for a
+ * [createARView] view, PBR Neutral for every other one (#4595). No-op without a view, or for a
+ * material that has no `inverseFilmic` parameter.
+ */
+/** Matches a [VideoNode] or [ViewNode] material to [view]'s tone mapper; other nodes are left as is. */
+internal fun Node.matchToneMapInverse(view: View?) {
+    when (this) {
+        is VideoNode -> materialInstance.matchToneMapInverse(view)
+        is ViewNode -> materialInstance.matchToneMapInverse(view)
+    }
+}
+
+internal fun MaterialInstance.matchToneMapInverse(view: View?) {
+    if (view == null || !material.hasParameter("inverseFilmic")) return
+    setParameter("inverseFilmic", view in filmicViews)
 }
 
 fun createRenderer(engine: Engine): Renderer = engine.createRenderer()
@@ -275,14 +312,19 @@ fun createViewNodeManager(context: Context) = ViewNode.WindowManager(context)
 fun createEnvironment(
     environmentLoader: EnvironmentLoader,
     isOpaque: Boolean = true
-) = createEnvironment(
-    engine = environmentLoader.engine,
-    isOpaque = isOpaque,
-    indirectLight = KTX1Loader.createIndirectLight(
+): Environment {
+    val indirectLightBundle = KTX1Loader.createIndirectLight(
         environmentLoader.engine,
         environmentLoader.context.assets.readBuffer("environments/neutral/neutral_ibl.ktx"),
-    ).indirectLight?.also { it.intensity = DEFAULT_IBL_INTENSITY },
-)
+    )
+    return createEnvironment(
+        engine = environmentLoader.engine,
+        isOpaque = isOpaque,
+        indirectLight = indirectLightBundle.indirectLight
+            ?.also { it.intensity = DEFAULT_IBL_INTENSITY },
+        textures = listOfNotNull(indirectLightBundle.cubemap),
+    )
+}
 
 fun createEnvironment(
     engine: Engine,
@@ -292,7 +334,37 @@ fun createEnvironment(
         .color(colorOf(rgb = 0.0f, a = if (isOpaque) 1.0f else 0.0f).toFloatArray())
         .build(engine),
     sphericalHarmonics: List<Float>? = null
-) = Environment(indirectLight, skybox, sphericalHarmonics)
+): Environment =
+    createEnvironment(engine, isOpaque, indirectLight, skybox, sphericalHarmonics, emptyList())
+
+/**
+ * Creates an environment that owns the [textures] its indirect light and skybox sample.
+ *
+ * Filament does not destroy a texture with the `IndirectLight` or `Skybox` built on it, so a
+ * cubemap left out of [textures] stays on the GPU until the engine is destroyed (#4358) — the
+ * `cubemap` half of a `KTX1Loader` bundle is the usual one. Ownership moves to the returned
+ * [Environment]: `Engine.safeDestroyEnvironment` and `EnvironmentLoader.destroyEnvironment` both
+ * destroy them, once, after the light and the skybox. Do not destroy them yourself, and do not
+ * hand the same texture to two environments.
+ *
+ * A `copy()` of the returned environment shares its handles without owning the textures: the
+ * environment to destroy is this one.
+ *
+ * @param textures The cubemaps [indirectLight] and [skybox] sample. A texture listed twice — one
+ * cubemap serving both — is destroyed once.
+ */
+fun createEnvironment(
+    engine: Engine,
+    isOpaque: Boolean = true,
+    indirectLight: IndirectLight? = null,
+    skybox: Skybox? = Skybox.Builder()
+        .color(colorOf(rgb = 0.0f, a = if (isOpaque) 1.0f else 0.0f).toFloatArray())
+        .build(engine),
+    sphericalHarmonics: List<Float>? = null,
+    textures: List<Texture>,
+): Environment = Environment(indirectLight, skybox, sphericalHarmonics).also {
+    it.ownTextures(textures)
+}
 
 fun createCollisionSystem(view: View) = CollisionSystem(view)
 

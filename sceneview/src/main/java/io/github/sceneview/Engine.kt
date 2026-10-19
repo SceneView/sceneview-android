@@ -412,9 +412,19 @@ fun Engine.safeDestroyTransformable(@FilamentEntity entity: Entity) =
 
 fun Engine.safeDestroyCamera(camera: Camera) = runCatching { destroyCameraComponent(camera.entity) }
 
+/**
+ * Destroys the indirect light and the skybox of [environment], then the textures it owns — the
+ * cubemaps of a KTX or HDR environment, which Filament does not free with the light or the skybox
+ * that samples them (#4358).
+ *
+ * Safe to call twice, and after [io.github.sceneview.loaders.EnvironmentLoader.destroyEnvironment].
+ */
 fun Engine.safeDestroyEnvironment(environment: Environment) {
-    environment.indirectLight?.let { safeDestroyIndirectLight(it) }
-    environment.skybox?.let { safeDestroySkybox(it) }
+    environment.destroy(
+        destroyIndirectLight = { safeDestroyIndirectLight(it) },
+        destroySkybox = { safeDestroySkybox(it) },
+        destroyTexture = { safeDestroyTexture(it) },
+    )
 }
 
 fun Engine.safeDestroyIndirectLight(indirectLight: IndirectLight) =
@@ -460,14 +470,24 @@ fun Engine.destroyLight(@FilamentEntity entity: Entity) {
 fun Engine.safeDestroyLight(@FilamentEntity entity: Entity) =
     runCatching { destroyLight(entity) }
 
+/**
+ * Destroys [geometry]'s vertex and index buffers, right away — no rendered frame is needed.
+ *
+ * A no-op while a node is still bound to [geometry] (`GeometryNode`, or any
+ * `RenderableNode.setGeometry`): the last of those nodes to be destroyed releases the buffers
+ * itself, so a geometry shared between nodes is freed once and never under a live renderable.
+ * Idempotent.
+ *
+ * A raw renderable that was lent the buffers (`MeshNode(vertexBuffer = geometry.vertexBuffer, …)`)
+ * is not counted: destroy it before, or in the same composition pass as, this call.
+ */
 fun Engine.destroyGeometry(geometry: Geometry) {
-    destroyVertexBuffer(geometry.vertexBuffer)
-    destroyIndexBuffer(geometry.indexBuffer)
+    geometry.destroy(this)
 }
 
+/** Same as [destroyGeometry]; kept for symmetry with the other `safeDestroy*` helpers. */
 fun Engine.safeDestroyGeometry(geometry: Geometry) {
-    safeDestroyVertexBuffer(geometry.vertexBuffer)
-    safeDestroyIndexBuffer(geometry.indexBuffer)
+    geometry.destroy(this)
 }
 
 fun Engine.safeDestroyVertexBuffer(vertexBuffer: VertexBuffer) =

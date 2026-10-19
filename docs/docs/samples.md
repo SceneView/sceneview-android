@@ -102,7 +102,7 @@ npx http-server samples/web-demo/site -p 8080
 **`samples/desktop-demo/`** — Compose Desktop (`SceneViewer`)
 
 `sceneview-compose` `SceneViewer` on JVM. Filament via filament-kmp (offscreen →
-Skia). **JDK 22+**.
+Skia). **JDK 21+**.
 
 - Loads `Duck.glb` through `ModelSource.Bytes`
 - Drag to orbit, scroll to zoom

@@ -231,6 +231,7 @@ object RoomDollhouse {
             colors = IntArray(kept.size) { cloud.colors[kept[it]] },
             normals = cloud.normals?.let(::triples),
             confidences = cloud.confidences?.let { all -> ByteArray(kept.size) { all[kept[it]] } },
+            levels = cloud.levels?.let { all -> ByteArray(kept.size) { all[kept[it]] } },
         )
     }
 
@@ -366,6 +367,20 @@ object RoomDollhouse {
      * [PLINTH_ON_TABLE_M] thick on the table whatever the room's scale.
      */
     fun plinthThickness(scale: Float): Float = PLINTH_ON_TABLE_M / scale.coerceAtLeast(MIN_SCALE)
+
+    /**
+     * Everything the 3D view draws of a room, as `[minX, minY, minZ, maxX, maxY, maxZ]` with the
+     * room centred on the origin and standing on its plinth's foot at 0: the [fit]'s own box and
+     * the plinth under it, which runs [BASE_MARGIN_M] past the walls all round. The opening camera
+     * frames this, not the walls alone — a plinth cut by the screen's edge reads as a room that
+     * does not fit (#4492).
+     */
+    fun previewBounds(fit: DollhouseFit): FloatArray {
+        val halfWidth = fit.width / 2f + BASE_MARGIN_M
+        val halfDepth = fit.depth / 2f + BASE_MARGIN_M
+        val top = BASE_DROP_M + plinthThickness(fit.scale) + fit.height
+        return floatArrayOf(-halfWidth, 0f, -halfDepth, halfWidth, top, halfDepth)
+    }
 
     /**
      * [polygon] (flat `[x,y,z, …]`, horizontal) pushed [margin] metres outwards from its centre,
@@ -582,14 +597,12 @@ data class DollhouseScaleToggle(val label: String, val selected: Boolean)
 
 /** The dollhouse screen's words, in one place (English, like the rest of the Rerun demo). */
 object DollhouseCopy {
-    const val VIEW_IN_AR = "View in AR"
-    const val VIEW_IN_AR_CAPTION = "AR"
     const val OPENING = "Opening your room…"
-    const val OPEN_FAILED = "This room could not be opened. Record it again, or pick another session."
+    const val OPEN_FAILED = "This room could not be opened. Scan it again, or pick another scan."
 
     const val NO_SURFACES_TITLE = "This recording has no surfaces yet — record again"
     const val NO_SURFACES_BODY = "It kept the path you walked and its photos, but no floor, wall or " +
-        "table, so there is no room to stand on your table. Record your room again, moving slowly " +
+        "table, so there is no room to stand on your table. Scan your room again, moving slowly " +
         "past the floor and the walls."
     const val OTHER_RECORDINGS = "Or stand another recording"
     const val ON_THE_TABLE = "On the table"
@@ -598,9 +611,9 @@ object DollhouseCopy {
     const val RESET_HOLD = "Room removed. Point at a table — it stands where you aim."
 
     const val EMPTY_TITLE = "No room recorded yet"
-    const val EMPTY_BODY = "Record your room with the Rerun demo, and it stands on your table as a " +
+    const val EMPTY_BODY = "Scan your room with 3D Scan, and it stands on your table as a " +
         "miniature you can walk around."
-    const val RECORD = "Record your room"
+    const val RECORD = "Start scanning"
 
     const val REAL_SIZE = "Real size"
     const val RESET = "Reset"
@@ -613,7 +626,7 @@ object DollhouseCopy {
     const val PLACE_HINT = "Point at a table. Your room stands on it as a miniature."
     const val GESTURE_HINT = "Drag to move · twist to turn · pinch to resize"
 
-    const val INTRO = "Your own room, recorded with the Rerun demo, cut open and stood on a table " +
+    const val INTRO = "Your own room, recorded with the 3D Scan demo, cut open and stood on a table " +
         "as a miniature, in the colours your phone saw. " +
         "Drag it, twist it, pinch it — or switch to Real size and stand inside it."
 
