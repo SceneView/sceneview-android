@@ -2,10 +2,8 @@
 <resources>
     <string name="demo_two_d_in_three_d_title">2D in 3D</string>
     <string name="demo_two_d_in_three_d_subtitle">Live UI, text, images and video in a 3D scene</string>
-    <string name="demo_two_d_in_three_d_inspect_hint">Tap a part</string>
-    <string name="demo_two_d_in_three_d_media_hint">Drag to look around</string>
-    <string name="demo_two_d_in_three_d_inspect_explainer">The card is real Compose UI on a flat surface in the scene. A tap picks a part or reaches a swatch through the scene’s picking ray.</string>
-    <string name="demo_two_d_in_three_d_media_explainer">TextNode adds text, ImageNode a bitmap or drawable, VideoNode a video a MediaPlayer streams, and BillboardNode a sprite that faces you. Inspect shows live Compose UI.</string>
+    <string name="demo_two_d_in_three_d_inspect_hint">Tap the rocket to restyle it</string>
+    <string name="demo_two_d_in_three_d_explainer">Everything flat here lives in the 3D scene. The card beside the rocket is live Compose UI (ViewNode): tap a part, then pick a finish. Behind it, ImageNode hangs a picture, VideoNode plays a streamed clip, BillboardNode keeps the badge turned to you and TextNode writes the labels. Drag to walk around them.</string>
     <string name="demo_two_d_in_three_d_nose">Nose</string>
     <string name="demo_two_d_in_three_d_body">Body</string>
     <string name="demo_two_d_in_three_d_window">Window</string>
@@ -21,10 +19,8 @@
     <string name="demo_two_d_in_three_d_play">Play</string>
     <string name="demo_two_d_in_three_d_pause">Pause</string>
     <string name="demo_two_d_in_three_d_face_camera">Face camera</string>
-    <string name="demo_two_d_in_three_d_face_camera_caption">Face</string>
     <string name="demo_two_d_in_three_d_image_node">ImageNode</string>
     <string name="demo_two_d_in_three_d_video_node">VideoNode</string>
-    <string name="demo_two_d_in_three_d_billboard_node">BillboardNode</string>
     <string name="demo_two_d_in_three_d_video_loading">Loading video…</string>
     <string name="demo_two_d_in_three_d_video_unavailable">Video unavailable</string>
     <string name="demo_two_d_in_three_d_video_unavailable_detail">Check your connection</string>

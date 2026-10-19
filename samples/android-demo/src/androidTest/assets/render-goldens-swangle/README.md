@@ -34,7 +34,14 @@ logs `first-frame slug=… elapsedMs=…` in the job's `logcat.txt`.
 
 ## Left out of the gate
 
-None today. `splatpreview_default` was out until #4459: its picture moved from one
+`twodinthreed_default`, since #4624 put the media wall behind the rocket. In runs
+39228738442 and 39231078031 the case reported its first-run capture as saved, but
+neither artifact holds it: the job pulls captures every 20 s and warned both times
+that the emulator was gone after the suite, so the final pull never ran. It comes back once a
+run's artifact does; the hardware-GPU golden in `../render-goldens/` covers it locally
+meanwhile.
+
+`splatpreview_default` was out until #4459: its picture moved from one
 run to the next (54.7 % of pixels against its recording in run 36416690269, 54.9 %
 between the two attempts of run 38044621943).
 

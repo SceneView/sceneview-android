@@ -16,7 +16,7 @@ internal enum class RocketPart(val originalMaterial: Int) {
     Nose(1), Body(0), Window(1), Fins(2), Engine(2),
 }
 
-/** Metres and Y-up rotations for the rocket, its attached card and the media gallery. */
+/** Metres and Y-up rotations for the rocket, its attached card and the wall of media behind it. */
 internal object CalloutLayout {
     const val FLOOR_SIZE = 90f
     const val ELEVATION_DEGREES = 10f
@@ -26,9 +26,6 @@ internal object CalloutLayout {
     /** The rocket alone, fins included; [inspectDistance] then makes room for the card. */
     val INSPECT_EXTENT = Size(0.72f, 1f, 0.72f)
     val INSPECT_TARGET = Position(y = 0.5f)
-    /** Narrower than the 1.49 m hung: the fit keeps a depth margin a near-flat wall has no use for. */
-    val MEDIA_EXTENT = Size(1.38f, 1.4f, 0.3f)
-    val MEDIA_TARGET = Position(y = 1.04f)
     const val BODY_RADIUS = 0.15f
     const val BODY_HEIGHT = 0.46f
     const val NOSE_HEIGHT = 0.34f
@@ -52,8 +49,6 @@ internal object CalloutLayout {
     val PICTURE_SIZE = Size(0.64f, 0.512f, 0f)
     val SCREEN_SIZE = Size(0.64f, 0.36f, 0f)
     val BADGE_SIZE = Size(0.3f, 0.3f, 0f)
-    /** TextNode rasters 512 x 128: keep the quad at that 4:1 or the glyphs stretch. */
-    val CAPTION_SIZE = Size(0.72f, 0.18f, 0f)
     const val FRAME_BORDER = 0.025f
     const val FRAME_DEPTH = 0.035f
     val CONTENT_OFFSET = Position(z = FRAME_DEPTH / 2f + 0.002f)
@@ -176,32 +171,44 @@ internal object CalloutLayout {
             abs(previous.z - current.z) > 0.001f
 
     /**
-     * Two fixed surfaces hung centre to centre and a sprite raised above the gap between them.
-     * The two wall captions share one line, under the taller frame.
+     * The showcase (#4624): one scene instead of an Inspect and a Media tab nobody found. The
+     * rocket stands in front; behind it and above its nose hangs a wall — the picture and the
+     * video screen side by side, turned in towards the viewer, the badge floating over them. The
+     * wall stands [WALL_DEPTH] behind the rocket, so it reads as the backdrop of the scene, not as
+     * a second subject, and the card a tap opens beside the rocket never lands on a frame.
      */
-    val GALLERY = listOf(
-        Exhibit(Position(-0.385f, 0.86f, 0f), 14f, PICTURE_SIZE, Position(-0.385f, 0.44f, 0.05f)),
-        Exhibit(Position(0.385f, 0.86f, 0f), -14f, SCREEN_SIZE, Position(0.385f, 0.44f, 0.05f)),
-        Exhibit(Position(0f, 1.56f, -0.1f), 0f, BADGE_SIZE, Position(0f, 1.28f, -0.1f)),
+    const val WALL_DEPTH = 0.9f
+    val SHOWCASE = listOf(
+        Exhibit(Position(-0.385f, 1.62f, -WALL_DEPTH), 14f, PICTURE_SIZE,
+            Position(-0.385f, 1.25f, -WALL_DEPTH + 0.05f)),
+        Exhibit(Position(0.385f, 1.62f, -WALL_DEPTH), -14f, SCREEN_SIZE,
+            Position(0.385f, 1.25f, -WALL_DEPTH + 0.05f)),
+        Exhibit(Position(0f, 2.16f, -WALL_DEPTH - 0.05f), 0f, BADGE_SIZE, Position()),
     )
+    /** The rocket's 1 m and the wall over it: the camera fits the whole column. */
+    val SHOWCASE_EXTENT = Size(1.42f, 2.32f, 1.1f)
+    val SHOWCASE_TARGET = Position(y = 1.16f)
 
     /**
-     * A phone held sideways leaves a strip: the same three on one line, the sprite between the two
-     * surfaces, so the captions are half as large again as the upright wall would leave them.
+     * A phone held sideways leaves a strip: the picture and the screen stand either side of the
+     * rocket instead, the badge over its nose, so the rocket keeps most of the strip's height.
      */
-    val GALLERY_STRIP = listOf(
-        Exhibit(Position(-0.8f, 0.86f, 0f), 14f, PICTURE_SIZE, Position(-0.8f, 0.44f, 0.05f)),
-        Exhibit(Position(0.8f, 0.86f, 0f), -14f, SCREEN_SIZE, Position(0.8f, 0.44f, 0.05f)),
-        Exhibit(Position(0f, 0.86f, -0.1f), 0f, BADGE_SIZE, Position(0f, 0.44f, -0.1f)),
+    val SHOWCASE_STRIP = listOf(
+        Exhibit(Position(-0.95f, 0.62f, -0.35f), 20f, PICTURE_SIZE, Position(-0.95f, 0.24f, -0.3f)),
+        Exhibit(Position(0.95f, 0.62f, -0.35f), -20f, SCREEN_SIZE, Position(0.95f, 0.24f, -0.3f)),
+        Exhibit(Position(-0.5f, 1.12f, -0.4f), 0f, BADGE_SIZE, Position()),
     )
-    val MEDIA_STRIP_EXTENT = Size(2.34f, 0.82f, 0.3f)
-    val MEDIA_STRIP_TARGET = Position(y = 0.745f)
+    val SHOWCASE_STRIP_EXTENT = Size(2.6f, 1.3f, 0.8f)
+    val SHOWCASE_STRIP_TARGET = Position(y = 0.62f)
 
-    fun gallery(strip: Boolean): List<Exhibit> = if (strip) GALLERY_STRIP else GALLERY
+    /** Captions of the showcase: the 4:1 TextNode raster, two thirds of the gallery's size. */
+    val SHOWCASE_CAPTION_SIZE = Size(0.6f, 0.15f, 0f)
 
-    fun mediaExtent(strip: Boolean): Size = if (strip) MEDIA_STRIP_EXTENT else MEDIA_EXTENT
+    fun showcase(strip: Boolean): List<Exhibit> = if (strip) SHOWCASE_STRIP else SHOWCASE
 
-    fun mediaTarget(strip: Boolean): Position = if (strip) MEDIA_STRIP_TARGET else MEDIA_TARGET
+    fun showcaseExtent(strip: Boolean): Size = if (strip) SHOWCASE_STRIP_EXTENT else SHOWCASE_EXTENT
+
+    fun showcaseTarget(strip: Boolean): Position = if (strip) SHOWCASE_STRIP_TARGET else SHOWCASE_TARGET
 
     fun frameSize(size: Size): Size = Size(
         size.x + FRAME_BORDER * 2f, size.y + FRAME_BORDER * 2f, FRAME_DEPTH
