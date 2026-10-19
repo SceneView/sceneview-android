@@ -1,0 +1,2 @@
+<!-- category: Fixed -->
+- **Android demo render tests: the Model Viewer CI reference shows the studio showroom (refs [#4448](https://github.com/sceneview/sceneview/issues/4448)).** Since #4580 the Model Viewer opens in a white photo studio, but the emulator golden still held the old dark stage, so `modelViewerDemo_default_state` failed on 99.7 % of its pixels. The reference under `render-goldens-swangle/` is now the showroom render.
