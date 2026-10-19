@@ -1,2 +1,0 @@
-<!-- category: Fixed -->
-- **Website home: no more lag from a film nobody sees ([#4581](https://github.com/sceneview/sceneview/issues/4581)).** The night-circuit film now pauses while it is scrolled out of view and picks up where it was when it comes back. Before, it kept drawing about 30 frames a second off screen and halved the frame rate of the code sample below it. A stage whose WebGL context is lost, after a GPU reset for instance, now goes back to its poster and its load button instead of staying "Live" on an empty canvas.

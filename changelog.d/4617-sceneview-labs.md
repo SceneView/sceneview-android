@@ -1,2 +1,0 @@
-<!-- category: Added -->
-- **SceneView Labs in the Android demo app ([#4617](https://github.com/sceneview/sceneview/pull/4617)).** New features that still need testing on real phones can ship behind a Labs switch, off by default. Your first report sent from Send feedback unlocks Labs on the spot. The Labs card sits under the Home hero, a deep link to a Labs demo opens an explainer until you join, and About lets you switch Labs off. Reports now include the Labs state.

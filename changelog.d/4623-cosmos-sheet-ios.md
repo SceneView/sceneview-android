@@ -1,2 +1,0 @@
-<!-- category: Fixed -->
-- **iOS demo: Cosmos's spacetime sheet now looks like Android's ([#4623](https://github.com/sceneview/sceneview/issues/4623)).** The flat grey sheet is now a dark slate fabric with a glowing blue grid, one line every half unit. The lines bend into each well, glow brighter around the star, and fade out before the rim. Instead of shimmering where the cells get small on screen, they fade away. Planet shadows still show on the grid. The sheet looks the same in light and dark mode.

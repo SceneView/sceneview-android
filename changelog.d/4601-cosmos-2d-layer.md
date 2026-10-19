@@ -1,2 +1,0 @@
-<!-- category: Fixed -->
-- **Demo: Cosmos's controls now always show the current scene and never fade out ([#4601](https://github.com/sceneview/sceneview/issues/4601)).** The four scenes moved out of the dock into an opaque Galaxy | Star | Burst | Flow switch above it, its checked segment following the voyage, so a near miss next to Settings no longer opens the settings sheet and dims the whole bar. The unlabeled rocket became a labeled Autoplay play/pause item. The 3D scenes and their transitions are unchanged.

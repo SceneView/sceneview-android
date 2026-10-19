@@ -1,2 +1,0 @@
-<!-- category: Fixed -->
-- **Scene Geometry, Plane Node, Point Cloud**: AR overlays no longer wash out to pale pink and pale blue over a bright room. Terrain is a saturated blue and buildings a saturated orange that tint the camera image instead of covering it, so the colour holds on a white wall and in a dim corner and the room stays visible through it; the plane marker and the point-cloud ramp use the same tokens.
