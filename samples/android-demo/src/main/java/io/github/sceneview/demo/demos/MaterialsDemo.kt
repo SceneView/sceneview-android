@@ -102,6 +102,7 @@ import io.github.sceneview.material.setRoughness
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Size
 import io.github.sceneview.math.colorOf
+import io.github.sceneview.math.toLinearSpace
 import io.github.sceneview.rememberCameraManipulator
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberEnvironment
@@ -1180,13 +1181,15 @@ private fun rememberStudioMaterial(
  * do not use them. One shader serves eight of the nine spheres, so "this material has no clear
  * coat" has to be written as `clearCoat = 0`; an unwritten uniform is not a guaranteed zero.
  */
-private fun MaterialInstance.push(
+internal fun MaterialInstance.push(
     material: StudioMaterial,
     metallic: Float = material.metallic,
     roughness: Float = material.roughness,
     traitAmount: Float = material.traitAmount,
 ) {
-    val base = colorOf(material.color)
+    // Metals carry linear reflectance; every other colour is sRGB and is linearised here, as
+    // `materialLoader.createColorInstance` does for any colour (RgbaType.SRGB).
+    val base = colorOf(material.color).let { if (material.colorIsLinear) it else it.toLinearSpace() }
 
     if (material.trait == MaterialTrait.Transmission) {
         setParameter("color", base.x, base.y, base.z, 1f)
@@ -1206,7 +1209,7 @@ private fun MaterialInstance.push(
     setParameter("clearCoat", coat)
     setParameter("clearCoatRoughness", material.traitRoughness)
 
-    val tint = colorOf(material.traitColor)
+    val tint = colorOf(material.traitColor).toLinearSpace()
     if (material.trait == MaterialTrait.Sheen) {
         setParameter("sheenColor", tint.x * traitAmount, tint.y * traitAmount, tint.z * traitAmount)
     } else {

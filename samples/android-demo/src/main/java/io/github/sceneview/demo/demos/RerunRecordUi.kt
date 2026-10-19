@@ -1,12 +1,23 @@
 package io.github.sceneview.demo.demos
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.offset
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.MyLocation
+import androidx.compose.material.icons.rounded.Navigation
+import androidx.compose.material3.Icon
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import io.github.sceneview.demo.R
+import io.github.sceneview.demo.demos.internal.DebugGroup
+import io.github.sceneview.demo.demos.internal.ScanFollow
+import io.github.sceneview.demo.ui.GlassActionPill
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -15,7 +26,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -26,8 +36,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -45,7 +53,8 @@ import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
 
 /*
- * The capture screen of 3D Scan (#4627): the scan growing in a 3D card over the camera, one
+ * The capture screen of 3D Scan (#4627, #4628): the scan growing full screen over the dimmed
+ * camera, following the phone heading-up, one
  * compact line above it — "Scanning · 0:42" and the points captured so far — and, under it,
  * one coaching line with Pause and Finish. Finish opens a review that Keep scanning leaves for
  * the same capture; only Save scan builds and writes it.
@@ -265,47 +274,75 @@ private fun ScanHint(text: String) {
 }
 
 /**
- * The scan growing in 3D while it records: the camera's path drawing itself, the points in the
- * colours the camera saw, the planes and the photos, framed as they grow. The same view the
- * replay opens on once the scan stops.
+ * The scan growing in 3D while it records, full screen (#4628): the camera dimmed under it, so
+ * what is not scanned yet still shows, and on top the points in the colours the camera saw —
+ * no path, no photo frames, no plane grid. The view follows the phone like a navigation app,
+ * heading-up ([ScanFollow]); a drag or a pinch takes it over, and [ScanRecenterPill] gives it
+ * back. While it follows, a marker holds the phone's place, where [ScanFollow.LIFT] draws it.
  */
 @Composable
 @Suppress("LongParameterList") // the demo's shared engine, handed down once
-internal fun ScanStage(
+internal fun ScanLiveView(
     session: ArDebugSession,
     orbit: ArDebugOrbitCamera,
+    follow: ScanFollow,
+    coverage: ScanCoverageState,
+    following: Boolean,
     media: RerunReplayMedia,
     engine: Engine,
     modelLoader: ModelLoader,
     materialLoader: MaterialLoader,
 ) {
-    val shape = RoundedCornerShape(SceneViewTokens.Radius.lg)
-    // The scaffold stacks top overlays Space.sm apart; one more brings the card to the Space.md
-    // the HUD keeps from the header and the screen's edges.
-    Box(modifier = Modifier.fillMaxWidth().padding(top = Space.sm), contentAlignment = Alignment.Center) {
-        Box(
-            modifier = Modifier
-                .padding(horizontal = Space.md)
-                .widthIn(max = ArOverlay.maxWidth)
-                .fillMaxWidth()
-                .aspectRatio(SCAN_STAGE_ASPECT)
-                .shadow(elevation = SceneViewTokens.Elevation.lg, shape = shape, clip = false)
-                .clip(shape)
-                .background(SceneViewTokens.Stage.background)
-                .testTag(SCAN_STAGE_TAG),
-        ) {
-            ArDebugSceneView(
-                session = session,
-                orbit = orbit,
-                engine = engine,
-                modelLoader = modelLoader,
-                materialLoader = materialLoader,
-                modifier = Modifier.fillMaxSize(),
-                replay = media,
-            )
-            Box(Modifier.fillMaxSize().overMediaEdge(shape))
+    BoxWithConstraints(modifier = Modifier.fillMaxSize().testTag(SCAN_STAGE_TAG)) {
+        // Only the camera is dimmed: the cloud is drawn by its own view, above the veil.
+        Box(Modifier.fillMaxSize().background(ArOverlay.cameraDim))
+        ArDebugSceneView(
+            session = session,
+            orbit = orbit,
+            engine = engine,
+            modelLoader = modelLoader,
+            materialLoader = materialLoader,
+            modifier = Modifier.fillMaxSize(),
+            replay = media,
+            transparent = true,
+            visible = { it in SCAN_LIVE_GROUPS },
+            follow = { frame -> follow.poseFor(frame.camera) },
+            observe = coverage::observe,
+        )
+        if (following) {
+            val youAreHere = stringResource(R.string.demo_ar_rerun_you_are_here)
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .offset(y = maxHeight * (0.5f - ScanFollow.LIFT) - ScanMarkerSize / 2)
+                    .size(ScanMarkerSize)
+                    .overMediaEdge(CircleShape)
+                    .background(ArOverlay.accentProgress, CircleShape)
+                    .semantics { contentDescription = youAreHere }
+                    .testTag(SCAN_MARKER_TAG),
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Navigation,
+                    contentDescription = null,
+                    tint = ArOverlay.onAccentProgress,
+                    modifier = Modifier.size(ScanMarkerSize - Space.sm),
+                )
+            }
         }
     }
+}
+
+/** Shown once a drag or a pinch has left the follow view: back to following the phone. */
+@Composable
+internal fun ScanRecenterPill(onRecenter: () -> Unit) {
+    GlassActionPill(
+        icon = Icons.Rounded.MyLocation,
+        label = stringResource(R.string.demo_ar_rerun_recenter),
+        contentDescription = stringResource(R.string.demo_ar_rerun_recenter_description),
+        onClick = onRecenter,
+        modifier = Modifier.testTag(SCAN_RECENTER_TAG),
+    )
 }
 
 /**
@@ -317,14 +354,19 @@ internal fun ScanShutter(startEnabled: Boolean, onStart: () -> Unit) {
     RecordShutter(isRecording = false, startEnabled = startEnabled, onStart = onStart, onStop = {})
 }
 
-/** Wider than tall: the room reads across, and the camera keeps the lower half of the screen. */
-private const val SCAN_STAGE_ASPECT = 1.35f
+/** What the live view draws: the points, in the colours the camera saw. */
+private val SCAN_LIVE_GROUPS = setOf(DebugGroup.Points)
+
+/** The phone's marker: a 28 dp disc, read at a glance like a navigation app's arrow. */
+private val ScanMarkerSize = Space.lg + Space.xs
 
 /** A notch above the capture card's 10 dp dot: this one is read from a metre away. */
 private val ScanDotSize = Space.md - Space.xs / 2
 
 internal const val SCAN_HUD_TAG = "ar_rerun_scan_hud"
 internal const val SCAN_STAGE_TAG = "ar_rerun_scan_stage"
+internal const val SCAN_MARKER_TAG = "ar_rerun_scan_marker"
+internal const val SCAN_RECENTER_TAG = "ar_rerun_scan_recenter"
 internal const val SCAN_POINTS_TAG = "ar_rerun_scan_points"
 internal const val SCAN_CONTROLS_TAG = "ar_rerun_scan_controls"
 internal const val SCAN_HINT_TAG = "ar_rerun_scan_hint"

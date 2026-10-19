@@ -386,6 +386,14 @@ object ScanCopy {
     const val FINISH = "Finish"
     const val COACH_SCANNING = "Move slowly sideways"
     const val COACH_PAUSED = "Nothing is captured while paused."
+
+    // ScanCoach's lines (#4631): short, and said only while their cause holds.
+    const val COACH_SLOWER = "Move slower"
+    const val COACH_NOTHING_NEW = "Point at the floor or a wall, 1 to 3 m away"
+
+    // The dense map past its budget (#4629): said once while it merges, never as a limit.
+    const val ADJUSTING_DETAIL = "Adjusting detail for a larger space"
+    const val SCAN_FULL = "This scan is full. Save it to keep what you have."
     const val TRACKING_LOST = "Scan paused. Point at an area you already scanned."
     const val REVIEW_TITLE = "Review your scan"
     const val REVIEW_DETAIL = "Keep scanning to add more, or save it on this phone."
@@ -423,12 +431,23 @@ object ScanCopy {
 
     /**
      * The one coaching line under the capture, or `null` when a card speaks instead: tracking
-     * loss first, then the photo limit, then the plain advice.
+     * loss first, then the dense map's [detail] when it is not [ScanDetail.Fine], then the photo
+     * limit, then the [coach]'s line (#4631), then the plain advice.
      */
-    fun coaching(phase: ScanPhase, trackingLost: Boolean, photoLimitReached: Boolean): String? = when (phase) {
+    fun coaching(
+        phase: ScanPhase,
+        trackingLost: Boolean,
+        photoLimitReached: Boolean,
+        detail: ScanDetail = ScanDetail.Fine,
+        coach: ScanCoach.Line? = null,
+    ): String? = when (phase) {
         ScanPhase.Scanning -> when {
             trackingLost -> TRACKING_LOST
+            detail == ScanDetail.Full -> SCAN_FULL
+            detail == ScanDetail.Adjusting -> ADJUSTING_DETAIL
             photoLimitReached -> FULL
+            coach == ScanCoach.Line.Slower -> COACH_SLOWER
+            coach == ScanCoach.Line.NothingNew -> COACH_NOTHING_NEW
             else -> COACH_SCANNING
         }
         ScanPhase.Paused -> COACH_PAUSED

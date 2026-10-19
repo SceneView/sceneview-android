@@ -42,6 +42,13 @@ The demo apps are built from [`samples/`](samples/). Any demo opens straight fro
 [Cosmos](https://sceneview.github.io/open?demo=cosmos), the galaxy the catalogue opens on, or
 [3D Scan](https://sceneview.github.io/open?demo=ar-rerun), a space scanned with ARCore and rebuilt in 3D.
 
+### Help test the demos
+
+Install the Android demo, record your screen while you use a demo, and tell us what breaks or
+confuses you: [open an issue](https://github.com/sceneview/sceneview/issues/new?labels=user-feedback)
+with the recording attached, or send it from the app (any demo, Settings, then Send feedback).
+Your first report unlocks **SceneView Labs**, early access to the experimental demos, straight away.
+
 ---
 
 ## Quick start

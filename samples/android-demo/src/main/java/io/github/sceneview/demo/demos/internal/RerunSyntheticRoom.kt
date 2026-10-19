@@ -194,17 +194,21 @@ object RerunSyntheticRoom {
     /** A Pixel's texture focal length (~500 px at 640 × 360), at the depth image's size. */
     const val FOCAL = 125f
 
+    /** The room's floor corners: x and z from [MIN] to [MAX], the floor at y = 0. */
+    val MIN = Vec3(-2f, 0f, -1.8f)
+    val MAX = Vec3(2f, 2.6f, 1.8f)
+
     val scene: SyntheticScene by lazy { SyntheticScene(shapes()) }
 
     /** The scan's depth frames, in the order a phone would take them. */
     fun frames(): Sequence<DepthFrame> = poses().asSequence().map { scene.render(it) }
 
-    /** Camera poses: every [YAW_STEPS]th of a turn, at [PITCHES_DEG], from each of [stops]. */
-    fun poses(stops: List<Vec3> = STOPS): List<DebugPose> = buildList {
+    /** Camera poses: every [yawSteps]th of a turn, at [PITCHES_DEG], from each of [stops]. */
+    fun poses(yawSteps: Int = YAW_STEPS, stops: List<Vec3> = STOPS): List<DebugPose> = buildList {
         for (stop in stops) {
             for (pitchDeg in PITCHES_DEG) {
-                for (step in 0 until YAW_STEPS) {
-                    val yaw = Math.toRadians(step * FULL_TURN_DEG / YAW_STEPS).toFloat()
+                for (step in 0 until yawSteps) {
+                    val yaw = Math.toRadians(step * FULL_TURN_DEG / yawSteps).toFloat()
                     add(lookPose(stop, yaw, Math.toRadians(pitchDeg.toDouble()).toFloat()))
                 }
             }
@@ -221,7 +225,7 @@ object RerunSyntheticRoom {
     }
 
     private fun shapes(): List<SyntheticShape> {
-        val room = SyntheticShape.Room(Vec3(-2f, 0f, -1.8f), Vec3(2f, 2.6f, 1.8f)) { x, y, z ->
+        val room = SyntheticShape.Room(MIN, MAX) { x, y, z ->
             when {
                 y < SURFACE -> floor(x, z)
                 y > 2.6f - SURFACE -> CEILING

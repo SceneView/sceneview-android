@@ -231,6 +231,7 @@ object RoomDollhouse {
             colors = IntArray(kept.size) { cloud.colors[kept[it]] },
             normals = cloud.normals?.let(::triples),
             confidences = cloud.confidences?.let { all -> ByteArray(kept.size) { all[kept[it]] } },
+            levels = cloud.levels?.let { all -> ByteArray(kept.size) { all[kept[it]] } },
         )
     }
 

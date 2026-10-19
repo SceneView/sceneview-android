@@ -18,7 +18,7 @@ class RoomSurveySyntheticTest {
     /** The scan's input: the fused cloud with its normals, and the camera path. */
     private fun scan(scene: SyntheticScene, stops: List<Vec3>): RoomSurveyInput {
         val fusion = DenseFusion()
-        val poses = RerunSyntheticRoom.poses(stops)
+        val poses = RerunSyntheticRoom.poses(stops = stops)
         for (pose in poses) fusion.add(DepthBackProjection.project(scene.render(pose)))
         val cloud = fusion.cloud(minViews = DenseFusion.MIN_VIEWS)
         val trail = FloatArray(poses.size * 3)

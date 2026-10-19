@@ -137,7 +137,7 @@ fun SceneView(
 )
 ```
 
-**Defaults changed in v4.0.10+:** shadows ON (mainLight + fillLight), SSAO + bloom enabled, neutral exposure (~1.0), dual-light setup out-of-the-box. No more "flat-lit chrome look" — drop a model in and it renders cinematic by default.
+**Defaults changed in v4.0.10+:** shadows ON (mainLight + fillLight), SSAO + bloom enabled, neutral exposure (~1.0), dual-light setup out-of-the-box. Tone mapper: Khronos PBR Neutral (#4595 — identity up to 0.76, so base colours display as authored; `rememberARView` keeps Filmic). Old look: `view.colorGrading = ColorGrading.Builder().toneMapper(ToneMapper.Filmic()).build(engine)`. No more "flat-lit chrome look" — drop a model in and it renders cinematic by default.
 
 **`frameRatePolicy` (default `FrameRatePolicy.OnDemand()`, v4.38.0+ / #3108) — breaking change:** it replaces the `isRendering: Boolean` parameter, which is **removed, with no deprecated overload**. Before v4.38.0 a `SceneView` drew every vsync for as long as it was composed, whether or not anything had changed; a static 3D screen therefore kept the GPU redrawing an identical frame 60 or 120 times a second, which reads to the user as battery drain and thermal throttling on devices whose Choreographer keeps ticking a visually static UI.
 
@@ -3517,7 +3517,7 @@ ARSceneView(...) {
 }
 ```
 
-Demo: the **Streetscape** mode of `samples/android-demo/.../ARSceneGeometryDemo.kt` (the `ar-scene-mesh` card, "Scene Geometry"). Setup guide (Cloud project + API key): `samples/android-demo/ARCORE_CLOUD_SETUP.md`.
+Demo: the **Streetscape** mode of the `ar-geospatial-anchors` card (`samples/android-demo/.../ARSceneGeometryDemo.kt`), with its "Colour buildings & terrain" switch off. Setup guide (Cloud project + API key): `samples/android-demo/ARCORE_CLOUD_SETUP.md`.
 
 ### SceneMeshNode — classified building / terrain mesh (ARKit ARMeshAnchor parity)
 
@@ -3557,7 +3557,7 @@ ARSceneView(...) {
 }
 ```
 
-Demo: the **Mesh** mode of `samples/android-demo/.../ARSceneGeometryDemo.kt` (the `ar-scene-mesh` card, "Scene Geometry"). Its Streetscape mode renders the same trackables through the raw `StreetscapeGeometryNode`, so the two are one screen away from each other.
+Demo: the **Streetscape** mode of the `ar-geospatial-anchors` card (`samples/android-demo/.../ARSceneGeometryDemo.kt`), with its "Colour buildings & terrain" switch on (the default). Turning the switch off renders the same trackables through the raw `StreetscapeGeometryNode`, so the two are one tap away from each other.
 
 ### Geospatial Depth — extend environment depth accuracy to ~65 m
 
@@ -3800,6 +3800,13 @@ Key facts an AI codegen pass must get right:
 - These are plain `Node` properties, not composable parameters — to change them
   reactively after creation, re-push them from a `LaunchedEffect` keyed on the new
   values (the `apply` block runs only once at node creation).
+- A flick **coasts** after release (`Node.editingInertia`, default `Inertia.Default`): a
+  drag keeps sliding along the surface it was dragged on and stops where that surface ends
+  (an AR object stays on its plane), a twist keeps turning, a pinch keeps growing until
+  `editableScaleRange`. `onMoveEnd` / `onRotateEnd` / `onScaleEnd` and the editing
+  listeners' `onEditingEnd` fire **once the node is at rest**, so an `AnchorNode` re-anchors
+  where the coast ended. `editingInertia = Inertia.None` stops the node dead on release; a
+  new touch always stops a coast.
 
 The `camera-gestures` demo in `samples/android-demo` is the canonical end-to-end
 example. Its dock's **Move** item flips `isEditable` on whichever subject currently has
@@ -4132,12 +4139,12 @@ Most are default parameter values in `SceneView`/`ARSceneView` — call them exp
 | `rememberCameraNode(engine) { ... }` | `CameraNode` | Custom camera with apply block |
 | `rememberMainLightNode(engine) { ... }` | `LightNode` | Primary directional light (key) with apply block — shadows ON by default; apply block is reactive (re-runs on recomposition, so Compose-state-driven intensity/direction/color update live) |
 | `rememberFillLightNode(engine) { ... }` | `LightNode` | Soft fill light opposite the main light — lifts shadows so models don't look flat; apply block is reactive (same as `rememberMainLightNode`) |
-| `rememberCameraManipulator(orbitRadius, targetPosition?)` | `CameraManipulator?` | Orbit/pan/zoom camera controller, distance-first (recommended): the camera starts `orbitRadius` metres from the target along the default 3/4 viewing angle — `orbitRadius = 2.78f` is the stock framing. Keyed on `orbitRadius` and `targetPosition`: a new value rebuilds the manipulator and `SceneView` glides the camera there (~0.6 s) instead of cutting — derive the radius once, don't animate it. See "Camera" |
+| `rememberCameraManipulator(orbitRadius, targetPosition?, inertia?)` | `CameraManipulator?` | Orbit/pan/zoom camera controller, distance-first (recommended): the camera starts `orbitRadius` metres from the target along the default 3/4 viewing angle — `orbitRadius = 2.78f` is the stock framing. Keyed on `orbitRadius` and `targetPosition`: a new value rebuilds the manipulator and `SceneView` glides the camera there (~0.6 s) instead of cutting — derive the radius once, don't animate it. Optional `inertia` (default `Inertia.Default`; `Inertia.None` = no coast). See "Camera" |
 | `rememberCameraManipulator(orbitHomePosition?, targetPosition?)` | `CameraManipulator?` | Same, with an explicit eye position. `orbitHomePosition` is the camera's **absolute** eye position, never an offset from `targetPosition`; under the default `autoCenterContent = true` the subject is framed from `\|orbitHomePosition\|` — see "Camera". Name kept as-is (not `eyePosition`) to stay binary-compatible on major version 4 |
 | `rememberOnGestureListener(...)` | `OnGestureListener` | Gesture callbacks for tap/drag/pinch |
 | `rememberViewNodeManager()` | `ViewNode.WindowManager` | Required for ViewNode composables |
 | `rememberSurfaceMirrorer()` | `SurfaceMirrorer` | In-app video recording — mirror frames to a `MediaRecorder` surface, no MediaProjection (see "Record the scene to MP4") |
-| `rememberView(engine)` | `View` | Filament view (one per viewport) |
+| `rememberView(engine)` | `View` | Filament view (one per viewport), PBR Neutral tone mapper |
 | `rememberARView(engine)` | `View` | AR-tuned view (Filmic tone mapper — round-trips the camera background, #1434) |
 | `rememberRenderer(engine)` | `Renderer` | Filament renderer (one per window) |
 | `rememberScene(engine)` | `Scene` | Filament scene graph |
@@ -4247,6 +4254,38 @@ override fun update(deltaTime: Float) {          // already ticked every frame
 ``` Note that with an ORBIT manipulator the zoom is centred on the orbit pivot,
 not anchored under the finger: Filament's `OrbitManipulator::scroll` moves the eye along the gaze
 and ignores `x`/`y`.
+
+### Gesture inertia
+
+Every gesture that moves something coasts after the finger lifts, like a list fling: camera
+orbit, pan and pinch-zoom, and the drag / twist / pinch of an editable node (AR objects
+included). The release velocity is measured over the last 100 ms of the gesture (zero if the
+finger rested 40 ms before lifting), then decays exponentially with a 0.35 s time constant,
+integrated exactly so the coast is the same at any frame rate. A slow, deliberate drag stops
+where it is left; a new touch stops any coast on the spot; a pinch coast stops at the zoom or
+scale limit.
+
+```kotlin
+// Default: the camera coasts.
+SceneView(cameraManipulator = rememberCameraManipulator(orbitRadius = 3f))
+// A camera that stops dead on release.
+SceneView(cameraManipulator = rememberCameraManipulator(orbitRadius = 3f, inertia = Inertia.None))
+// A longer, floatier coast.
+SceneView(
+    cameraManipulator = rememberCameraManipulator(
+        orbitRadius = 3f,
+        inertia = Inertia(timeConstantSeconds = 0.6f),
+    )
+)
+```
+
+- `inertia` is applied to the stock `CameraGestureDetector.DefaultCameraManipulator` (also
+  settable as its `inertia` property); changing it does not rebuild the manipulator. A custom
+  manipulator gets `stopInertia()` on every touch-down (default no-op) and owns its own coast.
+- Node editing reads `Node.editingInertia` on the node that owns the edit — see "Editable nodes".
+- `InertiaTracker` (`sceneview-core`, package `io.github.sceneview.gesture`) is the shared
+  maths: `addSample` the cumulative position, `release` on finger up, `advance(dt, out)` per
+  frame.
 
 ### How far `orbitHomePosition` actually puts the camera
 
@@ -4459,6 +4498,54 @@ val manipulator = rememberCameraManipulator(orbitHomePosition = fit.eye, targetP
 On the axis that binds, the projected box spans exactly `±widthFill` (or `±heightFill`)
 of the half-view; on the other it is centred and spans less. The camera is assumed
 upright (world `+Y` up); looking straight down, "right" is world `+X`.
+
+### Cinematic camera — shots, transitions, paths, reveal, tour (`io.github.sceneview.camera`)
+
+Camera *moves* as a cinematographer calls them, pure Kotlin and JVM-tested (#4631). A
+`CameraShot` is an orbit around a target — azimuth from `+Z` towards `+X`, elevation above
+the horizon, distance — not an eye position, so two shots of one subject interpolate on an
+arc *around* it, never through it. Every move is a function of time: the same shot lands at
+30, 60 or 120 Hz, and a stalled frame advances by at most 50 ms (runs long, never jumps).
+
+```kotlin
+import io.github.sceneview.camera.*
+
+val home = CameraShot(target = Position(0f, 0.8f, 0f), azimuthDegrees = 35f, elevationDegrees = 32f, distance = 4f)
+val plan = home.copy(elevationDegrees = 84f)          // same room, seen as a floor plan
+val eye = home.eye                                     // derived; CameraShot.lookingAt(eye, target) inverts it
+
+// One animator owns the camera. Wrap any gesture manipulator with it: while a move plays the
+// camera is the animator's; the first touch interrupts and the gesture takes over without a cut.
+val animator = remember { CameraAnimator(initial = home) }
+SceneView(
+    cameraManipulator = rememberCinematicCameraManipulator(animator, inner = rememberCameraManipulator(orbitRadius = 4f)),
+) { … }
+
+LaunchedEffect(model) { animator.play(CameraPath.reveal(home)) }   // the entrance: high, wide, 75° round, cranes onto home in 2.8 s
+Button(onClick = { animator.flyTo(plan) }) { Text("Plan") }        // 700 ms, ease-expressive, no cut
+Button(onClick = { animator.play(CameraPath.tour(home)) }) { Text("Tour") }   // one slow lap, 18 s, loops seamlessly
+Button(onClick = { animator.flyTo(otherRoom) })                     // another subject: pulls back at mid-flight (fly-over), lands exactly
+```
+
+- `CameraTransition(from, to, durationSeconds, easing = CameraEasing.Expressive, flyOver = 0.5f)`
+  and the pure `cameraTransition(from, to, progress)` for a scroll or slider. `flyOver` adds
+  that share of the targets' separation to the distance at mid-flight (sine bump, exact ends);
+  `0f` is a straight carry. `CameraEasing.Expressive` is DESIGN.md's `cubic-bezier(0.2, 0, 0, 1)`.
+- `CameraPath(keyframes, easing, shortestArc = true, loop = false)` — Catmull-Rom over the
+  orbit parameters: the camera passes each `CameraKeyframe(shot, seconds)` on time with
+  continuous velocity across it. `shortestArc` unwraps azimuths the short way; a full turn is
+  spelled `azimuthDegrees + 360f` with it off. Builders: `reveal(home)`, `tour(around, turns)`,
+  `through(shots, secondsPerShot)`. A looping path's azimuth keeps counting (`home + 720°` on
+  lap two); `CameraShot.normalizeDegrees` wraps it for display.
+- `CameraAnimator`: `play(path, onFinished)`, `flyTo(to, durationSeconds = 0.7f)` from
+  wherever the camera is, `snapTo`, `advance(dt): CameraShot`, `interrupt(): CameraShotVelocity`.
+  Without a `SceneView`, drive it yourself: `cameraNode.transform = animator.advance(dt).transform()`.
+- Hand-off: an inner manipulator that implements `CameraShotSink` gets `takeOver(shot, velocity)`
+  on the first touch and carries on at that speed; any other manipulator (the default orbit one
+  included) gets a 350 ms glide from the move's last frame onto its own pose.
+
+`CinematicHero` (below) and `applyCinematicOrbit` stay as they are: a hero is scroll-driven,
+these are time-driven. Pick the animator when the move has a beginning and an end.
 
 ---
 
@@ -6396,7 +6483,7 @@ by `samples/android-demo/scripts/collate-demos.sh` — never edit between the ma
 ### Developer tools
 
 - `ar-rerun` — 3D Scan. Move around a space and watch it take shape in 3D.
-- `debug-overlay` — Debug Overlay. Find the node budget for smooth 3D rendering on your device.
+- `debug-overlay` — Performance Test. Find the node budget for smooth 3D rendering on your device.
 
 ### Place in AR
 
@@ -6406,7 +6493,7 @@ by `samples/android-demo/scripts/collate-demos.sh` — never edit between the ma
 - `ar-geospatial-anchors` — Geospatial Anchors. Place objects at outdoor locations.
 - `ar-cloud-anchor` — Cloud Anchors. Persistent anchors shared across devices.
 - `ar-pool` — Pool in the garden. A real-size pool dug into your lawn.
-- `ar-measure` — Measure. Add two points, read the distance.
+- `ar-measure` — Measure. Distances, walls rising to their height, whole rooms.
 - `ar-plane-node` — Plane Lifecycle. Watch surfaces appear and update.
 - `ar-plane-renderer-v2` — Plane Renderer V2. Soft dots show each surface your phone finds.
 
@@ -6422,21 +6509,18 @@ by `samples/android-demo/scripts/collate-demos.sh` — never edit between the ma
 ### Understand the world
 
 - `ar-face` — Augmented Faces. Face mesh tracking with 3D overlays.
-- `ar-people-occlusion` — People Occlusion. Real people hide virtual objects.
+- `ar-people-occlusion` — People Occlusion. A person walking in front hides the model.
 - `ar-depth-occlusion` — Depth Occlusion. Real-world depth hides virtual objects.
 - `point-and-ask` — Point & Ask. On-device Gemini Nano explains the AR scene.
-- `ar-body-tracker` — AR Body Tracker. Follow a person with a live skeleton.
+- `ar-body-tracker` — Squat Coach. Counts your squats out loud and tells you when to go lower.
 - `ar-scene-semantics` — Scene Semantics. Recognize parts of the outdoor scene.
 - `ar-depth-visualization` — Depth Visualization. False-color depth map blended with camera.
 - `ar-image` — Image Tracking. Detect and track reference images.
-- `ar-depth-collider` — Depth Collider. Virtual balls bounce off the real floor.
-- `ar-fog` — AR Fog. Distance fog over real and virtual geometry.
-- `ar-depth-of-field` — AR Depth of Field. Tap to focus, real-world bokeh blur.
+- `ar-depth-of-field` — Portrait focus. Keep the sneaker sharp, blur the room behind it.
 - `ar-point-cloud` — Point Cloud. See the points your camera tracks.
 - `ar-raw-depth-point-cloud` — Raw Depth Point Cloud. Explore the shape of your surroundings.
 - `ar-ml-object-label` — ML Kit Object Labels. Recognize objects and label them in space.
-- `ar-image-stabilization` — Image Stabilization. Electronic stabilization of the AR feed.
-- `ar-scene-mesh` — Scene Geometry. Explore the shape of nearby buildings.
+- `ar-image-stabilization` — Image Stabilization. Steadies the camera feed. The difference is subtle.
 - `ar-xr` — Android XR (preview). Hand skeleton and face mesh on Android XR headsets.
 
 <!-- END GENERATED DEMOS -->
@@ -8344,8 +8428,11 @@ optional (default `1`); `a < 1` makes the canvas see-through so the page behind 
 covers the background.
 
 Tone mapping: the Kotlin/JS bundle (`sceneview-web.js`) and the hand-written website viewer
-(`website-static/js/sceneview.js`) grade with Filmic, the Android default
-(`SceneFactories.createView`), so a model is graded the same way on Android and on the web.
+(`website-static/js/sceneview.js`) grade with Filmic. Android's `SceneFactories.createView`
+grades with PBR Neutral, which keeps base colours as authored; Filament's JavaScript bindings
+expose no PBR Neutral tone mapper, so the web keeps Filmic and shows light, pastel base colours
+a little paler than Android does. Web primitives take linear colours (`createBox` etc. write
+`baseColorFactor` as given): convert an sRGB hex first, or it renders pastel.
 Neither grades the background: both show the colour they are given (hand-written viewer:
 sRGB 0-1, default `#333C57`), and a transparent canvas leaves the page behind it untouched.
 
