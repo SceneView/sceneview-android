@@ -27,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.DeleteSweep
+import androidx.compose.material.icons.rounded.Done
 import androidx.compose.material.icons.rounded.Height
 import androidx.compose.material.icons.rounded.IosShare
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -99,8 +100,9 @@ import io.github.sceneview.demo.demos.internal.MeasureFigure
 import io.github.sceneview.demo.demos.internal.MeasureFigureNumbers
 import io.github.sceneview.demo.demos.internal.MeasureMode
 import io.github.sceneview.demo.demos.internal.MeasurePhase
+import io.github.sceneview.demo.demos.internal.MeasurePlane
+import io.github.sceneview.demo.demos.internal.MeasurePlaneKind
 import io.github.sceneview.demo.demos.internal.MeasureSnap
-import io.github.sceneview.demo.demos.internal.MeasureSnapContext
 import io.github.sceneview.demo.demos.internal.MeasureSnapKind
 import io.github.sceneview.demo.demos.internal.MeasureUnitSystem
 import io.github.sceneview.demo.demos.internal.WALL_MAX_HEIGHT
@@ -111,12 +113,13 @@ import io.github.sceneview.demo.demos.internal.measureClosesOutline
 import io.github.sceneview.demo.demos.internal.measureDistanceMeters
 import io.github.sceneview.demo.demos.internal.measureFigureNumbers
 import io.github.sceneview.demo.demos.internal.measureFigureOutline
+import io.github.sceneview.demo.demos.internal.measureFirstFloorPoint
+import io.github.sceneview.demo.demos.internal.measureFloorLevel
 import io.github.sceneview.demo.demos.internal.measureLabelScale
 import io.github.sceneview.demo.demos.internal.measureLerp
 import io.github.sceneview.demo.demos.internal.measureMidpoint
 import io.github.sceneview.demo.demos.internal.measureOnLevel
-import io.github.sceneview.demo.demos.internal.measureOutlineCorners
-import io.github.sceneview.demo.demos.internal.measureOutlineEdges
+import io.github.sceneview.demo.demos.internal.measurePlaneSnapTargets
 import io.github.sceneview.demo.demos.internal.measurePointsMoved
 import io.github.sceneview.demo.demos.internal.measureRayFloorHit
 import io.github.sceneview.demo.demos.internal.measureRoomHeightFromRay
@@ -350,7 +353,17 @@ fun ARMeasureDemo(onBack: () -> Unit) {
                 },
             )
         },
-        dock = listOf(
+        dock = listOfNotNull(
+            // Done ends the open chain; walls and rooms end themselves, so only Distance has it.
+            DockItem(
+                icon = Icons.Rounded.Done,
+                label = stringResource(R.string.demo_ar_measure_action_done),
+                onClick = {
+                    commit(board.finish())
+                    haptic.success()
+                },
+                enabled = board.canFinish,
+            ).takeIf { board.mode == MeasureMode.Distance },
             DockItem(
                 icon = Icons.AutoMirrored.Rounded.Undo,
                 label = stringResource(R.string.demo_ar_measure_action_undo),
@@ -548,6 +561,7 @@ private fun measureHint(board: MeasureBoard<Anchor>, aim: MeasureAimView?): Stri
             MeasureMode.Distance -> when {
                 board.phase == MeasurePhase.First -> R.string.demo_ar_measure_hint_first
                 aim?.closes == true -> R.string.demo_ar_measure_hint_close
+                board.canFinish -> R.string.demo_ar_measure_hint_chain
                 else -> R.string.demo_ar_measure_hint_second
             }
             MeasureMode.Wall -> when (board.phase) {
@@ -1218,6 +1232,7 @@ private fun findMeasureAim(
     val active = board.active
     val activeOutline = if (active != null) outlines.lastOrNull().orEmpty() else emptyList()
     val floorY = activeOutline.firstOrNull()?.y?.takeIf { mode != MeasureMode.Distance }
+    val planes = session?.trackedMeasurePlanes().orEmpty()
 
     var hit: MeasureHit? = null
     if (floorY != null) {
@@ -1225,16 +1240,20 @@ private fun findMeasureAim(
     }
     if (hit == null) hit = hitTestCenter(frame, session, x, y, allowDepth)
     val raw = hit ?: return null
-    val rawPosition = if (floorY != null) measureOnLevel(raw.position, floorY) else raw.position
+    val rawPosition = when {
+        floorY != null -> measureOnLevel(raw.position, floorY)
+        // The first corner of a wall or a room may be aimed on the wall's foot: drop it to the floor.
+        mode != MeasureMode.Distance -> measureFirstFloorPoint(raw.position, raw.planeKind, measureFloorLevel(planes))
+        else -> raw.position
+    }
+    // The level a wall or a room is traced on: its first point's, or the one being placed.
+    val level = if (mode == MeasureMode.Distance) null else floorY ?: rawPosition.y
 
     val pointPositions = board.allPoints.distinct().mapNotNull { anchor ->
         positions[anchor]?.let { if (floorY != null) measureOnLevel(it, floorY) else it }
     }
-    val outline = raw.planeOutline.orEmpty()
-    val context = MeasureSnapContext(
+    val context = measurePlaneSnapTargets(mode, planes, level).copy(
         points = pointPositions,
-        corners = if (mode == MeasureMode.Distance) measureOutlineCorners(outline) else emptyList(),
-        edges = if (mode == MeasureMode.Distance) measureOutlineEdges(outline) else emptyList(),
         previous = activeOutline.lastOrNull().takeIf { mode == MeasureMode.Distance },
     )
     val tolerance = measureSnapTolerance(measureDistanceMeters(origin, rawPosition))
@@ -1255,7 +1274,9 @@ private fun findMeasureAim(
         null
     }
     val snapped = snap.position
-    val createAnchor: () -> Anchor? = if (snap.kind == MeasureSnapKind.None && raw.createHitAnchor != null) {
+    val createAnchor: () -> Anchor? = if (snap.kind == MeasureSnapKind.None && snapped == raw.position &&
+        raw.createHitAnchor != null
+    ) {
         raw.createHitAnchor
     } else {
         { session?.createAnchor(Pose.makeTranslation(snapped.x, snapped.y, snapped.z)) }
@@ -1269,7 +1290,8 @@ private class MeasureHit(
     val position: Position,
     val source: MeasureHitSource,
     val createHitAnchor: (() -> Anchor?)?,
-    val planeOutline: List<Position>?,
+    /** How the hit plane faces; `null` off a plane. */
+    val planeKind: MeasurePlaneKind?,
 )
 
 /** Accuracy-ordered hit at the screen centre, without creating an anchor. */
@@ -1285,7 +1307,7 @@ private fun hitTestCenter(frame: Frame, session: Session?, x: Float, y: Float, a
             position = hit.hitPose.toPosition(),
             source = MeasureHitSource.Plane,
             createHitAnchor = { hit.takeIf { it.trackable.trackingState == TrackingState.TRACKING }?.createAnchor() },
-            planeOutline = plane.worldOutline(),
+            planeKind = plane.measureKind,
         )
     }
     if (allowDepth) {
@@ -1313,6 +1335,19 @@ private fun hitTestCenter(frame: Frame, session: Session?, x: Float, y: Float, a
     }
     return null
 }
+
+/** Every plane ARCore tracks right now, with its real polygon: the outlines the reticle snaps to. */
+private fun Session.trackedMeasurePlanes(): List<MeasurePlane> =
+    runCatching { getAllTrackables(Plane::class.java) }.getOrNull().orEmpty()
+        .filter { it.trackingState == TrackingState.TRACKING && it.subsumedBy == null }
+        .map { MeasurePlane(it.measureKind, it.worldOutline()) }
+
+private val Plane.measureKind: MeasurePlaneKind
+    get() = when (type) {
+        Plane.Type.HORIZONTAL_UPWARD_FACING -> MeasurePlaneKind.Upward
+        Plane.Type.HORIZONTAL_DOWNWARD_FACING -> MeasurePlaneKind.Downward
+        else -> MeasurePlaneKind.Vertical
+    }
 
 /** The plane's boundary polygon in world space — table edges and corners to snap to. */
 private fun Plane.worldOutline(): List<Position> {

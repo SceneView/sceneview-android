@@ -3,6 +3,7 @@
 package io.github.sceneview.demo.demos.internal
 
 import io.github.sceneview.math.Position
+import io.github.sceneview.triangulation.Earcut
 import kotlin.math.abs
 import kotlin.math.acos
 import kotlin.math.sqrt
@@ -213,6 +214,95 @@ fun closestPointOnSegment(p: Position, a: Position, b: Position): Position {
     return Position(a.x + abx * t, a.y + aby * t, a.z + abz * t)
 }
 
+// ── Tracked planes ──────────────────────────────────────────────────────────────────────────
+
+/** How a tracked plane faces, as far as snapping cares. */
+enum class MeasurePlaneKind {
+    /** Floor, table top, seat: a horizontal plane facing up. */
+    Upward,
+
+    /** A ceiling. */
+    Downward,
+
+    /** A wall, a cupboard front, a door. */
+    Vertical,
+}
+
+/**
+ * A plane ARCore is tracking, with its real boundary polygon in world space. These polygons
+ * are the only outlines the reticle snaps to: an edge or a corner is never guessed.
+ */
+data class MeasurePlane(val kind: MeasurePlaneKind, val outline: List<Position>)
+
+/** Heights within this of the floor count as the floor (ARCore's floor patches differ a little). */
+private const val LEVEL_TOLERANCE = 0.1f
+
+/** The floor's height: the lowest upward-facing plane, `null` until one is tracked. */
+fun measureFloorLevel(planes: List<MeasurePlane>): Float? =
+    planes.filter { it.kind == MeasurePlaneKind.Upward && it.outline.size >= 3 }
+        .minOfOrNull { plane -> plane.outline.sumOf { it.y.toDouble() }.toFloat() / plane.outline.size }
+
+/**
+ * Where the first point of a wall or a room goes for a hit on a [kind] plane (`null` for a
+ * depth or feature point). Aiming at the foot of a wall often lands on the wall itself, a
+ * few centimetres up: a wall hit drops straight down to the floor at [floorY], which is the
+ * corner the user means. Without a tracked floor, and for any other hit, the hit is kept.
+ */
+fun measureFirstFloorPoint(hit: Position, kind: MeasurePlaneKind?, floorY: Float?): Position =
+    if (kind == MeasurePlaneKind.Vertical && floorY != null) measureOnLevel(hit, floorY) else hit
+
+/**
+ * The corners and edges the reticle may lock onto, taken from tracked [planes] only.
+ *
+ * - [MeasureMode.Distance]: every plane's outline as it is in space — table edges, the floor's
+ *   edge, a wall's or a door's edge.
+ * - [MeasureMode.Wall] and [MeasureMode.Room] trace on the level [level] (the figure's floor):
+ *   the outlines of the upward planes at that level, and the foot of every vertical plane —
+ *   its real polygon dropped onto the level, an edge along the wall whose two ends are the
+ *   corners. `null` [level] (nothing to trace on yet) gives no target.
+ *
+ * Same snap radius for all of them: the caller passes one tolerance to [snapMeasureTarget].
+ */
+fun measurePlaneSnapTargets(mode: MeasureMode, planes: List<MeasurePlane>, level: Float?): MeasureSnapContext {
+    val corners = ArrayList<Position>()
+    val edges = ArrayList<Pair<Position, Position>>()
+    for (plane in planes) {
+        if (plane.outline.size < 3) continue
+        when {
+            mode == MeasureMode.Distance -> {
+                corners += measureOutlineCorners(plane.outline)
+                edges += measureOutlineEdges(plane.outline)
+            }
+            level == null -> Unit
+            plane.kind == MeasurePlaneKind.Upward && plane.outline.all { abs(it.y - level) <= LEVEL_TOLERANCE } -> {
+                val flat = plane.outline.map { measureOnLevel(it, level) }
+                corners += measureOutlineCorners(flat)
+                edges += measureOutlineEdges(flat)
+            }
+            plane.kind == MeasurePlaneKind.Vertical -> measureWallFootprint(plane.outline, level)?.let { foot ->
+                corners += foot.first
+                corners += foot.second
+                edges += foot
+            }
+        }
+    }
+    return MeasureSnapContext(corners = corners, edges = edges)
+}
+
+/**
+ * The foot of a vertical plane on the level [y]: its polygon dropped straight down, which is a
+ * segment along the wall. Its ends are the polygon's two horizontally farthest vertices.
+ */
+fun measureWallFootprint(outline: List<Position>, y: Float): Pair<Position, Position>? {
+    if (outline.size < 2) return null
+    val a = outline.maxByOrNull { horizontalDistance(outline.first(), it) } ?: return null
+    val b = outline.maxByOrNull { horizontalDistance(a, it) } ?: return null
+    if (horizontalDistance(a, b) < WALL_FOOT_MIN_LENGTH) return null
+    return measureOnLevel(a, y) to measureOnLevel(b, y)
+}
+
+private const val WALL_FOOT_MIN_LENGTH = 0.05f
+
 /** [p] moved onto the horizontal plane at height [y] — floor lines stay flat on the floor. */
 fun measureOnLevel(p: Position, y: Float): Position = Position(p.x, y, p.z)
 
@@ -239,7 +329,12 @@ fun measureWallHeightFromRay(
     a: Position,
     b: Position,
     spanSlack: Float = WALL_SPAN_SLACK,
-): Float? {
+): Float? = wallRayHit(origin, direction, a, b, spanSlack)?.height
+
+/** Where a camera ray crosses one wall: the height it reaches and how far along the ray. */
+private class WallRayHit(val height: Float, val rayDistance: Float)
+
+private fun wallRayHit(origin: Position, direction: Position, a: Position, b: Position, spanSlack: Float): WallRayHit? {
     val ex = b.x - a.x
     val ez = b.z - a.z
     val length = sqrt(ex * ex + ez * ez)
@@ -256,12 +351,14 @@ fun measureWallHeightFromRay(
     val hz = origin.z + direction.z * t
     val along = ((hx - a.x) * ex + (hz - a.z) * ez) / length
     if (along < -spanSlack || along > length + spanSlack) return null
-    return (hy - a.y).coerceIn(WALL_MIN_HEIGHT, WALL_MAX_HEIGHT)
+    val directionLength = sqrt(direction.x * direction.x + direction.y * direction.y + direction.z * direction.z)
+    return WallRayHit((hy - a.y).coerceIn(WALL_MIN_HEIGHT, WALL_MAX_HEIGHT), t * directionLength)
 }
 
 /**
- * Height aimed at across every wall of a floor outline: the nearest wall the ray actually
- * crosses wins, the way the eye reads "the wall I am looking at".
+ * Height aimed at across every wall of a floor outline: the wall the ray crosses first — the
+ * shortest distance along the aim — wins, the way the eye reads "the wall I am looking at".
+ * A long wall whose middle is far away still wins over a short one behind it.
  */
 fun measureRoomHeightFromRay(
     origin: Position,
@@ -271,20 +368,10 @@ fun measureRoomHeightFromRay(
 ): Float? {
     if (outline.size < 2) return null
     val segmentCount = if (closed && outline.size > 2) outline.size else outline.size - 1
-    var best: Float? = null
-    var bestDistance = Float.MAX_VALUE
-    for (i in 0 until segmentCount) {
-        val a = outline[i]
-        val b = outline[(i + 1) % outline.size]
-        val height = measureWallHeightFromRay(origin, direction, a, b, spanSlack = 0f) ?: continue
-        val mid = Position((a.x + b.x) / 2f, a.y, (a.z + b.z) / 2f)
-        val d = horizontalDistance(origin, mid)
-        if (d < bestDistance) {
-            bestDistance = d
-            best = height
-        }
-    }
-    return best
+    return (0 until segmentCount)
+        .mapNotNull { i -> wallRayHit(origin, direction, outline[i], outline[(i + 1) % outline.size], spanSlack = 0f) }
+        .minByOrNull { it.rayDistance }
+        ?.height
 }
 
 /**
@@ -356,48 +443,19 @@ fun measureClosesOutline(outline: List<Position>, candidate: Position, tolerance
     outline.size >= 3 && distance(outline.first(), candidate) <= tolerance * POINT_TOLERANCE_FACTOR
 
 /**
- * Ear-clipping triangulation of a simple polygon seen from above (x/z). Works for the
- * L- and T-shaped rooms a rectangle model cannot read. Returns indices into [outline];
- * empty for a degenerate or self-intersecting outline.
+ * Triangulation of a simple polygon seen from above (x/z), by SceneView's own
+ * [Earcut] (sceneview-core). Works for the L- and T-shaped rooms a rectangle model cannot
+ * read. Returns indices into [outline]; empty for a degenerate outline.
  */
 fun measureTriangulateXZ(outline: List<Position>): IntArray {
-    val n = outline.size
-    if (n < 3) return IntArray(0)
-    val ccw = signedAreaXZ(outline) > 0f
-    val remaining = MutableList(n) { it }
-    val result = ArrayList<Int>((n - 2) * 3)
-    var guard = 0
-    while (remaining.size > 3 && guard < n * n) {
-        guard++
-        val size = remaining.size
-        val ear = remaining.indices.firstOrNull { i ->
-            isEar(outline, remaining, remaining[(i - 1 + size) % size], remaining[i], remaining[(i + 1) % size], ccw)
-        } ?: return IntArray(0)
-        result += remaining[(ear - 1 + size) % size]
-        result += remaining[ear]
-        result += remaining[(ear + 1) % size]
-        remaining.removeAt(ear)
+    if (outline.size < 3) return IntArray(0)
+    val flat = DoubleArray(outline.size * 2)
+    outline.forEachIndexed { i, p ->
+        flat[i * 2] = p.x.toDouble()
+        flat[i * 2 + 1] = p.z.toDouble()
     }
-    if (remaining.size == 3) result.addAll(remaining)
-    return result.toIntArray()
+    return Earcut.triangulate(flat).toIntArray()
 }
-
-private fun isEar(outline: List<Position>, remaining: List<Int>, ia: Int, ib: Int, ic: Int, ccw: Boolean): Boolean {
-    val a = outline[ia]
-    val b = outline[ib]
-    val c = outline[ic]
-    val cross = crossXZ(a, b, c)
-    if (if (ccw) cross <= EPSILON else cross >= -EPSILON) return false
-    for (j in remaining) {
-        if (j == ia || j == ib || j == ic) continue
-        if (pointInTriangleXZ(outline[j], a, b, c)) return false
-    }
-    return true
-}
-
-/** z-x cross product so that a counter-clockwise turn seen from +Y is positive. */
-private fun crossXZ(a: Position, b: Position, c: Position): Float =
-    (b.z - a.z) * (c.x - b.x) - (b.x - a.x) * (c.z - b.z)
 
 private fun signedAreaXZ(outline: List<Position>): Float {
     if (outline.size < 3) return 0f
@@ -408,15 +466,6 @@ private fun signedAreaXZ(outline: List<Position>): Float {
         sum += c.z * n.x - n.z * c.x
     }
     return sum / 2f
-}
-
-private fun pointInTriangleXZ(p: Position, a: Position, b: Position, c: Position): Boolean {
-    val d1 = crossXZ(a, b, p)
-    val d2 = crossXZ(b, c, p)
-    val d3 = crossXZ(c, a, p)
-    val hasNegative = d1 < 0f || d2 < 0f || d3 < 0f
-    val hasPositive = d1 > 0f || d2 > 0f || d3 > 0f
-    return !(hasNegative && hasPositive)
 }
 
 // ── Motion and labels ───────────────────────────────────────────────────────────────────────

@@ -75,6 +75,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.ViewInAr
+import androidx.compose.material3.TextButton
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import io.github.sceneview.demo.R
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
@@ -329,7 +335,11 @@ private fun DownloadingContent(
         collector.join()
         result.fold(
             onSuccess = onReady,
-            onFailure = { onError(downloadFailedMsg) },
+            onFailure = {
+                // The class only: a message may carry a signed CDN URL.
+                android.util.Log.w("GalleryViewer", "Model download failed: ${it.javaClass.name}")
+                onError(downloadFailedMsg)
+            },
         )
     }
 
@@ -757,7 +767,57 @@ private fun RenderContent(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = SceneViewTokens.Space.md),
         )
+        ModelViewerAppAction(model = model)
     }
+}
+
+/**
+ * The one discreet way from this viewer to the 3D AR Model Viewer app (#4622): "Open in 3D AR
+ * Model Viewer" when it is installed, "Get 3D AR Model Viewer" (its Play listing) when it is
+ * not, nothing for a model that app cannot open. A text button, under the hint, so the model
+ * stays the screen's subject. The install check runs again on every resume, so coming back
+ * from the store after installing turns "Get" into "Open".
+ */
+@Composable
+private fun ModelViewerAppAction(model: GalleryModel) {
+    val context = LocalContext.current
+    var installed by remember { mutableStateOf(context.isModelViewerAppInstalled()) }
+    LifecycleResumeEffect(Unit) {
+        installed = context.isModelViewerAppInstalled()
+        onPauseOrDispose {}
+    }
+    val handoff = ModelViewerAppLink.handoff(model, installed) ?: return
+    TextButton(
+        onClick = { context.launchModelViewerHandoff(handoff) },
+        modifier = Modifier
+            .padding(horizontal = SceneViewTokens.Space.xs)
+            .testTag(GalleryViewerTestTags.MODEL_VIEWER_APP),
+    ) {
+        Icon(
+            imageVector = if (handoff is ModelViewerHandoff.OpenInApp) {
+                Icons.AutoMirrored.Filled.OpenInNew
+            } else {
+                Icons.Filled.ViewInAr
+            },
+            contentDescription = null,
+            modifier = Modifier.size(ButtonDefaults.IconSize),
+        )
+        Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+        Text(
+            text = stringResource(
+                if (handoff is ModelViewerHandoff.OpenInApp) {
+                    R.string.gallery_open_in_model_viewer_app
+                } else {
+                    R.string.gallery_get_model_viewer_app
+                },
+            ),
+        )
+    }
+}
+
+/** Test tags of the gallery viewer. */
+object GalleryViewerTestTags {
+    const val MODEL_VIEWER_APP = "gallery-viewer-model-viewer-app"
 }
 
 // ── Error ─────────────────────────────────────────────────────────────────

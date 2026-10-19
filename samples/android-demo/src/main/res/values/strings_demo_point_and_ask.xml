@@ -6,7 +6,6 @@
     <!-- Top status pill -->
     <string name="demo_point_and_ask_status_checking">Checking Gemini Nano availability…</string>
     <string name="demo_point_and_ask_status_ready">Long-press: drop a 3D prop · Tap: ask the on-device AI</string>
-    <string name="demo_point_and_ask_status_limited">Gemini Nano isn\'t ready — see below</string>
     <string name="demo_point_and_ask_status_thinking">✦ Gemini Nano is thinking…</string>
 
     <!-- Bottom cards -->

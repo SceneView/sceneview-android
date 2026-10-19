@@ -78,6 +78,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
@@ -228,6 +229,21 @@ fun RootScreen(
             snap()
         }
     }
+    // Home and the gallery cross-fade instead (#4622). The gallery is a page of the
+    // Showcase tab, not a peer tab, and the fade-through left a beat where neither
+    // page was drawn: the frame that tears the home's 3D hero down landed in it and
+    // held an empty surface on screen. Cross-fading, the gallery is already opaque
+    // when the home leaves.
+    val galleryFadeSpec = remember(motionEnabled) {
+        if (motionEnabled) {
+            tween<Float>(
+                durationMillis = SceneViewTokens.Duration.mediumMillis,
+                easing = SceneViewTokens.Ease.expressive,
+            )
+        } else {
+            snap()
+        }
+    }
 
     // Play in-app update: one snackbar that goes "Update available" · Update → "Waiting for
     // Google Play…" → "Downloading update… 42 %" → "Update ready" · Restart (#3947). It sits
@@ -298,19 +314,25 @@ fun RootScreen(
             AnimatedContent(
                 targetState = selectedTab to galleryOpen,
                 transitionSpec = {
-                    // Material fade-through: the outgoing surface leaves before the
-                    // incoming one arrives, both shrinking a touch towards the page.
-                    // Not a shared axis — these are peers, and a sideways slide would
-                    // claim a direction the bottom bar does not have. Nothing overlaps
-                    // at full opacity, so the AR tab is never seen through the
-                    // catalogue on its way in.
-                    (
-                        fadeIn(tabEnterSpec) +
-                            scaleIn(tabEnterSpec, initialScale = TAB_FADE_THROUGH_SCALE)
-                        ) togetherWith (
-                        fadeOut(tabExitSpec) +
-                            scaleOut(tabExitSpec, targetScale = TAB_FADE_THROUGH_SCALE)
-                        ) using SizeTransform(clip = false)
+                    if (initialState.first == targetState.first) {
+                        // Home ↔ gallery, inside the Showcase tab: cross-fade.
+                        fadeIn(galleryFadeSpec) togetherWith
+                            fadeOut(galleryFadeSpec) using SizeTransform(clip = false)
+                    } else {
+                        // Material fade-through: the outgoing surface leaves before the
+                        // incoming one arrives, both shrinking a touch towards the page.
+                        // Not a shared axis — these are peers, and a sideways slide would
+                        // claim a direction the bottom bar does not have. Nothing overlaps
+                        // at full opacity, so the AR tab is never seen through the
+                        // catalogue on its way in.
+                        (
+                            fadeIn(tabEnterSpec) +
+                                scaleIn(tabEnterSpec, initialScale = TAB_FADE_THROUGH_SCALE)
+                            ) togetherWith (
+                            fadeOut(tabExitSpec) +
+                                scaleOut(tabExitSpec, targetScale = TAB_FADE_THROUGH_SCALE)
+                            ) using SizeTransform(clip = false)
+                    }
                 },
                 label = "root-tab",
             ) { (tab, gallery) ->
@@ -319,6 +341,7 @@ fun RootScreen(
                 RootTab.Showcase -> if (gallery) {
                     ExploreTabScreen(
                         onBack = { galleryOpen = false },
+                        enterSettled = transition.currentState == EnterExitState.Visible,
                         curatedSamples = curatedSamplesForExplore(),
                         onSampleClick = { sample ->
                             Telemetry.nextOpenSource = OpenSource.Other

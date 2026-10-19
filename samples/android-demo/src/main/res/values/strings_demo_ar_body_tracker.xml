@@ -6,11 +6,25 @@
      this file or `strings.xml` — see #1870. -->
 <resources>
     <string name="demo_ar_body_tracker_title">Squat Coach</string>
-    <string name="demo_ar_body_tracker_subtitle">Counts your squats and tells you when to go lower</string>
-    <string name="demo_ar_body_tracker_explainer">Prop the phone up, step back until your whole body is on screen, and squat. Each rep counts when your knees bend past about 100° and you stand back up. The pose is read on the phone, from the camera image — nothing leaves the device. Reset sets the count back to zero.</string>
+    <string name="demo_ar_body_tracker_subtitle">Counts your squats out loud and tells you when to go lower</string>
+    <string name="demo_ar_body_tracker_explainer">Stand the phone up at about hip height with the screen facing you, step back until your whole body is on screen, and squat. Each rep counts — out loud — when your knees bend past about 100° and you stand back up; a squat that stops short gets a “Go lower”. The pose is read on the phone, from the camera image — nothing leaves the device. Reset sets the count back to zero.</string>
+    <!-- Camera picker in the controls sheet. -->
+    <string name="demo_squat_camera_label">Camera</string>
+    <string name="demo_squat_camera_front">Front</string>
+    <string name="demo_squat_camera_back">Back</string>
+    <string name="demo_squat_camera_front_hint">You squat facing the screen and see the count.</string>
+    <string name="demo_squat_camera_back_hint">For filming someone else squatting.</string>
+    <string name="demo_squat_camera_front_unavailable">The front camera could not start on this phone, so the back camera is on. Tap Front to try again.</string>
+    <!-- Spoken-count switch in the controls sheet. -->
+    <string name="demo_squat_voice">Spoken count</string>
+    <string name="demo_squat_voice_hint">Says each rep out loud, and “Go lower” when a squat is too shallow</string>
+    <!-- Said out loud when a squat stops short of depth. Two words at most. -->
+    <string name="demo_squat_voice_shallow">Go lower</string>
     <string name="demo_ar_body_tracker_status_no_model">Squat counting is unavailable right now — the camera still works.</string>
     <!-- Shown while the camera is live but no legs are visible yet. One line at card size. -->
     <string name="demo_ar_body_tracker_hint_aim">Step back until your whole body is on screen</string>
+    <!-- Same hint with the back camera, filming someone else. -->
+    <string name="demo_ar_body_tracker_hint_aim_back">Frame the whole body of the person squatting</string>
     <string name="demo_squat_feedback_ready">Ready — squat when you are</string>
     <string name="demo_squat_feedback_lower">Lower</string>
     <string name="demo_squat_feedback_stand_up">Good depth — stand up</string>
