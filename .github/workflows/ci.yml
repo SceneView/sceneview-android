@@ -136,6 +136,7 @@ jobs:
     timeout-minutes: 10
     outputs:
       android: ${{ steps.filter.outputs.android }}
+      library: ${{ steps.filter.outputs.library }}
       web: ${{ steps.filter.outputs.web }}
       flutter: ${{ steps.filter.outputs.flutter }}
       kmp: ${{ steps.filter.outputs.kmp }}
@@ -232,6 +233,12 @@ jobs:
             # broke every Play deploy from `main` at `buildReleasePreBundle`.
             build-system:
               - *shared
+            library:
+              - *shared
+              - 'sceneview/**'
+              - 'arsceneview/**'
+              - 'sceneview-core/**'
+              - 'sceneview-compose/**'
             android:
               - *shared
               - 'sceneview/**'
@@ -326,6 +333,7 @@ jobs:
         env:
           VERDICTS: |
             android=${{ steps.filter.outputs.android }}
+            library=${{ steps.filter.outputs.library }}
             web=${{ steps.filter.outputs.web }}
             flutter=${{ steps.filter.outputs.flutter }}
             kmp=${{ steps.filter.outputs.kmp }}
@@ -561,14 +569,10 @@ jobs:
 
       - uses: ./.github/actions/setup-gradle
 
-      # `:samples:android-demo:lintDebug` is here because it was NOT, and that gap is
-      # the whole of #3660: three Compose lint errors sat on `main` behind a green
-      # "Lint" job, because this step only ever linted the two library modules while
-      # the Detekt step below already covered the demo. Local `lintDebug` was the only
-      # thing that saw them. The demo's release-secret guard (#1915) hangs off
-      # `assembleRelease` only, so the debug lint variant needs no secrets.
+      # The demo checks its library dependencies, so this single task covers
+      # the Android source graph without separate library analyses.
       - name: Lint
-        run: ./gradlew :sceneview:lintDebug :arsceneview:lintDebug :samples:android-demo:lintDebug --stacktrace
+        run: ./gradlew :samples:android-demo:lintDebug --stacktrace
 
       # detekt is applied to every Kotlin Android/KMP subproject in
       # build.gradle with a hand-tuned config (buildSrc/config/detekt/detekt.yml).
@@ -604,10 +608,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: lint-reports
-          path: |
-            sceneview/build/reports/lint-results-debug.html
-            arsceneview/build/reports/lint-results-debug.html
-            samples/android-demo/build/reports/lint-results-debug.html
+          path: samples/android-demo/build/reports/lint-results-debug.html
           if-no-files-found: ignore
 
   # ── PR-blocking unit-test gate ───────────────────────────────────────────
@@ -754,14 +755,14 @@ jobs:
   # apiDump` fails this check and blocks the merge. This is the binary-level
   # guard for the exact signatures `llms.txt` promises.
   #
-  # Path-gated on `android` exactly like `unit-test` (the `android` filter
-  # includes `sceneview-core/**`): a docs-only PR reports it `skipped`, which
+  # Path-gated on the four modules whose ABI is validated: a docs-only PR
+  # reports it `skipped`, which
   # branch protection grades as passing. It is NOT advisory: a red `apiCheck`
   # must fail the PR.
   api-check:
     name: API compatibility
     needs: changes
-    if: inputs.force-all || needs.changes.outputs.android == 'true'
+    if: inputs.force-all || needs.changes.outputs.library == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
 

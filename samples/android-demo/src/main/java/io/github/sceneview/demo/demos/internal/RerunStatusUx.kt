@@ -15,9 +15,9 @@ const val RERUN_INTRO: String =
 
 /** Atop the sheet, on every screen of the demo: what it records, and where that stays. */
 const val RERUN_REPLAY_INTRO: String =
-    "\"Record your room\" keeps the camera's path, its photos, the surfaces and the points, then " +
-        "replays the room in 3D. \"Watch a sample session\" plays a real room recorded the same way. " +
-        "Your sessions stay on this phone until you share or delete them."
+    "\"Start scanning\" keeps the camera's path, its photos, the surfaces and the points, then " +
+        "shows the space in 3D. \"See an example\" plays a real room scanned the same way. " +
+        "Your scans stay on this phone until you share or delete them."
 
 /** The status line over the camera: a dot, a [title] and a quieter [detail] line. */
 data class RerunStatusUx(

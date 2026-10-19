@@ -77,8 +77,8 @@ name: Device QA
 #
 #   web      — Playwright on ubuntu-latest. Cheap, always feasible. Per-push.
 #              BLOCKING (not continue-on-error).
-#   android  — Maestro on a KVM-accelerated emulator (ubuntu-latest). Heavy
-#              but feasible on GitHub-hosted runners. Per-push. ADVISORY.
+#   android  — Maestro on a KVM-accelerated emulator (ubuntu-latest).
+#              Nightly/manual only. ADVISORY.
 #   ar       — ARCore replay harness on the KVM emulator (ubuntu-latest).
 #              Per-push. ADVISORY.
 #   ios      — Maestro on an iOS Simulator (#2803). NIGHTLY + release-checkpoint
@@ -253,6 +253,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: device-qa-report-web
+          retention-days: 7
           path: |
             device-qa-report.json
             device-qa-artifacts/
@@ -292,6 +293,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: android-demo-debug-apk
+          retention-days: 3
           # qa-android-demos.sh expects the APK at this exact path and skips
           # its own build when it is present — the emulator jobs restore the
           # artifact into this directory before invoking device-qa.sh.
@@ -317,7 +319,7 @@ jobs:
     # Explicit, not the implicit `success()`: that one also requires every
     # ANCESTOR to have succeeded, and `changes` is skipped on dispatch and on
     # the nightly — the implicit check would skip this leg exactly there.
-    if: ${{ !cancelled() && needs.build-android-apk.result == 'success' }}
+    if: ${{ github.event_name != 'push' && !cancelled() && needs.build-android-apk.result == 'success' }}
     # 45 min, same as the `ar` leg: with the store keys set, the keyed Gradle
     # rebuild (#2343) runs before the emulator boot and the Maestro flow, and a
     # cold cache must not get the job cancelled (continue-on-error does not
@@ -426,6 +428,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: device-qa-report-android
+          retention-days: 7
           path: |
             device-qa-report.json
             device-qa-artifacts/
@@ -518,6 +521,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: device-qa-report-ar
+          retention-days: 7
           path: |
             device-qa-report.json
             device-qa-artifacts/
@@ -612,6 +616,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: device-qa-report-ios
+          retention-days: 7
           path: |
             device-qa-report.json
             device-qa-artifacts/

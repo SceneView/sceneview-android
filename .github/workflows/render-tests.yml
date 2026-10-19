@@ -267,6 +267,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: android-library-render-screenshots
+          retention-days: 7
           path: render-output/
           if-no-files-found: ignore
 
@@ -376,6 +377,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: android-demo-screenshots
+          retention-days: 7
           path: demo-screenshots/
           if-no-files-found: ignore
 
@@ -422,10 +424,10 @@ jobs:
   # annotates a shortfall, so "green" can no longer mean "compared nothing".
   demo-render-goldens:
     name: Unified-demo render goldens (emulator)
-    # Advisory leg — push/nightly/dispatch only, never on a PR (#3216).
+    # Advisory leg — schedule/dispatch only (#4448).
     needs: changes
     if: >-
-      ${{ github.event_name != 'pull_request' && !cancelled()
+      ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && !cancelled()
       && (needs.changes.result != 'success' || needs.changes.outputs.android == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -654,6 +656,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: ar-demo-playback-screenshots
+          retention-days: 7
           path: ar-screenshot-output/
           if-no-files-found: ignore
 
@@ -780,14 +783,16 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: ios-render-screenshots
+          retention-days: 7
           path: samples/ios-demo/ios-render-screenshots/
           if-no-files-found: ignore
 
       - name: Upload xcresult bundle
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@v7
         with:
           name: ios-xcresult
+          retention-days: 7
           path: samples/ios-demo/TestResults.xcresult
           if-no-files-found: ignore
 
@@ -845,6 +850,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: web-playwright-report
+          retention-days: 7
           path: samples/web-demo/playwright-report/
           if-no-files-found: ignore
 
@@ -853,5 +859,6 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: web-render-screenshots
+          retention-days: 7
           path: samples/web-demo/test-results/
           if-no-files-found: ignore
