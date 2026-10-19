@@ -179,7 +179,9 @@ final class CosmosSpacetimeTests: XCTestCase {
         XCTAssertEqual((S.baseColor * 255).rounded(.toNearestOrEven), SIMD3(0x1C, 0x26, 0x38))
         XCTAssertEqual((S.gridColor * 255).rounded(.toNearestOrEven), SIMD3(0xA4, 0xC1, 0xFF))
         XCTAssertEqual(S.gridGlow(0), 1.6, accuracy: 1e-12)
-        XCTAssertEqual(S.gridGlow(S.gridFadeStart), 1, accuracy: 1e-12)
+        // The well's extra glow is gone by its radius; the fade is full until fadeStart.
+        XCTAssertEqual(S.gridGlow(S.gridFadeStart), 1 + S.gridWellGain * (1 - S.smoothstep(0, S.gridWellRadius, S.gridFadeStart)), accuracy: 1e-12)
+        XCTAssertLessThan(S.gridGlow(S.gridWellRadius), 1)
         XCTAssertEqual(S.gridGlow(S.gridFadeEnd), 0, accuracy: 1e-12)
         XCTAssertEqual(S.gridGlow(S.rim), 0, accuracy: 1e-12)
         // A line at full legibility: core and halo on it, nothing 5 px away.
@@ -190,7 +192,8 @@ final class CosmosSpacetimeTests: XCTestCase {
         // The texture's levels: a 256-texel cell down to one texel, the last ones blank.
         let levels = CosmosSpacetimeScene.gridLevels()
         XCTAssertEqual(levels.map(\.width), [256, 128, 64, 32, 16, 8, 4, 2, 1])
-        XCTAssertEqual(levels[8].pixels.max(), 0)
+        // Premultiplied colour, alpha 1: the last level carries no colour.
+        XCTAssertEqual(levels[8].pixels.enumerated().filter { $0.offset % 4 != 3 }.map(\.element).max(), 0)
         // Row 0 (v = 1) is the brightest glow; on it the line, at u = 0, outshines mid-cell.
         XCTAssertGreaterThan(levels[0].pixels[0], levels[0].pixels[4 * 128])
     }
