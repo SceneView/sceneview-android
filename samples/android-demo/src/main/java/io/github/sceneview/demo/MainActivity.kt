@@ -68,6 +68,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.ui.platform.LocalContext
+import io.github.sceneview.demo.feedback.ArTrackingHistory
 import io.github.sceneview.demo.feedback.BugReportSheet
 import io.github.sceneview.demo.feedback.CurrentRootScreen
 import io.github.sceneview.demo.feedback.FeedbackOpenRequest
@@ -144,6 +145,8 @@ class MainActivity : ComponentActivity() {
         Telemetry.ensureInit(this)
         // Clean up any feedback recording stranded in the cache by a prior run.
         sweepStaleFeedbackMedia(this)
+        // Keep the AR tracking lines for the bug report past the log buffer (#4529).
+        ArTrackingHistory.start()
         // HD pack: queue the Wi-Fi-only download of the demo's full-resolution models. A no-op
         // once they are on the device or after the user removed them in About. Off the main
         // thread: it reads the bundled manifest and checks the files on disk.
