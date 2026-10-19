@@ -29,6 +29,7 @@ import dev.romainguy.kotlin.math.Float2
 import dev.romainguy.kotlin.math.Float3
 import io.github.sceneview.RenderQuality
 import io.github.sceneview.SceneView
+import io.github.sceneview.createARView
 import io.github.sceneview.ar.scene.PlaneRenderer
 import io.github.sceneview.demo.DemoScaffold
 import io.github.sceneview.demo.R
@@ -44,6 +45,7 @@ import io.github.sceneview.math.Rotation
 import io.github.sceneview.rememberCameraManipulator
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberMaterialLoader
+import io.github.sceneview.rememberView
 import io.github.sceneview.sample.ui.LabeledSlider
 import kotlin.math.PI
 import kotlin.math.cos
@@ -189,6 +191,10 @@ fun PlaneGridPreviewDemo(onBack: () -> Unit) {
             engine = engine,
             materialLoader = materialLoader,
             environment = environment,
+            // The AR view, not the plain SceneView one: since #4595 SceneView tone-maps with PBR
+            // Neutral while ARSceneView keeps Filmic (createARView), and the plane marks are tuned
+            // against Filmic. Same view as AR, so the preview shows what AR renders.
+            view = rememberView(engine) { createARView(engine) },
             // Match ARSceneView's render pipeline: the AR view runs with bloom + SSAO OFF
             // (RenderQuality.Performance is the documented "AR camera-feed" preset). The plain
             // SceneView default keeps bloom ON, which bleeds the translucent marks into a

@@ -19,6 +19,8 @@ import io.github.sceneview.ar.arcore.isTracking
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.material.setParameter
 import io.github.sceneview.safeDestroyMaterialInstance
+import io.github.sceneview.safeDestroyTexture
+import java.nio.ByteBuffer
 import kotlin.math.max
 import kotlin.math.min
 
@@ -129,12 +131,19 @@ class PlaneRenderer(
             maxUpdatesPerSecond = value
         }
 
+    private val placeholderTexture = LazyOwned(
+        create = { createPlaceholderTexture(engine) },
+        release = { engine.safeDestroyTexture(it) },
+    )
+
     /**
-     * Always `null`: the surface marks are procedural and no texture is loaded any more. The
-     * textured-grid renderer this belonged to was folded into this one in 4.57.0 (#4307).
+     * A 1 × 1 transparent texture, kept so that code written against the textured-grid
+     * renderer still compiles and never reads `null`. The dots renderer does not sample it:
+     * the surface marks are procedural since 4.57.0 (#4307). It is created on the first read
+     * and destroyed with the renderer.
      */
-    @Deprecated("The plane marks are procedural: there is no plane texture any more. Always null.")
-    val planeTexture: Texture? get() = null
+    @Deprecated("No longer used by the dots renderer: the plane marks are procedural.")
+    val planeTexture: Texture get() = placeholderTexture.value
 
     /**
      * Display size of the surface the renderer draws into, still set by `ARSceneView` on every
@@ -242,6 +251,7 @@ class PlaneRenderer(
         visualizers.clear()
         materialLoader.destroyMaterial(planeMaterial)
         materialLoader.destroyMaterial(shadowMaterial)
+        placeholderTexture.release()
     }
 
     /** Refreshes (or lazily creates) the [PlaneVisualizer] for [plane]. */
@@ -557,3 +567,48 @@ private val WALL_PRESET = PlaneMaterialPreset(
 private val CEILING_PRESET = PlaneMaterialPreset(
     kind = PlaneSurfaceKind.CEILING, gridR = 0.90f, gridG = 0.35f, gridB = 0.04f, markAlpha = 0.70f,
 )
+
+/**
+ * A value built on its first read and released only if it was built. Holds the deprecated
+ * [PlaneRenderer.planeTexture], which almost no caller reads.
+ */
+internal class LazyOwned<T : Any>(
+    private val create: () -> T,
+    private val release: (T) -> Unit,
+) {
+    private var instance: T? = null
+    private var released = false
+
+    /** The value, built on the first read. */
+    val value: T
+        get() {
+            check(!released) { "Read after release" }
+            return instance ?: create().also { instance = it }
+        }
+
+    /** Releases the value if it was ever built. Further calls do nothing. */
+    fun release() {
+        if (released) return
+        released = true
+        instance?.let(release)
+        instance = null
+    }
+}
+
+/** A 1 × 1 fully transparent RGBA8 texture. */
+private fun createPlaceholderTexture(engine: Engine): Texture {
+    val texture = Texture.Builder()
+        .width(1)
+        .height(1)
+        .levels(1)
+        .sampler(Texture.Sampler.SAMPLER_2D)
+        .format(Texture.InternalFormat.RGBA8)
+        .build(engine)
+    val pixel = ByteBuffer.allocateDirect(4)
+    texture.setImage(
+        engine,
+        0,
+        Texture.PixelBufferDescriptor(pixel, Texture.Format.RGBA, Texture.Type.UBYTE),
+    )
+    return texture
+}

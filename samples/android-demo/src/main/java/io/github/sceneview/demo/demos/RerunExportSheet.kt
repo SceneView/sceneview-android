@@ -29,12 +29,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Inventory2
 import androidx.compose.material.icons.rounded.ScatterPlot
+import androidx.compose.material.icons.rounded.SquareFoot
 import androidx.compose.material.icons.rounded.Timeline
 import androidx.compose.material.icons.rounded.ViewInAr
 import androidx.compose.material3.Button
@@ -118,10 +120,17 @@ private sealed interface Prepared {
     data object Failed : Prepared
 }
 
-/** The export sheet: the model's row with Save file and Share, then the other formats, folded. */
+/**
+ * The export sheet: the model's row with Save file and Share, a scan's floor plan when
+ * [onFloorPlan] is given (#4540), then the other formats, folded.
+ */
 @Composable
 @Suppress("LongMethod")
-internal fun RerunExportSheet(source: RerunExportSource, onDismiss: () -> Unit) {
+internal fun RerunExportSheet(
+    source: RerunExportSource,
+    onDismiss: () -> Unit,
+    onFloorPlan: (() -> Unit)? = null,
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val files = remember(source) { RerunExportFiles(context.applicationContext, source) }
@@ -229,6 +238,12 @@ internal fun RerunExportSheet(source: RerunExportSource, onDismiss: () -> Unit) 
                             modifier = Modifier.padding(start = Space.sm),
                         )
                     }
+                }
+            }
+            if (onFloorPlan != null) {
+                Column {
+                    HorizontalDivider()
+                    FloorPlanRow(onClick = onFloorPlan)
                 }
             }
             if (more.isNotEmpty()) {
@@ -356,6 +371,46 @@ private fun MoreHeader(expanded: Boolean, onToggle: () -> Unit) {
             imageVector = if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/** The scan's floor plan: a tap opens it, measured, with its PDF to share. */
+@Composable
+private fun FloorPlanRow(onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = SceneViewTokens.Layout.touchTarget)
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(vertical = Space.xs)
+            .testTag(EXPORT_FLOOR_PLAN_TAG),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Space.sm),
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.SquareFoot,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(SceneViewTokens.Layout.touchTarget).padding(Space.sm),
+        )
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Space.xs)) {
+            Text(
+                text = stringResource(R.string.demo_ar_rerun_plan_export_title),
+                style = Type.body.copy(fontWeight = FontWeight.SemiBold),
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = stringResource(R.string.demo_ar_rerun_plan_export_detail),
+                style = Type.caption,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Icon(
+            Icons.Rounded.ChevronRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(SceneViewTokens.Layout.touchTarget).padding(Space.sm),
         )
     }
 }
@@ -492,6 +547,7 @@ internal const val EXPORT_SHEET_TAG = "ar_rerun_export_sheet"
 internal const val EXPORT_SAVE_TAG = "ar_rerun_export_save"
 internal const val EXPORT_SHARE_TAG = "ar_rerun_export_share"
 internal const val EXPORT_MORE_TAG = "ar_rerun_export_more"
+internal const val EXPORT_FLOOR_PLAN_TAG = "ar_rerun_export_floor_plan"
 internal const val EXPORT_ROW_TAG_PREFIX = "ar_rerun_export_"
 
 /** The thumbnail's side on screen, and in pixels: drawn at about 3× for a sharp picture. */

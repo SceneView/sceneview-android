@@ -34,8 +34,9 @@ class PlaneRendererV2(
     /** See [PlaneRenderer.planeMaterial]. */
     val planeMaterial: Material get() = renderer.planeMaterial
 
-    /** Always `null`: the plane marks are procedural. */
-    val planeTexture: Texture? get() = null
+    /** See [PlaneRenderer.planeTexture]: a placeholder, not used by the dots renderer. */
+    @Suppress("DEPRECATION")
+    val planeTexture: Texture get() = renderer.planeTexture
 
     /** See [PlaneRenderer.planeRendererMode]. */
     var planeRendererMode: PlaneRenderer.PlaneRendererMode

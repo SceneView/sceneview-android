@@ -1143,8 +1143,8 @@ demos:
     contract: >-
       Detected surfaces drawn by type: round dots on floors and tables,
       upright dashes on walls, hollow rings on ceilings, slivers below a
-      minimum size skipped. Tap a floor to place a car; the surfaces fade,
-      the car stays movable (drag, twist, pinch, tap elsewhere), the
+      minimum size skipped. Tap a floor to place a sofa; the surfaces fade,
+      the sofa stays movable (drag, twist, pinch, tap elsewhere), the
       surfaces return during a drag, and the dock keeps Surfaces and Reset.
     parity: missing
     evidence: >-
