@@ -91,7 +91,6 @@ import io.github.sceneview.demo.demos.internal.DebugMesh
 import io.github.sceneview.demo.demos.internal.DebugPlaneKind
 import io.github.sceneview.demo.demos.internal.DebugPose
 import io.github.sceneview.demo.demos.internal.IntervalGate
-import io.github.sceneview.demo.demos.internal.MeasureUnitSystem
 import io.github.sceneview.demo.demos.internal.OrbitPose
 import io.github.sceneview.demo.demos.internal.CameraRig
 import io.github.sceneview.demo.demos.internal.PlaneLayering
@@ -99,6 +98,7 @@ import io.github.sceneview.demo.demos.internal.Vec3
 import io.github.sceneview.demo.demos.internal.ReplayGeometry
 import io.github.sceneview.demo.demos.internal.ReplayIntro
 import io.github.sceneview.demo.demos.internal.RoomMeasure
+import io.github.sceneview.demo.demos.internal.scanSummary
 import io.github.sceneview.demo.demos.internal.ScanPlanes
 import io.github.sceneview.demo.demos.internal.ScanFollow
 import io.github.sceneview.demo.theme.DebugPalette
@@ -889,8 +889,7 @@ internal fun ArDebugSceneView(
                 // draw ([ReplayLayers.measure]), so the two never disagree — and on the frame the
                 // floor redraws them, rather than a stats tick later.
                 if (replayLayers != null) {
-                    val locale = Locale.getDefault()
-                    val room = replayLayers.measure?.summary(MeasureUnitSystem.forLocale(locale), locale)
+                    val room = replayLayers.measure?.scanSummary(Locale.getDefault())
                     if (session.stats.room != room) session.stats = session.stats.copy(room = room)
                 }
                 // onFrame only fires for a frame that reached the surface (#3444): counting them is
