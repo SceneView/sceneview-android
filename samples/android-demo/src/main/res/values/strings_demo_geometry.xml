@@ -7,8 +7,6 @@
 <resources>
     <string name="demo_geometry_title">Geometry Primitives</string>
     <string name="demo_geometry_subtitle">Show, hide and restyle the seven built-in shapes</string>
-    <string name="demo_geometry">Geometry Nodes</string>
-    <string name="demo_geometry_desc">The seven built-in primitives: cube, sphere, cylinder, cone, torus, capsule and plane</string>
 
     <!-- Shape chips over the scene: one switch per primitive. -->
     <string name="demo_geometry_shape_cube">Cube</string>

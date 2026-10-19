@@ -1,2 +1,0 @@
-<!-- category: Fixed -->
-- **Website: the AR session page's header keeps its buttons on screen between 601 and 720 px ([#4553](https://github.com/sceneview/sceneview/issues/4553)).** On `/rerun/`, at those widths the header's labelled buttons pushed the theme switch past the right edge and squeezed the session title out. The compact header — icons only, no brand text — now applies up to 720 px, so every button stays visible and the title keeps its place.

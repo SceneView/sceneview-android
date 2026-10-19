@@ -19,6 +19,12 @@ class SurveyWording(
     val dimensions: String,
     val perimeter: String,
     val height: String,
+    val volume: String,
+    /** The rooms' table: one row per room, then the plan's total. */
+    val rooms: String,
+    /** `%1$d` the room's number on the plan. */
+    val room: String,
+    val total: String,
     /** The one dimension a scan with a single pair of facing walls gives. */
     val span: String,
     val walls: String,
@@ -46,12 +52,23 @@ object SurveyReport {
     private const val SEPARATOR = " · "
     private const val METRES = " m"
     private const val SQUARE_METRES = " m²"
+    private const val CUBIC_METRES = " m³"
+    private const val ROOM_SEPARATOR = "; "
     private const val PLUS_MINUS = " ± "
 
     /** `20.0 m² ± 0.3` when measured, `≈ 20.0 m²` when an estimate. */
     fun area(figure: SurveyFigure): String = when {
         figure.estimate -> SurveyFormat.ESTIMATE + SurveyFormat.area(figure.value) + SQUARE_METRES
         else -> SurveyFormat.area(figure.value) + SQUARE_METRES + PLUS_MINUS + SurveyFormat.areaSpread(figure.plusMinus)
+    }
+
+    /**
+     * `37.4 m³ ± 1.2` when measured, `≈ 37.4 m³` when an estimate: to a tenth of a cubic metre,
+     * the area's own step — a finer one would claim more than the floor it stands on.
+     */
+    fun volume(figure: SurveyFigure): String = when {
+        figure.estimate -> SurveyFormat.ESTIMATE + SurveyFormat.area(figure.value) + CUBIC_METRES
+        else -> SurveyFormat.area(figure.value) + CUBIC_METRES + PLUS_MINUS + SurveyFormat.areaSpread(figure.plusMinus)
     }
 
     /** `5.00 m ± 0.05` when measured, `≈ 5.00 m` when an estimate. */
@@ -77,7 +94,7 @@ object SurveyReport {
         wording.spreadNote.takeIf { survey.hasSpread },
     )
 
-    /** The survey's figures: area, length × width, perimeter and ceiling height — or what is missing. */
+    /** The survey's figures: area, length × width, perimeter, ceiling height and volume — or what is missing. */
     fun rows(survey: RoomSurvey, wording: SurveyWording): List<SurveyRow> {
         val rows = ArrayList<SurveyRow>()
         val area = survey.area
@@ -103,8 +120,32 @@ object SurveyReport {
             null -> SurveyRow(wording.height, wording.notSeen, muted = true)
             else -> SurveyRow(wording.height, length(height))
         }
+        rows += when (val volume = PlanAreas.volume(survey.area, height)) {
+            null -> SurveyRow(wording.volume, wording.notMeasured, muted = true)
+            else -> SurveyRow(wording.volume, volume(volume))
+        }
         return rows
     }
+
+    /** The plan's rooms: a scan is one room, numbered as the plan's first. */
+    fun areas(survey: RoomSurvey, wording: SurveyWording): PlanAreas =
+        PlanAreas.of(listOf(PlanAreas.room(wording.room.format(1), survey)))
+
+    /**
+     * One row per room — its floor area, then its volume — and the plan's total last. A room
+     * without a figure says so, and the total then gives none: it would leave that room out.
+     */
+    fun roomRows(areas: PlanAreas, wording: SurveyWording): List<SurveyRow> =
+        areas.rooms.map { roomRow(it.name, it.area, it.volume, wording) } +
+            roomRow(wording.total, areas.area, areas.volume, wording)
+
+    private fun roomRow(label: String, area: SurveyFigure?, volume: SurveyFigure?, wording: SurveyWording) =
+        SurveyRow(
+            label = label,
+            value = (area?.let(::area) ?: wording.notMeasured) + SEPARATOR +
+                (volume?.let(::volume) ?: wording.notMeasured),
+            muted = area == null,
+        )
 
     /** One row per wall: its letter, its length, and whether it was seen. */
     fun wallRows(survey: RoomSurvey, wording: SurveyWording): List<SurveyRow> = survey.walls.map { wall ->
@@ -148,9 +189,14 @@ object SurveyReport {
         val lines = ArrayList<String>()
         lines += heading(wording, title, date)
         val rows = rows(survey, wording)
-        val height = rows.last()
-        lines += rows.dropLast(1).joinToString(SEPARATOR) { it.label + ": " + it.value }
-        lines += height.label + ": " + height.value
+        // The floor's figures on one line, the height and the volume it gives on the next.
+        val room = rows.takeLast(2)
+        lines += rows.dropLast(2).joinToString(SEPARATOR) { it.label + ": " + it.value }
+        lines += room.joinToString(SEPARATOR) { it.label + ": " + it.value }
+        if (survey.hasPlan) {
+            lines += wording.rooms + ": " +
+                roomRows(areas(survey, wording), wording).joinToString(ROOM_SEPARATOR) { it.label + " " + it.value }
+        }
         if (survey.walls.isNotEmpty()) {
             val walls = wallRows(survey, wording)
             lines += wording.walls + ": " +

@@ -61,6 +61,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.core.content.FileProvider
+import io.github.sceneview.demo.DemoScaffold
 import io.github.sceneview.demo.LocalDemoBottomChromeCover
 import io.github.sceneview.demo.R
 import io.github.sceneview.demo.SETTINGS_FAB_RESERVED_SPACE
@@ -142,6 +143,10 @@ private fun rememberPlanWords(): PlanWords = PlanWords(
         dimensions = stringResource(R.string.demo_ar_rerun_plan_dimensions),
         perimeter = stringResource(R.string.demo_ar_rerun_plan_perimeter),
         height = stringResource(R.string.demo_ar_rerun_plan_height),
+        volume = stringResource(R.string.demo_ar_rerun_plan_volume),
+        rooms = stringResource(R.string.demo_ar_rerun_plan_rooms),
+        room = stringResource(R.string.demo_ar_rerun_plan_room),
+        total = stringResource(R.string.demo_ar_rerun_plan_total),
         span = stringResource(R.string.demo_ar_rerun_plan_span),
         walls = stringResource(R.string.demo_ar_rerun_plan_walls),
         wall = stringResource(R.string.demo_ar_rerun_plan_wall),
@@ -200,6 +205,27 @@ internal fun rememberRoomSurvey(media: RerunReplayMedia?, wanted: Boolean): Room
         }
     }
 }.value
+
+/**
+ * A scan's floor plan as a screen of its own, opened from the export sheet: the scan's [media]
+ * measured off the main thread, then its [RerunPlanView] under the demo's header. Back returns to
+ * the screen it was opened from ([onBack]). The settings sheet over this page of figures is
+ * opaque: rows reading through its glass would mix with its own.
+ */
+@Composable
+internal fun RerunPlanScreen(media: RerunReplayMedia?, title: String, date: String?, onBack: () -> Unit) {
+    val survey = rememberRoomSurvey(media, wanted = true)
+    DemoScaffold(
+        title = stringResource(R.string.demo_ar_rerun_plan_export_title),
+        onBack = onBack,
+        controls = { Text(stringResource(R.string.demo_ar_rerun_plan_about), style = Type.body) },
+        themedStage = true,
+        opaqueSheet = true,
+        hasScene = false,
+    ) {
+        RerunPlanView(survey, title, date)
+    }
+}
 
 /**
  * The Plan view: the dimensioned plan, the survey's table, what the scan lacks, and the two
@@ -400,6 +426,11 @@ private fun SurveyDetails(
     PlanSection(words.surveyTitle, caption = SurveyReport.heading(words.survey, title, date)) {
         SurveyReport.rows(survey, words.survey).forEach { FigureRow(it) }
     }
+    if (survey.hasPlan) {
+        PlanSection(words.survey.rooms, testTag = RERUN_PLAN_ROOMS_TAG) {
+            SurveyReport.roomRows(SurveyReport.areas(survey, words.survey), words.survey).forEach { FigureRow(it) }
+        }
+    }
     if (hints.isNotEmpty()) {
         PlanSection(words.emptyTitle.takeIf { !survey.hasPlan }, testTag = RERUN_PLAN_HINTS_TAG) {
             hints.forEach { Text(text = it, style = Type.body.copy(color = stage.onGlass)) }
@@ -579,6 +610,7 @@ internal object RoomPlanPdf {
     private const val TABLE_GAP = 30f
     private const val ROW = 16f
     private const val VALUE_X = 150f
+    private const val ROOM_VALUE_X = 60f
     private const val WALLS_X = 320f
     private const val WALL_VALUE_X = 60f
     private const val FOLLOWING_COLUMNS = 3
@@ -718,6 +750,18 @@ internal object RoomPlanPdf {
                 at += ROW
                 pen.text(line, MARGIN, at, TEXT_SIZE, pen.ink.text)
             }
+        }
+        if (!survey.hasPlan) return
+        // Each room's area and volume, then the plan's total, as on the screen.
+        at += TABLE_GAP
+        pen.text(words.survey.rooms, MARGIN, at, HEAD_SIZE, pen.ink.text, bold = true)
+        val rows = SurveyReport.roomRows(SurveyReport.areas(survey, words.survey), words.survey)
+        rows.forEachIndexed { i, row ->
+            at += ROW
+            val total = i == rows.lastIndex
+            val ink = if (row.muted) pen.ink.muted else pen.ink.text
+            pen.text(row.label, MARGIN, at, TEXT_SIZE, pen.ink.muted, bold = total)
+            pen.text(row.value, MARGIN + ROOM_VALUE_X, at, TEXT_SIZE, ink, bold = total)
         }
     }
 
@@ -868,6 +912,7 @@ private fun DenseCloud.without(hidden: (Float, Float, Float) -> Boolean): DenseC
 internal const val RERUN_PLAN_TAG = "rerun-plan"
 internal const val RERUN_PLAN_DRAWING_TAG = "rerun-plan-drawing"
 internal const val RERUN_PLAN_HINTS_TAG = "rerun-plan-hints"
+internal const val RERUN_PLAN_ROOMS_TAG = "rerun-plan-rooms"
 internal const val RERUN_PLAN_SHARE_PDF_TAG = "rerun-plan-share-pdf"
 internal const val RERUN_PLAN_SHARE_TEXT_TAG = "rerun-plan-share-text"
 

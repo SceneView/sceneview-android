@@ -22,7 +22,6 @@
     <string name="ar_placement_cta_no_model">Pick a model first.</string>
 
     <!-- In-AR chrome. -->
-    <string name="ar_placement_change_model">Change model</string>
     <string name="ar_placement_catalogue_note">Bundled models work offline. Online models download when selected and appear once the download completes.</string>
 
     <!-- Automatic placement (plan §2.2) — the exact copy of the state machine. Shared by
@@ -55,6 +54,8 @@
     <string name="ar_place_loading_model">Loading model…</string>
     <string name="ar_place_model_failed">Model couldn’t load.</string>
     <string name="ar_place_preview_size">Preview size</string>
+    <!-- Placement Scene: the product is placed at its real size, not the 0.3 m preview. -->
+    <string name="ar_place_real_size">Actual size</string>
     <!-- Closes every "View in 3D" preview sheet (PlacementPreviewSheet, #3884). -->
     <string name="ar_place_close_preview">Close preview</string>
 

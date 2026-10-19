@@ -1,2 +1,0 @@
-<!-- category: Changed -->
-- **Website: the adoption section no longer names companies ([#4567](https://github.com/sceneview/sceneview/pull/4567)).** A team that ships SceneView under Apache 2.0 has not endorsed it, so the "Found in public code and posts from teams at" list is gone from the home page and the companies page. Both pages keep only public, re-checkable numbers with their source; Google Play SDK Console figures stay off the site because its terms make them Google confidential.

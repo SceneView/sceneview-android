@@ -333,6 +333,16 @@ struct ShowcaseTab: View {
             }
             .onChange(of: presenting, initial: true) { _, covered in onPresentingChange(covered) }
             .onAppear { loadScenes() }
+            // `search`: a Home query counts once the field has been still for
+            // `SearchTerm.settleDelay`, or when a demo is opened from it — Android parity.
+            .task(id: selection.query) {
+                guard searching else {
+                    DemoAnalytics.shared.searchCleared(.samples)
+                    return
+                }
+                do { try await Task.sleep(for: SearchTerm.settleDelay) } catch { return }
+                DemoAnalytics.shared.searchSettled(selection.query, surface: .samples, resultCount: visible.count)
+            }
             .task {
                 guard !releasesLoaded else { return }
                 releases = await Task.detached(priority: .utility) { WhatsNewChangelog.load() }.value
@@ -555,6 +565,9 @@ struct ShowcaseTab: View {
     }
 
     private func open(_ scene: DemoItem, from sourceId: String) {
+        if searching {
+            DemoAnalytics.shared.searchSettled(selection.query, surface: .samples, resultCount: visible.count)
+        }
         transitionSourceId = sourceId
         #if os(iOS)
         SceneViewHaptic.shared.light()

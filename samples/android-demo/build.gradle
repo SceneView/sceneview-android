@@ -119,7 +119,7 @@ android {
         minSdk 28
         targetSdk 36
         versionCode project.hasProperty('versionCode') ? project.property('versionCode').toInteger() : 350
-        versionName project.hasProperty('versionName') ? project.property('versionName') : "4.56.0"
+        versionName project.hasProperty('versionName') ? project.property('versionName') : "4.57.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
@@ -402,7 +402,7 @@ dependencies {
     implementation project(":arsceneview")
     // ML depth (Depth Anything V2 Small on LiteRT) for the Depth Visualization demo's ML
     // mode. The model is downloaded on first use and SHA-256 checked: 0 model bytes in the
-    // APK, ~8.6 MB of LiteRT native code per ABI.
+    // APK, ~9.4 MB of LiteRT native code on arm64-v8a.
     implementation project(":arsceneview-depth-ml")
 
     // Google Play In-App Updates — Play Core deps come via :samples:common

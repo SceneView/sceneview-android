@@ -1,6 +1,7 @@
 package io.github.sceneview.demo
 
 import android.app.Application
+import io.github.sceneview.demo.labs.Labs
 import io.github.sceneview.demo.telemetry.Telemetry
 
 /**
@@ -19,6 +20,8 @@ import io.github.sceneview.demo.telemetry.Telemetry
 class DemoApplication : Application() {
     override fun onCreate() {
         super.onCreate()
+        // SceneView Labs: two booleans from SharedPreferences, read before any screen lists demos.
+        Labs.init(this)
         if (!BuildConfig.DEBUG) Telemetry.ensureInit(this)
     }
 

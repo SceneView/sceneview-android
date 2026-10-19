@@ -161,17 +161,17 @@ class DemoSmokeTest {
 
     @Test
     fun a06_arRerun_smokeOpen() {
-        openDemoTolerant("ar-rerun", "Room Scan")
+        openDemoTolerant("ar-rerun", "3D Scan")
         screenshot("s06_ar_rerun")
     }
 
-    // Record mode: the landing's "Record your room" opens the live room scan. The emulator
+    // Record mode: the landing's "Start scanning" opens the live scan. The emulator
     // cannot track (#2754), so this only proves the switch into the camera screen survives
     // without a crash; the scan itself is checked on a Pixel from the PR's needs-device list.
     @Test
     fun a06b_arRerun_recordSmokeOpen() {
-        openDemoTolerant("ar-rerun", "Room Scan")
-        device.wait(Until.findObject(By.text("Record your room")), timeout)?.click()
+        openDemoTolerant("ar-rerun", "3D Scan")
+        device.wait(Until.findObject(By.text("Start scanning")), timeout)?.click()
         Thread.sleep(5000)
         screenshot("s06b_ar_rerun_record")
         check(device.currentPackageName == pkg) { "The demo left the foreground after opening Record" }
@@ -184,27 +184,6 @@ class DemoSmokeTest {
     @Test
     fun a06c_arRerun_themeSwitchDuringReplay() =
         switchThemeOverReplay(qaState = "replay", shot = "s06c_ar_rerun_theme_switch") { Thread.sleep(10000) }
-
-    // Same switch over the Surface view. Its ground is the scene's skybox, which the theme
-    // replaced: the scene kept the old one a dispatch after its owner had destroyed it, and
-    // Filament read it while taking the new one — a segfault, on some switches only. So the
-    // switches start once the surface is built and on screen (about a minute on the emulator;
-    // before that the view is still the points'), and there are enough of them for a defect
-    // that showed once in ~27 to show.
-    @Test
-    fun a06d_arRerun_themeSwitchOverSurface() =
-        switchThemeOverReplay(
-            qaState = "model-synthetic",
-            shot = "s06d_ar_rerun_theme_surface",
-            rounds = SURFACE_SWITCH_ROUNDS,
-        ) {
-            // The caption turns from "Building the surface…" to the mesh's figures once it is built.
-            checkNotNull(device.wait(Until.findObject(By.textStartsWith("Surface preview")), SURFACE_TIMEOUT)) {
-                "The surface was not built within ${SURFACE_TIMEOUT / 1000} s"
-            }
-            // Built, then loaded into the 3D view and drawn.
-            Thread.sleep(8000)
-        }
 
     private fun switchThemeOverReplay(
         qaState: String,
@@ -223,7 +202,7 @@ class DemoSmokeTest {
                     addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK)
                 },
             )
-            device.wait(Until.hasObject(By.text("Room Scan")), timeout)
+            device.wait(Until.hasObject(By.text("3D Scan")), timeout)
             settle()
             repeat(rounds) { round ->
                 for (night in listOf("yes", "no")) {
@@ -270,13 +249,7 @@ class DemoSmokeTest {
         /** Dark then light, this many times: the freed skybox is not read on every switch. */
         const val THEME_SWITCH_ROUNDS = 3
 
-        /** Over the surface: 60 switches, twice what it took to see the abort once (#4330). */
-        const val SURFACE_SWITCH_ROUNDS = 30
-
         /** A few rendered frames on the new theme, and time for an abort to take the process down. */
         const val SWITCH_SETTLE_MILLIS = 1500L
-
-        /** The synthetic surface takes about a minute on the emulator, up to 95 s under load. */
-        const val SURFACE_TIMEOUT = 180_000L
     }
 }

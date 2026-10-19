@@ -930,14 +930,15 @@ object RoomSurveyor {
         val pairV = pairSeen(edges, seen, vertical = false)
         val alongU = extentOf(edges, pos, seen, spread, vertical = true).takeIf { pairU }
         val alongV = extentOf(edges, pos, seen, spread, vertical = false).takeIf { pairV }
-        var area = 0.0
+        // The area is the outline's, read as the Measure demo reads a room (PlanAreas); its
+        // scatter is each side's length times how far that side's wall could move.
+        val floorArea = PlanAreas.wallsArea(walls)
         var areaSpread = 0f
         for (i in 0 until n) {
             val next = (i + 1) % n
-            area += px[i].toDouble() * py[next] - px[next].toDouble() * py[i]
             areaSpread += (abs(px[next] - px[i]) + abs(py[next] - py[i])) * spread[i]
         }
-        val whole = pairU && pairV
+        val whole = pairU && pairV && floorArea != null
         val bounds = floatArrayOf(minU, minV, minU + extentU, minV + extentV)
         val height = ceilingOf(ceilingH, ceilingCell, grid, floor, bounds)
         val rough = oblique || seen.any { !it }
@@ -947,7 +948,7 @@ object RoomSurveyor {
             planWidth = min(extentU, extentV),
             length = if (turned) alongV else alongU,
             width = if (turned) alongU else alongV,
-            area = SurveyFigure.of(abs(area / 2).toFloat(), areaSpread, rough).takeIf { whole },
+            area = floorArea?.let { SurveyFigure.of(it, areaSpread, rough) }?.takeIf { whole },
             perimeter = SurveyFigure.of(
                 walls.sumOf { it.length.value.toDouble() }.toFloat(),
                 walls.sumOf { it.length.plusMinus.toDouble() }.toFloat(),
