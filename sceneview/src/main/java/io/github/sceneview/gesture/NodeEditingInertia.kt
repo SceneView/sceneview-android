@@ -25,7 +25,9 @@ import kotlin.math.ln
  *
  * The gesture's `…End` callbacks are held back until the coast is over, so whatever an app does
  * there (an AR re-anchor, a save) sees the node where it came to rest. A new touch-down
- * ([stopAll]) ends every coast on the spot and fires those callbacks then. The app-level
+ * ([stopAll]) ends every coast on the spot and fires those callbacks then, and so does a node
+ * destroyed mid-coast — whatever stops a coast, its deferred `…End` always runs, so the edit is
+ * always closed (an editing overlay brings its selection ring back). The app-level
  * [GestureDetector.OnGestureListener] does not see the synthetic steps — its `onMove` /
  * `onRotate` / `onScale` read detector state that is frozen at release.
  */
@@ -75,7 +77,10 @@ internal class NodeEditingInertia(
         val owner: Node,
         val detector: D,
         val event: MotionEvent,
-    )
+    ) {
+        /** The node was destroyed mid-coast: stop on the spot, still closing the edit. */
+        val isGone: Boolean get() = node.isDestroyed || owner.isDestroyed
+    }
 
     /** `true` while any edit is still coasting: the render loop must keep ticking. */
     val isCoasting: Boolean
@@ -123,6 +128,7 @@ internal class NodeEditingInertia(
 
     private fun advanceMove(deltaSeconds: Float) {
         val coast = moveCoast ?: return
+        if (coast.node.isDestroyed) return finishMove()
         val going = move.advance(deltaSeconds, step)
         moveX += step[0]
         moveY += step[1]
@@ -171,6 +177,7 @@ internal class NodeEditingInertia(
 
     private fun advanceRotate(deltaSeconds: Float) {
         val coast = rotateCoast ?: return
+        if (coast.isGone) return finishRotate()
         val going = rotate.advance(deltaSeconds, step)
         // Same mapping as NodeGestureDelegate.onRotate: a screen-space angle turns the node about
         // its up axis, the other way round.
@@ -221,6 +228,7 @@ internal class NodeEditingInertia(
 
     private fun advanceScale(deltaSeconds: Float) {
         val coast = scaleCoast ?: return
+        if (coast.isGone) return finishScale()
         val going = scale.advance(deltaSeconds, step)
         // A pinch that runs into the scale range stops there (the edit reports `applied = false`).
         val grown = runCatching {
