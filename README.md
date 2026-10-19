@@ -60,7 +60,7 @@ One minimal, working example per platform. The full reference for each is in
 
 ```kotlin
 // build.gradle.kts
-implementation("io.github.sceneview:sceneview:4.59.0")
+implementation("io.github.sceneview:sceneview:4.60.0")
 ```
 
 ```kotlin
@@ -82,7 +82,7 @@ coroutine: Filament calls must run on the main thread, and `rememberModelInstanc
 
 ```kotlin
 // build.gradle.kts
-implementation("io.github.sceneview:arsceneview:4.59.0")   // includes the 3D module
+implementation("io.github.sceneview:arsceneview:4.60.0")   // includes the 3D module
 ```
 
 ```kotlin
@@ -145,8 +145,8 @@ that finishes loading after the scene appears is never added.
 
 ```html
 <canvas id="viewer" style="width: 100%; height: 480px"></canvas>
-<script src="https://cdn.jsdelivr.net/gh/sceneview/sceneview@v4.59.0/website-static/js/filament/filament.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/sceneview/sceneview@v4.59.0/website-static/js/sceneview.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/sceneview/sceneview@v4.60.0/website-static/js/filament/filament.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/sceneview/sceneview@v4.60.0/website-static/js/sceneview.js"></script>
 <script> SceneView.modelViewer("viewer", "model.glb") </script>
 ```
 
@@ -154,7 +154,7 @@ that finishes loading after the scene appears is never added.
 
 ```kotlin
 // commonMain dependencies
-implementation("io.github.sceneview:sceneview-compose:4.59.0")
+implementation("io.github.sceneview:sceneview-compose:4.60.0")
 ```
 
 ```kotlin
@@ -167,7 +167,7 @@ A viewer by design — load, orbit, light, tap; no AR. Scope and the one-time iO
 ### Flutter
 
 ```dart
-// pubspec.yaml → flutter_sceneview: ^4.59.0
+// pubspec.yaml → flutter_sceneview: ^4.60.0
 final controller = SceneViewController();
 
 SceneView(
@@ -241,10 +241,10 @@ The other platforms in the table below join this section once a capture backs th
 
 | Platform | Coordinate |
 |---|---|
-| Android 3D | `io.github.sceneview:sceneview:4.59.0` |
-| Android AR | `io.github.sceneview:arsceneview:4.59.0` |
-| Compose Multiplatform | `io.github.sceneview:sceneview-compose:4.59.0` |
-| KMP core only (math, collision, physics) | `io.github.sceneview:sceneview-core:4.59.0` |
+| Android 3D | `io.github.sceneview:sceneview:4.60.0` |
+| Android AR | `io.github.sceneview:arsceneview:4.60.0` |
+| Compose Multiplatform | `io.github.sceneview:sceneview-compose:4.60.0` |
+| KMP core only (math, collision, physics) | `io.github.sceneview:sceneview-core:4.60.0` |
 | Apple (SPM) | `https://github.com/sceneview/sceneview.git`, from `4.39.0` |
 | Web, script tag | the two `<script>` tags in [Web](#web) |
 | Web, bundler (Kotlin/JS) | `npm install sceneview-web` — see [SceneView Web](#sceneview-web) |
@@ -504,7 +504,7 @@ npm install sceneview-web
 The package expects a `Filament` global and does not include the `SceneView.modelViewer` script
 helpers. A Kotlin Multiplatform project that only needs the shared core (collision, math,
 geometry, animation, physics — no renderer) uses
-`implementation("io.github.sceneview:sceneview-core-js:4.59.0")`.
+`implementation("io.github.sceneview:sceneview-core-js:4.60.0")`.
 
 [Landing page](https://sceneview.github.io/) · [Playground](https://sceneview.github.io/playground.html) · [npm](https://www.npmjs.com/package/sceneview-web)
 
