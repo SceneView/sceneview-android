@@ -36,6 +36,25 @@ class CameraAnimator(initial: CameraShot) {
     private var elapsedSeconds = 0f
     private var onFinished: (() -> Unit)? = null
 
+    /** Bumped by every [snapTo]: how a [CinematicCameraManipulator] notices a cut it must hand on. */
+    internal var snapCount: Int = 0
+        private set
+
+    /**
+     * Called on every [play], [flyTo] and [snapTo]. A parked `FrameRatePolicy.OnDemand` loop does
+     * not poll anything, so `SceneView` registers its render invalidator here (through
+     * [CinematicCameraManipulator]) for a move started from a button or a `LaunchedEffect` to wake it.
+     */
+    private var changeListeners: List<() -> Unit> = emptyList()
+
+    /** Adds [listener] to [changeListeners]; returns the call that removes it. */
+    internal fun addChangeListener(listener: () -> Unit): () -> Unit {
+        changeListeners = changeListeners + listener
+        return { changeListeners = changeListeners - listener }
+    }
+
+    private fun changed() = changeListeners.forEach { it() }
+
     /** `true` while a move plays. */
     val isPlaying: Boolean get() = path != null || transition != null
 
@@ -50,6 +69,7 @@ class CameraAnimator(initial: CameraShot) {
         elapsedSeconds = 0f
         velocity = CameraShotVelocity.Zero
         path.start?.let { shot = it }
+        changed()
     }
 
     /**
@@ -69,13 +89,19 @@ class CameraAnimator(initial: CameraShot) {
         this.onFinished = onFinished
         elapsedSeconds = 0f
         velocity = CameraShotVelocity.Zero
+        changed()
     }
 
-    /** Puts the camera on [shot] at once, stopping any move; nothing is called back. */
+    /**
+     * Puts the camera on [shot] at once, stopping any move; nothing is called back. Through a
+     * [CinematicCameraManipulator], the gesture manipulator is handed [shot] too, so the cut holds.
+     */
     fun snapTo(shot: CameraShot) {
         clear()
         this.shot = shot
         velocity = CameraShotVelocity.Zero
+        snapCount++
+        changed()
     }
 
     /**
