@@ -110,6 +110,7 @@ import io.github.sceneview.demo.DemoBottomOverlayScope
 import io.github.sceneview.demo.DemoScaffold
 import io.github.sceneview.demo.DemoSettings
 import io.github.sceneview.demo.DockItem
+import io.github.sceneview.demo.LocalDemoFullScreen
 import io.github.sceneview.demo.LocalDemoSheetCover
 import io.github.sceneview.demo.R
 import io.github.sceneview.demo.common.DemoStatusBanner
@@ -1085,7 +1086,13 @@ private fun RerunReplayScreen(
         } ?: export,
     ) {
         val cover = with(LocalDensity.current) { LocalDemoSheetCover.current.toPx() }
-        SideEffect { sheetCover = cover }
+        // Full screen (#4558): the chrome is gone, so the room is drawn into the whole view —
+        // larger and centred — and back into its band on the way out, on `motion-focus`.
+        val fullScreen = LocalDemoFullScreen.current
+        SideEffect {
+            sheetCover = cover
+            orbit.focusBand = if (fullScreen) OrbitBand.FULL_SCREEN else null
+        }
         when {
             media == null -> Unit // the scaffold's cover says it is loading
             mode == RerunMode.Camera -> RerunCameraView(media, thumbnails, session, Modifier.fillMaxSize())

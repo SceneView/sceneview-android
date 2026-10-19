@@ -1,5 +1,6 @@
 package io.github.sceneview.demo.demos.internal
 
+import io.github.sceneview.demo.theme.SceneViewTokens
 import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.cross
 import dev.romainguy.kotlin.math.dot
@@ -114,6 +115,26 @@ class ArDebugOrbitCamera(
      * [shownScale]) and follows the sheet both ways.
      */
     var squeeze: OrbitBand? = null
+
+    /**
+     * The band the picture is drawn into while the demo is in full screen (#4558) — the whole
+     * view, the chrome gone — or `null` with the chrome shown. Like [squeeze], the framing is
+     * still fitted for [band]: the picture is drawn larger ([focusScale]) and at this band's lift,
+     * eased on `motion-focus` both ways, so leaving full screen brings back the exact picture.
+     */
+    var focusBand: OrbitBand? = null
+
+    /**
+     * How much larger the picture is drawn in [focusBand] than in [band]: the ratio of the home
+     * distances fitted for each, set by the view as it frames the session.
+     */
+    var focusScale: Float = 1f
+
+    /** How far into full screen the picture is, 0..1, on the `motion-focus` timeline. */
+    private var focusProgress: Float = 0f
+
+    /** The last [focusBand], kept while the picture eases back out of it. */
+    private var lastFocusBand: OrbitBand? = null
 
     /** The lift the picture is drawn at now, easing towards [squeeze]'s or [band]'s. */
     var shownLift: Float = band.lift
@@ -315,8 +336,10 @@ class ArDebugOrbitCamera(
     fun snapTo(target: OrbitPose) {
         pose = ArDebugFraming.clamp(target)
         heading = pose.azimuthDegrees
-        shownLift = (squeeze ?: band).lift
-        shownScale = ArDebugFraming.squeezeScale(band, squeeze)
+        focusProgress = if (focusBand != null) 1f else 0f
+        lastFocusBand = focusBand ?: lastFocusBand
+        shownLift = targetLift()
+        shownScale = targetScale()
     }
 
     override fun setViewport(width: Int, height: Int) {
@@ -468,8 +491,9 @@ class ArDebugOrbitCamera(
 
     /** [shownLift] and [shownScale] eased towards the band the picture is drawn in, [SQUEEZE_RATE]. */
     private fun easeSqueeze(dt: Float) {
-        val lift = (squeeze ?: band).lift
-        val scale = ArDebugFraming.squeezeScale(band, squeeze)
+        easeFocus(dt)
+        val lift = targetLift()
+        val scale = targetScale()
         val fraction = 1f - exp(-SQUEEZE_RATE * dt)
         shownLift += (lift - shownLift) * fraction
         shownScale += (scale - shownScale) * fraction
@@ -550,6 +574,35 @@ class ArDebugOrbitCamera(
     }
 
     /** How far [lift] moves the drawn camera of [at] along its own up axis. */
+    /** [focusProgress] moved along the `motion-focus` timeline towards [focusBand]'s presence. */
+    private fun easeFocus(dt: Float) {
+        focusBand?.let { lastFocusBand = it }
+        val goal = if (focusBand != null) 1f else 0f
+        val step = dt * MILLIS_PER_SECOND / SceneViewTokens.Motion.focusMillis
+        focusProgress = if (goal > focusProgress) {
+            minOf(goal, focusProgress + step)
+        } else {
+            maxOf(goal, focusProgress - step)
+        }
+    }
+
+    /** [focusProgress] through the `ease-expressive` curve: 0 = the chrome's band, 1 = full screen. */
+    private fun focusShare(): Float = SceneViewTokens.Ease.expressive.transform(focusProgress)
+
+    /** The lift the picture heads for: [squeeze]'s, else [band]'s blended towards [focusBand]'s. */
+    private fun targetLift(): Float {
+        squeeze?.let { return it.lift }
+        val focus = lastFocusBand ?: return band.lift
+        return band.lift + (focus.lift - band.lift) * focusShare()
+    }
+
+    /** The scale the picture heads for: [squeeze]'s, else 1 blended towards [focusScale]. */
+    private fun targetScale(): Float {
+        if (squeeze != null) return ArDebugFraming.squeezeScale(band, squeeze)
+        if (lastFocusBand == null) return 1f
+        return 1f + (focusScale - 1f) * focusShare()
+    }
+
     private fun liftDrop(at: OrbitPose, lift: Float = shownLift): Float3 {
         val metresPerPixel = CameraRig.worldPerPixel(at.distance, verticalFovDegrees, viewportHeight)
         if (lift == 0f || metresPerPixel <= 0f) return Float3()
@@ -582,6 +635,8 @@ class ArDebugOrbitCamera(
          */
         const val SQUEEZE_RATE = 10f
 
+        private const val MILLIS_PER_SECOND = 1000f
+
         /** Close enough to the squeeze's lift and scale to stand on them. */
         const val SQUEEZE_EPSILON = 1e-4f
 
@@ -600,6 +655,9 @@ class ArDebugOrbitCamera(
  */
 data class OrbitBand(val halfWidth: Float, val halfHeight: Float, val lift: Float = 0f) {
     companion object {
+        /** The whole view in full screen (#4558): no chrome above or below, a stage's air at the sides. */
+        val FULL_SCREEN = OrbitBand(halfWidth = 0.90f, halfHeight = 0.86f)
+
         /** A card or a picture-in-picture: nothing over it, a little air all round. */
         val CARD = OrbitBand(halfWidth = 0.86f, halfHeight = 0.86f)
 

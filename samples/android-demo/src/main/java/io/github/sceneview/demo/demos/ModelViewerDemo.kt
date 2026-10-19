@@ -88,6 +88,7 @@ import io.github.sceneview.verticalFovDegreesForFocalLength
 import io.github.sceneview.demo.AssetSourceState
 import io.github.sceneview.demo.DemoScaffold
 import io.github.sceneview.demo.LocalDemoChromeTopInset
+import io.github.sceneview.demo.LocalDemoFullScreen
 import io.github.sceneview.demo.LocalDemoSceneCover
 import io.github.sceneview.demo.LocalDemoSheetCover
 import androidx.compose.foundation.layout.WindowInsets
@@ -1668,10 +1669,17 @@ private fun SingleModelSection(
             if (environmentSheetOpen) environmentSheetCover else 0.dp,
             LocalDemoSheetCover.current,
         )
-        val bottomInset = maxOf(
-            SETTINGS_FAB_RESERVED_SPACE + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding(),
-            sheetCover,
-        )
+        // Full screen (#4558): no dock to keep the model above, and no sheet — the model takes the
+        // whole window, and gets its band back on the way out.
+        val fullScreen = LocalDemoFullScreen.current
+        val bottomInset = if (fullScreen) {
+            WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+        } else {
+            maxOf(
+                SETTINGS_FAB_RESERVED_SPACE + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding(),
+                sheetCover,
+            )
+        }
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             // A phone held sideways (#4326): the lens projects into the area the chrome and the
             // sheets leave free, wherever they are right now, so the model is drawn — and picked —
@@ -1711,18 +1719,31 @@ private fun SingleModelSection(
             val easedFraming = remember { EasedFraming() }
             val framingBlend = remember { Animatable(1f) }
             var framingEaseGeneration by remember { mutableStateOf(0) }
+            // A full-screen toggle (#4558) re-frames on `motion-focus`, the chrome's own move; an
+            // inset settling or a sheet keeps the short settle.
+            val framedFullScreen = remember { booleanArrayOf(fullScreen) }
+            var framingEaseIsFocus by remember { mutableStateOf(false) }
             SideEffect {
-                if (easedFraming.retarget(framing, bounds, framingBlend.value)) framingEaseGeneration++
+                val focusMove = framedFullScreen[0] != fullScreen
+                framedFullScreen[0] = fullScreen
+                if (easedFraming.retarget(framing, bounds, framingBlend.value)) {
+                    framingEaseIsFocus = focusMove
+                    framingEaseGeneration++
+                }
             }
             LaunchedEffect(framingEaseGeneration) {
                 if (framingEaseGeneration == 0) return@LaunchedEffect
                 framingBlend.snapTo(0f)
                 easedFraming.release()
                 renderInvalidator.requestRender()
-                framingBlend.flyToOne(
-                    FRAMING_SETTLE_MILLIS,
-                    androidx.compose.animation.core.FastOutSlowInEasing,
-                )
+                if (framingEaseIsFocus) {
+                    framingBlend.flyToOne(SceneViewTokens.Motion.focusMillis, SceneViewTokens.Ease.expressive)
+                } else {
+                    framingBlend.flyToOne(
+                        FRAMING_SETTLE_MILLIS,
+                        androidx.compose.animation.core.FastOutSlowInEasing,
+                    )
+                }
             }
             // Camera orbits; the model stays fixed at its glTF pose. The resting pose is flown
             // to when the model lands (#3406) and then held live.

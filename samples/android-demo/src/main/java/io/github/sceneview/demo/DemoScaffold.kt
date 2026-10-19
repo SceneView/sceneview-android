@@ -430,6 +430,9 @@ val LocalDemoBottomChromeCover = androidx.compose.runtime.compositionLocalOf { 0
  * window: under [DemoScaffold]'s `bottomOverlayReservesScene` the slot is already inset by the
  * bands, and only what the sheet covers beyond them is left to report.
  *
+ * Full screen (#4558) eases the bands to zero on `motion-focus`, and back on the way out: a camera
+ * fed with this value re-frames on that curve.
+ *
  * Zero outside a [DemoScaffold].
  */
 val LocalDemoSceneCover = androidx.compose.runtime.compositionLocalOf { PaddingValues(0.dp) }
@@ -443,6 +446,9 @@ val LocalDemoSceneCover = androidx.compose.runtime.compositionLocalOf { PaddingV
  * same share of whatever band a rising sheet leaves: the picture follows the sheet, smaller, with
  * nothing to recompute. Fitting for the live cover instead rebuilds the orbit on every frame of a
  * drag, and throws away the angle the user had set the moment Settings opens.
+ *
+ * In full screen (#4558) it is zero from the first frame: the state the screen settles in, while
+ * [LocalDemoSceneCover] is still on its way there.
  *
  * Zero outside a [DemoScaffold].
  */
@@ -503,9 +509,18 @@ private fun ProvideDemoSceneCover(
     chromeBottom: Dp,
     slotTop: Dp,
     slotBottom: Dp,
+    focused: Boolean,
+    focusProgress: androidx.compose.runtime.State<Float>,
     content: @Composable () -> Unit,
 ) {
     val density = LocalDensity.current
+    // Full screen (#4558): the live bands ease out on `motion-focus` and back in on the way out,
+    // so a camera that follows them glides to the whole screen and home again. The resting bands
+    // are where they settle — none in full screen — so a fit made for them is made once, for the
+    // state the screen is going to, and eased by the demo that makes it.
+    val chromeShare = 1f - focusProgress.value
+    val easedTop = chromeTop * chromeShare
+    val easedBottom = chromeBottom * chromeShare
     val sheetCoverPx by remember(sheetState, windowHeightPx) {
         androidx.compose.runtime.derivedStateOf {
             // The offset is the sheet's top edge in the scaffold, which fills the window. It has
@@ -519,18 +534,18 @@ private fun ProvideDemoSceneCover(
         }
     }
     val cover = demoSceneCover(
-        chromeTop = chromeTop,
-        chromeBottom = chromeBottom,
+        chromeTop = easedTop,
+        chromeBottom = easedBottom,
         sheetCover = with(density) { sheetCoverPx.toDp() },
         slotTop = slotTop,
         slotBottom = slotBottom,
     )
     // The same bands with the sheet closed. Remembered, so the demos that only read this one are
-    // not recomposed by a sheet on the move.
-    val restingCover = remember(chromeTop, chromeBottom, slotTop, slotBottom) {
+    // not recomposed by a sheet on the move, nor by full screen on its way.
+    val restingCover = remember(chromeTop, chromeBottom, slotTop, slotBottom, focused) {
         demoSceneCover(
-            chromeTop = chromeTop,
-            chromeBottom = chromeBottom,
+            chromeTop = if (focused) 0.dp else chromeTop,
+            chromeBottom = if (focused) 0.dp else chromeBottom,
             sheetCover = 0.dp,
             slotTop = slotTop,
             slotBottom = slotBottom,
@@ -539,6 +554,7 @@ private fun ProvideDemoSceneCover(
     CompositionLocalProvider(
         LocalDemoSceneCover provides cover,
         LocalDemoSceneRestingCover provides restingCover,
+        LocalDemoFullScreen provides focused,
         content = content,
     )
 }
@@ -659,6 +675,15 @@ fun DemoScaffold(
         targetValue = if (focused) 0f else 1f,
         animationSpec = SceneViewTokens.Motion.fade(),
         label = "demo-full-screen",
+    )
+    // How far the scene has gone into full screen, 0 → 1 on `motion-focus`: the bands the chrome
+    // leaves the scene ease out with it, so a camera framed by them re-frames on that curve
+    // instead of jumping the frame the chrome leaves (#4558). Read only where the bands are
+    // provided, so the scaffold itself does not recompose with it.
+    val focusProgress = animateFloatAsState(
+        targetValue = if (focused) 1f else 0f,
+        animationSpec = SceneViewTokens.Motion.focus(),
+        label = "demo-full-screen-framing",
     )
 
     val chromeVisible = !focused && (chromeToggled || touchExploration || DemoSettings.qaMode)
@@ -945,15 +970,14 @@ fun DemoScaffold(
                 // all (a phone in landscape), in which case the slot stays full-frame and the bands
                 // are only reported, through [LocalDemoSceneCover] (#4310).
                 // In full screen nothing covers the scene: no bands to report, no reserve.
-                val chromeTop = if (focused) 0.dp else maxOf(identityRow + statusBarInset, topOverlayBand)
+                // The bands at rest, focused or not: [ProvideDemoSceneCover] eases them out.
+                val restChromeTop = maxOf(identityRow + statusBarInset, topOverlayBand)
+                val chromeTop = if (focused) 0.dp else restChromeTop
                 val navigationBarInset = with(density) {
                     WindowInsets.safeDrawing.getBottom(density).toDp()
                 }
-                val chromeBottom = if (focused) {
-                    0.dp
-                } else {
-                    maxOf(bottomOverlayBand, dockBandClearance + navigationBarInset)
-                }
+                val restChromeBottom = maxOf(bottomOverlayBand, dockBandClearance + navigationBarInset)
+                val chromeBottom = if (focused) 0.dp else restChromeBottom
                 // The whole bottom stack above the system inset, for a scene that scrolls under it.
                 // The measured band counts the inset (see `DemoBottomOverlay`), so it comes off here.
                 // In full screen nothing covers it.
@@ -1054,10 +1078,12 @@ fun DemoScaffold(
                                 ProvideDemoSceneCover(
                                     sheetState = settingsSheetState,
                                     windowHeightPx = rootHeightPx,
-                                    chromeTop = chromeTop,
-                                    chromeBottom = chromeBottom,
+                                    chromeTop = restChromeTop,
+                                    chromeBottom = restChromeBottom,
                                     slotTop = slotTop,
                                     slotBottom = slotBottom,
+                                    focused = focused,
+                                    focusProgress = focusProgress,
                                 ) {
                                     if (arSessionFailed) {
                                         Box(

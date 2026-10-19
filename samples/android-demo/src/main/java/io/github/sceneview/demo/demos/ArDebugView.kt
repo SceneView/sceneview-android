@@ -870,6 +870,20 @@ internal fun ArDebugSceneView(
                     band = orbit.band,
                     fill = if (finished) 1f else ArDebugFraming.GROWING_FILL,
                 )
+                // Full screen (#4558): how much larger the room is drawn once the chrome is gone —
+                // the fit for the whole view against the fit for the chrome's band.
+                orbit.focusBand?.let { focusBand ->
+                    val homeFull = ArDebugFraming.homeWithMeasure(
+                        bounds, measured, floorY, orbit.viewportHeight,
+                        orbit.home.azimuthDegrees, orbit.verticalFovDegrees, orbit.aspect,
+                        elevationDegrees = orbit.homeElevation,
+                        band = focusBand,
+                        fill = if (finished) 1f else ArDebugFraming.GROWING_FILL,
+                    )
+                    if (homeFull.distance > 0f && home.distance > 0f) {
+                        orbit.focusScale = (home.distance / homeFull.distance).coerceIn(1f, MAX_FOCUS_SCALE)
+                    }
+                }
                 val followed = follow?.invoke(frame)
                 // Following, the view frames the room — moved by what a picked box needs to be seen.
                 if (orbit.following) {
@@ -1310,3 +1324,6 @@ internal const val AR_DEBUG_TIMELINE_TAG = "ar_debug_timeline"
 internal const val AR_DEBUG_LIVE_TAG = "ar_debug_live"
 
 internal const val AR_DEBUG_PIP_TAG = "ar_debug_pip"
+
+/** The most full screen enlarges the room: past it, a thin band's fit would throw the room at the lens. */
+private const val MAX_FOCUS_SCALE = 2.5f

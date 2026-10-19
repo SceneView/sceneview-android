@@ -35,6 +35,17 @@ import io.github.sceneview.demo.ui.GlassIconButton
 // row's full-screen button is tapped.
 
 /**
+ * Whether the demo is in full screen (#4558) — provided in the scaffold's `scene` slot.
+ *
+ * The bands of [LocalDemoSceneCover] and [LocalDemoSceneRestingCover] already ease to zero on
+ * `motion-focus` as full screen opens, and back on the way out: a scene framed by them follows on
+ * its own. This is for a demo that frames its subject from what it measures of the chrome itself
+ * (3D Scan's replay) or from a fixed reserve (the Model Viewer's dock): it gives that frame up for
+ * the whole screen while this is `true`, and keeps it to go back to. `false` outside a scaffold.
+ */
+val LocalDemoFullScreen = androidx.compose.runtime.compositionLocalOf { false }
+
+/**
  * Fades a band out while the demo is in full screen (#4558) and, once it has gone, stops
  * placing it — an unplaced node draws nothing and takes no touch, so the scene under it keeps
  * every gesture. The band stays composed: a demo's overlay comes back with its state.

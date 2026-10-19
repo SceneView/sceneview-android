@@ -734,4 +734,31 @@ class ArDebugOrbitCameraTest {
         assertEquals(1f, camera.shownScale, 0f)
         assertArrayEquals(before, camera.getTransform().toFloatArray(), 1e-5f)
     }
+
+    @Test
+    fun `full screen draws the room larger and centred, on motion-focus, and Back restores it (#4558)`() {
+        val band = OrbitBand(halfWidth = 0.9f, halfHeight = 0.46f, lift = 0.04f)
+        val camera = replayCamera(band, 0.46f)
+        val before = camera.getTransform().toFloatArray()
+
+        camera.focusBand = OrbitBand.FULL_SCREEN
+        camera.focusScale = 1.6f
+        camera.update(1f / 60f)
+        // Eased, not cut: one frame in, the picture has started to grow, not arrived.
+        assertTrue(camera.shownScale > 1f && camera.shownScale < 1.6f)
+        // Still on its way a third of the way through the 600 ms move.
+        repeat(11) { camera.update(1f / 60f) }
+        assertTrue(camera.shownScale < 1.6f - 1e-3f)
+        repeat(60) { camera.update(1f / 60f) }
+        assertEquals(1.6f, camera.shownScale, 1e-4f)
+        assertEquals(OrbitBand.FULL_SCREEN.lift, camera.shownLift, 1e-4f)
+
+        camera.focusBand = null
+        camera.update(1f / 60f)
+        assertTrue(camera.shownScale < 1.6f && camera.shownScale > 1f)
+        repeat(80) { camera.update(1f / 60f) }
+        assertEquals(band.lift, camera.shownLift, 0f)
+        assertEquals(1f, camera.shownScale, 0f)
+        assertArrayEquals(before, camera.getTransform().toFloatArray(), 1e-5f)
+    }
 }
