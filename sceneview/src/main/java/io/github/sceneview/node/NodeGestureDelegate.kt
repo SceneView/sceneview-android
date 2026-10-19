@@ -114,6 +114,10 @@ class NodeGestureDelegate(
      */
     private val claimedKinds = mutableSetOf<NodeEditingKind>()
 
+    /** The node in this chain that accepted [kind], if the corresponding edit is still open. */
+    internal fun claimedNode(kind: NodeEditingKind): Node? =
+        if (kind in claimedKinds) node else node.parent?.gestureDelegate?.claimedNode(kind)
+
     /** The set of [Node] transform properties currently being edited by a gesture. */
     var editingTransforms = setOf<KProperty1<Node, Any>>()
         set(value) {

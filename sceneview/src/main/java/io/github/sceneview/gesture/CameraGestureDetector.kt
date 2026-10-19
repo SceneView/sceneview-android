@@ -882,6 +882,8 @@ open class CameraGestureDetector(
             MotionEvent.ACTION_CANCEL, MotionEvent.ACTION_UP -> {
                 twoFingerTapCandidate = false
                 endGesture()
+                // A cancelled stream (a parent intercepted it) is not a release: nothing coasts.
+                if (event.actionMasked == MotionEvent.ACTION_CANCEL) stopInertia()
             }
         }
     }
@@ -1048,6 +1050,31 @@ class FovZoomCameraManipulator @JvmOverloads constructor(
     private val pinchFovSpeed: Float = DEFAULT_PINCH_FOV_SPEED,
 ) : CameraGestureDetector.CameraManipulator {
     private var currentFov: Double = 60.0
+    private var fovCumulative = 0f
+    private val coastStep = FloatArray(1)
+    private val fovInertia = InertiaTracker(
+        dimensions = 1,
+        minSpeed = scaledZoomThreshold(
+            CameraGestureDetector.DefaultCameraManipulator.ZOOM_INERTIA_STOP_PER_SECOND,
+        ),
+        maxSpeed = scaledZoomThreshold(
+            CameraGestureDetector.DefaultCameraManipulator.ZOOM_INERTIA_MAX_PER_SECOND,
+        ),
+        minReleaseSpeed = scaledZoomThreshold(
+            CameraGestureDetector.DefaultCameraManipulator.ZOOM_INERTIA_RELEASE_PER_SECOND,
+        ),
+    )
+
+    /** Clock the release velocity is measured against, in nanoseconds. Injectable for tests. */
+    internal var nanoTime: () -> Long = System::nanoTime
+
+    private fun nowSeconds(): Double = nanoTime() / 1_000_000_000.0
+
+    private fun scaledZoomThreshold(threshold: Float): Float {
+        val fovSpeed = pinchFovSpeed.takeIf { it.isFinite() && it > 0f } ?: DEFAULT_PINCH_FOV_SPEED
+        return threshold * fovSpeed /
+            CameraGestureDetector.DefaultCameraManipulator.DEFAULT_PINCH_ZOOM_SPEED
+    }
 
     override fun setViewport(width: Int, height: Int) = inner.setViewport(width, height)
     override fun getTransform(): Transform = inner.getTransform()
@@ -1056,27 +1083,54 @@ class FovZoomCameraManipulator @JvmOverloads constructor(
     override fun grabEnd() = inner.grabEnd()
 
     override fun scrollBegin(x: Int, y: Int, separation: Float) {
-        // Snapshot the current FOV at gesture start so the delta is applied to a stable base.
-        // We can't query the Camera directly for current FOV (Filament's Camera API exposes
-        // setProjection but not a getter), so we track it locally.
+        stopInertia()
+        fovCumulative = 0f
+        fovInertia.reset()
+        fovInertia.addSample(nowSeconds(), fovCumulative)
     }
 
     override fun scrollUpdate(x: Int, y: Int, prevSeparation: Float, currSeparation: Float) {
         // Pinch out (curr > prev) ⇒ user wants to zoom IN ⇒ smaller FOV.
         // Pure math is in [nextFov] for unit testability without a Filament Camera.
-        currentFov = nextFov(currentFov, prevSeparation, currSeparation, fovRangeDegrees, pinchFovSpeed)
-        cameraNode.setProjection(fovInDegrees = currentFov, direction = Camera.Fov.VERTICAL)
+        val nextFov = nextFov(
+            currentFov, prevSeparation, currSeparation, fovRangeDegrees, pinchFovSpeed,
+        )
+        fovCumulative += (nextFov - currentFov).toFloat()
+        fovInertia.addSample(nowSeconds(), fovCumulative)
+        applyFov(nextFov)
     }
 
-    override fun scrollEnd() {}
-    override fun update(deltaTime: Float) = inner.update(deltaTime)
+    override fun scrollEnd() {
+        fovInertia.release(nowSeconds())
+    }
+
+    override fun update(deltaTime: Float) {
+        if (fovInertia.isCoasting) {
+            fovInertia.advance(deltaTime, coastStep)
+            val nextFov = (currentFov + coastStep[0]).coerceIn(
+                fovRangeDegrees.start.toDouble(),
+                fovRangeDegrees.endInclusive.toDouble(),
+            )
+            if (nextFov == currentFov) fovInertia.stop() else applyFov(nextFov)
+        }
+        inner.update(deltaTime)
+    }
+
+    private fun applyFov(fov: Double) {
+        currentFov = fov
+        cameraNode.setProjection(fovInDegrees = fov, direction = Camera.Fov.VERTICAL)
+    }
 
     // Double-tap stays a dolly, handled by the inner manipulator: this class only re-maps the
     // *pinch* to a FOV change, and a double-tap that narrowed the lens instead of approaching the
     // subject would contradict the dolly the orbit/pan half of the camera still does.
     override fun doubleTapZoom(x: Int, y: Int, zoomIn: Boolean) = inner.doubleTapZoom(x, y, zoomIn)
-    override fun stopInertia() = inner.stopInertia()
-    override val isFrameActive: Boolean get() = inner.isFrameActive
+    override fun stopInertia() {
+        fovInertia.stop()
+        inner.stopInertia()
+    }
+
+    override val isFrameActive: Boolean get() = fovInertia.isCoasting || inner.isFrameActive
 
     companion object {
         const val DEFAULT_PINCH_FOV_SPEED: Float = 0.05f

@@ -8,12 +8,15 @@ data class CameraKeyframe(val shot: CameraShot, val seconds: Float)
 /**
  * A camera move through keyframes: the camera passes each [CameraKeyframe.shot] at its time and
  * flows between them on a cubic spline (Catmull-Rom over the orbit parameters), so its speed is
- * continuous across a keyframe — no kink, no pause, no change of pace the eye can catch.
+ * continuous across a keyframe — no kink, no change of pace the eye can catch.
  *
  * Two keyframes make a plain move. With one keyframe, or none, the path holds that shot.
  *
- * - [easing] shapes the whole path's time (`0..1` of [durationSeconds]) — [CameraEasing.Expressive]
- *   lands a reveal softly; a looping tour wants [CameraEasing.Linear].
+ * - [easing] shapes the time of each segment between two keyframes (`0..1` of that segment), so
+ *   every keyframe is reached at exactly its declared [CameraKeyframe.seconds].
+ *   [CameraEasing.Expressive] lands a reveal softly and, through several keyframes, settles on
+ *   each one before leaving it (its speed is zero at both ends of a segment, so still continuous);
+ *   [CameraEasing.Linear] flows through the keyframes without slowing — what a looping tour wants.
  * - [shortestArc] unwraps each keyframe's azimuth the short way round from the one before.
  *   Off, the azimuths are taken as given: a tour spells its turn as `azimuthDegrees + 360f`.
  * - [loop] wraps time past the end back to the start; the spline then closes, so the last
@@ -52,7 +55,8 @@ class CameraPath(
     val end: CameraShot? get() = keyframes.lastOrNull()?.shot
 
     /**
-     * The shot [seconds] into the path. Past the end a path holds its last shot; a [loop] wraps,
+     * The shot [seconds] into the path — counted from the first keyframe, the same clock as
+     * [isFinishedAt] and [CameraAnimator]. Past the end a path holds its last shot; a [loop] wraps,
      * and its azimuth keeps counting (lap two of a tour reads `home + 720°`), so the camera's
      * velocity is the same across the seam as anywhere else — nothing for a touch to catch.
      */
@@ -61,7 +65,7 @@ class CameraPath(
         if (frames.isEmpty()) return CameraShot()
         if (frames.size == 1 || durationSeconds <= 0f) return frames.first().shot
         val startSeconds = frames.first().seconds
-        var local = seconds - startSeconds
+        var local = seconds
         var laps = 0f
         if (loop) {
             laps = kotlin.math.floor(local / durationSeconds)
@@ -70,8 +74,7 @@ class CameraPath(
         } else {
             local = local.coerceIn(0f, durationSeconds)
         }
-        val eased = easing((local / durationSeconds).coerceIn(0f, 1f)).coerceIn(0f, 1f) * durationSeconds
-        val shot = sample(startSeconds + eased)
+        val shot = sample(startSeconds + local)
         if (laps == 0f) return shot
         val turnPerLap = frames.last().shot.azimuthDegrees - frames.first().shot.azimuthDegrees
         return shot.copy(azimuthDegrees = shot.azimuthDegrees + laps * turnPerLap)
@@ -80,7 +83,7 @@ class CameraPath(
     /** `true` once [seconds] is past the end of a path that does not loop. */
     fun isFinishedAt(seconds: Float): Boolean = !loop && seconds >= durationSeconds
 
-    /** Hermite sample at absolute time [t] between the two keyframes around it. */
+    /** Hermite sample at absolute time [t] between the two keyframes around it, [easing] per segment. */
     private fun sample(t: Float): CameraShot {
         val frames = keyframes
         val last = frames.size - 1
@@ -90,7 +93,7 @@ class CameraPath(
         val k1 = frames[i + 1]
         val span = k1.seconds - k0.seconds
         if (span <= 0f) return k1.shot
-        val u = ((t - k0.seconds) / span).coerceIn(0f, 1f)
+        val u = easing(((t - k0.seconds) / span).coerceIn(0f, 1f)).coerceIn(0f, 1f)
         val m0 = tangentAt(i)
         val m1 = tangentAt(i + 1)
         val u2 = u * u
@@ -200,6 +203,11 @@ class CameraPath(
          * A tour: [turns] slow laps around [around]'s target at its distance and elevation, rising
          * by [riseDegrees] at the half-way point of each lap for life, at constant speed and looping
          * seamlessly — a share, a video, a result left on screen.
+         *
+         * A [loop] of a fractional number of [turns] (`1.5f`) still closes: its rise runs a whole
+         * number of times over the path (the nearest to [turns], at least once) instead of once
+         * per lap, so the camera is back at [around]'s elevation at the seam and the loop never
+         * jumps. The azimuth keeps counting across the seam, as for whole turns.
          */
         fun tour(
             around: CameraShot,
@@ -210,9 +218,13 @@ class CameraPath(
         ): CameraPath {
             val laps = turns.coerceAtLeast(MIN_TURNS)
             val quarters = (laps * QUARTERS_PER_TURN).toInt().coerceAtLeast(2)
+            val whole = laps == kotlin.math.floor(laps)
+            // Rises over the path: one per lap, or a whole number of them for a fractional loop,
+            // so the last keyframe is back at the start's elevation and the seam closes.
+            val rises = if (whole || !loop) laps else kotlin.math.round(laps).coerceAtLeast(1f)
             val keyframes = (0..quarters).map { step ->
                 val share = step.toFloat() / quarters
-                val lapPhase = (share * laps) % 1f
+                val lapPhase = (share * rises) % 1f
                 val rise = riseDegrees * kotlin.math.sin(Math.PI * lapPhase).toFloat()
                 CameraKeyframe(
                     shot = around.copy(
