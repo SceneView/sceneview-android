@@ -1,6 +1,13 @@
 package io.github.sceneview.demo.demos
 
 import androidx.compose.foundation.background
+import io.github.sceneview.math.Position
+import io.github.sceneview.demo.demos.internal.OrbitPose
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.offset
 import androidx.compose.material.icons.Icons
@@ -226,9 +233,12 @@ internal fun HomeReviewCard(
     }
 }
 
-/** Save scan, in progress: the card stays where the review was, with what it is doing. */
+/**
+ * Save scan, in progress: the card stays where the review was, with what it is doing — fusing the
+ * capture's [points] (#4719), while the view turns round the cloud ([ScanLiveView]'s `saving`).
+ */
 @Composable
-internal fun ScanSavingCard() {
+internal fun ScanSavingCard(points: Int = 0) {
     OverlayCard(testTag = SCAN_SAVING_TAG) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             CircularProgressIndicator(
@@ -237,7 +247,7 @@ internal fun ScanSavingCard() {
                 strokeWidth = Space.xs / 2,
             )
             Spacer(Modifier.width(Space.sm))
-            Text(text = ScanCopy.SAVING, style = OnScrimTitle)
+            Text(text = ScanCopy.fusing(points), style = OnScrimTitle)
         }
     }
 }
@@ -347,6 +357,9 @@ private fun ScanHint(text: String) {
  * no path, no photo frames, no plane grid. The view follows the phone like a navigation app,
  * heading-up ([ScanFollow]); a drag or a pinch takes it over, and [ScanRecenterPill] gives it
  * back. While it follows, a marker holds the phone's place, where [ScanFollow.LIFT] draws it.
+ *
+ * [saving] (#4719): the camera fades out under an opaque veil and the view leaves the phone for a
+ * slow orbit round the whole cloud ([ScanFollow.savingPose]) while the scan is fused and written.
  */
 @Composable
 @Suppress("LongParameterList") // the demo's shared engine, handed down once
@@ -360,10 +373,19 @@ internal fun ScanLiveView(
     engine: Engine,
     modelLoader: ModelLoader,
     materialLoader: MaterialLoader,
+    saving: Boolean = false,
 ) {
+    // Saving, the view is handed back to the automatic framing, which the orbit then drives.
+    LaunchedEffect(saving) { if (saving) orbit.recenter() }
+    val veil by animateColorAsState(
+        targetValue = if (saving) ArOverlay.cameraDim.copy(alpha = 1f) else ArOverlay.cameraDim,
+        animationSpec = tween(SceneViewTokens.Duration.longMillis, easing = SceneViewTokens.Ease.expressive),
+        label = "scanVeil",
+    )
+    val savingOrbit = remember(saving) { if (saving) SavingOrbit() else null }
     BoxWithConstraints(modifier = Modifier.fillMaxSize().testTag(SCAN_STAGE_TAG)) {
         // Only the camera is dimmed: the cloud is drawn by its own view, above the veil.
-        Box(Modifier.fillMaxSize().background(ArOverlay.cameraDim))
+        Box(Modifier.fillMaxSize().background(veil))
         ArDebugSceneView(
             session = session,
             orbit = orbit,
@@ -374,10 +396,13 @@ internal fun ScanLiveView(
             replay = media,
             transparent = true,
             visible = { it in SCAN_LIVE_GROUPS },
-            follow = { frame -> follow.poseFor(frame.camera) },
+            follow = { frame ->
+                val phone = follow.poseFor(frame.camera)
+                savingOrbit?.poseFor(phone, media.dense?.cloud?.positions ?: frame.mapPoints, orbit) ?: phone
+            },
             observe = coverage::observe,
         )
-        if (following) {
+        if (following && !saving) {
             val youAreHere = stringResource(R.string.demo_ar_rerun_you_are_here)
             Box(
                 contentAlignment = Alignment.Center,
@@ -400,6 +425,32 @@ internal fun ScanLiveView(
         }
     }
 }
+
+/**
+ * The saving orbit of one save (#4719): started on its first frame from the follow pose of the
+ * moment, round the cloud's centre and reach read once — the cloud no longer grows while saving.
+ */
+private class SavingOrbit {
+    private var from: OrbitPose? = null
+    private var started = 0L
+    private var centre: Position? = null
+    private var radius = 0f
+
+    fun poseFor(phone: OrbitPose?, points: FloatArray, orbit: ArDebugOrbitCamera): OrbitPose? {
+        val start = from ?: (phone ?: orbit.pose).also {
+            from = it
+            started = System.nanoTime()
+        }
+        val around = centre ?: (ScanFollow.cloudCentre(points) ?: return phone).also {
+            centre = it
+            radius = ScanFollow.cloudRadius(points, it)
+        }
+        val seconds = (System.nanoTime() - started) / NS_PER_S
+        return ScanFollow.savingPose(start, around, radius, seconds, orbit.verticalFovDegrees)
+    }
+}
+
+private const val NS_PER_S = 1e9f
 
 /** Shown once a drag or a pinch has left the follow view: back to following the phone. */
 @Composable
