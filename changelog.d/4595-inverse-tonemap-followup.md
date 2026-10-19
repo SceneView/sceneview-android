@@ -10,6 +10,5 @@
   into a pastel (255, 212, 212). The shared inverse is still exact for every colour the curve can
   produce. For the others it now balances the peak against the curve's desaturation: red shows
   (235, 13, 13), and no colour lands more than 20 steps (of 255) away.
-- **Demo: AR Fog renders through the AR view.** It passed `rememberView(engine)` to
-  `ARSceneView`, so its camera feed, which the camera-stream materials pre-distort for Filmic,
-  went through PBR Neutral instead and came out over-bright.
+- **Demo: the 2D-in-3D Inspect card shows its authored swatch colours.** The card is now an unlit
+  `ViewNode`; lit, it took the scene light and its amber swatch read as ochre.
