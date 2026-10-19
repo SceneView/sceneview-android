@@ -22,6 +22,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -68,6 +69,8 @@ import io.github.sceneview.sample.rememberMaterialInstance
 import io.github.sceneview.sample.ui.LabeledSlider
 import java.util.Locale
 import kotlin.math.atan2
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 
 /**
  * **Orbital Pendulum** — a chaotic two-link mechanism rendered in SceneView's
@@ -180,6 +183,18 @@ fun DoublePendulumDemo(onBack: () -> Unit) {
     val firstFrame = rememberFirstFrameState(engine)
     // "Scene ready" waits for the HDR: the fallback-lit frames are not the demo's picture (#4174).
     firstFrame.holdUntil(landed = hdrEnvironment != null)
+
+    // The swing waits for the scene to be on screen. The loop used to start as soon as the nodes
+    // existed, under the loading cover, so on a slow first frame the pendulum was already mid-swing
+    // when the cover lifted and the release pose was never seen. It now holds that pose until the
+    // cover has gone and a short beat has passed, then lets go. Only the cold open waits: a
+    // Release or a slider change later lets go at once.
+    var letGo by remember { mutableStateOf(false) }
+    LaunchedEffect(firstFrame) {
+        snapshotFlow { firstFrame.rendered.value }.first { it }
+        delay(PENDULUM_RELEASE_BEAT_MS)
+        letGo = true
+    }
 
     DemoScaffold(
         title = stringResource(R.string.demo_double_pendulum_title),
@@ -476,8 +491,10 @@ fun DoublePendulumDemo(onBack: () -> Unit) {
                 // into whichever tube exists on that frame.
                 LaunchedEffect(
                     leadArmRef, trailArmRef, jointBobRef, tipBobRef,
-                    generation, length1, length2, gravity,
+                    generation, length1, length2, gravity, letGo,
                 ) {
+                    // Held at the release pose the nodes were built in, trail parked with it.
+                    if (!letGo) return@LaunchedEffect
                     val arm1 = leadArmRef ?: return@LaunchedEffect
                     val arm2 = trailArmRef ?: return@LaunchedEffect
                     val bobJoint = jointBobRef ?: return@LaunchedEffect
@@ -575,6 +592,12 @@ internal const val PENDULUM_TIP_MASS = 1.6f
 
 /** Share of the angular velocity lost per second. */
 internal const val PENDULUM_DAMPING = 0.035f
+
+/**
+ * How long the pendulum rests at its release pose once the loading cover has lifted, in
+ * milliseconds: the cover's crossfade, then long enough to read the pose before it lets go.
+ */
+internal const val PENDULUM_RELEASE_BEAT_MS = 650L
 
 /** What the demo opens with: the two arm lengths in metres, gravity in m/s². */
 internal const val PENDULUM_DEFAULT_LENGTH_1 = 0.52f
