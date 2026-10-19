@@ -1,5 +1,6 @@
 package io.github.sceneview.demo
 
+import android.annotation.SuppressLint
 import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.util.Half
@@ -179,6 +180,8 @@ private fun ReplayScene(
  * the stock image material draws unchanged. Filmic then maps it back to the photo on screen.
  * The texture lives as long as the engine — a debug screen, freed with it.
  */
+// The ShortBuffer takes the raw half-float bits that RGBA16F expects, not widened values.
+@SuppressLint("HalfFloat")
 @Composable
 private fun rememberCameraReplayBackdrop(engine: Engine, materialLoader: MaterialLoader, photo: Int): MaterialInstance {
     val context = LocalContext.current

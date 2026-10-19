@@ -15,7 +15,7 @@ Re-run that script after adding, removing or re-compressing a bundled asset;
 `ci.yml` → `build` (step "Check asset credits") fails if this file and the
 assets disagree.
 
-Assets bundled: **47**.
+Assets bundled: **48**.
 
 > **Optimization note (#934, #2305).** The bundled GLBs and HDRs are compressed
 > for a lean APK while preserving on-device visual quality:
@@ -73,6 +73,8 @@ Assets bundled: **47**.
   Generated locally with ffmpeg (880 Hz sine, 0.6 s) — see `assets/audio/CREDITS.md`
 - `augmented_images/qrcode.png` — **[qrcode.png](https://github.com/sceneview/sceneview/blob/main/LICENSE)** by SceneView project — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) (2 KB)  
   QR-like reference pattern drawn for `ARImageDemo`
+- `materials/ar_mesh_tint.filamat` — **[ar_mesh_tint.filamat](https://github.com/sceneview/sceneview/blob/main/LICENSE)** by SceneView project — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) (49 KB)  
+  Compiled from `samples/android-demo/src/main/materials/ar_mesh_tint.mat` (AR overlays that tint the camera image, #4623)
 - `materials/cosmos_dust.filamat` — **[cosmos_dust.filamat](https://github.com/sceneview/sceneview/blob/main/LICENSE)** by SceneView project — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) (40 KB)  
   Compiled from `samples/android-demo/src/main/materials/cosmos_dust.mat` (Cosmos demo, #4152)
 - `materials/cosmos_planet.filamat` — **[cosmos_planet.filamat](https://github.com/sceneview/sceneview/blob/main/LICENSE)** by SceneView project — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) (57 KB)  
