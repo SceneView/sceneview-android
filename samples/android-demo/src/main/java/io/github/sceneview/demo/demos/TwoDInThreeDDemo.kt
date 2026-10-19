@@ -1,6 +1,20 @@
 package io.github.sceneview.demo.demos
 
 import android.view.MotionEvent
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Typeface
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.ui.graphics.toArgb
+import io.github.sceneview.demo.demos.internal.StreamPhase
+import io.github.sceneview.demo.demos.internal.fitInside
+import io.github.sceneview.demo.demos.internal.videoTransport
+import io.github.sceneview.demo.theme.themedStageChrome
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.delay
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -84,7 +98,12 @@ import io.github.sceneview.sample.LifecycleAwareLaunchedEffect
 import io.github.sceneview.sample.rememberMaterialInstance
 
 /**
- * Inspect: tap a rocket part, then restyle it with live Compose swatches on an attached quad.
+ * 2D in 3D, one showcase (#4624). It used to be two tabs, Inspect and Media, and the second one
+ * went unnoticed three times out of four: everything now stands in one scene. A procedural rocket
+ * in front — tap a part, then restyle it from live Compose UI on an attached [ViewNode] card —
+ * and behind it a wall: a framed drawable ([ImageNode]), a muted streamed video ([VideoNode]),
+ * a floating badge ([BillboardNode]), each surface named by a [TextNode].
+ *
  * Procedural parts are deliberate: ModelNode has one model-wide collider and HitResult carries
  * no primitive index, so the public API cannot pick individual glTF parts today.
  *
@@ -92,17 +111,31 @@ import io.github.sceneview.sample.rememberMaterialInstance
  * so re-apply the theme inside. A manager sizes every child to its largest: keep a fixed card box.
  * The card is unlit so its swatches show their authored token colours (#4595 follow-up): a lit
  * card takes the scene light and displayed amber as ochre. Bloom stays disabled so the unlit
- * white card has no halo. Rendering last
- * does not change picking order: the raw touch callback prioritises the visible on-top card.
+ * white card has no halo. Rendering last does not change picking order: the raw touch callback
+ * prioritises the visible on-top card.
+ *
+ * TextNode and BillboardNode face the camera only with a cameraPositionProvider. Clearing it leaves
+ * a node as it was last turned, so those nodes are keyed on Face camera: rebuilt, they hang at
+ * their resting yaw again. VideoNode(player) needs a prepared MediaPlayer:
+ * `rememberMediaPlayer` prepares the URL off the main thread ([rememberStreamedVideo]), and until
+ * it has, or when it cannot, the screen says so on a still. It never plays a stand-in.
+ * QA seeks the attached video to one second while paused; a decoder that cannot finish that seek
+ * falls back to muted playback after a bounded wait, so the rest of the scene remains usable.
  */
 @Composable
-fun TwoDInThreeDInspectDemo(onBack: () -> Unit) {
+fun TwoDInThreeDDemo(onBack: () -> Unit) {
     val title = stringResource(R.string.demo_two_d_in_three_d_title)
     if (LocalInspectionMode.current) {
         DemoPreviewPlaceholder(title = title, onBack = onBack)
         return
     }
     val layout = CalloutLayout
+    val qa = DemoSettings.qaMode
+    // A phone held sideways: the strip above the controls is too thin to give a line to a hint,
+    // and the wall stands either side of the rocket there.
+    val strip = isDemoCompactHeight()
+    val showcase = layout.showcase(strip)
+    val target = layout.showcaseTarget(strip)
     var selected by remember { mutableStateOf<RocketPart?>(null) }
     var hasSelected by remember { mutableStateOf(false) }
     val originals = remember { RocketPart.entries.associateWith { it.originalMaterial } }
@@ -110,6 +143,7 @@ fun TwoDInThreeDInspectDemo(onBack: () -> Unit) {
     var alwaysOnTop by remember { mutableStateOf(true) }
     var faceCamera by remember { mutableStateOf(true) }
     var spinning by remember { mutableStateOf(false) }
+    var playing by remember { mutableStateOf(!qa) }
     var yaw by remember { mutableFloatStateOf(0f) }
     var anchor by remember { mutableStateOf(Position()) }
     // Where the card was turned when its part was picked: what it keeps with Face camera off.
@@ -123,8 +157,8 @@ fun TwoDInThreeDInspectDemo(onBack: () -> Unit) {
             pulse.animateTo(1f, SceneViewTokens.Motion.spring())
         }
     }
-    LifecycleAwareLaunchedEffect(spinning, DemoSettings.qaMode) {
-        if (!spinning || DemoSettings.qaMode) return@LifecycleAwareLaunchedEffect
+    LifecycleAwareLaunchedEffect(spinning, qa) {
+        if (!spinning || qa) return@LifecycleAwareLaunchedEffect
         var previous = 0L
         while (true) withFrameNanos { now ->
             if (previous != 0L) yaw = layout.nextTurntableYaw(yaw, now - previous)
@@ -141,6 +175,7 @@ fun TwoDInThreeDInspectDemo(onBack: () -> Unit) {
     val invalidator = rememberRenderInvalidator()
     val firstFrame = rememberFirstFrameState(engine)
     val sky = themedStageSky()
+    val chrome = themedStageChrome()
     val skybox = rememberStageSkybox(engine, sky, invalidator::requestRender)
     StageSkyFog(view, sky, invalidator::requestRender)
     LaunchedEffect(view) {
@@ -150,6 +185,7 @@ fun TwoDInThreeDInspectDemo(onBack: () -> Unit) {
     val studio = rememberModelDemoEnvironment(environments, firstFrame)
     val environment = remember(studio, skybox) { studio.copy(skybox = skybox) }
     val floor = rememberMaterialInstance(materials, sky.floor, 0f, 0.62f)
+    val frame = rememberMaterialInstance(materials, SceneViewColors.SurfaceDim, 0.2f, 0.45f)
     val swatchColors = listOf(SceneViewColors.SurfaceLight, SceneViewColors.Primary,
         SceneViewColors.TintLight, SceneViewColors.Highlight)
     val finishes = listOf(
@@ -158,13 +194,78 @@ fun TwoDInThreeDInspectDemo(onBack: () -> Unit) {
         rememberMaterialInstance(materials, swatchColors[2], 1f, 0.42f, 0.5f),
         rememberMaterialInstance(materials, swatchColors[3], 1f, 0.18f, 0.5f),
     )
+
+    // ── The wall: picture, video, badge and their captions ──────────────────────────────────
+    var eye by remember { mutableStateOf(Position()) }
+    val badge = rememberGallerySprite()
+    val screenAspect = layout.SCREEN_SIZE.x / layout.SCREEN_SIZE.y
+    val loadingStill = rememberVideoStatusStill(
+        stringResource(R.string.demo_two_d_in_three_d_video_loading), null, screenAspect)
+    val unavailableStill = rememberVideoStatusStill(
+        stringResource(R.string.demo_two_d_in_three_d_video_unavailable),
+        stringResource(R.string.demo_two_d_in_three_d_video_unavailable_detail), screenAspect)
+    val captions = listOf(R.string.demo_two_d_in_three_d_image_node, R.string.demo_two_d_in_three_d_video_node)
+    // TextNode's bitmap is 512 x 128 px: at 2.25 x the large headline, the longest caption fills
+    // about three quarters of it in monospace, readable from where the camera stands.
+    val fontSize = MaterialTheme.typography.headlineLarge.fontSize.value * 2.25f
+    val video = rememberStreamedVideo(MEDIA_VIDEO_URL)
+    val player = video.player
+    val videoFailed = video.phase == StreamPhase.Failed
+    var attached by remember { mutableStateOf(false) }
+    var seekFinished by remember { mutableStateOf(!qa) }
+    var seekFallback by remember { mutableStateOf(false) }
+    // A video paused before it ever played has no picture yet: one seek gives it its first frame.
+    val pictured = remember { booleanArrayOf(false) }
+    LaunchedEffect(player, attached) {
+        val seekable = attached && qa && video.phase == StreamPhase.Ready
+        if (player != null && seekable) {
+            player.setOnSeekCompleteListener { seekFinished = true; invalidator.requestRender() }
+            // A seek that throws has nothing to wait for: the fallback plays at once, so the
+            // scene is never announced ready over a screen that has no picture coming.
+            val refused = runCatching { player.seekTo(QA_FRAME_MILLIS) }.isFailure
+            if (!refused) delay(SEEK_TIMEOUT_MILLIS)
+            val failed = video.phase == StreamPhase.Failed
+            if ((refused || !seekFinished) && !failed) seekFallback = true
+            if (seekFallback && !failed) playing = true
+            player.setOnSeekCompleteListener(null)
+        }
+    }
+    LifecycleAwareLaunchedEffect(player, attached, playing, videoFailed) {
+        if (player == null || !attached || videoFailed) return@LifecycleAwareLaunchedEffect
+        try {
+            runCatching {
+                if (playing) player.start()
+                else if (player.isPlaying) player.pause()
+                else if (!qa && !pictured[0]) player.seekTo(0)
+                pictured[0] = true
+            }.onFailure { video.fail() }
+            invalidator.requestRender()
+            awaitCancellation()
+        } finally {
+            runCatching { if (player.isPlaying) player.pause() }
+        }
+    }
+    // The scene never waits for the network: the screen shows where the stream stands. QA does
+    // wait, for its paused seek; a stream that fails, a preparation or a decoder that times out
+    // must never leave the loading cover up.
+    val rendered = remember(firstFrame, video) { derivedStateOf {
+        firstFrame.rendered.value &&
+            (!qa || video.phase == StreamPhase.Failed || seekFinished || seekFallback)
+    } }
+    val ready = remember(firstFrame, rendered) { derivedStateOf {
+        rendered.value && firstFrame.sceneReady.value
+    } }
+    // `playing` is the request; a failed stream leaves it true with nothing playing on screen.
+    val transport = videoTransport(playing, videoFailed, qa, seekFallback)
+
+    // ── The card ────────────────────────────────────────────────────────────────────────────
     var cardNode by remember { mutableStateOf<ViewNode?>(null) }
     // What the card faces, read on every frame; the node skips the frames where nothing moved.
     // Not the eye itself — `{ camera.worldPosition }` — which turns a card this far off the
     // axis into a parallelogram. A point as far from the card as the eye is from the orbit
     // target, the same way: the card stays parallel to the screen, a rectangle.
-    val cameraPosition = remember(camera) { {
-        (cardNode?.worldPosition ?: layout.INSPECT_TARGET) + (camera.worldPosition - layout.INSPECT_TARGET)
+    val cameraPosition = remember(camera, target) { {
+        (cardNode?.worldPosition ?: target) + (camera.worldPosition - target)
     } }
     val touchCapture = remember { arrayOfNulls<ViewNode>(1) }
     LaunchedEffect(cardNode, alwaysOnTop) {
@@ -193,33 +294,42 @@ fun TwoDInThreeDInspectDemo(onBack: () -> Unit) {
 
     DemoScaffold(
         title = title, onBack = onBack, themedStage = true,
-        firstFrameRendered = firstFrame.rendered, sceneReady = firstFrame.sceneReady,
+        firstFrameRendered = rendered, sceneReady = ready,
         // A phone held sideways leaves a strip above the controls: no line of it goes to a hint.
-        peekHeader = if (hasSelected || isDemoCompactHeight()) null
+        peekHeader = if (hasSelected || strip) null
             else stringResource(R.string.demo_two_d_in_three_d_inspect_hint),
         dock = listOf(
+            DockItem(if (transport.playing) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                stringResource(if (transport.playing) R.string.demo_two_d_in_three_d_pause
+                    else R.string.demo_two_d_in_three_d_play),
+                { playing = !playing }, enabled = transport.enabled, selected = transport.playing),
             DockItem(Icons.Filled.RotateRight, stringResource(R.string.demo_two_d_in_three_d_spin),
-                { spinning = !spinning }, selected = spinning, enabled = !DemoSettings.qaMode),
+                { spinning = !spinning }, selected = spinning, enabled = !qa),
             DockItem(Icons.Filled.Refresh, stringResource(R.string.demo_two_d_in_three_d_reset),
                 { choices = originals }, enabled = choices != originals),
         ),
         controls = {
-            Text(stringResource(R.string.demo_two_d_in_three_d_inspect_explainer),
+            Text(stringResource(R.string.demo_two_d_in_three_d_explainer),
                 style = MaterialTheme.typography.bodyMedium)
             Row(Modifier.fillMaxWidth().padding(top = SceneViewTokens.Space.md)
-                .toggleable(alwaysOnTop, onValueChange = { alwaysOnTop = it }),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.demo_two_d_in_three_d_always_on_top))
-                Switch(alwaysOnTop, onCheckedChange = null)
-            }
-            Row(Modifier.fillMaxWidth().padding(top = SceneViewTokens.Space.sm)
                 .toggleable(faceCamera, onValueChange = { faceCamera = it }),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.demo_two_d_in_three_d_face_camera))
                 Switch(faceCamera, onCheckedChange = null)
             }
+            Row(Modifier.fillMaxWidth().padding(top = SceneViewTokens.Space.sm)
+                .toggleable(alwaysOnTop, onValueChange = { alwaysOnTop = it }),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.demo_two_d_in_three_d_always_on_top))
+                Switch(alwaysOnTop, onCheckedChange = null)
+            }
+            // CC BY asks for the title, the author and the licence wherever the work is shown.
+            Text(stringResource(R.string.demo_two_d_in_three_d_video_credit),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = SceneViewTokens.Space.sm))
         },
     ) {
         BoxWithConstraints(Modifier.fillMaxSize()) {
@@ -234,11 +344,13 @@ fun TwoDInThreeDInspectDemo(onBack: () -> Unit) {
             val freeWidth = maxWidth - sceneFrame.contentPadding.calculateLeftPadding(LayoutDirection.Ltr) -
                 sceneFrame.contentPadding.calculateRightPadding(LayoutDirection.Ltr)
             // Bounded once, here: the eye and the card's scale then share the distance really applied.
-            val distance = remember(aspect, freeWidth, DemoSettings.cameraDistance) {
-                layout.homeDistance(DemoSettings.cameraDistance ?: layout.inspectDistance(
-                    aspect, freeWidth.value, cardWidth.value, SceneViewTokens.Space.md.value))
+            // The whole showcase fits, and the card still finds room beside the rocket.
+            val distance = remember(aspect, freeWidth, strip, DemoSettings.cameraDistance) {
+                layout.homeDistance(DemoSettings.cameraDistance ?: maxOf(
+                    layout.inspectDistance(aspect, freeWidth.value, cardWidth.value, SceneViewTokens.Space.md.value),
+                    layout.cameraDistance(layout.showcaseExtent(strip), aspect)))
             }
-            val home = remember(distance) { layout.cameraHome(distance) + layout.INSPECT_TARGET }
+            val home = remember(distance, target) { layout.cameraHome(distance) + target }
             // One dp of card is one dp of screen at the home distance, in either orientation.
             val metersPerDp = layout.metersPerDp(distance, freeWidth.value / aspect)
             val cardMeters by rememberUpdatedState(
@@ -247,7 +359,7 @@ fun TwoDInThreeDInspectDemo(onBack: () -> Unit) {
             // Keyed on the home: the eye-position `rememberCameraManipulator` builds once and keeps
             // the frame of the first composition, made before the sheet has reported its height.
             val manipulator = remember(home) {
-                createDefaultCameraManipulator(eyePosition = home, targetPosition = layout.INSPECT_TARGET)
+                createDefaultCameraManipulator(eyePosition = home, targetPosition = target)
             }
             SceneView(
                 contentPadding = sceneFrame.contentPadding,
@@ -256,7 +368,11 @@ fun TwoDInThreeDInspectDemo(onBack: () -> Unit) {
                 cameraNode = camera, collisionSystem = collisions, viewNodeWindowManager = manager,
                 renderInvalidator = invalidator, autoCenterContent = false,
                 cameraManipulator = manipulator,
-                onFrame = firstFrame.onFrame,
+                onFrame = { nanos ->
+                    firstFrame.onFrame(nanos)
+                    val current = camera.worldPosition
+                    if (layout.movedPerceptibly(eye, current)) eye = current
+                },
                 onTouchEvent = { event, nearest ->
                     // Depth priority is visual only. Pick the on-top card before geometry behind it,
                     // then keep its whole stream, including padding and an UP outside its collider.
@@ -282,10 +398,10 @@ fun TwoDInThreeDInspectDemo(onBack: () -> Unit) {
                         selected = part
                         if (part != null) {
                             hasSelected = true
-                            val eye = camera.worldPosition
-                            anchor = layout.cardAnchor(part, eye, yaw, cardMeters)
-                            resting = Rotation(x = layout.billboardPitchDegrees(layout.INSPECT_TARGET, eye),
-                                y = layout.billboardYawDegrees(Position(), eye, yaw))
+                            val eyeNow = camera.worldPosition
+                            anchor = layout.cardAnchor(part, eyeNow, yaw, cardMeters)
+                            resting = Rotation(x = layout.billboardPitchDegrees(target, eyeNow),
+                                y = layout.billboardYawDegrees(Position(), eyeNow, yaw))
                             pulseRequest++
                         }
                     }
@@ -293,6 +409,46 @@ fun TwoDInThreeDInspectDemo(onBack: () -> Unit) {
             ) {
                 PlaneNode(size = Size(layout.FLOOR_SIZE, layout.FLOOR_SIZE, 0f), rotation = Rotation(x = -90f),
                     materialInstance = floor, apply = { isHittable = false })
+                // The wall. Fixed surfaces: orbit and they go edge-on, as a picture on a wall does.
+                showcase.take(2).forEachIndexed { index, exhibit -> key(index) {
+                    Node(position = exhibit.position, rotation = Rotation(y = exhibit.yaw),
+                        apply = { isHittable = false }) {
+                        CubeNode(size = layout.frameSize(exhibit.size), materialInstance = frame,
+                            apply = { isHittable = false })
+                        if (index == 0) {
+                            ImageNode(imageResId = R.drawable.preview_geometry_light,
+                                size = exhibit.size, position = layout.CONTENT_OFFSET,
+                                apply = { isHittable = false })
+                        } else if (player != null && video.phase == StreamPhase.Ready) {
+                            // Construction-only size: the picture fits the screen, never stretched.
+                            VideoNode(player = player, position = layout.CONTENT_OFFSET,
+                                size = fitInside(exhibit.size, player.videoWidth, player.videoHeight),
+                                apply = { attached = true; isHittable = false })
+                        } else {
+                            // Not there yet, or not coming: the screen says which.
+                            ImageNode(bitmap = if (videoFailed) unavailableStill else loadingStill,
+                                size = exhibit.size, position = layout.CONTENT_OFFSET,
+                                apply = { isHittable = false })
+                        }
+                    }
+                } }
+                // Only these nodes are recreated: a cleared provider would leave them as last turned.
+                key(faceCamera) {
+                    val provider: (() -> Position)? = if (faceCamera) ({ eye }) else null
+                    val badgeSpot = showcase[2]
+                    BillboardNode(bitmap = badge, widthMeters = badgeSpot.size.x, heightMeters = badgeSpot.size.y,
+                        position = badgeSpot.position, cameraPositionProvider = provider,
+                        apply = { isHittable = false })
+                    showcase.take(2).forEachIndexed { index, item -> key(index) {
+                        TextNode(text = stringResource(captions[index]), fontSize = fontSize,
+                            textColor = chrome.onCard.toArgb(), backgroundColor = chrome.card.toArgb(),
+                            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD),
+                            widthMeters = layout.SHOWCASE_CAPTION_SIZE.x,
+                            heightMeters = layout.SHOWCASE_CAPTION_SIZE.y,
+                            position = item.caption, cameraPositionProvider = provider,
+                            apply = { rotation = Rotation(y = item.yaw); isHittable = false })
+                    } }
+                }
                 Node(rotation = Rotation(y = yaw)) {
                     RocketPart.entries.forEach { part -> key(part) {
                         val material = finishes[choices.getValue(part)]
@@ -369,3 +525,29 @@ fun TwoDInThreeDInspectDemo(onBack: () -> Unit) {
         }
     }
 }
+
+/** A remembered Canvas sprite made entirely from the existing palette and sizing tokens. */
+@Composable
+private fun rememberGallerySprite(): Bitmap {
+    val density = LocalDensity.current
+    val size = with(density) { SceneViewTokens.Space.x4l.roundToPx() }
+    val radius = with(density) { SceneViewTokens.Space.x3l.toPx() / 2f }
+    val inset = with(density) { SceneViewTokens.Space.lg.toPx() }
+    return remember(size, radius, inset) {
+        Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888).also { bitmap ->
+            val canvas = Canvas(bitmap)
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+            val centerX = size / 2f
+            val centerY = size / 2f
+            paint.color = SceneViewColors.Primary.toArgb()
+            canvas.drawCircle(centerX, centerY, radius, paint)
+            canvas.rotate(45f, centerX, centerY)
+            paint.color = SceneViewColors.Highlight.toArgb()
+            canvas.drawRect(centerX - inset / 2, centerY - inset / 2,
+                centerX + inset / 2, centerY + inset / 2, paint)
+        }
+    }
+}
+
+private const val QA_FRAME_MILLIS = 1_000
+private const val SEEK_TIMEOUT_MILLIS = 3_000L

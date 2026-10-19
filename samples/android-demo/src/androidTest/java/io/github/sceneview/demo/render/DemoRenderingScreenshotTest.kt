@@ -162,9 +162,9 @@ class DemoRenderingScreenshotTest {
 
     @Test
     fun twoDInThreeDDemo_default_state() {
-        // The demo opens on Inspect: a procedural rocket on the themed stage, no card until a
-        // part is tapped, so the golden is the rocket alone under the "Tap a part" hint. The
-        // helmet-and-cards golden of #3424 went with the scene it depicted.
+        // One scene since #4624: a procedural rocket on the themed stage, no card until a part
+        // is tapped, and behind it the media wall (picture, video, badge, captions). QA holds
+        // the video paused on its one-second frame, so the golden stays still.
         //
         // 14 s settle, the budget of every demo that loads the studio HDR: its light lands
         // after the first frame, and a rocket caught before it is not the scene.
@@ -220,9 +220,8 @@ class DemoRenderingScreenshotTest {
             pixelDiffTolerancePercent = 15.0f, maxChannelDiff = 24)
     }
 
-    // #2239 Batch 1 — `billboard` consolidated into `two-d-in-three-d`, where it is now the
-    // Media mode (`?tab=media`). `twoDInThreeDDemo_default_state` above covers the mode the demo
-    // opens on, Inspect; Media plays a video, which a pixel golden cannot hold still.
+    // #2239 Batch 1 — `billboard` consolidated into `two-d-in-three-d`; since #4624 its media
+    // wall shares the rocket's scene, so `twoDInThreeDDemo_default_state` above covers it.
 
     // #2239 Batch 1 — `view-node` consolidated into `picking-collision` (covered by
     // `pickingCollisionDemo_default_state` above). The View Node sub-mode is reachable

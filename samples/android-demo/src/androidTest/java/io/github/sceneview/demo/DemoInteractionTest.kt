@@ -713,7 +713,7 @@ class DemoInteractionTest {
     // lands. Covered by `lighting_allThreeRigs`, which cycles the environment
     // swatches.
 
-    // ── 12. 2D in 3D — Inspect picking and Media playback ─────────────────────
+    // ── 12. 2D in 3D — picking and media playback, one scene ─────────────────────
 
     @Test
     fun twoDInThreeD_inspectMaterialsAndDepth() {
@@ -727,12 +727,12 @@ class DemoInteractionTest {
 
         // Swatches live on a texture, outside the accessibility tree: tap their projected screen
         // positions, never invoke a semantics click on the view. Both points are measured on the
-        // shared Pixel_7a AVD (1280 x 2856, portrait): the middle of the body, then the Gold
-        // swatch, bottom right of the card that stands to the body's right.
-        device.click((device.displayWidth * 0.5f).toInt(), (device.displayHeight * 0.525f).toInt())
+        // shared Pixel_7a AVD (1280 x 2856, portrait), with the media wall above the rocket since
+        // #4624: the window, then the Gold swatch, bottom right of the card at the rocket's right.
+        device.click((device.displayWidth * 0.5f).toInt(), (device.displayHeight * 0.63f).toInt())
         Thread.sleep(800)
         screenshot("50_twoDInThreeD_part_selected")
-        device.click((device.displayWidth * 0.857f).toInt(), (device.displayHeight * 0.468f).toInt())
+        device.click((device.displayWidth * 0.89f).toInt(), (device.displayHeight * 0.677f).toInt())
         Thread.sleep(800)
         check(resetEnabled()) { "Swatch tap must change a part" }
         screenshot("51_twoDInThreeD_restyled")
@@ -752,17 +752,21 @@ class DemoInteractionTest {
 
     @Test
     fun twoDInThreeD_mediaPlaybackAndFacing() {
-        // Same tab token as sceneview://demo/two-d-in-three-d?tab=media.
+        // The media nodes share the rocket's scene (#4624); the old `?tab=media` token still
+        // lands on the same screen.
         openDemo("two-d-in-three-d", tab = "media")
         tapByDesc(context.getString(R.string.demo_two_d_in_three_d_pause))
         screenshot("52c_twoDInThreeD_media_paused")
         tapByDesc(context.getString(R.string.demo_two_d_in_three_d_play))
-        tapByDesc(context.getString(R.string.demo_two_d_in_three_d_face_camera))
+        // Face camera is a settings switch: flip it, close the sheet, walk around.
+        tap(context.getString(R.string.demo_two_d_in_three_d_face_camera))
+        device.pressBack()
         device.swipe((device.displayWidth * 0.75f).toInt(), (device.displayHeight * 0.4f).toInt(),
             (device.displayWidth * 0.25f).toInt(), (device.displayHeight * 0.4f).toInt(), 30)
         Thread.sleep(800)
         screenshot("52d_twoDInThreeD_media_fixed")
-        tapByDesc(context.getString(R.string.demo_two_d_in_three_d_face_camera))
+        tap(context.getString(R.string.demo_two_d_in_three_d_face_camera))
+        device.pressBack()
         screenshot("52e_twoDInThreeD_media_facing")
     }
 
