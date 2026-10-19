@@ -1657,8 +1657,11 @@ fun ARSceneView(
     // ── Render loop ───────────────────────────────────────────────────────────────────────────────
 
     LaunchedEffect(engine, renderer, view, scene) {
+        // Previous frame time for the node-edit coast's time step; 0 = none yet (or paused).
+        var lastFrameTimeNanos = 0L
         while (true) {
             if (!isResumed.get()) {
+                lastFrameTimeNanos = 0L
                 delay(16)
                 continue
             }
@@ -1728,11 +1731,23 @@ fun ARSceneView(
                     modelLoader.updateLoad()
                     frameDispatch.dispatch(childNodes, frameTimeNanos)
 
+                    // A drag / twist / pinch of an AR object still coasting after release: one
+                    // step, capped like SceneView's so a stalled frame never jumps the object.
+                    val inertiaDelta = if (lastFrameTimeNanos == 0L) {
+                        NOMINAL_INERTIA_FRAME_SECONDS
+                    } else {
+                        ((frameTimeNanos - lastFrameTimeNanos) / 1_000_000_000f)
+                            .coerceIn(0f, MAX_INERTIA_FRAME_SECONDS)
+                    }
+                    lastFrameTimeNanos = frameTimeNanos
+                    gestureDetector.advanceInertia(inertiaDelta)
+
                     // Last, so the node ticks above are already accounted for: a glTF animation
                     // advanced this tick reports `isFrameActive` and keeps the budget topped up.
                     sceneChanged = frameRateGate.shouldRender(
                         frameTimeNanos = frameTimeNanos,
                         active = frameActivity.hasActiveNode ||
+                                gestureDetector.isCoasting ||
                                 // Not `progress < 1f`: a loader that was never asked for an async
                                 // load reports 0, which reads as "loading" forever — see
                                 // [io.github.sceneview.loaders.ModelLoader.isLoading].
@@ -1816,6 +1831,12 @@ fun ARSceneView(
 }
 
 // ── AR frame update helpers ───────────────────────────────────────────────────────────────────────
+
+/** Time step of the first node-edit coast frame after a start or a resume (one 60 Hz frame). */
+private const val NOMINAL_INERTIA_FRAME_SECONDS = 1f / 60f
+
+/** Largest step one frame advances a node-edit coast by — a stall resumes, it never jumps. */
+private const val MAX_INERTIA_FRAME_SECONDS = 0.05f
 
 private fun onARFrame(
     engine: Engine,
