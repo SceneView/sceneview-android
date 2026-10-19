@@ -529,7 +529,7 @@ concept by concept (`ArFragment` → `ARSceneView { }`, `ModelRenderable` →
   at your desk with `ARSceneView(playbackDataset = file)`. See
   [`docs/docs/ar-recording.md`](docs/docs/ar-recording.md) and the
   [Record & Playback demo](samples/android-demo/RECORDING_PLAYBACK.md).
-- **Hosted Rerun viewer** — tap **Save & Share** in the AR Rerun demo, host the `.rrd` file at
+- **Hosted Rerun viewer** — export a scan's **Rerun recording** from the 3D Scan demo, host the `.rrd` file at
   an https address that ends in `.rrd`, and open
   `https://sceneview.github.io/rerun/?url=<encoded-url>` to scrub the session frame by frame in a
   browser, with no local install. The host has to allow cross-origin requests (CORS): a public

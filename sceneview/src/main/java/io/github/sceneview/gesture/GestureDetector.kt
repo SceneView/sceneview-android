@@ -222,9 +222,10 @@ open class GestureDetector(context: Context, var listener: OnGestureListener?) {
                     // Finish any coast first: its deferred `…End` must not close the new edit.
                     editingInertia.onMoveBegin(e)
                     val accepted = touchedNode?.onMoveBegin(detector, e) == true
-                    editingInertia.moveOwner = touchedNode?.gestureDelegate
-                        ?.claimedNode(NodeEditingKind.Move)
-                        ?.takeIf { accepted }
+                    // An overridden begin handler accepts without its delegate: own it then.
+                    editingInertia.moveOwner = (
+                        touchedNode?.gestureDelegate?.claimedNode(NodeEditingKind.Move) ?: touchedNode
+                        ).takeIf { accepted }
                     listener?.onMoveBegin(detector, e, touchedNode)
                 }
 
@@ -265,9 +266,10 @@ open class GestureDetector(context: Context, var listener: OnGestureListener?) {
                     // Finish any coast first: its deferred `…End` must not close the new edit.
                     editingInertia.onRotateBegin(e)
                     val accepted = touchedNode?.onRotateBegin(detector, e) == true
-                    editingInertia.rotateOwner = touchedNode?.gestureDelegate
-                        ?.claimedNode(NodeEditingKind.Rotate)
-                        ?.takeIf { accepted }
+                    // An overridden begin handler accepts without its delegate: own it then.
+                    editingInertia.rotateOwner = (
+                        touchedNode?.gestureDelegate?.claimedNode(NodeEditingKind.Rotate) ?: touchedNode
+                        ).takeIf { accepted }
                     listener?.onRotateBegin(detector, e, touchedNode)
                 }
 
@@ -305,9 +307,10 @@ open class GestureDetector(context: Context, var listener: OnGestureListener?) {
                     // Finish any coast first: its deferred `…End` must not close the new edit.
                     editingInertia.onScaleBegin(e)
                     val accepted = touchedNode?.onScaleBegin(detector, e) == true
-                    editingInertia.scaleOwner = touchedNode?.gestureDelegate
-                        ?.claimedNode(NodeEditingKind.Scale)
-                        ?.takeIf { accepted }
+                    // An overridden begin handler accepts without its delegate: own it then.
+                    editingInertia.scaleOwner = (
+                        touchedNode?.gestureDelegate?.claimedNode(NodeEditingKind.Scale) ?: touchedNode
+                        ).takeIf { accepted }
                     listener?.onScaleBegin(detector, e, touchedNode)
                 }
 

@@ -1,5 +1,6 @@
 package io.github.sceneview.demo.demos
 
+import io.github.sceneview.demo.demos.internal.ArDebugFormat
 import io.github.sceneview.demo.demos.internal.RerunSessionSource
 import io.github.sceneview.demo.demos.internal.RerunStoredSession
 import io.github.sceneview.demo.demos.internal.formatFileSize
@@ -61,6 +62,16 @@ class RerunEnglishFormatsTest {
     @Test
     fun `an export's size reads in English on a French phone`() {
         assertEquals("4.7 MB", formatFileSize(4_700_000))
+    }
+
+    /** The debug figures (distances, counts, the clock) keep the English point on a French phone. */
+    @Test
+    fun `the debug figures keep the decimal point on a French phone`() {
+        assertEquals("3.2 m", ArDebugFormat.distance(3.2f))
+        assertEquals("1,204 m", ArDebugFormat.distance(1204f))
+        assertEquals("25,300", ArDebugFormat.count(25_300))
+        assertEquals("4.8k", ArDebugFormat.compactCount(4_812))
+        assertEquals("0:18", ArDebugFormat.clock(18.4f))
     }
 
     // ICU puts a narrow no-break space before "PM" on recent JDKs and Android versions.
