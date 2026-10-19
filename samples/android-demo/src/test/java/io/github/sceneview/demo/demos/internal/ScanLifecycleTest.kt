@@ -183,6 +183,24 @@ class ScanLifecycleTest {
     }
 
     @Test
+    fun `Back while a scan is being built leaves and never drops it`() {
+        // #4500: Save scan was tapped, so the scan is kept whatever Back does — a room of a
+        // whole home included, between rooms or not.
+        assertEquals(ScanBack.LeaveWhileSaving, ScanBack.of(recording = true, betweenRooms = false, ScanPhase.Saving))
+        assertEquals(ScanBack.LeaveWhileSaving, ScanBack.of(recording = true, betweenRooms = true, ScanPhase.Saving))
+    }
+
+    @Test
+    fun `Back asks first for a capture not built yet, and leaves when there is nothing to lose`() {
+        for (phase in listOf(ScanPhase.Scanning, ScanPhase.Paused, ScanPhase.Reviewing, ScanPhase.SaveFailed)) {
+            assertEquals(phase.name, ScanBack.AskFirst, ScanBack.of(recording = true, betweenRooms = false, phase))
+        }
+        assertEquals(ScanBack.Leave, ScanBack.of(recording = false, betweenRooms = false, ScanPhase.Scanning))
+        assertEquals(ScanBack.Leave, ScanBack.of(recording = true, betweenRooms = true, ScanPhase.Paused))
+        assertEquals(ScanBack.AskFirst, ScanBack.of(recording = true, betweenRooms = true, ScanPhase.Scanning))
+    }
+
+    @Test
     fun `discarding an unsaved scan asks first, with no claim it was saved`() {
         assertEquals("Discard this scan?", ScanCopy.DISCARD_TITLE)
         assertTrue(ScanCopy.DISCARD_DETAIL.contains("never saved"))

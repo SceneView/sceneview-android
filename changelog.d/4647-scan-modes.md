@@ -1,2 +1,0 @@
-<!-- category: Added -->
-- **Demo — 3D Scan scans an object, a room or a whole home** (#4647). The scan now starts by asking what you are scanning and remembers your choice. Object mode keeps only depth within 1.5 m, takes photos more often and builds a finer model. Whole home goes room by room in one session: finish a room, walk to the next one with capture paused, and the summary shows each room's plan and measurements plus a total.
