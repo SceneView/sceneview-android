@@ -633,9 +633,10 @@ demos:
       - samples/ios-demo/SceneViewDemo/Views/Demos/Rerun/RerunReplayStage.swift
     contract: >-
       3D Scan, plus Session MP4 by deep link. 3D Scan (the card's name on
-      Android, a clearer name; iOS still titles it "Rerun AR Replay", #4325) opens
-      on a landing (Record your room, Watch a sample session, Open file, Your
-      sessions); a recording replays as a 3D rebuild of the room (camera path,
+      both platforms, #4325) opens on a landing (Start scanning, Watch a sample
+      session, Open file, Your sessions); Start scanning first asks what is
+      scanned (an object, a room, an outdoor area; Android also offers a whole
+      home); a recording replays as a 3D rebuild of the room (camera path,
       planes, points) and opens as a
       dollhouse; sessions share as a file, and a live stream to the Rerun
       viewer saves a .rrd. Session MP4 (Android only, the former
