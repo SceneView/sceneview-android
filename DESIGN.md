@@ -136,6 +136,7 @@ the surface ramp above, not the M3 tonal ramp.
 | `hero-subtitle` | rgba(255,255,255,0.80) | rgba(255,255,255,0.80) | Hero subtitle, max width 260dp |
 | `hero-pill-bg` | #ffffff | #ffffff | Hero CTA pill (44dp, `radius-full`) |
 | `hero-pill-text` | #1a1a2e | #1a1a2e | Hero CTA label |
+| `hero-pill-icon` | 18dp, `hero-pill-text` | 18dp, `hero-pill-text` | Arrow after the hero CTA label (`ArrowForward`, auto-mirrored), `hero-pill-icon-gap` 8dp (`space-sm`) |
 | `header-glass` | `surface` at 72 % over the list under it blurred `header-glass-blur` (24dp) | `surface` at 78 %, same blur | Sticky home header once the list scrolls under it (API 31+). The blurred copy is drawn over a `surface` ground, so no sharp title shows through: the rows read as colour moving behind frosted glass, never as an overlap. `on-surface` holds 8.7:1 (light) / 8.2:1 (dark) against the worst ground, `on-surface-variant` 4.9:1 / 4.2:1 (icons, 3:1 bar). The stage is a `TextureView`, so its frame is in the recorded copy too. iOS: the same `surface` veil over native Liquid Glass (`glassEffect(.regular)`) on iOS 26+, over `.ultraThinMaterial` below — bare glass let the row titles read through |
 | `header-overlay` | `surface` at 100 % | `surface` at 100 % | The same header below API 31 (no `RenderEffect`). Tried at the `glass-sheet` opacity: without a backdrop blur the card titles scrolling under the wordmark stay legible and read as an overlap bug, so without blur it stays opaque |
 | `card-glass` | `surface-container` (#ffffff) at 80 % over the card's own picture blurred 28dp — at 72 % a dark picture turned it a muddy grey | `surface-container` at 90 % (the `glass-sheet` value), same blur | Caption of a home card. Below API 31 (no `RenderEffect`) there is no blurred copy and the fill takes `glass-sheet` (88 % / 90 %) |
@@ -149,9 +150,14 @@ category.
 
 **Above the chips, a demo is pushed once.** The header pager, the "Featured" banners and
 the "What's new" row's picture are read in that order, and each only shows what the ones
-before it do not; a group left with nothing of its own is not drawn. The pager stays at two
-pages (Models, Cosmos) so the banners keep the other three featured demos: the banner is the
-card the Home is liked for. In the catalogue, a demo shown as a banner is not listed again
+before it do not; a group left with nothing of its own is not drawn. The pager has four
+pages (Model Viewer, Cosmos, Real-World Scan, Rolling Balls — #4622): the flagship and
+Cosmos, then the two newest showpieces that are not Labs experiments, outside the common Featured list so the
+banners keep the other three featured demos: the banner is the card the Home is liked for.
+The flagship's page is titled after the screen it opens, "Model Viewer", not the catalogue's
+"Models", which read as a section. Each page's one action is the `hero-pill`: label, then a
+`hero-pill-icon` arrow `hero-pill-icon-gap` after it — a bare "Open" over the live stage read
+as a caption. iOS still shows one band titled "Models" with a bare "Open" (`HomeHero.swift`); that is a parity item. In the catalogue, a demo shown as a banner is not listed again
 in its category; a search is a query and lists every match. The "What's new" row
 opens the "What's new" sheet over the whole catalogue: a tap on a home row must not make
 the catalogue look smaller than it is.

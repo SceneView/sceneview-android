@@ -1,19 +1,25 @@
 package io.github.sceneview.demo.demos
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,6 +42,8 @@ import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.body.BodyPose
 import io.github.sceneview.ar.body.Joint
 import io.github.sceneview.ar.body.SKELETON_BONES
+import io.github.sceneview.ar.frontCameraConfig
+import io.github.sceneview.ar.highestResolutionCameraConfig
 import io.github.sceneview.demo.ARCameraInitScrim
 import io.github.sceneview.demo.DemoBottomOverlayScope
 import io.github.sceneview.demo.DemoScaffold
@@ -50,17 +58,31 @@ import io.github.sceneview.demo.demos.squat.SquatFeedback
 import io.github.sceneview.demo.demos.squat.SquatFrame
 import io.github.sceneview.demo.demos.squat.SquatPhase
 import io.github.sceneview.demo.demos.squat.SquatPosePipeline
+import io.github.sceneview.demo.demos.squat.SquatVoice
 import io.github.sceneview.demo.rememberArPlaybackDataset
 import io.github.sceneview.demo.theme.SceneViewTokens
+import io.github.sceneview.demo.ui.ConnectedChoiceRow
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberMaterialLoader
 import io.github.sceneview.rememberModelLoader
 import kotlin.math.roundToInt
 
 /**
- * **Squat Coach** (route `ar-body-tracker`, #1763): prop the phone up, step back, squat —
- * the screen draws your skeleton, counts each rep that goes deep enough, and says "Lower"
- * when it does not.
+ * **Squat Coach** (route `ar-body-tracker`, #1763): stand the phone up facing you, step
+ * back, squat — the screen draws your skeleton and counts each rep that goes deep enough,
+ * and the phone says the count out loud ([SquatVoice]) and "Go lower" when a squat stops
+ * short.
+ *
+ * ### Front camera by default
+ * The user squats *in front of* the phone, so the screen has to face them: the session
+ * opens the selfie camera (`Session.Feature.FRONT_CAMERA` + [frontCameraConfig]). Nothing in
+ * the coach needs world tracking — [SquatPosePipeline] only reads the CPU camera image —
+ * so the front camera loses nothing. ARCore draws the selfie feed as a mirror, and
+ * [io.github.sceneview.demo.demos.squat.UprightFrame] reads that mirror back from ARCore's
+ * own display transform: the pose model sees the mirrored picture and the skeleton lands on
+ * the mirrored body with no extra flip. The controls keep a Back option for filming someone
+ * else; switching rebuilds the session (`key`), the pipeline and its count survive it. A
+ * phone whose ARCore cannot open the front camera falls back to the back one and says so.
  *
  * ### Why it used to lag
  * The previous Body Tracker ran the whole pose pipeline inside `onSessionUpdated`, on the
@@ -93,10 +115,28 @@ fun ARBodyTrackerDemo(onBack: () -> Unit) {
     // Replay a recorded ARCore dataset when the device-QA harness deep-links this demo.
     val arPlaybackDataset = rememberArPlaybackDataset()
 
+    var frontCamera by rememberSaveable { mutableStateOf(true) }
+    // Set when a front-camera session could not start (no FRONT config on this phone's ARCore
+    // profile, or the emulator): the demo falls back to the back camera instead of a dead end.
+    var frontUnavailable by rememberSaveable { mutableStateOf(false) }
+    var voiceOn by rememberSaveable { mutableStateOf(true) }
+
+    val shallowCue = stringResource(R.string.demo_squat_voice_shallow)
+    val voice = remember { SquatVoice(context, shallowCue) }
+    SideEffect { voice.enabled = voiceOn }
+
     var latest by remember { mutableStateOf(SquatFrame(BodyPose(emptyMap()), SquatCoachState())) }
-    val pipeline = remember { SquatPosePipeline(context) { latest = it } }
-    DisposableEffect(pipeline) {
-        onDispose { pipeline.close() }
+    val pipeline = remember {
+        SquatPosePipeline(context) { update ->
+            voice.onCoach(previous = latest.coach, current = update.coach)
+            latest = update
+        }
+    }
+    DisposableEffect(pipeline, voice) {
+        onDispose {
+            pipeline.close()
+            voice.close()
+        }
     }
 
     // True after the first ARCore camera frame — used to dismiss ARCameraInitScrim (#2485).
@@ -116,10 +156,19 @@ fun ARBodyTrackerDemo(onBack: () -> Unit) {
             latest = latest.copy(coach = SquatCoachState())
         },
         controls = {
-            Text(
-                stringResource(R.string.demo_ar_body_tracker_explainer),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            SquatCoachControls(
+                frontCamera = frontCamera,
+                frontUnavailable = frontUnavailable,
+                onFrontCameraChange = {
+                    frontCamera = it
+                    arSessionFailed = false
+                    if (it) frontUnavailable = false
+                    // The new session starts from scratch: bring the init scrim back.
+                    cameraReady = false
+                    trackingFailureReason = null
+                },
+                voiceOn = voiceOn,
+                onVoiceOnChange = { voiceOn = it },
             )
         },
         // One surface at a time (DESIGN.md, AR Overlay Card): a problem or the "step back"
@@ -142,7 +191,13 @@ fun ARBodyTrackerDemo(onBack: () -> Unit) {
                 )
                 !cameraReady -> Unit
                 coach.phase == SquatPhase.NO_BODY && coach.reps == 0 -> DemoStatusBanner(
-                    stringResource(R.string.demo_ar_body_tracker_hint_aim),
+                    stringResource(
+                        if (frontCamera) {
+                            R.string.demo_ar_body_tracker_hint_aim
+                        } else {
+                            R.string.demo_ar_body_tracker_hint_aim_back
+                        },
+                    ),
                     tone = DemoStatusTone.Guidance,
                 )
                 else -> SquatCoachCard(coach)
@@ -150,27 +205,44 @@ fun ARBodyTrackerDemo(onBack: () -> Unit) {
         },
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            ARSceneView(
-                onSessionFailure = { arSessionFailed = true },
-                modifier = Modifier.fillMaxSize(),
-                engine = engine,
-                modelLoader = modelLoader,
-                materialLoader = materialLoader,
-                playbackDataset = arPlaybackDataset,
-                planeRenderer = false,
-                sessionConfiguration = { _: Session, config: Config ->
-                    config.planeFindingMode = Config.PlaneFindingMode.DISABLED
-                },
-                onARCoreAvailability = { arCoreAvailability = it },
-                onSessionUpdated = { _, frame: Frame ->
-                    if (!cameraReady) cameraReady = true
-                    if (frame.camera.trackingState == TrackingState.TRACKING) {
-                        // A plane copy and a hand-off; returns at once (see SquatPosePipeline).
-                        pipeline.onFrame(frame)
-                    }
-                },
-                onTrackingFailureChanged = { reason -> trackingFailureReason = reason },
-            )
+            // A camera switch is a new ARCore session: rebuild it cleanly (ARSceneView KDoc).
+            key(frontCamera) {
+                ARSceneView(
+                    onSessionFailure = {
+                        if (frontCamera) {
+                            frontCamera = false
+                            frontUnavailable = true
+                            cameraReady = false
+                        } else {
+                            arSessionFailed = true
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                    engine = engine,
+                    modelLoader = modelLoader,
+                    materialLoader = materialLoader,
+                    playbackDataset = arPlaybackDataset,
+                    planeRenderer = false,
+                    // Front by default: the user faces the screen. Feature *and* config — the
+                    // feature alone leaves the session on the back camera (#1436).
+                    sessionFeatures = if (frontCamera) setOf(Session.Feature.FRONT_CAMERA) else emptySet(),
+                    sessionCameraConfig = if (frontCamera) ::frontCameraConfig else ::highestResolutionCameraConfig,
+                    sessionConfiguration = { _: Session, config: Config ->
+                        config.planeFindingMode = Config.PlaneFindingMode.DISABLED
+                    },
+                    onARCoreAvailability = { arCoreAvailability = it },
+                    onSessionUpdated = { _, frame: Frame ->
+                        if (!cameraReady) cameraReady = true
+                        // A front-camera session never tracks the device pose, and the coach does
+                        // not need it: only the back camera waits for tracking.
+                        if (frontCamera || frame.camera.trackingState == TrackingState.TRACKING) {
+                            // A plane copy and a hand-off; returns at once (see SquatPosePipeline).
+                            pipeline.onFrame(frame)
+                        }
+                    },
+                    onTrackingFailureChanged = { reason -> trackingFailureReason = reason },
+                )
+            }
 
             SkeletonOverlay(
                 pose = latest.pose,
@@ -183,6 +255,77 @@ fun ARBodyTrackerDemo(onBack: () -> Unit) {
                 arCoreAvailability = arCoreAvailability,
             )
         }
+    }
+}
+
+/**
+ * The demo's controls sheet: which camera (Front, the default, for squatting facing the
+ * screen; Back for filming someone else), the spoken-count switch, and what to do.
+ */
+@Composable
+internal fun SquatCoachControls(
+    frontCamera: Boolean,
+    frontUnavailable: Boolean,
+    onFrontCameraChange: (Boolean) -> Unit,
+    voiceOn: Boolean,
+    onVoiceOnChange: (Boolean) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(SceneViewTokens.Space.md)) {
+        Column(verticalArrangement = Arrangement.spacedBy(SceneViewTokens.Space.sm)) {
+            Text(
+                stringResource(R.string.demo_squat_camera_label),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            ConnectedChoiceRow(
+                options = listOf(true, false),
+                selected = frontCamera,
+                onSelect = onFrontCameraChange,
+                label = { front ->
+                    stringResource(if (front) R.string.demo_squat_camera_front else R.string.demo_squat_camera_back)
+                },
+                optionTestTag = { front -> if (front) SQUAT_CAMERA_FRONT_TAG else SQUAT_CAMERA_BACK_TAG },
+            )
+            Text(
+                stringResource(
+                    when {
+                        frontCamera -> R.string.demo_squat_camera_front_hint
+                        frontUnavailable -> R.string.demo_squat_camera_front_unavailable
+                        else -> R.string.demo_squat_camera_back_hint
+                    },
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        // Toggleable on the whole row so the label is part of the target — the same
+        // contract every other demo switch uses.
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .toggleable(value = voiceOn, onValueChange = onVoiceOnChange),
+            horizontalArrangement = Arrangement.spacedBy(SceneViewTokens.Space.md),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    stringResource(R.string.demo_squat_voice),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                Text(
+                    stringResource(R.string.demo_squat_voice_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(checked = voiceOn, onCheckedChange = null)
+        }
+
+        Text(
+            stringResource(R.string.demo_ar_body_tracker_explainer),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -304,6 +447,10 @@ internal fun SkeletonOverlay(pose: BodyPose, phase: SquatPhase, modifier: Modifi
 
 /** Test tag of the coach card, for UI tests. */
 internal const val SQUAT_COACH_CARD_TAG = "squat-coach-card"
+
+/** Test tags of the camera picker's options. */
+internal const val SQUAT_CAMERA_FRONT_TAG = "squat-camera-front"
+internal const val SQUAT_CAMERA_BACK_TAG = "squat-camera-back"
 
 /** Segments of the depth meter — one per 20 % of the way from standing to depth. */
 private const val DEPTH_SEGMENTS = 5

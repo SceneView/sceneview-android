@@ -66,10 +66,14 @@ class SquatPosePipeline(
     }
     private val closed = AtomicBoolean(false)
 
-    /** One inference at a time. Set by the render thread, cleared by the result/error listener. */
-    private val busy = AtomicBoolean(false)
+    /**
+     * One inference at a time, ticketed by the request's model timestamp: taken by the render
+     * thread, freed by the result listener only for the request still holding it (#4606 P3).
+     */
+    private val slot = InferenceSlot(stuckAfterNs = STUCK_NS)
 
-    @Volatile private var busySinceNs = 0L
+    /** Camera → model timestamps, strictly increasing across session restarts (#4606 P3). */
+    private val timestamps = ModelTimestamps()
 
     private val landmarker: PoseLandmarker? = runCatching {
         PoseLandmarker.createFromOptions(
@@ -81,7 +85,7 @@ class SquatPosePipeline(
                 .setResultListener(::onPose)
                 .setErrorListener { error ->
                     Log.w(PERF_TAG, "pose inference failed", error)
-                    busy.set(false)
+                    slot.releaseAny()
                 }
                 .build(),
         )
@@ -94,7 +98,7 @@ class SquatPosePipeline(
 
     private val counter = SquatRepCounter()
 
-    // ── Buffers owned by the one request in flight (handed over through [busy]) ──────────
+    // ── Buffers owned by the one request in flight (handed over through [slot]) ──────────
     private var yPlane = ByteArray(0)
     private var uPlane = ByteArray(0)
     private var vPlane = ByteArray(0)
@@ -119,7 +123,6 @@ class SquatPosePipeline(
     private val dropped = AtomicInteger()
     private var lastFrameNs = 0L
     private var lastLogNs = 0L
-    private var lastTimestampMs = -1L
 
     /** Clears the rep count. Safe from any thread. */
     fun resetCount() {
@@ -135,31 +138,28 @@ class SquatPosePipeline(
 
         val detector = landmarker ?: return
         if (closed.get()) return
-        val timestampMs = frame.timestamp / NS_PER_MS_LONG
-        // Same camera frame redrawn: nothing new for the model, and LIVE_STREAM needs
-        // strictly increasing timestamps.
-        if (timestampMs <= lastTimestampMs) return
+        // Same camera frame redrawn → null: nothing new for the model. A new session whose
+        // clock starts lower is rebased instead of skipped (LIVE_STREAM needs strictly
+        // increasing timestamps).
+        val timestampMs = timestamps.next(frame.timestamp / NS_PER_MS_LONG) ?: return
 
-        if (!busy.compareAndSet(false, true)) {
+        val wasHeld = slot.isHeld
+        if (!slot.tryAcquire(ticket = timestampMs, nowNs = startNs)) {
             dropped.incrementAndGet()
-            if (startNs - busySinceNs > STUCK_NS) {
-                // A result that never came back (should not happen) must not freeze the coach.
-                Log.w(PERF_TAG, "inference slot stuck for > 1 s, freeing it")
-                busy.set(false)
-            }
             return
         }
-        busySinceNs = startNs
+        // Held and still acquired: the previous request never came back within STUCK_NS.
+        // Its slot is reclaimed and its late result, if any, is ignored.
+        if (wasHeld) Log.w(PERF_TAG, "inference slot stuck for > 1 s, reclaimed")
 
         val handedOff = runCatching { copyFrame(frame) }.getOrElse {
             Log.w(PERF_TAG, "camera frame copy failed", it)
             false
         }
         if (!handedOff) {
-            busy.set(false)
+            slot.release(timestampMs)
             return
         }
-        lastTimestampMs = timestampMs
         requestSubmitNs = startNs
         handOffCost.add((SystemClock.elapsedRealtimeNanos() - startNs) / NS_PER_MS)
 
@@ -219,17 +219,21 @@ class SquatPosePipeline(
             detector.detectAsync(mpImage, timestampMs)
         }.onFailure {
             Log.w(PERF_TAG, "pose submit failed", it)
-            busy.set(false)
+            slot.release(timestampMs)
         }
     }
 
     /** MediaPipe's callback thread. */
     @Suppress("UNUSED_PARAMETER")
     private fun onPose(result: PoseLandmarkerResult, input: MPImage) {
-        inferenceLatency.add((SystemClock.elapsedRealtimeNanos() - requestSubmitNs) / NS_PER_MS)
+        // Read the request's state before freeing the slot: the next request overwrites it.
         val upright = requestFrame
         val aspect = if (requestUprightH > 0) requestUprightW.toFloat() / requestUprightH else 1f
-        busy.set(false)
+        val submitNs = requestSubmitNs
+        // A result for a request whose slot was reclaimed: its buffers now belong to a newer
+        // request, so it neither frees that request's slot nor reaches the counter.
+        if (!slot.release(result.timestampMs())) return
+        inferenceLatency.add((SystemClock.elapsedRealtimeNanos() - submitNs) / NS_PER_MS)
         if (closed.get() || upright == null) return
 
         val landmarks = result.landmarks().firstOrNull()

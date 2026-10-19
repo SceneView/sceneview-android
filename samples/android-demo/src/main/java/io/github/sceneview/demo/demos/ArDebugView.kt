@@ -89,6 +89,7 @@ import io.github.sceneview.demo.demos.internal.DebugMesh
 import io.github.sceneview.demo.demos.internal.DebugPlaneKind
 import io.github.sceneview.demo.demos.internal.DebugPose
 import io.github.sceneview.demo.demos.internal.IntervalGate
+import io.github.sceneview.demo.demos.internal.MeasureUnitSystem
 import io.github.sceneview.demo.demos.internal.OrbitPose
 import io.github.sceneview.demo.demos.internal.CameraRig
 import io.github.sceneview.demo.demos.internal.PlaneLayering
@@ -120,6 +121,7 @@ import io.github.sceneview.safeDestroyVertexBuffer
 import io.github.sceneview.utils.readBuffer
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.util.Locale
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.roundToInt
@@ -774,7 +776,10 @@ internal fun ArDebugSceneView(
                     val points = replay?.pointCountAt(frame.time) ?: frame.mapPointCount
                     session.stats = ArDebugStats.of(frame, trace.duration, points).let { stats ->
                         // A replay names the room it found, as a floor plan would.
-                        if (replay == null) stats else stats.copy(room = RoomMeasure.of(frame.planes, floorY)?.summary)
+                        if (replay == null) stats else stats.copy(room = RoomMeasure.of(frame.planes, floorY)?.summary(
+                            MeasureUnitSystem.forLocale(Locale.getDefault()),
+                            Locale.getDefault(),
+                        ))
                     }
                 }
                 // onFrame only fires for a frame that reached the surface (#3444): counting them is
