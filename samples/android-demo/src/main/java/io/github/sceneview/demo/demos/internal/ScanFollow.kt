@@ -2,6 +2,7 @@ package io.github.sceneview.demo.demos.internal
 
 import io.github.sceneview.math.Position
 import kotlin.math.atan2
+import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
@@ -120,6 +121,71 @@ class ScanFollow {
                 -(1f - 2f * (x * x + y * y)),
             )
         }
+
+        /**
+         * While a scan is saved (#4719), the view leaves the phone and turns round the whole cloud
+         * at this pace: a turn in 40 s, slow enough to read as a showcase, not a spinner.
+         */
+        const val SAVING_DEGREES_PER_SECOND = 9f
+
+        /** The saving orbit's pitch: the room from above its walls, its floor still in depth. */
+        const val SAVING_ELEVATION_DEGREES = 42f
+
+        /** The move from the phone onto the saving orbit, seconds, eased out of the follow pose. */
+        const val SAVING_ENTER_SECONDS = 1.6f
+
+        /** How much of the view's height the cloud's horizontal reach fills on the saving orbit. */
+        const val SAVING_FILL = 0.85f
+
+        /**
+         * The saving orbit [seconds] after it began from [from], the follow pose of the moment,
+         * round a cloud centred on [centre] that reaches [radius] metres from it: from [from] it
+         * eases onto the orbit over [SAVING_ENTER_SECONDS] while it already turns, so the move
+         * never stops nor jolts. [verticalFovDegrees] is the view's, to frame the whole cloud.
+         */
+        fun savingPose(
+            from: OrbitPose,
+            centre: Position,
+            radius: Float,
+            seconds: Float,
+            verticalFovDegrees: Double,
+        ): OrbitPose {
+            val halfFov = Math.toRadians(verticalFovDegrees / 2.0)
+            val distance = maxOf(DISTANCE_M, (radius / sin(halfFov) / SAVING_FILL).toFloat())
+            val t = (seconds / SAVING_ENTER_SECONDS).coerceIn(0f, 1f)
+            val e = t * t * (3f - 2f * t)
+            fun mix(a: Float, b: Float) = a + (b - a) * e
+            return OrbitPose(
+                target = Position(mix(from.target.x, centre.x), mix(from.target.y, centre.y), mix(from.target.z, centre.z)),
+                azimuthDegrees = from.azimuthDegrees + SAVING_DEGREES_PER_SECOND * seconds.coerceAtLeast(0f),
+                elevationDegrees = mix(from.elevationDegrees, SAVING_ELEVATION_DEGREES),
+                distance = mix(from.distance, distance),
+            )
+        }
+
+        /**
+         * How far [points] reach on the floor from [centre], metres: the 95th percentile of their
+         * horizontal distance, so a few stray far points do not shrink the room on screen. Sampled
+         * evenly, [CENTRE_SAMPLE] points at most; `0` without any.
+         */
+        fun cloudRadius(points: FloatArray, centre: Position): Float {
+            val count = points.size / 3
+            if (count == 0) return 0f
+            val step = (count + CENTRE_SAMPLE - 1) / CENTRE_SAMPLE
+            val reach = FloatArray((count + step - 1) / step)
+            var n = 0
+            var i = 0
+            while (i < count && n < reach.size) {
+                val dx = points[i * 3] - centre.x
+                val dz = points[i * 3 + 2] - centre.z
+                reach[n++] = sqrt(dx * dx + dz * dz)
+                i += step
+            }
+            reach.sort(0, n)
+            return reach[((n - 1) * RADIUS_PERCENTILE).toInt()]
+        }
+
+        private const val RADIUS_PERCENTILE = 0.95f
 
         /** At most this many points are averaged: enough for a stable centre, cheap per frame. */
         const val CENTRE_SAMPLE = 20_000
