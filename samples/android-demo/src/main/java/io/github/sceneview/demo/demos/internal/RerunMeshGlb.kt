@@ -48,6 +48,10 @@ object RerunMeshGlb {
         return encode(exported, generator)
     }
 
+    /**
+     * The `.glb` bytes of [mesh], written straight into the one array returned: a full room's
+     * model is tens of MB, and a phone holds the mesh, this and the renderer's copy at once.
+     */
     private fun encode(mesh: RerunMesh, generator: String): ByteArray {
         val n = mesh.vertexCount
         // 65535 is the reserved primitive-restart value and is forbidden in glTF indices.
@@ -56,7 +60,7 @@ object RerunMeshGlb {
         val normalBytes = n * 12
         val colorBytes = n * 4
         val indexBytes = mesh.indices.size * if (shortIndices) 2 else 4
-        val bin = binary(mesh, positionBytes + normalBytes + colorBytes + indexBytes, shortIndices)
+        val binBytes = positionBytes + normalBytes + colorBytes + indexBytes
         val views = listOf(
             view(0, positionBytes, ARRAY_BUFFER, stride = 12),
             view(positionBytes, normalBytes, ARRAY_BUFFER, stride = 12),
@@ -92,11 +96,11 @@ object RerunMeshGlb {
                     ),
                 ),
             ),
-            "buffers" to listOf(jsonOf("byteLength" to bin.capacity())),
+            "buffers" to listOf(jsonOf("byteLength" to binBytes)),
             "bufferViews" to views,
             "accessors" to accessors,
         )
-        return glb(RerunJson.write(json).toByteArray(Charsets.UTF_8), bin.array())
+        return glb(RerunJson.write(json).toByteArray(Charsets.UTF_8), binBytes) { putBinary(mesh, shortIndices) }
     }
 
     private fun accessors(mesh: RerunMesh, shortIndices: Boolean): List<JsonMap> {
@@ -120,18 +124,16 @@ object RerunMeshGlb {
         )
     }
 
-    private fun binary(mesh: RerunMesh, size: Int, shortIndices: Boolean): ByteBuffer {
-        val bin = ByteBuffer.allocate(size).order(ByteOrder.LITTLE_ENDIAN)
-        mesh.positions.forEach { bin.putFloat(it) }
-        mesh.normals.forEach { bin.putFloat(it) }
+    private fun ByteBuffer.putBinary(mesh: RerunMesh, shortIndices: Boolean) {
+        mesh.positions.forEach { putFloat(it) }
+        mesh.normals.forEach { putFloat(it) }
         for (c in mesh.colors) {
-            bin.put(LINEAR[(c shr 16) and 0xFF])
-            bin.put(LINEAR[(c shr 8) and 0xFF])
-            bin.put(LINEAR[c and 0xFF])
-            bin.put(0xFF.toByte())
+            put(LINEAR[(c shr 16) and 0xFF])
+            put(LINEAR[(c shr 8) and 0xFF])
+            put(LINEAR[c and 0xFF])
+            put(0xFF.toByte())
         }
-        mesh.indices.forEach { if (shortIndices) bin.putShort(it.toShort()) else bin.putInt(it) }
-        return bin
+        mesh.indices.forEach { if (shortIndices) putShort(it.toShort()) else putInt(it) }
     }
 
     private fun view(offset: Int, length: Int, target: Int, stride: Int?): JsonMap =
@@ -139,16 +141,20 @@ object RerunMeshGlb {
             if (stride != null) it["byteStride"] = stride
         }
 
-    private fun glb(json: ByteArray, bin: ByteArray): ByteArray {
+    /** The container around [json] and a binary chunk of [binBytes] that [writeBin] puts in place. */
+    private fun glb(json: ByteArray, binBytes: Int, writeBin: ByteBuffer.() -> Unit): ByteArray {
         val jsonPadded = pad(json.size)
-        val binPadded = pad(bin.size)
+        val binPadded = pad(binBytes)
         val total = HEADER + CHUNK_HEADER + jsonPadded + CHUNK_HEADER + binPadded
         val out = ByteBuffer.allocate(total).order(ByteOrder.LITTLE_ENDIAN)
         out.putInt(GLB_MAGIC).putInt(2).putInt(total)
         out.putInt(jsonPadded).putInt(CHUNK_JSON).put(json)
         repeat(jsonPadded - json.size) { out.put(' '.code.toByte()) }
-        out.putInt(binPadded).putInt(CHUNK_BIN).put(bin)
-        repeat(binPadded - bin.size) { out.put(0) }
+        out.putInt(binPadded).putInt(CHUNK_BIN)
+        val start = out.position()
+        out.writeBin()
+        check(out.position() - start == binBytes) { "binary chunk is ${out.position() - start}, not $binBytes" }
+        repeat(binPadded - binBytes) { out.put(0) }
         return out.array()
     }
 

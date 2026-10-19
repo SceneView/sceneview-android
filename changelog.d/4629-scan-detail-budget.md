@@ -1,0 +1,2 @@
+<!-- category: Fixed -->
+- **Demo app: a 3D Scan no longer stops at a point limit ([#4629](https://github.com/sceneview/sceneview/issues/4629)).** A depth scan now keeps every room you walk through: when the scan grows past what the phone can hold, the areas you have already left are kept in coarser detail instead of new surfaces being dropped, the point count stays the number the saved scan really has, and the coaching line says "Adjusting detail for a larger space" for a few seconds instead of a "limit reached".

@@ -1,0 +1,2 @@
+<!-- category: Fixed -->
+- **Demo app — voice dictation keeps going through pauses** (#4618). Google's "Speak now" dialog closes after about half a second of silence whatever the silence extras say, so the bug-report note and Point & Ask's question were cut at the first pause. Both now share one dictation that reopens the dialog as soon as a round returns text and appends it to the field, until the user dismisses the dialog, a round returns nothing, or they tap stop. No new permission.
