@@ -261,7 +261,7 @@ internal fun buildRerunModel(source: RerunModelSource, progress: (Float) -> Unit
     }
     val fused = System.nanoTime()
     val base = if (source is RerunModelSource.Live) 0f else FUSE_SHARE
-    val extraction = RerunMarchingCubes.extract(tsdf, minWeight) { progress(base + (MESH_SHARE - base) * it) }
+    val extraction = RerunMarchingCubes.extractWhole(tsdf, minWeight) { progress(base + (MESH_SHARE - base) * it) }
     val mesh = extraction.mesh
     val glb = if (mesh.triangleCount > 0) RerunMeshGlb.write(mesh) else ByteArray(0)
     progress(1f)
