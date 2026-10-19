@@ -378,9 +378,15 @@ private fun ScanHint(text: String) {
  * heading-up ([ScanFollow]); a drag or a pinch takes it over, and [ScanRecenterPill] gives it
  * back. No marker stands on it: the map card says where you are and which way you face (#4718).
  *
+ * While it follows a tracked phone, the view draws from the phone's own eye and lens (the
+ * orbit's [ArDebugOrbitCamera.firstPerson], #4716), so each point sits on the camera pixel it was
+ * taken from; without a tracked frame, or once a drag has taken it over, it falls back to the
+ * heading-up follow view or the free orbit.
+ *
  * [livePose] is the phone now, given the trace's last pose: that pose while it scans, the live one
  * while paused. Paused, the trace records nothing, and a view that followed it stayed glued to the
  * screen as the phone turned (#4718); following the live pose, the cloud stays put in the room.
+ * The phone's eye is the live pose too, paused or not, so resuming does not move the view.
  *
  * [saving] (#4719): the camera fades out under an opaque veil and the view leaves the phone for a
  * slow orbit round the whole cloud ([ScanFollow.savingPose]) while the scan is fused and written.
