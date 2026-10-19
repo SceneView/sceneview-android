@@ -1,14 +1,10 @@
 package io.github.sceneview.demo.feedback
 
-import io.github.sceneview.demo.telemetry.logOutboundLink
 import android.app.Activity
 import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.speech.RecognizerIntent
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -32,11 +28,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -62,8 +56,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.sceneview.demo.R
 import io.github.sceneview.demo.common.DemoModalBottomSheet
-import io.github.sceneview.demo.common.putVoiceSilenceExtras
+import io.github.sceneview.demo.common.VoiceDictationButton
+import io.github.sceneview.demo.common.VoiceDictationListeningHint
+import io.github.sceneview.demo.common.rememberVoiceDictation
 import io.github.sceneview.demo.labs.Labs
+import io.github.sceneview.demo.telemetry.logOutboundLink
 import io.github.sceneview.demo.theme.SceneViewTokens
 import kotlinx.coroutines.launch
 
@@ -105,24 +102,13 @@ fun BugReportSheet(
     val noteFieldBringIntoView = remember { BringIntoViewRequester() }
     val scope = rememberCoroutineScope()
 
-    val speechAvailable = remember {
-        Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).resolveActivity(context.packageManager) != null
-    }
-    val voicePrompt = stringResource(R.string.feedback_report_voice_prompt)
+    // Voice dictation (#4618): keeps listening through pauses and streams into the note.
+    val dictation = rememberVoiceDictation(
+        prompt = stringResource(R.string.feedback_report_voice_prompt),
+        text = note,
+        onTextChange = { note = it },
+    )
     val noAppError = stringResource(R.string.feedback_report_no_app)
-    val speechLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult(),
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val spoken = result.data
-                ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
-                ?.firstOrNull()
-                ?.takeIf { it.isNotBlank() }
-            if (spoken != null) {
-                note = if (note.isBlank()) spoken else "$note $spoken"
-            }
-        }
-    }
 
     DemoModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -182,27 +168,18 @@ fun BugReportSheet(
                 label = { Text(stringResource(R.string.feedback_report_note_label)) },
                 placeholder = { Text(stringResource(R.string.feedback_report_note_placeholder)) },
                 minLines = 3,
-                trailingIcon = if (speechAvailable) {
+                trailingIcon = if (dictation.available) {
                     {
-                        IconButton(
-                            onClick = {
-                                val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                                    putExtra(
-                                        RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                                        RecognizerIntent.LANGUAGE_MODEL_FREE_FORM,
-                                    )
-                                    putExtra(RecognizerIntent.EXTRA_PROMPT, voicePrompt)
-                                    putVoiceSilenceExtras()
-                                }
-                                runCatching { speechLauncher.launch(intent) }
-                            },
-                        ) {
-                            Icon(
-                                Icons.Outlined.Mic,
-                                contentDescription = stringResource(R.string.feedback_report_voice_cd),
-                            )
-                        }
+                        VoiceDictationButton(
+                            dictation = dictation,
+                            idleContentDescription = stringResource(R.string.feedback_report_voice_cd),
+                        )
                     }
+                } else {
+                    null
+                },
+                supportingText = if (dictation.listening) {
+                    { VoiceDictationListeningHint() }
                 } else {
                     null
                 },
