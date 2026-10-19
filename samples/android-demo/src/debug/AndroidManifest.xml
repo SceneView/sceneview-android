@@ -29,5 +29,11 @@
             android:name=".ArOverlayColourQaActivity"
             android:exported="true"
             android:theme="@style/Theme.SceneViewDemo" />
+        <!-- Debug-only visual QA of the "No surface found" card in the Wall mode's bottom band,
+             no ARCore session needed (#4531). See PlacementCardQaActivity.kt. -->
+        <activity
+            android:name=".PlacementCardQaActivity"
+            android:exported="true"
+            android:theme="@style/Theme.SceneViewDemo" />
     </application>
 </manifest>
