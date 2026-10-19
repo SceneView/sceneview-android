@@ -9,6 +9,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import io.github.sceneview.demo.ui.LIST_BOTTOM_GUTTER
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -201,10 +202,13 @@ private fun ExploreTabContent(
 
     // Feeds keyed by the source's advertised [FeedKind]s (each source exposes
     // its own subset — Poly Haven has no "staff picks", for instance).
-    var feedsByKind by remember { mutableStateOf<Map<FeedKind, List<GalleryModel>>>(emptyMap()) }
+    // A reopened gallery starts on the feeds this source last returned (#4622),
+    // so its first frame already shows them; the effect below refreshes them.
+    val cachedFeeds = remember { exploreFeedCache.get(selectedSource.id, animatedOnly = false) }
+    var feedsByKind by remember { mutableStateOf(cachedFeeds?.feeds ?: emptyMap()) }
     // Loading → Ready / Empty / Failed (#3993). A stalled or failed load ends in
     // an error card with a retry instead of spinners that never stop.
-    var feedsStatus by remember { mutableStateOf(FeedsStatus.Loading) }
+    var feedsStatus by remember { mutableStateOf(cachedFeeds?.status ?: FeedsStatus.Loading) }
     var isRefreshing by remember { mutableStateOf(false) }
     // `true` once a feed/search request fails with HTTP 401/403 — the API key
     // is present but rejected (revoked, wrong scope, typo'd secret). Drives the
@@ -237,7 +241,15 @@ private fun ExploreTabContent(
 
     /** (Re)load the selected source's feeds on source switch, animated toggle, first composition, or pull-to-refresh. */
     LaunchedEffect(selectedSource.id, animatedOnly, refreshTick) {
-        feedsStatus = FeedsStatus.Loading
+        // Models this source already returned stay on screen while they refresh
+        // (#4622); only a source with nothing to show yet goes back to the spinner.
+        val cached = exploreFeedCache.get(selectedSource.id, animatedOnly)
+        if (cached != null) {
+            feedsByKind = cached.feeds
+            feedsStatus = cached.status
+        } else {
+            feedsStatus = FeedsStatus.Loading
+        }
         // Reset the Sketchfab "key rejected" banner before every (re)load so a
         // transient 401/403 that clears drops the banner instead of latching it.
         keyRejected = false
@@ -259,8 +271,10 @@ private fun ExploreTabContent(
                     limit = 10,
                 )
             }
-            feedsByKind = load.feeds
-            feedsStatus = load.status
+            exploreFeedCache.put(source.id, animatedOnly, load)
+            val settled = settleFeeds(shown = cached, fresh = load)
+            feedsByKind = settled.feeds
+            feedsStatus = settled.status
         } finally {
             // try/finally so isRefreshing always resets even if the coroutine
             // was cancelled mid-flight.
@@ -686,7 +700,7 @@ private fun TrendingRail(
     if (models.isEmpty() && !loading) return
     CarouselSection(title = stringResource(R.string.explore_trending_in_3d)) {
         if (models.isEmpty()) {
-            LoadingIndicator(modifier = Modifier.size(SceneViewTokens.Space.lg))
+            TrendingRailPlaceholder()
         } else {
             val state = rememberLazyListState()
             LazyRow(
@@ -711,6 +725,39 @@ private fun TrendingRail(
         }
     }
 }
+
+/**
+ * The "Trending in 3D" rail while its feed loads (#4622): two empty tiles with
+ * the cards' own widths, ratio and corners, so the rail has its real shape from
+ * the first frame and nothing moves when the cards arrive.
+ */
+@Composable
+private fun TrendingRailPlaceholder() {
+    LazyRow(
+        modifier = Modifier.testTag(ExploreTestTags.RAIL_LOADING),
+        horizontalArrangement = Arrangement.spacedBy(SceneViewTokens.Space.sm),
+        contentPadding = PaddingValues(horizontal = SceneViewTokens.Space.xs),
+        userScrollEnabled = false,
+    ) {
+        items(TRENDING_PLACEHOLDER_TILES) { index ->
+            val width = if (index == 0) {
+                SceneViewTokens.Layout.heroStageHeight
+            } else {
+                SceneViewTokens.Layout.heroStageHeight - SceneViewTokens.Space.x3l
+            }
+            Box(
+                modifier = Modifier
+                    .width(width)
+                    .aspectRatio(SceneViewTokens.Layout.mediaAspect)
+                    .clip(RoundedCornerShape(SceneViewTokens.Radius.lg))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+            )
+        }
+    }
+}
+
+/** Placeholder tiles in the loading "Trending in 3D" rail: the first card and a peek of the next. */
+private const val TRENDING_PLACEHOLDER_TILES = 2
 
 @Composable
 private fun CompactBrowseRail(
@@ -774,6 +821,9 @@ private fun CompactBrowseRail(
 }
 
 /** UI-test tags for the Explore tab's browse rail. */
+/** The gallery's feeds cache, for the life of the process (#4622). */
+private val exploreFeedCache = ExploreFeedCache<ModelSourceId, FeedKind, GalleryModel>()
+
 internal object ExploreTestTags {
     const val ANIMATED_FILTER = "explore_filter_animated"
 
@@ -782,6 +832,9 @@ internal object ExploreTestTags {
 
     /** The featured stage's spinner while the feeds load. */
     const val STAGE_LOADING = "explore_stage_loading"
+
+    /** The "Trending in 3D" placeholder tiles while the feeds load. */
+    const val RAIL_LOADING = "explore_rail_loading"
 
     /** Tag of the source picker button for [id]. */
     fun sourceOption(id: ModelSourceId): String = "explore_source_${id.slug}"

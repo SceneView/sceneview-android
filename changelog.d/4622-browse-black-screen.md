@@ -1,0 +1,2 @@
+<!-- category: Fixed -->
+- **"Browse online models" reopens on the models it already loaded ([#4622](https://github.com/sceneview/sceneview/issues/4622)).** The demo's gallery used to forget its feeds when you left it, so every visit waited on the network again behind a spinner. It now opens on the last models each source returned and refreshes them in the background; a refresh that fails keeps them on screen. On a first visit, "Trending in 3D" shows two placeholder tiles shaped like its cards instead of a lone dot.
