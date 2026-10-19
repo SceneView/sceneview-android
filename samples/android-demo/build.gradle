@@ -447,7 +447,8 @@ dependencies {
     // offline. The default options classify generic categories (Home good,
     // Fashion good, Food, Place, Plant). For finer labels callers can plug
     // in a custom TFLite model via ObjectDetectorOptions / CustomObjectDetectorOptions.
-    // See ARMLObjectLabelDemo (#1737).
+    // See ARMLObjectLabelDemo (#1737). It no longer has a catalogue card: it is
+    // Point & Ask's on-device fallback on phones without AICore (#4608, #2648).
     implementation libs.mlkit.object.detection
 
     // ML Kit GenAI Prompt API — Gemini Nano on-device for the Point & Ask demo.
