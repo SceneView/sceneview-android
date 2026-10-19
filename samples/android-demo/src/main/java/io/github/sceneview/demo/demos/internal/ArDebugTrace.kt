@@ -181,6 +181,12 @@ class ArDebugTrace {
      */
     var cutoff: ScanCutoff? = null
 
+    /**
+     * A live scan's feature-point threshold, relaxed while a frame keeps nothing (#4717); `null`
+     * keeps [MIN_POINT_CONFIDENCE]. The journal holds the points kept, so a replay keeps them too.
+     */
+    var pointConfidence: AdaptiveConfidence? = null
+
     /** Bumped on every change, so a reader can tell "same trace" without comparing contents. */
     var version: Int = 0
         private set
@@ -315,8 +321,15 @@ class ArDebugTrace {
         val seen = IntArray(count)
         var seenCount = 0
         val kept = journal?.let { PointJournal(count, colors != null) }
+        val adaptive = pointConfidence
+        val threshold = adaptive?.threshold ?: MIN_POINT_CONFIDENCE
+        var passed = 0
+        var passedAtBase = 0
         for (i in 0 until count) {
-            if (confidences != null && i < confidences.size && confidences[i] < MIN_POINT_CONFIDENCE) continue
+            val confidence = if (confidences != null && i < confidences.size) confidences[i] else 1f
+            if (confidence < threshold) continue
+            passed++
+            if (confidence >= MIN_POINT_CONFIDENCE) passedAtBase++
             val x = positions[i * 3]
             val y = positions[i * 3 + 1]
             val z = positions[i * 3 + 2]
@@ -355,6 +368,7 @@ class ArDebugTrace {
         observationTimes.add(t)
         observations.add(seen.copyOf(seenCount))
         kept?.let { journal?.add(it.event(nanos)) }
+        adaptive?.record(nanos, passed, passedAtBase)
         touch(t)
     }
 

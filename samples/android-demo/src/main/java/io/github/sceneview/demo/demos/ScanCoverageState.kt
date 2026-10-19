@@ -1,6 +1,24 @@
 package io.github.sceneview.demo.demos
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CloseFullscreen
+import androidx.compose.material.icons.rounded.OpenInFull
+import androidx.compose.material3.Icon
+import androidx.compose.material3.ripple
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.semantics.Role
+import io.github.sceneview.demo.demos.internal.ScanAreaCopy
+import io.github.sceneview.demo.ui.pressScale
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -11,7 +29,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -55,7 +75,7 @@ import kotlin.math.roundToInt
  * What the scan has, fed frame by frame from the 3D view's `observe` (#4631): the floor
  * [grid], the phone and its trail for the map, and the [coach]'s line. Plain fields for the
  * draw, read only in the draw phase through [tick]; the two figures the chrome shows,
- * [floorPercent] and [coachLine], are Compose state that changes only when their value does.
+ * [coveredSquareMetres] and [coachLine], are Compose state that changes only when their value does.
  */
 internal class ScanCoverageState {
     val grid = CoverageGrid()
@@ -83,13 +103,18 @@ internal class ScanCoverageState {
     /** The map's scale, pixels per metre, `0` until the first draw fits it ([fitScale]). */
     var pxPerMetre = 0f
         private set
+    private var lastHalf = 0f
 
     /** Bumped when the map has something new to draw: read in the draw phase only. */
     var tick by mutableIntStateOf(0)
         private set
 
-    /** `Floor NN % covered`: the covered share of [extent]. */
-    var floorPercent by mutableIntStateOf(0)
+    /**
+     * The floor covered so far, in m² (#4717): covered cells times a cell's area, to a tenth.
+     * It only grows within the capture: a share of a room whose outline grows with the scan fell
+     * as the scan went on, so the map says how much is covered, never of how much.
+     */
+    var coveredSquareMetres by mutableFloatStateOf(0f)
         private set
 
     var coachLine by mutableStateOf<ScanCoach.Line?>(null)
@@ -107,13 +132,14 @@ internal class ScanCoverageState {
      * [frame]'s time: it stands in for the feature points, as it does in the 3D view, so a scan whose
      * room is drawn from depth does not read `Floor 0 % covered` under that room (#4619).
      */
-    fun observe(frame: ArDebugFrame, dense: FloatArray? = null, denseCount: Int = 0) {
+    fun observe(frame: ArDebugFrame, dense: FloatArray? = null, denseCount: Int = 0, pose: DebugPose? = frame.camera) {
         val grew = if (dense != null) grid.update(dense, denseCount) else grid.update(frame.mapPoints)
         coachLine = coach.update(frame.time, frame.camera, grew)
-        val moved = frame.camera != camera
-        camera = frame.camera
+        // [pose] is the phone now: the trace's while it records, the live one while paused (#4718).
+        val moved = pose != camera
+        camera = pose
         trail = frame.trail
-        frame.camera?.let { pose -> heading = ScanFollow.headingOf(pose, heading) }
+        pose?.let { heading = ScanFollow.headingOf(it, heading) }
         headingDegrees = heading ?: 0f
         val floors = frame.planes.filter { it.kind == DebugPlaneKind.Floor && it.vertexCount >= 3 }
         val key = floors.fold(floors.size) { acc, plane -> acc * KEY_PRIME + plane.polygon.contentHashCode() }
@@ -122,8 +148,8 @@ internal class ScanCoverageState {
             floorKey = key
             extentVersion = grid.version
             extent = grid.floorExtent(floors.map { it.polygon })
-            val percent = (grid.coveredShareOf(extent) * PERCENT).roundToInt()
-            if (percent != floorPercent) floorPercent = percent
+            val area = (grid.covered * grid.cellMetres * grid.cellMetres * TENTHS).roundToInt() / TENTHS
+            if (area > coveredSquareMetres) coveredSquareMetres = area
         }
         if (reshaped || moved) tick++
     }
@@ -180,7 +206,10 @@ internal class ScanCoverageState {
             }
         }
         target = max(target, half / MAX_HALF_RANGE_M)
-        val now = pxPerMetre
+        // Eased in map half-sizes per metre, not pixels: the card opening into the map to
+        // complete (#4718) draws the same framing at once, larger, instead of zooming in to it.
+        val now = pxPerMetre * lastHalf.let { if (it > 0f) half / it else 1f }
+        lastHalf = half
         pxPerMetre = if (now == 0f || target < now) target else now + (target - now) * ZOOM_IN_RATE
         return pxPerMetre
     }
@@ -197,7 +226,7 @@ internal class ScanCoverageState {
 
         private const val EPSILON = 1e-3f
         private const val KEY_PRIME = 31
-        private const val PERCENT = 100f
+        private const val TENTHS = 10f
     }
 }
 
@@ -210,98 +239,197 @@ private fun Path.segment(x0: Float, z0: Float, x1: Float, z1: Float) {
  * The live footprint of a scan (#4631): the floor seen from above, heading-up like the 3D view,
  * the phone fixed a little below its middle, the room turning and scaling under it. The room's
  * estimated floor is hatched — still to scan — covered cells are filled over it, the edge of what is
- * covered is outlined, the path walked is drawn under them. [showFloor] adds `Floor NN % covered`.
+ * covered is outlined, the path walked is drawn under them. [showFloor] adds the area covered,
+ * `12.5 m² covered`, which only grows (#4717).
+ *
+ * A tap opens it into the map to complete (#4718): the same map across the screen, with what
+ * each mark means, and a tap closes it again. The card grows and shrinks on `motion-spring`.
  */
 @Composable
-internal fun ScanCoverageMap(state: ScanCoverageState, modifier: Modifier = Modifier, showFloor: Boolean = true) {
+@Suppress("LongMethod") // one card, two sizes, drawn by one Canvas
+internal fun ScanCoverageMap(
+    state: ScanCoverageState,
+    modifier: Modifier = Modifier,
+    showFloor: Boolean = true,
+    expanded: Boolean = false,
+    onToggle: (() -> Unit)? = null,
+) {
     val dark = MaterialTheme.colorScheme.surface.luminance() < LUMINANCE_MID
     val scrim = if (dark) ArOverlay.scrimDark else ArOverlay.scrimLight
     val shape = RoundedCornerShape(SceneViewTokens.Radius.lg)
     val mapShape = RoundedCornerShape(SceneViewTokens.Radius.md)
-    val percent = state.floorPercent
-    val label = stringResource(R.string.scan_coverage_label, percent)
+    val area = ScanAreaCopy.area(state.coveredSquareMetres)
+    val label = stringResource(R.string.scan_coverage_label, area)
+    val toggleLabel = stringResource(if (expanded) R.string.scan_coverage_collapse else R.string.scan_coverage_expand)
+    val interaction = remember { MutableInteractionSource() }
+    val tappable = onToggle?.let { toggle ->
+        Modifier
+            .pressScale(interaction)
+            .clip(shape)
+            .clickable(
+                interactionSource = interaction,
+                indication = ripple(),
+                role = Role.Button,
+                onClickLabel = toggleLabel,
+                onClick = toggle,
+            )
+    } ?: Modifier
     Column(
         modifier = modifier
+            .then(if (expanded) Modifier.widthIn(max = ArOverlay.maxWidth).fillMaxWidth() else Modifier)
+            .then(tappable)
             .overMediaEdge(shape)
             .clip(shape)
             .background(scrim, shape)
-            .padding(Space.sm)
+            .animateContentSize(SceneViewTokens.Motion.spring())
+            .padding(if (expanded) Space.md else Space.sm)
             .semantics(mergeDescendants = true) { contentDescription = label }
-            .testTag(SCAN_COVERAGE_MAP_TAG),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(Space.xs),
+            .testTag(if (expanded) SCAN_COVERAGE_MAP_EXPANDED_TAG else SCAN_COVERAGE_MAP_TAG),
+        horizontalAlignment = if (expanded) Alignment.Start else Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(if (expanded) Space.sm else Space.xs),
     ) {
-        Canvas(Modifier.size(ScanMapSize).clip(mapShape).background(ArOverlay.meterTrack, mapShape)) {
-            // Read here only: a new cell or a step redraws the map, never recomposes it.
-            state.tick
-            val camera = state.camera
-            // You stay put, below the middle like a navigation app's arrow: most of the map is
-            // ahead of you, where you are about to scan.
-            val centre = Offset(size.width / 2f, size.height * MARKER_HEIGHT)
-            val pxPerMetre = state.fitScale(size.width, size.height, centre.y, MapFitMargin.toPx())
-            val (cells, edges) = state.paths()
-            val extent = state.extent
-            val floor = Path()
-            extent.forEachIndexed { i, (x, z) -> if (i == 0) floor.moveTo(x, z) else floor.lineTo(x, z) }
-            floor.close()
-            translate(centre.x, centre.y) {
-                // Heading-up: the way the phone faces is the top of the map (see ScanFollow).
-                rotate(state.headingDegrees, pivot = Offset.Zero) {
-                    scale(pxPerMetre, pxPerMetre, pivot = Offset.Zero) {
-                        translate(-(camera?.x ?: 0f), -(camera?.z ?: 0f)) {
-                            if (extent.size >= 3) {
-                                // The floor still to scan: hatched inside the room's estimated
-                                // outline, so a gap reads as "not yet", not as "nothing there".
-                                clipPath(floor) {
-                                    // Never over what is covered: a covered cell reads solid.
-                                    clipPath(cells, ClipOp.Difference) {
-                                        drawHatch(extent, MapHatchStep.toPx() / pxPerMetre, pxPerMetre)
-                                    }
-                                }
-                                drawPath(
-                                    floor,
-                                    ArOverlay.onScrimMuted,
-                                    style = Stroke(
-                                        width = MapEdgeWidth.toPx() / pxPerMetre,
-                                        pathEffect = PathEffect.dashPathEffect(
-                                            floatArrayOf(MapDash.toPx() / pxPerMetre, MapDash.toPx() / pxPerMetre),
-                                        ),
-                                    ),
-                                )
-                            }
-                            drawTrail(state.trail, ArOverlay.onScrimMuted, MapTrailWidth.toPx() / pxPerMetre)
-                            drawPath(cells, ArOverlay.accentProgress.copy(alpha = COVERED_ALPHA))
-                            drawPath(
-                                edges,
-                                ArOverlay.onScrim,
-                                style = Stroke(width = MapEdgeWidth.toPx() / pxPerMetre, cap = StrokeCap.Square),
-                            )
-                        }
-                    }
-                }
-            }
-            if (camera != null) {
-                // You: the live view's marker, small — a disc with the heading's arrow, pointing up.
-                val r = MapMarkerSize.toPx() / 2f
-                drawCircle(ArOverlay.onScrim, radius = r + MapEdgeWidth.toPx(), center = centre)
-                drawCircle(ArOverlay.accentProgress, radius = r, center = centre)
-                val arrow = Path().apply {
-                    moveTo(centre.x, centre.y - r * ARROW_TIP)
-                    lineTo(centre.x + r * ARROW_HALF_WIDTH, centre.y + r * ARROW_BASE)
-                    lineTo(centre.x, centre.y + r * ARROW_NOTCH)
-                    lineTo(centre.x - r * ARROW_HALF_WIDTH, centre.y + r * ARROW_BASE)
-                    close()
-                }
-                drawPath(arrow, ArOverlay.onAccentProgress)
+        if (expanded) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = stringResource(R.string.scan_coverage_title),
+                    style = SceneViewTokens.Type.card,
+                    color = ArOverlay.onScrim,
+                    modifier = Modifier.weight(1f),
+                )
+                Icon(
+                    imageVector = Icons.Rounded.CloseFullscreen,
+                    contentDescription = null,
+                    tint = ArOverlay.onScrimMuted,
+                    modifier = Modifier.size(MapGlyphSize),
+                )
             }
         }
-        if (showFloor) {
+        Box {
+            val canvas = if (expanded) Modifier.fillMaxWidth().aspectRatio(1f) else Modifier.size(ScanMapSize)
+            Canvas(canvas.clip(mapShape).background(ArOverlay.meterTrack, mapShape)) {
+                drawMap(state, MapFitMargin.toPx(), MapHatchStep.toPx(), MapEdgeWidth.toPx())
+            }
+            if (!expanded && onToggle != null) {
+                // The map opens: the corner says so, like a picture-in-picture's.
+                Icon(
+                    imageVector = Icons.Rounded.OpenInFull,
+                    contentDescription = null,
+                    tint = ArOverlay.onScrim,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(Space.xs)
+                        .size(MapCornerGlyphSize),
+                )
+            }
+        }
+        if (expanded) {
+            Row(horizontalArrangement = Arrangement.spacedBy(Space.md), verticalAlignment = Alignment.CenterVertically) {
+                MapLegend(stringResource(R.string.scan_coverage_covered, area)) { swatch ->
+                    drawRect(ArOverlay.accentProgress.copy(alpha = COVERED_ALPHA), size = swatch)
+                }
+                MapLegend(stringResource(R.string.scan_coverage_missing)) { swatch ->
+                    clipRect(right = swatch.width, bottom = swatch.height) {
+                        val box = listOf(0f to 0f, swatch.width to 0f, swatch.width to swatch.height, 0f to swatch.height)
+                        drawHatch(box, MapHatchStep.toPx(), 1f / MapEdgeWidth.toPx())
+                    }
+                }
+                MapLegend(stringResource(R.string.scan_coverage_you)) { swatch ->
+                    drawCircle(ArOverlay.accentProgress, radius = swatch.minDimension / 2f)
+                }
+            }
             Text(
-                text = stringResource(R.string.scan_coverage_floor, percent),
+                text = stringResource(R.string.scan_coverage_hint),
+                style = SceneViewTokens.Type.caption,
+                color = ArOverlay.onScrimMuted,
+            )
+        } else if (showFloor) {
+            Text(
+                text = stringResource(R.string.scan_coverage_area, area),
                 style = SceneViewTokens.Type.caption,
                 color = ArOverlay.onScrim,
             )
         }
+    }
+}
+
+/** One mark of the open map and what it means: a 12 dp swatch, then its caption. */
+@Composable
+private fun MapLegend(text: String, swatch: androidx.compose.ui.graphics.drawscope.DrawScope.(Size) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.xs)) {
+        Canvas(Modifier.size(MapSwatchSize)) { swatch(size) }
+        Text(text = text, style = SceneViewTokens.Type.caption, color = ArOverlay.onScrim)
+    }
+}
+
+/** The map itself, whatever the card's size: fitted, heading-up, you below the middle. */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawMap(
+    state: ScanCoverageState,
+    fitMargin: Float,
+    hatchStep: Float,
+    edgeWidth: Float,
+) {
+    // Read here only: a new cell or a step redraws the map, never recomposes it.
+    state.tick
+    val camera = state.camera
+    // You stay put, below the middle like a navigation app's arrow: most of the map is
+    // ahead of you, where you are about to scan.
+    val centre = Offset(size.width / 2f, size.height * MARKER_HEIGHT)
+    val pxPerMetre = state.fitScale(size.width, size.height, centre.y, fitMargin)
+    val (cells, edges) = state.paths()
+    val extent = state.extent
+    val floor = Path()
+    extent.forEachIndexed { i, (x, z) -> if (i == 0) floor.moveTo(x, z) else floor.lineTo(x, z) }
+    floor.close()
+    translate(centre.x, centre.y) {
+        // Heading-up: the way the phone faces is the top of the map (see ScanFollow).
+        rotate(state.headingDegrees, pivot = Offset.Zero) {
+            scale(pxPerMetre, pxPerMetre, pivot = Offset.Zero) {
+                translate(-(camera?.x ?: 0f), -(camera?.z ?: 0f)) {
+                    if (extent.size >= 3) {
+                        // The floor still to scan: hatched inside the room's estimated
+                        // outline, so a gap reads as "not yet", not as "nothing there".
+                        clipPath(floor) {
+                            // Never over what is covered: a covered cell reads solid.
+                            clipPath(cells, ClipOp.Difference) {
+                                drawHatch(extent, hatchStep / pxPerMetre, pxPerMetre / edgeWidth)
+                            }
+                        }
+                        drawPath(
+                            floor,
+                            ArOverlay.onScrimMuted,
+                            style = Stroke(
+                                width = edgeWidth / pxPerMetre,
+                                pathEffect = PathEffect.dashPathEffect(
+                                    floatArrayOf(hatchStep / MAP_DASH_PER_HATCH / pxPerMetre, hatchStep / MAP_DASH_PER_HATCH / pxPerMetre),
+                                ),
+                            ),
+                        )
+                    }
+                    drawTrail(state.trail, ArOverlay.onScrimMuted, edgeWidth * 2f / pxPerMetre)
+                    drawPath(cells, ArOverlay.accentProgress.copy(alpha = COVERED_ALPHA))
+                    drawPath(
+                        edges,
+                        ArOverlay.onScrim,
+                        style = Stroke(width = edgeWidth / pxPerMetre, cap = StrokeCap.Square),
+                    )
+                }
+            }
+        }
+    }
+    if (camera != null) {
+        // You: a disc with the heading's arrow, pointing up. A quarter of the short side at
+        // most, so the open map draws it larger than the corner one.
+        val r = (size.minDimension * MARKER_SHARE).coerceIn(MARKER_MIN_RADIUS * edgeWidth, MARKER_MAX_RADIUS * edgeWidth)
+        drawCircle(ArOverlay.onScrim, radius = r + edgeWidth, center = centre)
+        drawCircle(ArOverlay.accentProgress, radius = r, center = centre)
+        val arrow = Path().apply {
+            moveTo(centre.x, centre.y - r * ARROW_TIP)
+            lineTo(centre.x + r * ARROW_HALF_WIDTH, centre.y + r * ARROW_BASE)
+            lineTo(centre.x, centre.y + r * ARROW_NOTCH)
+            lineTo(centre.x - r * ARROW_HALF_WIDTH, centre.y + r * ARROW_BASE)
+            close()
+        }
+        drawPath(arrow, ArOverlay.onAccentProgress)
     }
 }
 
@@ -322,7 +450,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawTrail(
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawHatch(
     extent: List<Pair<Float, Float>>,
     step: Float,
-    pxPerMetre: Float,
+    unitsPerLine: Float,
 ) {
     val minX = extent.minOf { it.first }
     val maxX = extent.maxOf { it.first }
@@ -330,7 +458,8 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawHatch(
     val maxZ = extent.maxOf { it.second }
     val span = (maxX - minX) + (maxZ - minZ)
     val color = ArOverlay.onScrimMuted.copy(alpha = HATCH_ALPHA)
-    val width = MapEdgeWidth.toPx() / pxPerMetre
+    // One edge width wide, whatever the units the caller draws in.
+    val width = 1f / unitsPerLine
     var d = 0f
     while (d <= span) {
         // Lines at 45°: x + z = minX + minZ + d.
@@ -342,18 +471,26 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawHatch(
 /** `112 dp`: the map reads a room at a glance and leaves the live view its middle. */
 private val ScanMapSize = Space.x4l + Space.md
 
-/** The phone's marker on the map: half the live view's, the map is a quarter of its scale. */
-private val MapMarkerSize = Space.md - Space.xs / 2
-
 private val MapEdgeWidth = SceneViewTokens.Glass.edgeWidth
-private val MapTrailWidth = SceneViewTokens.Glass.edgeWidth * 2
+
+/** The glyphs of the map card: the open map's close mark, the corner one's open mark. */
+private val MapGlyphSize = Space.lg - Space.xs
+private val MapCornerGlyphSize = Space.md - Space.xs / 2
+
+/** A legend mark of the open map: 12 dp. */
+private val MapSwatchSize = Space.sm + Space.xs
 
 /** Air between the room's outline and the map's edge. */
 private val MapFitMargin = Space.sm
 
-/** The hatching's pitch and the outline's dash: fine enough to read as texture, not as lines. */
+/** The hatching's pitch, and the outline's dash at two thirds of it: texture, not lines. */
 private val MapHatchStep = Space.xs + Space.xs / 2
-private val MapDash = Space.xs
+private const val MAP_DASH_PER_HATCH = 1.5f
+
+/** The marker's radius: a share of the map's short side, between 5 and 12 edge widths (dp). */
+private const val MARKER_SHARE = 0.045f
+private const val MARKER_MIN_RADIUS = 5f
+private const val MARKER_MAX_RADIUS = 12f
 
 /** The marker's height in the map: below the middle, most of the map ahead of you. */
 private const val MARKER_HEIGHT = 0.7f
@@ -366,3 +503,4 @@ private const val ARROW_NOTCH = 0.22f
 private const val ARROW_HALF_WIDTH = 0.46f
 
 internal const val SCAN_COVERAGE_MAP_TAG = "scan_coverage_map"
+internal const val SCAN_COVERAGE_MAP_EXPANDED_TAG = "scan_coverage_map_expanded"

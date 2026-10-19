@@ -8,16 +8,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.offset
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.MyLocation
-import androidx.compose.material.icons.rounded.Navigation
+import androidx.compose.material.icons.rounded.NoPhotography
 import androidx.compose.material3.Icon
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
 import io.github.sceneview.demo.R
 import io.github.sceneview.demo.demos.internal.DebugGroup
+import io.github.sceneview.demo.demos.internal.DebugPose
 import io.github.sceneview.demo.demos.internal.ScanFollow
 import io.github.sceneview.demo.ui.GlassActionPill
 import androidx.compose.foundation.layout.Arrangement
@@ -53,10 +51,10 @@ import io.github.sceneview.demo.demos.internal.ArDebugSession
 import io.github.sceneview.demo.demos.internal.ScanCopy
 import io.github.sceneview.demo.demos.internal.ScanPhase
 import io.github.sceneview.demo.demos.internal.ScanScopeCopy
+import io.github.sceneview.demo.theme.LocalStageChrome
 import io.github.sceneview.demo.theme.SceneViewTokens
 import io.github.sceneview.demo.theme.SceneViewTokens.ArOverlay
 import io.github.sceneview.demo.theme.SceneViewTokens.Space
-import io.github.sceneview.demo.ui.overMediaEdge
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
 
@@ -73,7 +71,13 @@ import io.github.sceneview.loaders.ModelLoader
  * points captured, counted off the scan from zero and never shown against a cap.
  */
 @Composable
-internal fun ScanHud(phase: ScanPhase, seconds: Float, points: Int, label: String? = null) {
+internal fun ScanHud(
+    phase: ScanPhase,
+    seconds: Float,
+    points: Int,
+    label: String? = null,
+    photoLimit: Boolean = false,
+) {
     val clock = ArDebugFormat.clock(seconds)
     OverlayCard(testTag = SCAN_HUD_TAG) {
         Row(
@@ -103,6 +107,22 @@ internal fun ScanHud(phase: ScanPhase, seconds: Float, points: Int, label: Strin
             maxLines = 1,
             modifier = Modifier.testTag(SCAN_POINTS_TAG),
         )
+        if (photoLimit) {
+            // Said once in the coaching line; from then on, this small reminder (#4717).
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Space.xs),
+                modifier = Modifier.semantics(mergeDescendants = true) {}.testTag(SCAN_PHOTO_LIMIT_TAG),
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.NoPhotography,
+                    contentDescription = null,
+                    tint = LocalStageChrome.current.onCardMuted,
+                    modifier = Modifier.size(ScanDotSize + Space.xs),
+                )
+                Text(text = ScanCopy.PHOTO_LIMIT, style = OnScrimCaption, maxLines = 1)
+            }
+        }
     }
 }
 
@@ -356,7 +376,11 @@ private fun ScanHint(text: String) {
  * what is not scanned yet still shows, and on top the points in the colours the camera saw —
  * no path, no photo frames, no plane grid. The view follows the phone like a navigation app,
  * heading-up ([ScanFollow]); a drag or a pinch takes it over, and [ScanRecenterPill] gives it
- * back. While it follows, a marker holds the phone's place, where [ScanFollow.LIFT] draws it.
+ * back. No marker stands on it: the map card says where you are and which way you face (#4718).
+ *
+ * [livePose] is the phone now, given the trace's last pose: that pose while it scans, the live one
+ * while paused. Paused, the trace records nothing, and a view that followed it stayed glued to the
+ * screen as the phone turned (#4718); following the live pose, the cloud stays put in the room.
  *
  * [saving] (#4719): the camera fades out under an opaque veil and the view leaves the phone for a
  * slow orbit round the whole cloud ([ScanFollow.savingPose]) while the scan is fused and written.
@@ -368,11 +392,11 @@ internal fun ScanLiveView(
     orbit: ArDebugOrbitCamera,
     follow: ScanFollow,
     coverage: ScanCoverageState,
-    following: Boolean,
     media: RerunReplayMedia,
     engine: Engine,
     modelLoader: ModelLoader,
     materialLoader: MaterialLoader,
+    livePose: (traced: DebugPose?) -> DebugPose? = { it },
     saving: Boolean = false,
 ) {
     // Saving, the view is handed back to the automatic framing, which the orbit then drives.
@@ -383,7 +407,7 @@ internal fun ScanLiveView(
         label = "scanVeil",
     )
     val savingOrbit = remember(saving) { if (saving) SavingOrbit() else null }
-    BoxWithConstraints(modifier = Modifier.fillMaxSize().testTag(SCAN_STAGE_TAG)) {
+    Box(modifier = Modifier.fillMaxSize().testTag(SCAN_STAGE_TAG)) {
         // Only the camera is dimmed: the cloud is drawn by its own view, above the veil.
         Box(Modifier.fillMaxSize().background(veil))
         ArDebugSceneView(
@@ -397,32 +421,11 @@ internal fun ScanLiveView(
             transparent = true,
             visible = { it in SCAN_LIVE_GROUPS },
             follow = { frame ->
-                val phone = follow.poseFor(frame.camera)
+                val phone = follow.poseFor(livePose(frame.camera))
                 savingOrbit?.poseFor(phone, media.dense?.cloud?.positions ?: frame.mapPoints, orbit) ?: phone
             },
-            observe = coverage::observe,
+            observe = { frame -> coverage.observe(frame, pose = livePose(frame.camera)) },
         )
-        if (following && !saving) {
-            val youAreHere = stringResource(R.string.demo_ar_rerun_you_are_here)
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .offset(y = maxHeight * (0.5f - ScanFollow.LIFT) - ScanMarkerSize / 2)
-                    .size(ScanMarkerSize)
-                    .overMediaEdge(CircleShape)
-                    .background(ArOverlay.accentProgress, CircleShape)
-                    .semantics { contentDescription = youAreHere }
-                    .testTag(SCAN_MARKER_TAG),
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Navigation,
-                    contentDescription = null,
-                    tint = ArOverlay.onAccentProgress,
-                    modifier = Modifier.size(ScanMarkerSize - Space.sm),
-                )
-            }
-        }
     }
 }
 
@@ -476,17 +479,14 @@ internal fun ScanShutter(startEnabled: Boolean, onStart: () -> Unit) {
 /** What the live view draws: the points, in the colours the camera saw. */
 private val SCAN_LIVE_GROUPS = setOf(DebugGroup.Points)
 
-/** The phone's marker: a 28 dp disc, read at a glance like a navigation app's arrow. */
-private val ScanMarkerSize = Space.lg + Space.xs
-
 /** A notch above the capture card's 10 dp dot: this one is read from a metre away. */
 private val ScanDotSize = Space.md - Space.xs / 2
 
 internal const val SCAN_HUD_TAG = "ar_rerun_scan_hud"
 internal const val SCAN_STAGE_TAG = "ar_rerun_scan_stage"
-internal const val SCAN_MARKER_TAG = "ar_rerun_scan_marker"
 internal const val SCAN_RECENTER_TAG = "ar_rerun_scan_recenter"
 internal const val SCAN_POINTS_TAG = "ar_rerun_scan_points"
+internal const val SCAN_PHOTO_LIMIT_TAG = "ar_rerun_scan_photo_limit"
 internal const val SCAN_CONTROLS_TAG = "ar_rerun_scan_controls"
 internal const val SCAN_HINT_TAG = "ar_rerun_scan_hint"
 internal const val SCAN_REVIEW_TAG = "ar_rerun_scan_review"

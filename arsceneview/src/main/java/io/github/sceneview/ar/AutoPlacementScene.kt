@@ -455,6 +455,7 @@ fun AutoPlacementScene(
                 val tracked = session.getAllTrackables(Plane::class.java)
                     .filter { it.trackingState == TrackingState.TRACKING && it.subsumedBy == null }
                 if (tracked != planes) planes = tracked
+                state.onFloor(trackedFloorY(tracked))
                 val candidate = if (ready && state.wantsSurface) {
                     findAutoPlacementSurface(frame, tracked, viewport.width, viewport.height, surface)
                 } else null

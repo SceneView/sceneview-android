@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import com.google.android.filament.ColorGrading
 import com.google.android.filament.Engine
 import com.google.android.filament.Material
@@ -26,6 +27,9 @@ import io.github.sceneview.SceneView
 import io.github.sceneview.SurfaceType
 import io.github.sceneview.collision.Box as CollisionBox
 import io.github.sceneview.collision.Vector3
+import io.github.sceneview.demo.LocalDemoChromeBottomWidth
+import io.github.sceneview.demo.LocalDemoChromeTopInset
+import io.github.sceneview.demo.LocalDemoFullScreen
 import io.github.sceneview.demo.LocalDemoSceneRestingCover
 import io.github.sceneview.demo.demoContentPadding
 import io.github.sceneview.demo.demos.internal.ArDebugGeometry
@@ -36,6 +40,7 @@ import io.github.sceneview.demo.demos.internal.DenseSurfels
 import io.github.sceneview.demo.demos.internal.DollhouseFraming
 import io.github.sceneview.demo.demos.internal.DollhouseOpening
 import io.github.sceneview.demo.demos.internal.DollhouseRoom
+import io.github.sceneview.demo.demos.internal.dollhouseSideBand
 import io.github.sceneview.demo.demos.internal.FramingInsets
 import io.github.sceneview.demo.demos.internal.PlaneLayering
 import io.github.sceneview.demo.demos.internal.RoomDollhouse
@@ -414,20 +419,31 @@ internal fun DollhousePreview(
         // whole in there (#4492). The camera is aimed for it; the surface keeps the whole view, so
         // the stage's ground still runs under the glass and a drag pans at the speed it always did.
         //
-        // A phone held sideways has no such band: the chip, the scale pill and the dock stack up
-        // the middle of a view barely taller than they are, and a room fitted between them is a
-        // thumbnail behind the chip. There the room takes the window's safe area, as large as it
-        // goes, and the glass floats over it.
+        // A phone held sideways has no such band: the chip and the dock stack up the middle of a
+        // view barely taller than they are. There the chip stands in the top end corner and the
+        // room is framed in the band beside the chrome, at the start (#4527). In full screen
+        // nothing covers the view: the room takes the window's safe area.
         val direction = LocalLayoutDirection.current
         val safe = WindowInsets.safeDrawing.asPaddingValues()
-        val cover = if (isDemoCompactHeight()) {
-            safe
-        } else {
-            demoContentPadding(
+        val cover = when {
+            !isDemoCompactHeight() -> demoContentPadding(
                 cover = LocalDemoSceneRestingCover.current,
                 sceneHeight = maxHeight,
                 left = safe.calculateLeftPadding(direction),
                 right = safe.calculateRightPadding(direction),
+            )
+            LocalDemoFullScreen.current -> safe
+            else -> dollhouseSideBand(
+                width = maxWidth,
+                safeLeft = safe.calculateLeftPadding(direction),
+                safeRight = safe.calculateRightPadding(direction),
+                safeTop = safe.calculateTopPadding(),
+                safeBottom = safe.calculateBottomPadding(),
+                identityRow = LocalDemoChromeTopInset.current,
+                bottomChromeWidth = LocalDemoChromeBottomWidth.current,
+                cornerCard = DOLLHOUSE_CORNER_CARD_WIDTH,
+                cornerMargin = SceneViewTokens.Space.md,
+                startIsLeft = direction == LayoutDirection.Ltr,
             )
         }
         val gutter = SceneViewTokens.Space.md
@@ -482,6 +498,12 @@ internal fun DollhousePreview(
         }
     }
 }
+
+/**
+ * How wide the recording's chip may grow in the top end corner on a phone held sideways (#4527):
+ * the replay's corner card, so the two screens put their card in the same place at the same width.
+ */
+internal val DOLLHOUSE_CORNER_CARD_WIDTH = SceneViewTokens.DebugView.compactCardWidth
 
 /** A little higher than the replay's three-quarter view: a dollhouse is looked into from above. */
 private const val PREVIEW_ELEVATION = 40f

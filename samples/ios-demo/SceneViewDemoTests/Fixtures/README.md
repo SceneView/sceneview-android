@@ -1,3 +1,13 @@
+# Android cross-platform RRD fixture
+
+`android-cross-platform.rrd` is what the Android writer writes for one small scene (lens, map,
+path, one photo — `cross-platform-photo.png` —, a plane, an anchor, sightings, a dense cloud),
+with a fixed recording id. `RerunRrdCrossPlatformFixtureTest` (Android, JVM) wrote it and fails
+if Android drifts from it; `RerunRRDWriterTests` (iOS) checks the iOS writer gives the same
+bytes for `crossPlatformScene()` and that the iOS reader reads both. Regenerate it after a
+deliberate format change with `RERUN_FIXTURE_WRITE=1` on the Android test. Tests read it
+relative to `#filePath`; it is not a bundled resource.
+
 # Android dense-only RRD fixture (pending generation)
 
 No binary fixture has been generated or committed. The current Swift tests construct

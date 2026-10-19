@@ -136,4 +136,33 @@ class RerunEnglishFormatsTest {
         /** 2026-09-30 13:56 UTC. */
         const val SEP_30_13_56_UTC = 1_790_776_560_000L
     }
+
+    /** "Room · Oct 19, 11:58 AM · 19 Oct 2026" wrote the date twice, in two formats (#4714, #4720). */
+    @Test
+    fun `the plan writes a scan's date once, in the format of every other screen`() {
+        val seconds = SEP_30_13_56_UTC / 1000
+        val titled = planHeading(recordingTitle(SEP_30_13_56_UTC), seconds)
+        assertEquals("Room · Sep 30, 2026, 1:56 PM", titled.title.plainSpaces())
+        assertEquals(null, titled.date)
+        val renamed = planHeading("Garden", seconds)
+        assertEquals("Garden", renamed.title)
+        assertEquals("Sep 30, 2026, 1:56 PM", renamed.date?.plainSpaces())
+        assertEquals(PlanHeading("Garden", null), planHeading("Garden", null))
+    }
+
+    @Test
+    fun `a card whose title says when does not say it again`() {
+        val session = RerunStoredSession(
+            id = "A",
+            title = recordingTitle(SEP_30_13_56_UTC),
+            createdAt = SEP_30_13_56_UTC / 1000,
+            source = RerunSessionSource.Recorded,
+            duration = 1f,
+            pathMetres = 1f,
+            points = 1,
+            planes = 1,
+            photos = 1,
+        )
+        assertEquals(RerunSessionSource.Recorded.label, sessionOrigin(session))
+    }
 }

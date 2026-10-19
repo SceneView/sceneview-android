@@ -1,4 +1,5 @@
 import CoreGraphics
+import CryptoKit
 import Foundation
 import ImageIO
 import XCTest
@@ -18,18 +19,45 @@ final class RerunRRDWriterTests: XCTestCase {
         XCTAssertEqual(Array(data.prefix(12)), Array("RRF2".utf8) + [0, 38, 1, 0] + [0, 2, 0, 0])
     }
 
-    func testMessagesTileTheFileAndStartWithStoreInfo() throws {
+    /// The layout's store, its chunks and its activation, then the recording's store and
+    /// chunks, then `End`: the order Android and the Rerun SDKs write.
+    func testMessagesTileTheFileBlueprintFirstAndEndWithTheFooter() throws {
+        let data = try RerunRRDWriter.data(for: scene(), recordingId: recordingId)
+        let messages = try Self.messages(in: data)
+        let kinds = messages.map(\.kind)
+        let activation = try XCTUnwrap(kinds.firstIndex(of: 3))
+        XCTAssertEqual(kinds.first, 1, "the blueprint's SetStoreInfo first")
+        XCTAssertGreaterThan(activation, 1)
+        XCTAssertTrue(kinds[1..<activation].allSatisfy { $0 == 2 }, "then the layout's chunks")
+        XCTAssertEqual(kinds[activation + 1], 1, "then the recording's SetStoreInfo")
+        XCTAssertTrue(kinds[(activation + 2)..<(kinds.count - 1)].allSatisfy { $0 == 2 }, "then its chunks")
+        XCTAssertEqual(kinds.last, 0, "End last")
+        let storeKinds = try messages.filter { $0.kind == 1 }.map { try Self.storeKind(ofStoreInfo: $0.payload) }
+        XCTAssertEqual(storeKinds, [2, 1])
+        let layoutStores = try messages[1..<activation].map { try Self.storeKind(ofArrowMessage: $0.payload) }
+        XCTAssertEqual(Set(layoutStores), [2], "layout chunks go to the blueprint store")
+    }
+
+    /// `BlueprintActivationCommand`: the blueprint store, `make_default`, not `make_active`.
+    func testBlueprintIsActivatedAsTheDefaultLayout() throws {
         let messages = try Self.messages(in: RerunRRDWriter.data(for: scene(), recordingId: recordingId))
-        XCTAssertEqual(messages.first?.kind, 1, "SetStoreInfo first")
-        XCTAssertEqual(messages.filter { $0.kind == 1 }.count, 1)
-        XCTAssertTrue(messages.dropFirst().allSatisfy { $0.kind == 2 }, "then only ArrowMsg")
+        let command = try Self.fields(XCTUnwrap(messages.first { $0.kind == 3 }).payload)
+        let storeId = try Self.fields(XCTUnwrap(command[1]?.first?.bytes))
+        XCTAssertEqual(storeId[1]?.first?.varint, 2, "StoreKind.Blueprint")
+        XCTAssertEqual(storeId[2]?.first?.string, RerunRRDBlueprint.storeId(recordingId))
+        XCTAssertNil(command[2], "make_active unset")
+        XCTAssertEqual(command[3]?.first?.varint, 1, "make_default")
+        let entities = try messages.prefix { $0.kind != 3 }.filter { $0.kind == 2 }
+            .map { try Self.chunk(from: $0.payload).entityPath }
+        XCTAssertEqual(entities.filter { $0.hasPrefix("/view/") }.count, 4, "Room and Camera, each with its contents")
+        XCTAssertTrue(entities.contains("/viewport"))
     }
 
     func testStoreInfoNamesTheApplicationAndRecording() throws {
         let messages = try Self.messages(in: RerunRRDWriter.data(
             for: scene(), applicationId: "my_app", recordingId: recordingId
         ))
-        let info = try Self.fields(messages[0].payload)
+        let info = try Self.fields(XCTUnwrap(messages.filter { $0.kind == 1 }.last).payload)
         let storeInfo = try Self.fields(XCTUnwrap(info[2]?.first?.bytes))
         let storeId = try Self.fields(XCTUnwrap(storeInfo[2]?.first?.bytes))
         XCTAssertEqual(storeId[1]?.first?.varint, 1, "StoreKind.Recording")
@@ -124,75 +152,148 @@ final class RerunRRDWriterTests: XCTestCase {
         XCTAssertEqual(try self.chunks(of: recorded).first { $0.fieldNames.contains("EncodedImage:blob") }?.rowCount, 1)
     }
 
-    // MARK: - Expected bytes written by hand from the Android writer's source
+    // MARK: - Byte compatibility with Android
     //
-    // No file the Android writer produced is involved here: the expected bytes are assembled
-    // in this file from a reading of `RerunRrdWriter.kt` and `RerunRrdChunk.kt`. They pin the
-    // iOS layout to that reading; they do not prove the two writers agree.
+    // `Fixtures/android-cross-platform.rrd` is a file the Android writer produced
+    // (`RerunRrdCrossPlatformFixtureTest`, which also fails when Android drifts from it) for
+    // the scene `crossPlatformScene()` builds here. The iOS writer must give the same bytes,
+    // the store source label aside.
 
-    /// `RerunRrdWriter.kt`'s `TUID_EPOCH_NANOS`, and its `RerunTuidSequence` seed for
-    /// ``recordingId``: the UUID's high 64 bits masked to 48.
-    private static let tuidEpoch: UInt64 = 1_767_225_600_000_000_000
-    private static let tuidSeed: UInt64 = 0x04E0_4F89_11D3
+    private static let fixtures = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+        .appendingPathComponent("Fixtures")
 
-    /// `rerun.common.v1alpha1.StoreId` as Android's `storeId` writes it: kind 1 (recording),
-    /// the lowercase recording id, then the application id in its own message.
-    private static let storeId: [UInt8] = [0x08, 0x01, 0x12, 0x24]
-        + Array("3f2504e0-4f89-11d3-9a0c-0305e82c3301".utf8)
-        + [0x1A, 0x15, 0x0A, 0x13] + Array("sceneview_ar_replay".utf8)
-
-    /// The stream header, the first `MessageHeader` and the whole `SetStoreInfo`, assembled
-    /// here field by field from `RerunRrdWriter.kt` (`streamHeader`, `appendMessage`,
-    /// `setStoreInfo`) and compared as one prefix. By that reading the store source label is
-    /// the only byte run that differs between the platforms: `SceneView Android` there.
-    func testStreamAndStoreInfoMatchBytesHandWrittenFromTheAndroidWriter() throws {
-        let data = try RerunRRDWriter.data(for: scene(), recordingId: recordingId)
-        let source = Array("SceneView iOS".utf8)
-        var expected: [UInt8] = Array("RRF2".utf8) + [0, 38, 1, 0] + [0, 2, 0, 0]
-        expected += Self.le64(1) + Self.le64(UInt64(101 + source.count)) // MessageHeader: kind, length.
-        expected += [0x0A, 0x12, 0x09] + Self.le64(Self.tuidEpoch) + [0x11] + Self.le64(Self.tuidSeed + 1) // row_id
-        expected += [0x12, UInt8(79 + source.count)] // info
-        expected += [0x12, 0x3F] + Self.storeId
-        expected += [0x2A, UInt8(6 + source.count), 0x08, 0x06, 0x12, UInt8(2 + source.count), 0x0A, UInt8(source.count)]
-        expected += source
-        expected += [0x32, 0x04, 0x08, 0x80, 0xCC, 0x04] // crate_version_bits of 0.38.1
-        XCTAssertEqual(Self.storeId.count, 0x3F)
-        XCTAssertEqual(Array(data.prefix(expected.count)), expected)
-        XCTAssertEqual(Array(data.dropFirst(expected.count).prefix(8)), Self.le64(2), "an ArrowMsg follows")
+    private static func androidFixture() throws -> Data {
+        try Data(contentsOf: fixtures.appendingPathComponent("android-cross-platform.rrd"))
     }
 
-    /// The `world/points/live` message against a reading of Android's `arrowMessage` and
-    /// `liveChunk`: the envelope bytes around the IPC stream are compared in place, the chunk
-    /// and row ids and each column's values are looked for as contiguous little-endian runs
-    /// inside the IPC stream — present, not located.
-    func testLivePointsMessageContainsBytesHandWrittenFromTheAndroidWriter() throws {
-        var recorded = scene()
-        recorded.pointObservations = [.init(time: 1.25, points: [1, 2]), .init(time: 0.5, points: [0])]
-        let messages = try Self.messages(in: RerunRRDWriter.data(for: recorded, recordingId: recordingId))
-        let parsed = try messages.dropFirst().map { try Self.chunk(from: $0.payload) }
-        let index = try XCTUnwrap(parsed.firstIndex { $0.entityPath == "/world/points/live" })
-        XCTAssertEqual(parsed[index - 1].entityPath, "/world/points", "right after the static map, as on Android")
+    /// `RerunRrdCrossPlatformFixtureTest.scene()`, value for value.
+    static func crossPlatformScene() throws -> RerunExportScene {
+        let identity = simd_quatf(ix: 0, iy: 0, iz: 0, r: 1)
+        let turned = simd_quatf(ix: 0, iy: 0.6, iz: 0, r: 0.8)
+        let photoPose = RerunExportScene.CameraSample(time: 0.75, position: SIMD3(0.25, 1.5, -0.5), orientation: turned)
+        let photo = try Data(contentsOf: fixtures.appendingPathComponent("cross-platform-photo.png"))
+        return RerunExportScene(
+            title: "Cross-platform room",
+            lens: .init(width: 960, height: 1280, fx: 1000, fy: 1001, cx: 480, cy: 640),
+            points: [SIMD3(0, 0, 0), SIMD3(1, 0, 0), SIMD3(0, 1, 0)],
+            pointColors: [SIMD3(255, 0, 0), SIMD3(0, 255, 0), SIMD3(0, 0, 255)],
+            cameraPath: [
+                .init(time: 0, position: SIMD3(0, 1.5, 0), orientation: identity),
+                .init(time: 0.5, position: SIMD3(0.125, 1.5, -0.25), orientation: identity),
+                .init(time: 1, position: SIMD3(0.5, 1.5, -1), orientation: turned),
+            ],
+            keyframes: [],
+            images: ["frames/000.png": photo],
+            planes: [.init(
+                id: 1, kind: "horizontal_upward",
+                polygon: [SIMD3(-1, 0, -1), SIMD3(1, 0, -1), SIMD3(1, 0, 1), SIMD3(-1, 0, 1)],
+                texture: nil
+            )],
+            anchors: [.init(id: 7, position: SIMD3(0.5, 0, -0.5), orientation: identity, modelName: "shiba")],
+            photos: [.init(time: 0.75, imagePath: "frames/000.png", pose: photoPose)],
+            pointObservations: [.init(time: 1.25, points: [1, 2]), .init(time: 0.5, points: [0])],
+            dense: RerunDenseCloud(
+                positions: [SIMD3(0, 0, 0), SIMD3(1, 2, 3)], colors: [SIMD3(10, 20, 30), SIMD3(255, 0, 0)], voxelM: 0.03
+            )
+        )
+    }
 
-        // One id for SetStoreInfo, then a chunk id and one row id per row for every chunk.
-        let chunkInc = Self.tuidSeed + 1 + UInt64(parsed[..<index].reduce(0) { $0 + 1 + $1.rowCount }) + 1
-        let payload = [UInt8](messages[index + 1].payload)
-        let ipc = parsed[index].ipc
-        var head: [UInt8] = [0x0A, 0x3F] + Self.storeId
-        head += [0x10, 0x01, 0x18] + Self.varint(ipc.count) + [0x20, 0x01, 0x2A] + Self.varint(ipc.count)
-        head += [0xFF, 0xFF, 0xFF, 0xFF]
-        XCTAssertEqual(Array(payload.prefix(head.count)), head, "store id, no compression, size, Arrow IPC, payload")
-        var tail: [UInt8] = [0x32, 0x12, 0x09] + Self.le64(Self.tuidEpoch)
-        tail += [0x11] + Self.le64(chunkInc) + [0x38, 0x00]
-        XCTAssertEqual(Array(payload.suffix(tail.count)), tail, "chunk id, then is_static = false")
+    /// The whole file — header, layout, recording, footer — byte for byte as Android wrote it.
+    func testCrossPlatformSceneIsTheAndroidFileByteForByte() throws {
+        let android = try Self.androidFixture()
+        let ios = try RerunRRDWriter.data(for: Self.crossPlatformScene(), recordingId: recordingId, source: "SceneView Android")
+        XCTAssertEqual(ios.count, android.count)
+        if let first = zip(ios, android).enumerated().first(where: { $0.element.0 != $0.element.1 })?.offset {
+            XCTFail("first differing byte at \(first) of \(android.count)")
+        }
+    }
 
-        func tuid(_ inc: UInt64) -> [UInt8] { Array(Self.le64(Self.tuidEpoch).reversed()) + Array(Self.le64(inc).reversed()) }
-        XCTAssertNotNil(ipc.range(of: Data(tuid(chunkInc + 1) + tuid(chunkInc + 2))), "row ids, big-endian")
-        XCTAssertNotNil(ipc.range(of: Data(Self.le64(500_000_000) + Self.le64(1_250_000_000))), "nanoseconds, sorted")
-        let positions: [Float] = [0, 0, 0, 1, 0, 0, 0, 1, 0]
-        XCTAssertNotNil(ipc.range(of: Data(positions.flatMap { Self.le32($0.bitPattern) })), "the sighted map points, row after row")
-        let radius = Self.le32(Float(0.008).bitPattern)
-        XCTAssertNotNil(ipc.range(of: Data(radius + radius)), "radius 8 mm")
-        XCTAssertNotNil(ipc.range(of: Data([0xFF, 0x0B, 0x9E, 0xF5, 0xFF, 0x0B, 0x9E, 0xF5])), "#F59E0B, opaque")
+    /// The store source label is the only difference iOS keeps: `SceneView iOS`.
+    func testStoreSourceLabelIsSceneViewIOS() throws {
+        let ios = try RerunRRDWriter.data(for: Self.crossPlatformScene(), recordingId: recordingId)
+        let infos = try Self.messages(in: ios).filter { $0.kind == 1 }.map { try Self.fields($0.payload) }
+        XCTAssertEqual(infos.count, 2)
+        for message in infos {
+            let storeInfo = try Self.fields(XCTUnwrap(message[2]?.first?.bytes))
+            let source = try Self.fields(XCTUnwrap(storeInfo[5]?.first?.bytes))
+            let other = try Self.fields(XCTUnwrap(source[2]?.first?.bytes))
+            XCTAssertEqual(other[1]?.first?.string, "SceneView iOS")
+        }
+    }
+
+    /// Both files, Android's and the iOS one, read back through the iOS reader as one recording.
+    func testAndroidAndIOSFilesReadBackAsTheSameRecording() throws {
+        let android = try RerunRRDReader.recording(from: Self.androidFixture())
+        let ios = try RerunRRDReader.recording(from: RerunRRDWriter.data(for: Self.crossPlatformScene(), recordingId: recordingId))
+        XCTAssertEqual(android, ios)
+        XCTAssertEqual(android.title, "Cross-platform room")
+        let pack = try RerunPack.load(manifest: android.pack.manifest, log: android.pack.log,
+                                      media: android.pack.media, title: android.title ?? "")
+        let replayed = RerunExportAdapter.scene(for: pack)
+        XCTAssertEqual(replayed.cameraPath.map(\.time), [0, 0.5, 1])
+        XCTAssertEqual(replayed.photos.map(\.time), [0.75])
+        XCTAssertEqual(replayed.points, [SIMD3(0, 0, 0), SIMD3(1, 0, 0), SIMD3(0, 1, 0)])
+        XCTAssertEqual(replayed.planes.map(\.id), [1])
+        XCTAssertEqual(replayed.anchors.map(\.id), [7])
+        // The pack stores the dense cloud quantised: positions come back within a micrometre.
+        let dense = try XCTUnwrap(replayed.dense?.positions)
+        XCTAssertEqual(dense.count, 2)
+        for (a, b) in zip(dense, [SIMD3<Float>(0, 0, 0), SIMD3(1, 2, 3)]) { XCTAssertLessThan(simd_distance(a, b), 1e-6) }
+    }
+
+    // MARK: - Footer
+
+    /// The `StreamFooter` points at the `End` payload and checks it; the `RrdFooter` holds
+    /// the layout's manifest, then the recording's, each with its schema's SHA-256 and a row
+    /// per chunk at the offset and size the chunk really has.
+    func testFooterIndexesEveryChunkOfBothStores() throws {
+        let data = try RerunRRDWriter.data(for: Self.crossPlatformScene(), recordingId: recordingId)
+        let bytes = [UInt8](data)
+        let messages = try Self.messages(in: data)
+        let end = try XCTUnwrap(messages.last)
+        XCTAssertEqual(end.kind, 0)
+
+        let tail = Array(bytes.suffix(32))
+        XCTAssertEqual(Int(Self.le(tail, 0, 8)), end.offset, "payload offset")
+        XCTAssertEqual(Int(Self.le(tail, 8, 8)), end.payload.count, "payload length")
+        XCTAssertEqual(UInt32(Self.le(tail, 16, 4)), RerunXxHash32.hash(end.payload, seed: 7_850_921), "checksum")
+        XCTAssertEqual(Array(tail[20..<28]), Array("RRF2FOOT".utf8))
+        XCTAssertEqual(Self.le(tail, 28, 4), 1, "one entry")
+
+        let manifests = try XCTUnwrap(Self.fields(end.payload)[1]).compactMap(\.bytes).map { try Self.fields($0) }
+        XCTAssertEqual(manifests.count, 2)
+        let kinds = try manifests.map { try Self.fields(XCTUnwrap($0[1]?.first?.bytes))[1]?.first?.varint }
+        XCTAssertEqual(kinds, [2, 1], "the layout's, then the recording's")
+
+        let arrows = messages.filter { $0.kind == 2 }
+        let stores = try arrows.map { try Self.storeKind(ofArrowMessage: $0.payload) }
+        for (manifest, kind) in zip(manifests, [UInt64(2), 1]) {
+            let schema = try Self.fields(XCTUnwrap(manifest[2]?.first?.bytes))
+            let stream = try XCTUnwrap(schema[1]?.first?.bytes)
+            XCTAssertEqual(Array(stream.suffix(8)), [0xFF, 0xFF, 0xFF, 0xFF, 0, 0, 0, 0], "end of stream")
+            let sha = try XCTUnwrap(manifest[3]?.first?.bytes)
+            XCTAssertEqual(sha, Data(SHA256.hash(data: stream.dropLast(8))), "sorbet_schema_sha256")
+
+            let part = try Self.fields(XCTUnwrap(manifest[4]?.first?.bytes))
+            let frame = try XCTUnwrap(part[2]?.first?.bytes)
+            XCTAssertEqual(part[4]?.first?.varint, UInt64(frame.count))
+            let mine = zip(arrows, stores).filter { $0.1 == kind }.map(\.0)
+            XCTAssertFalse(mine.isEmpty)
+            // The offset and size columns: one u64 per chunk, contiguous, in file order.
+            let offsets = mine.flatMap { Self.le64(UInt64($0.offset)) }
+            let sizes = mine.flatMap { Self.le64(UInt64($0.payload.count)) }
+            XCTAssertNotNil(frame.range(of: Data(offsets)), "chunk_byte_offset of store \(kind)")
+            XCTAssertNotNil(frame.range(of: Data(sizes)), "chunk_byte_size of store \(kind)")
+        }
+    }
+
+    func testXxHash32GivesTheReferenceValues() {
+        func hash(_ text: String, seed: UInt32 = 0) -> UInt32 { RerunXxHash32.hash(Data(text.utf8), seed: seed) }
+        XCTAssertEqual(hash(""), 0x02CC_5D05)
+        XCTAssertEqual(hash("a"), 0x550D_7456)
+        XCTAssertEqual(hash("abc"), 0x32D1_53FF)
+        XCTAssertEqual(hash("Nobody inspects the spammish repetition"), 0xE229_3B2F)
+        XCTAssertEqual(hash("xxhash", seed: 20_141_025), 0x67BB_40DD)
     }
 
     /// A plane photo with a texel that is not opaque is written as straight RGBA
@@ -345,6 +446,8 @@ final class RerunRRDWriterTests: XCTestCase {
     struct Message {
         var kind: UInt64
         var payload: Data
+        /// Where the payload starts in the file, after its 16-byte header.
+        var offset: Int = 0
     }
 
     struct ParsedChunk {
@@ -364,12 +467,14 @@ final class RerunRRDWriterTests: XCTestCase {
 
     struct ReaderError: Error {}
 
+    /// The recording's chunks, without the layout's.
     private func chunks(of scene: RerunExportScene) throws -> [ParsedChunk] {
         try Self.messages(in: RerunRRDWriter.data(for: scene, recordingId: recordingId))
-            .filter { $0.kind == 2 }
+            .filter { try $0.kind == 2 && Self.storeKind(ofArrowMessage: $0.payload) == 1 }
             .map { try Self.chunk(from: $0.payload) }
     }
 
+    /// Every message, `End` included; after `End` exactly the 32-byte `StreamFooter` remains.
     static func messages(in data: Data) throws -> [Message] {
         let bytes = [UInt8](data)
         var position = 12
@@ -379,10 +484,27 @@ final class RerunRRDWriterTests: XCTestCase {
             let kind = le(bytes, position, 8), length = Int(le(bytes, position + 8, 8))
             position += 16
             guard position + length <= bytes.count else { throw ReaderError() }
-            messages.append(Message(kind: kind, payload: Data(bytes[position..<position + length])))
+            messages.append(Message(kind: kind, payload: Data(bytes[position..<position + length]), offset: position))
             position += length
+            if kind == 0 {
+                guard bytes.count - position == 32 else { throw ReaderError() }
+                break
+            }
         }
         return messages
+    }
+
+    /// `StoreKind` of an `ArrowMsg`'s `store_id`.
+    static func storeKind(ofArrowMessage payload: Data) throws -> UInt64 {
+        let storeId = try fields(XCTUnwrap(fields(payload)[1]?.first?.bytes))
+        return storeId[1]?.first?.varint ?? 0
+    }
+
+    /// `StoreKind` of a `SetStoreInfo`'s `info.store_id`.
+    static func storeKind(ofStoreInfo payload: Data) throws -> UInt64 {
+        let info = try fields(XCTUnwrap(fields(payload)[2]?.first?.bytes))
+        let storeId = try fields(XCTUnwrap(info[2]?.first?.bytes))
+        return storeId[1]?.first?.varint ?? 0
     }
 
     static func le(_ bytes: [UInt8], _ at: Int, _ count: Int) -> UInt64 {

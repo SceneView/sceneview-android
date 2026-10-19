@@ -494,7 +494,16 @@ final class RerunRRDReaderTests: XCTestCase {
         let data = try rrd()
         assertFails(data.prefix(8), with: .truncated)
         assertFails(data.prefix(data.count / 2), with: .truncated)
-        assertFails(data.dropLast(1), with: .truncated)
+        // One byte short of the last chunk. A cut later, in the footer, loses nothing.
+        let bytes = [UInt8](data)
+        let footerStart = (0..<8).reduce(0) { $0 | Int(bytes[bytes.count - RerunRRDFooter.streamFooterSize + $1]) << (8 * $1) }
+        let endMessage = footerStart - RerunRRDWriter.messageHeaderSize
+        assertFails(data.prefix(endMessage - 1), with: .truncated)
+        let whole = try RerunRRDReader.capturePack(from: data)
+        for cut in [endMessage, endMessage + 3, endMessage + 16, data.count - 1] {
+            let pack = try RerunRRDReader.capturePack(from: data.prefix(cut))
+            XCTAssertEqual(pack, whole, "cut at \(cut), inside the footer")
+        }
     }
 
     func testCompressedStreamIsRefused() throws {

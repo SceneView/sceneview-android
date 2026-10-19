@@ -654,6 +654,7 @@ extension RerunRRDReader {
             var position = 12
             var chunks: [Chunk] = []
             while position < bytes.count {
+                if try endsInsideFooter(bytes, at: position) { return chunks }
                 let kind = try bytes.u64(position)
                 let length = try bytes.u64(position + 8)
                 position += 16
@@ -673,6 +674,17 @@ extension RerunRRDReader {
                 }
             }
             return chunks
+        }
+
+        /// Whether the data stops inside the `End` message at `position` — the footer, written
+        /// last. Every chunk comes before it, so such a file reads like one without a footer. An
+        /// `End` header is told from its first byte alone: the kind is `0`, and no other
+        /// message's starts with a zero byte.
+        private static func endsInsideFooter(_ bytes: Bytes, at position: Int) throws -> Bool {
+            let left = bytes.count - position
+            if left < 16 { return try bytes.u8(position) == 0 }
+            let length = try bytes.u64(position + 8)
+            return try bytes.u64(position) == 0 && length > UInt64(left - 16)
         }
 
         /// `RRF2`, the Rerun version (major, minor, patch, 0), then the options: compression

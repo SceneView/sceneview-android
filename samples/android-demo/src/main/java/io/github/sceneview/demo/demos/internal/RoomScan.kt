@@ -377,7 +377,11 @@ object ScanCopy {
     const val LOADING = "Opening your scan…"
     const val REPLAY_TITLE = "Your scan"
     const val SAMPLE_TITLE = "Example scan"
+    /** Said once, for a few seconds, when the photos run out (#4717); then [PHOTO_LIMIT] stays in the HUD. */
     const val FULL = "Photo limit reached — points and path keep recording."
+
+    /** The HUD's small, lasting reminder once [FULL] has been said. */
+    const val PHOTO_LIMIT = "Photo limit reached"
 
     // The capture lifecycle (#4627): Scanning ⇄ Paused, Finish opens a review that Keep scanning
     // leaves for the same capture; only Save scan ends it.
@@ -392,6 +396,12 @@ object ScanCopy {
     // ScanCoach's lines (#4631): short, and said only while their cause holds.
     const val COACH_SLOWER = "Move slower"
     const val COACH_NOTHING_NEW = "Point at the floor or a wall, 1 to 3 m away"
+
+    /**
+     * Nothing passes the usual confidence on the surface in view, or only relaxed samples do
+     * (#4717): a plain wall, a tiled floor, a bright sky. Closer, the sensor has more to read.
+     */
+    const val COACH_LOW_TEXTURE = "Move closer — this surface has little texture"
 
     // The dense map past its budget (#4629): said once while it merges, never as a limit.
     const val ADJUSTING_DETAIL = "Adjusting detail for a larger space"
@@ -439,23 +449,28 @@ object ScanCopy {
     }
 
     /**
-     * The one coaching line under the capture, or `null` when a card speaks instead: tracking
-     * loss first, then the dense map's [detail] when it is not [ScanDetail.Fine], then the photo
-     * limit, then the [coach]'s line (#4631), then the plain advice.
+     * The one coaching line under the capture, or `null` when a card speaks instead. Tracking loss
+     * first, then a full map, then the photo limit while its one notice lasts ([photoLimitReached]
+     * is that notice, not the lasting state, #4717), then what the user can act on — a surface
+     * with too little texture ([lowTexture]), moving too fast — then the dense map's
+     * "Adjusting detail", then the [coach]'s "nothing new" (#4631), then the plain advice.
      */
+    @Suppress("LongParameterList") // one flag per cause the line can speak of
     fun coaching(
         phase: ScanPhase,
         trackingLost: Boolean,
         photoLimitReached: Boolean,
         detail: ScanDetail = ScanDetail.Fine,
         coach: ScanCoach.Line? = null,
+        lowTexture: Boolean = false,
     ): String? = when (phase) {
         ScanPhase.Scanning -> when {
             trackingLost -> TRACKING_LOST
             detail == ScanDetail.Full -> SCAN_FULL
-            detail == ScanDetail.Adjusting -> ADJUSTING_DETAIL
             photoLimitReached -> FULL
+            lowTexture -> COACH_LOW_TEXTURE
             coach == ScanCoach.Line.Slower -> COACH_SLOWER
+            detail == ScanDetail.Adjusting -> ADJUSTING_DETAIL
             coach == ScanCoach.Line.NothingNew -> COACH_NOTHING_NEW
             else -> COACH_SCANNING
         }

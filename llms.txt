@@ -1460,6 +1460,9 @@ model grows in from 55 % over 260 ms and shrinks away on tracking loss (opaque g
 cannot fade).
 `placement.hasCameraFrame` is true from the first camera frame, tracked or not — key a
 "starting camera" cover on it, not on `INITIALIZING`.
+`placement.floorHeight` is the lowest tracked upward plane's world Y (`null` until one is
+tracked): content placed on a table that must stand on the floor drops by
+`floorHeight - pose.ty()`.
 
 `AutoPlacementModel` grounds the complete model bounds, preserves the contact pivot
 while rotating/scaling, and constrains dragging to supported plane geometry. Its
