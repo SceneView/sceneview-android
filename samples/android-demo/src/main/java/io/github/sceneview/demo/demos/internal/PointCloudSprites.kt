@@ -38,10 +38,10 @@ internal object PointCloudSprites {
     const val SETTLE_MS: Long = 1_200L
 
     /** Opacity the history settles to: present but behind the live points. */
-    const val HISTORY_ALPHA: Float = 0.8f
+    const val HISTORY_ALPHA: Float = 0.9f
 
     /** Extra size of a fresh point, so the area being scanned visibly sparkles. */
-    const val FRESH_SIZE_BOOST: Float = 0.35f
+    const val FRESH_SIZE_BOOST: Float = 0.25f
 
     /** Linear-space rgb triplets of the ramp. */
     class Palette(val low: FloatArray, val high: FloatArray, val fresh: FloatArray) {
@@ -147,7 +147,7 @@ internal object PointCloudSprites {
     private fun lerp(a: Float, b: Float, t: Float): Float = a + (b - a) * t
 
     private const val MIN_DISTANCE_M = 0.05f
-    private const val MIN_SIZE_FACTOR = 0.65f
+    private const val MIN_SIZE_FACTOR = 0.8f
     private val CORNER_X = floatArrayOf(-1f, 1f, 1f, -1f)
     private val CORNER_Y = floatArrayOf(-1f, -1f, 1f, 1f)
 }

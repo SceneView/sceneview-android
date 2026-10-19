@@ -468,7 +468,7 @@ private const val ALL_POINTS_THRESHOLD = 0.1f
 private const val CONFIDENT_ONLY_THRESHOLD = 0.4f
 
 /** On-screen radius of a fully confident dot, in dp (the soft core reads at about half). */
-private const val DOT_RADIUS_DP = 6f
+private const val DOT_RADIUS_DP = 10f
 
 /** Re-upload cadence of the sprite buffer — the cloud grows smoothly at 10 Hz. */
 private const val REBUILD_INTERVAL_MS = 100L
