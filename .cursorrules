@@ -74,7 +74,7 @@ fun MyARScreen() {
 
 ## iOS (SceneViewSwift)
 ```swift
-// SPM: https://github.com/sceneview/sceneview.git from: "4.58.0"
+// SPM: https://github.com/sceneview/sceneview.git from: "4.59.0"
 import SwiftUI
 import SceneViewSwift
 

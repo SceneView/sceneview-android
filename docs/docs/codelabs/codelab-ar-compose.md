@@ -14,7 +14,7 @@
 
 ```kotlin
 dependencies {
-    implementation("io.github.sceneview:arsceneview:4.58.0")
+    implementation("io.github.sceneview:arsceneview:4.59.0")
 }
 ```
 

@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+## v4.59.0 — 2026-10-19
+
+### Added
+
+- **Demo app: know what a shared 3D Scan contains ([#4332](https://github.com/sceneview/sceneview/pull/4332)).** Share, from a scan's menu, now opens a sheet that shows the size of the file and says what it reveals before it leaves the phone. Camera photos can be left out; the sheet then says the 3D surfaces and points still show the room. A scan without photos opens on a clear empty Camera view, and a sheet closed without sending leaves no copy in the cache.
+- **Demo — 3D Scan scans an object, a room or a whole home** (#4647). The scan now starts by asking what you are scanning and remembers your choice. Object mode keeps only depth within 1.5 m, takes photos more often and builds a finer model. Whole home goes room by room in one session: finish a room, walk to the next one with capture paused, and the summary shows each room's plan and measurements plus a total.
+
+### Changed
+
+- **Demo app: shorter placement and 3D Scan actions.** 3D Scan uses Place in AR, Share and Close; placement screens use 3D, Try again and Move slowly.
+- **Demo app: an exported 3D Scan model is lighter and rests on its floor ([#4334](https://github.com/sceneview/sceneview/pull/4334)).** The 3D model you save or share from Export scan is now a lighter copy of the scan's surface — about 100,000 triangles, resting on its floor and centred — so other 3D viewers open it. Preparing it takes a few seconds the first time; the model on screen keeps its full detail. On a phone too short of memory to lighten it, the full model is written instead, and the sheet says so.
+
+### Fixed
+
+- **The 3D Scan replay's floor grid reads at a glance ([#4040](https://github.com/sceneview/sceneview/issues/4040)).** A line every 25 cm and a stronger one every metre, about twice as wide and two to three times as opaque as before, on the light and the dark stage alike. The grid stays whole under the room and fades out over 3 m past its corners, like the ground grid of Polycam or Reality Composer, so it gives the camera path its scale with no hard edge, and still sits under the points, the path and the dimensions.
+- **Android demo render tests: the emulator references match the demos as they ship again (refs [#4448](https://github.com/sceneview/sceneview/issues/4448)).** Nine CI references under `render-goldens-swangle/` predated changes merged since 2026-10-17. Those changes are the full-screen button (#4596), the PBR Neutral tone mapper (#4595), the studio finishes on Geometry Primitives (#4666) and the "Performance Test" title on the Debug Overlay demo (#4626). Each new reference was checked by eye before it replaced the old one.
+- **Android demo render tests: the Model Viewer CI reference shows the studio showroom (refs [#4448](https://github.com/sceneview/sceneview/issues/4448)).** Since #4580 the Model Viewer opens in a white photo studio, but the emulator golden still held the old dark stage, so `modelViewerDemo_default_state` failed on 99.7 % of its pixels. The reference under `render-goldens-swangle/` is now the showroom render.
+- **3D Scan keeps one copy of a scan opened from the share sheet, and a scan without photos gets a real thumbnail ([#4680](https://github.com/sceneview/sceneview/issues/4680)).** Picking "Open in SceneView" from the demo's own share sheet starts a second app window while the first still shows 3D Scan; both read the shared file and it was listed twice. A file now goes only to the window it was sent to, and opening the same file again (same SHA-256) opens the scan it already made instead of adding a copy. A scan kept without photos shows its points seen from above, with the path walked, instead of an empty square.
+
 ## v4.58.0 — 2026-10-19
 
 ### Added
