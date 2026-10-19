@@ -621,4 +621,63 @@ class ArDebugOrbitCameraTest {
         camera.band = OrbitBand.STAGE_LANDSCAPE
         assertEquals(OrbitBand.STAGE_LANDSCAPE.lift, camera.lift, 0f)
     }
+
+    // ── The settings sheet (#4564) ─────────────────
+
+    /** A camera holding [room] fitted in [band], as the replay's 3D view does. */
+    private fun replayCamera(band: OrbitBand, aspect: Float): ArDebugOrbitCamera {
+        val camera = ArDebugOrbitCamera(drift = false, band = band)
+        camera.setViewport(1080, (1080 / aspect).toInt())
+        camera.home = ArDebugFraming.home(room, ArDebugFraming.HOME_AZIMUTH, fov, aspect, band = band)
+        camera.snapTo(camera.home)
+        return camera
+    }
+
+    @Test
+    fun `a squeeze is drawn smaller and higher, inside the band it leaves`() {
+        val band = OrbitBand(halfWidth = 0.9f, halfHeight = 0.62f, lift = 0.04f)
+        val sheet = OrbitBand(halfWidth = 0.9f, halfHeight = 0.38f, lift = 0.2f)
+        assertEquals(1f, ArDebugFraming.squeezeScale(band, null), 0f)
+        assertEquals(0.38f / 0.62f, ArDebugFraming.squeezeScale(band, sheet), 1e-5f)
+        // A squeeze is never a zoom-in, nor a speck.
+        assertEquals(1f, ArDebugFraming.squeezeScale(band, band.copy(halfHeight = 0.8f)), 0f)
+        assertEquals(
+            ArDebugFraming.MIN_SQUEEZE_SCALE,
+            ArDebugFraming.squeezeScale(band, sheet.copy(halfHeight = 0.01f)),
+            0f,
+        )
+
+        val aspect = 0.46f
+        val camera = replayCamera(band, aspect)
+        camera.squeeze = sheet
+        repeat(60) { camera.update(1f / 60f) }
+        assertEquals(sheet.lift, camera.shownLift, 1e-4f)
+        // The room, drawn from further back by the scale, stands whole in the sheet's band.
+        val drawn = camera.pose.copy(distance = camera.pose.distance / camera.shownScale)
+        assertFramed(drawn, sheet, aspect)
+    }
+
+    @Test
+    fun `closing the sheet brings back the very picture it opened over, eased both ways`() {
+        val band = OrbitBand(halfWidth = 0.9f, halfHeight = 0.62f, lift = 0.04f)
+        val sheet = OrbitBand(halfWidth = 0.9f, halfHeight = 0.38f, lift = 0.2f)
+        val camera = replayCamera(band, 0.46f)
+        val before = camera.getTransform().toFloatArray()
+
+        camera.squeeze = sheet
+        camera.update(1f / 60f)
+        // Eased, not cut: one frame in, the picture is on its way, not there.
+        assertTrue(camera.shownLift > band.lift && camera.shownLift < sheet.lift)
+        repeat(60) { camera.update(1f / 60f) }
+        val open = camera.getTransform().toFloatArray()
+        assertFalse(before.contentEquals(open))
+
+        camera.squeeze = null
+        camera.update(1f / 60f)
+        assertTrue(camera.shownLift < sheet.lift && camera.shownLift > band.lift)
+        repeat(60) { camera.update(1f / 60f) }
+        assertEquals(band.lift, camera.shownLift, 0f)
+        assertEquals(1f, camera.shownScale, 0f)
+        assertArrayEquals(before, camera.getTransform().toFloatArray(), 1e-5f)
+    }
 }

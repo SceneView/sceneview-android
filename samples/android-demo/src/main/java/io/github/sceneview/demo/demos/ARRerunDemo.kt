@@ -109,6 +109,7 @@ import io.github.sceneview.demo.DemoBottomOverlayScope
 import io.github.sceneview.demo.DemoScaffold
 import io.github.sceneview.demo.DemoSettings
 import io.github.sceneview.demo.DockItem
+import io.github.sceneview.demo.LocalDemoSheetCover
 import io.github.sceneview.demo.R
 import io.github.sceneview.demo.common.DemoStatusBanner
 import io.github.sceneview.demo.common.DemoStatusTone
@@ -889,7 +890,25 @@ private fun RerunReplayScreen(
         else -> stackedBand(stage, headerBottom, timeline)
     }
     val band = measured ?: stageBand
-    SideEffect { orbit.band = band }
+    // The settings sheet rises over the stage's lower part (#4564): while it is up, the room is
+    // drawn smaller and higher, into the band it leaves between the header and the sheet's top,
+    // and comes back down when it closes. The sheet's target detent, so the picture starts moving
+    // with the sheet. Read in the scaffold's scene slot, which is where the scaffold provides it.
+    var sheetCover by remember { mutableFloatStateOf(0f) }
+    val windowHeight = LocalWindowInfo.current.containerSize.height.toFloat()
+    val squeeze = if (sheetCover > 0f && measured != null) {
+        val sheetTop = windowHeight - sheetCover
+        when {
+            compact -> sideBand(stage, timeline, statusBottom, minOf(pillTop - pillClearance, sheetTop))
+            else -> stackedBand(stage, headerBottom, timeline, coveredFrom = sheetTop)
+        }
+    } else {
+        null
+    }
+    SideEffect {
+        orbit.band = band
+        orbit.squeeze = squeeze
+    }
     // What the recording covers at the replay's time (#4631): the map card in the top corner, in
     // the 3D and Map views, which feed it.
     val coverage = remember(media) { ScanCoverageState() }
@@ -1045,6 +1064,8 @@ private fun RerunReplayScreen(
             )
         } ?: export,
     ) {
+        val cover = with(LocalDensity.current) { LocalDemoSheetCover.current.toPx() }
+        SideEffect { sheetCover = cover }
         when {
             media == null -> Unit // the scaffold's cover says it is loading
             mode == RerunMode.Camera -> RerunCameraView(media, thumbnails, session, Modifier.fillMaxSize())
@@ -1086,12 +1107,18 @@ private fun compactStage(): Boolean {
 
 /**
  * The band the replay's chrome leaves the room on [stage] when the phone is upright, measured on
- * screen: from [headerBottom], where the header ends, down to the timeline bar. `null` until both
- * are laid out.
+ * screen: from [headerBottom], where the header ends, down to the timeline bar — or to
+ * [coveredFrom], the settings sheet's top, when it rises higher. `null` until both are laid out.
  */
-private fun stackedBand(stage: Rect, headerBottom: Float, timeline: Rect?): OrbitBand? {
+private fun stackedBand(
+    stage: Rect,
+    headerBottom: Float,
+    timeline: Rect?,
+    coveredFrom: Float = Float.POSITIVE_INFINITY,
+): OrbitBand? {
     if (timeline == null) return null
-    return OrbitBand.between(headerBottom - stage.top, timeline.top - stage.top, stage.height)
+    val bottom = minOf(timeline.top, coveredFrom)
+    return OrbitBand.between(headerBottom - stage.top, bottom - stage.top, stage.height)
 }
 
 /**

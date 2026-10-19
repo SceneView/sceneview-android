@@ -105,6 +105,23 @@ class ArDebugOrbitCamera(
      */
     val lift: Float get() = band.lift
 
+    /**
+     * The smaller band something covering part of [band] leaves the picture — the settings sheet
+     * risen over the stage (#4564) — or `null` when nothing does. The framing is still fitted for
+     * [band]: the picture is only drawn smaller and higher, into this band, so taking it away
+     * brings back exactly the picture that was there before. The move is eased ([shownLift],
+     * [shownScale]) and follows the sheet both ways.
+     */
+    var squeeze: OrbitBand? = null
+
+    /** The lift the picture is drawn at now, easing towards [squeeze]'s or [band]'s. */
+    var shownLift: Float = band.lift
+        private set
+
+    /** The scale the picture is drawn at now (1 = fitted for [band]), easing towards [squeeze]'s. */
+    var shownScale: Float = 1f
+        private set
+
     /** What the gestures may do around the scene on screen; set by the view with [home]. */
     var limits: OrbitLimits = OrbitLimits.NONE
 
@@ -242,6 +259,8 @@ class ArDebugOrbitCamera(
     fun snapTo(target: OrbitPose) {
         pose = ArDebugFraming.clamp(target)
         heading = pose.azimuthDegrees
+        shownLift = (squeeze ?: band).lift
+        shownScale = ArDebugFraming.squeezeScale(band, squeeze)
     }
 
     override fun setViewport(width: Int, height: Int) {
@@ -250,9 +269,12 @@ class ArDebugOrbitCamera(
     }
 
     override fun getTransform(): Transform {
-        val eye = CameraRig.eye(pose)
+        // Drawn from further back while a [squeeze] holds the picture smaller: the orbit is not
+        // touched, so the picture comes back whole when the squeeze goes.
+        val drawn = pose.copy(distance = pose.distance / shownScale)
+        val eye = CameraRig.eye(drawn)
         // A pedestal move along the camera's own up axis: the picture slides, the orbit does not.
-        val drop = liftDrop(pose)
+        val drop = liftDrop(drawn, shownLift)
         return Transform(lookAt(eye = eye - drop, target = pose.target - drop, up = Float3(0f, 1f, 0f)))
     }
 
@@ -335,6 +357,7 @@ class ArDebugOrbitCamera(
         }
         dragAzimuth = 0f
         dragElevation = 0f
+        easeSqueeze(dt)
         if (grabbing) return
 
         if (following) {
@@ -368,6 +391,17 @@ class ArDebugOrbitCamera(
             azimuthVelocity = CameraRig.decayInertia(azimuthVelocity, dt)
             elevationVelocity = CameraRig.decayInertia(elevationVelocity, dt)
         }
+    }
+
+    /** [shownLift] and [shownScale] eased towards the band the picture is drawn in, [SQUEEZE_RATE]. */
+    private fun easeSqueeze(dt: Float) {
+        val lift = (squeeze ?: band).lift
+        val scale = ArDebugFraming.squeezeScale(band, squeeze)
+        val fraction = 1f - exp(-SQUEEZE_RATE * dt)
+        shownLift += (lift - shownLift) * fraction
+        shownScale += (scale - shownScale) * fraction
+        if (abs(lift - shownLift) < SQUEEZE_EPSILON) shownLift = lift
+        if (abs(scale - shownScale) < SQUEEZE_EPSILON) shownScale = scale
     }
 
     /** [candidate] kept inside [limits]: what every gesture's result goes through. */
@@ -442,7 +476,7 @@ class ArDebugOrbitCamera(
     }
 
     /** How far [lift] moves the drawn camera of [at] along its own up axis. */
-    private fun liftDrop(at: OrbitPose): Float3 {
+    private fun liftDrop(at: OrbitPose, lift: Float = shownLift): Float3 {
         val metresPerPixel = CameraRig.worldPerPixel(at.distance, verticalFovDegrees, viewportHeight)
         if (lift == 0f || metresPerPixel <= 0f) return Float3()
         val forward = normalize(at.target - CameraRig.eye(at))
@@ -467,6 +501,15 @@ class ArDebugOrbitCamera(
 
         /** The degrees of drag over which the orbit's centre slides onto [pivot]. */
         const val PIVOT_SLIDE_DEGREES = 30f
+
+        /**
+         * How fast the picture follows a [squeeze], per second: the settings sheet rises in some
+         * 300 ms, and the picture keeps up with it instead of trailing behind.
+         */
+        const val SQUEEZE_RATE = 10f
+
+        /** Close enough to the squeeze's lift and scale to stand on them. */
+        const val SQUEEZE_EPSILON = 1e-4f
 
         /** How close, in degrees and metres, a finished move must land to count as already there. */
         private const val LANDED_EPSILON = 1e-3f
@@ -1054,6 +1097,21 @@ object ArDebugFraming {
         val reachSettled = abs(next.distance - home.distance) < 1e-4f && targetOffset < 1e-4f
         return if (angleSettled && reachSettled) home else next
     }
+
+    /**
+     * The scale that draws a picture fitted for [band] inside [squeeze] — the band a settings
+     * sheet leaves (#4564): the smaller of the two half-extents' ratios, never above 1, and 1 with
+     * no squeeze. The picture is scaled about the band's centre, which moves to the squeeze's.
+     */
+    fun squeezeScale(band: OrbitBand, squeeze: OrbitBand?): Float {
+        if (squeeze == null || band.halfHeight <= 0f || band.halfWidth <= 0f) return 1f
+        return minOf(1f, squeeze.halfHeight / band.halfHeight, squeeze.halfWidth / band.halfWidth)
+            .coerceAtLeast(MIN_SQUEEZE_SCALE)
+    }
+
+
+    /** The smallest a squeeze draws the picture: under it the room is a speck, better left covered. */
+    const val MIN_SQUEEZE_SCALE = 0.3f
 
     /** [bounds] widened about its middle to at least a room's size: a session that barely moved. */
     private fun roomSized(bounds: FloatArray): FloatArray {
