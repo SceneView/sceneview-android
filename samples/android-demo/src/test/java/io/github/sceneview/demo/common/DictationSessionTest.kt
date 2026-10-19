@@ -1,189 +1,127 @@
 package io.github.sceneview.demo.common
 
-import android.speech.SpeechRecognizer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** #4618: dictation keeps listening through pauses and never loses what it heard. */
+/** #4618: dictation chains the system dialog through pauses and never loses what it heard. */
 class DictationSessionTest {
 
-    private class FakeEngine : SpeechEngine {
-        var starts = 0
-        var stops = 0
-        var cancels = 0
-        override fun startListening() { starts++ }
-        override fun stopListening() { stops++ }
-        override fun cancel() { cancels++ }
+    private class FakeLauncher : SpeechDialogLauncher {
+        var launches = 0
+        var opens = true
+        override fun launch(): Boolean {
+            launches++
+            return opens
+        }
     }
 
-    private val engine = FakeEngine()
-    private var now = 0L
+    private val launcher = FakeLauncher()
     private val updates = mutableListOf<DictationState>()
-    private val session = DictationSession(
-        engine = engine,
-        clock = { now },
-        onUpdate = { updates += it },
-        maxSilenceMillis = 8_000L,
-    )
+    private val session = DictationSession(launcher = launcher, onUpdate = { updates += it })
 
     @Test
-    fun startListensWithAnEmptyTranscript() {
+    fun startOpensTheDialogWithAnEmptyTranscript() {
         session.start()
         assertTrue(session.listening)
-        assertEquals(1, engine.starts)
+        assertEquals(1, launcher.launches)
         assertEquals(DictationState(listening = true, transcript = ""), updates.last())
     }
 
     @Test
-    fun partialResultsShowLive() {
+    fun startingTwiceOpensOneDialog() {
         session.start()
-        session.onPartialResult("the model")
-        assertEquals("the model", updates.last().transcript)
-        assertTrue(updates.last().listening)
+        session.start()
+        assertEquals(1, launcher.launches)
     }
 
     @Test
-    fun aFinishedSegmentIsKeptAndTheNextOneAppendsToIt() {
+    fun aRoundWithTextIsAppendedAndTheDialogReopens() {
         session.start()
-        session.onPartialResult("the model")
-        now += 1_000
-        session.onSegmentResult("the model is too dark")
-        assertEquals(2, engine.starts)
+        session.onRoundResult("the model is too dark", canceled = false)
+        assertEquals(2, launcher.launches)
         assertTrue(session.listening)
-        session.onPartialResult("on the floor")
-        assertEquals("the model is too dark on the floor", updates.last().transcript)
-        session.onSegmentResult("on the floor")
-        assertEquals("the model is too dark on the floor", session.transcript)
+        session.onRoundResult("on the floor", canceled = false)
+        assertEquals(3, launcher.launches)
+        assertEquals(
+            DictationState(listening = true, transcript = "the model is too dark on the floor"),
+            updates.last(),
+        )
     }
 
     @Test
-    fun aSilenceErrorWhileListeningRestartsAndKeepsThePartial() {
+    fun cancelingTheDialogEndsTheChainAndKeepsTheText() {
         session.start()
-        session.onPartialResult("hello")
-        now += 2_000
-        session.onError(SpeechRecognizer.ERROR_NO_MATCH)
-        assertEquals(2, engine.starts)
-        now += 3_000
-        session.onError(SpeechRecognizer.ERROR_SPEECH_TIMEOUT)
-        assertEquals(3, engine.starts)
-        assertTrue(session.listening)
-        assertEquals("hello", updates.last().transcript)
-    }
-
-    @Test
-    fun anEmptyFinalResultDoesNotDropThePartial() {
-        session.start()
-        session.onPartialResult("keep me")
-        session.onSegmentResult(null)
-        assertEquals("keep me", session.transcript)
-        assertTrue(session.listening)
-    }
-
-    @Test
-    fun aLongSilenceEndsTheSession() {
-        session.start()
-        session.onPartialResult("done")
-        now += 8_000
-        session.onError(SpeechRecognizer.ERROR_SPEECH_TIMEOUT)
+        session.onRoundResult("first", canceled = false)
+        session.onRoundResult(null, canceled = true)
         assertFalse(session.listening)
-        assertEquals(1, engine.starts)
-        assertEquals(DictationState(listening = false, transcript = "done"), updates.last())
+        assertEquals(2, launcher.launches)
+        assertEquals(DictationState(listening = false, transcript = "first"), updates.last())
     }
 
     @Test
-    fun theWatchdogEndsASegmentHeldOpenBySilence() {
+    fun anEmptyRoundEndsTheChain() {
         session.start()
-        session.onPartialResult("still here")
-        now += 7_000
-        session.onTick()
-        assertTrue(session.listening)
-        now += 1_000
-        session.onTick()
+        session.onRoundResult("said something", canceled = false)
+        session.onRoundResult("  ", canceled = false)
         assertFalse(session.listening)
-        assertEquals(1, engine.cancels)
-        assertEquals("still here", updates.last().transcript)
-        session.onError(SpeechRecognizer.ERROR_CLIENT)
-        assertEquals(1, engine.starts)
+        assertEquals(2, launcher.launches)
+        assertEquals("said something", session.transcript)
     }
 
     @Test
-    fun userStopEndsListeningAndTakesTheFinalResult() {
+    fun aRoundWithNoResultEndsTheChain() {
         session.start()
-        session.onPartialResult("tap stop")
+        session.onRoundResult(null, canceled = false)
+        assertFalse(session.listening)
+        assertEquals(1, launcher.launches)
+    }
+
+    @Test
+    fun userStopEndsTheChainAndKeepsTheText() {
+        session.start()
+        session.onRoundResult("tap stop", canceled = false)
         session.stop()
         assertFalse(session.listening)
-        assertEquals(1, engine.stops)
-        assertFalse(updates.last().listening)
-        assertEquals("tap stop", updates.last().transcript)
-        session.onSegmentResult("tap stop now")
-        assertEquals("tap stop now", session.transcript)
-        assertEquals(1, engine.starts)
+        assertEquals(DictationState(listening = false, transcript = "tap stop"), updates.last())
     }
 
     @Test
-    fun nothingRestartsAfterStop() {
+    fun nothingReopensAfterStop() {
         session.start()
         session.stop()
-        session.onError(SpeechRecognizer.ERROR_NO_MATCH)
-        session.onError(SpeechRecognizer.ERROR_SPEECH_TIMEOUT)
-        session.onSegmentResult("late")
-        session.onPartialResult("later")
-        assertEquals(1, engine.starts)
+        session.onRoundResult("late", canceled = false)
+        assertEquals(1, launcher.launches)
         assertFalse(session.listening)
         assertEquals("", session.transcript)
     }
 
     @Test
-    fun aHardErrorEndsTheSessionAndReportsIt() {
+    fun aDialogThatCannotOpenEndsTheChain() {
         session.start()
-        session.onPartialResult("network")
-        session.onError(SpeechRecognizer.ERROR_NETWORK)
+        launcher.opens = false
+        session.onRoundResult("kept", canceled = false)
         assertFalse(session.listening)
-        assertEquals(1, engine.starts)
-        assertEquals(SpeechRecognizer.ERROR_NETWORK, updates.last().error)
-        assertEquals("network", updates.last().transcript)
+        assertEquals("kept", session.transcript)
     }
 
     @Test
-    fun busyIsRetriedOnlyAFewTimesInARow() {
+    fun aDialogThatCannotOpenAtStartLeavesItIdle() {
+        launcher.opens = false
         session.start()
-        repeat(3) { session.onError(SpeechRecognizer.ERROR_RECOGNIZER_BUSY) }
-        assertTrue(session.listening)
-        assertEquals(4, engine.starts)
-        session.onError(SpeechRecognizer.ERROR_RECOGNIZER_BUSY)
         assertFalse(session.listening)
-    }
-
-    @Test
-    fun segmentedSessionEndRestartsWhileListening() {
-        session.start()
-        session.onSegmentResult("first")
-        session.onEndOfSegmentedSession()
-        assertEquals(3, engine.starts)
-        assertEquals("first", session.transcript)
+        assertFalse(updates.last().listening)
     }
 
     @Test
     fun startingAgainBeginsAFreshTranscript() {
         session.start()
-        session.onSegmentResult("old")
+        session.onRoundResult("old", canceled = false)
         session.stop()
         session.start()
         assertEquals("", session.transcript)
-        assertNull(updates.last().error)
-    }
-
-    @Test
-    fun disposeCancelsTheRecognizer() {
-        session.start()
-        session.dispose()
-        session.onError(SpeechRecognizer.ERROR_NO_MATCH)
-        assertEquals(1, engine.cancels)
-        assertEquals(1, engine.starts)
-        assertFalse(session.listening)
+        assertTrue(session.listening)
     }
 
     @Test

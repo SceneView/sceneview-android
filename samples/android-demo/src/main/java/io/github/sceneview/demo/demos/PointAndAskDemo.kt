@@ -305,9 +305,9 @@ private class AnswerPanel(
  * tip `bc3ed0170`) forked 200+ commits back with no reachable merge-base by the time it was
  * revisited (#3083):
  *  - **Voice input** — an optional mic button on the question field starts the shared
- *    in-app dictation (`rememberVoiceDictation`, #4618). It first shipped as the zero-permission
- *    system dialog (`ACTION_RECOGNIZE_SPEECH`, #3292), which ends at the first pause; the
- *    in-app `SpeechRecognizer` + `RECORD_AUDIO` keeps listening, with that dialog as fallback.
+ *    dictation (`rememberVoiceDictation`, #4618): the zero-permission system dialog
+ *    (`ACTION_RECOGNIZE_SPEECH`, #3292), reopened after each pause so one stays a sentence
+ *    rather than the end of it — still no `RECORD_AUDIO`, by design.
  *  - **Drop-3D mode** — long-press now drops whichever [PropSpec] is selected in the picker
  *    (`DROP_PROPS`), not always the shiba. Re-scoped to the three GLBs already bundled in the
  *    APK (shiba, fox, toy car) instead of the original branch's two new ~7 MB binary assets
@@ -519,8 +519,8 @@ fun PointAndAskDemo(onBack: () -> Unit) {
     var tapFocus by remember { mutableStateOf<Offset?>(null) }
 
     // Voice input (#3083, #4618): the question field's optional mic button. The shared
-    // in-app dictation keeps listening through pauses and replaces the field with what it
-    // hears; without RECORD_AUDIO it falls back to the system "Speak now" dialog.
+    // dictation chains the zero-permission system dialog through pauses and replaces the
+    // field with what it hears.
     val dictation = rememberVoiceDictation(
         prompt = stringResource(R.string.demo_point_and_ask_voice_prompt),
         text = questionText,

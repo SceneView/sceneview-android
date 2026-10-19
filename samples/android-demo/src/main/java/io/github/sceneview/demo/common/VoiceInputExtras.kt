@@ -21,7 +21,7 @@ import android.speech.RecognizerIntent
  * Google's recognizer turned out to ignore them on a Pixel 9 (#4618): it still ends a
  * segment after about half a second of silence. They stay as a best-effort hint for
  * recognizers that honour them; what actually keeps a dictation going is
- * [DictationSession], which chains segments (see `rememberVoiceDictation`).
+ * [DictationSession], which reopens the dialog after each round (see `rememberVoiceDictation`).
  */
 fun Intent.putVoiceSilenceExtras(): Intent = apply {
     putExtra(

@@ -102,7 +102,7 @@ fun BugReportSheet(
     val noteFieldBringIntoView = remember { BringIntoViewRequester() }
     val scope = rememberCoroutineScope()
 
-    // Voice dictation (#4618): keeps listening through pauses and streams into the note.
+    // Voice dictation (#4618): chains the system dialog through pauses, appending to the note.
     val dictation = rememberVoiceDictation(
         prompt = stringResource(R.string.feedback_report_voice_prompt),
         text = note,

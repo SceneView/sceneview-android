@@ -1,17 +1,8 @@
 package io.github.sceneview.demo.common
 
-import android.Manifest
 import android.app.Activity
-import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.os.SystemClock
-import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
-import android.speech.SpeechRecognizer
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.Icons
@@ -31,7 +22,6 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -39,33 +29,28 @@ import io.github.sceneview.demo.R
 
 /**
  * A text field's voice dictation (#4618), shared by the bug-report note and Point & Ask's
- * question.
- *
- * Tapping the mic listens in-app with a [DictationSession], which keeps going through pauses
- * and streams what it hears into the field until the user taps stop (or stays silent for
- * several seconds). It needs `RECORD_AUDIO`, asked on the first tap. Without it — refused, or
- * no in-app recognizer on the device — the mic falls back to the system "Speak now" dialog,
- * which still works but ends at the first pause.
+ * question. No permission: it chains the system "Speak now" dialog through a
+ * [DictationSession], so a pause closes one round and the next one opens straight away.
  */
 @Stable
 class VoiceDictation internal constructor(
-    /** False when the device has no recognizer at all: hide the mic. */
+    /** False when the device has no speech recognizer: hide the mic. */
     val available: Boolean,
 ) {
-    /** True while the in-app recognizer is listening: show the stop button. */
+    /** True while rounds keep chaining: show the stop button and the listening hint. */
     var listening by mutableStateOf(false)
         internal set
 
     internal var onToggle: () -> Unit = {}
 
-    /** Starts listening, or stops if already listening. */
+    /** Starts dictating, or stops chaining if already going. */
     fun toggle() = onToggle()
 }
 
 /**
- * @param prompt shown by the system dialog fallback.
+ * @param prompt shown in the system dialog.
  * @param text the field's current value.
- * @param onTextChange receives the field's new value every time the transcript grows.
+ * @param onTextChange receives the field's new value each time a round adds text.
  * @param append true to add what is heard after [text] as it was when the mic was tapped,
  * false to replace it.
  */
@@ -79,88 +64,69 @@ fun rememberVoiceDictation(
     val context = LocalContext.current
     val latestText by rememberUpdatedState(text)
     val latestOnTextChange by rememberUpdatedState(onTextChange)
-    // What the field held when the mic was tapped; the transcript is joined after it.
-    val base = remember { arrayOf("") }
-    val latestOnTranscript: (String) -> Unit = { heard ->
-        latestOnTextChange(if (append) appendDictation(base[0], heard) else heard)
-    }
-    val inAppAvailable = remember(context) { SpeechRecognizer.isRecognitionAvailable(context) }
-    val dialogAvailable = remember(context) {
+    val latestPrompt by rememberUpdatedState(prompt)
+    val available = remember(context) {
         Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).resolveActivity(context.packageManager) != null
     }
+    val dictation = remember { VoiceDictation(available) }
+    // What the field held when the mic was tapped; the transcript is joined after it.
+    val base = remember { arrayOf("") }
+    // A dialog round is open: leaving the app now is the dialog itself, not the user.
+    val roundOpen = remember { booleanArrayOf(false) }
+    val holder = remember { arrayOfNulls<DictationSession>(1) }
 
-    val dialogLauncher = rememberLauncherForActivityResult(
+    val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
     ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            result.data
-                ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
-                ?.firstOrNull()
-                ?.takeIf { it.isNotBlank() }
-                ?.let { latestOnTranscript(it) }
-        }
-    }
-    val launchDialog = {
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_PROMPT, prompt)
-            putVoiceSilenceExtras()
-        }
-        runCatching { dialogLauncher.launch(intent) }
-        Unit
+        roundOpen[0] = false
+        val heard = result.data
+            ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+            ?.firstOrNull()
+        holder[0]?.onRoundResult(heard, canceled = result.resultCode != Activity.RESULT_OK)
     }
 
-    // Holder filled once the session exists; the dictation object itself is stable.
-    val holder = remember { arrayOfNulls<DictationSession>(1) }
-    val dictation = remember { VoiceDictation(available = inAppAvailable || dialogAvailable) }
-
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) { granted ->
-        val session = holder[0]
-        if (granted && session != null) session.start() else if (dialogAvailable) launchDialog()
-    }
-
-    DisposableEffect(context, inAppAvailable) {
-        if (!inAppAvailable) return@DisposableEffect onDispose { }
-        val engine = AndroidSpeechEngine(context)
-        val session = DictationSession(
-            engine = engine,
-            clock = SystemClock::elapsedRealtime,
+    val session = remember {
+        DictationSession(
+            launcher = {
+                val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                    putExtra(
+                        RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                        RecognizerIntent.LANGUAGE_MODEL_FREE_FORM,
+                    )
+                    putExtra(RecognizerIntent.EXTRA_PROMPT, latestPrompt)
+                    putVoiceSilenceExtras()
+                }
+                runCatching { launcher.launch(intent) }.isSuccess.also { roundOpen[0] = it }
+            },
             onUpdate = { state ->
                 dictation.listening = state.listening
-                if (state.transcript.isNotBlank()) latestOnTranscript(state.transcript)
+                if (state.transcript.isNotBlank()) {
+                    latestOnTextChange(
+                        if (append) appendDictation(base[0], state.transcript) else state.transcript,
+                    )
+                }
             },
-        )
-        engine.bind(session)
-        holder[0] = session
-        onDispose {
-            holder[0] = null
-            session.dispose()
-            engine.destroy()
-            dictation.listening = false
-        }
+        ).also { holder[0] = it }
     }
 
-    // Never keep the mic open behind another app or a locked screen.
+    // Leaving the app between two rounds ends the dictation. While a round is open, the
+    // dialog is what covers this screen; its result comes back only once the app is in front
+    // again, so a reopened round can never surface over another app.
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP) holder[0]?.stop()
+            if (event == Lifecycle.Event.ON_STOP && !roundOpen[0]) session.stop()
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     dictation.onToggle = {
-        val session = holder[0]
-        if (session?.listening != true) base[0] = latestText
-        when {
-            session == null -> if (dialogAvailable) launchDialog()
-            session.listening -> session.stop()
-            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
-                PackageManager.PERMISSION_GRANTED -> session.start()
-            else -> permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        if (session.listening) {
+            session.stop()
+        } else {
+            base[0] = latestText
+            session.start()
         }
     }
     return dictation
@@ -182,7 +148,7 @@ fun VoiceDictationButton(dictation: VoiceDictation, idleContentDescription: Stri
     }
 }
 
-/** A text field's supporting line while dictation listens — tells the user pauses are fine. */
+/** A text field's supporting line while dictation chains — tells the user pauses are fine. */
 @Composable
 fun VoiceDictationListeningHint() {
     Text(
@@ -194,72 +160,3 @@ fun VoiceDictationListeningHint() {
 /** Joins dictated text after what the field held when the mic was tapped. */
 fun appendDictation(base: String, transcript: String): String =
     if (base.isBlank()) transcript else "${base.trimEnd()} $transcript"
-
-/** The platform [SpeechRecognizer] behind a [DictationSession]. Main thread only. */
-private class AndroidSpeechEngine(context: Context) : SpeechEngine {
-    private val recognizer = SpeechRecognizer.createSpeechRecognizer(context)
-    private val handler = Handler(Looper.getMainLooper())
-    private val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-        putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-        putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-        putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-        putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
-        putVoiceSilenceExtras()
-    }
-
-    // Restarting from inside a recognizer callback races the service ("busy"); post it.
-    private val startNow = Runnable { runCatching { recognizer.startListening(intent) } }
-
-    private var tick: Runnable? = null
-
-    fun bind(session: DictationSession) {
-        // Silence watchdog: one check a second, see DictationSession.onTick.
-        tick = object : Runnable {
-            override fun run() {
-                session.onTick()
-                handler.postDelayed(this, TICK_MILLIS)
-            }
-        }.also { handler.postDelayed(it, TICK_MILLIS) }
-        recognizer.setRecognitionListener(object : RecognitionListener {
-            override fun onReadyForSpeech(params: Bundle?) = Unit
-            override fun onBeginningOfSpeech() = Unit
-            override fun onRmsChanged(rmsdB: Float) = Unit
-            override fun onBufferReceived(buffer: ByteArray?) = Unit
-            override fun onEndOfSpeech() = Unit
-            override fun onEvent(eventType: Int, params: Bundle?) = Unit
-            override fun onError(error: Int) = session.onError(error)
-            override fun onPartialResults(partialResults: Bundle?) =
-                session.onPartialResult(partialResults.firstResult())
-            override fun onResults(results: Bundle?) = session.onSegmentResult(results.firstResult())
-            override fun onSegmentResults(segmentResults: Bundle) =
-                session.onSegmentResult(segmentResults.firstResult())
-            override fun onEndOfSegmentedSession() = session.onEndOfSegmentedSession()
-        })
-    }
-
-    override fun startListening() {
-        handler.removeCallbacks(startNow)
-        handler.post(startNow)
-    }
-
-    override fun stopListening() {
-        handler.removeCallbacks(startNow)
-        runCatching { recognizer.stopListening() }
-    }
-
-    override fun cancel() {
-        handler.removeCallbacks(startNow)
-        runCatching { recognizer.cancel() }
-    }
-
-    fun destroy() {
-        handler.removeCallbacks(startNow)
-        tick?.let(handler::removeCallbacks)
-        runCatching { recognizer.destroy() }
-    }
-}
-
-private const val TICK_MILLIS = 1_000L
-
-private fun Bundle?.firstResult(): String? =
-    this?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()

@@ -20,10 +20,6 @@
          button can vibrate (#1901 phase 1). When absent, every haptic call
          becomes a silent no-op + one Log.d. -->
     <uses-permission android:name="android.permission.VIBRATE" />
-    <!-- Voice dictation (#4618): the in-app SpeechRecognizer keeps listening through
-         pauses, which the system "Speak now" dialog does not. Asked only when the user
-         taps a mic button; refusing it falls back to that system dialog. -->
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- "What's new" push notifications (API 33+ runtime permission). Never requested at
          launch: a pre-prompt sheet asks first, on the second return to the Showcase after a
          demo was opened, and the About tab's Notifications switch can ask later
@@ -75,8 +71,7 @@
         android:name="android.hardware.camera"
         android:required="false" />
 
-    <!-- In-app bug reporting deliberately needs NO install-time permission (#2120/#2188);
-         its optional voice dictation asks RECORD_AUDIO on first tap only (#4618).
+    <!-- In-app bug reporting deliberately needs NO permission (#2120/#2188).
          The former MediaProjection screen-recording feedback system (RECORD_AUDIO
          + FOREGROUND_SERVICE + FOREGROUND_SERVICE_MEDIA_PROJECTION +
          POST_NOTIFICATIONS) was removed: the rebuilt reporter uses PixelCopy on
@@ -90,11 +85,6 @@
     <queries>
         <intent>
             <action android:name="android.speech.action.RECOGNIZE_SPEECH" />
-        </intent>
-        <!-- SpeechRecognizer.isRecognitionAvailable() needs to see the recognition
-             service on API 30+ (#4618). -->
-        <intent>
-            <action android:name="android.speech.RecognitionService" />
         </intent>
         <!-- Point & Ask tells "no AICore on this device" from "AICore present but Gemini Nano
              unavailable" and only offers the AICore Play listing in the second case (#4028). -->
