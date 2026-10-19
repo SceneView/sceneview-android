@@ -68,7 +68,7 @@ val LocalDemoModeSwitch = compositionLocalOf<DemoModeSwitch?> { null }
  *
  * **No switch on screen.** [showSwitch] `= false` publishes no [LocalDemoModeSwitch]: the
  * card opens on its first mode and nothing on screen leads to the others, which stay
- * reachable by deep link (`?tab=<key>`, a retired id). Room Scan does this — its
+ * reachable by deep link (`?tab=<key>`, a retired id). 3D Scan does this — its
  * "Session MP4" mode is a developer tool the QA harness opens, not a choice to put in front
  * of whoever came to scan a room.
  */

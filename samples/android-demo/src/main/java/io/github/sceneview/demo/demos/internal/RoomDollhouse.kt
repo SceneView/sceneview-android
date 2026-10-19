@@ -628,7 +628,7 @@ object DollhouseCopy {
     const val PLACE_HINT = "Point at a table. Your room stands on it as a miniature."
     const val GESTURE_HINT = "Drag to move · twist to turn · pinch to resize"
 
-    const val INTRO = "Your own room, recorded with the Rerun demo, cut open and stood on a table " +
+    const val INTRO = "Your own room, recorded with the 3D Scan demo, cut open and stood on a table " +
         "as a miniature, in the colours your phone saw. " +
         "Drag it, twist it, pinch it — or switch to Real size and stand inside it."
 
