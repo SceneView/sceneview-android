@@ -245,7 +245,8 @@ import io.github.sceneview.node.LightNode
  * Required AndroidManifest.xml:
  *   <uses-permission android:name="android.permission.CAMERA" />
  *   <uses-feature android:name="android.hardware.camera.ar" android:required="true" />
- *   <meta-data android:name="com.google.ar.core" android:value="required" />
+ *   <!-- arsceneview declares "optional": overriding it needs xmlns:tools="http://schemas.android.com/tools" on <manifest> -->
+ *   <meta-data android:name="com.google.ar.core" android:value="required" tools:replace="android:value" />
  *
  * Gradle: implementation("io.github.sceneview:arsceneview:4.53.0")
  */

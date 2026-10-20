@@ -126,7 +126,8 @@ dependencies {
 <uses-feature android:name="android.hardware.camera.ar" android:required="true" />
 
 <application>
-    <meta-data android:name="com.google.ar.core" android:value="required" />
+    <!-- arsceneview declares "optional": overriding it needs xmlns:tools="http://schemas.android.com/tools" on <manifest> -->
+    <meta-data android:name="com.google.ar.core" android:value="required" tools:replace="android:value" />
 </application>
 \`\`\`
 
@@ -557,7 +558,8 @@ dependencies:
 <uses-permission android:name="android.permission.CAMERA" />
 <uses-feature android:name="android.hardware.camera.ar" android:required="true" />
 <application>
-    <meta-data android:name="com.google.ar.core" android:value="required" />
+    <!-- arsceneview declares "optional": overriding it needs xmlns:tools="http://schemas.android.com/tools" on <manifest> -->
+    <meta-data android:name="com.google.ar.core" android:value="required" tools:replace="android:value" />
 </application>
 \`\`\`
 
@@ -705,7 +707,8 @@ Add to \`AndroidManifest.xml\`:
 <uses-permission android:name="android.permission.CAMERA" />
 <uses-feature android:name="android.hardware.camera.ar" android:required="true" />
 <application>
-    <meta-data android:name="com.google.ar.core" android:value="required" />
+    <!-- arsceneview declares "optional": overriding it needs xmlns:tools="http://schemas.android.com/tools" on <manifest> -->
+    <meta-data android:name="com.google.ar.core" android:value="required" tools:replace="android:value" />
 </application>
 \`\`\`
 
