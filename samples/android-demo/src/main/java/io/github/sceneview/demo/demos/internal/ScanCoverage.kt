@@ -1,5 +1,6 @@
 package io.github.sceneview.demo.demos.internal
 
+import kotlin.math.abs
 import kotlin.math.sqrt
 
 /**
@@ -229,9 +230,9 @@ internal class CoverageGrid(
  * by default. Two things it says, from the phone's own movement and whether the grid still grows:
  *
  * - [Line.Slower] — the phone moves faster than [MAX_SPEED_M_PER_S]; depth does not keep up.
- * - [Line.NothingNew] — moving, yet no cell became covered for [STALL_SECONDS]: the surfaces are
- *   too close, too far, or it is pointed at nothing.
- * - [Line.Still] — standing still and nothing new for [STILL_SECONDS]: the scan waits for the
+ * - [Line.NothingNew] — moving or turning, yet no cell became covered for [STALL_SECONDS]: the
+ *   surfaces are too close, too far, too plain, or it is pointed at nothing.
+ * - [Line.Still] — standing still, not turning, and nothing new for [STILL_SECONDS]: the scan waits for the
  *   phone to move (#4540 — "0 points" sat frozen for a minute with nothing said).
  *
  * A line holds [holdSeconds] once shown so it can be read, and goes when its cause has gone.
@@ -248,9 +249,14 @@ class ScanCoach(private val holdSeconds: Float = HOLD_SECONDS) {
     var speed = 0f
         private set
 
+    /** How fast the phone turns on the spot, smoothed, in degrees a second: turning is moving too. */
+    var turnRate = 0f
+        private set
+
     private var lastTime = Float.NaN
     private var lastX = 0f
     private var lastZ = 0f
+    private var lastHeading = Float.NaN
     private var grewAt = Float.NaN
     private var shownAt = Float.NaN
 
@@ -261,6 +267,7 @@ class ScanCoach(private val holdSeconds: Float = HOLD_SECONDS) {
             lastTime = time
             lastX = camera.x
             lastZ = camera.z
+            lastHeading = heading(camera)
             grewAt = time
             return line
         }
@@ -275,14 +282,19 @@ class ScanCoach(private val holdSeconds: Float = HOLD_SECONDS) {
             val instant = sqrt(dx * dx + dz * dz) / dt
             val blend = (dt / SMOOTHING_SECONDS).coerceAtMost(1f)
             speed += (instant - speed) * blend
+            val heading = heading(camera)
+            val turned = if (lastHeading.isNaN()) 0f else abs(wrapDegrees(heading - lastHeading))
+            turnRate += (turned / dt - turnRate) * blend
             lastTime = time
             lastX = camera.x
             lastZ = camera.z
+            lastHeading = heading
         }
         if (grew) grewAt = time
         val wanted = when {
             speed > MAX_SPEED_M_PER_S -> Line.Slower
-            speed > MOVING_M_PER_S && time - grewAt > STALL_SECONDS -> Line.NothingNew
+            (speed > MOVING_M_PER_S || turnRate > TURNING_DEGREES_PER_S) && time - grewAt > STALL_SECONDS ->
+                Line.NothingNew
             time - grewAt > STILL_SECONDS -> Line.Still
             else -> null
         }
@@ -297,7 +309,9 @@ class ScanCoach(private val holdSeconds: Float = HOLD_SECONDS) {
     fun reset() {
         line = null
         speed = 0f
+        turnRate = 0f
         lastTime = Float.NaN
+        lastHeading = Float.NaN
         grewAt = Float.NaN
         shownAt = Float.NaN
     }
@@ -312,6 +326,9 @@ class ScanCoach(private val holdSeconds: Float = HOLD_SECONDS) {
         /** Slower than this the phone is standing still, and nothing new is expected. */
         const val MOVING_M_PER_S = 0.15f
 
+        /** Turning faster than this on the spot is looking round, not standing still. */
+        const val TURNING_DEGREES_PER_S = 8f
+
         /** Moving this long without a new cell is pointing at nothing. */
         const val STALL_SECONDS = 3f
 
@@ -320,5 +337,21 @@ class ScanCoach(private val holdSeconds: Float = HOLD_SECONDS) {
 
         /** The speed's time constant: a hand's tremor out, a stride in. */
         const val SMOOTHING_SECONDS = 0.5f
+
+        /** The way [pose] faces on the floor, in degrees. */
+        private fun heading(pose: DebugPose): Float {
+            val f = pose.rotate(0f, 0f, -1f)
+            return Math.toDegrees(kotlin.math.atan2(f.x.toDouble(), -f.z.toDouble())).toFloat()
+        }
+
+        private fun wrapDegrees(d: Float): Float {
+            var a = d % FULL_TURN
+            if (a > HALF_TURN) a -= FULL_TURN
+            if (a < -HALF_TURN) a += FULL_TURN
+            return a
+        }
+
+        private const val FULL_TURN = 360f
+        private const val HALF_TURN = 180f
     }
 }

@@ -32,12 +32,12 @@ object ScanWallWalk {
     private const val TURN_RAD = 5.2f
     private const val PITCH_RAD = -0.32f
     private const val POSE_HZ = 30
-    private const val POINTS_EVERY = 6
+    private const val POINTS_EVERY = 15
     private const val PLANES_EVERY = 15
     private const val HALF_FOV_X = 0.5f
     private const val HALF_FOV_Y = 0.36f
-    private const val RAYS_X = 22
-    private const val RAYS_Y = 16
+    private const val RAYS_X = 18
+    private const val RAYS_Y = 13
     private const val MAX_RANGE_M = 4.5f
 
     /** A wall piece shows as a plane once this much of it is seen. */

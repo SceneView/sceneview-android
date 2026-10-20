@@ -68,12 +68,13 @@ object ScanGuide {
     /**
      * The room's scan done so far, `0..1`, the one gauge the HUD shows: the walls found (up to
      * [ROOM_WALLS]) for [WALLS_SHARE] of it, the floor seen covered ([floorShare],
-     * [CoverageGrid.coveredShareOf]) for the rest. A room whose walls [closed] it is done.
+     * [CoverageGrid.coveredShareOf]) for the rest, weighed by the walls found: the floor seen early is
+     * a corner of the room, so covering it all is not most of the room. A room whose walls [closed] it is done.
      */
     fun completion(walls: Int, floorShare: Float, closed: Boolean): Float {
         if (closed) return 1f
         val wallsPart = min(walls, ROOM_WALLS).toFloat() / ROOM_WALLS
-        val floorPart = floorShare.coerceIn(0f, 1f)
+        val floorPart = floorShare.coerceIn(0f, 1f) * wallsPart
         return max(0f, WALLS_SHARE * wallsPart + (1f - WALLS_SHARE) * floorPart).coerceAtMost(1f)
     }
 

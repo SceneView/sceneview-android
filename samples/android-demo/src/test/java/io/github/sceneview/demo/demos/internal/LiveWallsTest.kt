@@ -168,6 +168,8 @@ class LiveWallsTest {
     fun `the gauge weighs the walls and the floor, and is full once the room is closed`() {
         assertEquals(0f, ScanGuide.completion(0, 0f, closed = false), 1e-6f)
         assertEquals(0.3f, ScanGuide.completion(2, 0f, closed = false), 1e-6f)
+        // The floor seen with two walls is half a room at most.
+        assertEquals(0.5f, ScanGuide.completion(2, 1f, closed = false), 1e-6f)
         assertEquals(0.8f, ScanGuide.completion(4, 0.5f, closed = false), 1e-6f)
         assertEquals(1f, ScanGuide.completion(6, 2f, closed = false), 1e-6f)
         assertEquals(1f, ScanGuide.completion(3, 0.1f, closed = true), 0f)
@@ -214,6 +216,28 @@ class LiveWallsTest {
             ScanCopy.TRACKING_LOST,
             ScanScopeCopy.coaching(room, ScanCopy.TRACKING_LOST, walls = 2, turn = ScanTurn.Left),
         )
+    }
+
+    @Test
+    fun `turning on the spot with nothing new is not standing still`() {
+        val coach = ScanCoach()
+        var t = 0f
+        while (t < 8f) {
+            // 20 degrees a second about +Y, on the spot.
+            val half = Math.toRadians(-20.0 * t).toFloat() / 2f
+            coach.update(t, DebugPose(0f, 0f, 0f, qy = kotlin.math.sin(half), qw = kotlin.math.cos(half)), grew = false)
+            t += 1f / 30f
+        }
+        assertEquals(ScanCoach.Line.NothingNew, coach.line)
+        assertTrue(coach.turnRate > 15f)
+    }
+
+    @Test
+    fun `the synthetic turn stays under the feature map's cap`() {
+        val trace = ArDebugTrace()
+        ScanWallWalk.events().forEach { it.applyTo(trace) }
+        val count = trace.frameAt(ScanWallWalk.DURATION_S).mapPointCount
+        assertTrue("$count points", count in 2_000 until ArDebugTrace.MAX_MAP_POINTS)
     }
 
     @Test
