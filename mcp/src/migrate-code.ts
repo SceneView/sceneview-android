@@ -219,7 +219,7 @@ const MIGRATION_RULES: MigrationRule[] = [
     replacement:
       "// .onTapArPlane removed — use ARSceneView(onSessionUpdated = { _, frame -> latestFrame = frame }, onTouchEvent = { motionEvent, _ ->",
     explanation:
-      "`.onTapArPlane` removed. Keep the latest `Frame` from `onSessionUpdated`, then in `ARSceneView(onTouchEvent = { motionEvent, _ -> ... })` call `latestFrame?.hitTest(motionEvent)?.firstOrNull()?.createAnchorOrNull()` (the callback's own hitResult is a scene-node hit, not an ARCore one).",
+      "`.onTapArPlane` removed. Keep the latest `Frame` from `onSessionUpdated`, then in `ARSceneView(onTouchEvent = { motionEvent, _ -> ... })` call `latestFrame?.hitTest(motionEvent)?.firstOrNull { (it.trackable as? Plane)?.isPoseInPolygon(it.hitPose) == true }?.createAnchorOrNull()` (the callback's own hitResult is a scene-node hit, not an ARCore one).",
   },
 ];
 

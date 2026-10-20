@@ -687,6 +687,7 @@ export function generateScene(description: string): GeneratedScene {
   // SceneView or ARSceneView
   if (isAR) {
     lines.push("    var anchor by remember { mutableStateOf<Anchor?>(null) }");
+    lines.push("    var latestFrame by remember { mutableStateOf<Frame?>(null) }");
     lines.push("");
     lines.push("    ARSceneView(");
     lines.push("        modifier = Modifier.fillMaxSize(),");
@@ -698,11 +699,21 @@ export function generateScene(description: string): GeneratedScene {
       "            config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR"
     );
     lines.push("        },");
-    lines.push("        onTouchEvent = { event, hitResult ->");
-    lines.push("            if (event.action == MotionEvent.ACTION_UP && hitResult != null) {");
-    lines.push("                anchor = hitResult.createAnchor()");
+    lines.push("        onSessionUpdated = { _, frame -> latestFrame = frame },");
+    lines.push("        onTouchEvent = { event, _ ->");
+    lines.push("            var anchorCreated = false");
+    lines.push("            if (event.action == MotionEvent.ACTION_UP) {");
+    lines.push("                latestFrame?.hitTest(event)");
+    lines.push(
+      "                    ?.firstOrNull { (it.trackable as? Plane)?.isPoseInPolygon(it.hitPose) == true }"
+    );
+    lines.push("                    ?.createAnchorOrNull()");
+    lines.push("                    ?.let {");
+    lines.push("                        anchor = it");
+    lines.push("                        anchorCreated = true");
+    lines.push("                    }");
     lines.push("            }");
-    lines.push("            true");
+    lines.push("            anchorCreated");
     lines.push("        }");
     lines.push("    ) {");
     lines.push("        anchor?.let { a ->");

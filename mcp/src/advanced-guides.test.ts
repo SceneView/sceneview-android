@@ -102,6 +102,16 @@ describe("GESTURE_GUIDE", () => {
 // ─── Performance Tips Tests ──────────────────────────────────────────────────
 
 describe("PERFORMANCE_TIPS", () => {
+  it("loads the small HDR through the real EnvironmentLoader API", () => {
+    expect(PERFORMANCE_TIPS).toContain("rememberEnvironment(environmentLoader) {");
+    expect(PERFORMANCE_TIPS).toContain(
+      'environmentLoader.createHDREnvironment("environments/sky_2k.hdr")'
+    );
+    expect(PERFORMANCE_TIPS).not.toContain(
+      'rememberEnvironment(engine, "environments/sky_2k.hdr")'
+    );
+  });
+
   it("contains polygon budget table with device tiers", () => {
     expect(PERFORMANCE_TIPS).toContain("Low-end");
     expect(PERFORMANCE_TIPS).toContain("Mid-range");

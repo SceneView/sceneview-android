@@ -150,6 +150,14 @@ describe("AR samples", () => {
   it("has 2 iOS AR samples", () => {
     expect(iosArIds).toHaveLength(2);
   });
+
+  it("ar-model-viewer consumes only the tap that creates an anchor", () => {
+    const code = SAMPLES["ar-model-viewer"].code;
+    expect(code).toContain("anchorCreated = true");
+    expect(code).toContain("createAnchorOrNull()");
+    expect(code).toContain("isEditable = true");
+    expect(code).not.toMatch(/onTouchEvent\s*=\s*\{[\s\S]*?\n\s*true\s*\n\s*}/);
+  });
 });
 
 describe("3D samples", () => {

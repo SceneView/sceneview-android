@@ -585,13 +585,17 @@ ARSceneView(
     onTouchEvent = { event, _ ->
         // The callback's hitResult is a scene-node hit (io.github.sceneview.collision.HitResult),
         // null on an empty plane and without createAnchor(): hit-test the latest ARCore Frame.
+        var anchorCreated = false
         if (event.action == MotionEvent.ACTION_UP) {
             latestFrame?.hitTest(event)
                 ?.firstOrNull { (it.trackable as? Plane)?.isPoseInPolygon(it.hitPose) == true }
                 ?.createAnchorOrNull()
-                ?.let { anchor = it }
+                ?.let {
+                    anchor = it
+                    anchorCreated = true
+                }
         }
-        true
+        anchorCreated
     }
 ) {
     anchor?.let { a ->

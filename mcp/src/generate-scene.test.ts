@@ -22,6 +22,16 @@ describe("generateScene", () => {
     expect(result.dependencies[0]).toContain("arsceneview");
   });
 
+  it("hit-tests the latest ARCore frame and only consumes a successful placement", () => {
+    const code = generateScene("AR scene with an editable chair").code;
+    expect(code).toContain("onSessionUpdated = { _, frame -> latestFrame = frame }");
+    expect(code).toContain("(it.trackable as? Plane)?.isPoseInPolygon(it.hitPose) == true");
+    expect(code).toContain("createAnchorOrNull()");
+    expect(code).toContain("anchorCreated = true");
+    expect(code).toContain("            anchorCreated\n");
+    expect(code).not.toContain("hitResult.createAnchor()");
+  });
+
   it("includes light in every scene", () => {
     const result = generateScene("a sphere");
     expect(result.code).toContain("LightNode(");

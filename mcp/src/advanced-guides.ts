@@ -242,13 +242,17 @@ fun ARAnimatedModel() {
         onTouchEvent = { event, _ ->
             // The callback's hitResult is a scene-node hit (io.github.sceneview.collision.HitResult),
             // null on an empty plane and without createAnchor(): hit-test the latest ARCore Frame.
+            var anchorCreated = false
             if (event.action == MotionEvent.ACTION_UP) {
                 latestFrame?.hitTest(event)
                     ?.firstOrNull { (it.trackable as? Plane)?.isPoseInPolygon(it.hitPose) == true }
                     ?.createAnchorOrNull()
-                    ?.let { anchor = it }
+                    ?.let {
+                        anchor = it
+                        anchorCreated = true
+                    }
             }
-            true
+            anchorCreated
         }
     ) {
         anchor?.let { a ->
@@ -379,13 +383,17 @@ fun TapToPlaceAR() {
         onTouchEvent = { event, _ ->
             // The callback's hitResult is a scene-node hit (io.github.sceneview.collision.HitResult),
             // null on an empty plane and without createAnchor(): hit-test the latest ARCore Frame.
+            var anchorCreated = false
             if (event.action == MotionEvent.ACTION_UP) {
                 latestFrame?.hitTest(event)
                     ?.firstOrNull { (it.trackable as? Plane)?.isPoseInPolygon(it.hitPose) == true }
                     ?.createAnchorOrNull()
-                    ?.let { anchor = it }
+                    ?.let {
+                        anchor = it
+                        anchorCreated = true
+                    }
             }
-            true
+            anchorCreated
         }
     ) {
         anchor?.let { a ->
@@ -755,7 +763,11 @@ LightNode(
 )
 
 // Use small HDR environments
-val environment = rememberEnvironment(engine, "environments/sky_2k.hdr")
+val environmentLoader = rememberEnvironmentLoader(engine)
+val environment = rememberEnvironment(environmentLoader) {
+    environmentLoader.createHDREnvironment("environments/sky_2k.hdr")
+        ?: createEnvironment(environmentLoader)
+}
 // NOT: sky_4k.hdr or sky_8k.hdr (wastes GPU memory on mobile)
 \`\`\`
 

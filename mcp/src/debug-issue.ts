@@ -504,7 +504,7 @@ SceneView(
 1. Check \`hitResult\` is not null — log it.
 2. Ensure plane detection is enabled: \`planeFindingMode = HORIZONTAL_AND_VERTICAL\`.
 3. Plane renderer helps user see where planes are: \`planeRenderer = true\`.
-4. Create the anchor from an ARCore hit: \`latestFrame?.hitTest(event)?.firstOrNull()?.createAnchorOrNull()\` (the \`onTouchEvent\` \`hitResult\` is a scene-node hit).
+4. Create the anchor from an in-polygon ARCore plane hit: \`latestFrame?.hitTest(event)?.firstOrNull { (it.trackable as? Plane)?.isPoseInPolygon(it.hitPose) == true }?.createAnchorOrNull()\` (the \`onTouchEvent\` \`hitResult\` is a scene-node hit).
 
 ### Camera Orbit Not Working
 
@@ -668,10 +668,14 @@ For smooth node transforms (not skeletal animation):
 // ModelNode has no smoothing parameter: keep a reference to the node and ask it to
 // interpolate. Don't also pass \`position\` — the composable assigns it directly.
 var shipNode by remember { mutableStateOf<io.github.sceneview.node.Node?>(null) }
+val createdShipNode = remember {
+    java.util.concurrent.atomic.AtomicReference<io.github.sceneview.node.Node?>(null)
+}
 ModelNode(
     modelInstance = instance,
-    apply = { shipNode = this }
+    apply = { createdShipNode.set(this) }
 )
+SideEffect { shipNode = createdShipNode.get() }
 LaunchedEffect(shipNode, targetPosition) {
     shipNode?.transform(position = targetPosition, smooth = true, smoothSpeed = 5.0f)
 }

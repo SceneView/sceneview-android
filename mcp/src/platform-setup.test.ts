@@ -55,6 +55,16 @@ describe("getPlatformSetup", () => {
     expect(result).toContain("ARScene");
   });
 
+  it("uses an in-polygon ARCore plane hit and preserves gestures when placement fails", () => {
+    const result = getPlatformSetup("android", "ar");
+    expect(result).toContain("onSessionUpdated = { _, frame -> latestFrame = frame }");
+    expect(result).toContain("(it.trackable as? Plane)?.isPoseInPolygon(it.hitPose) == true");
+    expect(result).toContain("createAnchorOrNull()");
+    expect(result).toContain("anchorCreated = true");
+    expect(result).not.toContain("hitResult.createAnchor()");
+    expect(result).not.toMatch(/onTouchEvent\s*=\s*\{[\s\S]*?\n\s*true\s*\n\s*}/);
+  });
+
   it("returns iOS 3D setup with SPM dependency", () => {
     const result = getPlatformSetup("ios", "3d");
     expect(result).toContain("SceneViewSwift");

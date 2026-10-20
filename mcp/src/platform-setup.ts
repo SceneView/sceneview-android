@@ -150,6 +150,7 @@ fun MyARScreen() {
     val engine = rememberEngine()
     val modelLoader = rememberModelLoader(engine)
     var anchor by remember { mutableStateOf<Anchor?>(null) }
+    var latestFrame by remember { mutableStateOf<Frame?>(null) }
 
     val modelInstance = rememberModelInstance(modelLoader, "models/robot.glb")
 
@@ -165,11 +166,19 @@ fun MyARScreen() {
             config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
             config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
         },
-        onTouchEvent = { event, hitResult ->
-            if (event.action == MotionEvent.ACTION_UP && hitResult != null) {
-                anchor = hitResult.createAnchor()
+        onSessionUpdated = { _, frame -> latestFrame = frame },
+        onTouchEvent = { event, _ ->
+            var anchorCreated = false
+            if (event.action == MotionEvent.ACTION_UP) {
+                latestFrame?.hitTest(event)
+                    ?.firstOrNull { (it.trackable as? Plane)?.isPoseInPolygon(it.hitPose) == true }
+                    ?.createAnchorOrNull()
+                    ?.let {
+                        anchor = it
+                        anchorCreated = true
+                    }
             }
-            true
+            anchorCreated
         }
     ) {
         anchor?.let { a ->
