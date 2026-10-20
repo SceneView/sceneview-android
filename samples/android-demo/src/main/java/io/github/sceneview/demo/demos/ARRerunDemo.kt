@@ -288,6 +288,11 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
     var scanPack by remember { mutableStateOf<RerunCapturePack?>(null) }
     // What the scan shows (#4683), kept with it: an object's has no floor plan and no room figures.
     var scanKind by remember { mutableStateOf(ScanScope.Room) }
+    // The floor it covered, the figure its replay ends on, said on its result too (#4734).
+    val scanFloorCovered by produceState<Float?>(null, scanMedia, showingScan, scanKind) {
+        val scan = scanMedia?.takeIf { showingScan && scanKind.mapsGround }
+        value = scan?.let { withContext(Dispatchers.Default) { it.floorCoveredSquareMetres() } }
+    }
     // The kept session the replay shows, when it was opened from the list: Place stands that one.
     var scanId by remember { mutableStateOf<String?>(null) }
     var exporting by remember {
@@ -780,6 +785,7 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
             materialLoader = materialLoader,
             hintStays = qaState != null,
             opened = resultModel,
+            floorCovered = scanFloorCovered,
         )
     }
     val exportable = when (screen) {
@@ -1135,7 +1141,8 @@ private fun RerunReplayScreen(
                     DpSize.Zero
                 },
                 observe = { frame ->
-                    coverage.observe(frame, media.dense?.cloud?.positions, media.pointCountAt(frame.time))
+                    val dense = media.dense?.cloud?.positions
+                    coverage.observe(frame, dense, media.pointCountAt(frame.time), saved = media.trace)
                 },
             )
         }
