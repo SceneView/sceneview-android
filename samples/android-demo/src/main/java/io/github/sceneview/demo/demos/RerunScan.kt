@@ -247,8 +247,11 @@ internal class ScanCapture private constructor(
      * and no fusion is running; `null` otherwise, or without [rawDepth]. Close it this frame.
      */
     fun acquireDepth(frame: Frame): ScanDepth? {
+        // The wait for depth starts again after a gap — a pause, tracking lost: no frame came, so
+        // no depth could, and "No depth yet" flashed on resuming.
+        val gap = lastFrameNanos != 0L && frame.timestamp - lastFrameNanos > FRAME_GAP_NANOS
         lastFrameNanos = frame.timestamp
-        if (depthSeenFromNanos == 0L) depthSeenFromNanos = frame.timestamp
+        if (depthSeenFromNanos == 0L || gap) depthSeenFromNanos = frame.timestamp
         if (dense == null || !depthGate.isDue(frame.timestamp)) return null
         if (fusing.get()) {
             intake.count(Outcome.Busy)
@@ -455,6 +458,9 @@ internal class ScanCapture private constructor(
 
         /** Two seconds without fresh depth: twenty missed keyframes, not a hiccup. */
         const val DEPTH_STARVED_NANOS = 2_000_000_000L
+
+        /** Longer than this between two tracked frames, the scan was paused or lost track. */
+        const val FRAME_GAP_NANOS = 500_000_000L
 
         /** `adb logcat -s RerunScan`: the depth verdicts every second, the intake every two. */
         private const val LOG_TAG = "RerunScan"

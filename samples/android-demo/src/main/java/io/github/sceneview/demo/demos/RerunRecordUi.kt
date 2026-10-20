@@ -53,10 +53,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
 import com.google.android.filament.Engine
 import io.github.sceneview.demo.demos.internal.ArDebugFormat
@@ -148,9 +153,10 @@ internal fun ScanHud(
 }
 
 /**
- * A room's scan so far (#4540 live walls): `3 walls · 64 %` over a ten-segment meter (DESIGN.md
- * "Meters", one segment per 10 %), lit in `accent-progress`, then `accent-success` once the walls
- * close the room — the moment to tap Finish.
+ * A room's scan so far (#4540 live walls): `3 walls` over a ten-segment meter (DESIGN.md "Meters",
+ * one segment per 10 %), lit in `accent-progress`, then `accent-success` once the walls close the
+ * room — the moment to tap Finish. The share is the meter alone, said aloud to TalkBack: the one
+ * figure on screen is the map's area, once two walls are seen.
  */
 @Composable
 internal fun ScanRoomGauge(room: ScanWallsState) {
@@ -159,10 +165,12 @@ internal fun ScanRoomGauge(room: ScanWallsState) {
     val lit = if (done) ArOverlay.accentSuccess else ArOverlay.accentProgress
     Column(
         verticalArrangement = Arrangement.spacedBy(Space.xs),
-        modifier = Modifier.semantics(mergeDescendants = true) {}.testTag(SCAN_ROOM_GAUGE_TAG),
+        modifier = Modifier
+            .semantics(mergeDescendants = true) { stateDescription = ScanCopy.completion(share) }
+            .testTag(SCAN_ROOM_GAUGE_TAG),
     ) {
         Text(
-            text = "${ScanCopy.wallsFound(room.wallCount)} · ${ScanCopy.completion(share)}",
+            text = ScanCopy.wallsFound(room.wallCount),
             style = OnScrimBody,
             maxLines = 1,
         )
@@ -200,9 +208,10 @@ internal fun BoxScope.ScanTurnArrow(turn: ScanTurn?) {
     // Kept through the fade-out, so the arrow leaves from where it was.
     var last by remember { mutableStateOf(ScanTurn.Left) }
     if (shown != null) last = shown
+    // Left and right are the room's, not the reading direction's: the same side in RTL.
     val alignment = when (last) {
-        ScanTurn.Left -> Alignment.CenterStart
-        ScanTurn.Right -> Alignment.CenterEnd
+        ScanTurn.Left -> AbsoluteAlignment.CenterLeft
+        ScanTurn.Right -> AbsoluteAlignment.CenterRight
         else -> Alignment.Center
     }
     AnimatedVisibility(
@@ -217,16 +226,19 @@ internal fun BoxScope.ScanTurnArrow(turn: ScanTurn?) {
                 .size(SceneViewTokens.Layout.touchTarget + Space.md)
                 .background(LocalStageChrome.current.card, CircleShape),
         ) {
-            Icon(
-                imageVector = when (last) {
-                    ScanTurn.Left -> Icons.AutoMirrored.Rounded.ArrowBack
-                    ScanTurn.Right -> Icons.AutoMirrored.Rounded.ArrowForward
-                    else -> Icons.Rounded.UTurnLeft
-                },
-                contentDescription = ScanCopy.turnHint(last),
-                tint = ArOverlay.accentGuidance,
-                modifier = Modifier.size(SceneViewTokens.Layout.touchTarget - Space.sm),
-            )
+            // Drawn left to right whatever the locale: a mirrored arrow would point at the wrong wall.
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                Icon(
+                    imageVector = when (last) {
+                        ScanTurn.Left -> Icons.AutoMirrored.Rounded.ArrowBack
+                        ScanTurn.Right -> Icons.AutoMirrored.Rounded.ArrowForward
+                        else -> Icons.Rounded.UTurnLeft
+                    },
+                    contentDescription = ScanCopy.turnHint(last),
+                    tint = ArOverlay.accentGuidance,
+                    modifier = Modifier.size(SceneViewTokens.Layout.touchTarget - Space.sm),
+                )
+            }
         }
     }
 }
@@ -545,12 +557,12 @@ internal fun ScanLiveView(
             },
             observe = { frame ->
                 val pose = livePose(frame.camera)
-                val live = media.liveDense?.invoke()?.cloud
-                coverage.observe(frame, pose = pose, snapshot = live?.positions, snapshotCount = live?.count ?: 0)
+                coverage.observe(frame, pose = pose, snapshotCells = media.liveDense?.invoke()?.coveredCells)
                 walls?.observe(frame, coverage, pose)
             },
             // The walls stand in the room while it is scanned; saving, the orbit shows the cloud.
-            walls = walls.takeIf { !saving },
+            walls = walls,
+            drawWalls = !saving,
         )
         if (walls != null && !saving) ScanTurnArrow(walls.turn)
     }

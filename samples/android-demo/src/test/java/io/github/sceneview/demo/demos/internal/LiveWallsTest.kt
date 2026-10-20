@@ -6,6 +6,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
 
@@ -14,9 +15,9 @@ class LiveWallsTest {
     private val floorY = -1.4f
 
     /** A vertical plane from (x0, z0) to (x1, z1), 0.3 m to 1.6 m over the floor. */
-    private fun wall(id: Int, x0: Float, z0: Float, x1: Float, z1: Float, top: Float = 1.6f) = DebugPlane(
+    private fun wall(id: Int, x0: Float, z0: Float, x1: Float, z1: Float, top: Float = 1.6f) = LivePlane(
         id,
-        DebugPlaneKind.Wall,
+        LivePlane.Kind.Wall,
         floatArrayOf(
             x0, floorY + 0.3f, z0, x1, floorY + 0.3f, z1,
             x1, floorY + top, z1, x0, floorY + top, z0,
@@ -59,7 +60,7 @@ class LiveWallsTest {
 
     @Test
     fun `a wall 3 degrees off the room's axis is squared to it`() {
-        val tilt = Math.toRadians(3.0).toFloat()
+        val tilt = 3f * PI.toFloat() / 180f
         val source = PlaneWallSource()
         val snapshot = source.update(
             listOf(
@@ -224,7 +225,7 @@ class LiveWallsTest {
         var t = 0f
         while (t < 8f) {
             // 20 degrees a second about +Y, on the spot.
-            val half = Math.toRadians(-20.0 * t).toFloat() / 2f
+            val half = -20f * t * PI.toFloat() / 180f / 2f
             coach.update(t, DebugPose(0f, 0f, 0f, qy = kotlin.math.sin(half), qw = kotlin.math.cos(half)), grew = false)
             t += 1f / 30f
         }
@@ -242,13 +243,108 @@ class LiveWallsTest {
 
     @Test
     fun `a new dense snapshot covers cells, and a covered cell stays covered`() {
-        val grid = CoverageGrid(minPoints = 1)
-        assertTrue(grid.cover(floatArrayOf(0.1f, 0f, 0.1f, 1.1f, 0f, 0.1f)))
+        val grid = CoverageGrid()
+        assertTrue(grid.addCells(CoverageGrid.coveredKeys(floatArrayOf(0.1f, 0f, 0.1f, 1.1f, 0f, 0.1f), minPoints = 1)))
         assertEquals(2, grid.covered)
         // A later snapshot elsewhere: the first cells stay.
-        assertTrue(grid.cover(floatArrayOf(2.1f, 0f, 0.1f)))
+        assertTrue(grid.addCells(CoverageGrid.coveredKeys(floatArrayOf(2.1f, 0f, 0.1f), minPoints = 1)))
         assertEquals(3, grid.covered)
-        assertFalse(grid.cover(floatArrayOf(0.1f, 0f, 0.1f)))
+        assertFalse(grid.addCells(CoverageGrid.coveredKeys(floatArrayOf(0.1f, 0f, 0.1f), minPoints = 1)))
         assertEquals(3, grid.covered)
     }
+
+    @Test
+    fun `a snapshot's covered cells need three surfels each, counted once`() {
+        // Three surfels in one cell, two in another, one beyond the count passed.
+        val points = floatArrayOf(
+            0.1f, 0f, 0.1f, 0.2f, 0f, 0.1f, 0.1f, 0f, 0.2f,
+            1.1f, 0f, 0.1f, 1.2f, 0f, 0.1f,
+            1.15f, 0f, 0.15f,
+        )
+        val keys = CoverageGrid.coveredKeys(points, count = 5)
+        assertEquals(1, keys.size)
+        assertEquals(CoverageGrid.key(0, 0), keys.single())
+        assertEquals(2, CoverageGrid.coveredKeys(points).size)
+    }
+
+    @Test
+    fun `a refit plane moves its wall instead of averaging with the first fit`() {
+        val source = PlaneWallSource()
+        // ARCore's first rough fit, 15 cm off, then the same plane refit where the wall is.
+        source.update(listOf(wall(1, -1.5f, -2.15f, 1.5f, -2.15f)), floorY, time = 1f)
+        var w = source.update(listOf(wall(1, -1.5f, -2f, 1.5f, -2f)), floorY, time = 2f).walls.single()
+        repeat(5) {
+            val refit = wall(1, -1.5f, -2f, 1.5f, -2f + it * 1e-4f)
+            w = source.update(listOf(refit), floorY, time = 3f + it).walls.single()
+        }
+        assertEquals(-2f, (w.az + w.bz) / 2f, 0.01f)
+        // Seen again and again, it does not weigh itself up: its length is what was seen.
+        assertEquals(3f, w.length, 0.05f)
+    }
+
+    @Test
+    fun `an unchanged room keeps its snapshot`() {
+        val source = PlaneWallSource()
+        val first = source.update(listOf(wall(1, -1.5f, -2f, 1.5f, -2f)), floorY, time = 1f)
+        // A new outline that moves no wall: the same snapshot, nothing to redraw.
+        val again = source.update(listOf(wall(1, -1.5f, -2f, 1.4f, -2f)), floorY, time = 2f)
+        assertTrue(first === again)
+    }
+
+    @Test
+    fun `slowing down and standing still are working, and a complete room is never stuck`() {
+        assertEquals(ScanActivity.Working, ScanActivity.of(ScanPhase.Scanning, false, coach = ScanCoach.Line.Slower))
+        assertEquals(ScanActivity.Working, ScanActivity.of(ScanPhase.Scanning, false, coach = ScanCoach.Line.Still))
+        assertEquals(ScanActivity.Stuck, ScanActivity.of(ScanPhase.Scanning, false, coach = ScanCoach.Line.NothingNew))
+        assertEquals(
+            ScanActivity.Working,
+            ScanActivity.of(ScanPhase.Scanning, false, coach = ScanCoach.Line.NothingNew, depthStarved = true, done = true),
+        )
+        assertEquals(
+            ScanCopy.ROOM_DONE,
+            ScanScopeCopy.coaching(ScanScope.Room, ScanCopy.COACH_NOTHING_NEW, walls = 3, done = true),
+        )
+    }
+
+    @Test
+    fun `sweeping a wall up and down is moving, looking at the floor is not a turn`() {
+        val sweep = ScanCoach()
+        var t = 0f
+        while (t < 8f) {
+            // Tilting up and down 25 degrees a second about +X, on the spot.
+            val pitch = (if ((t / 2f).toInt() % 2 == 0) t % 2f else 2f - t % 2f) * 25f - 25f
+            val half = pitch * PI.toFloat() / 180f / 2f
+            sweep.update(t, DebugPose(0f, 0f, 0f, qx = kotlin.math.sin(half), qw = kotlin.math.cos(half)), grew = false)
+            t += 1f / 30f
+        }
+        assertEquals(ScanCoach.Line.NothingNew, sweep.line)
+
+        val floor = ScanCoach()
+        t = 0f
+        while (t < 8f) {
+            // Straight down, rolling about the view axis: the view direction does not move.
+            val down = -45f * PI.toFloat() / 180f
+            val roll = 30f * t * PI.toFloat() / 180f / 2f
+            val q = DebugPose(0f, 0f, 0f, qx = kotlin.math.sin(down), qw = kotlin.math.cos(down))
+            val r = DebugPose(0f, 0f, 0f, qz = kotlin.math.sin(roll), qw = kotlin.math.cos(roll))
+            floor.update(t, compose(q, r), grew = false)
+            t += 1f / 30f
+        }
+        assertTrue("turn ${floor.turnRate}", floor.turnRate < 1f)
+        assertFalse(floor.facingWall)
+        assertEquals(ScanCoach.Line.Still, floor.line)
+        assertEquals(
+            ScanCopy.COACH_FACE_WALLS,
+            ScanScopeCopy.coaching(ScanScope.Room, ScanCopy.COACH_NOTHING_NEW, walls = 1, facingWall = false),
+        )
+    }
+
+    /** [a] then [b], as quaternions: [b] turns in [a]'s own frame. */
+    private fun compose(a: DebugPose, b: DebugPose) = DebugPose(
+        0f, 0f, 0f,
+        qx = a.qw * b.qx + a.qx * b.qw + a.qy * b.qz - a.qz * b.qy,
+        qy = a.qw * b.qy - a.qx * b.qz + a.qy * b.qw + a.qz * b.qx,
+        qz = a.qw * b.qz + a.qx * b.qy - a.qy * b.qx + a.qz * b.qw,
+        qw = a.qw * b.qw - a.qx * b.qx - a.qy * b.qy - a.qz * b.qz,
+    )
 }

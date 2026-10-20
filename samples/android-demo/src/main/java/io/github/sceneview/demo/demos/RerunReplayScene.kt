@@ -25,6 +25,7 @@ import io.github.sceneview.demo.demos.internal.ArDebugEvent
 import io.github.sceneview.demo.demos.internal.ArDebugFrame
 import io.github.sceneview.demo.demos.internal.ArDebugStyle
 import io.github.sceneview.demo.demos.internal.ArDebugTrace
+import io.github.sceneview.demo.demos.internal.CoverageGrid
 import io.github.sceneview.demo.demos.internal.DebugMesh
 import io.github.sceneview.demo.demos.internal.DebugPlane
 import io.github.sceneview.demo.demos.internal.DebugPose
@@ -121,7 +122,14 @@ internal class RerunReplayMedia(
  * [mesh] one square surfel per point in the plane of its normal, [atlas] its colours
  * ([DenseSurfels.ATLAS_SIZE]² RGBA), both built off the main thread.
  */
-internal class ReplayDenseLayer(val cloud: DenseCloud, val voxelM: Float, val mesh: DebugMesh, val atlas: ByteArray) {
+internal class ReplayDenseLayer(
+    val cloud: DenseCloud,
+    val voxelM: Float,
+    val mesh: DebugMesh,
+    val atlas: ByteArray,
+    /** A live scan's floor cells [cloud] covers ([CoverageGrid.coveredKeys]), found with it off the main thread. */
+    val coveredCells: LongArray = LongArray(0),
+) {
     companion object {
         /** The dense cloud [manifest] indexes in [archive], built for drawing; `null` without one. */
         fun of(manifest: ReplayManifest, archive: ByteArray): ReplayDenseLayer? {
@@ -132,12 +140,16 @@ internal class ReplayDenseLayer(val cloud: DenseCloud, val voxelM: Float, val me
             return of(cloud, dense.voxelM)
         }
 
-        /** [cloud] of [voxelM] surfels, meshed and coloured for drawing. Off the main thread. */
-        fun of(cloud: DenseCloud, voxelM: Float) = ReplayDenseLayer(
+        /**
+         * [cloud] of [voxelM] surfels, meshed and coloured for drawing, with the floor cells it
+         * covers when [withCells] (a live scan's coverage). Off the main thread.
+         */
+        fun of(cloud: DenseCloud, voxelM: Float, withCells: Boolean = false) = ReplayDenseLayer(
             cloud = cloud,
             voxelM = voxelM,
             mesh = DenseSurfels.mesh(cloud, voxelM),
             atlas = DenseSurfels.atlas(cloud, fallback = DENSE_FALLBACK_COLOR),
+            coveredCells = if (withCells) CoverageGrid.coveredKeys(cloud.positions, cloud.count) else LongArray(0),
         )
 
         /** A surfel the camera never coloured: the sparse points' own neutral. */

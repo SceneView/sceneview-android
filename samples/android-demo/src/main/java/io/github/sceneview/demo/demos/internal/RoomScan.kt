@@ -458,6 +458,9 @@ object ScanCopy {
     /** A wall still missing while nothing new comes: plain walls give ARCore little to hold. */
     const val COACH_BLANK_WALL = "Plain wall? Get closer, at an angle, with a corner in view"
 
+    /** Nothing new while a wall is missing, the phone looking at the floor or the ceiling. */
+    const val COACH_FACE_WALLS = "Raise the phone to the walls"
+
     /** Before the first frame tracks: the scan starts by itself, as soon as AR is ready. */
     const val STARTING = "Getting AR ready — the scan starts by itself"
 

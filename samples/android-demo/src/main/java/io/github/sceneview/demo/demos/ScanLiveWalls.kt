@@ -20,6 +20,7 @@ import io.github.sceneview.demo.demos.internal.ScanGuide
 import io.github.sceneview.demo.demos.internal.ScanTurn
 import io.github.sceneview.demo.demos.internal.WallMesh
 import io.github.sceneview.demo.demos.internal.openFloorEdges
+import io.github.sceneview.demo.demos.internal.update
 import io.github.sceneview.demo.theme.SceneViewTokens.ArOverlay
 import io.github.sceneview.loaders.MaterialLoader
 import kotlin.math.max
@@ -125,8 +126,13 @@ internal class ScanWallLayer(engine: Engine, private val materialLoader: Materia
     private var cueFor: FloatArray? = null
     private var openFloorY = Float.NaN
 
-    /** Eases the walls [dt] seconds on and re-uploads what moved. On the main thread. */
-    fun sync(state: ScanWallsState, dt: Float) {
+    /**
+     * Eases the walls [dt] seconds on and re-uploads what moved, or hides them all while not
+     * [shown] — the save's orbit shows the cloud alone. On the main thread.
+     */
+    fun sync(state: ScanWallsState, dt: Float, shown: Boolean = true) {
+        nodes.forEach { if (it.isVisible != shown) it.isVisible = shown }
+        if (!shown) return
         val motion = state.motion
         if (motion.step(state.snapshot, dt)) {
             fillMesh.clear()

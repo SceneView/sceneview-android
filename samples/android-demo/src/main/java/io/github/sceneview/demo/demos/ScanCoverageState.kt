@@ -120,38 +120,42 @@ internal class ScanCoverageState {
     var coachLine by mutableStateOf<ScanCoach.Line?>(null)
         private set
 
+    /** The phone looks at the walls, not the floor or the ceiling ([ScanCoach.facingWall]). */
+    var facingWall by mutableStateOf(true)
+        private set
+
     private var heading: Float? = null
     private var cellsPath: Path? = null
     private var edgesPath: Path? = null
     private var pathsVersion = -1
     private var extentVersion = -1
     private var floorKey = 0
-    private var lastSnapshot: FloatArray? = null
+    private var lastSnapshot: LongArray? = null
 
     /**
      * [dense] is a v2 scan's dense cloud (flat xyz), of which [denseCount] surfels are found by
      * [frame]'s time: it stands in for the feature points, as it does in the 3D view, so a scan whose
      * room is drawn from depth does not read `Floor 0 % covered` under that room (#4619).
-     * [snapshot] is a live depth scan's dense cloud as it stands ([snapshotCount] surfels), each
-     * new one binned once on top of the feature points ([CoverageGrid.cover]): live and replay
-     * then count the same depth points.
+     * [snapshotCells] are the floor cells a live depth scan's dense cloud covers as it stands,
+     * found off the main thread ([CoverageGrid.coveredKeys]) and added once each new snapshot on
+     * top of the feature points: live and replay then count the same depth points.
      */
     fun observe(
         frame: ArDebugFrame,
         dense: FloatArray? = null,
         denseCount: Int = 0,
         pose: DebugPose? = frame.camera,
-        snapshot: FloatArray? = null,
-        snapshotCount: Int = 0,
+        snapshotCells: LongArray? = null,
     ) {
         var grew = if (dense != null) grid.update(dense, denseCount) else grid.update(frame.mapPoints)
         // A live depth scan's dense cloud, a new snapshot every few seconds (#4540): the feature
         // map alone stops at its cap, and the figure froze while the cloud kept growing.
-        if (snapshot != null && snapshot !== lastSnapshot) {
-            lastSnapshot = snapshot
-            grew = grid.cover(snapshot, snapshotCount) || grew
+        if (snapshotCells != null && snapshotCells !== lastSnapshot) {
+            lastSnapshot = snapshotCells
+            grew = grid.addCells(snapshotCells) || grew
         }
         coachLine = coach.update(frame.time, frame.camera, grew)
+        if (coach.facingWall != facingWall) facingWall = coach.facingWall
         // [pose] is the phone now: the trace's while it records, the live one while paused (#4718).
         val moved = pose != camera
         camera = pose

@@ -1,5 +1,6 @@
 package io.github.sceneview.demo.demos.internal
 
+import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -49,12 +50,27 @@ data class LiveWallSnapshot(
 }
 
 /**
+ * A plane as any AR source gives it, with nothing of 3D Scan's trace: ARCore's [id] for it, which
+ * way it faces ([kind]), and its boundary as a **world-space** polygon, flat `[x0,y0,z0, …]` — an
+ * ARCore `Plane`'s `polygon` put through its `centerPose`. What Measure (#4732) and a scan module
+ * hand [PlaneWallSource].
+ */
+class LivePlane(val id: Int, val kind: Kind, val polygon: FloatArray) {
+    enum class Kind { Floor, Ceiling, Wall, Other }
+
+    val vertexCount: Int get() = polygon.size / 3
+}
+
+/**
  * Where the live walls come from. Today, ARCore's vertical planes ([PlaneWallSource]); a source
  * that builds the room's structure from the dense map can replace it without the view changing.
  */
 interface LiveWallSource {
-    /** The walls recognised by [frame]. Called each frame: cheap when nothing changed. */
-    fun update(frame: ArDebugFrame): LiveWallSnapshot
+    /**
+     * The walls recognised from [planes], over a floor at [floorY], at [time] seconds. Called each
+     * frame: cheap when nothing changed, and the same snapshot instance while the walls do not.
+     */
+    fun update(planes: List<LivePlane>, floorY: Float, time: Float): LiveWallSnapshot
 
     /** Forgets every wall: a new capture. */
     fun reset()
@@ -69,41 +85,43 @@ interface LiveWallSource {
 class PlaneWallSource : LiveWallSource {
     private val tracks = ArrayList<Track>()
     private var nextId = 0
-    private var key: List<Int> = emptyList()
+    private var key = LongArray(0)
     private var last = LiveWallSnapshot.Empty
 
-    override fun update(frame: ArDebugFrame): LiveWallSnapshot =
-        update(frame.planes, ArDebugGeometry.floorHeight(frame), frame.time)
-
-    /**
-     * The same from plain planes — no trace needed: Measure, say, hands it ARCore's planes as
-     * [DebugPlane]s, the floor's height and the time in seconds (#4732).
-     */
-    fun update(planes: List<DebugPlane>, floorY: Float, time: Float): LiveWallSnapshot {
-        val newKey = planes.map { System.identityHashCode(it) }
-        if (newKey == key && last !== LiveWallSnapshot.Empty) return last
+    override fun update(planes: List<LivePlane>, floorY: Float, time: Float): LiveWallSnapshot {
+        // A plane is the same while its id and outline are: ARCore hands new objects every frame.
+        val newKey = LongArray(planes.size) { i ->
+            (planes[i].id.toLong() shl Int.SIZE_BITS) or (planes[i].polygon.contentHashCode().toLong() and MASK)
+        }
+        if (newKey.contentEquals(key) && last !== LiveWallSnapshot.Empty) return last
         key = newKey
         merge(clusters(pieces(planes, floorY)), time)
         val ceiling = ceilingOf(planes, floorY)
         val top = tracks.maxOfOrNull { it.top } ?: (floorY + DEFAULT_HEIGHT_M)
         val height = (ceiling ?: top) - floorY
-        last = LiveWallSnapshot(
+        val next = LiveWallSnapshot(
             walls = shaped(tracks.filter { it.length >= MIN_WALL_M }),
             floorY = floorY,
             height = height.coerceIn(MIN_HEIGHT_M, MAX_HEIGHT_M),
             ceilingSeen = ceiling != null,
         )
+        // A plane refit that moves no wall keeps the snapshot: whoever draws it has nothing to redo.
+        if (next != last) last = next
         return last
     }
 
     override fun reset() {
         tracks.clear()
         nextId = 0
-        key = emptyList()
+        key = LongArray(0)
         last = LiveWallSnapshot.Empty
     }
 
-    /** Folds this update's [found] walls into the walls already known: they only grow. */
+    /**
+     * Folds this update's [found] walls into the walls already known. Where a wall stands and which
+     * way it runs is what ARCore's planes say now — a refit corrects its first rough fit — and what
+     * was seen of it before keeps only its ends, so it never shrinks.
+     */
     private fun merge(found: List<Segment>, time: Float) {
         val taken = HashSet<Track>()
         for (segment in found.sortedByDescending { it.length }) {
@@ -115,7 +133,7 @@ class PlaneWallSource : LiveWallSource {
             // The oldest keeps its name; the others were the same wall seen in pieces.
             val keep = matches.minBy { it.id }
             var grown = segment
-            matches.forEach { grown = grown.union(it.segment) }
+            matches.forEach { grown = grown.spanning(it.segment) }
             keep.segment = grown
             keep.top = max(grown.top, matches.maxOf { it.top })
             tracks.removeAll { it in matches && it !== keep }
@@ -176,15 +194,16 @@ class PlaneWallSource : LiveWallSource {
         const val MIN_CEILING_M = 1.8f
 
         /**
-         * The walls in [planes], each counted once — what the room's figures wait on (#4540): no
-         * area while fewer than two walls are seen. No tracking: one call, one answer.
+         * The walls in [planes], each counted once, with no tracking — one call, one answer: a
+         * finished recording's planes, which no live [PlaneWallSource] followed. A live scan reads
+         * its source's snapshot instead, the count the HUD shows.
          */
-        fun wallCount(planes: List<DebugPlane>, floorY: Float): Int =
+        fun wallCount(planes: List<LivePlane>, floorY: Float): Int =
             clusters(pieces(planes, floorY)).count { it.length >= MIN_WALL_M }
 
         /** Each vertical plane as a floor segment: its line, its extent along it, its top. */
-        internal fun pieces(planes: List<DebugPlane>, floorY: Float): List<Segment> = planes.mapNotNull { plane ->
-            if (plane.kind != DebugPlaneKind.Wall || plane.vertexCount < 3) return@mapNotNull null
+        internal fun pieces(planes: List<LivePlane>, floorY: Float): List<Segment> = planes.mapNotNull { plane ->
+            if (plane.kind != LivePlane.Kind.Wall || plane.vertexCount < 3) return@mapNotNull null
             Segment.ofPolygon(plane.polygon)?.takeIf { it.length >= MIN_PIECE_M && it.top > floorY }
         }
 
@@ -207,17 +226,15 @@ class PlaneWallSource : LiveWallSource {
         }
 
         internal fun sameWall(a: Segment, b: Segment): Boolean {
-            if (abs(Math.toDegrees(WallMesh.wrapHalfTurn(a.angle - b.angle).toDouble())) > SAME_WALL_DEGREES) {
-                return false
-            }
+            if (abs(degrees(WallMesh.wrapHalfTurn(a.angle - b.angle))) > SAME_WALL_DEGREES) return false
             if (a.distanceAcross(b.midX, b.midZ) > SAME_WALL_OFFSET_M) return false
             if (b.distanceAcross(a.midX, a.midZ) > SAME_WALL_OFFSET_M) return false
             return a.gapAlong(b) <= SAME_WALL_GAP_M
         }
 
         /** The ceiling's height, from the lowest downward-facing plane high enough to be one. */
-        private fun ceilingOf(planes: List<DebugPlane>, floorY: Float): Float? = planes
-            .filter { it.kind == DebugPlaneKind.Ceiling && it.vertexCount >= 3 }
+        private fun ceilingOf(planes: List<LivePlane>, floorY: Float): Float? = planes
+            .filter { it.kind == LivePlane.Kind.Ceiling && it.vertexCount >= 3 }
             .map { plane -> (0 until plane.vertexCount).map { plane.polygon[it * 3 + 1] }.average().toFloat() }
             .filter { it - floorY >= MIN_CEILING_M }
             .minOrNull()
@@ -227,7 +244,7 @@ class PlaneWallSource : LiveWallSource {
          * an end of each — extended to it or trimmed back to it — and they are near square.
          */
         private fun joinCorner(a: Segment, b: Segment, ea: FloatArray, eb: FloatArray) {
-            val off = abs(Math.toDegrees(WallMesh.wrapHalfTurn(a.angle - b.angle).toDouble()))
+            val off = abs(degrees(WallMesh.wrapHalfTurn(a.angle - b.angle)))
             if (abs(off - RIGHT_ANGLE) > CORNER_DEGREES) return
             val cross = intersection(ea, eb) ?: return
             val endA = nearestEnd(ea, cross) ?: return
@@ -260,7 +277,8 @@ class PlaneWallSource : LiveWallSource {
             return (a[0] + t * rx) to (a[1] + t * rz)
         }
 
-        private const val RIGHT_ANGLE = 90.0
+        private const val RIGHT_ANGLE = 90f
+        private const val MASK = 0xffffffffL
         private const val EPSILON = 1e-6f
     }
 }
@@ -324,6 +342,22 @@ class Segment(
         return Segment(joined, mx, mz, lo, hi, max(top, other.top), w)
     }
 
+    /**
+     * This line as it is — its direction, its position, its weight — stretched to reach [other]'s
+     * ends: what a wall seen before keeps when ARCore refits it. Unlike [union], [other] has no say
+     * in where the line runs, so a wall seen again is not merged with itself.
+     */
+    fun spanning(other: Segment): Segment {
+        var lo = from
+        var hi = to
+        for ((x, z) in listOf(other.ax to other.az, other.bx to other.bz)) {
+            val t = along(x, z)
+            lo = min(lo, t)
+            hi = max(hi, t)
+        }
+        return Segment(angle, midX, midZ, lo, hi, max(top, other.top), weight)
+    }
+
     /** The same span turned onto [angle] round its centre. */
     fun rotatedTo(angle: Float): Segment {
         val centre = (from + to) / 2f
@@ -379,7 +413,7 @@ class Segment(
         /** A line's direction in `[0, π)`: taken before projecting onto it, so the span matches. */
         private fun positive(angle: Float): Float {
             val a = WallMesh.wrapHalfTurn(angle)
-            return if (a < 0f) a + Math.PI.toFloat() else a
+            return if (a < 0f) a + PI.toFloat() else a
         }
 
         private const val TINY = 1e-8f
@@ -541,6 +575,11 @@ private fun distanceToSegment(x: Float, z: Float, wall: LiveWall): Float {
 }
 
 private fun hypot(x: Float, z: Float): Float = sqrt(x * x + z * z)
+
+/** [radians] in degrees. */
+private fun degrees(radians: Float): Float = radians * (HALF_TURN_DEGREES / PI.toFloat())
+
+private const val HALF_TURN_DEGREES = 180f
 
 /** An open floor edge shorter than this is the grid's own raggedness, not an opening. */
 private const val MIN_OPEN_EDGE_M = 0.3f

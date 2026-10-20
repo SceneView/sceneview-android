@@ -1761,6 +1761,7 @@ private fun RerunLiveScreen(
                         coach = scanCoverage.coachLine,
                         lowTexture = lowTexture,
                         depthStarved = depthStarved,
+                        done = scanWalls?.done == true,
                     ),
                     room = scanWalls,
                 )
@@ -1824,6 +1825,8 @@ private fun RerunLiveScreen(
                         modifier = Modifier
                             .align(if (scanMapExpanded) Alignment.CenterHorizontally else Alignment.Start)
                             .padding(horizontal = Space.md),
+                        // A room's area waits on two walls (#4540): one wall and the floor are not a room.
+                        showFloor = scanWalls == null || scanWalls.wallCount >= ArDebugSession.MIN_ROOM_WALLS,
                         expanded = scanMapExpanded,
                         onToggle = { scanMapExpanded = !scanMapExpanded },
                     )
@@ -1881,6 +1884,7 @@ private fun RerunLiveScreen(
                                 walls = scanWalls?.wallCount,
                                 turn = scanWalls?.turn,
                                 done = scanWalls?.done == true,
+                                facingWall = scanCoverage.facingWall,
                             ),
                             onTogglePause = {
                                 betweenRooms = false

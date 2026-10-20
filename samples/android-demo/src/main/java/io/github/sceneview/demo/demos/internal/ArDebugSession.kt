@@ -61,7 +61,7 @@ class ArDebugSession(initial: ArDebugTrace = ArDebugTrace()) {
         // No room's area before two walls are seen (#4540): one wall and the floor named a room
         // that was only the floor in front of it.
         stats = if (floorY == null) counted else counted.copy(room = RoomMeasure.of(frame.planes, floorY)
-            ?.takeIf { PlaneWallSource.wallCount(frame.planes, floorY) >= MIN_ROOM_WALLS }
+            ?.takeIf { PlaneWallSource.wallCount(livePlanesOf(frame), floorY) >= MIN_ROOM_WALLS }
             ?.scanSummary(Locale.getDefault()))
     }
 

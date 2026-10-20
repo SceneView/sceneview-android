@@ -81,6 +81,7 @@ import io.github.sceneview.demo.demos.internal.ArDebugFormat
 import io.github.sceneview.demo.demos.internal.ArDebugFrame
 import io.github.sceneview.demo.demos.internal.ArDebugFraming
 import io.github.sceneview.demo.demos.internal.PlaneWallSource
+import io.github.sceneview.demo.demos.internal.livePlanesOf
 import io.github.sceneview.demo.demos.internal.ArDebugGeometry
 import io.github.sceneview.demo.demos.internal.ArDebugOrbitCamera
 import io.github.sceneview.demo.demos.internal.ArDebugSession
@@ -723,7 +724,7 @@ private fun skyboxAlpha(transparent: Boolean): Float = if (transparent) 0f else 
  * dimensions, nor frames room for them.
  *
  * [walls], 3D Scan's live walls (#4540), drawn by a [ScanWallLayer] once the caller's [observe]
- * has fed them the frame.
+ * has fed them the frame, while [drawWalls]; hidden, they still give the room its wall count.
  */
 @Composable
 @Suppress("LongParameterList") // the demo's shared engine, handed down once, and one flag per reading
@@ -745,8 +746,10 @@ internal fun ArDebugSceneView(
     selection: ScanSelection? = null,
     cornerCard: DpSize = DpSize.Zero,
     walls: ScanWallsState? = null,
+    drawWalls: Boolean = true,
 ) {
     val shown by rememberUpdatedState(onShown)
+    val wallsDrawn by rememberUpdatedState(drawWalls)
     val observer by rememberUpdatedState(observe)
     // The ground and palette of the stage this view is drawn on (#4080): the dark stage under
     // media chrome, the light one on a themed stage in light theme.
@@ -968,7 +971,7 @@ internal fun ArDebugSceneView(
                 objectPick?.sync(style)
 
                 observer?.invoke(frame)
-                if (walls != null) wallLayer?.sync(walls, dt)
+                if (walls != null) wallLayer?.sync(walls, dt, shown = wallsDrawn)
                 if (frame.anchors != anchors) anchors = frame.anchors
                 if (frameTimeNanos - clock.statsAtNanos >= STATS_INTERVAL_NS) {
                     clock.statsAtNanos = frameTimeNanos
@@ -983,8 +986,10 @@ internal fun ArDebugSceneView(
                     // A scan still growing names no room before two walls are seen (#4540).
                     val room = replayLayers.measure?.takeIf { measuresRoom }
                         ?.takeIf {
+                            // The walls the HUD counts when it counts them: one figure on screen.
                             replay?.growing != true ||
-                                PlaneWallSource.wallCount(frame.planes, floorY) >= ArDebugSession.MIN_ROOM_WALLS
+                                (walls?.wallCount ?: PlaneWallSource.wallCount(livePlanesOf(frame), floorY)) >=
+                                ArDebugSession.MIN_ROOM_WALLS
                         }
                         ?.scanSummary(Locale.getDefault())
                     if (session.stats.room != room) session.stats = session.stats.copy(room = room)
