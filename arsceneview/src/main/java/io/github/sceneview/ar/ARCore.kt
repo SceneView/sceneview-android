@@ -2,6 +2,7 @@ package io.github.sceneview.ar
 
 import android.content.Context
 import android.os.Build
+import android.util.Log
 import com.google.ar.core.ArCoreApk.Availability
 import com.google.ar.core.Config
 import com.google.ar.core.Session
@@ -28,7 +29,9 @@ const val kDefaultHitTestInstantDistance = 2.0f
  * @param onSessionCreated     Called once when the [Session] is created.
  * @param onSessionResumed     Called each time the session resumes.
  * @param onSessionPaused      Called each time the session pauses.
- * @param onArSessionFailed    Called when session creation or resume fails.
+ * @param onArSessionFailed    Called when session creation or resume fails, once per failed
+ *                             attempt: every host resume, permission grant or [retrySession]
+ *                             that cannot resume the session reports again.
  * @param onSessionConfigChanged Called when the session configuration changes.
  */
 class ARCore(
@@ -553,12 +556,22 @@ class ARCore(
      * (`CameraNotAvailableException`), when the camera permission is missing
      * (`SecurityException`), or on an ARCore error (`FatalException`, `IllegalStateException`).
      * Every caller is a lifecycle or UI callback, where a throw crashes the host app. The session
-     * stays paused, so the next host resume, or [retrySession], tries again.
+     * stays paused, so the next host resume, or [retrySession], tries again. The failure is logged
+     * too, for a host that set no failure callback.
+     *
+     * Only the resume itself is guarded: once ARCore did resume, the session runs the host's
+     * [onSessionResumed], and what that callback throws is the host's own, so it goes on to the
+     * host unchanged.
      */
     private fun resumeSession() {
+        val session = session ?: return
         try {
-            session?.resume()
+            session.resume()
         } catch (exception: Exception) {
+            // The session counts as resumed from the moment ARCore resumed it: whatever threw
+            // after that (the host's callback) is not a resume failure.
+            if (session.isResumed) throw exception
+            Log.w("ARCore", "Could not resume the ARCore session; the next resume tries again", exception)
             onException(exception)
         }
     }
