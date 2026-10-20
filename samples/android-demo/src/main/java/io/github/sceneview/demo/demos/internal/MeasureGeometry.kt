@@ -306,6 +306,31 @@ private const val WALL_FOOT_MIN_LENGTH = 0.05f
 /** [p] moved onto the horizontal plane at height [y] — floor lines stay flat on the floor. */
 fun measureOnLevel(p: Position, y: Float): Position = Position(p.x, y, p.z)
 
+/**
+ * The snap of one aim at [raw], in the order the reticle applies it: the placed [points], the
+ * planes' corners and edges ([measurePlaneSnapTargets]), the guides from the previous point of
+ * a Distance chain, then — in Room, when none of those holds — the square corner on the last
+ * two corners of [activeOutline].
+ */
+@Suppress("LongParameterList") // the reticle's whole input, one frame
+fun measureSnapAim(
+    mode: MeasureMode,
+    planes: List<MeasurePlane>,
+    level: Float?,
+    points: List<Position>,
+    activeOutline: List<Position>,
+    raw: Position,
+    tolerance: Float,
+): MeasureSnap {
+    val context = measurePlaneSnapTargets(mode, planes, level).copy(
+        points = points,
+        previous = activeOutline.lastOrNull().takeIf { mode == MeasureMode.Distance },
+    )
+    val snap = snapMeasureTarget(raw, context, tolerance)
+    if (snap.kind != MeasureSnapKind.None || mode != MeasureMode.Room || activeOutline.size < 2) return snap
+    return snapSquareCorner(activeOutline[activeOutline.size - 2], activeOutline.last(), raw) ?: snap
+}
+
 // ── Rising walls ────────────────────────────────────────────────────────────────────────────
 
 /** Walls never rise below a few centimetres (so they stay visible) nor above a tall ceiling. */

@@ -6,7 +6,8 @@ package io.github.sceneview.demo.demos.internal
  * - [Distance]: tap point after point, every segment gets its length. Tap the first point
  *   again to close an outline and read its area, or tap Done to end an open chain.
  * - [Wall]: tap the two ends of a wall where it meets the floor; the wall then rises with
- *   the aim, a tap locks its height and reads its area.
+ *   the aim, a tap locks its height and reads its area. Doors and windows marked on it then
+ *   come off its net area.
  * - [Room]: trace the floor corner by corner, tap the first corner to close it; all the
  *   walls rise together, a tap locks the ceiling height.
  */
@@ -32,6 +33,7 @@ enum class MeasurePhase {
  * @property ended a Distance chain the user ended with Done, open: the next point starts a new chain.
  * @property raising the walls follow the aim (wall or room still open for a height).
  * @property height the locked wall height, metres; `null` until locked.
+ * @property openings the doors and windows marked on a measured wall, left out of its net area.
  */
 data class MeasureFigure<P>(
     val mode: MeasureMode,
@@ -40,6 +42,7 @@ data class MeasureFigure<P>(
     val ended: Boolean = false,
     val raising: Boolean = false,
     val height: Float? = null,
+    val openings: List<MeasureOpening> = emptyList(),
 ) {
     /** Done: no tap can change it any more, the next tap starts a new figure. */
     val finished: Boolean
@@ -131,10 +134,29 @@ data class MeasureBoard<P>(
         )
     }
 
-    /** Steps back one action: unlock a height, lower the walls, reopen, resume a chain, or drop a point. */
+    /**
+     * The measured wall an opening goes on: the last figure, when it is a wall with its height
+     * and Wall is still the mode. `null` otherwise.
+     */
+    val openingWall: MeasureFigure<P>?
+        get() = figures.lastOrNull()?.takeIf {
+            mode == MeasureMode.Wall && it.mode == MeasureMode.Wall && it.height != null && it.points.size == 2
+        }
+
+    /** Adds [opening] to the [openingWall]; the board as it is without one. */
+    fun addOpening(opening: MeasureOpening): MeasureBoard<P> {
+        val wall = openingWall ?: return this
+        return replaceActive(wall.copy(openings = wall.openings + opening))
+    }
+
+    /**
+     * Steps back one action: drop the last opening, unlock a height, lower the walls, reopen,
+     * resume a chain, or drop a point.
+     */
     fun undo(): MeasureBoard<P> {
         val figure = figures.lastOrNull() ?: return this
         val stepped: MeasureFigure<P>? = when {
+            figure.openings.isNotEmpty() -> figure.copy(openings = figure.openings.dropLast(1))
             figure.height != null -> figure.copy(height = null, raising = true)
             figure.raising && figure.mode == MeasureMode.Wall ->
                 figure.copy(raising = false, points = figure.points.dropLast(1))

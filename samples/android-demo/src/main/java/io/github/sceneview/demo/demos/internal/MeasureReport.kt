@@ -20,6 +20,12 @@ data class MeasureFigureNumbers(
     val outlineArea: Float?,
     val height: Float?,
     val wallArea: Float?,
+    /** A room's floor area times its height; `null` until both are known. */
+    val volume: Float? = null,
+    /** The area of the doors and windows marked on a wall; `null` with none marked. */
+    val openingsArea: Float? = null,
+    /** A wall's area less its openings; `null` with none marked. */
+    val netWallArea: Float? = null,
 )
 
 /**
@@ -51,6 +57,16 @@ fun <P> measureFigureNumbers(
         else -> measurePolygonArea(positions)
     }
     val wallArea = height?.let { measureWallArea(positions, figure.closed, it) }
+    val volume = if (figure.mode == MeasureMode.Room && outlineArea != null && height != null) {
+        outlineArea * height
+    } else {
+        null
+    }
+    val openingsArea = if (figure.mode == MeasureMode.Wall && figure.openings.isNotEmpty() && height != null) {
+        measureOpeningsArea(figure.openings, segments.sum(), height)
+    } else {
+        null
+    }
     return MeasureFigureNumbers(
         mode = figure.mode,
         segments = segments,
@@ -59,6 +75,9 @@ fun <P> measureFigureNumbers(
         outlineArea = outlineArea,
         height = height,
         wallArea = wallArea,
+        volume = volume,
+        openingsArea = openingsArea,
+        netWallArea = if (wallArea != null && openingsArea != null) (wallArea - openingsArea).coerceAtLeast(0f) else null,
     )
 }
 
@@ -73,6 +92,7 @@ fun measureShareText(
 ): String {
     fun len(m: Float) = formatMeasureLength(m, system, locale)
     fun area(m: Float) = formatMeasureArea(m, system, locale)
+    fun volume(m: Float) = formatMeasureVolume(m, system, locale)
     val lines = ArrayList<String>()
     lines += "Measured with SceneView"
     var distance = 0
@@ -97,6 +117,8 @@ fun measureShareText(
                 lines += "  Width: ${len(f.length)}"
                 f.height?.let { lines += "  Height: ${len(it)}" }
                 f.wallArea?.let { lines += "  Area: ${area(it)}" }
+                f.openingsArea?.let { lines += "  Doors and windows: ${area(it)}" }
+                f.netWallArea?.let { lines += "  Net area: ${area(it)}" }
             }
             MeasureMode.Room -> {
                 room++
@@ -106,6 +128,7 @@ fun measureShareText(
                 f.outlineArea?.let { lines += "  Floor area: ${area(it)}" }
                 f.height?.let { lines += "  Ceiling height: ${len(it)}" }
                 f.wallArea?.let { lines += "  Wall area: ${area(it)}" }
+                f.volume?.let { lines += "  Volume: ${volume(it)}" }
             }
         }
     }

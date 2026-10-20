@@ -125,7 +125,6 @@ import io.github.sceneview.demo.demos.internal.measureOnLevel
 import io.github.sceneview.demo.demos.internal.MeasurePhase
 import io.github.sceneview.demo.demos.internal.MeasurePlane
 import io.github.sceneview.demo.demos.internal.MeasurePlaneKind
-import io.github.sceneview.demo.demos.internal.measurePlaneSnapTargets
 import io.github.sceneview.demo.demos.internal.measurePointsMoved
 import io.github.sceneview.demo.demos.internal.measureRaisingHeight
 import io.github.sceneview.demo.demos.internal.measureRayFloorHit
@@ -134,6 +133,7 @@ import io.github.sceneview.demo.demos.internal.measureRefusal
 import io.github.sceneview.demo.demos.internal.measureRoomHeightFromRay
 import io.github.sceneview.demo.demos.internal.measureShareText
 import io.github.sceneview.demo.demos.internal.MeasureSnap
+import io.github.sceneview.demo.demos.internal.measureSnapAim
 import io.github.sceneview.demo.demos.internal.MeasureSnapKind
 import io.github.sceneview.demo.demos.internal.measureSnapTolerance
 import io.github.sceneview.demo.demos.internal.measureTriangulateXZ
@@ -143,8 +143,6 @@ import io.github.sceneview.demo.demos.internal.measureWallHeightFromRay
 import io.github.sceneview.demo.demos.internal.measureWallIndices
 import io.github.sceneview.demo.demos.internal.measureWallVertices
 import io.github.sceneview.demo.demos.internal.PlaneWallSource
-import io.github.sceneview.demo.demos.internal.snapMeasureTarget
-import io.github.sceneview.demo.demos.internal.snapSquareCorner
 import io.github.sceneview.demo.demos.internal.WALL_MAX_HEIGHT
 import io.github.sceneview.demo.demos.internal.WALL_MIN_HEIGHT
 import io.github.sceneview.demo.DemoScaffold
@@ -1464,15 +1462,8 @@ private fun findMeasureAim(
     val pointPositions = board.allPoints.distinct().mapNotNull { anchor ->
         positions[anchor]?.let { if (floorY != null) measureOnLevel(it, floorY) else it }
     }
-    val context = measurePlaneSnapTargets(mode, planes, level).copy(
-        points = pointPositions,
-        previous = activeOutline.lastOrNull().takeIf { mode == MeasureMode.Distance },
-    )
     val tolerance = measureSnapTolerance(measureDistanceMeters(origin, rawPosition))
-    var snap = snapMeasureTarget(rawPosition, context, tolerance)
-    if (snap.kind == MeasureSnapKind.None && mode == MeasureMode.Room && activeOutline.size >= 2) {
-        snapSquareCorner(activeOutline[activeOutline.size - 2], activeOutline.last(), rawPosition)?.let { snap = it }
-    }
+    val snap = measureSnapAim(mode, planes, level, pointPositions, activeOutline, rawPosition, tolerance)
     val closes = active != null && mode != MeasureMode.Wall &&
         measureClosesOutline(activeOutline, snap.position, tolerance)
     val reuse = if (snap.kind == MeasureSnapKind.Point) {
