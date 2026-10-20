@@ -103,6 +103,14 @@ class LiveWallsTest {
     }
 
     @Test
+    fun `an empty snapshot is no move once nothing is drawn`() {
+        val motion = LiveWallMotion()
+        motion.step(LiveWallSnapshot.Empty, 0.016f)
+        assertFalse(motion.step(LiveWallSnapshot.Empty, 0.016f))
+        assertFalse(motion.step(LiveWallSnapshot.Empty, 0.016f))
+    }
+
+    @Test
     fun `a new wall rises from the floor and a dropped one goes`() {
         val motion = LiveWallMotion()
         val one = LiveWall(1, 0f, 0f, 2f, 0f, bornAt = 0f)

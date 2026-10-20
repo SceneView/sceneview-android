@@ -322,17 +322,11 @@ fun ARMeasureDemo(onBack: () -> Unit) {
     )
     val coaching = arCoreAvailability == null && !arSessionFailed && guidance.isCoaching
 
-    // Snap haptics: one tick each time the reticle locks onto something new. The wall's foot
-    // only counts with no snap on: crossing a wall's foot along a snapped edge is not a new lock.
-    val snapKind = aim?.snap?.kind ?: MeasureSnapKind.None
-    val lock: Any? = when {
-        aim?.closes == true -> MeasureAimLock.Close
-        snapKind != MeasureSnapKind.None -> snapKind
-        aim?.wallFoot != null -> MeasureAimLock.WallFoot
-        else -> null
-    }
-    LaunchedEffect(lock) {
-        if (lock != null) haptic.selection()
+    // Snap haptics: one tick each time the reticle locks onto something new.
+    LaunchedEffect(aim?.snap?.kind, aim?.closes) {
+        if (aim?.closes == true || (aim?.snap?.kind ?: MeasureSnapKind.None) != MeasureSnapKind.None) {
+            haptic.selection()
+        }
     }
 
     val phase = board.phase
@@ -534,10 +528,15 @@ fun ARMeasureDemo(onBack: () -> Unit) {
 
                     // One read of ARCore's planes a frame: the live walls and the snapper share it.
                     val livePlanes = if (isTracking) session?.livePlanes(liveWalls.planeIds).orEmpty() else emptyList()
-                    val walls = liveWalls.update(livePlanes, origin.y, frame.timestamp)
-                    if (walls.walls.size != liveWallCount) liveWallCount = walls.walls.size
                     // Walls matter to Wall and Room; while a figure raises its own, it is the one shown.
+                    // Hidden, they are not recognised at all: the snapper still reads the planes, as on main.
                     val wallsShown = board.mode != MeasureMode.Distance && board.phase != MeasurePhase.Raising
+                    val walls = if (wallsShown) {
+                        liveWalls.update(livePlanes, origin.y, frame.timestamp)
+                    } else {
+                        LiveWallSnapshot.Empty
+                    }
+                    if (wallsShown && walls.walls.size != liveWallCount) liveWallCount = walls.walls.size
                     wallLayer.sync(liveWalls.motion, walls, liveWalls.dt, shown = wallsShown)
 
                     if (board.phase == MeasurePhase.Raising) {
@@ -908,9 +907,6 @@ internal const val MEASURE_ADD_TAG = "measure_add"
 // shutter sits on the camera feed, where 0.38 lost the ring on bright floors. 0.45 keeps it seen
 // while it plainly reads as off; the refusal line under the reticle says why.
 private const val ADD_REFUSED_ALPHA = 0.45f
-
-/** What the reticle locked onto besides a snap, for the snap haptic. */
-private enum class MeasureAimLock { Close, WallFoot }
 private val AddButtonSize = SceneViewTokens.Space.x3l + SceneViewTokens.Space.sm // 72 dp, a camera shutter
 private val AddDiscSize = SceneViewTokens.Space.x2l + SceneViewTokens.Space.sm // 56 dp
 private val AddRingWidth = SceneViewTokens.Space.xs - SceneViewTokens.Space.xs / 4 // 3 dp

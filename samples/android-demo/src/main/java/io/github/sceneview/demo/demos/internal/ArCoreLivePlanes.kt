@@ -34,19 +34,16 @@ fun livePlanePolygon(local: FloatArray, transformPoint: (FloatArray) -> FloatArr
 /**
  * The floor the live walls stand on: the lowest upward-facing plane's mean height, `null` before
  * one is tracked. Walls are not drawn floating, so a screen waits for this. With [cameraY], a
- * plane less than [MIN_FLOOR_DROP_M] under the camera is a table or a counter, and loses to any
- * plane that far under it: with a table and the floor tracked, the walls stand on the floor. When
- * no upward plane is that far under the camera — the phone held low, someone crouching to measure
- * a skirting board — the lowest one is the floor all the same, so the walls never vanish for that
- * (a table tracked alone stands in until the floor shows up).
+ * plane less than [MIN_FLOOR_DROP_M] under the camera is a table or a counter, never the floor:
+ * with only a table tracked so far, the walls wait for the floor instead of standing on the table.
+ * This only feeds the live walls (and the "Wall foot" chip they tell): Measure's snapping keeps
+ * main's own floor, `measureFloorLevel`.
  */
-fun livePlanesFloorY(planes: List<LivePlane>, cameraY: Float? = null): Float? {
-    val heights = planes
-        .filter { it.kind == LivePlane.Kind.Floor && it.vertexCount >= MIN_POLYGON_VERTICES }
-        .map { plane -> (0 until plane.vertexCount).sumOf { plane.polygon[it * 3 + 1].toDouble() }.toFloat() / plane.vertexCount }
-    val lowest = heights.minOrNull() ?: return null
-    return heights.filter { cameraY == null || it <= cameraY - MIN_FLOOR_DROP_M }.minOrNull() ?: lowest
-}
+fun livePlanesFloorY(planes: List<LivePlane>, cameraY: Float? = null): Float? = planes
+    .filter { it.kind == LivePlane.Kind.Floor && it.vertexCount >= MIN_POLYGON_VERTICES }
+    .map { plane -> (0 until plane.vertexCount).sumOf { plane.polygon[it * 3 + 1].toDouble() }.toFloat() / plane.vertexCount }
+    .filter { cameraY == null || it <= cameraY - MIN_FLOOR_DROP_M }
+    .minOrNull()
 
 /** [this] plane's boundary in world space: `polygon` through `centerPose`. */
 fun Plane.worldPolygon(): FloatArray {

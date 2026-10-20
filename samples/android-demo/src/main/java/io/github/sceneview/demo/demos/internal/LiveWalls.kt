@@ -448,6 +448,9 @@ class LiveWallMotion(
      */
     fun step(target: LiveWallSnapshot, dt: Float): Boolean {
         var moved = false
+        // Nothing drawn and nothing to draw (no floor yet, or just reset): following the empty
+        // snapshot's floor is no move, or the layer would rebuild its meshes every frame.
+        val drawn = target.height != 0f || shown.isNotEmpty()
         val ease = settle(dt, stretchSeconds)
         val rise = settle(dt, riseSeconds)
         val ids = target.walls.mapTo(HashSet()) { it.id }
@@ -472,7 +475,7 @@ class LiveWallMotion(
                 floorY += (target.floorY - floorY) * ease
                 if (abs(floorY - target.floorY) < DONE) floorY = target.floorY
             }
-            moved = true
+            if (drawn) moved = true
         }
         if (height != target.height) {
             height = if (height == 0f || abs(height - target.height) < DONE) {
