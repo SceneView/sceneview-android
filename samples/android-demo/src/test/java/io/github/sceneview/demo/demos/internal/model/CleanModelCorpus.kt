@@ -106,6 +106,10 @@ internal object CleanModelCorpus {
                     put("glb_bytes", s.glbBytes)
                     put("components", s.geometry.piecesOut)
                     put("atlas", if (s.atlasWidth > 0) "${s.atlasWidth}x${s.atlasHeight}" else "none")
+                    put("clean_input_triangles", s.cleanInputTriangles)
+                    put("simplify_target", s.simplifyTarget)
+                    s.droppedTextureShare?.let { put("dropped_texture_share", it) }
+                    put("prepare_ms", s.prepareMs)
                     put("clean_ms", s.cleanMs)
                     put("simplify_ms", s.simplifyMs)
                     put("texture_ms", s.textureMs)

@@ -21,6 +21,8 @@ internal class TextureAtlas(
     private val views: List<PhotoTexturing.View>,
     private val gains: FloatArray,
     private val label: IntArray,
+    /** Called between the levelling's sweeps: where a cancelled build stops. */
+    private val tick: () -> Unit = {},
 ) {
     class Built(
         val chart: IntArray,
@@ -72,10 +74,10 @@ internal class TextureAtlas(
             }
         }
         val seams = Seams()
-        val seamRaw = seams.step { cv -> seams.rawColor(cv) }
-        val seamExposed = seams.step { cv -> seams.atlasColor(cv) }
+        val seamRaw = seams.step(inAtlas = false)
+        val seamExposed = seams.step(inAtlas = true)
         seams.level()
-        val seamFinal = seams.step { cv -> seams.atlasColor(cv) }
+        val seamFinal = seams.step(inAtlas = true)
         var textured = 0.0
         var texelWeighted = 0.0
         for (f in 0 until faceCount) {
@@ -299,12 +301,6 @@ internal class TextureAtlas(
             byVertex.values.filter { it.size > 1 }.map { it.toIntArray() }
         }
 
-        /** The photo's own colour around chart-vertex [cv], no gain. */
-        fun rawColor(cv: Int): FloatArray {
-            val photo = views[chartView[chartOf[cv]]].photo
-            return box(photo, atX[cv] - HALF, atY[cv] - HALF, 1f)
-        }
-
         /** The atlas's colour around chart-vertex [cv]: what a viewer shows there. */
         fun atlasColor(cv: Int): FloatArray {
             val c = chartOf[cv]
@@ -313,21 +309,57 @@ internal class TextureAtlas(
 
         private val atlasPhoto get() = BakePhoto(ORIGIN, width, height, pixels)
 
-        /** The mean colour step (0–255, channels averaged) between the charts meeting at each shared vertex. */
-        fun step(color: (Int) -> FloatArray): Float {
+        /** Seam edges, as face × 3 + edge: the face's chart differs from the one across, counted once. */
+        private val edges: IntArray = run {
+            val list = ArrayList<Int>()
+            for (f in 0 until faceCount) {
+                if (chart[f] < 0) continue
+                for (k in 0 until 3) {
+                    val g = topology.neighbours[f * 3 + k]
+                    if (g > f && chart[g] >= 0 && chart[g] != chart[f]) list += f * 3 + k
+                }
+            }
+            list.toIntArray()
+        }
+
+        /**
+         * The mean colour step (0–255, channels averaged) across the seams, read on both sides at
+         * points along each seam edge — between its vertices, where [level] sets nothing outright:
+         * the photos' own colours with [inAtlas] false, the atlas's otherwise.
+         */
+        fun step(inAtlas: Boolean): Float {
             var sum = 0.0
             var n = 0
-            for (group in shared) {
-                val colors = group.map(color)
-                for (i in colors.indices) {
-                    for (j in i + 1 until colors.size) {
-                        sum += (abs(colors[i][0] - colors[j][0]) + abs(colors[i][1] - colors[j][1]) +
-                            abs(colors[i][2] - colors[j][2])) / 3.0
-                        n++
-                    }
+            for (e in edges) {
+                val f = e / 3
+                val next = f * 3 + (e % 3 + 1) % 3
+                val g = topology.neighbours[e]
+                val ga = cornerOf(g, mesh.indices[e])
+                val gb = cornerOf(g, mesh.indices[next])
+                for (t in SEAM_POINTS) {
+                    val p = colorAlong(chart[f], e, next, t, inAtlas)
+                    val q = colorAlong(chart[g], ga, gb, t, inAtlas)
+                    sum += (abs(p[0] - q[0]) + abs(p[1] - q[1]) + abs(p[2] - q[2])) / 3.0
+                    n++
                 }
             }
             return if (n == 0) 0f else (sum / n).toFloat()
+        }
+
+        private fun cornerOf(f: Int, vertex: Int): Int {
+            for (k in 0 until 3) if (mesh.indices[f * 3 + k] == vertex) return f * 3 + k
+            error("vertex $vertex is not a corner of face $f")
+        }
+
+        /** Chart [c]'s colour at [t] of the way from corner [from] to corner [to]. */
+        private fun colorAlong(c: Int, from: Int, to: Int, t: Float, inAtlas: Boolean): FloatArray {
+            val x = photoX[from] + (photoX[to] - photoX[from]) * t
+            val y = photoY[from] + (photoY[to] - photoY[from]) * t
+            return if (inAtlas) {
+                box(atlasPhoto, atlasX(c, x) - HALF, atlasY(c, y) - HALF, 1f)
+            } else {
+                box(views[chartView[c]].photo, x - HALF, y - HALF, 1f)
+            }
         }
 
         fun level() {
@@ -364,7 +396,8 @@ internal class TextureAtlas(
                     links[fillAt[a]++] = cornerId[f * 3 + (k + 2) % 3]
                 }
             }
-            repeat(DIFFUSE_ITERATIONS) {
+            repeat(DIFFUSE_ITERATIONS) { iteration ->
+                if (iteration % TICK_EVERY == 0) tick()
                 var change = 0f
                 for (cv in 0 until count) {
                     if (fixed[cv] || degree[cv + 1] == degree[cv]) continue
@@ -502,8 +535,8 @@ internal class TextureAtlas(
     }
 
     private companion object {
-        /** Texels of margin around each chart: bilinear filtering and the first mip levels stay inside. */
-        const val PAD = 2
+        /** Texels of margin around each chart: bilinear filtering stays inside down to the 4th mip level. */
+        const val PAD = 4
         const val MAX_SIZE = 2048
         val WIDTHS = intArrayOf(256, 512, 1024, 2048)
         const val ROW_ALIGN = 16
@@ -514,6 +547,8 @@ internal class TextureAtlas(
         const val BACKGROUND = 0xFF808080.toInt()
         const val DIFFUSE_ITERATIONS = 300
         const val DIFFUSE_SETTLED = 0.05f
+        const val TICK_EVERY = 25
+        val SEAM_POINTS = floatArrayOf(0.25f, 0.5f, 0.75f)
         const val GROW_PASSES = PAD + 2
         const val EDGE_SLACK = 0.02f
         const val MIN_TEXEL_AREA = 1e-6f

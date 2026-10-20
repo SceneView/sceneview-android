@@ -86,6 +86,7 @@ import io.github.sceneview.demo.demos.internal.DepthFrame
 import io.github.sceneview.demo.demos.internal.DollhouseFraming
 import io.github.sceneview.demo.demos.internal.DollhouseOpening
 import io.github.sceneview.demo.demos.internal.FramingInsets
+import io.github.sceneview.demo.demos.internal.MeshExtraction
 import io.github.sceneview.demo.demos.internal.RerunCapturePack
 import io.github.sceneview.demo.demos.internal.RerunGlbMesh
 import io.github.sceneview.demo.demos.internal.RerunMarchingCubes
@@ -106,6 +107,7 @@ import io.github.sceneview.demo.demos.internal.model.CleanModel
 import io.github.sceneview.demo.demos.internal.model.CleanModelResult
 import io.github.sceneview.demo.demos.internal.model.ModelPhoto
 import io.github.sceneview.demo.demos.internal.model.ModelPhotos
+import io.github.sceneview.demo.demos.internal.model.TexturedSyntheticRoom
 import io.github.sceneview.demo.isDemoCompactHeight
 import io.github.sceneview.demo.theme.LocalStageChrome
 import io.github.sceneview.demo.theme.SceneViewTokens
@@ -211,7 +213,9 @@ internal sealed interface RerunModelSource {
  * to the surfel map alone, so neither slows the other.
  */
 internal class RerunLiveModel(private val preset: ScanPreset = ScanPreset.ROOM) {
-    val tsdf = RerunTsdf(voxelM = preset.modelVoxelM)
+    /** The TSDF while it records; `null` once [keepFor] has handed it on, so only its slot holds it. */
+    @Volatile
+    private var tsdf: RerunTsdf? = RerunTsdf(voxelM = preset.modelVoxelM)
     private val busy = AtomicBoolean(false)
 
     @Volatile
@@ -219,6 +223,7 @@ internal class RerunLiveModel(private val preset: ScanPreset = ScanPreset.ROOM) 
 
     /** Integrates [frame] on [scope]'s Default dispatcher, unless an integration is under way. */
     fun offer(frame: DepthFrame, scope: CoroutineScope) {
+        val tsdf = tsdf ?: return
         if (!busy.compareAndSet(false, true)) return
         job = scope.launch(Dispatchers.Default) {
             try {
@@ -241,8 +246,13 @@ internal class RerunLiveModel(private val preset: ScanPreset = ScanPreset.ROOM) 
         job?.join()
     }
 
-    /** Keeps this TSDF for [pack], the scan it recorded, so its result can build the model. */
+    /**
+     * Keeps this TSDF for [pack], the scan it recorded, so its result can build the model, and
+     * lets go of it here: from now on the slot alone holds it, and the model's build can free it.
+     */
     fun keepFor(pack: RerunCapturePack?) {
+        val tsdf = tsdf ?: return
+        this.tsdf = null
         if (pack != null && tsdf.frames > 0) RerunLiveModels.keep(pack, tsdf)
     }
 }
@@ -284,28 +294,14 @@ internal class RerunModelBuild(
 /**
  * Meshes [source] — fuse (unless done), mesh, then finish ([CleanModel]): clean, simplify, texture
  * from its photos and write — reporting its share done to [progress]. A finish that fails writes
- * the raw surface instead.
+ * the raw surface instead; one that runs out of memory lets the error through, for the points.
  */
 internal fun buildRerunModel(source: RerunModelSource, progress: (Float) -> Unit): RerunModelBuild {
     val started = System.nanoTime()
-    val (tsdf, minWeight) = when (source) {
-        is RerunModelSource.Live -> checkNotNull(source.tsdf) { "TSDF released" } to LIVE_MIN_WEIGHT
-        is RerunModelSource.Surfels -> RerunTsdf().also { t ->
-            t.integrateSurfels(source.cloud) { progress(it * FUSE_SHARE) }
-        } to RerunMarchingCubes.DEFAULT_MIN_WEIGHT
-        is RerunModelSource.Synthetic -> RerunTsdf().also { t ->
-            val poses = RerunSyntheticRoom.poses()
-            poses.forEachIndexed { i, pose ->
-                t.integrate(RerunSyntheticRoom.scene.render(pose))
-                progress(FUSE_SHARE * (i + 1) / poses.size)
-            }
-        } to RerunMarchingCubes.DEFAULT_MIN_WEIGHT
-    }
-    val fused = System.nanoTime()
-    val base = if (source is RerunModelSource.Live) 0f else FUSE_SHARE
-    val extraction = RerunMarchingCubes.extractWhole(tsdf, minWeight) { progress(base + (MESH_SHARE - base) * it) }
+    val meshed = mesh(source, progress)
+    val extraction = meshed.extraction
     val mesh = extraction.mesh
-    val meshed = System.nanoTime()
+    val meshedAt = System.nanoTime()
     val photos = when (source) {
         is RerunModelSource.Live -> source.photos
         is RerunModelSource.Surfels -> source.photos
@@ -325,10 +321,10 @@ internal fun buildRerunModel(source: RerunModelSource, progress: (Float) -> Unit
         "model (${source::class.simpleName}): ${mesh.triangleCount} triangles, ${mesh.vertexCount} vertices " +
             "(${extraction.rawTriangles} raw, ${extraction.droppedComponents} pieces dropped, " +
             "capped ${extraction.capped}); " +
-            "fused ${(fused - started) / NS_PER_MS} ms, meshed ${(meshed - fused) / NS_PER_MS} ms, " +
-            "finished ${(done - meshed) / NS_PER_MS} ms (${finished?.stats ?: "raw surface"}); " +
-            "tsdf ${tsdf.frames} frames, ${tsdf.blockCount} blocks, ${tsdf.bytes / MB} MB, " +
-            "dropped ${tsdf.droppedBlocks}; " +
+            "fused ${meshed.fuseMs} ms, meshed ${(meshedAt - started) / NS_PER_MS - meshed.fuseMs} ms, " +
+            "finished ${(done - meshedAt) / NS_PER_MS} ms (${finished?.stats ?: "raw surface"}); " +
+            "tsdf ${meshed.frames} frames, ${meshed.blocks} blocks, ${meshed.bytes / MB} MB, " +
+            "dropped ${meshed.droppedBlocks}, ${if (meshed.released) "released" else "kept"}; " +
             "glb ${glb.size / KB} KB",
     )
     return RerunModelBuild(
@@ -337,21 +333,68 @@ internal fun buildRerunModel(source: RerunModelSource, progress: (Float) -> Unit
         triangles = finishedMesh?.triangleCount ?: mesh.triangleCount,
         vertices = finishedMesh?.vertexCount ?: mesh.vertexCount,
         buildMs = (done - started) / NS_PER_MS,
-        voxelBytes = tsdf.bytes,
-        budgetReached = tsdf.budgetReached,
+        voxelBytes = meshed.bytes,
+        budgetReached = meshed.droppedBlocks > 0,
     )
 }
 
-/** [mesh] finished by [CleanModel]; `null` (logged) when that fails — cancellation goes through. */
+/** [source]'s surface, and what its TSDF held — the TSDF itself is not kept past meshing. */
+private class Meshed(
+    val extraction: MeshExtraction,
+    val fuseMs: Long,
+    val frames: Int,
+    val blocks: Int,
+    val bytes: Long,
+    val droppedBlocks: Int,
+    val released: Boolean,
+)
+
+/**
+ * Fuses [source] (unless done) and meshes it. Nothing past this function holds the TSDF, so the
+ * finish's peak — the cleaning and the photos — never sits on top of its up to
+ * [RerunTsdf.MAX_BYTES]. A recording's TSDF that big is also let go from its slot: reopened
+ * without a model kept, the scan meshes its surfels instead.
+ */
+private fun mesh(source: RerunModelSource, progress: (Float) -> Unit): Meshed {
+    val started = System.nanoTime()
+    val tsdf = when (source) {
+        is RerunModelSource.Live -> checkNotNull(source.tsdf) { "TSDF released" }
+        is RerunModelSource.Surfels -> RerunTsdf().also { t ->
+            t.integrateSurfels(source.cloud) { progress(it * FUSE_SHARE) }
+        }
+        is RerunModelSource.Synthetic -> RerunTsdf().also { t ->
+            val poses = RerunSyntheticRoom.poses()
+            poses.forEachIndexed { i, pose ->
+                t.integrate(TexturedSyntheticRoom.scene.render(pose))
+                progress(FUSE_SHARE * (i + 1) / poses.size)
+            }
+        }
+    }
+    val fuseMs = (System.nanoTime() - started) / NS_PER_MS
+    // A surfel's weight counts surfels, each already seen in DenseFusion.MIN_VIEWS frames or more:
+    // the default keeps the lateral fade between two surfel columns. Depth frames count views.
+    val minWeight = if (source is RerunModelSource.Surfels) RerunMarchingCubes.DEFAULT_MIN_WEIGHT else FRAMES_MIN_WEIGHT
+    val base = if (source is RerunModelSource.Live) 0f else FUSE_SHARE
+    val extraction = RerunMarchingCubes.extractWhole(tsdf, minWeight) { progress(base + (MESH_SHARE - base) * it) }
+    val release = source is RerunModelSource.Live && tsdf.bytes >= tsdf.maxBytes / 2
+    if (release && source is RerunModelSource.Live) source.release()
+    return Meshed(extraction, fuseMs, tsdf.frames, tsdf.blockCount, tsdf.bytes, tsdf.droppedBlocks, release)
+}
+
+/**
+ * [mesh] finished by [CleanModel]; `null` (logged) when that fails — cancellation goes through, and
+ * so does running out of memory: writing the raw surface next, in a spent heap, would only fail
+ * again after the whole wait. The result then falls back to the points.
+ */
 private fun finish(mesh: RerunMesh, photos: ModelPhotos?, progress: (Float) -> Unit): CleanModelResult? =
     runCatching { CleanModel.build(mesh, photos, JpegAtlasEncoder, progress = progress) }
-        .onFailure { if (it is CancellationException) throw it }
+        .onFailure { if (it is CancellationException || it is OutOfMemoryError) throw it }
         .onFailure { Log.w(TAG, "finishing the model failed: the raw surface is kept", it) }
         .getOrNull()
 
 /** QA only: the ray-cast room's key photos, as a recording keeps them. */
 private fun syntheticPhotos(): ModelPhotos =
-    ModelPhotos(RerunSyntheticRoom.PHOTO_LENS, RerunSyntheticRoom.photos().map { shot -> ModelPhoto(shot.pose) { shot } })
+    ModelPhotos(TexturedSyntheticRoom.PHOTO_LENS, TexturedSyntheticRoom.photos().map { shot -> ModelPhoto(shot.pose) { shot } })
 
 /** The texture atlas as the `.glb` embeds it. */
 private object JpegAtlasEncoder : AtlasEncoder {
@@ -973,8 +1016,12 @@ private const val MB = 1024L * 1024L
 private const val KB = 1024
 private const val NS_PER_MS = 1_000_000L
 
-/** A live TSDF voxel meshes once two medium-confidence views (or one sure one) agree on it. */
-private const val LIVE_MIN_WEIGHT = 1f
+/**
+ * A depth-fused voxel meshes once two medium-confidence views (or one sure one) agree on it:
+ * twice the marching cubes' default, so the voxels seen once at the edge of the view or through
+ * a window leave no veil on the finished model.
+ */
+private const val FRAMES_MIN_WEIGHT = 1f
 private const val FUSE_SHARE = 0.3f
 
 /** Where meshing ends on the progress bar: finishing the model ([CleanModel]) takes the rest. */

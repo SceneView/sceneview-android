@@ -37,7 +37,10 @@ internal data class PhotoTextureStats(
     val texturedShare: Float,
     val gainMin: Float,
     val gainMax: Float,
-    /** Mean colour step (0–255) across chart seams: the photos as taken, after exposure, in the atlas. */
+    /**
+     * Mean colour step (0–255) across chart seams, read at points along each seam edge, between
+     * its vertices: the photos as taken, the atlas after exposure, the atlas after levelling.
+     */
     val seamRaw: Float,
     val seamExposed: Float,
     val seamFinal: Float,
@@ -49,7 +52,7 @@ internal data class PhotoTextureStats(
  * Texturing a cleaned mesh from the scan's key photos, on the phone, off the main thread:
  *
  * 1. Photos — at most [PhotoTexturing.MAX_PHOTOS], picked greedily for the surface they cover
- *    best, then decoded, and graded for sharpness (variance of the Laplacian).
+ *    best, then decoded, brought within [PhotoTexturing.MAX_PHOTO_PIXELS], and graded for sharpness (variance of the Laplacian).
  * 2. Views — each photo's depth buffer (the mesh rasterised at a quarter of its pixels) tells what
  *    it really sees; each face keeps its best few views, scored by facing, distance, centring and
  *    sharpness, with its mean colour in each.
@@ -68,7 +71,7 @@ internal object PhotoTexturing {
         progress(PROGRESS_CHOSEN)
         val views = chosen.mapNotNull { i ->
             val photo = photos.photos[i]
-            photo.load()?.takeIf { it.width > 1 && it.height > 1 }?.let { View(photo.pose, it, photos.lens) }
+            photo.load()?.takeIf { it.width > 1 && it.height > 1 }?.let { View(photo.pose, downscaled(it), photos.lens) }
         }
         if (views.isEmpty()) return null
         grade(views)
@@ -81,7 +84,7 @@ internal object PhotoTexturing {
         val topology = MeshTopology(mesh.vertexCount, mesh.indices)
         val label = labels(topology, candidates, faces.count)
         if (label.none { it >= 0 }) return null
-        val built = TextureAtlas(mesh, faces, topology, views, gains, label).build()
+        val built = TextureAtlas(mesh, faces, topology, views, gains, label) { progress(PROGRESS_SEEN) }.build()
         progress(1f)
         val (gainMin, gainMax) = gains.fold(Float.MAX_VALUE to 0f) { (lo, hi), g -> min(lo, g) to max(hi, g) }
         return PhotoTexture(
@@ -157,26 +160,94 @@ internal object PhotoTexturing {
         return picked
     }
 
+    /**
+     * [photo] within [MAX_PHOTO_PIXELS], by an integer box filter: the texture keeps up to
+     * [MAX_PHOTOS] at once, so their bytes, not only their number, stay bounded whatever size the
+     * recorder keeps them at (at most ~24 MB). A photo already that small is returned as is.
+     */
+    fun downscaled(photo: BakePhoto): BakePhoto {
+        val pixels = photo.width.toLong() * photo.height
+        if (pixels <= MAX_PHOTO_PIXELS) return photo
+        val k = ceil(sqrt(pixels.toDouble() / MAX_PHOTO_PIXELS)).toInt()
+        val w = max(1, photo.width / k)
+        val h = max(1, photo.height / k)
+        val argb = IntArray(w * h)
+        val n = k * k
+        for (y in 0 until h) {
+            for (x in 0 until w) {
+                var r = 0
+                var g = 0
+                var b = 0
+                for (dy in 0 until k) {
+                    val row = (y * k + dy) * photo.width + x * k
+                    for (dx in 0 until k) {
+                        val c = photo.argb[row + dx]
+                        r += c shr 16 and 0xFF
+                        g += c shr 8 and 0xFF
+                        b += c and 0xFF
+                    }
+                }
+                argb[y * w + x] = rgb(r / n, g / n, b / n)
+            }
+        }
+        return BakePhoto(photo.pose, w, h, argb)
+    }
+
+    /**
+     * The part of an upright photo the sensor covered: `PlaneBake` frames the photo with the
+     * lens, so the sensor's image fills it but for a strip a few pixels wide along an edge or
+     * two, where the principal point sits off centre — written black. The trace keeps no sensor
+     * intrinsics to place it, so the strip is read from the photo: whole rows or columns at an
+     * edge, within [MAX_STRIP_SHARE] of it, that are all but entirely near-black. A black sofa or
+     * a switched-off TV inside the picture is never cut, whatever its colour.
+     */
+    class SensorArea(val x0: Int, val y0: Int, val x1: Int, val y1: Int) {
+        /** Whether the bilinear footprint at pixel-centre ([fx], [fy]) lies on the sensor's image. */
+        fun covers(fx: Float, fy: Float): Boolean =
+            fx >= x0 && fy >= y0 && fx <= x1 && fy <= y1
+
+        companion object {
+            fun of(photo: BakePhoto): SensorArea {
+                val w = photo.width
+                val h = photo.height
+                fun offRow(y: Int) =
+                    (0 until w).count { outsideSensor(photo.argb[y * w + it]) } >= w * OFF_SENSOR_SHARE
+                fun offColumn(x: Int) =
+                    (0 until h).count { outsideSensor(photo.argb[it * w + x]) } >= h * OFF_SENSOR_SHARE
+                val maxRows = (h * MAX_STRIP_SHARE).toInt()
+                val maxColumns = (w * MAX_STRIP_SHARE).toInt()
+                var top = 0
+                while (top < maxRows && offRow(top)) top++
+                var bottom = 0
+                while (bottom < maxRows && offRow(h - 1 - bottom)) bottom++
+                var left = 0
+                while (left < maxColumns && offColumn(left)) left++
+                var right = 0
+                while (right < maxColumns && offColumn(w - 1 - right)) right++
+                return SensorArea(left, top, w - 1 - right, h - 1 - bottom)
+            }
+        }
+    }
+
     /** Sharpness: each photo's Laplacian variance against the median's, a weight in [MIN_SHARPNESS], 1. */
     private fun grade(views: List<View>) {
-        val variance = views.map { laplacianVariance(it.photo) }
+        val variance = views.map { laplacianVariance(it.photo, it.sensor) }
         val median = variance.sorted()[variance.size / 2].coerceAtLeast(MIN_AREA)
         views.forEachIndexed { i, view ->
             view.sharpness = sqrt(variance[i] / median).coerceIn(MIN_SHARPNESS, 1f)
         }
     }
 
-    private fun laplacianVariance(photo: BakePhoto): Float {
+    private fun laplacianVariance(photo: BakePhoto, sensor: SensorArea): Float {
         val w = photo.width
         val h = photo.height
         val luma = FloatArray(w * h) { luma(photo.argb[it]) }
         var sum = 0.0
         var sumSq = 0.0
         var n = 0
-        for (y in 1 until h - 1) {
-            for (x in 1 until w - 1) {
+        for (y in max(1, sensor.y0 + 1) until min(h - 1, sensor.y1)) {
+            for (x in max(1, sensor.x0 + 1) until min(w - 1, sensor.x1)) {
                 val i = y * w + x
-                if (outsideSensor(photo.argb[i])) continue
                 val l = 4f * luma[i] - luma[i - 1] - luma[i + 1] - luma[i - w] - luma[i + w]
                 sum += l
                 sumSq += l * l
@@ -492,6 +563,7 @@ internal object PhotoTexturing {
     /** A decoded photo, its camera, its sharpness weight and, once rasterised, its depth buffer. */
     class View(pose: DebugPose, val photo: BakePhoto, lens: ReplayLens) {
         val camera = Camera(pose, lens, photo.width, photo.height)
+        val sensor = SensorArea.of(photo)
         var sharpness = 1f
 
         /** Two pixels of margin, normalised: bilinear sampling never leaves the picture. */
@@ -522,8 +594,10 @@ internal object PhotoTexturing {
                     pz += (mesh.positions[v * 3 + 2] - cz) * PROBE_REACH
                 }
                 if (!camera.project(px, py, pz) || hidden()) return null
-                val c = sample(photo, camera.pixelX - HALF, camera.pixelY - HALF, rejectOutside = true)
-                if (c == 0) return null
+                val fx = camera.pixelX - HALF
+                val fy = camera.pixelY - HALF
+                if (!sensor.covers(fx, fy)) return null
+                val c = sample(photo, fx, fy)
                 r += c shr 16 and 0xFF
                 g += c shr 8 and 0xFF
                 b += c and 0xFF
@@ -542,8 +616,8 @@ internal object PhotoTexturing {
         }
     }
 
-    /** Bilinear sample at pixel-centre coordinates; with [rejectOutside], `0` where the sensor saw nothing. */
-    fun sample(photo: BakePhoto, fx: Float, fy: Float, rejectOutside: Boolean = false): Int {
+    /** Bilinear sample at pixel-centre coordinates, clamped to the photo. */
+    fun sample(photo: BakePhoto, fx: Float, fy: Float): Int {
         val x = fx.coerceIn(0f, photo.width - 1f)
         val y = fy.coerceIn(0f, photo.height - 1f)
         val x0 = x.toInt()
@@ -554,11 +628,6 @@ internal object PhotoTexturing {
         val c10 = photo.argb[y0 * photo.width + x1]
         val c01 = photo.argb[y1 * photo.width + x0]
         val c11 = photo.argb[y1 * photo.width + x1]
-        if (rejectOutside &&
-            (outsideSensor(c00) || outsideSensor(c10) || outsideSensor(c01) || outsideSensor(c11))
-        ) {
-            return 0
-        }
         val ax = x - x0
         val ay = y - y0
         fun channel(shift: Int): Int {
@@ -575,7 +644,7 @@ internal object PhotoTexturing {
     private fun luma(c: Int): Float =
         LUMA_R * (c shr 16 and 0xFF) + LUMA_G * (c shr 8 and 0xFF) + LUMA_B * (c and 0xFF)
 
-    /** The upright photo's corners the sensor did not cover are black, as `PlaneBake` reads them. */
+    /** Black as `PlaneBake` writes what the sensor did not cover, give or take the JPEG's noise. */
     private fun outsideSensor(c: Int): Boolean =
         (c shr 16 and 0xFF) <= OUTSIDE_SENSOR_LEVEL &&
             (c shr 8 and 0xFF) <= OUTSIDE_SENSOR_LEVEL &&
@@ -583,6 +652,11 @@ internal object PhotoTexturing {
 
     /** Photos decoded at most: ~60 photos of 240 × 320 are 18 MB of pixels. */
     const val MAX_PHOTOS = 60
+
+    /** A kept photo's pixels at most: 240 × 320 passes as is; 720 × 960 comes down to it. */
+    const val MAX_PHOTO_PIXELS = 100_000L
+    private const val OFF_SENSOR_SHARE = 0.98f
+    private const val MAX_STRIP_SHARE = 0.05f
     private const val MAX_CANDIDATES = 400
     private const val SAMPLE_FACES = 6000
     private const val GOOD_DISTANCE_M = 1.5f

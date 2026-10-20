@@ -33,6 +33,7 @@ internal object PlaneFlattening {
         maxAngleDeg: Float = GROW_ANGLE_DEG,
         maxDistanceM: Float = GROW_DISTANCE_M,
         maxSnapM: Float = MAX_SNAP_M,
+        tick: () -> Unit = {},
     ): Flattening {
         val n = mesh.triangleCount
         val faces = FaceGeometry(mesh.positions, mesh.indices)
@@ -40,6 +41,7 @@ internal object PlaneFlattening {
         if (n == 0) return Flattening(emptyList(), IntArray(0), 0f, 0f, 0)
         val topology = MeshTopology(mesh.vertexCount, mesh.indices)
         val label = grow(topology, faces, cos(Math.toRadians(maxAngleDeg.toDouble())).toFloat(), maxDistanceM)
+        tick()
         var regions = label.max() + 1
         val area = FloatArray(regions)
         for (t in 0 until n) area[label[t]] += faces.areas[t]
@@ -58,6 +60,7 @@ internal object PlaneFlattening {
             planes = (0 until regions).map { fit(faces, label, it) }
         }
         absorb(topology, faces, label, planes)
+        tick()
         val snapped = snap(mesh, topology, faces, label, planes, maxSnapM)
         var flatArea = 0f
         for (t in 0 until n) if (label[t] >= 0) flatArea += faces.areas[t]
@@ -76,11 +79,18 @@ internal object PlaneFlattening {
             }
             flatness[t] = worst
         }
-        val order = (0 until n).sortedByDescending { flatness[it] }
+        // Flattest first, ties by index: one primitive sort, no boxed index per face.
+        val order = LongArray(n) { t ->
+            val bits = flatness[t].toRawBits()
+            val sortable = bits xor ((bits shr 31) and Int.MAX_VALUE)
+            (sortable.inv().toLong() shl 32) or t.toLong()
+        }
+        order.sort()
         val label = IntArray(n) { -1 }
         val queue = IntArray(n)
         var regions = 0
-        for (seed in order) {
+        for (key in order) {
+            val seed = (key and LOW_INT).toInt()
             if (label[seed] >= 0) continue
             val id = regions++
             var head = 0
@@ -503,6 +513,7 @@ internal object PlaneFlattening {
     const val GRAVITY_SNAP_DEG = 4.0
 
     private const val RELAX_PASSES = 12
+    private const val LOW_INT = 0xFFFFFFFFL
     private const val ABSORB_ANGLE_DEG = 45.0
     private const val ABSORB_DISTANCE_M = 0.02f
     private const val MERGE_ANGLE_DEG = 5.0

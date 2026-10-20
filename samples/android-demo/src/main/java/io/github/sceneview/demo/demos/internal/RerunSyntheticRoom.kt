@@ -229,7 +229,7 @@ object RerunSyntheticRoom {
             when {
                 y < SURFACE -> floor(x, z)
                 y > 2.6f - SURFACE -> CEILING
-                z < -1.8f + SURFACE -> poster(x, y) ?: SAGE
+                z < -1.8f + SURFACE -> SAGE
                 else -> WALL
             }
         }
@@ -253,46 +253,9 @@ object RerunSyntheticRoom {
 
     private fun floor(x: Float, z: Float): Int {
         if (x in -1.2f..0.9f && z in -0.9f..1.1f) return if (x in -1.1f..0.8f && z in -0.8f..1.0f) RUG else RUG_EDGE
-        val along = (x + 2f) / PLANK_M
-        val plank = along.toInt()
-        if ((along - plank) * PLANK_M < SEAM_M) return SEAM
+        val plank = ((x + 2f) / PLANK_M).toInt()
         return if (plank % 2 == 0) OAK else OAK_DARK
     }
-
-    /** A framed print on the sage wall, its 5 cm checks finer than the model's voxels: a photo's detail. */
-    private fun poster(x: Float, y: Float): Int? {
-        if (x !in POSTER_X0..POSTER_X1 || y !in POSTER_Y0..POSTER_Y1) return null
-        val inset = minOf(x - POSTER_X0, POSTER_X1 - x, y - POSTER_Y0, POSTER_Y1 - y)
-        if (inset < FRAME_M) return FRAME
-        val check = ((x - POSTER_X0) / CHECK_M).toInt() + ((y - POSTER_Y0) / CHECK_M).toInt()
-        return if (check % 2 == 0) PRINT_LIGHT else PRINT_DARK
-    }
-
-    /** The key photos' lens: upright [PHOTO_WIDTH] × [PHOTO_HEIGHT], a phone's ~63° tall view. */
-    val PHOTO_LENS = ReplayLens(PHOTO_WIDTH / 2f / PHOTO_FOCAL, PHOTO_HEIGHT / 2f / PHOTO_FOCAL)
-
-    /**
-     * The walk's key photos: every [every]th of [poses], ray-cast upright through [PHOTO_LENS],
-     * each with its own exposure — up to [exposureSpread] brighter or darker, as a phone's auto
-     * exposure drifts across a room — so a texture has seams to level.
-     */
-    fun photos(every: Int = PHOTO_EVERY, exposureSpread: Float = EXPOSURE_SPREAD): List<BakePhoto> =
-        poses().filterIndexed { i, _ -> i % every == 0 }.mapIndexed { i, pose ->
-            // Pixel centres at half-pixels: the mapping a photo is projected with (PlaneBake).
-            val frame = scene.render(
-                pose, PHOTO_WIDTH, PHOTO_HEIGHT, PHOTO_FOCAL, PHOTO_FOCAL,
-                PHOTO_WIDTH / 2f - HALF_PIXEL, PHOTO_HEIGHT / 2f - HALF_PIXEL,
-            )
-            val gain = 1f + exposureSpread * sin(i * EXPOSURE_STEP)
-            val argb = IntArray(frame.colors.size) { p ->
-                val c = frame.colors[p]
-                val r = ((c shr 16 and 0xFF) * gain).toInt().coerceIn(0, 255)
-                val g = ((c shr 8 and 0xFF) * gain).toInt().coerceIn(0, 255)
-                val b = ((c and 0xFF) * gain).toInt().coerceIn(0, 255)
-                (0xFF shl 24) or (r shl 16) or (g shl 8) or b
-            }
-            BakePhoto(pose, PHOTO_WIDTH, PHOTO_HEIGHT, argb)
-        }
 
     /** Where the scan stands: three spots a walk around the furnished room stops at. */
     val STOPS = listOf(Vec3(0f, 1.4f, 0.6f), Vec3(-0.7f, 1.3f, 0.2f), Vec3(0.7f, 1.5f, 1.1f))
@@ -303,20 +266,6 @@ object RerunSyntheticRoom {
     private const val LEG = 0.03f
     private const val PLANK_M = 0.18f
     private const val DRAWER_MM = 400
-    private const val SEAM_M = 0.008f
-    private const val POSTER_X0 = 0.2f
-    private const val POSTER_X1 = 1.4f
-    private const val POSTER_Y0 = 1.1f
-    private const val POSTER_Y1 = 1.9f
-    private const val FRAME_M = 0.03f
-    private const val CHECK_M = 0.05f
-    const val PHOTO_WIDTH = 240
-    const val PHOTO_HEIGHT = 320
-    private const val PHOTO_FOCAL = 260f
-    private const val PHOTO_EVERY = 3
-    private const val EXPOSURE_SPREAD = 0.12f
-    private const val EXPOSURE_STEP = 1.7f
-    private const val HALF_PIXEL = 0.5f
 
     // Scene content, not UI: the colours of the things in the room.
     private const val OAK = 0xFFB08457.toInt()
@@ -333,10 +282,6 @@ object RerunSyntheticRoom {
     private const val CABINET = 0xFFD9CBB2.toInt()
     private const val CABINET_DARK = 0xFFC7B79C.toInt()
     private const val BALL = 0xFFE39A2D.toInt()
-    private const val SEAM = 0xFF5C4128.toInt()
-    private const val FRAME = 0xFF2B2B2B.toInt()
-    private const val PRINT_LIGHT = 0xFFF1E3C6.toInt()
-    private const val PRINT_DARK = 0xFF2F4F6F.toInt()
 }
 
 /**

@@ -24,7 +24,17 @@ internal data class CleanGeometryStats(
 internal object CleanGeometry {
     fun of(mesh: RerunMesh): WorkMesh = WorkMesh(mesh.positions.copyOf(), mesh.colors.copyOf(), mesh.indices.copyOf())
 
+    /**
+     * The most triangles [clean] takes. Each step rebuilds a face table, a topology and a grid
+     * over the whole mesh, a few hundred bytes a triangle at peak: past this, a phone's heap is
+     * at risk, so [CleanModel] brings a bigger surface down to [CleanModel.CLEAN_INPUT_TRIANGLES]
+     * first.
+     */
+    const val MAX_TRIANGLES = 500_000
+
+    /** [raw] cleaned; [progress] (0–1) is told after each step and pass, and may throw to stop it. */
     fun clean(raw: WorkMesh, progress: (Float) -> Unit = {}): Pair<WorkMesh, CleanGeometryStats> {
+        require(raw.triangleCount <= MAX_TRIANGLES) { "${raw.triangleCount} triangles: clean takes $MAX_TRIANGLES" }
         val trianglesIn = raw.triangleCount
         val piecesIn = MeshCleanup.pieces(raw)
         var (mesh, dropped) = MeshCleanup.removeSmallPieces(raw)
@@ -38,9 +48,9 @@ internal object CleanGeometry {
             dropped += more
         }
         progress(PROGRESS_DOUBLED)
-        MeshCleanup.smooth(mesh)
+        MeshCleanup.smooth(mesh) { progress(PROGRESS_DOUBLED) }
         progress(PROGRESS_SMOOTH)
-        val flattening = PlaneFlattening.flatten(mesh)
+        val flattening = PlaneFlattening.flatten(mesh) { progress(PROGRESS_SMOOTH) }
         progress(PROGRESS_PLANES)
         val (filled, holes) = MeshCleanup.fillSmallHoles(mesh)
         mesh = filled

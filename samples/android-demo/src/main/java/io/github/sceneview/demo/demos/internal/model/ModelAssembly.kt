@@ -112,6 +112,7 @@ internal object ModelAssembly {
                     }
                 }
                 if (chosen < 0) chosen = groups++
+                check(chosen < 1 shl KEY_CHART_SHIFT) { "vertex $v: more smoothing groups than its key holds" }
                 val o = (start + chosen) * 3
                 val area = faces.areas[t]
                 normal[o] += faces.normals[t * 3] * area

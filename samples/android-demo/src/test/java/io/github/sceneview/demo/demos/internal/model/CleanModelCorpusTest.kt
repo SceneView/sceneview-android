@@ -6,7 +6,6 @@ import io.github.sceneview.demo.demos.internal.ArDebugEvent
 import io.github.sceneview.demo.demos.internal.DenseFusion
 import io.github.sceneview.demo.demos.internal.DepthBackProjection
 import io.github.sceneview.demo.demos.internal.RerunScanFile
-import io.github.sceneview.demo.demos.internal.RerunSyntheticRoom
 import io.github.sceneview.demo.demos.internal.ScanDevice
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
@@ -96,7 +95,7 @@ class CleanModelCorpusTest {
      * its key photos, and its dense surfels fused from the walk's depth.
      */
     private fun syntheticRecording() = runBlocking {
-        val shots = RerunSyntheticRoom.photos()
+        val shots = TexturedSyntheticRoom.photos()
         val events = ArrayList<ArDebugEvent>()
         val photos = shots.mapIndexed { i, shot ->
             val nanos = (i + 1) * FRAME_NANOS
@@ -106,10 +105,10 @@ class CleanModelCorpusTest {
             ScanPhoto(path, JvmImages.jpeg(shot.argb, shot.width, shot.height), shot.pose)
         }
         val fusion = DenseFusion()
-        RerunSyntheticRoom.frames().forEach { fusion.add(DepthBackProjection.project(it)) }
+        TexturedSyntheticRoom.frames().forEach { fusion.add(DepthBackProjection.project(it)) }
         RerunCaptureBuilder.build(
             events = events,
-            lens = RerunSyntheticRoom.PHOTO_LENS,
+            lens = TexturedSyntheticRoom.PHOTO_LENS,
             photos = photos,
             device = ScanDevice("android", "synthetic", ScanDevice.TIER_DEPTH, ScanDevice.SOURCE_RAW_DEPTH),
             dense = fusion.cloud(minViews = DenseFusion.MIN_VIEWS),

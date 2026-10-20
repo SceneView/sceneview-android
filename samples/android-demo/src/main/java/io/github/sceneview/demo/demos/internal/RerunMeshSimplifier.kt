@@ -27,8 +27,9 @@ import kotlin.math.sqrt
  * every edge again for a handful of triangles.
  * Target is best effort: boundaries, topology and colour take priority over the triangle budget.
  * Storage: [workspaceBytes] of primitive working arrays, plus input/output and array headers.
- * Typical 400k-T / 200k-V scan: ~53 MiB workspace; the extraction's cap (1.5 M triangles) would
- * take ~200 MiB, more than a phone's heap gives — ask [workspaceBytes] before calling.
+ * Typical 400k-T / 200k-V scan: ~53 MiB workspace; the extraction's cap
+ * ([RerunMarchingCubes.MAX_TRIANGLES], ~0.5 M vertices) would take ~137 MiB, more than a phone's
+ * heap gives — ask [workspaceBytes] before calling.
  * Time: O(S * (T log T + T d²)), S <= 64, d local vertex valence (normally ~6).
  */
 internal object RerunMeshSimplifier {
@@ -40,9 +41,12 @@ internal object RerunMeshSimplifier {
      * [progress] is told the share done, 0–1, a few times a second; a caller stops the work by
      * throwing from it (a coroutine's `ensureActive()`), which leaves nothing behind.
      * No collapse leaves an edge longer than [maxEdgeM]: a textured model's faces must each fit
-     * in one photo. None moves the surface more than [maxErrorM] off any of the planes it merges
-     * (the quadric's error): a flat wall goes down to a few large faces, a cushion keeps its curve,
-     * and the result may stay well under [targetTriangles].
+     * in one photo. A collapse is refused when its cost passes [maxErrorM]²: the cost is the sum
+     * of the squared distances from the new vertex to every plane its quadric gathered (plus the
+     * colour charge above), so each single distance stays under [maxErrorM], and a curved patch,
+     * whose planes disagree, stops sooner than one plane would make it. A flat wall goes down to
+     * a few large faces, a cushion keeps its curve, and the result may stay well above
+     * [targetTriangles]: the caller logs what it reached.
      */
     fun simplify(
         mesh: RerunMesh,

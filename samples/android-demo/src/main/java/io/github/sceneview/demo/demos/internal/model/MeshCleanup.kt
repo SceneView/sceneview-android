@@ -214,13 +214,15 @@ internal object MeshCleanup {
      * Smooths depth noise out of the surface without rounding its edges: each triangle's normal
      * is replaced by a blend of its neighbours' that ignores the ones turned away from it
      * (a bilateral filter on normals), then the vertices move to fit the filtered normals. A
-     * wall's ripple goes; the crease where it meets the floor stays sharp. In place.
+     * wall's ripple goes; the crease where it meets the floor stays sharp. In place. [tick] runs
+     * after each pass, so a caller can stop the work by throwing from it.
      */
     fun smooth(
         mesh: WorkMesh,
         normalPasses: Int = SMOOTH_NORMAL_PASSES,
         vertexPasses: Int = SMOOTH_VERTEX_PASSES,
         sharpness: Float = SMOOTH_NORMAL_SIGMA,
+        tick: () -> Unit = {},
     ) {
         val n = mesh.triangleCount
         if (n == 0) return
@@ -266,10 +268,12 @@ internal object MeshCleanup {
             val swap = normals
             normals = next
             next = swap
+            tick()
         }
         val p = mesh.positions
         val moved = FloatArray(p.size)
         repeat(vertexPasses) {
+            tick()
             faces.update()
             for (v in 0 until mesh.vertexCount) {
                 val start = topology.vertexStart[v]
@@ -613,6 +617,8 @@ internal class TriangleGrid(positions: FloatArray, indices: IntArray, private va
 
     init {
         val n = indices.size / 3
+        // A key keeps the triangle in its low TRIANGLE_BITS: past that, two triangles would share one.
+        require(n <= 1 shl TRIANGLE_BITS) { "$n triangles: the grid keys hold ${1 shl TRIANGLE_BITS}" }
         var entries = LongArray(n * 2)
         var count = 0
         for (t in 0 until n) {

@@ -29,15 +29,15 @@ class CleanModelSyntheticTest {
     @Test
     fun `the synthetic room comes out textured, sharper and lighter than its raw model`() {
         val tsdf = RerunTsdf()
-        RerunSyntheticRoom.frames().forEach { tsdf.integrate(it) }
+        TexturedSyntheticRoom.frames().forEach { tsdf.integrate(it) }
 
         val beforeStart = System.nanoTime()
         val raw = RerunMarchingCubes.extractWhole(tsdf, RerunMarchingCubes.DEFAULT_MIN_WEIGHT).mesh
         val beforeGlb = RerunMeshGlb.write(raw)
         val beforeMs = (System.nanoTime() - beforeStart) / NANOS_PER_MS
 
-        val shots = RerunSyntheticRoom.photos()
-        val photos = ModelPhotos(RerunSyntheticRoom.PHOTO_LENS, shots.map { shot -> ModelPhoto(shot.pose) { shot } })
+        val shots = TexturedSyntheticRoom.photos()
+        val photos = ModelPhotos(TexturedSyntheticRoom.PHOTO_LENS, shots.map { shot -> ModelPhoto(shot.pose) { shot } })
         val result = CleanModel.build(raw, photos, JvmAtlasEncoder)
         val stats = result.stats
         val texture = checkNotNull(stats.texture) { "the room's photos should texture it" }
@@ -63,9 +63,9 @@ class CleanModelSyntheticTest {
             }
         }
 
-        println(
-            "clean model, synthetic room (${shots.size} photos ${RerunSyntheticRoom.PHOTO_WIDTH}x" +
-                "${RerunSyntheticRoom.PHOTO_HEIGHT}):\n" +
+        val report = (
+            "clean model, synthetic room (${shots.size} photos ${TexturedSyntheticRoom.PHOTO_WIDTH}x" +
+                "${TexturedSyntheticRoom.PHOTO_HEIGHT}):\n" +
                 "  before: ${raw.triangleCount} triangles, ${raw.vertexCount} vertices, " +
                 "glb ${beforeGlb.size / KB} KB, ${beforeMs} ms, colour error $rawError\n" +
                 "  after:  ${stats.finalTriangles} triangles (${stats.simplifiedTriangles} simplified), " +
@@ -80,11 +80,16 @@ class CleanModelSyntheticTest {
                 "textured ${"%.1f".format(texture.texturedShare * 100f)}%, gains ${"%.2f".format(texture.gainMin)}.." +
                 "${"%.2f".format(texture.gainMax)}, seams ${"%.1f".format(texture.seamRaw)} -> " +
                 "${"%.1f".format(texture.seamExposed)} -> ${"%.1f".format(texture.seamFinal)}, " +
-                "${"%.0f".format(texture.texelsPerMetre)} texels/m (${"%.2f".format(CM_PER_M / texture.texelsPerMetre)} cm/texel)",
+                "${"%.0f".format(texture.texelsPerMetre)} texels/m (${"%.2f".format(CM_PER_M / texture.texelsPerMetre)} cm/texel)"
         )
+        println(report)
 
         assertTrue("textured share ${texture.texturedShare}", texture.texturedShare > MIN_TEXTURED_SHARE)
-        assertTrue("seams ${texture.seamRaw} -> ${texture.seamFinal}", texture.seamFinal < texture.seamRaw)
+        // Read along the seam edges, between the vertices the levelling pins: what a viewer sees.
+        assertTrue(
+            "seams ${texture.seamRaw} -> ${texture.seamExposed} -> ${texture.seamFinal}",
+            texture.seamFinal < texture.seamRaw && texture.seamFinal < texture.seamExposed,
+        )
         assertTrue("triangles ${stats.finalTriangles}", stats.finalTriangles < raw.triangleCount / 2)
         assertTrue("glb ${stats.glbBytes} vs ${beforeGlb.size}", stats.glbBytes < beforeGlb.size)
         // The photos' detail: the poster's checks and the floor's seams, finer than a voxel.
@@ -93,7 +98,7 @@ class CleanModelSyntheticTest {
         // The photos' exposures differ by up to ±12 %, the depth's colours not at all: levelled,
         // what is left on the plain walls stays within a couple of percent of the paint.
         assertTrue("overall $afterError", afterError.matched < MAX_MATCHED_ERROR)
-        assertTrue("${stats.totalMs} ms", stats.totalMs < BUDGET_MS)
+        assertTrue("${stats.totalMs} ms", stats.totalMs < DEV_JVM_BUDGET_MS)
 
         assertEquals(emptyList<String>(), GlbCheck.problems(result.glb))
         assertEquals(emptyList<String>(), GlbCheck.problems(beforeGlb))
@@ -122,12 +127,13 @@ class CleanModelSyntheticTest {
         assertEquals(0.0, (min[0] + max[0]) / 2 + translation[0], FLOOR_TOLERANCE)
         assertEquals(0.0, (min[2] + max[2]) / 2 + translation[2], FLOOR_TOLERANCE)
         assertEquals(result.glb.size.toDouble(), shared.glb.size.toDouble(), SHARE_GROWTH_BYTES)
+        org.junit.Assert.fail("PROBE $report | $stats")
     }
 
     @Test
     fun `without photos the model keeps its vertex colours, cleaned and simplified`() {
         val tsdf = RerunTsdf()
-        RerunSyntheticRoom.frames().forEach { tsdf.integrate(it) }
+        TexturedSyntheticRoom.frames().forEach { tsdf.integrate(it) }
         val raw = RerunMarchingCubes.extractWhole(tsdf, RerunMarchingCubes.DEFAULT_MIN_WEIGHT).mesh
         val result = CleanModel.build(raw, photos = null, encoder = null)
         assertEquals(null, result.stats.texture)
@@ -229,7 +235,7 @@ class CleanModelSyntheticTest {
         val wall = z < min.z + SHELL_M || z > max.z - SHELL_M || x < min.x + SHELL_M || x > max.x - SHELL_M
         return when {
             // The poster's 5 cm checks, and the floor's 8 mm plank seams.
-            z < min.z + SHELL_M && x in POSTER_X && y in POSTER_Y -> Part.DETAIL
+            z < min.z + SHELL_M && TexturedSyntheticRoom.onPoster(x, y) -> Part.DETAIL
             y < SHELL_M -> Part.FLOOR
             wall || y > max.y - SHELL_M -> Part.WALLS
             else -> Part.FURNITURE
@@ -246,7 +252,7 @@ class CleanModelSyntheticTest {
         val oz = z + nz * LIFT_M
         var best = Float.POSITIVE_INFINITY
         var color: Int? = null
-        for (s in RerunSyntheticRoom.scene.shapes) {
+        for (s in TexturedSyntheticRoom.scene.shapes) {
             val t = s.hit(ox, oy, oz, -nx, -ny, -nz)
             if (t < best) {
                 best = t
@@ -288,8 +294,6 @@ class CleanModelSyntheticTest {
         val ORIGIN = DebugPose(0f, 0f, 0f)
         const val LIFT_M = 0.05f
         const val SHELL_M = 0.03f
-        val POSTER_X = 0.2f..1.4f
-        val POSTER_Y = 1.1f..1.9f
         const val MAX_MISS_M = 0.04f
         const val HALF = 0.5f
         const val KB = 1024
@@ -298,7 +302,12 @@ class CleanModelSyntheticTest {
         const val MIN_TEXTURED_SHARE = 0.9f
         const val DETAIL_GAIN = 0.5
         const val MAX_MATCHED_ERROR = 8.0
-        const val BUDGET_MS = 20_000L
+
+        /**
+         * A desktop JVM's ceiling, a guard against a slower algorithm: not the phone's budget.
+         * A mid-range phone runs this several times slower; its time is measured on the device.
+         */
+        const val DEV_JVM_BUDGET_MS = 20_000L
     }
 }
 
