@@ -1,5 +1,6 @@
 package io.github.sceneview.demo.demos.internal.model
 
+import io.github.sceneview.demo.demos.internal.DenseCloud
 import io.github.sceneview.demo.demos.internal.RerunMesh
 import io.github.sceneview.demo.demos.internal.RerunMeshGlb
 import kotlinx.serialization.json.Json
@@ -41,10 +42,22 @@ class CleanModelRealScanTest {
     }
 
     @Test
+    fun `a corner scanned alone never comes out heavier than its raw surface`() {
+        // A small scan, as the recordings of a corner are: the atlas outweighs the triangles saved.
+        val raw = crop(RealScanRoom.raw(furnished = true), CORNER)
+        val rawGlb = RerunMeshGlb.write(raw)
+        val result = CleanModel.build(raw, RealScanRoom.modelPhotos(furnished = true), JvmAtlasEncoder)
+        val stats = result.stats
+        val report = "corner: raw ${raw.triangleCount} triangles, glb ${rawGlb.size / KB} KB -> " +
+            "${stats.finalTriangles} triangles, glb ${result.glb.size / KB} KB, atlas ${stats.atlasWidth}x${stats.atlasHeight}" +
+            ", textured ${stats.texture?.let { percent(it.texturedShare) } ?: "none"}"
+        println(report)
+        assertTrue("glb ${result.glb.size} > raw ${rawGlb.size} | $report", result.glb.size <= rawGlb.size)
+        assertTrue("glb: ${GlbCheck.problems(result.glb)} | $report", GlbCheck.problems(result.glb).isEmpty())
+    }
+
+    @Test
     fun `the furnished room finishes within a 192 MB heap`() {
-        val raw = RealScanRoom.raw(furnished = true)
-        val meshFile = folder.newFile("room.mesh")
-        RealScanRoom.writeMesh(raw, meshFile)
         val log = folder.newFile("finish.log")
         val java = File(File(System.getProperty("java.home"), "bin"), "java").path
         val classpath = (
@@ -54,13 +67,13 @@ class CleanModelRealScanTest {
             ).filter { it.isNotEmpty() }.distinct().joinToString(File.pathSeparator)
         val process = ProcessBuilder(
             java, "-Xmx${HeapCappedFinish.HEAP_MB}m", "-XX:+UseSerialGC", "-Djava.awt.headless=true",
-            "-cp", classpath, HeapCappedFinish::class.java.name, meshFile.path,
+            "-cp", classpath, HeapCappedFinish::class.java.name,
         ).redirectErrorStream(true).redirectOutput(log).start()
         val done = process.waitFor(CHILD_TIMEOUT_S, TimeUnit.SECONDS)
         if (!done) process.destroyForcibly().waitFor()
         val output = log.readText()
-        val tail = "furnished room in ${HeapCappedFinish.HEAP_MB} MB (${raw.triangleCount} raw triangles): " +
-            output.takeLast(LOG_TAIL)
+        val tail = "furnished room in ${HeapCappedFinish.HEAP_MB} MB: " + output.takeLast(LOG_TAIL)
+        println(tail)
         assertTrue("timed out after $CHILD_TIMEOUT_S s: $tail", done)
         assertEquals(tail, 0, process.exitValue())
         assertTrue(tail, output.contains(HeapCappedFinish.FINISHED))
@@ -268,6 +281,39 @@ class CleanModelRealScanTest {
         return sqrt(max(0.0, squares / w - mean * mean)).toFloat()
     }
 
+    /** [mesh]'s faces whose centroid lies in [box], their vertices renumbered. */
+    private fun crop(mesh: RerunMesh, box: Box): RerunMesh {
+        val remap = IntArray(mesh.vertexCount) { -1 }
+        val kept = mutableListOf<Int>()
+        var vertices = 0
+        for (t in 0 until mesh.indices.size / 3) {
+            val corners = (0 until 3).map { mesh.indices[t * 3 + it] }
+            val inside = (0 until 3).all { axis ->
+                val c = corners.sumOf { mesh.positions[it * 3 + axis].toDouble() } / 3.0
+                c >= box.lo(axis) && c <= box.hi(axis)
+            }
+            if (!inside) continue
+            for (v in corners) {
+                if (remap[v] < 0) remap[v] = vertices++
+                kept += remap[v]
+            }
+        }
+        val positions = FloatArray(vertices * 3)
+        val normals = FloatArray(vertices * 3)
+        val colors = IntArray(vertices)
+        for (v in 0 until mesh.vertexCount) {
+            val to = remap[v]
+            if (to < 0) continue
+            mesh.positions.copyInto(positions, to * 3, v * 3, v * 3 + 3)
+            mesh.normals.copyInto(normals, to * 3, v * 3, v * 3 + 3)
+            colors[to] = mesh.colors[v]
+        }
+        return RerunMesh(positions, normals, colors, kept.toIntArray())
+    }
+
+    private fun Box.lo(axis: Int) = when (axis) { 0 -> x0; 1 -> y0; else -> z0 }
+    private fun Box.hi(axis: Int) = when (axis) { 0 -> x1; 1 -> y1; else -> z1 }
+
     private fun codeSource(type: Class<*>): String? =
         runCatching { File(type.protectionDomain.codeSource.location.toURI()).path }.getOrNull()
 
@@ -327,6 +373,9 @@ class CleanModelRealScanTest {
         const val SEAT_Z0 = -3.05f
         const val SEAT_Z1 = -2.66f
 
+        /** The sofa's corner of the room, about a metre and a half across. */
+        val CORNER = Box(-2.6f, -0.1f, -3.6f, -1.0f, 1.4f, -2.0f)
+
         const val CHILD_TIMEOUT_S = 300L
         const val LOG_TAIL = 4000
     }
@@ -334,22 +383,28 @@ class CleanModelRealScanTest {
 
 /**
  * The finish of [CleanModelRealScanTest]'s furnished room in a JVM of its own, its heap capped
- * at a mid-range phone's ([HEAP_MB], a Pixel 4a's `dalvik.vm.heapgrowthlimit`). What the app
- * holds meanwhile stays live too: [APP_BYTES] for the rest of the app, the raw surface, and its
- * `.glb`, shown while the finish runs. Prints [FINISHED] and its figures when it fits.
+ * at a mid-range phone's ([HEAP_MB], a Pixel 4a's `dalvik.vm.heapgrowthlimit`). What the result
+ * screen holds meanwhile stays live too: [APP_BYTES] for the rest of the app, the recording's TSDF
+ * and dense cloud ([CLOUD_POINTS_PER_TRIANGLE] points per raw triangle, as the recordings have),
+ * the raw surface, and its `.glb`, shown while the finish runs. Prints [FINISHED] and its figures
+ * when it fits.
  */
 object HeapCappedFinish {
     const val FINISHED = "FINISHED"
     const val HEAP_MB = 192
     private const val APP_BYTES = 32 * 1024 * 1024
+    private const val CLOUD_POINTS_PER_TRIANGLE = 0.85f
     private const val MB = 1024 * 1024
     private const val SAMPLE_MS = 20L
     private const val NANOS_PER_MS = 1_000_000L
 
     @JvmStatic
-    fun main(args: Array<String>) {
+    fun main(@Suppress("UNUSED_PARAMETER") args: Array<String>) {
         val app = ByteArray(APP_BYTES)
-        val raw: RerunMesh = RealScanRoom.readMesh(File(args[0]))
+        val scan = RealScanRoom.scan(furnished = true)
+        val tsdf = scan.tsdf
+        val raw: RerunMesh = scan.mesh
+        val cloud = cloudOf(raw, (raw.triangleCount * CLOUD_POINTS_PER_TRIANGLE).toInt())
         val rawGlb = RerunMeshGlb.write(raw)
         val runtime = Runtime.getRuntime()
         val peak = AtomicLong()
@@ -365,10 +420,25 @@ object HeapCappedFinish {
         val ms = (System.nanoTime() - start) / NANOS_PER_MS
         println(
             "$FINISHED ${raw.triangleCount} -> ${result.stats.finalTriangles} triangles, " +
-                "glb ${result.glb.size / 1024} KB (raw ${rawGlb.size / 1024} KB), " +
-                "peak used ${peak.get() / MB} MB of $HEAP_MB, $ms ms, app ${app.size / MB} MB held",
+                "glb ${result.glb.size / MB.toFloat()} MB (raw ${rawGlb.size / MB.toFloat()} MB), " +
+                "peak used ${peak.get() / MB} MB of $HEAP_MB, $ms ms; held: app ${app.size / MB} MB, " +
+                "tsdf ${tsdf.bytes / MB} MB, cloud ${cloud.count} points",
         )
         System.out.flush()
         exitProcess(0)
+    }
+
+    /** A dense cloud of [points] points on [mesh]'s vertices, as large as a recording's. */
+    private fun cloudOf(mesh: RerunMesh, points: Int): DenseCloud {
+        val positions = FloatArray(points * 3)
+        val normals = FloatArray(points * 3)
+        val colors = IntArray(points)
+        for (p in 0 until points) {
+            val v = p % mesh.vertexCount
+            mesh.positions.copyInto(positions, p * 3, v * 3, v * 3 + 3)
+            mesh.normals.copyInto(normals, p * 3, v * 3, v * 3 + 3)
+            colors[p] = mesh.colors[v]
+        }
+        return DenseCloud(positions, colors, normals, ByteArray(points), ByteArray(points))
     }
 }

@@ -10,11 +10,6 @@ import io.github.sceneview.demo.demos.internal.RerunTsdf
 import io.github.sceneview.demo.demos.internal.SyntheticScene
 import io.github.sceneview.demo.demos.internal.SyntheticShape
 import io.github.sceneview.demo.demos.internal.Vec3
-import java.io.BufferedInputStream
-import java.io.BufferedOutputStream
-import java.io.DataInputStream
-import java.io.DataOutputStream
-import java.io.File
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -52,23 +47,29 @@ internal object RealScanRoom {
     val PHOTO_LENS = ReplayLens(PHOTO_WIDTH / 2f / PHOTO_FOCAL, PHOTO_HEIGHT / 2f / PHOTO_FOCAL)
 
     /** The marching cubes' surface of the room, its doubled walls appended, as the app meshes a recording. */
-    fun raw(furnished: Boolean): RerunMesh {
-        val room = fuse(ROOM.inflate(MARGIN_M), seed = 11) { x, y, z -> shell(x, y, z, furnished) }
+    fun raw(furnished: Boolean, depth: Depth = Depth.PHONE): RerunMesh = scan(furnished, depth).mesh
+
+    /** A recording of the room as the result screen opens it: its TSDF, and the surface meshed from it. */
+    class Scan(val tsdf: RerunTsdf, val mesh: RerunMesh)
+
+    /** [raw], with the room's TSDF the surface was meshed from. */
+    fun scan(furnished: Boolean, depth: Depth = Depth.PHONE): Scan {
+        val room = fuse(ROOM.inflate(MARGIN_M), depth, seed = 11) { x, y, z -> shell(x, y, z, furnished) }
         val meshes = mutableListOf(RerunMarchingCubes.extractWhole(room, FRAMES_MIN_WEIGHT).mesh)
         // The second passes: open sheets facing the room, 3 cm behind the wall they repeat.
         meshes += RerunMarchingCubes.extractWhole(
-            fuse(DOUBLED_X_WALL.inflate(SHEET_MARGIN_M), seed = 23, phase = SECOND_PASS_PHASE, region = DOUBLED_X_WALL) { x, _, _ ->
+            fuse(DOUBLED_X_WALL.inflate(SHEET_MARGIN_M), depth, seed = 23, phase = SECOND_PASS_PHASE, region = DOUBLED_X_WALL) { x, _, _ ->
                 x - DOUBLED_X_WALL.x0
             },
             FRAMES_MIN_WEIGHT,
         ).mesh
         meshes += RerunMarchingCubes.extractWhole(
-            fuse(DOUBLED_Z_WALL.inflate(SHEET_MARGIN_M), seed = 37, phase = SECOND_PASS_PHASE, region = DOUBLED_Z_WALL) { _, _, z ->
+            fuse(DOUBLED_Z_WALL.inflate(SHEET_MARGIN_M), depth, seed = 37, phase = SECOND_PASS_PHASE, region = DOUBLED_Z_WALL) { _, _, z ->
                 DOUBLED_Z_WALL.z0 - z
             },
             FRAMES_MIN_WEIGHT,
         ).mesh
-        return concat(meshes)
+        return Scan(room, concat(meshes))
     }
 
     /** Signed distance to the room's surfaces, positive in its free space. */
@@ -76,6 +77,83 @@ internal object RealScanRoom {
         val walls = -ROOM.sdf(x, y, z)
         if (!furnished) return walls
         return min(walls, min(curtain(x, y, z), sofa(x, y, z)))
+    }
+
+    /**
+     * How a phone's depth errs, fused once per voxel as a recording's frames are (weight 1): a
+     * drift of up to [driftM] across 20–45 cm ([swell]), blotches of up to [blotchM] about
+     * [blotchCellM] wide (the depth map's own grain, upsampled), white noise of [whiteM] per voxel,
+     * and [missedShare] of the voxels never seen, in patches about [missedCellM] wide — the
+     * holes that leave a real wall as lace.
+     */
+    class Depth(
+        val driftM: Float,
+        val blotchM: Float,
+        val blotchCellM: Float,
+        val whiteM: Float,
+        val missedShare: Float,
+        val missedCellM: Float,
+    ) {
+        val maxErrorM = driftM + blotchM + whiteM + GRAIN_M
+
+        fun error(x: Float, y: Float, z: Float, phase: Float, seed: Int): Float =
+            swell(x, y, z, phase) * driftM / SWELL_PEAK + blotchM * lattice(x, y, z, blotchCellM, seed)
+
+        /** Whether the voxel at ([x], [y], [z]) was never seen. */
+        fun missed(x: Float, y: Float, z: Float, seed: Int): Boolean =
+            missedShare > 0f && (lattice(x, y, z, missedCellM, seed * MISSED_SEED) + 1f) / 2f < missedShare
+
+        companion object {
+            /**
+             * As the app's recordings fuse: about ±2 cm on a wall, and a third of it never seen,
+             * in holes of about 8 cm — the lace a real wall comes out as.
+             */
+            val PHONE = Depth(
+                driftM = 0.009f, blotchM = 0.009f, blotchCellM = 0.05f, whiteM = 0.003f,
+                missedShare = 0.33f, missedCellM = 0.08f,
+            )
+
+            /** The swell alone, as the room was first written. */
+            val SWELL = Depth(
+                driftM = SWELL_PEAK, blotchM = 0f, blotchCellM = 1f, whiteM = 0.002f,
+                missedShare = 0f, missedCellM = 1f,
+            )
+        }
+    }
+
+    /**
+     * Smooth noise in -1..1, its features about [cellM] wide: random values on a lattice of
+     * [cellM], smoothly interpolated between them.
+     */
+    fun lattice(x: Float, y: Float, z: Float, cellM: Float, seed: Int): Float {
+        val fx = x / cellM
+        val fy = y / cellM
+        val fz = z / cellM
+        val ix = floor(fx).toInt()
+        val iy = floor(fy).toInt()
+        val iz = floor(fz).toInt()
+        val tx = smooth(fx - ix)
+        val ty = smooth(fy - iy)
+        val tz = smooth(fz - iz)
+        var sum = 0f
+        for (dz in 0..1) {
+            for (dy in 0..1) {
+                for (dx in 0..1) {
+                    val w = (if (dx == 0) 1f - tx else tx) * (if (dy == 0) 1f - ty else ty) * (if (dz == 0) 1f - tz else tz)
+                    sum += w * hash(ix + dx, iy + dy, iz + dz, seed)
+                }
+            }
+        }
+        return sum
+    }
+
+    private fun smooth(t: Float) = t * t * (3f - 2f * t)
+
+    private fun hash(x: Int, y: Int, z: Int, seed: Int): Float {
+        var h = x * HASH_X + y * HASH_Y + z * HASH_Z + seed * HASH_SEED
+        h = (h xor (h ushr HASH_SHIFT)) * HASH_MIX
+        h = h xor (h ushr HASH_SHIFT)
+        return (h and HASH_MASK) / HASH_MASK.toFloat() * 2f - 1f
     }
 
     /**
@@ -117,6 +195,7 @@ internal object RealScanRoom {
      */
     private fun fuse(
         bounds: Box,
+        depth: Depth,
         seed: Int,
         phase: Float = 0f,
         region: Box? = null,
@@ -124,7 +203,7 @@ internal object RealScanRoom {
     ): RerunTsdf {
         val tsdf = RerunTsdf(maxBytes = TSDF_BYTES)
         val voxel = tsdf.voxelM
-        val band = tsdf.truncationM * BAND_TRUNCATIONS + MAX_ERROR_M
+        val band = tsdf.truncationM * BAND_TRUNCATIONS + depth.maxErrorM
         val random = Random(seed)
         for (gz in floor(bounds.z0 / voxel).toInt()..floor(bounds.z1 / voxel).toInt() + 1) {
             for (gy in floor(bounds.y0 / voxel).toInt()..floor(bounds.y1 / voxel).toInt() + 1) {
@@ -135,12 +214,13 @@ internal object RealScanRoom {
                     if (region != null && !region.spans(x, y, z)) continue
                     val clean = sdf(x, y, z)
                     if (abs(clean) > band) continue
+                    if (depth.missed(x, y, z, seed)) continue
                     val error = if (phase == 0f) {
-                        swell(x, y, z)
+                        depth.error(x, y, z, 0f, seed)
                     } else {
-                        SHARED_SWELL * swell(x, y, z) + (1f - SHARED_SWELL) * swell(x, y, z, phase)
+                        SHARED_SWELL * depth.error(x, y, z, 0f, seed) + (1f - SHARED_SWELL) * depth.error(x, y, z, phase, seed + 1)
                     }
-                    val d = clean + error + (random.nextFloat() * 2f - 1f) * NOISE_M
+                    val d = clean + error + (random.nextFloat() * 2f - 1f) * depth.whiteM
                     tsdf.update(gx, gy, gz, d, 1f, paint(x, y, z))
                 }
             }
@@ -257,30 +337,6 @@ internal object RealScanRoom {
         else -> WALL
     }
 
-    // ── Mesh files, for a finish run in a JVM of its own ──────────────────────────
-
-    fun writeMesh(mesh: RerunMesh, file: File) {
-        DataOutputStream(BufferedOutputStream(file.outputStream())).use { out ->
-            out.writeInt(mesh.vertexCount)
-            out.writeInt(mesh.indices.size)
-            mesh.positions.forEach(out::writeFloat)
-            mesh.normals.forEach(out::writeFloat)
-            mesh.colors.forEach(out::writeInt)
-            mesh.indices.forEach(out::writeInt)
-        }
-    }
-
-    fun readMesh(file: File): RerunMesh =
-        DataInputStream(BufferedInputStream(file.inputStream())).use { input ->
-            val vertices = input.readInt()
-            val indexCount = input.readInt()
-            val positions = FloatArray(vertices * 3) { input.readFloat() }
-            val normals = FloatArray(vertices * 3) { input.readFloat() }
-            val colors = IntArray(vertices) { input.readInt() }
-            val indices = IntArray(indexCount) { input.readInt() }
-            RerunMesh(positions, normals, colors, indices)
-        }
-
     private val SOFA_PARTS: List<Pair<Box, Float>> = buildList {
         add(Box(-1.0f, 0f, -3.5f, 1.0f, 0.28f, -2.6f) to 0.04f) // base
         add(Box(-1.0f, 0f, -3.5f, -0.8f, 0.62f, -2.6f) to 0.06f) // arms
@@ -302,8 +358,16 @@ internal object RealScanRoom {
     private const val SWELL_M = 0.0105f
     private const val SECOND_TERM = 0.6f
     private const val GRAIN_M = 0.0012f
-    private const val NOISE_M = 0.002f
-    private const val MAX_ERROR_M = SWELL_M * (1f + SECOND_TERM) + GRAIN_M + NOISE_M
+    private const val SWELL_PEAK = SWELL_M * (1f + SECOND_TERM)
+    private const val MAX_ERROR_M = 0.04f
+    private const val MISSED_SEED = 7919
+    private const val HASH_X = 73856093
+    private const val HASH_Y = 19349663
+    private const val HASH_Z = 83492791
+    private const val HASH_SEED = 2654435
+    private const val HASH_SHIFT = 15
+    private const val HASH_MIX = 0x2C1B3C6D
+    private const val HASH_MASK = 0xFFFFFF
     private const val SECOND_PASS_PHASE = 2.1f
     private const val SHARED_SWELL = 0.6f
 
