@@ -212,7 +212,7 @@ class MeasurePrecisionTest(private val name: String, private val case: Precision
                 error(numbers.length, truePerimeter),
                 error(numbers.wallArea ?: return null, truePerimeter * CEILING_M),
                 error(numbers.volume ?: return null, trueArea * CEILING_M),
-                maxOf(abs(plan.area.value / floor - 1f), abs(plan.perimeter.value / numbers.length - 1f)),
+                maxOf(abs(plan.area!!.value / floor - 1f), abs(plan.perimeter!!.value / numbers.length - 1f)),
             )
         }
 

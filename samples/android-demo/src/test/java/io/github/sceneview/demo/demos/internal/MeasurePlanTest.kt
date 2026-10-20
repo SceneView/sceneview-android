@@ -40,8 +40,8 @@ class MeasurePlanTest {
             // Then down the right side.
             assertEquals(3f, plan.walls[1].by, 1e-3f)
             assertEquals(listOf(4f, 3f, 4f, 3f), plan.walls.map { it.length.value }.map { Math.round(it * 1000) / 1000f })
-            assertEquals(12f, plan.area.value, 1e-3f)
-            assertEquals(14f, plan.perimeter.value, 1e-3f)
+            assertEquals(12f, plan.area!!.value, 1e-3f)
+            assertEquals(14f, plan.perimeter!!.value, 1e-3f)
             assertEquals(2.5f, plan.ceilingHeight!!.value, 0f)
             assertTrue(plan.gaps.isEmpty())
             assertEquals(-1.2f, plan.floorY, 0f)
@@ -51,7 +51,7 @@ class MeasurePlanTest {
     @Test
     fun `every figure is measured, none estimated`() {
         val plan = measureRoomSurvey(traced(rectangle), height = 2.5f)!!
-        val figures = listOf(plan.length, plan.width, plan.area, plan.perimeter, plan.ceilingHeight!!) +
+        val figures = listOf(plan.length!!, plan.width!!, plan.area!!, plan.perimeter!!, plan.ceilingHeight!!) +
             plan.walls.map { it.length }
         assertTrue(figures.none { it.estimate })
         assertTrue(figures.all { it.plusMinus == 0f })
@@ -64,8 +64,8 @@ class MeasurePlanTest {
         assertEquals(6, plan.walls.size)
         assertEquals(5f, plan.planLength, 1e-3f)
         assertEquals(4f, plan.planWidth, 1e-3f)
-        assertEquals(16f, plan.area.value, 1e-3f)
-        assertEquals(18f, plan.perimeter.value, 1e-3f)
+        assertEquals(16f, plan.area!!.value, 1e-3f)
+        assertEquals(18f, plan.perimeter!!.value, 1e-3f)
         // Closed: each wall ends where the next one starts.
         plan.walls.forEachIndexed { i, wall ->
             val next = plan.walls[(i + 1) % plan.walls.size]
@@ -87,8 +87,8 @@ class MeasurePlanTest {
         val room = MeasureFigure(MeasureMode.Room, outline, closed = true, height = 2.5f)
         val numbers = measureFigureNumbers(room, outline)
         val plan = measureRoomSurvey(outline, height = 2.5f)!!
-        assertEquals(numbers.outlineArea!!, plan.area.value, 1e-3f)
-        assertEquals(numbers.length, plan.perimeter.value, 1e-3f)
+        assertEquals(numbers.outlineArea!!, plan.area!!.value, 1e-3f)
+        assertEquals(numbers.length, plan.perimeter!!.value, 1e-3f)
     }
 
     @Test
