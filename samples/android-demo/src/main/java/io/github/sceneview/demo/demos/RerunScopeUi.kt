@@ -3,22 +3,28 @@ package io.github.sceneview.demo.demos
 import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Chair
@@ -31,10 +37,17 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
@@ -78,10 +91,14 @@ internal object ScanScopeStore {
     }
 }
 
-/** The page of the scope choice: a heading, the four kinds, and the action that starts that scan. */
+/**
+ * The page of the scope choice: a heading, the four kinds, and the action that starts that scan.
+ * The action is pinned at the bottom, above the navigation bar, and the kinds scroll behind it
+ * (#4730): it never moves and is never covered, and the last kind scrolls clear above it.
+ */
 @Composable
 internal fun ScanScopePage(selected: ScanScope, onSelect: (ScanScope) -> Unit, onStart: () -> Unit) {
-    StagePage {
+    StagePage(bottomBar = { StartCard(ScanScopeCopy.start(selected), onClick = onStart) }) {
         Column(verticalArrangement = Arrangement.spacedBy(Space.xs)) {
             Text(
                 text = ScanScopeCopy.CHOOSER_TITLE,
@@ -98,7 +115,6 @@ internal fun ScanScopePage(selected: ScanScope, onSelect: (ScanScope) -> Unit, o
                 ScopeCard(scope, selected = scope == selected, onClick = { onSelect(scope) })
             }
         }
-        StartCard(ScanScopeCopy.start(selected), onClick = onStart)
     }
 }
 
@@ -256,9 +272,16 @@ private fun SummaryAction(icon: ImageVector?, label: String, onClick: () -> Unit
     }
 }
 
-/** The landing's scrolling page: the stage ground, clear of the header and the settings button. */
+/**
+ * The landing's scrolling page: the stage ground, clear of the header. Without a [bottomBar] the
+ * last row scrolls clear of the settings button, as the landing's. With one, the bar is pinned at
+ * the bottom over a fade into the ground, above the navigation bar, and the page scrolls behind
+ * it, ending a gutter above the bar's top.
+ */
 @Composable
-private fun StagePage(content: @Composable () -> Unit) {
+private fun StagePage(bottomBar: (@Composable () -> Unit)? = null, content: @Composable () -> Unit) {
+    val density = LocalDensity.current
+    var barHeight by remember { mutableStateOf(0.dp) }
     Box(
         modifier = Modifier.fillMaxSize().background(stage.ground),
         contentAlignment = Alignment.TopCenter,
@@ -266,7 +289,19 @@ private fun StagePage(content: @Composable () -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .rerunPageScroll()
+                .then(
+                    if (bottomBar == null) {
+                        Modifier.rerunPageScroll()
+                    } else {
+                        Modifier
+                            .windowInsetsPadding(
+                                WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
+                            )
+                            .padding(top = RerunHeaderClearance)
+                            .verticalScroll(rememberScrollState())
+                            .padding(bottom = barHeight)
+                    },
+                )
                 .padding(horizontal = Space.md),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -274,6 +309,27 @@ private fun StagePage(content: @Composable () -> Unit) {
                 modifier = Modifier.widthIn(max = RerunPageMaxWidth).fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(Space.md),
             ) { content() }
+        }
+        if (bottomBar != null) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .onSizeChanged { barHeight = with(density) { it.height.toDp() } }
+                    .background(
+                        Brush.verticalGradient(
+                            0f to stage.ground.copy(alpha = 0f),
+                            BAR_FADE_STOP to stage.ground,
+                        ),
+                    )
+                    .windowInsetsPadding(
+                        WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal),
+                    )
+                    .padding(start = Space.md, top = Space.lg, end = Space.md, bottom = Space.md),
+                contentAlignment = Alignment.Center,
+            ) {
+                Box(Modifier.widthIn(max = RerunPageMaxWidth).fillMaxWidth()) { bottomBar() }
+            }
         }
     }
 }
@@ -287,3 +343,6 @@ private val UNSELECTED_BORDER = 1.dp
 private const val BORDER_ALPHA = 0.12f
 private const val WELL_ALPHA = 0.08f
 private const val MUTED_ALPHA = 0.72f
+
+/** Where the pinned bar's fade reaches the full ground: within its top gutter, above the action. */
+private const val BAR_FADE_STOP = 0.2f

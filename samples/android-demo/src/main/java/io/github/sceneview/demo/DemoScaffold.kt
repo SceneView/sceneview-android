@@ -1186,8 +1186,14 @@ fun DemoScaffold(
                         dockBand = dockBandClearance,
                         navigationBarInset = navigationBarInset,
                     )
+                    // A hidden dock takes the scrim with it (#4730): the page's own bottom (a pinned
+                    // action, a sheet) is no longer washed out by a ground for a dock that is gone.
+                    // In portrait a bottom stack keeps its scrim. On a phone held sideways the scrim
+                    // never grounds the stack, only the dock, so it goes whenever the dock is
+                    // hidden; the stack is faded to alpha 0 with the dock then anyway.
                     AnimatedVisibility(
-                        visible = chromeVisible || (!focused && overlaysShown && bottomStackShown && !compactHeight),
+                        visible = (chromeVisible && !dockHidden) ||
+                            (!focused && overlaysShown && bottomStackShown && !compactHeight),
                         enter = fadeIn(SceneViewTokens.Motion.fade()),
                         exit = fadeOut(SceneViewTokens.Motion.fade()),
                         modifier = Modifier.align(Alignment.BottomCenter),

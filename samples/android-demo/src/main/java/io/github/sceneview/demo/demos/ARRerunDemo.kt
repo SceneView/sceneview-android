@@ -623,12 +623,15 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
                 onDismissNotice = { notice = null },
             ),
         )
+        // No Settings on the scope step (#4730): nothing in the sheet changes the scan about to
+        // start, and the capture screen it opens keeps the same sheet. The dock would hold only it.
         RerunScreen.Choose -> DemoScaffold(
             title = stringResource(R.string.demo_ar_rerun_title),
             onBack = toLanding,
-            controls = { RerunSheet() },
             dock = emptyList(),
+            dockHidden = true,
             themedStage = true,
+            modeSwitch = null,
         ) {
             ScanScopePage(selected = scanScope, onSelect = { scanScope = it }, onStart = { startScan(scanScope) })
         }
