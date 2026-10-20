@@ -51,7 +51,7 @@ internal object GltfBufferUris {
             source.getInt(start) == GLB_MAGIC
         if (!isGlb) {
             return ByteArray(source.remaining()).also { source.get(it) }
-                .toString(Charsets.UTF_8).removePrefix("﻿")
+                .toString(Charsets.UTF_8).removePrefix("\uFEFF")
         }
         val length = source.getInt(start + GLB_HEADER_SIZE)
         val type = source.getInt(start + GLB_HEADER_SIZE + 4)
