@@ -2,6 +2,7 @@ package io.github.sceneview.loaders
 
 import android.content.Context
 import android.os.SystemClock
+import android.util.Log
 import androidx.annotation.MainThread
 import androidx.annotation.RawRes
 import com.google.android.filament.Engine
@@ -31,7 +32,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -61,11 +64,19 @@ import java.nio.ByteBuffer
  *
  * The `suspend` [loadModel] converts off the main thread; the [createModel] overloads convert on
  * the calling (main) thread, like the rest of their work.
+ *
+ * **A failed `load*Async` reports `null` (an empty list for [loadInstancedModelAsync]) and is
+ * logged**: a missing file, an unreachable URL or an unparsable payload never reaches the app's
+ * uncaught-exception handler, and the loader keeps loading. The `suspend` loads let the same
+ * exceptions through to their caller.
+ *
+ * @param coroutineScope the scope the `load*Async` calls run in. The default one survives a failed
+ * load and [clear]; only [destroy] cancels it.
  */
 class ModelLoader(
     val engine: Engine,
     private val context: Context,
-    private val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.IO)
+    private val coroutineScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 ) {
 
     val materialProvider = UbershaderProvider(engine)
@@ -304,9 +315,8 @@ class ModelLoader(
             getFolderPath(fileLocation, it)
         },
         onResult: (Model?) -> Unit
-    ): Job = coroutineScope.launch {
-        val result = loadModel(fileLocation, resourceResolver)
-        withContext(Dispatchers.Main) { onResult(result) }
+    ): Job = launchLoad(fileLocation, failed = null, onResult) {
+        loadModel(fileLocation, resourceResolver)
     }
 
     /**
@@ -396,9 +406,8 @@ class ModelLoader(
             getFolderPath(fileLocation, it)
         },
         onResult: (ModelInstance?) -> Unit
-    ): Job = coroutineScope.launch {
-        val instance = loadModelInstance(fileLocation, resourceResolver)
-        withContext(Dispatchers.Main) { onResult(instance) }
+    ): Job = launchLoad(fileLocation, failed = null, onResult) {
+        loadModelInstance(fileLocation, resourceResolver)
     }
 
     /**
@@ -545,11 +554,32 @@ class ModelLoader(
             getFolderPath(fileLocation, it)
         },
         onResult: (List<ModelInstance>) -> Unit
+    ): Job = launchLoad(fileLocation, failed = listOf(), onResult) {
+        loadInstancedModel(fileLocation, count, resourceResolver)
+    }
+
+    /**
+     * Runs [load] in this loader's scope and hands its result to [onResult] on the main thread.
+     *
+     * A load that throws reports [failed] instead, and is logged: left to escape, the exception
+     * reached the thread's uncaught-exception handler (a crash on Android) and, with a plain `Job`,
+     * cancelled the scope, so every later `load*Async` on this loader did nothing at all.
+     */
+    private fun <T> launchLoad(
+        fileLocation: String,
+        failed: T,
+        onResult: (T) -> Unit,
+        load: suspend () -> T,
     ): Job = coroutineScope.launch {
-        val instances = loadInstancedModel(fileLocation, count, resourceResolver)
-        withContext(Dispatchers.Main) {
-            onResult(instances)
+        val result = try {
+            load()
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (error: Exception) {
+            Log.w(TAG, "Could not load $fileLocation", error)
+            failed
         }
+        withContext(Dispatchers.Main) { onResult(result) }
     }
 
     /**
@@ -634,9 +664,13 @@ class ModelLoader(
      * Cancels every load still running on this loader's scope and destroys every model it made.
      * The model whose textures are still decoding is destroyed once they are done, without
      * blocking the calling thread (see [destroyModel]).
+     *
+     * The loader stays usable: loads started afterwards run as usual. [destroy] is the end of it.
      */
     fun clear() {
-        runCatching { coroutineScope.cancel() }
+        // The running loads only: cancelling the scope itself left every later `load*Async` a
+        // job that was already cancelled, whose `onResult` never came.
+        coroutineScope.coroutineContext.cancelChildren()
 
         // No blanket `asyncLoad.cancel()` here any more: the only load it could interrupt belongs
         // to a model in `models`, whose destroyModel below cancels it — once doing so is instant
@@ -660,6 +694,7 @@ class ModelLoader(
      */
     fun destroy() {
         clear()
+        runCatching { coroutineScope.cancel() }
 
         settlingDestroys.afterAll {
             assetLoader.destroy()
@@ -694,6 +729,8 @@ class ModelLoader(
     }
 
     companion object {
+        private const val TAG = "ModelLoader"
+
         fun getFolderPath(baseFileName: String, resourceFileName: String) =
             "${baseFileName.substringBeforeLast("/")}/$resourceFileName"
     }

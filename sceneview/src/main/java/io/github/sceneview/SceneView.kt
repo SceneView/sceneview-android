@@ -9,6 +9,7 @@ package io.github.sceneview
 import android.content.Context
 import android.content.Context.WINDOW_SERVICE
 import android.opengl.EGLContext
+import android.util.Log
 import android.view.MotionEvent
 import android.view.SurfaceView
 import android.view.TextureView
@@ -73,16 +74,14 @@ import io.github.sceneview.math.Position
 import io.github.sceneview.model.Model
 import io.github.sceneview.model.ModelInstance
 import io.github.sceneview.model.model
-import io.github.sceneview.utils.readBuffer
 import io.github.sceneview.node.CameraNode
 import io.github.sceneview.node.LightNode
 import io.github.sceneview.node.Node
 import io.github.sceneview.node.ViewNode
 import io.github.sceneview.utils.SurfaceMirrorer
 import io.github.sceneview.utils.destroy
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
@@ -1413,17 +1412,15 @@ fun rememberModelInstance(
     if (android.net.Uri.parse(assetFileLocation).scheme != null) {
         return rememberModelInstance(modelLoader, fileLocation = assetFileLocation)
     }
-    val context = LocalContext.current
     val instance = produceState<ModelInstance?>(
         initialValue = null,
         key1 = modelLoader,
         key2 = assetFileLocation
     ) {
-        // Read file bytes on IO, then call Filament APIs back on Main (produceState's context).
-        val buffer = withContext(Dispatchers.IO) {
-            runCatching { context.assets.readBuffer(assetFileLocation) }.getOrNull()
-        } ?: return@produceState
-        value = runCatching { modelLoader.createModelInstance(buffer) }.getOrNull()
+        // The `suspend` load, like the URL overload: bytes read on IO, 3MF/STL/OBJ/PLY → GLB and
+        // WebP → PNG converted on Default, only the Filament calls on Main (produceState's
+        // context). Converting in this coroutine ran all of it on the main thread.
+        value = modelLoader.loadModelInstanceOrNull(assetFileLocation)
     }.value
     // `produceState` only cancels the producer coroutine on a key change — it never destroys the
     // previously produced [ModelInstance]/[Model], which otherwise stays in `ModelLoader.models`
@@ -1449,7 +1446,7 @@ fun rememberModelInstance(
  * - File URIs: `"file:///sdcard/model.glb"`
  * - HTTP/HTTPS URLs: `"https://example.com/model.glb"`
  *
- * For asset paths (no scheme), delegates to the faster asset-based overload.
+ * For asset paths (no scheme), delegates to the asset-path overload.
  * For URLs, downloads the file on IO and creates the model on Main.
  *
  * **Lifecycle & ownership.** Like the asset overload, this composable owns the produced
@@ -1489,9 +1486,7 @@ fun rememberModelInstance(
         key1 = modelLoader,
         key2 = fileLocation
     ) {
-        value = runCatching {
-            modelLoader.loadModelInstance(fileLocation, resourceResolver)
-        }.getOrNull()
+        value = modelLoader.loadModelInstanceOrNull(fileLocation, resourceResolver)
     }.value
     // See the asset-path overload: `produceState` skips per-key disposal, so destroy the previous
     // [Model] on a key swap and on leave-composition (#2459). Disposal is ordered after the
@@ -1500,6 +1495,25 @@ fun rememberModelInstance(
         onDispose { instance?.let { modelLoader.destroyModel(it.model) } }
     }
     return instance
+}
+
+/**
+ * [ModelLoader.loadModelInstance] for the `rememberModelInstance` overloads: a failed load is
+ * `null`, as before, but no longer a silent one — it is logged with its cause. Cancellation (a key
+ * change, leaving the composition) is rethrown, not reported as a failure.
+ */
+private suspend fun ModelLoader.loadModelInstanceOrNull(
+    fileLocation: String,
+    resourceResolver: (resourceFileName: String) -> String = {
+        ModelLoader.getFolderPath(fileLocation, it)
+    }
+): ModelInstance? = try {
+    loadModelInstance(fileLocation, resourceResolver)
+} catch (cancellation: CancellationException) {
+    throw cancellation
+} catch (error: Exception) {
+    Log.w("rememberModelInstance", "Could not load $fileLocation", error)
+    null
 }
 
 // ── Engine / resource lifecycle helpers ──────────────────────────────────────────────────────────
