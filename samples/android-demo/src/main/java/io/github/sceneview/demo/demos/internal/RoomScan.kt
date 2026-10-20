@@ -472,8 +472,11 @@ object ScanCopy {
         ScanTurn.Ahead -> "Sweep ahead — no wall seen there yet"
     }
 
-    /** The gauge's figure: `0 %` to `100 %`, the room's scan done so far ([ScanGuide.completion]). */
-    fun completion(share: Float): String = "${(share.coerceIn(0f, 1f) * PERCENT).toInt()} %"
+    /**
+     * The gauge, said aloud: `Room 72 % scanned`, the room's scan done so far
+     * ([ScanGuide.completion]), named so it is never read as the floor covered (#4734).
+     */
+    fun completion(share: Float): String = "Room ${(share.coerceIn(0f, 1f) * PERCENT).toInt()} % scanned"
 
     private const val PERCENT = 100
 

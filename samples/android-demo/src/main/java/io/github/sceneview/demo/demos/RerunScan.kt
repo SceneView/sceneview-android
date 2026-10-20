@@ -388,7 +388,12 @@ internal class ScanCapture private constructor(
         // The journal is taken once and kept: a build that threw (out of memory, painting the
         // planes) is retried from the same events, not from a journal already let go.
         val events = finishedEvents ?: run {
-            trace.journal?.lastOrNull()?.let { recordDepthStats(it.nanos) }
+            trace.journal?.lastOrNull()?.let { last ->
+                recordDepthStats(last.nanos)
+                // The last fusion's floor cells, which no frame observed before the stop (#4734):
+                // the result's m² reads the cells journaled, so they go in with the rest.
+                dense?.live?.coveredCells?.takeIf { it.isNotEmpty() }?.let { trace.addFloorCells(last.nanos, it) }
+            }
             trace.journal?.toList().orEmpty().also { finishedEvents = it }
         }
         trace.journal = null

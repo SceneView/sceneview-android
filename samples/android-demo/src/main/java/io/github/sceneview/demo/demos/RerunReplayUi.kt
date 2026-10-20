@@ -117,8 +117,8 @@ internal fun RerunLayersSection(session: ArDebugSession, modifier: Modifier = Mo
             }
             LayerRow(layer, value, session)
         }
-        // The room the planes outline, measured as a floor plan.
-        stats.room?.let { room -> SheetFigureRow("Room", room) }
+        // The room its walls outline, measured as a floor plan: named so, not read as the floor covered (#4734).
+        stats.room?.let { room -> SheetFigureRow("Room from walls", room) }
     }
 }
 

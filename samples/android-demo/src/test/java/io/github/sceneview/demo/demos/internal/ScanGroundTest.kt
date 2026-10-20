@@ -50,7 +50,7 @@ class ScanGroundTest {
     fun `a whole floor is all seen`() {
         val ground = room(floorY = 0f, hole = 0f)
         assertEquals(0, ground.missing)
-        assertEquals(100, ScanGround.percent(ground.seenShare, ground.missing, ground.seen))
+        assertEquals(1f, ground.seenShare, 0f)
     }
 
     @Test
@@ -62,13 +62,6 @@ class ScanGroundTest {
         val column = (-ground.originX / ground.cellM).toInt()
         val row = (-ground.originZ / ground.cellM).toInt()
         assertEquals(ScanGround.MISSING, ground.at(column, row))
-    }
-
-    @Test
-    fun `the percent is never 100 with a hole nor 0 with a seen cell`() {
-        assertEquals(99, ScanGround.percent(0.999f, missing = 1, seen = 999))
-        assertEquals(1, ScanGround.percent(0.001f, missing = 999, seen = 1))
-        assertEquals(50, ScanGround.percent(0.5f, missing = 5, seen = 5))
     }
 
     @Test
