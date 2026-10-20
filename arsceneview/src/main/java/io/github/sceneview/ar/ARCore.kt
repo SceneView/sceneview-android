@@ -107,7 +107,7 @@ class ARCore(
      */
     internal var startSession: (Context) -> Unit = { context ->
         createSession(context)
-        session?.resume()
+        resumeSession()
     }
 
     /** Monotonic clock, in nanoseconds. Replaced in tests. */
@@ -195,7 +195,7 @@ class ARCore(
                 createSession(context)
             }
         }
-        session?.resume()
+        resumeSession()
     }
 
     /** Pauses the current ARCore session. */
@@ -492,7 +492,7 @@ class ARCore(
         publishAvailability(null)
         destroy()
         createSession(target)
-        session?.resume()
+        resumeSession()
     }
 
     /**
@@ -543,6 +543,23 @@ class ARCore(
                 closeSessionInOrder(isResumed = it.isResumed, pause = it::pause, close = it::close)
                 session = null
             }
+        }
+    }
+
+    /**
+     * Resumes the session, reporting a failure through [onArSessionFailed] instead of throwing.
+     *
+     * `Session.resume()` throws when the camera is held by another app or was revoked
+     * (`CameraNotAvailableException`), when the camera permission is missing
+     * (`SecurityException`), or on an ARCore error (`FatalException`, `IllegalStateException`).
+     * Every caller is a lifecycle or UI callback, where a throw crashes the host app. The session
+     * stays paused, so the next host resume, or [retrySession], tries again.
+     */
+    private fun resumeSession() {
+        try {
+            session?.resume()
+        } catch (exception: Exception) {
+            onException(exception)
         }
     }
 
