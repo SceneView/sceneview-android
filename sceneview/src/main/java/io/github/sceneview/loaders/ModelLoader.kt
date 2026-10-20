@@ -507,6 +507,10 @@ class ModelLoader(
      * Embedded WebP glTF textures are re-encoded to PNG on the calling thread first, as in
      * [createModel].
      *
+     * @throws IllegalArgumentException if the buffer cannot be parsed, or if one of its external
+     * `.bin` buffers cannot be resolved (the model is destroyed and the miss logged). A texture the
+     * resolver cannot read is logged and skipped.
+     *
      * @see AssetLoader.createInstancedAsset
      */
     @MainThread
@@ -806,34 +810,43 @@ class ModelLoader(
     }
 
     /**
-     * Feeds the binary content of an external resource into the loader's URI cache.
-     */
-    /**
      * The synchronous counterpart of [loadModelThen]'s resource step, same rule: a missing texture
      * is logged and skipped, a missing buffer (or a begin gltfio refuses) destroys [model] and
-     * throws, rather than handing out a model with no geometry.
+     * throws, rather than handing out a model with no geometry. A resolver that throws anything
+     * other than an `IOException` also destroys [model], then the error is rethrown.
      */
     @MainThread
+    @Suppress("TooGenericExceptionCaught") // Destroy on any failure, then rethrow it unchanged.
     private fun loadResources(model: Model, source: Buffer, resourceResolver: (String) -> Buffer?) {
         // `data:` URIs are decoded by gltfio itself; only the others are resolved here.
         val uris = model.resourceUris.filterNot { it.startsWith("data:") }
-        val bufferUris = if (uris.isEmpty()) emptySet() else GltfBufferUris.of(source, uris)
         val missing = mutableListOf<String>()
-        for (uri in uris) {
-            val data = try {
-                resourceResolver(uri)
-            } catch (error: IOException) {
-                Log.w(TAG, "Could not read $uri", error)
-                null
+        try {
+            val bufferUris = if (uris.isEmpty()) emptySet() else GltfBufferUris.of(source, uris)
+            for (uri in uris) {
+                val data = try {
+                    resourceResolver(uri)
+                } catch (error: IOException) {
+                    Log.w(TAG, "Could not read $uri", error)
+                    null
+                }
+                when {
+                    data != null -> resourceLoader.addResourceData(uri, data)
+                    uri in bufferUris -> missing += uri
+                    else -> Log.w(TAG, "Could not read $uri; loading the model without it")
+                }
             }
-            when {
-                data != null -> resourceLoader.addResourceData(uri, data)
-                uri in bufferUris -> missing += uri
-                else -> Log.w(TAG, "Could not read $uri; loading the model without it")
-            }
+        } catch (failure: Throwable) {
+            // Not begun yet, so nothing is decoding: the destroy is immediate.
+            resourceLoader.evictResourceData()
+            destroyModel(model)
+            Log.w(TAG, "Could not resolve the resources of a glTF model; the model was destroyed", failure)
+            throw failure
         }
         val failure = when {
             missing.isNotEmpty() -> "Could not load a glTF model without ${missing.joinToString()}"
+            // gltfio refuses only an asset whose resources were already loaded, which a freshly
+            // created one never is: this cannot overwrite the in-flight slot of another model.
             !asyncLoad.begin(model) -> "gltfio refused to begin the resource load of a glTF model"
             else -> null
         }

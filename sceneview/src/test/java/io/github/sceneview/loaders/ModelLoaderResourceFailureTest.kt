@@ -7,6 +7,7 @@ import com.google.android.filament.gltfio.FilamentAsset
 import com.google.android.filament.gltfio.ResourceLoader
 import io.github.sceneview.model.Model
 import io.github.sceneview.node.FilamentWithoutJni
+import io.github.sceneview.utils.readBuffer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -162,6 +163,43 @@ class ModelLoaderResourceFailureTest {
     }
 
     @Test
+    fun `createModel destroys the model and rethrows when the resolver throws`() {
+        resourceUris = arrayOf(BUFFER, TEXTURE)
+
+        val failure = runCatching {
+            loader.createModel(File(java.net.URI(modelFileUri()))) { throw SecurityException("denied") }
+        }.exceptionOrNull()
+
+        assertTrue("Expected the resolver's SecurityException, got $failure", failure is SecurityException)
+        assertEquals(listOf(ASSET), destroyedAssets.toList())
+    }
+
+    @Test
+    fun `createInstancedModel throws on a missing buffer and destroys the model`() {
+        resourceUris = arrayOf(BUFFER, TEXTURE)
+
+        val failure = runCatching {
+            loader.createInstancedModel(File(java.net.URI(modelFileUri())).readBuffer(), count = 2)
+        }.exceptionOrNull()
+
+        assertTrue("Expected IllegalArgumentException, got $failure", failure is IllegalArgumentException)
+        assertEquals(listOf(ASSET), destroyedAssets.toList())
+        assertWarned(BUFFER, "the model was destroyed")
+    }
+
+    @Test
+    fun `createModel never asks the resolver for a data URI`() {
+        val dataUri = "data:application/octet-stream;base64,AAAAAA=="
+        resourceUris = arrayOf(dataUri, TEXTURE)
+        val asked = mutableListOf<String>()
+
+        val model = loader.createModel(File(java.net.URI(modelFileUri()))) { asked += it; null }
+
+        assertNotNull(model)
+        assertEquals(listOf(TEXTURE), asked)
+    }
+
+    @Test
     fun `a load failing after the model was created destroys that model`() {
         val result = await {
             loader.loadModelAsync(
@@ -209,6 +247,11 @@ class ModelLoaderResourceFailureTest {
             @JvmStatic
             @Implementation
             fun nCreateAsset(nativeLoader: Long, buffer: Buffer, remaining: Int): Long = ASSET
+
+            @JvmStatic
+            @Implementation
+            fun nCreateInstancedAsset(nativeLoader: Long, buffer: Buffer, remaining: Int, instances: LongArray): Long =
+                ASSET
 
             @JvmStatic
             @Implementation
