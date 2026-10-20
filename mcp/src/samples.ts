@@ -142,7 +142,7 @@ fun ARModelViewerScreen() {
     val modelLoader = rememberModelLoader(engine)
     val modelInstance = rememberModelInstance(modelLoader, "models/toy_car.glb")
     var anchor by remember { mutableStateOf<Anchor?>(null) }
-    var latestFrame by remember { mutableStateOf<Frame?>(null) }
+    val latestFrame = remember { arrayOfNulls<Frame>(1) } // plain holder, not state: no recomposition per frame
 
     ARSceneView(
         modifier = Modifier.fillMaxSize(),
@@ -155,12 +155,12 @@ fun ARModelViewerScreen() {
                     Config.DepthMode.AUTOMATIC else Config.DepthMode.DISABLED
             config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
         },
-        onSessionUpdated = { _, frame -> latestFrame = frame },
+        onSessionUpdated = { _, frame -> latestFrame[0] = frame },
         onTouchEvent = { event, _ ->
             // The callback's hitResult is a scene-node hit (io.github.sceneview.collision.HitResult),
             // null on an empty plane and without createAnchor(): hit-test the latest ARCore Frame.
             if (event.action == MotionEvent.ACTION_UP) {
-                latestFrame?.hitTest(event)
+                latestFrame[0]?.hitTest(event)
                     ?.firstOrNull { (it.trackable as? Plane)?.isPoseInPolygon(it.hitPose) == true }
                     ?.createAnchorOrNull()
                     ?.let { anchor = it }
@@ -2150,7 +2150,7 @@ fun ARSurfaceCursorScreen() {
     val view = LocalView.current
     val modelInstance = rememberModelInstance(modelLoader, "models/chair.glb")
     var placedAnchors by remember { mutableStateOf(listOf<Anchor>()) }
-    var latestFrame by remember { mutableStateOf<Frame?>(null) }
+    val latestFrame = remember { arrayOfNulls<Frame>(1) } // plain holder, not state: no recomposition per frame
 
     ARSceneView(
         modifier = Modifier.fillMaxSize(),
@@ -2162,12 +2162,12 @@ fun ARSurfaceCursorScreen() {
                 Config.DepthMode.AUTOMATIC else Config.DepthMode.DISABLED
             config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
         },
-        onSessionUpdated = { _, frame -> latestFrame = frame },
+        onSessionUpdated = { _, frame -> latestFrame[0] = frame },
         onTouchEvent = { event, _ ->
             // The callback's hitResult is a scene-node hit (io.github.sceneview.collision.HitResult),
             // null on an empty plane and without createAnchor(): hit-test the latest ARCore Frame.
             if (event.action == MotionEvent.ACTION_UP) {
-                latestFrame?.hitTest(event)
+                latestFrame[0]?.hitTest(event)
                     ?.firstOrNull { (it.trackable as? Plane)?.isPoseInPolygon(it.hitPose) == true }
                     ?.createAnchorOrNull()
                     ?.let { placedAnchors = placedAnchors + it }

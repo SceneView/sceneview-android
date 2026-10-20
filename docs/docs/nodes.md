@@ -734,7 +734,7 @@ MeshNode(
 )
 ```
 
-When the vertex count changes at runtime, prefer `GeometryNode`, which owns the `Geometry` and follows its rebuilds.
+`MeshNode` keeps the buffers it was given. When the vertex count changes at runtime there is no `GeometryNode` composable: use the imperative class `io.github.sceneview.node.GeometryNode(engine, geometry, materialInstances)`, which owns the `Geometry` and follows `updateGeometry(vertices, indices)` rebuilds. Attach it under a composable parent with `Node(apply = { addChildNode(geometryNode) })` and destroy it yourself (`geometryNode.destroy()` in a `DisposableEffect`).
 
 **When to use MeshNode vs CubeNode / SphereNode:**
 
@@ -927,12 +927,15 @@ Follows a fixed ARCore `Anchor`. Once placed, the node stays pinned to that real
 ```kotlin
 var anchors by remember { mutableStateOf(listOf<Anchor>()) }
 val drone = rememberModelInstance(modelLoader, "models/drone.glb")
+// Latest ARCore Frame: a plain holder, not state, so it does not recompose every frame.
+val latestFrame = remember { arrayOfNulls<Frame>(1) }
 
 ARSceneView(
     modifier = Modifier.fillMaxSize(),
+    onSessionUpdated = { _, frame -> latestFrame[0] = frame },
     onGestureListener = rememberOnGestureListener(
         onSingleTapConfirmed = { motionEvent, node ->
-            val hit = sessionRef?.frame?.hitTest(motionEvent)?.firstOrNull {
+            val hit = latestFrame[0]?.hitTest(motionEvent)?.firstOrNull {
                 val tr = it.trackable
                 tr is Plane && tr.isPoseInPolygon(it.hitPose)
             }
@@ -1100,7 +1103,7 @@ resolved?.let { anchor ->
 }
 ```
 
-`CloudAnchorNode.resolve(engine, session, cloudAnchorId) { state, node -> }` is the imperative equivalent: it returns a ready `CloudAnchorNode` instance instead of an `Anchor`.
+`CloudAnchorNode.resolve(engine, session, cloudAnchorId) { state, node -> }` is the imperative equivalent: it returns a `ResolveCloudAnchorFuture` and delivers a ready `CloudAnchorNode` (or `null` on error) to the callback.
 
 ---
 

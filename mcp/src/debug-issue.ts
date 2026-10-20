@@ -169,7 +169,7 @@ fun DebugModelViewer() {
 
 5. **Objects not appearing on tap?**
    - Is \`onTouchEvent\` wired up?
-   - Is \`hitResult\` null? Log it: \`Log.d("AR", "hitResult: $hitResult")\`
+   - Does the ARCore hit-test find a surface? On \`ACTION_UP\`, log the size of \`frame.hitTest(event)\` for the latest \`Frame\` kept from \`onSessionUpdated\`. Do not use the callback's \`hitResult\`: it is a scene-node hit, null over an empty plane.
    - Are you creating an anchor? The \`hitResult\` passed to \`onTouchEvent\` is a scene-node hit with no \`createAnchor()\`: hit-test the latest ARCore \`Frame\` (\`frame.hitTest(event)\`) and call \`createAnchorOrNull()\` on the plane hit.
    - Is the model loaded? Check \`rememberModelInstance\` is not null.
 
@@ -223,7 +223,7 @@ fun DebugModelViewer() {
 ### NullPointerException
 
 - \`rememberModelInstance\` returns null while loading — always null-check.
-- \`hitResult\` can be null in \`onTouchEvent\` if no surface is hit.
+- The \`hitResult\` passed to \`onTouchEvent\` is null whenever no scene node is under the finger (it is not an ARCore surface hit); \`frame.hitTest(event)\` returns an empty list when no surface is hit, so use \`firstOrNull { … }\`.
 
 ### Out of Memory
 
@@ -502,10 +502,10 @@ SceneView(
 
 ### Tap-to-Place Not Working in AR
 
-1. Check \`hitResult\` is not null — log it.
+1. Check the ARCore hit-test finds a surface: log \`frame.hitTest(event)\` on \`ACTION_UP\` for the latest \`Frame\` kept from \`onSessionUpdated\` (the \`onTouchEvent\` \`hitResult\` is a scene-node hit, null over an empty plane).
 2. Ensure plane detection is enabled: \`planeFindingMode = HORIZONTAL_AND_VERTICAL\`.
 3. Plane renderer helps user see where planes are: \`planeRenderer = true\`.
-4. Create the anchor from an ARCore hit: \`latestFrame?.hitTest(event)?.firstOrNull()?.createAnchorOrNull()\` (the \`onTouchEvent\` \`hitResult\` is a scene-node hit).
+4. Create the anchor from a plane hit inside its polygon: \`frame.hitTest(event).firstOrNull { (it.trackable as? Plane)?.isPoseInPolygon(it.hitPose) == true }?.createAnchorOrNull()\` (the first hit may be a feature point or outside the plane polygon).
 
 ### Camera Orbit Not Working
 

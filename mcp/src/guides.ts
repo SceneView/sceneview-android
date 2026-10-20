@@ -576,18 +576,18 @@ ARSceneView(
 ### Tap-to-Place with Anchor
 \`\`\`kotlin
 var anchor by remember { mutableStateOf<Anchor?>(null) }
-var latestFrame by remember { mutableStateOf<Frame?>(null) }
+val latestFrame = remember { arrayOfNulls<Frame>(1) } // plain holder, not state: no recomposition per frame
 
 ARSceneView(
     engine = engine,
     modelLoader = modelLoader,
     planeRenderer = true,
-    onSessionUpdated = { _, frame -> latestFrame = frame },
+    onSessionUpdated = { _, frame -> latestFrame[0] = frame },
     onTouchEvent = { event, _ ->
         // The callback's hitResult is a scene-node hit (io.github.sceneview.collision.HitResult),
         // null on an empty plane and without createAnchor(): hit-test the latest ARCore Frame.
         if (event.action == MotionEvent.ACTION_UP) {
-            latestFrame?.hitTest(event)
+            latestFrame[0]?.hitTest(event)
                 ?.firstOrNull { (it.trackable as? Plane)?.isPoseInPolygon(it.hitPose) == true }
                 ?.createAnchorOrNull()
                 ?.let { anchor = it }
