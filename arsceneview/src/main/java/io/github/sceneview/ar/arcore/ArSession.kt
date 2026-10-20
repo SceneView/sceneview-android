@@ -137,8 +137,10 @@ class ARSession(
 
     override fun resume() {
         check(!isClosed) { "Cannot resume a closed ARCore session (#4026)" }
-        isResumed = true
         super.resume()
+        // Only once ARCore did resume: a throw above (camera busy, permission revoked) leaves the
+        // session paused, and the frame loop must not call `update()` on it.
+        isResumed = true
 
         // Don't remove this code-block. It is important to correctly set the DisplayGeometry for
         // the ArCore-Session if for example the permission Dialog is shown on the screen.
