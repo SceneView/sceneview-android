@@ -24,6 +24,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
@@ -57,6 +58,15 @@ import io.github.sceneview.demo.demos.internal.ScanPick
 import io.github.sceneview.demo.demos.internal.ScanReveal
 import io.github.sceneview.demo.demos.internal.ScanTaps
 import io.github.sceneview.demo.demos.internal.scanCamera
+import io.github.sceneview.demo.demos.internal.semantic.Detection2D
+import io.github.sceneview.demo.demos.internal.semantic.RecognizedItem
+import io.github.sceneview.demo.demos.internal.semantic.SceneBoxMeshes
+import io.github.sceneview.demo.demos.internal.semantic.SceneDetector
+import io.github.sceneview.demo.demos.internal.semantic.SceneImage
+import io.github.sceneview.demo.demos.internal.semantic.SceneRecognizer
+import io.github.sceneview.demo.demos.internal.semantic.loadSceneDetector
+import io.github.sceneview.demo.demos.internal.semantic.nameRes
+import io.github.sceneview.demo.demos.internal.semantic.sceneImageOf
 import io.github.sceneview.demo.theme.DebugPalette
 import io.github.sceneview.demo.theme.LocalStageChrome
 import io.github.sceneview.demo.theme.SceneViewTokens
@@ -66,6 +76,8 @@ import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.colorOf
 import io.github.sceneview.math.toLinearSpace
+import kotlin.coroutines.cancellation.CancellationException
+import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -94,6 +106,9 @@ private const val TAG = "ScanObject"
  */
 internal class ScanSelection {
     var found: ScanPick.Found? = null
+
+    /** What the scan was recognised to hold, once it has been ([SceneRecognizer]): done once a replay. */
+    var recognized: List<RecognizedItem>? = null
 }
 
 /**
@@ -115,6 +130,8 @@ internal class ScanObjectPick(
     private val materialLoader: MaterialLoader,
     palette: DebugPalette,
     parent: CoroutineScope,
+    /** The 2D detector the scan's parts are recognised with, off the main thread; `null` without one. */
+    private val loadDetector: () -> SceneDetector? = { null },
 ) {
     /**
      * This picker's own coroutines, under the composition's [parent] scope: [destroy] cancels them,
@@ -135,12 +152,20 @@ internal class ScanObjectPick(
     }
     private val edgeMaterial = materialLoader.selectionMaterial(palette.frustum, palette.frustumGlow)
 
+    /** The recognised parts' boxes wear the quiet outline of what is not the selection. */
+    private val recognizedMaterial = materialLoader.selectionMaterial(palette.otherOutline, 1f)
+
     private val tintNode = DebugLayerNode(engine, tintMaterial, TINT_PRIORITY)
     private val hiddenNode = DebugLayerNode(engine, hiddenMaterial, HIDDEN_PRIORITY)
     private val edgeNode = DebugLayerNode(engine, edgeMaterial, EDGE_PRIORITY)
 
+    private val recognizedNode = DebugLayerNode(engine, recognizedMaterial, EDGE_PRIORITY)
+
+    /** The three layers of the picked object, shown and hidden together. */
+    private val pickNodes = listOf(tintNode, hiddenNode, edgeNode)
+
     /** Children of the replay's layer node, destroyed with it; [destroy] comes after. */
-    val nodes: List<DebugLayerNode> = listOf(tintNode, hiddenNode, edgeNode)
+    val nodes: List<DebugLayerNode> = pickNodes + recognizedNode
 
     private val objects: Deferred<ScanObjects?> = scope.async(Dispatchers.Default) {
         runCatching { ScanObjects.of(dense.cloud, dense.voxelM) }
@@ -186,6 +211,20 @@ internal class ScanObjectPick(
     var foot: Offset by mutableStateOf(Offset.Unspecified)
         private set
 
+    /** The parts of the room recognised in the scan, surest first; none until recognised. */
+    var recognized: List<RecognizedItem> by mutableStateOf(emptyList())
+        private set
+
+    /**
+     * Over the middle of each of [recognized]'s boxes' top, in pixels, in the same order;
+     * unspecified for one not drawn now.
+     */
+    var recognizedAnchors: List<Offset> by mutableStateOf(emptyList())
+        private set
+
+    private val recognizedMesh = DebugMesh()
+    private var recognizedFor: Triple<List<RecognizedItem>, Int, ArDebugStyle>? = null
+
     /** Where a tap found something too large to be one object, until the hint has been read. */
     var tooLargeAt: Offset by mutableStateOf(Offset.Unspecified)
         private set
@@ -197,6 +236,47 @@ internal class ScanObjectPick(
         selection.found?.takeIf { it.surfels.isNotEmpty() && it.surfels.last() < dense.cloud.count }?.let {
             show(it, Offset.Unspecified)
             reveal.settled()
+        }
+        val known = selection.recognized
+        if (known != null) recognized = known else recognize()
+    }
+
+    /**
+     * Recognises the scan's parts, once ([SceneRecognizer]): the keyframes are read here, from the
+     * trace, on the main thread that owns it; the photos, the detector and the lifting run on
+     * [Dispatchers.Default], each lifting under the taps' own [picking] lock. Without a detector
+     * the openings in the walls are still found.
+     */
+    private fun recognize() {
+        val keyframes = SceneRecognizer.keyframes(replay.trace, replay.manifest.lens)
+        scope.launch {
+            val sorted = objects.await() ?: return@launch
+            val recognition = withContext(Dispatchers.Default) {
+                val detector = runCatching { loadDetector() }.getOrNull()
+                try {
+                    SceneRecognizer(detector ?: NoDetector, maxFrames = if (detector == null) 0 else SceneRecognizer.MAX_FRAMES)
+                        .recognize(
+                            keyframes, dense.cloud, sorted,
+                            image = { path -> sceneImageOf { replay.decode(path, it) } },
+                            pickLimit = minOf(dense.cloud.count, DenseSurfels.MAX_SURFELS),
+                            picking = picking,
+                        )
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w(TAG, "The scan could not be recognised: ${e.message}")
+                    null
+                } finally {
+                    detector?.close()
+                }
+            } ?: return@launch
+            Log.d(
+                TAG,
+                "recognised ${recognition.items.size} parts on ${recognition.frames.size} keyframes " +
+                    "with ${recognition.detector} in ${recognition.totalMillis} ms",
+            )
+            selection.recognized = recognition.items
+            recognized = recognition.items
         }
     }
 
@@ -267,8 +347,9 @@ internal class ScanObjectPick(
         orbit.steady = visible
         if (visible != drawn) {
             drawn = visible
-            nodes.forEach { it.isVisible = visible }
+            pickNodes.forEach { it.isVisible = visible }
         }
+        syncRecognized(style)
         if (found == null) reveal.settled()
         if (found == null || !visible) {
             anchor = Offset.Unspecified
@@ -314,6 +395,30 @@ internal class ScanObjectPick(
         foot = span?.let { (x, _, low) -> Offset(x, low) } ?: Offset.Unspecified
     }
 
+    /**
+     * The recognised boxes drawn now — those every point of which is — at [style]'s width, and
+     * where their labels go: none while a picked object's label is written.
+     */
+    private fun syncRecognized(style: ArDebugStyle) {
+        val items = recognized
+        if (items.isEmpty()) return
+        val shown = shownSurfels()
+        val all = minOf(dense.cloud.count, DenseSurfels.MAX_SURFELS)
+        val now = Triple(items, shown, style)
+        val drawnItems = items.map { SceneBoxMeshes.isShown(it, shown, all) }
+        if (now != recognizedFor) {
+            recognizedFor = now
+            val boxes = items.filterIndexed { index, _ -> drawnItems[index] }.map { it.box }
+            recognizedNode.upload(SceneBoxMeshes.edges(boxes, style.axisRadius, recognizedMesh))
+            recognizedNode.isVisible = boxes.isNotEmpty()
+        }
+        val camera = orbit.scanCamera(orbit.restingPose)
+        recognizedAnchors = items.mapIndexed { index, item ->
+            val span = if (drawnItems[index] && !drawn) ScanObjectMeshes.drawnSpan(item.box, camera) else null
+            span?.let { (x, high, _) -> Offset(x, high) } ?: Offset.Unspecified
+        }
+    }
+
     /** The surfels the dense layer is drawing now, the cloud's first ones; none with Points off. */
     private fun shownSurfels(): Int =
         if (session.isVisible(DebugGroup.Points)) {
@@ -327,7 +432,9 @@ internal class ScanObjectPick(
         orbit.steady = false
         // The pick under way, the cloud's sort and the hint: none of them shows anything any more.
         taps.cancel()
-        listOf(tintMaterial, hiddenMaterial, edgeMaterial).forEach { materialLoader.destroyMaterialInstance(it) }
+        listOf(tintMaterial, hiddenMaterial, edgeMaterial, recognizedMaterial).forEach {
+            materialLoader.destroyMaterialInstance(it)
+        }
     }
 
     private fun describe(pick: ScanPick) = when (pick) {
@@ -346,6 +453,14 @@ internal class ScanObjectPick(
         const val TINT_OFFSET = -1f
         const val HINT_MILLIS = 2600L
         const val NANOS_PER_MILLI = 1_000_000L
+    }
+
+    /** No 2D detector — the model is not in the build: the walls' openings are still found. */
+    private object NoDetector : SceneDetector {
+        override val name = "none"
+        override fun detect(image: SceneImage) =
+            emptyList<Detection2D>()
+        override fun close() = Unit
     }
 }
 
@@ -375,12 +490,15 @@ internal fun rememberScanObjectPick(
     selection: ScanSelection? = null,
 ): ScanObjectPick? {
     val palette = LocalStageChrome.current.debug
+    val context = LocalContext.current.applicationContext
     val scope = rememberCoroutineScope()
     val kept = selection ?: remember(replay) { ScanSelection() }
     val pick = remember(engine, materialLoader, replay, session, orbit, palette, kept) {
         val dense = replay?.dense?.takeUnless { replay.growing }
         if (replay != null && dense != null) {
-            ScanObjectPick(replay, dense, session, orbit, kept, engine, materialLoader, palette, scope)
+            ScanObjectPick(replay, dense, session, orbit, kept, engine, materialLoader, palette, scope) {
+                loadSceneDetector(context)
+            }
         } else {
             null
         }
@@ -455,7 +573,42 @@ internal fun ScanObjectOverlay(pick: ScanObjectPick?, modifier: Modifier = Modif
             )
         }
     }
+    // The recognised parts of the room, each named over its box; hidden under a picked one's label.
+    pick.recognized.forEachIndexed { index, item ->
+        val at = { pick.recognizedAnchors.getOrElse(index) { Offset.Unspecified } }
+        Anchored(above = at, below = at, chrome = chrome, modifier = modifier) {
+            RecognizedLabel(item)
+        }
+    }
 }
+
+/** A recognised part of the room: what it is, over its box's three dimensions. */
+@Composable
+private fun RecognizedLabel(item: RecognizedItem) {
+    val (length, depth, height) = item.box.sizes()
+    val name = stringResource(item.label.nameRes())
+    val sure = (item.confidence * PERCENT).roundToInt()
+    val chrome = LocalStageChrome.current
+    val shape = RoundedCornerShape(SceneViewTokens.Radius.sm)
+    val description = stringResource(R.string.demo_ar_rerun_recognized_description, name, sure)
+    Column(
+        modifier = Modifier
+            .testTag("scan-recognized-${item.label.wireName}")
+            .overMediaEdge(shape, chrome.edgeRing, chrome.edgeHalo)
+            .background(chrome.card, shape)
+            .semantics(mergeDescendants = true) { contentDescription = description }
+            .padding(horizontal = Space.sm, vertical = Space.xs),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(name, style = SceneViewTokens.Type.caption.copy(color = chrome.onCard))
+        Text(
+            stringResource(R.string.demo_ar_rerun_object_size, length, depth, height),
+            style = SceneViewTokens.Type.caption.copy(color = chrome.onCardMuted, fontFeatureSettings = "tnum"),
+        )
+    }
+}
+
+private const val PERCENT = 100f
 
 /**
  * The last specified offset it was given, so a label fading out stays where it was. While what it
