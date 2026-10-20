@@ -11,6 +11,9 @@ import io.github.sceneview.ar.arcore.ARSession
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertSame
+import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -19,6 +22,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.Implementation
 import org.robolectric.annotation.Implements
+import org.robolectric.shadows.ShadowLog
 
 /**
  * A failed `Session.resume()` reaches [ARCore.onArSessionFailed] instead of the host app.
@@ -44,6 +48,7 @@ class ARSessionResumeFailureTest {
     private lateinit var arCore: ARCore
     private lateinit var failures: MutableList<Exception>
     private var created: Session? = null
+    private var resumedCallbacks = 0
 
     @Before
     fun setUp() {
@@ -53,10 +58,16 @@ class ARSessionResumeFailureTest {
         context = app.createWindowContext(display, WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY, null)
         failures = mutableListOf()
         created = null
+        resumedCallbacks = 0
         resumeFailure = null
-        arCore = ARCore(
+        ShadowLog.clear()
+        arCore = newARCore(onSessionResumed = { resumedCallbacks++ })
+    }
+
+    private fun newARCore(onSessionResumed: (Session) -> Unit) =
+        ARCore(
             onSessionCreated = { created = it },
-            onSessionResumed = {},
+            onSessionResumed = onSessionResumed,
             onSessionPaused = {},
             onArSessionFailed = { failures += it },
             onSessionConfigChanged = { _, _ -> },
@@ -64,7 +75,6 @@ class ARSessionResumeFailureTest {
             checkCameraPermission = false
             features = emptySet()
         }
-    }
 
     @Test
     fun `every documented resume failure reaches onArSessionFailed from the host resume`() {
@@ -109,6 +119,45 @@ class ARSessionResumeFailureTest {
         arCore.startSession(context)
 
         assertEquals(listOf<Exception>(failure), failures)
+    }
+
+    @Test
+    fun `a resume failure is logged, for a host that set no failure callback`() {
+        val failure = CameraNotAvailableException("camera held by another app")
+        resumeFailure = failure
+
+        arCore.resume(context, handler = null)
+
+        assertTrue(
+            "The failure must leave a trace in the log",
+            ShadowLog.getLogsForTag("ARCore").any { it.throwable === failure },
+        )
+    }
+
+    @Test
+    fun `the next resume after a failure resumes the session once`() {
+        resumeFailure = CameraNotAvailableException("camera held by another app")
+        arCore.resume(context, handler = null)
+        arCore.pause()
+        resumeFailure = null
+
+        arCore.resume(context, handler = null)
+
+        assertTrue("The camera is free again: the session resumes", (created as ARSession).isResumed)
+        assertEquals("onSessionResumed runs for the successful resume only", 1, resumedCallbacks)
+    }
+
+    @Test
+    fun `an exception thrown by the host's onSessionResumed is not reported as a resume failure`() {
+        val hostBug = IllegalStateException("host callback bug")
+        arCore = newARCore(onSessionResumed = { throw hostBug })
+
+        val thrown = assertThrows(IllegalStateException::class.java) {
+            arCore.resume(context, handler = null)
+        }
+
+        assertSame("The host's own exception reaches the host, unchanged", hostBug, thrown)
+        assertEquals("ARCore did resume: nothing to report", emptyList<Exception>(), failures)
     }
 
     @Implements(Session::class)
