@@ -129,13 +129,13 @@ class AsyncLoadCancelBeforeDestroyTest {
     @Test
     fun `a load cancelled after asyncBeginLoad cancels before its cleanup destroy`() = runBlocking {
         // loadModel's own cleanup path: the coroutine is cancelled once the begin already ran, and
-        // destroyOnCancel frees the model on the "main" thread — through the same ordering.
+        // destroyOnFailure frees the model on the "main" thread — through the same ordering.
         val executor = Executors.newSingleThreadExecutor()
         try {
             val main = executor.asCoroutineDispatcher()
             val begun = CountDownLatch(1)
             val job = launch(Dispatchers.Default) {
-                destroyOnCancel("a", destroy = ::destroy, dispatcher = main) {
+                destroyOnFailure("a", destroy = ::destroy, dispatcher = main) {
                     withContext(main) { load("a") }
                     begun.countDown()
                     delay(10_000)

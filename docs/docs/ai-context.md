@@ -55,7 +55,7 @@ your tool reads, or point your assistant at `llms.txt`.
 
 For AI system prompts, use:
 
-- **Compact**: `https://sceneview.github.io/llms-full.txt` (~12 kB, fits most context windows)
+- **Compact**: `https://sceneview.github.io/llms-full.txt` (~13 kB, fits most context windows)
 - **Complete**: `https://sceneview.github.io/llms.txt` (full API reference, and an index of these docs at the top)
 - **MCP resource**: `sceneview://api` (served by sceneview-mcp)
 

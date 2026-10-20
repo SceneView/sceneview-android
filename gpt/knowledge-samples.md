@@ -709,8 +709,8 @@ fun RoomMemory(folder: File) {
 
 What the SDK does not do: rebuild the room as a 3D model you can orbit. The demo's orbit view
 (path, photos, floor, points) is sample code — copy
-[`ArDebugView.kt`](samples/android-demo/src/main/java/io/github/sceneview/demo/demos/ArDebugView.kt)
-and [`RerunReplayScene.kt`](samples/android-demo/src/main/java/io/github/sceneview/demo/demos/RerunReplayScene.kt).
+[`ArDebugView.kt`](https://github.com/sceneview/sceneview/blob/main/samples/android-demo/src/main/java/io/github/sceneview/demo/demos/ArDebugView.kt)
+and [`RerunReplayScene.kt`](https://github.com/sceneview/sceneview/blob/main/samples/android-demo/src/main/java/io/github/sceneview/demo/demos/RerunReplayScene.kt).
 iOS: `ARRecorder` records a video of the walk only (see the iOS section above) — no replay.
 
 ### Measure how much floor a room scan has seen
@@ -767,7 +767,7 @@ For a replayed recording, `rememberARRecordInterpreter()` gives `interpretation.
 without any of this — but it counts every surface found, walls and tables included. The demo's
 `Room 3.9 × 3.8 m · 15 m²` line is a different figure: the rectangle around the floor and walls,
 squared to the walls. It is sample code
-([`RoomMeasure.kt`](samples/android-demo/src/main/java/io/github/sceneview/demo/demos/internal/RoomMeasure.kt)),
+([`RoomMeasure.kt`](https://github.com/sceneview/sceneview/blob/main/samples/android-demo/src/main/java/io/github/sceneview/demo/demos/internal/RoomMeasure.kt)),
 and it over-reads on large or open spaces (#4328).
 
 ### Draw a room's outline from a scan
@@ -837,7 +837,7 @@ fun RoomOutline() {
 The outline is what the phone saw of the floor, so it is ragged where furniture stands. For a
 rectangle squared to the walls with its two lengths written along the sides, the way the demo
 draws it, copy `RoomMeasure` and `MeasureDrawing` from
-[`RoomMeasure.kt`](samples/android-demo/src/main/java/io/github/sceneview/demo/demos/internal/RoomMeasure.kt).
+[`RoomMeasure.kt`](https://github.com/sceneview/sceneview/blob/main/samples/android-demo/src/main/java/io/github/sceneview/demo/demos/internal/RoomMeasure.kt).
 
 ---
 

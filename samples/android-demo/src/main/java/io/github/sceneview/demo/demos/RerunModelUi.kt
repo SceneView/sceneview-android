@@ -98,6 +98,7 @@ import io.github.sceneview.demo.demos.internal.RerunScanModel
 import io.github.sceneview.demo.demos.internal.RerunSessionStore
 import io.github.sceneview.demo.demos.internal.RerunSyntheticRoom
 import io.github.sceneview.demo.demos.internal.RerunTsdf
+import io.github.sceneview.demo.demos.internal.ScanAreaCopy
 import io.github.sceneview.demo.demos.internal.ScanGround
 import io.github.sceneview.demo.demos.internal.ScanGroundMeshes
 import io.github.sceneview.demo.demos.internal.ScanPreset
@@ -479,6 +480,8 @@ private sealed interface ModelState {
  *
  * [onModel] hears the model once it is known (`null` when there is none), for the export sheet.
  * [opened] is the kept model when the caller has already read it, so it is not read twice.
+ * [floorCovered] is the scan's floor covered in m², its replay's figure (#4734); `null` when its
+ * recording cannot be read, and the legend then keys the hatching alone.
  */
 @Composable
 @Suppress("LongMethod", "LongParameterList", "CyclomaticComplexMethod")
@@ -498,6 +501,7 @@ internal fun RerunModelScreen(
     materialLoader: MaterialLoader,
     hintStays: Boolean = false,
     opened: RerunScanModel? = null,
+    floorCovered: Float? = null,
 ) {
     var progress by remember(source, id) { mutableFloatStateOf(0f) }
     val state by produceState<ModelState>(ModelState.Loading, source, id) {
@@ -603,7 +607,8 @@ internal fun RerunModelScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 val floor = ground?.ground?.takeIf { tourReady && it.seen + it.missing > 0 }
-                floor?.let { FloorLegend(ScanGround.percent(it.seenShare, it.missing, it.seen)) }
+                // Without a readable recording there is no figure, but the hatching still needs its key.
+                if (floor != null) FloorLegend(floorCovered?.takeIf { it > 0f }?.let { ScanAreaCopy.area(it) })
                 ScanTourPill(
                     touring = touring,
                     enabled = tourReady,
@@ -852,13 +857,15 @@ private fun groundOf(model: RerunScanModel): GroundBuild? = runCatching {
 
 /**
  * How much of the floor the scan covers, and the hatching that marks the rest: the live map's
- * own words and swatch, so the result reads as the map the scan was filling in.
+ * own words and swatch, so the result reads as the map the scan was filling in. Without [area] (a
+ * recording that cannot be read) it keys the hatching alone.
  */
 @Composable
-private fun FloorLegend(percent: Int) {
+private fun FloorLegend(area: String?) {
     val chrome = LocalStageChrome.current
     val shape = RoundedCornerShape(SceneViewTokens.Radius.full)
-    val label = stringResource(R.string.scan_coverage_label, percent)
+    val label = area?.let { stringResource(R.string.scan_coverage_label, it) }
+        ?: stringResource(R.string.scan_coverage_label_hatched)
     val colors = ScanGroundColors.current()
     Row(
         modifier = Modifier
@@ -889,7 +896,8 @@ private fun FloorLegend(percent: Int) {
             }
         }
         Text(
-            text = stringResource(R.string.scan_coverage_floor, percent),
+            text = area?.let { stringResource(R.string.scan_coverage_floor, it) }
+                ?: stringResource(R.string.scan_coverage_hatched),
             style = SceneViewTokens.Type.caption,
             color = chrome.onCard,
         )
