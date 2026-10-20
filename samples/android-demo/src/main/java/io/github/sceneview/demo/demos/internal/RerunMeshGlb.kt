@@ -34,7 +34,7 @@ object RerunMeshGlb {
         progress: (Float) -> Unit = {},
     ): ByteArray {
         require(mesh.triangleCount > 0) { "a GLB mesh must contain triangles" }
-        val reduced = if (fullResolution) mesh else RerunMeshSimplifier.simplify(mesh, targetTriangles, progress)
+        val reduced = if (fullResolution) mesh else RerunMeshSimplifier.simplify(mesh, targetTriangles, progress = progress)
         require(reduced.triangleCount > 0) { "simplification must retain a surface" }
         onReduced(reduced.triangleCount)
         val exported = if (floorOrigin) {
@@ -142,7 +142,7 @@ object RerunMeshGlb {
         }
 
     /** The container around [json] and a binary chunk of [binBytes] that [writeBin] puts in place. */
-    private fun glb(json: ByteArray, binBytes: Int, writeBin: ByteBuffer.() -> Unit): ByteArray {
+    internal fun glb(json: ByteArray, binBytes: Int, writeBin: ByteBuffer.() -> Unit): ByteArray {
         val jsonPadded = pad(json.size)
         val binPadded = pad(binBytes)
         val total = HEADER + CHUNK_HEADER + jsonPadded + CHUNK_HEADER + binPadded
@@ -161,7 +161,7 @@ object RerunMeshGlb {
     private fun pad(size: Int) = (size + 3) and 3.inv()
 
     /** sRGB byte → linear byte, glTF's colour space for `COLOR_0`. */
-    private val LINEAR = ByteArray(256) { i ->
+    internal val LINEAR = ByteArray(256) { i ->
         val c = i / 255.0
         val linear = if (c <= SRGB_KNEE) {
             c / SRGB_LINEAR_SLOPE

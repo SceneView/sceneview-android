@@ -39,15 +39,21 @@ internal object RerunMeshSimplifier {
      *
      * [progress] is told the share done, 0–1, a few times a second; a caller stops the work by
      * throwing from it (a coroutine's `ensureActive()`), which leaves nothing behind.
+     * No collapse leaves an edge longer than [maxEdgeM]: a textured model's faces must each fit
+     * in one photo. None moves the surface more than [maxErrorM] off any of the planes it merges
+     * (the quadric's error): a flat wall goes down to a few large faces, a cushion keeps its curve,
+     * and the result may stay well under [targetTriangles].
      */
     fun simplify(
         mesh: RerunMesh,
         targetTriangles: Int = DEFAULT_TARGET_TRIANGLES,
+        maxEdgeM: Float = Float.POSITIVE_INFINITY,
+        maxErrorM: Float = Float.POSITIVE_INFINITY,
         progress: (Float) -> Unit = {},
     ): RerunMesh {
         require(targetTriangles >= 0)
         if (mesh.triangleCount == 0) return mesh
-        return Worker(mesh, progress).run(targetTriangles)
+        return Worker(mesh, progress, maxEdgeM.toDouble() * maxEdgeM, maxErrorM.toDouble() * maxErrorM).run(targetTriangles)
     }
 
     /** The working arrays [simplify] allocates for a mesh of this size, in bytes. */
@@ -66,7 +72,12 @@ internal object RerunMeshSimplifier {
     /** A sweep earns the next one by removing at least one triangle in this many. */
     private const val SWEEP_GAIN_DIVISOR = 100
 
-    private class Worker(val input: RerunMesh, val progress: (Float) -> Unit) {
+    private class Worker(
+        val input: RerunMesh,
+        val progress: (Float) -> Unit,
+        val maxEdgeSq: Double,
+        val maxErrorSq: Double,
+    ) {
         val vertices = input.vertexCount
         val p = input.positions.copyOf()
         val colors = input.colors.copyOf()
@@ -209,7 +220,9 @@ internal object RerunMeshSimplifier {
                     val b = edge.toInt()
                     // The cost is recomputed: it also sets where on the edge the collapse lands.
                     val gone = !alive[a] || !alive[b]
-                    if (gone || !cost(a, b).isFinite() || !legal(a, b)) continue
+                    if (gone) continue
+                    val cost = cost(a, b)
+                    if (!cost.isFinite() || cost > maxErrorSq || !legal(a, b)) continue
                     collapse(a, b)
                     if (++sinceReport == REPORT_EVERY) {
                         sinceReport = 0
@@ -347,11 +360,19 @@ internal object RerunMeshSimplifier {
             for (axis in 0..2) p[v * 3 + axis] =
                 (p[a * 3 + axis] + fraction * (p[b * 3 + axis] - p[a * 3 + axis])).toFloat()
             faceNormal(triangles[t], triangles[t + 1], triangles[t + 2], normal)
+            val tooLong = maxEdgeSq.isFinite() && (0..2).any { k ->
+                val u = triangles[t + k]
+                val w = triangles[t + (k + 1) % 3]
+                val dx = (p[u * 3] - p[w * 3]).toDouble()
+                val dy = (p[u * 3 + 1] - p[w * 3 + 1]).toDouble()
+                val dz = (p[u * 3 + 2] - p[w * 3 + 2]).toDouble()
+                dx * dx + dy * dy + dz * dz > maxEdgeSq
+            }
             p[v * 3] = px
             p[v * 3 + 1] = py
             p[v * 3 + 2] = pz
             val area = dot(normal, normal)
-            return area <= 1e-24 || dot(normal, oldNormal) <= 0.1 * sqrt(area * dot(oldNormal, oldNormal))
+            return tooLong || area <= 1e-24 || dot(normal, oldNormal) <= 0.1 * sqrt(area * dot(oldNormal, oldNormal))
         }
 
         fun collapse(a: Int, b: Int) {
