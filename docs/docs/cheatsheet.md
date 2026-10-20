@@ -202,7 +202,9 @@ ARSceneView(
             else -> { /* fallback while prototyping only */ }
         }
     },
-    onTouchEvent = { event, hitResult -> true }
+    // Return true only to consume the event: it then never reaches the nodes' gestures nor
+    // onGestureListener. Place models from onGestureListener's onSingleTapConfirmed instead.
+    onTouchEvent = { event, hitResult -> false }
 ) {
     // ARSceneScope — declare AR nodes here
 }
