@@ -19,10 +19,11 @@ package io.github.sceneview.demo.demos.internal
  * busy fusing, or ARCore stalled), and is dropped like any reprojection.
  *
  * The clock can also run the other way by a hair: on a Pixel 4a (#4729) every raw depth image
- * is stamped 0 to 2 ms **after** the camera frame that hands it over — a skew between two clocks
- * of the same capture, not a depth of the future. Rejecting it fused nothing in a 2:28 room scan. A depth up to [MAX_LEAD_NANOS] after its frame is therefore judged
- * as lag 0: fused when new, still never twice ([Verdict.ALREADY_FUSED]). Only a depth further
- * ahead than that is [Verdict.AHEAD], a clock the scan cannot trust.
+ * is stamped 0 to 2 ms **after** the camera frame that hands it over: a skew between two clocks
+ * of the same capture, not a depth of the future. Rejecting it fused nothing in a 37 s room
+ * scan. A depth up to [MAX_LEAD_NANOS] after its frame is therefore judged as lag 0: fused when
+ * new, still never twice ([Verdict.ALREADY_FUSED]). Only a depth further ahead than that is
+ * [Verdict.AHEAD], a clock the scan cannot trust.
  */
 object DepthFreshness {
     /** 100 ms: ARCore's raw-depth period on a Pixel, ~3 camera frames at 30 fps. */

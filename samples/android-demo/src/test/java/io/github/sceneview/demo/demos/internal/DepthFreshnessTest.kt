@@ -93,6 +93,21 @@ class DepthFreshnessTest {
     }
 
     @Test
+    fun `the clock-reset boundary honours the lead`() {
+        val last = boot + 2_000_000L
+        val lead = DepthFreshness.MAX_LEAD_NANOS
+        // A frame further back than the lead: a restarted session, the last fused depth is forgotten.
+        assertEquals(Verdict.FRESH, DepthFreshness.judge(last - lead - 1, last - lead - 1, lastFusedNanos = last))
+        // A frame within the lead: the same capture handing the fused depth again.
+        assertEquals(Verdict.ALREADY_FUSED, DepthFreshness.judge(last - lead, last, lastFusedNanos = last))
+    }
+
+    @Test
+    fun `depth a whole 60 fps frame ahead is rejected`() {
+        assertEquals(Verdict.AHEAD, DepthFreshness.judge(boot, boot + 16_666_667L, null))
+    }
+
+    @Test
     fun `the lead tolerance stays well under one camera frame`() {
         assertEquals(5_000_000L, DepthFreshness.MAX_LEAD_NANOS)
         assertTrue(DepthFreshness.MAX_LEAD_NANOS * 3 < frame / 2) // under a third of a 60 fps frame
