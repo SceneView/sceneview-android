@@ -557,7 +557,12 @@ internal fun ScanLiveView(
             },
             observe = { frame ->
                 val pose = livePose(frame.camera)
-                coverage.observe(frame, pose = pose, snapshotCells = media.liveDense?.invoke()?.coveredCells)
+                coverage.observe(
+                    frame,
+                    pose = pose,
+                    snapshotCells = media.liveDense?.invoke()?.coveredCells,
+                    record = media.trace,
+                )
                 walls?.observe(frame, coverage, pose)
             },
             // The walls stand in the room while it is scanned; saving, the orbit shows the cloud.

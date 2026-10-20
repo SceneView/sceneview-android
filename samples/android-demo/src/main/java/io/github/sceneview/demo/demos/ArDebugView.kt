@@ -317,10 +317,15 @@ internal class DebugLayerNode(
     priority: Int,
     /** Carries [DebugMesh.uvs] as UV0 — the textured layers of the replay. */
     private val textured: Boolean = false,
+    /**
+     * Also carries CUSTOM0, each corner minus its surfel's centre, given to [upload]: the dense
+     * layer drawn through `scan_surfel.mat`, which clamps a surfel's size on screen (#4742).
+     */
+    private val surfels: Boolean = false,
 ) : MeshNode(
     engine = engine,
     primitiveType = PrimitiveType.TRIANGLES,
-    vertexBuffer = createVertexBuffer(engine, INITIAL_CAPACITY, textured),
+    vertexBuffer = createVertexBuffer(engine, INITIAL_CAPACITY, textured, surfels),
     indexBuffer = createIndexBuffer(engine, INITIAL_CAPACITY),
     // The session is room-sized but unbounded; a generous fixed box keeps culling cheap and
     // never clips a layer, where a per-upload AABB would cost a pass over every vertex.
@@ -342,20 +347,32 @@ internal class DebugLayerNode(
     private var uploadedIndices = 3
     private var shownIndices = 3
 
+    /**
+     * CUSTOM0 staging for a [surfels] layer, reused across uploads: a live room is megabytes of
+     * offsets per snapshot. Filament reads it asynchronously, so it is only refilled once the
+     * previous upload's callback has fired; meanwhile an upload falls back to a fresh buffer.
+     */
+    private var offsetScratch: ByteBuffer? = null
+    private val offsetScratchInFlight = java.util.concurrent.atomic.AtomicBoolean(false)
+
     init {
         // The buffers are uninitialised until the first upload: draw one degenerate triangle.
         upload(null)
     }
 
-    /** Replaces the layer's triangles with [mesh]'s; `null` or empty draws nothing. */
-    fun upload(mesh: DebugMesh?) {
+    /**
+     * Replaces the layer's triangles with [mesh]'s; `null` or empty draws nothing. A [surfels]
+     * layer takes [offsets] too, xyz per vertex (`DenseSurfels.cornerOffsets`); none draws every
+     * surfel at its world size.
+     */
+    fun upload(mesh: DebugMesh?, offsets: FloatArray? = null) {
         val empty = mesh == null || mesh.isEmpty
         val vertexCount = if (empty) 1 else mesh!!.vertexCount
         val indexCount = if (empty) 3 else mesh!!.indexCount
 
         val newVertexBuffer =
             if (vertexCount > vertexCapacity) {
-                createVertexBuffer(engine, nextPowerOfTwo(vertexCount), textured)
+                createVertexBuffer(engine, nextPowerOfTwo(vertexCount), textured, surfels)
             } else {
                 null
             }
@@ -375,6 +392,25 @@ internal class DebugLayerNode(
                 if (empty) uvBytes.asFloatBuffer().put(floatArrayOf(0f, 0f))
                 else uvBytes.asFloatBuffer().put(mesh!!.uvs, 0, vertexCount * 2)
                 vertexTarget.setBufferAt(engine, 1, uvBytes, 0, vertexCount * 2 * Float.SIZE_BYTES)
+            }
+            if (surfels) {
+                val bytes = vertexCount * 3 * Float.SIZE_BYTES
+                val reuse = offsetScratchInFlight.compareAndSet(false, true)
+                if (reuse && (offsetScratch?.capacity() ?: 0) < bytes) {
+                    offsetScratch = ByteBuffer.allocateDirect(nextPowerOfTwo(bytes)).order(ByteOrder.nativeOrder())
+                }
+                val offsetBytes = if (reuse) offsetScratch!!.apply { clear() }
+                else ByteBuffer.allocateDirect(bytes).order(ByteOrder.nativeOrder())
+                if (!empty && offsets != null && offsets.size >= vertexCount * 3) {
+                    offsetBytes.asFloatBuffer().put(offsets, 0, vertexCount * 3)
+                }
+                if (reuse) {
+                    vertexTarget.setBufferAt(engine, 2, offsetBytes, 0, bytes, DirectExecutor) {
+                        offsetScratchInFlight.set(false)
+                    }
+                } else {
+                    vertexTarget.setBufferAt(engine, 2, offsetBytes, 0, bytes)
+                }
             }
 
             val indexBytes = ByteBuffer.allocateDirect(indexCount * Int.SIZE_BYTES).order(ByteOrder.nativeOrder())
@@ -429,14 +465,21 @@ internal class DebugLayerNode(
         const val INITIAL_CAPACITY = 64
         const val WORLD_HALF_EXTENT_M = 500f
 
+        /** Runs Filament's buffer-released callback where it fires; it only clears a flag. */
+        val DirectExecutor = java.util.concurrent.Executor { it.run() }
+
         fun nextPowerOfTwo(value: Int): Int = Integer.highestOneBit((value - 1).coerceAtLeast(1)) shl 1
 
-        fun createVertexBuffer(engine: Engine, count: Int, textured: Boolean): VertexBuffer = VertexBuffer.Builder()
-            .bufferCount(if (textured) 2 else 1)
-            .vertexCount(count)
-            .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT3)
-            .apply { if (textured) attribute(VertexAttribute.UV0, 1, AttributeType.FLOAT2) }
-            .build(engine)
+        fun createVertexBuffer(engine: Engine, count: Int, textured: Boolean, surfels: Boolean): VertexBuffer {
+            require(!surfels || textured) { "a surfel layer is textured" }
+            return VertexBuffer.Builder()
+                .bufferCount(if (surfels) 3 else if (textured) 2 else 1)
+                .vertexCount(count)
+                .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT3)
+                .apply { if (textured) attribute(VertexAttribute.UV0, 1, AttributeType.FLOAT2) }
+                .apply { if (surfels) attribute(VertexAttribute.CUSTOM0, 2, AttributeType.FLOAT3) }
+                .build(engine)
+        }
 
         fun createIndexBuffer(engine: Engine, count: Int): IndexBuffer = IndexBuffer.Builder()
             .bufferType(IndexBuffer.Builder.IndexType.UINT)

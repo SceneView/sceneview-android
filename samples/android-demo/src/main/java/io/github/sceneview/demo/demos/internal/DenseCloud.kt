@@ -394,6 +394,66 @@ object DenseSurfels {
     const val MAX_SURFELS = ATLAS_SIZE * ATLAS_SIZE
 
     /**
+     * The distance under which a surfel shrinks towards a dot (#4742): `scan_surfel.mat` scales
+     * it about its centre by `(depth / NEAR_FADE_M)²`, so its side on screen falls to nothing as
+     * the camera reaches it. A surfel is a few centimetres wide in the world, so one the camera
+     * passed close to — the saving orbit leaving the room through a wall, the live eye next to a
+     * surface — grew into a square over most of the screen. Farther, every level is drawn as
+     * built, so walls keep no holes.
+     */
+    const val NEAR_FADE_M = 0.3f
+
+    /**
+     * The largest side a surfel is drawn at, as a fraction of the view's height: a backstop for
+     * the coarsest levels just past [NEAR_FADE_M]. A level-[DenseFusion.MAX_LEVEL] surfel (about
+     * 10 cm) reaches it only closer than ~0.36 m on a phone's lens; a level-0 one never does.
+     */
+    const val MAX_SCREEN_SIDE = 0.25f
+
+    /**
+     * What `scan_surfel.mat`'s vertex stage scales a surfel's corners by about its centre — its
+     * centre [depth] metres ahead, [halfDiagonal] metres from centre to corner, through a
+     * projection whose `[1][1]` term is [clipYScale]: `1` past [nearFade] while its side on
+     * screen stays under [maxSide] of the view's height, `(depth / nearFade)²` nearer, and never
+     * more than keeps it under [maxSide].
+     */
+    fun screenScale(
+        halfDiagonal: Float,
+        depth: Float,
+        clipYScale: Float,
+        maxSide: Float = MAX_SCREEN_SIDE,
+        nearFade: Float = NEAR_FADE_M,
+    ): Float {
+        val d = depth.coerceAtLeast(MIN_DEPTH_M)
+        val side = halfDiagonal * SQRT_2 * clipYScale / (2f * d)
+        val fade = (d / nearFade).coerceAtMost(1f)
+        return minOf(fade * fade, maxSide / side.coerceAtLeast(MIN_SIDE))
+    }
+
+    /**
+     * Each vertex of a [mesh] made by [mesh] minus the centre of its surfel, xyz per vertex: the
+     * `custom0` attribute `scan_surfel.mat` finds the centre with. Four vertices per surfel.
+     */
+    fun cornerOffsets(mesh: DebugMesh): FloatArray {
+        val p = mesh.positions
+        val out = FloatArray(mesh.vertexCount * 3)
+        var q = 0
+        while (q + 4 <= mesh.vertexCount) {
+            for (axis in 0 until 3) {
+                val base = q * 3 + axis
+                val centre = (p[base] + p[base + 3] + p[base + 6] + p[base + 9]) / 4f
+                for (corner in 0 until 4) out[base + corner * 3] = p[base + corner * 3] - centre
+            }
+            q += 4
+        }
+        return out
+    }
+
+    private const val SQRT_2 = 1.4142135f
+    private const val MIN_DEPTH_M = 1e-4f
+    private const val MIN_SIDE = 1e-6f
+
+    /**
      * Two triangles and four vertices per surfel, surfel `i` at indices `6i until 6i + 6`; a
      * surfel of level L ([DenseCloud.levelOf]) 2^L times as wide, so a coarsened wall stays whole.
      */

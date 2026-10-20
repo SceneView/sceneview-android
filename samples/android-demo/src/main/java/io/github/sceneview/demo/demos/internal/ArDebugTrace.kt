@@ -168,6 +168,11 @@ class ArDebugTrace {
     private var depthTotals = IntArray(64)
     private var depthCount = 0
 
+    private var floorCellTimes = FloatArray(64)
+    private var floorCellKeys = LongArray(64)
+    private var floorCellCount = 0
+    private val floorCellSet = HashSet<Long>()
+
     /**
      * When set, every event that changed the trace is appended here as it was kept — the
      * confident, finite points only, a plane or an anchor only when it changed — so replaying
@@ -439,6 +444,49 @@ class ArDebugTrace {
         touch(t)
     }
 
+    /**
+     * Records the floor cells ([CoverageGrid.key]-packed) a live scan's coverage found new at
+     * [nanos] (#4734): the one record of the floor covered that the live map, the replay and the
+     * result all read, so the three show the same m². A cell already recorded is skipped.
+     */
+    fun addFloorCells(nanos: Long, keys: LongArray) {
+        // Never back in time: a cell is kept, at the latest time already recorded at worst.
+        val at = secondsOf(nanos)
+        val t = if (floorCellCount > 0) maxOf(at, floorCellTimes[floorCellCount - 1]) else at
+        val fresh = keys.filter { floorCellSet.add(it) }
+        if (fresh.isEmpty()) return
+        if (floorCellCount + fresh.size > floorCellKeys.size) {
+            val size = maxOf(floorCellKeys.size * 2, floorCellCount + fresh.size)
+            floorCellKeys = floorCellKeys.copyOf(size)
+            floorCellTimes = floorCellTimes.copyOf(size)
+        }
+        for (key in fresh) {
+            floorCellTimes[floorCellCount] = t
+            floorCellKeys[floorCellCount] = key
+            floorCellCount++
+        }
+        journal?.add(ArDebugEvent.FloorCells(nanos, fresh.toLongArray()))
+        touch(t)
+    }
+
+    /**
+     * [addFloorCells] at [seconds] into the trace, for a caller that counts in seconds. Before the
+     * trace's first event there is no clock to stamp them on, and nothing is recorded.
+     */
+    fun addFloorCellsAt(seconds: Float, keys: LongArray) {
+        if (originNanos == Long.MIN_VALUE) return
+        addFloorCells(originNanos + (seconds.coerceAtLeast(0f) * NANOS_PER_SECOND).toLong(), keys)
+    }
+
+    /** Whether the scan recorded its floor coverage ([addFloorCells]); older scans did not. */
+    val hasFloorCells: Boolean get() = floorCellCount > 0
+
+    /** Floor cells recorded by [time]: the first that many of [floorCell] were covered by then. */
+    fun floorCellsAt(time: Float): Int = upperBound(floorCellTimes, floorCellCount, time)
+
+    /** Recorded floor cell [index], in the order the scan covered them. */
+    fun floorCell(index: Int): Long = floorCellKeys[index]
+
     /** Whether the trace says how its dense map grew ([addDepthStats]). */
     val hasDepthStats: Boolean get() = depthCount > 0
 
@@ -562,6 +610,8 @@ class ArDebugTrace {
     }
 
     companion object {
+        private const val NANOS_PER_SECOND = 1e9
+
         /** A pose closer than this to the last kept one does not extend the trail. */
         const val POSE_MIN_STEP_M = 0.005f
 

@@ -492,7 +492,7 @@ Sample: `SceneRecorderState` (`samples/android-demo/.../recording/SceneRecorderS
 
 ## AR Recording & Playback — debug without a phone
 
-ARCore captures the **entire** AR session (camera frames, IMU, planes, depth, anchors, light estimation) into an MP4. SceneView wraps this with [`ARRecorder`](arsceneview/src/main/java/io/github/sceneview/ar/recording/ARRecorder.kt) for recording and a `playbackDataset` parameter on `ARSceneView` for replay. The replayed session re-runs as if you were there: hit-tests return the same results, planes appear at the same moment, anchors track at the same poses.
+ARCore captures the **entire** AR session (camera frames, IMU, planes, depth, anchors, light estimation) into an MP4. SceneView wraps this with [`ARRecorder`](https://github.com/sceneview/sceneview/blob/main/arsceneview/src/main/java/io/github/sceneview/ar/recording/ARRecorder.kt) for recording and a `playbackDataset` parameter on `ARSceneView` for replay. The replayed session re-runs as if you were there: hit-tests return the same results, planes appear at the same moment, anchors track at the same poses.
 
 ### Why this matters
 
@@ -645,7 +645,7 @@ ARSceneView(playbackDatasetUri = pickedUri) { /* … */ }
 //    IllegalArgumentException at session creation.
 ```
 
-See [`ARRecorder.kt`](arsceneview/src/main/java/io/github/sceneview/ar/recording/ARRecorder.kt).
+See [`ARRecorder.kt`](https://github.com/sceneview/sceneview/blob/main/arsceneview/src/main/java/io/github/sceneview/ar/recording/ARRecorder.kt).
 
 ### AR Record interpretation — quantify a replayed session (#1441)
 
@@ -684,7 +684,7 @@ val report = interpreter.interpretation
 - Call `interpreter.reset()` to interpret another dataset with the same instance.
 - The pure folding core (`ARRecordInterpreterCore`, ARCore-free) is JVM-unit-tested directly.
 
-See [`ARRecordInterpreter.kt`](arsceneview/src/main/java/io/github/sceneview/ar/recording/ARRecordInterpreter.kt).
+See [`ARRecordInterpreter.kt`](https://github.com/sceneview/sceneview/blob/main/arsceneview/src/main/java/io/github/sceneview/ar/recording/ARRecordInterpreter.kt).
 
 ### iOS — `ARRecorder` (record-only via ReplayKit, v4.3.0+)
 
@@ -753,7 +753,7 @@ ARSceneView(
 - **Not all devices support EIS.** Always gate with `session.isImageStabilizationModeSupported(Config.ImageStabilizationMode.EIS)` — calling `setImageStabilizationMode(EIS)` on an unsupported device throws.
 - **Back-camera only.** EIS is not supported with `Session.Feature.FRONT_CAMERA`. The `isImageStabilizationModeSupported` check returns `false` for front-camera sessions, so the gate above already covers selfie configurations — but be aware that toggling EIS in a front-camera demo will be a no-op.
 - **Toggling at runtime works** via `session.configure {}`, but the camera background can briefly stutter while the stabilization buffers re-prime. If you expose an in-app toggle, prefer remounting via `key(eisEnabled) { ARSceneView(...) }` for a clean swap.
-- **Interactive demo** at [`samples/android-demo/src/main/java/io/github/sceneview/demo/demos/ARImageStabilizationDemo.kt`](samples/android-demo/src/main/java/io/github/sceneview/demo/demos/ARImageStabilizationDemo.kt).
+- **Interactive demo** at [`samples/android-demo/src/main/java/io/github/sceneview/demo/demos/ARImageStabilizationDemo.kt`](https://github.com/sceneview/sceneview/blob/main/samples/android-demo/src/main/java/io/github/sceneview/demo/demos/ARImageStabilizationDemo.kt).
 
 ---
 
@@ -1016,6 +1016,6 @@ setSpatialAudioListenerPose(cameraPos, cameraForward, cameraUp)  // call as the 
 
 **Phases.** Phase 1 (this release) ships positional playback with inverse / linear falloff. The listener is **caller-driven** in phase 1 — call `setSpatialAudioListenerPose` from your render loop. Automatic camera-tracked listening and anchor-attached listeners are phase 2. Occlusion and reverb zones are phase 3. See [#1900](https://github.com/sceneview/sceneview/issues/1900).
 
-**Interactive demos** — Android [`SpatialAudioDemo.kt`](samples/android-demo/src/main/java/io/github/sceneview/demo/demos/SpatialAudioDemo.kt), iOS [`SpatialAudioDemo.swift`](samples/ios-demo/SceneViewDemo/Views/Demos/SpatialAudioDemo.swift), and the **Spatial Audio** tab of the Web demo.
+**Interactive demos** — Android [`SpatialAudioDemo.kt`](https://github.com/sceneview/sceneview/blob/main/samples/android-demo/src/main/java/io/github/sceneview/demo/demos/SpatialAudioDemo.kt), iOS [`SpatialAudioDemo.swift`](https://github.com/sceneview/sceneview/blob/main/samples/ios-demo/SceneViewDemo/Views/Demos/SpatialAudioDemo.swift), and the **Spatial Audio** tab of the Web demo.
 
 ---

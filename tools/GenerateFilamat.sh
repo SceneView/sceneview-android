@@ -10,10 +10,10 @@
 # version than the runtime expected). See CLAUDE.md "Filament runtime ↔
 # .filamat ABI invariant" and CONTRIBUTING.md.
 #
-# Inventory (45 mats → 45 filamats), across THREE pinned toolchains:
+# Inventory (46 mats → 46 filamats), across THREE pinned toolchains:
 #   sceneview/src/main/materials/         (15) → sceneview/src/main/assets/materials/
 #   arsceneview/src/main/materials/        (8) → arsceneview/src/main/assets/materials/
-#   samples/android-demo/src/main/materials/ (18) → samples/android-demo/src/main/assets/materials/
+#   samples/android-demo/src/main/materials/ (19) → samples/android-demo/src/main/assets/materials/
 #   website-static/materials/              (3) → website-static/materials/     [filamentWebsite]
 #   sceneview-web/materials/               (1) → sceneview-web/materials/      [filamentWeb]
 #
@@ -31,8 +31,8 @@
 # fetch — both artifacts are committed and --check-diffed (#2646 P2).
 #
 # Usage:
-#   bash tools/GenerateFilamat.sh                 # regenerate all 45 filamats
-#   bash tools/GenerateFilamat.sh --check         # diff all 45 against committed blobs; exit 1 on drift
+#   bash tools/GenerateFilamat.sh                 # regenerate all 46 filamats
+#   bash tools/GenerateFilamat.sh --check         # diff all 46 against committed blobs; exit 1 on drift
 #   bash tools/GenerateFilamat.sh --mat <name>    # regenerate one (e.g. --mat opaque_colored)
 #   bash tools/GenerateFilamat.sh --ci-tolerant   # treat matc download failure as WARN, not FAIL
 #   bash tools/GenerateFilamat.sh --help
@@ -182,6 +182,7 @@ MATS=(
     "android-demo:showroom_floor:samples/android-demo/src/main/materials/showroom_floor.mat:samples/android-demo/src/main/assets/materials/showroom_floor.filamat:--optimize-size -p mobile -a opengl -a vulkan"
     "android-demo:viewer_grid:samples/android-demo/src/main/materials/viewer_grid.mat:samples/android-demo/src/main/assets/materials/viewer_grid.filamat:--optimize-size -p mobile -a opengl -a vulkan"
     "android-demo:ar_mesh_tint:samples/android-demo/src/main/materials/ar_mesh_tint.mat:samples/android-demo/src/main/assets/materials/ar_mesh_tint.filamat:--optimize-size -p mobile -a opengl -a vulkan"
+    "android-demo:scan_surfel:samples/android-demo/src/main/materials/scan_surfel.mat:samples/android-demo/src/main/assets/materials/scan_surfel.filamat:--optimize-size -p mobile -a opengl -a vulkan"
     "android-demo:replay_grid:samples/android-demo/src/main/materials/replay_grid.mat:samples/android-demo/src/main/assets/materials/replay_grid.filamat:--optimize-size -p mobile -a opengl -a vulkan"
     "arsceneview:camera_stream_depth:arsceneview/src/main/materials/camera_stream_depth.mat:arsceneview/src/main/assets/materials/camera_stream_depth.filamat:--optimize-size -p mobile -a opengl -a vulkan"
     "arsceneview:camera_stream_person_occlusion:arsceneview/src/main/materials/camera_stream_person_occlusion.mat:arsceneview/src/main/assets/materials/camera_stream_person_occlusion.filamat:--optimize-size -p mobile -a opengl -a vulkan"

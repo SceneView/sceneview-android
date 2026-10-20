@@ -2,6 +2,7 @@ package io.github.sceneview.loaders
 
 import android.content.Context
 import android.os.SystemClock
+import android.util.Log
 import androidx.annotation.MainThread
 import androidx.annotation.RawRes
 import com.google.android.filament.Engine
@@ -31,7 +32,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -61,12 +64,30 @@ import java.nio.ByteBuffer
  *
  * The `suspend` [loadModel] converts off the main thread; the [createModel] overloads convert on
  * the calling (main) thread, like the rest of their work.
+ *
+ * **A failed `load*Async` reports `null` (an empty list for [loadInstancedModelAsync]) and is
+ * logged**: a missing file, an unreachable URL or an unparsable payload never reaches the app's
+ * uncaught-exception handler (nor a `CoroutineExceptionHandler` in [coroutineScope]), and the
+ * loader keeps loading. The `suspend` loads let the same exceptions through to their caller. An
+ * external resource of a `.gltf` (a `.bin` buffer, a texture) that cannot be read is logged and
+ * skipped: the model loads without it, as with the [createModel] overloads.
+ *
+ * @param coroutineScope the scope the `load*Async` calls run in, inside a child scope of the
+ * loader's own: [clear] cancels the loads it started there and nothing else, and [destroy] ends
+ * that child scope, never [coroutineScope] itself.
  */
 class ModelLoader(
     val engine: Engine,
     private val context: Context,
-    private val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.IO)
+    private val coroutineScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 ) {
+
+    // Where the `load*Async` calls run: a supervisor child of [coroutineScope], so a failed load
+    // never cancels its siblings, and `clear()` / `destroy()` reach this loader's loads only — not
+    // the other coroutines of a scope the app passed in (a `lifecycleScope`, say).
+    private val loadScope = CoroutineScope(
+        coroutineScope.coroutineContext + SupervisorJob(coroutineScope.coroutineContext[Job])
+    )
 
     val materialProvider = UbershaderProvider(engine)
     val assetLoader = AssetLoader(engine, materialProvider, EntityManager.get())
@@ -270,13 +291,18 @@ class ModelLoader(
         // instead of racing it.
         val model = createOrDestroyOnCancel(::destroyModel) {
             create(source)?.also { models += it }
-        } ?: return@let null
-        destroyOnCancel(model, ::destroyModel) {
+        } ?: run {
+            Log.w(TAG, "Could not parse $fileLocation")
+            return@let null
+        }
+        // Whatever stops the load from here on — a cancellation, or a resource resolver that
+        // throws — destroys the model: it is registered, but no caller will ever hold it.
+        destroyOnFailure(model, ::destroyModel) {
             val uris = withContext(Dispatchers.Main) {
                 model.takeIf { it in models }?.resourceUris
-            } ?: return@destroyOnCancel null
+            } ?: return@destroyOnFailure null
             val resources = uris.mapNotNull { uri ->
-                context.loadFileBuffer(resourceResolver(uri))?.let { uri to it }
+                loadResourceOrNull(fileLocation, resourceResolver(uri))?.let { uri to it }
             }
             withContext(Dispatchers.Main) {
                 if (model !in models) return@withContext null
@@ -288,6 +314,22 @@ class ModelLoader(
     }
 
     /**
+     * Reads one external resource of [fileLocation], or `null` when it cannot be read.
+     *
+     * A missing `.bin` or texture used to fail the whole load (and leak the model already created):
+     * like the [createModel] overloads, the model now loads without it, and the miss is logged.
+     */
+    private suspend fun loadResourceOrNull(fileLocation: String, resourceLocation: String): Buffer? =
+        try {
+            context.loadFileBuffer(resourceLocation)
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (error: Exception) {
+            Log.w(TAG, "Could not load $resourceLocation for $fileLocation; loading the model without it", error)
+            null
+        }
+
+    /**
      * Loads a [Model] from the contents of a GLB or GLTF file within a self owned coroutine scope.
      *
      * @param fileLocation the .glb or .gltf file location:
@@ -295,6 +337,9 @@ class ModelLoader(
      * - An android resource from the res folder *context.getResourceUri(R.raw.mymodel)*
      * - A File path *Uri.fromFile(myModelFile).path*
      * - An http or https url *https://mydomain.com/mymodel.glb*
+     * @param onResult called on the main thread with the result, or `null` if the load failed (the
+     * failure is logged). Not called when the load is cancelled ([clear], [destroy] or the
+     * returned [Job]).
      *
      * @see createModel
      */
@@ -304,9 +349,8 @@ class ModelLoader(
             getFolderPath(fileLocation, it)
         },
         onResult: (Model?) -> Unit
-    ): Job = coroutineScope.launch {
-        val result = loadModel(fileLocation, resourceResolver)
-        withContext(Dispatchers.Main) { onResult(result) }
+    ): Job = launchLoad(fileLocation, failed = null, onResult) {
+        loadModel(fileLocation, resourceResolver)
     }
 
     /**
@@ -388,6 +432,10 @@ class ModelLoader(
      *
      * Source data is released immediately since the model will not be re-instantiated.
      *
+     * @param onResult called on the main thread with the result, or `null` if the load failed (the
+     * failure is logged). Not called when the load is cancelled ([clear], [destroy] or the
+     * returned [Job]).
+     *
      * @see loadModel
      */
     fun loadModelInstanceAsync(
@@ -396,9 +444,8 @@ class ModelLoader(
             getFolderPath(fileLocation, it)
         },
         onResult: (ModelInstance?) -> Unit
-    ): Job = coroutineScope.launch {
-        val instance = loadModelInstance(fileLocation, resourceResolver)
-        withContext(Dispatchers.Main) { onResult(instance) }
+    ): Job = launchLoad(fileLocation, failed = null, onResult) {
+        loadModelInstance(fileLocation, resourceResolver)
     }
 
     /**
@@ -535,6 +582,9 @@ class ModelLoader(
      * @param count must be sized to the desired number of instances. If successful, this method
      * will populate the array with secondary instances whose resources are shared with the primary
      * asset.
+     * @param onResult called on the main thread with the result, or an empty list if the load failed (the
+     * failure is logged). Not called when the load is cancelled ([clear], [destroy] or the
+     * returned [Job]).
      *
      * @see loadInstancedModel
      */
@@ -545,11 +595,32 @@ class ModelLoader(
             getFolderPath(fileLocation, it)
         },
         onResult: (List<ModelInstance>) -> Unit
-    ): Job = coroutineScope.launch {
-        val instances = loadInstancedModel(fileLocation, count, resourceResolver)
-        withContext(Dispatchers.Main) {
-            onResult(instances)
+    ): Job = launchLoad(fileLocation, failed = listOf(), onResult) {
+        loadInstancedModel(fileLocation, count, resourceResolver)
+    }
+
+    /**
+     * Runs [load] in this loader's scope and hands its result to [onResult] on the main thread.
+     *
+     * A load that throws reports [failed] instead, and is logged: left to escape, the exception
+     * reached the thread's uncaught-exception handler (a crash on Android) and, with a plain `Job`,
+     * cancelled the scope, so every later `load*Async` on this loader did nothing at all.
+     */
+    private fun <T> launchLoad(
+        fileLocation: String,
+        failed: T,
+        onResult: (T) -> Unit,
+        load: suspend () -> T,
+    ): Job = loadScope.launch {
+        val result = try {
+            load()
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (error: Exception) {
+            Log.w(TAG, "Could not load $fileLocation", error)
+            failed
         }
+        withContext(Dispatchers.Main) { onResult(result) }
     }
 
     /**
@@ -577,7 +648,7 @@ class ModelLoader(
      *
      * Goes through [claimAndDestroy] so every destroy path — this call, a cancelled
      * [loadModel]/[loadInstancedModel] coroutine's cleanup, [clear] — shares the same
-     * synchronized claim on [models]. That closes #3523: a `destroyOnCancel` continuation
+     * synchronized claim on [models]. That closes #3523: a `destroyOnFailure` continuation
      * resuming after [clear] already tore this same model down (or the reverse) now finds it
      * already gone and returns instead of double-freeing the native asset — the segfault
      * `runCatching` could never have caught in the first place. See [safeDestroyModel] for why
@@ -634,16 +705,20 @@ class ModelLoader(
      * Cancels every load still running on this loader's scope and destroys every model it made.
      * The model whose textures are still decoding is destroyed once they are done, without
      * blocking the calling thread (see [destroyModel]).
+     *
+     * The loader stays usable: loads started afterwards run as usual. [destroy] is the end of it.
      */
     fun clear() {
-        runCatching { coroutineScope.cancel() }
+        // The running loads only: cancelling the scope itself left every later `load*Async` a
+        // job that was already cancelled, whose `onResult` never came.
+        loadScope.coroutineContext.cancelChildren()
 
         // No blanket `asyncLoad.cancel()` here any more: the only load it could interrupt belongs
         // to a model in `models`, whose destroyModel below cancels it — once doing so is instant
         // (#3981). With nothing in flight it was a pure `flushAndWait` on the main thread.
         resourceLoader.evictResourceData()
 
-        // A cancelled load's own cleanup (destroyOnCancel/createOrDestroyOnCancel, both wired
+        // A cancelled load's own cleanup (destroyOnFailure/createOrDestroyOnCancel, both wired
         // to destroyModel) may still be queued behind this call on the main dispatcher. That is
         // no longer a race to win: destroyModel's claim-then-destroy means whichever of the two
         // calls on a given model runs first destroys it, and the other finds it already removed
@@ -660,6 +735,7 @@ class ModelLoader(
      */
     fun destroy() {
         clear()
+        loadScope.cancel()
 
         settlingDestroys.afterAll {
             assetLoader.destroy()
@@ -694,8 +770,16 @@ class ModelLoader(
     }
 
     companion object {
+        private const val TAG = "ModelLoader"
+
+        /**
+         * The location of [resourceFileName], a resource a glTF names relative to itself, next to
+         * [baseFileName]. A file at the root of `assets/` (no folder) gets the bare name.
+         */
         fun getFolderPath(baseFileName: String, resourceFileName: String) =
-            "${baseFileName.substringBeforeLast("/")}/$resourceFileName"
+            baseFileName.substringBeforeLast('/', missingDelimiterValue = "").let { folder ->
+                if (folder.isEmpty()) resourceFileName else "$folder/$resourceFileName"
+            }
     }
 }
 
@@ -915,14 +999,15 @@ internal suspend fun <T : Any> createOrDestroyOnCancel(
 }
 
 /**
- * Runs [block] and, if it is cancelled, destroys [created] — the model a load has
+ * Runs [block] and, if it fails or is cancelled, destroys [created] — the model a load has
  * already built but not yet returned to the caller — before rethrowing.
  *
- * Resource loading suspends once per external buffer; a source swap that lands there
- * would otherwise leave the half-loaded model in [ModelLoader]'s list until the loader
- * is destroyed, with no caller holding a handle to free it earlier.
+ * Resource loading suspends once per external buffer; a source swap that lands there, or a
+ * resource that cannot be fetched, would otherwise leave the half-loaded model in
+ * [ModelLoader]'s list until the loader is destroyed, with no caller holding a handle to free it
+ * earlier — one more GPU-resident model at every retry.
  */
-internal suspend fun <T : Any, R> destroyOnCancel(
+internal suspend fun <T : Any, R> destroyOnFailure(
     created: T,
     destroy: (T) -> Unit,
     dispatcher: CoroutineDispatcher = Dispatchers.Main,
@@ -930,9 +1015,9 @@ internal suspend fun <T : Any, R> destroyOnCancel(
 ): R {
     try {
         return block()
-    } catch (cancellation: CancellationException) {
+    } catch (failure: Throwable) {
         withContext(NonCancellable + dispatcher) { destroy(created) }
-        throw cancellation
+        throw failure
     }
 }
 
