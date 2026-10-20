@@ -161,6 +161,15 @@ class RerunScanModelTest {
     }
 
     @Test
+    fun `a model json from the raw-surface format is refused, so the scan finishes its model again`() {
+        val model = floorModel()
+        val info = model.infoJson()
+        val first = info.replace("\"version\": ${RerunScanModel.VERSION}", "\"version\": 1")
+        assertNull(RerunScanModel.parse(first, model.glb))
+        assertNotNull(RerunScanModel.parse(info, model.glb))
+    }
+
+    @Test
     fun `model json is refused unless whole`() {
         val model = floorModel()
         assertNotNull(RerunScanModel.parse(model.infoJson(), model.glb))

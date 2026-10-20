@@ -3,13 +3,10 @@ package io.github.sceneview.demo.demos.internal.model
 import io.github.sceneview.demo.demos.internal.RerunMarchingCubes
 import io.github.sceneview.demo.demos.internal.RerunMesh
 import io.github.sceneview.demo.demos.internal.RerunMeshSimplifier
-import io.github.sceneview.demo.demos.internal.RerunTsdf
-import io.github.sceneview.demo.demos.syntheticCloud
 import kotlin.math.floor
 import kotlin.math.sqrt
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Assert.fail
 import org.junit.Test
 
 /**
@@ -48,34 +45,12 @@ class CleanModelWorstCaseTest {
             "(simplifier workspace at the cap ${RerunMeshSimplifier.workspaceBytes(raw.vertexCount, raw.triangleCount) / MB} MB); " +
             "$stats"
         println(summary)
-        fail("PROBE $summary | glb problems ${GlbCheck.problems(result.glb)} | ${surfelThresholds()}")
 
         assertEquals(emptyList<String>(), GlbCheck.problems(result.glb))
         assertTrue(summary, stats.cleanInputTriangles <= CleanModel.CLEAN_INPUT_TRIANGLES)
         assertTrue(summary, stats.finalTriangles <= RerunMeshSimplifier.DEFAULT_TARGET_TRIANGLES)
         assertTrue(summary, bestMs < MAX_MS)
         assertTrue(summary, leastBytes < MAX_ALLOCATED_BYTES)
-    }
-
-    /** Temporary probe: the surfel source's surface at the default weight floor and at the frames' one. */
-    private fun surfelThresholds(): String {
-        val cloud = syntheticCloud()
-        val out = StringBuilder("surfels ${cloud.count}:")
-        for (minWeight in floatArrayOf(RerunMarchingCubes.DEFAULT_MIN_WEIGHT, 1f)) {
-            val tsdf = RerunTsdf()
-            tsdf.integrateSurfels(cloud)
-            val mesh = RerunMarchingCubes.extractWhole(tsdf, minWeight).mesh
-            val open = MeshTopology(mesh.vertexCount, mesh.indices).borderEdges()
-            out.append(" w$minWeight ${mesh.triangleCount} T, $open open edges;")
-        }
-        val tsdf = RerunTsdf()
-        TexturedSyntheticRoom.frames().forEach { tsdf.integrate(it) }
-        for (minWeight in floatArrayOf(RerunMarchingCubes.DEFAULT_MIN_WEIGHT, 1f)) {
-            val mesh = RerunMarchingCubes.extractWhole(tsdf, minWeight).mesh
-            val open = MeshTopology(mesh.vertexCount, mesh.indices).borderEdges()
-            out.append(" frames w$minWeight ${mesh.triangleCount} T, $open open edges;")
-        }
-        return out.toString()
     }
 
     /**
@@ -206,9 +181,9 @@ class CleanModelWorstCaseTest {
         const val NANOS_PER_MS = 1_000_000L
         const val MB = 1024 * 1024
 
-        /** Placeholders until the probe's figures: about twice what CI measures. */
-        const val MAX_MS = 600_000L
-        const val MAX_ALLOCATED_BYTES = Long.MAX_VALUE
+        /** About twice what CI measures (3.7 s and 861 MB allocated, best of two). */
+        const val MAX_MS = 10_000L
+        const val MAX_ALLOCATED_BYTES = 1_800L * 1024 * 1024
 
         // 342 × 222 × 308 cells of ~1.17 cm: 998 544 triangles.
         const val CELLS_X = 342

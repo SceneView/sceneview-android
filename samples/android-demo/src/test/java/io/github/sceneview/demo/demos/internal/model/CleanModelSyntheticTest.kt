@@ -127,7 +127,6 @@ class CleanModelSyntheticTest {
         assertEquals(0.0, (min[0] + max[0]) / 2 + translation[0], FLOOR_TOLERANCE)
         assertEquals(0.0, (min[2] + max[2]) / 2 + translation[2], FLOOR_TOLERANCE)
         assertEquals(result.glb.size.toDouble(), shared.glb.size.toDouble(), SHARE_GROWTH_BYTES)
-        org.junit.Assert.fail("PROBE $report | $stats")
     }
 
     @Test
