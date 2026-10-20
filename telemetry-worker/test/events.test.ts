@@ -599,6 +599,56 @@ describe("GET /v1/export", () => {
     });
   });
 
+  describe("spreadsheet formula injection", () => {
+    async function exportRow(fields: { client: string; tool: string; client_ver?: string; mcp_ver?: string }) {
+      const db = env.DB as unknown as ReturnType<typeof createMockD1>;
+      db._rows = [{
+        timestamp: "2026-10-20T10:00:00.000Z",
+        event: "tool",
+        client_ver: "1.0",
+        mcp_ver: "4.0.0",
+        tier: "free",
+        bot_likelihood: null,
+        ...fields,
+      }];
+      const res = await getExport({}, env);
+      return (await res.text()).split("\n").slice(1).join("\n");
+    }
+
+    it.each([
+      ["=", "=1+1", "'=1+1"],
+      ["+", "+1+1", "'+1+1"],
+      ["-", "-1+1", "'-1+1"],
+      ["@", "@SUM(A1)", "'@SUM(A1)"],
+      ["a tab", "\t=1+1", "'\t=1+1"],
+    ])("prefixes a field that starts with %s with an apostrophe", async (_label, value, expected) => {
+      const row = await exportRow({ client: value, tool: value });
+      expect(row).toBe(`2026-10-20T10:00:00.000Z,tool,${expected},1.0,4.0.0,free,${expected},`);
+    });
+
+    it("prefixes a field that starts with a carriage return, then quotes it", async () => {
+      const row = await exportRow({ client: "\r=1+1", tool: "ok" });
+      expect(row).toBe(`2026-10-20T10:00:00.000Z,tool,"'\r=1+1",1.0,4.0.0,free,ok,`);
+    });
+
+    it("prefixes before the CSV escaping, so a quoted formula stays inert", async () => {
+      const row = await exportRow({ client: '=HYPERLINK("http://example.com","x")', tool: "ok" });
+      expect(row).toBe(
+        `2026-10-20T10:00:00.000Z,tool,"'=HYPERLINK(""http://example.com"",""x"")",1.0,4.0.0,free,ok,`,
+      );
+    });
+
+    it("prefixes the version strings too, since they also come from ingestion", async () => {
+      const row = await exportRow({ client: "c", tool: "t", client_ver: "=1", mcp_ver: "@2" });
+      expect(row).toBe("2026-10-20T10:00:00.000Z,tool,c,'=1,'@2,free,t,");
+    });
+
+    it("leaves a field alone when the character is not the first one", async () => {
+      const row = await exportRow({ client: "claude-desktop", tool: "a=b+c" });
+      expect(row).toBe("2026-10-20T10:00:00.000Z,tool,claude-desktop,1.0,4.0.0,free,a=b+c,");
+    });
+  });
+
   it("rejects invalid event_type", async () => {
     const res = await getExport({ event_type: "crash" }, env);
     expect(res.status).toBe(400);
@@ -639,6 +689,13 @@ const READ_ROUTES = [
   "/v1/funnel",
   "/v1/export",
 ];
+
+// A fresh copy of the worker module, as a new isolate would load it, so its
+// once-per-isolate state (the missing-secret log) starts unset.
+async function freshApp(): Promise<typeof app> {
+  vi.resetModules();
+  return (await import("../src/index.js")).app;
+}
 
 // The response a caller gets for a refused read request, as status, body and
 // the headers that could tell two refusals apart.
@@ -698,8 +755,13 @@ describe.each(READ_ROUTES)("GET %s — auth (fail closed)", (route) => {
     },
   );
 
-  it("logs the missing STATS_TOKEN on the server, never the request's credentials", async () => {
-    await app.request(route, { method: "GET", headers: AUTH }, makeEnv());
+  it("logs the missing STATS_TOKEN once per isolate, never the request's credentials", async () => {
+    const isolate = await freshApp();
+    const attempts: Record<string, string>[] = [AUTH, {}, { Authorization: "Basic x" }, AUTH];
+    for (const headers of attempts) {
+      const res = await isolate.request(route, { method: "GET", headers }, makeEnv());
+      expect(res.status).toBe(401);
+    }
     expect(consoleError).toHaveBeenCalledTimes(1);
     const logged = consoleError.mock.calls[0].join(" ");
     expect(logged).toContain("STATS_TOKEN is not configured");
@@ -707,7 +769,8 @@ describe.each(READ_ROUTES)("GET %s — auth (fail closed)", (route) => {
   });
 
   it("logs nothing when STATS_TOKEN is configured and the token is wrong", async () => {
-    const res = await app.request(
+    const isolate = await freshApp();
+    const res = await isolate.request(
       route,
       { method: "GET", headers: { Authorization: "Bearer wrong-token" } },
       makeReadEnv(),

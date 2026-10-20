@@ -139,8 +139,8 @@ Authorization: Bearer <your-token>
   (`bearer <token>` works too).
 - `STATS_TOKEN` not configured → the same `401` for every request, with or without a
   token. The read routes fail closed, and a caller cannot tell a missing secret from a
-  wrong token. The worker logs `STATS_TOKEN is not configured` on each refused request
-  (`wrangler tail` shows it).
+  wrong token. The worker logs `STATS_TOKEN is not configured` once per isolate, not
+  once per request, so callers cannot flood the logs (`wrangler tail` shows it).
 
 The read routes send no CORS headers, so a web page on another origin cannot read them
 from a visitor's browser. Only the ingestion routes (`/v1/events`, `/v1/batch`) and
@@ -164,6 +164,11 @@ from a visitor's browser. Only the ingestion routes (`/v1/events`, `/v1/batch`) 
 `GET /v1/export?days=7&event_type=tool` returns up to 10,000 events from the last 1–30 days
 (default 7) as CSV, with the columns
 `timestamp,event,client,client_ver,mcp_ver,tier,tool,bot_likelihood`.
+
+`client`, `tool` and the version strings come from the public ingestion routes. A field
+that starts with `=`, `+`, `-`, `@`, a tab or a carriage return is written with a leading
+apostrophe (`'=1+1`), so a spreadsheet shows it as text instead of running it as a
+formula. Strip the apostrophe if you load the CSV into something other than a spreadsheet.
 
 The export does not include `install_id`, raw or hashed. Its rows are close to unique
 (millisecond timestamp, client, versions, tool), so two exports with overlapping windows

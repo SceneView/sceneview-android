@@ -57,9 +57,14 @@ function bearerCredentials(header: string | undefined): string | null {
   return match ? match[1] : null;
 }
 
+// Logged once per isolate, not per request: an unauthenticated caller must not
+// be able to flood the worker's logs by hitting a read route.
+let missingTokenLogged = false;
+
 const requireStatsToken: MiddlewareHandler<{ Bindings: Env }> = async (c, next) => {
   const token = c.env.STATS_TOKEN;
-  if (!token) {
+  if (!token && !missingTokenLogged) {
+    missingTokenLogged = true;
     console.error(
       "STATS_TOKEN is not configured: every read route answers 401 until it is set (wrangler secret put STATS_TOKEN).",
     );
@@ -714,8 +719,12 @@ app.get("/v1/export", requireStatsToken, async (c) => {
           ? String(row.bot_likelihood)
           : "",
       ].map((v) => {
-        // Escape fields that contain commas, quotes, or newlines
-        if (v.includes(",") || v.includes('"') || v.includes("\n")) {
+        // client, tool and the version strings come from public ingestion. A
+        // spreadsheet runs a cell that starts with = + - @, a tab or a carriage
+        // return as a formula, so such a field is prefixed with an apostrophe.
+        if (/^[=+\-@\t\r]/.test(v)) v = `'${v}`;
+        // Escape fields that contain commas, quotes, or line breaks
+        if (v.includes(",") || v.includes('"') || v.includes("\n") || v.includes("\r")) {
           return `"${v.replace(/"/g, '""')}"`;
         }
         return v;
