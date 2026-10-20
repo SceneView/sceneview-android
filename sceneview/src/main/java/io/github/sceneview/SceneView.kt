@@ -1378,9 +1378,10 @@ fun SceneView(
  * `destroyModel` tolerates already-freed assets — so the renderables are never left dangling.
  * A key change right after the load returns, while the textures are still decoding, is safe too:
  * `destroyModel` cancels that model's pending texture load before freeing it.
- * Only a model that finished loading is disposed here: a load cancelled by a key change after
- * `ModelLoader` registered the `Model` but before it was produced stays resident until the
- * loader is cleared. The [ModelLoader]
+ * Only a model that finished loading is disposed here: a load cancelled by a key change, or one
+ * that failed, after `ModelLoader` created the `Model` has the loader destroy it before the load
+ * ends. An external resource of a `.gltf` that cannot be read is logged and skipped, so the model
+ * shows without it. The [ModelLoader]
  * does **not** dedupe by path — each call creates a fresh, independent `Model`; re-loading the same
  * path is a new GPU allocation, not a cache hit. For a model you manage imperatively (outside this
  * composable's keyed lifecycle), use [ModelLoader.loadModelInstanceAsync] and call

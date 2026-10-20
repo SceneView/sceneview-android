@@ -133,12 +133,12 @@ class ModelLoaderCancellationTest {
         }
 
     @Test
-    fun `destroyOnCancel frees a created model when resource loading is cancelled`() =
+    fun `destroyOnFailure frees a created model when resource loading is cancelled`() =
         runBlocking {
             val destroyed = mutableListOf<String>()
             val entered = CountDownLatch(1)
             val job = launch(Dispatchers.Default) {
-                destroyOnCancel("model", destroy = { destroyed += it }, dispatcher = main) {
+                destroyOnFailure("model", destroy = { destroyed += it }, dispatcher = main) {
                     entered.countDown()
                     delay(10_000)
                 }
@@ -150,13 +150,13 @@ class ModelLoaderCancellationTest {
         }
 
     @Test
-    fun `destroyOnCancel frees a created model when resource loading fails`() = runBlocking {
+    fun `destroyOnFailure frees a created model when resource loading fails`() = runBlocking {
         // A `.bin` or texture that cannot be read, after the model was created and registered:
         // no caller will ever hold the model, so nothing but this cleanup can free it.
         val destroyed = mutableListOf<String>()
         val failure = FileNotFoundException("missing.bin")
         val thrown = runCatching {
-            destroyOnCancel<String, Unit>("model", destroy = { destroyed += it }, dispatcher = main) {
+            destroyOnFailure<String, Unit>("model", destroy = { destroyed += it }, dispatcher = main) {
                 throw failure
             }
         }.exceptionOrNull()
@@ -165,9 +165,9 @@ class ModelLoaderCancellationTest {
     }
 
     @Test
-    fun `destroyOnCancel leaves a model alone when resource loading completes`() = runBlocking {
+    fun `destroyOnFailure leaves a model alone when resource loading completes`() = runBlocking {
         val destroyed = mutableListOf<String>()
-        destroyOnCancel("model", destroy = { destroyed += it }, dispatcher = main) { }
+        destroyOnFailure("model", destroy = { destroyed += it }, dispatcher = main) { }
         assertTrue(destroyed.isEmpty())
     }
 }
