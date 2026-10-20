@@ -3,7 +3,6 @@ package io.github.sceneview.demo.demos.internal
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.max
-import kotlin.math.roundToInt
 
 /**
  * The ground a scan's result stands on (#4719), read off the model's own vertices: the floor's
@@ -245,16 +244,6 @@ class ScanGround private constructor(
                 if (r < rows - 1) push(at + columns)
             }
             return BooleanArray(cells.size) { !outside[it] }
-        }
-
-        /** The share as a whole percent, never 100 while a cell is missing nor 0 while one is seen. */
-        fun percent(share: Float, missing: Int, seen: Int): Int {
-            val p = (share * 100f).roundToInt()
-            return when {
-                missing > 0 && p >= 100 -> 99
-                seen > 0 && p <= 0 -> 1
-                else -> p
-            }
         }
     }
 }
