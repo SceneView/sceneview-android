@@ -3,6 +3,7 @@ package io.github.sceneview.demo.demos.internal
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.ceil
+import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -134,6 +135,7 @@ object RoomPlanLayout {
     private const val SIDES = 4
     private const val MAX_PASSES = 4
     private const val POLE_STEPS = 40
+    private const val ALIGNED = 0.01f
 
     /** The round lengths a scale bar is drawn at, metres. */
     private val SCALE_BARS = floatArrayOf(0.5f, 1f, 2f, 5f, 10f)
@@ -167,12 +169,32 @@ object RoomPlanLayout {
         return drawing!!
     }
 
-    /** Which side of the outline a wall's dimension goes on: the one its outer face looks at. */
-    private fun sideOf(wall: SurveyWall): Int = when {
-        wall.horizontal && wall.bx > wall.ax -> TOP
-        wall.horizontal -> BOTTOM
-        wall.by > wall.ay -> RIGHT
-        else -> LEFT
+    /** Which side of the outline a wall's dimension goes on: the one its outer face mostly looks at. */
+    private fun sideOf(wall: SurveyWall): Int {
+        // Clockwise on the page, y down: the room is on the right of the walk, the outside on its left.
+        val ox = wall.by - wall.ay
+        val oy = wall.ax - wall.bx
+        return when {
+            abs(oy) >= abs(ox) && oy < 0f -> TOP
+            abs(oy) >= abs(ox) -> BOTTOM
+            ox > 0f -> RIGHT
+            else -> LEFT
+        }
+    }
+
+    /** A wall square to neither of the page's axes: dimensioned along itself. */
+    private fun oblique(wall: SurveyWall): Boolean {
+        val dx = abs(wall.bx - wall.ax)
+        val dy = abs(wall.by - wall.ay)
+        return min(dx, dy) > ALIGNED * max(dx, dy)
+    }
+
+    /** The unit normal out of the room, on the page. */
+    private fun outward(wall: SurveyWall): FloatArray {
+        val ox = wall.by - wall.ay
+        val oy = wall.ax - wall.bx
+        val length = hypot(ox, oy)
+        return if (length > 0f) floatArrayOf(ox / length, oy / length) else floatArrayOf(0f, 0f)
     }
 
     @Suppress("LongParameterList") // one layout pass: its inputs, and the rows it found it needs
@@ -234,10 +256,10 @@ object RoomPlanLayout {
         private fun assignLevels() {
             for (side in 0 until SIDES) {
                 val taken = ArrayList<MutableList<ClosedFloatingPointRange<Float>>>()
-                survey.walls.indices.filter { sideOf(survey.walls[it]) == side }.forEach { i ->
+                survey.walls.indices.filter { !oblique(survey.walls[it]) && sideOf(survey.walls[it]) == side }.forEach { i ->
                     val wall = survey.walls[i]
-                    val span = when {
-                        wall.horizontal -> min(wall.ax, wall.bx)..max(wall.ax, wall.bx)
+                    val span = when (side) {
+                        TOP, BOTTOM -> min(wall.ax, wall.bx)..max(wall.ax, wall.bx)
                         else -> min(wall.ay, wall.by)..max(wall.ay, wall.by)
                     }
                     var level = 0
@@ -287,6 +309,10 @@ object RoomPlanLayout {
             val rowHeight = DIMENSION_TEXT * LINE_HEIGHT * u
             survey.walls.forEachIndexed { i, wall ->
                 val side = sideOf(wall)
+                if (oblique(wall)) {
+                    aligned(i, wall, side)
+                    return@forEachIndexed
+                }
                 val out = if (side == TOP || side == LEFT) -1f else 1f
                 val edge = when (side) {
                     TOP -> top
@@ -298,7 +324,7 @@ object RoomPlanLayout {
                 val outermost = edge + out * (CHAIN_OFFSET + (levels[side] - 1) * CHAIN_PITCH) * u
                 val text = texts.walls.getOrElse(i) { "" }
                 val length = metrics.measure(text, DIMENSION_TEXT * u)
-                if (wall.horizontal) {
+                if (side == TOP || side == BOTTOM) {
                     val from = x(min(wall.ax, wall.bx))
                     val to = x(max(wall.ax, wall.bx))
                     lines += PlanLine(from, line, to, line, PlanStroke.Dimension)
@@ -334,6 +360,45 @@ object RoomPlanLayout {
             }
         }
 
+        /** An oblique wall's dimension: a line along the wall, outside it, its label beside it. */
+        private fun aligned(i: Int, wall: SurveyWall, side: Int) {
+            val (ox, oy) = outward(wall)
+            val offset = CHAIN_OFFSET * u
+            val ax = x(wall.ax)
+            val ay = y(wall.ay)
+            val bx = x(wall.bx)
+            val by = y(wall.by)
+            lines += PlanLine(ax + ox * offset, ay + oy * offset, bx + ox * offset, by + oy * offset, PlanStroke.Dimension)
+            val span = hypot(bx - ax, by - ay)
+            val dx = (bx - ax) / span
+            val dy = (by - ay) / span
+            val tick = TICK * u
+            for ((px, py) in listOf(ax to ay, bx to by)) {
+                lines += PlanLine(
+                    px + ox * EXTENSION_GAP * u, py + oy * EXTENSION_GAP * u,
+                    px + ox * (offset + EXTENSION_OVER * u), py + oy * (offset + EXTENSION_OVER * u),
+                    PlanStroke.Extension,
+                )
+                // The tick leans 45° across the line, as on the square walls.
+                val cx = px + ox * offset
+                val cy = py + oy * offset
+                val tx = (dx + ox) * tick
+                val ty = (dy + oy) * tick
+                lines += PlanLine(cx - tx, cy - ty, cx + tx, cy + ty, PlanStroke.Tick)
+            }
+            val text = texts.walls.getOrElse(i) { "" }
+            val length = metrics.measure(text, DIMENSION_TEXT * u)
+            val rowHeight = DIMENSION_TEXT * LINE_HEIGHT * u
+            val mx = (ax + bx) / 2
+            val my = (ay + by) / 2
+            place(side, text, length, fits = true) { row ->
+                // Clear of the line by half the label's own extent along the normal.
+                val half = abs(ox) * length / 2 + abs(oy) * rowHeight / 2
+                val reach = offset + LABEL_GAP * u + half + row * rowHeight
+                PlanText(text, mx + ox * reach, my + oy * reach, DIMENSION_TEXT * u, length, PlanTextRole.Dimension)
+            }
+        }
+
         /** Puts a label on the first row out where it covers no other; a row past 0 is asked of the next pass. */
         private fun place(side: Int, text: String, length: Float, fits: Boolean, at: (row: Int) -> PlanText) {
             if (text.isEmpty() || length <= 0f) return
@@ -359,7 +424,9 @@ object RoomPlanLayout {
                     // A label is wider than it is high: the room to its sides counts half.
                     var reach = Float.MAX_VALUE
                     for (wall in survey.walls) {
-                        reach = min(reach, if (wall.horizontal) abs(py - wall.ay) * 2 else abs(px - wall.ax))
+                        val (ox, oy) = outward(wall)
+                        val across = abs(ox * (px - wall.ax) + oy * (py - wall.ay))
+                        reach = min(reach, across * (1 + abs(oy)))
                     }
                     if (reach > best + EPSILON) {
                         best = reach
@@ -382,10 +449,9 @@ object RoomPlanLayout {
         private fun inside(px: Float, py: Float): Boolean {
             var crossings = 0
             for (wall in survey.walls) {
-                if (wall.horizontal) continue
-                val low = min(wall.ay, wall.by)
-                val high = max(wall.ay, wall.by)
-                if (py >= low && py < high && wall.ax > px) crossings++
+                if ((wall.ay > py) == (wall.by > py)) continue
+                val at = wall.ax + (py - wall.ay) * (wall.bx - wall.ax) / (wall.by - wall.ay)
+                if (at > px) crossings++
             }
             return crossings % 2 == 1
         }
@@ -397,12 +463,9 @@ object RoomPlanLayout {
                 val mx = x((wall.ax + wall.bx) / 2)
                 val my = y((wall.ay + wall.by) / 2)
                 val inset = TAG_INSET * u
-                val (tx, ty) = when (sideOf(wall)) {
-                    TOP -> mx to my + inset
-                    BOTTOM -> mx to my - inset
-                    LEFT -> mx + inset to my
-                    else -> mx - inset to my
-                }
+                val (ox, oy) = outward(wall)
+                val tx = mx - ox * inset
+                val ty = my - oy * inset
                 val size = TAG_TEXT * u
                 val tag = PlanText(wall.tag, tx, ty, size, metrics.measure(wall.tag, size), PlanTextRole.Tag)
                 if (placed.none { it.overlaps(tag) }) placed += tag

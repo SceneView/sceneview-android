@@ -1,0 +1,895 @@
+package io.github.sceneview.demo.demos.internal.room
+
+import kotlin.math.abs
+import kotlin.math.ceil
+import kotlin.math.floor
+import kotlin.math.hypot
+import kotlin.math.max
+import kotlin.math.min
+
+/** A raster over the room's frame: [nu] × [nv] cells of [cell] metres from ([minU], [minV]). */
+internal class Raster(val minU: Float, val minV: Float, val cell: Float, val nu: Int, val nv: Int) {
+    val size: Int get() = nu * nv
+
+    fun index(u: Float, v: Float): Int {
+        val i = floor((u - minU) / cell).toInt()
+        val j = floor((v - minV) / cell).toInt()
+        return if (i in 0 until nu && j in 0 until nv) j * nu + i else -1
+    }
+
+    fun centreU(index: Int): Float = minU + (index % nu + HALF) * cell
+    fun centreV(index: Int): Float = minV + (index / nu + HALF) * cell
+
+    private companion object {
+        const val HALF = 0.5f
+    }
+}
+
+/** One side of the outline: on [line] when a wall was seen there, else deduced — normal ([nu], [nv]) into the room, at [offset]. */
+internal class Side(val line: WallLine?, val nu: Float, val nv: Float, val offset: Float, val floorEdge: Boolean = false) {
+    fun parallel(other: Side): Boolean = abs(nu * other.nv - nv * other.nu) < WallLine.PARALLEL_SIN
+}
+
+/**
+ * The room's outline: corner `i` at ([u]`[i]`, [v]`[i]`) starts side `i`, counter-clockwise in
+ * the room's frame. [region] is the room's floor on [raster]; [traced] is `false` when the
+ * sides could not be read off the walls and the outline is the region's own edge.
+ */
+internal class Outline(
+    val u: FloatArray,
+    val v: FloatArray,
+    val sides: List<Side>,
+    val raster: Raster,
+    val region: BooleanArray,
+    val traced: Boolean,
+)
+
+/**
+ * Where the room is, and the polygon that bounds it. The walls are drawn as barriers on a raster
+ * of the floor; the room is what the camera's path reaches over seen floor without crossing a
+ * wall, with every place no way from outside reaches; its edge is then read side by side off the
+ * walls it runs along. A side no wall was seen along is deduced: closed where the floor was seen
+ * to end, in the room's directions when one fits.
+ */
+@Suppress("TooManyFunctions")
+internal object RoomOutline {
+    /** No outline is read on more cells than this: the raster's memory stays bounded. */
+    const val MAX_CELLS = 500_000
+
+    private const val REACH_M = 8f
+    private const val PAD_CELLS = 4
+    private const val SAMPLE_M = 0.02f
+    private const val FLOOR_BAND_M = 0.1f
+    private const val EVIDENCE_FROM_M = 0.05f
+    private const val EVIDENCE_TO_M = 2f
+    private const val CLOSING_CELLS = 2
+    private const val LABEL_BEHIND_M = 0.08f
+    private const val LABEL_AHEAD_M = 0.2f
+    private const val LABEL_ALONG_M = 0.5f
+    private const val LABEL_FACING = 0.3f
+    private const val MIN_RUN_M = 0.15f
+    private const val CORNER_RUN_M = 1f
+    private const val CORNER_NEAR_M = 0.75f
+    private const val FAMILY_FIT_DEG = 20f
+    private const val ENDS_NEAR_M = 1f
+    private const val SAME_SIDE_M = 0.15f
+    private const val SAME_FACING = 0.94f
+    private const val AREA_AGREE = 0.15f
+    private const val AREA_AGREE_M2 = 1f
+    private const val SIMPLIFY_M = 0.1f
+    private const val EDGE_BAND_CELLS = 3
+    private const val EDGE_PERCENTILE = 0.01f
+    private const val MIN_EDGE_SURFELS = 20
+    private const val MAX_STEPS = 4_000_000
+    private const val UNLABELED = -1
+    private const val DEGENERATE_M = 0.05f
+
+    /**
+     * The outline of the room in [cloud] bounded by [lines], on [cell]-metre cells; `null` when
+     * the raster would exceed [MAX_CELLS] or no floor was found to start from.
+     */
+    @Suppress("LongMethod", "CyclomaticComplexMethod", "ReturnCount", "LongParameterList")
+    fun of(
+        cloud: FrameCloud,
+        lines: List<WallLine>,
+        trailU: FloatArray,
+        trailV: FloatArray,
+        floorThickness: Float,
+        cell: Float,
+        members: BooleanArray,
+    ): Outline? {
+        val raster = rasterOf(cloud, lines, trailU, trailV, floorThickness, cell) ?: return null
+        val n = raster.size
+        val barrier = BooleanArray(n)
+        for (line in lines) {
+            for (range in line.barrier) {
+                var t = range.start
+                while (t <= range.endInclusive + SAMPLE_M / 2) {
+                    val k = raster.index(line.pointU(t), line.pointV(t))
+                    if (k >= 0) barrier[k] = true
+                    t += SAMPLE_M
+                }
+            }
+        }
+        var evidence = BooleanArray(n)
+        val band = max(FLOOR_BAND_M, floorThickness)
+        for (i in 0 until cloud.count) {
+            val h = cloud.h[i]
+            val floorSurfel = abs(h) <= band && cloud.ny[i] >= RoomLevels.UP
+            val standing = h in EVIDENCE_FROM_M..EVIDENCE_TO_M && !members[i]
+            if (!floorSurfel && !standing) continue
+            val k = raster.index(cloud.u[i], cloud.v[i])
+            if (k >= 0) evidence[k] = true
+        }
+        evidence = closing(evidence, raster, CLOSING_CELLS)
+        // The room: what the camera's path reaches over seen floor without crossing a wall.
+        val inside = insideOf(raster, evidence, barrier, trailU, trailV) ?: return null
+        // Everything a way from outside reaches is not the room; what is left of it, around the inside, is.
+        val outside = BooleanArray(n)
+        val queue = IntArray(n)
+        var head = 0
+        var tail = 0
+        for (k in 0 until n) {
+            val i = k % raster.nu
+            val j = k / raster.nu
+            val border = i == 0 || j == 0 || i == raster.nu - 1 || j == raster.nv - 1
+            if (border && !inside[k] && !barrier[k]) {
+                outside[k] = true
+                queue[tail++] = k
+            }
+        }
+        while (head < tail) {
+            val k = queue[head++]
+            forNeighbours(raster, k) { m ->
+                if (!outside[m] && !inside[m] && !barrier[m]) {
+                    outside[m] = true
+                    queue[tail++] = m
+                }
+            }
+        }
+        val region = BooleanArray(n)
+        head = 0
+        tail = 0
+        for (k in 0 until n) {
+            if (inside[k]) {
+                region[k] = true
+                queue[tail++] = k
+            }
+        }
+        while (head < tail) {
+            val k = queue[head++]
+            forNeighbours(raster, k) { m ->
+                if (!region[m] && !outside[m] && !barrier[m]) {
+                    region[m] = true
+                    queue[tail++] = m
+                }
+            }
+        }
+        val loop = traceOf(raster, region) ?: return null
+        val regionArea = region.count { it } * cell * cell
+        val floorAt = ArrayList<Float>()
+        for (i in 0 until cloud.count) {
+            if (abs(cloud.h[i]) <= band && cloud.ny[i] >= RoomLevels.UP) {
+                floorAt += cloud.u[i]
+                floorAt += cloud.v[i]
+            }
+        }
+        val traced = sidesOf(loop, raster, lines, cloud, floorAt.toFloatArray())
+        if (traced != null) {
+            val (cu, cv, sides) = traced
+            val area = signedArea(cu, cv)
+            if (area > 0f && simple(cu, cv) && abs(area - regionArea) <= max(AREA_AGREE * regionArea, AREA_AGREE_M2)) {
+                return Outline(cu, cv, sides, raster, region, traced = true)
+            }
+        }
+        // The sides did not close into a polygon that holds the room: its own edge, simplified, deduced.
+        val simplified = simplify(loop, SIMPLIFY_M)
+        val m = simplified.size / 2
+        if (m < 3) return null
+        val su = FloatArray(m) { simplified[it * 2] }
+        val sv = FloatArray(m) { simplified[it * 2 + 1] }
+        val sides = (0 until m).map { i ->
+            val next = (i + 1) % m
+            val side = sideThrough(su[i], sv[i], su[next], sv[next])
+            // A side that runs along a wall is that wall's, even where the walls did not close.
+            val line = lines.firstOrNull {
+                it.nu * side.nu + it.nv * side.nv >= SAME_FACING && abs(it.offset - side.offset) <= SAME_SIDE_M
+            }
+            if (line == null) side else Side(line, side.nu, side.nv, side.offset)
+        }
+        return Outline(su, sv, sides, raster, region, traced = false)
+    }
+
+    @Suppress("LongParameterList", "ReturnCount")
+    private fun rasterOf(
+        cloud: FrameCloud,
+        lines: List<WallLine>,
+        trailU: FloatArray,
+        trailV: FloatArray,
+        floorThickness: Float,
+        cell: Float,
+    ): Raster? {
+        var lo0 = Float.POSITIVE_INFINITY
+        var lo1 = Float.POSITIVE_INFINITY
+        var hi0 = Float.NEGATIVE_INFINITY
+        var hi1 = Float.NEGATIVE_INFINITY
+        fun take(u: Float, v: Float) {
+            lo0 = min(lo0, u)
+            lo1 = min(lo1, v)
+            hi0 = max(hi0, u)
+            hi1 = max(hi1, v)
+        }
+        for (k in trailU.indices) take(trailU[k], trailV[k])
+        for (line in lines) {
+            for (range in line.barrier) {
+                take(line.pointU(range.start), line.pointV(range.start))
+                take(line.pointU(range.endInclusive), line.pointV(range.endInclusive))
+            }
+        }
+        val band = max(FLOOR_BAND_M, floorThickness)
+        for (i in 0 until cloud.count) {
+            if (abs(cloud.h[i]) <= band && cloud.ny[i] >= RoomLevels.UP) take(cloud.u[i], cloud.v[i])
+        }
+        if (lo0 > hi0) return null
+        if (trailU.isNotEmpty()) {
+            val tu0 = trailU.min() - REACH_M
+            val tu1 = trailU.max() + REACH_M
+            val tv0 = trailV.min() - REACH_M
+            val tv1 = trailV.max() + REACH_M
+            lo0 = max(lo0, tu0)
+            hi0 = min(hi0, tu1)
+            lo1 = max(lo1, tv0)
+            hi1 = min(hi1, tv1)
+        }
+        val minU = floor(lo0 / cell) * cell - PAD_CELLS * cell
+        val minV = floor(lo1 / cell) * cell - PAD_CELLS * cell
+        val nu = ceil((hi0 - minU) / cell).toInt() + PAD_CELLS + 1
+        val nv = ceil((hi1 - minV) / cell).toInt() + PAD_CELLS + 1
+        if (nu.toLong() * nv > MAX_CELLS || nu <= 0 || nv <= 0) return null
+        return Raster(minU, minV, cell, nu, nv)
+    }
+
+    /** The cells of the room's inside: the component of passable floor that holds most of the camera's path. */
+    @Suppress("ReturnCount", "CyclomaticComplexMethod")
+    private fun insideOf(
+        raster: Raster,
+        evidence: BooleanArray,
+        barrier: BooleanArray,
+        trailU: FloatArray,
+        trailV: FloatArray,
+    ): BooleanArray? {
+        val n = raster.size
+        val label = IntArray(n) { -1 }
+        val queue = IntArray(n)
+        val seeds = trailU.indices.map { raster.index(trailU[it], trailV[it]) }.filter { it >= 0 && !barrier[it] }
+        var components = 0
+        val votes = ArrayList<Int>()
+        val sizes = ArrayList<Int>()
+        fun flood(start: Int) {
+            var head = 0
+            var tail = 0
+            label[start] = components
+            queue[tail++] = start
+            while (head < tail) {
+                val k = queue[head++]
+                forNeighbours(raster, k) { m ->
+                    if (label[m] < 0 && evidence[m] && !barrier[m]) {
+                        label[m] = components
+                        queue[tail++] = m
+                    }
+                }
+            }
+            sizes += tail
+            votes += 0
+            components++
+        }
+        if (seeds.isNotEmpty()) {
+            for (s in seeds) {
+                if (label[s] < 0) flood(s)
+                votes[label[s]] = votes[label[s]] + 1
+            }
+        } else {
+            for (k in 0 until n) if (label[k] < 0 && evidence[k] && !barrier[k]) flood(k)
+            if (components == 0) return null
+            for (c in 0 until components) votes[c] = sizes[c]
+        }
+        if (components == 0) return null
+        // Most of the path; between equals, the larger floor.
+        val best = (0 until components).maxWith(compareBy({ votes[it] }, { sizes[it] }))
+        return BooleanArray(n) { label[it] == best }
+    }
+
+    private inline fun forNeighbours(raster: Raster, k: Int, action: (Int) -> Unit) {
+        val i = k % raster.nu
+        val j = k / raster.nu
+        if (i > 0) action(k - 1)
+        if (i < raster.nu - 1) action(k + 1)
+        if (j > 0) action(k - raster.nu)
+        if (j < raster.nv - 1) action(k + raster.nu)
+    }
+
+    /** [mask] closed over [radius] cells: holes in a sparsely seen floor filled, its edge kept. */
+    private fun closing(mask: BooleanArray, raster: Raster, radius: Int): BooleanArray {
+        val grown = dilate(mask, raster, radius)
+        val inverse = BooleanArray(grown.size) { !grown[it] }
+        val shrunk = dilate(inverse, raster, radius)
+        return BooleanArray(grown.size) { !shrunk[it] }
+    }
+
+    /** [mask] grown by [radius] cells each way: a square window, rows then columns. */
+    private fun dilate(mask: BooleanArray, raster: Raster, radius: Int): BooleanArray {
+        val nu = raster.nu
+        val nv = raster.nv
+        val rows = BooleanArray(mask.size)
+        for (j in 0 until nv) {
+            var count = 0
+            for (i in 0 until min(radius, nu)) if (mask[j * nu + i]) count++
+            for (i in 0 until nu) {
+                if (i + radius < nu && mask[j * nu + i + radius]) count++
+                if (i - radius - 1 >= 0 && mask[j * nu + i - radius - 1]) count--
+                rows[j * nu + i] = count > 0
+            }
+        }
+        val out = BooleanArray(mask.size)
+        for (i in 0 until nu) {
+            var count = 0
+            for (j in 0 until min(radius, nv)) if (rows[j * nu + i]) count++
+            for (j in 0 until nv) {
+                if (j + radius < nv && rows[(j + radius) * nu + i]) count++
+                if (j - radius - 1 >= 0 && rows[(j - radius - 1) * nu + i]) count--
+                out[j * nu + i] = count > 0
+            }
+        }
+        return out
+    }
+
+    /**
+     * The region's outer edge as a loop of cell corners (`u, v` pairs), counter-clockwise: each
+     * step one cell side, the region on its left. Where two cells of it touch only at a corner,
+     * the edge keeps to the cell it is on.
+     */
+    @Suppress("ReturnCount", "CyclomaticComplexMethod", "LoopWithTooManyJumpStatements")
+    private fun traceOf(raster: Raster, region: BooleanArray): FloatArray? {
+        val nu = raster.nu
+        val start = region.indexOfFirst { it }
+        if (start < 0) return null
+        fun inRegion(i: Int, j: Int) = i in 0 until nu && j in 0 until raster.nv && region[j * nu + i]
+        // Corners are (i, j) in cell units; start on the lowest cell's bottom side, heading +u.
+        var ci = start % nu
+        var cj = start / nu
+        val si = ci
+        val sj = cj
+        var di = 1
+        var dj = 0
+        val points = ArrayList<Float>()
+        var steps = 0
+        do {
+            points += raster.minU + ci * raster.cell
+            points += raster.minV + cj * raster.cell
+            ci += di
+            cj += dj
+            // At the new corner: turn left when the cell ahead-left is not the region's, right when
+            // both cells ahead are, else straight on between them.
+            val left = cellLeft(ci, cj, di, dj)
+            val right = cellRight(ci, cj, di, dj)
+            val leftIn = inRegion(left[0], left[1])
+            val rightIn = inRegion(right[0], right[1])
+            if (!leftIn) {
+                val t = di
+                di = -dj
+                dj = t
+            } else if (rightIn) {
+                val t = di
+                di = dj
+                dj = -t
+            }
+            if (++steps > MAX_STEPS) return null
+        } while (ci != si || cj != sj || di != 1 || dj != 0)
+        return points.toFloatArray()
+    }
+
+    /** The cell ahead and to the left of a walk arriving at corner ([ci], [cj]) heading ([di], [dj]). */
+    private fun cellLeft(ci: Int, cj: Int, di: Int, dj: Int): IntArray = when {
+        di == 1 -> intArrayOf(ci, cj)
+        di == -1 -> intArrayOf(ci - 1, cj - 1)
+        dj == 1 -> intArrayOf(ci - 1, cj)
+        else -> intArrayOf(ci, cj - 1)
+    }
+
+    /** The cell ahead and to the right of a walk arriving at corner ([ci], [cj]) heading ([di], [dj]). */
+    private fun cellRight(ci: Int, cj: Int, di: Int, dj: Int): IntArray = when {
+        di == 1 -> intArrayOf(ci, cj - 1)
+        di == -1 -> intArrayOf(ci - 1, cj)
+        dj == 1 -> intArrayOf(ci, cj)
+        else -> intArrayOf(ci - 1, cj - 1)
+    }
+
+    /**
+     * The outline's sides read off the [loop]: each step labelled with the wall it runs along,
+     * labels smoothed, then each stretch no wall runs along either cut off (a corner the raster
+     * rounded) or deduced. `null` when fewer than three sides are left.
+     */
+    @Suppress("LongMethod", "CyclomaticComplexMethod", "ReturnCount", "NestedBlockDepth")
+    private fun sidesOf(
+        loop: FloatArray,
+        raster: Raster,
+        lines: List<WallLine>,
+        cloud: FrameCloud,
+        floorAt: FloatArray,
+    ): Triple<FloatArray, FloatArray, List<Side>>? {
+        val m = loop.size / 2
+        if (m < 4) return null
+        val labels = IntArray(m)
+        for (e in 0 until m) {
+            val next = (e + 1) % m
+            val au = loop[e * 2]
+            val av = loop[e * 2 + 1]
+            val bu = loop[next * 2]
+            val bv = loop[next * 2 + 1]
+            val mu = (au + bu) / 2
+            val mv = (av + bv) / 2
+            val du = (bu - au) / raster.cell
+            val dv = (bv - av) / raster.cell
+            // The region is on the left: its inward normal is (−dv, du).
+            val iu = -dv
+            val iv = du
+            var best = UNLABELED
+            var bestD = Float.MAX_VALUE
+            for (l in lines.indices) {
+                val line = lines[l]
+                if (iu * line.nu + iv * line.nv < LABEL_FACING) continue
+                val d = line.oOf(mu, mv) - line.offset
+                if (d < -LABEL_BEHIND_M || d > LABEL_AHEAD_M + raster.cell) continue
+                val t = line.tOf(mu, mv)
+                val lo = min(line.from, line.barrier.firstOrNull()?.start ?: line.from)
+                val hi = max(line.to, line.barrier.lastOrNull()?.endInclusive ?: line.to)
+                if (t < lo - LABEL_ALONG_M || t > hi + LABEL_ALONG_M) continue
+                if (abs(d) < bestD) {
+                    bestD = abs(d)
+                    best = l
+                }
+            }
+            labels[e] = best
+        }
+        if (labels.all { it == UNLABELED }) return null
+        // Runs: start where the label changes, so no run wraps around the loop's start.
+        val shift = (0 until m).firstOrNull { labels[it] != labels[(it + m - 1) % m] } ?: return null
+        val runLabel = ArrayList<Int>()
+        val runStart = ArrayList<Int>()
+        val runCount = ArrayList<Int>()
+        for (k in 0 until m) {
+            val e = (shift + k) % m
+            if (runLabel.isNotEmpty() && runLabel.last() == labels[e]) {
+                runCount[runCount.size - 1] = runCount.last() + 1
+            } else {
+                runLabel += labels[e]
+                runStart += e
+                runCount += 1
+            }
+        }
+        // Short runs take the label of their longer neighbour.
+        val minRun = max(1, (MIN_RUN_M / raster.cell + HALF).toInt())
+        while (runLabel.size > 2) {
+            var shortest = -1
+            for (r in runLabel.indices) {
+                if (runCount[r] < minRun && (shortest < 0 || runCount[r] < runCount[shortest])) shortest = r
+            }
+            if (shortest < 0) break
+            val prev = (shortest + runLabel.size - 1) % runLabel.size
+            val next = (shortest + 1) % runLabel.size
+            val into = if (runLabel[prev] == runLabel[next] || runCount[prev] >= runCount[next]) prev else next
+            if (into == prev) {
+                runCount[prev] = runCount[prev] + runCount[shortest]
+            } else {
+                runCount[next] = runCount[next] + runCount[shortest]
+                runStart[next] = runStart[shortest]
+            }
+            runLabel.removeAt(shortest)
+            runStart.removeAt(shortest)
+            runCount.removeAt(shortest)
+            mergeEqual(runLabel, runStart, runCount)
+        }
+        if (runLabel.size < 3) return null
+        // Each run as a side: a wall's own line, or a deduced one.
+        data class Run(val label: Int, val start: Int, val count: Int)
+        val runs = runLabel.indices.map { Run(runLabel[it], runStart[it], runCount[it]) }
+        fun point(e: Int) = floatArrayOf(loop[(e % m) * 2], loop[(e % m) * 2 + 1])
+        val sides = ArrayList<Side>()
+        val junctions = ArrayList<FloatArray>()
+        for ((r, run) in runs.withIndex()) {
+            val first = point(run.start)
+            val last = point(run.start + run.count)
+            if (run.label != UNLABELED) {
+                val line = lines[run.label]
+                sides += Side(line, line.nu, line.nv, line.offset)
+                junctions += first
+                continue
+            }
+            val prev = runs[(r + runs.size - 1) % runs.size]
+            val next = runs[(r + 1) % runs.size]
+            val length = run.count * raster.cell
+            if (prev.label != UNLABELED && next.label != UNLABELED && length < CORNER_RUN_M) {
+                val a = lines[prev.label]
+                val b = lines[next.label]
+                if (!a.parallel(b)) {
+                    val corner = meet(Side(a, a.nu, a.nv, a.offset), Side(b, b.nu, b.nv, b.offset))
+                    val mu = (first[0] + last[0]) / 2
+                    val mv = (first[1] + last[1]) / 2
+                    if (corner != null && hypot(corner[0] - mu, corner[1] - mv) <= CORNER_NEAR_M) continue
+                }
+            }
+            val ends = ArrayList<FloatArray>()
+            if (prev.label != UNLABELED) nearestEnd(lines[prev.label], first)?.let { ends += it }
+            if (next.label != UNLABELED) nearestEnd(lines[next.label], last)?.let { ends += it }
+            sides += deduced(loop, run.start, run.count, m, lines, ends)
+            junctions += first
+        }
+        // Parallel neighbours: one wall when they are one line, else a deduced step between them.
+        val merged = ArrayList<Side>()
+        val mergedAt = ArrayList<FloatArray>()
+        for (i in sides.indices) {
+            val side = sides[i]
+            if (merged.isNotEmpty()) {
+                val last = merged.last()
+                if (last.parallel(side)) {
+                    val same = last.nu * side.nu + last.nv * side.nv >= SAME_FACING
+                    if (same && abs(last.offset - side.offset) <= SAME_SIDE_M) {
+                        if (last.line == null && side.line != null) merged[merged.size - 1] = side
+                        continue
+                    }
+                    merged += stepBetween(last, side, junctions[i])
+                    mergedAt += junctions[i]
+                }
+            }
+            merged += side
+            mergedAt += junctions[i]
+        }
+        // The loop closes: the last side against the first.
+        while (merged.size >= 2 && merged.last().parallel(merged.first())) {
+            val last = merged.last()
+            val first = merged.first()
+            val same = last.nu * first.nu + last.nv * first.nv >= SAME_FACING
+            if (same && abs(last.offset - first.offset) <= SAME_SIDE_M) {
+                merged.removeAt(merged.size - 1)
+                mergedAt.removeAt(mergedAt.size - 1)
+                if (first.line == null && last.line != null) merged[0] = last
+            } else {
+                merged += stepBetween(last, first, mergedAt[0])
+                mergedAt += mergedAt[0]
+                break
+            }
+        }
+        dropDegenerate(merged)
+        if (merged.size < 3) return null
+        val n = merged.size
+        var cu = FloatArray(n)
+        var cv = FloatArray(n)
+        for (i in 0 until n) {
+            val corner = meet(merged[(i + n - 1) % n], merged[i]) ?: return null
+            cu[i] = corner[0]
+            cv[i] = corner[1]
+        }
+        // A side closed on the floor's edge stands on the raster's cell: moved onto the floor's last surfels.
+        if (merged.any { it.floorEdge }) {
+            val refined = ArrayList<Side>(n)
+            for (i in 0 until n) {
+                val side = merged[i]
+                refined += if (side.floorEdge) {
+                    val beside = listOfNotNull(merged[(i + n - 1) % n].line, merged[(i + 1) % n].line)
+                    onFloorEdge(side, cu[i], cv[i], cu[(i + 1) % n], cv[(i + 1) % n], floorAt, cloud, beside, raster.cell)
+                } else {
+                    side
+                }
+            }
+            val ru = FloatArray(n)
+            val rv = FloatArray(n)
+            var met = true
+            for (i in 0 until n) {
+                val corner = meet(refined[(i + n - 1) % n], refined[i])
+                if (corner == null) {
+                    met = false
+                    break
+                }
+                ru[i] = corner[0]
+                rv[i] = corner[1]
+            }
+            if (met) {
+                cu = ru
+                cv = rv
+                merged.clear()
+                merged += refined
+            }
+        }
+        return Triple(cu, cv, merged)
+    }
+
+    /**
+     * [side] moved onto the edge of what was seen along it between ([au], [av]) and ([bu], [bv]):
+     * the outermost of the floor's surfels there and of the [beside] walls' own, each read at its
+     * [EDGE_PERCENTILE], within a cell or so of where the raster put it. Left where it is when too
+     * little was seen there.
+     */
+    @Suppress("LongParameterList")
+    private fun onFloorEdge(
+        side: Side,
+        au: Float,
+        av: Float,
+        bu: Float,
+        bv: Float,
+        floorAt: FloatArray,
+        cloud: FrameCloud,
+        beside: List<WallLine>,
+        cell: Float,
+    ): Side {
+        val ta = -au * side.nv + av * side.nu
+        val tb = -bu * side.nv + bv * side.nu
+        val lo = min(ta, tb) + cell
+        val hi = max(ta, tb) - cell
+        if (hi <= lo) return side
+        val near = ArrayList<Float>()
+        for (k in 0 until floorAt.size / 2) {
+            val u = floorAt[k * 2]
+            val v = floorAt[k * 2 + 1]
+            val t = -u * side.nv + v * side.nu
+            if (t < lo || t > hi) continue
+            val d = u * side.nu + v * side.nv
+            if (d >= side.offset - cell && d <= side.offset + EDGE_BAND_CELLS * cell) near += d
+        }
+        if (near.size < MIN_EDGE_SURFELS) return side
+        near.sort()
+        var edge = near[(near.size * EDGE_PERCENTILE).toInt()]
+        for (line in beside) {
+            val reach = ArrayList<Float>()
+            for (i in line.members) {
+                val d = cloud.u[i] * side.nu + cloud.v[i] * side.nv
+                if (d >= side.offset - cell && d <= side.offset + EDGE_BAND_CELLS * cell) reach += d
+            }
+            if (reach.size < MIN_EDGE_SURFELS) continue
+            reach.sort()
+            edge = min(edge, reach[(reach.size * EDGE_PERCENTILE).toInt()])
+        }
+        return Side(null, side.nu, side.nv, edge, floorEdge = true)
+    }
+
+    /**
+     * Sides left with no length between their corners — a piece of furniture's end met square on
+     * the wall behind it — are not walls: dropped, their neighbours met again, one wall when they
+     * are one line.
+     */
+    private fun dropDegenerate(sides: ArrayList<Side>) {
+        var changed = true
+        while (changed && sides.size > 3) {
+            changed = false
+            val n = sides.size
+            for (i in 0 until n) {
+                val prev = sides[(i + n - 1) % n]
+                val side = sides[i]
+                val next = sides[(i + 1) % n]
+                val a = meet(prev, side) ?: continue
+                val b = meet(side, next) ?: continue
+                // The outline walks each side along (nv, −nu).
+                val length = (b[0] - a[0]) * side.nv - (b[1] - a[1]) * side.nu
+                if (length >= DEGENERATE_M) continue
+                if (prev.parallel(next)) {
+                    val same = prev.nu * next.nu + prev.nv * next.nv >= SAME_FACING
+                    if (!same || abs(prev.offset - next.offset) > SAME_SIDE_M) continue
+                    // One line on both sides of it: one wall.
+                    val keep = if (prev.line == null && next.line != null) next else prev
+                    val lo = minOf(i, (i + 1) % n)
+                    val hi = maxOf(i, (i + 1) % n)
+                    sides.removeAt(hi)
+                    sides.removeAt(lo)
+                    sides[if (i == 0) sides.size - 1 else (i - 1).coerceAtMost(sides.size - 1)] = keep
+                } else {
+                    sides.removeAt(i)
+                }
+                changed = true
+                break
+            }
+        }
+    }
+
+    private fun mergeEqual(label: ArrayList<Int>, start: ArrayList<Int>, count: ArrayList<Int>) {
+        var r = 0
+        while (label.size > 1 && r < label.size) {
+            val next = (r + 1) % label.size
+            if (next != r && label[r] == label[next]) {
+                count[r] = count[r] + count[next]
+                label.removeAt(next)
+                start.removeAt(next)
+                count.removeAt(next)
+                if (next < r) r--
+            } else {
+                r++
+            }
+        }
+    }
+
+    /** The end of [line]'s barrier nearest to [p], when within [ENDS_NEAR_M] of it. */
+    private fun nearestEnd(line: WallLine, p: FloatArray): FloatArray? {
+        var best: FloatArray? = null
+        var bestD = ENDS_NEAR_M
+        for (range in line.barrier) {
+            for (t in floatArrayOf(range.start, range.endInclusive)) {
+                val u = line.pointU(t)
+                val v = line.pointV(t)
+                val d = hypot(u - p[0], v - p[1])
+                if (d <= bestD) {
+                    bestD = d
+                    best = floatArrayOf(u, v)
+                }
+            }
+        }
+        return best
+    }
+
+    /**
+     * A side no wall was seen along: in the room's direction nearest its chord when one fits, at
+     * the outermost of the floor seen there and the ends of the walls beside it ([ends]).
+     */
+    @Suppress("LongParameterList")
+    private fun deduced(loop: FloatArray, start: Int, count: Int, m: Int, lines: List<WallLine>, ends: List<FloatArray>): Side {
+        val au = loop[(start % m) * 2]
+        val av = loop[(start % m) * 2 + 1]
+        val bu = loop[((start + count) % m) * 2]
+        val bv = loop[((start + count) % m) * 2 + 1]
+        val du = bu - au
+        val dv = bv - av
+        val len = max(hypot(du, dv), 1e-6f)
+        // Inward: the left of the walk.
+        var nu = -dv / len
+        var nv = du / len
+        val chord = WallLines.degreesOf(nu, nv)
+        var bestDiff = FAMILY_FIT_DEG
+        for (line in lines) {
+            val diff = WallLines.angleDiff(chord, WallLines.degreesOf(line.nu, line.nv))
+            if (diff < bestDiff) {
+                bestDiff = diff
+                nu = line.nu
+                nv = line.nv
+            }
+        }
+        val squares = floatArrayOf(0f, 90f, 180f, 270f)
+        if (bestDiff == FAMILY_FIT_DEG) {
+            for (a in squares) {
+                val diff = WallLines.angleDiff(chord, a)
+                if (diff < bestDiff) {
+                    bestDiff = diff
+                    val rad = Math.toRadians(a.toDouble())
+                    nu = Math.cos(rad).toFloat().let { if (abs(it) < 1e-6f) 0f else it }
+                    nv = Math.sin(rad).toFloat().let { if (abs(it) < 1e-6f) 0f else it }
+                }
+            }
+        }
+        var offset = Float.POSITIVE_INFINITY
+        for (k in 0..count) {
+            val e = (start + k) % m
+            offset = min(offset, loop[e * 2] * nu + loop[e * 2 + 1] * nv)
+        }
+        for (end in ends) offset = min(offset, end[0] * nu + end[1] * nv)
+        return Side(null, nu, nv, offset, floorEdge = true)
+    }
+
+    /** A deduced side through [at], square to two parallel sides it steps between, facing the room. */
+    private fun stepBetween(a: Side, b: Side, at: FloatArray): Side {
+        // Square to a, facing the way the walk goes on: from a's level towards b's.
+        var nu = -a.nv
+        var nv = a.nu
+        val toward = (b.offset - a.offset) * (if (a.nu * b.nu + a.nv * b.nv >= 0f) 1f else -1f)
+        // Which way along a the walk heads is a's tangent with the room on the left: (nv, −nu) rotated.
+        val walkU = a.nv
+        val walkV = -a.nu
+        // A step inward (towards b further into the room) faces back along the walk, outward faces ahead.
+        if ((nu * walkU + nv * walkV) * (if (toward < 0f) -1f else 1f) > 0f) {
+            nu = -nu
+            nv = -nv
+        }
+        return Side(null, nu, nv, at[0] * nu + at[1] * nv)
+    }
+
+    /** Where two sides' lines cross; `null` when they are parallel. */
+    fun meet(a: Side, b: Side): FloatArray? {
+        val det = a.nu * b.nv - a.nv * b.nu
+        if (abs(det) < 1e-4f) return null
+        val u = (a.offset * b.nv - a.nv * b.offset) / det
+        val v = (a.nu * b.offset - a.offset * b.nu) / det
+        return floatArrayOf(u, v)
+    }
+
+    /** A deduced side from ([au], [av]) to ([bu], [bv]), the room on its left. */
+    private fun sideThrough(au: Float, av: Float, bu: Float, bv: Float): Side {
+        val len = max(hypot(bu - au, bv - av), 1e-6f)
+        val nu = -(bv - av) / len
+        val nv = (bu - au) / len
+        return Side(null, nu, nv, au * nu + av * nv)
+    }
+
+    fun signedArea(u: FloatArray, v: FloatArray): Float {
+        var sum = 0.0
+        for (i in u.indices) {
+            val j = (i + 1) % u.size
+            sum += u[i].toDouble() * v[j] - u[j].toDouble() * v[i]
+        }
+        return (sum / 2).toFloat()
+    }
+
+    /** No two sides cross but neighbours at their shared corner. */
+    fun simple(u: FloatArray, v: FloatArray): Boolean {
+        val n = u.size
+        for (i in 0 until n) {
+            val i2 = (i + 1) % n
+            for (j in i + 1 until n) {
+                val j2 = (j + 1) % n
+                if (j == i2 || i == j2) continue
+                if (crosses(u[i], v[i], u[i2], v[i2], u[j], v[j], u[j2], v[j2])) return false
+            }
+        }
+        return true
+    }
+
+    @Suppress("LongParameterList")
+    private fun crosses(
+        ax: Float, ay: Float, bx: Float, by: Float,
+        cx: Float, cy: Float, dx: Float, dy: Float,
+    ): Boolean {
+        fun orient(px: Float, py: Float, qx: Float, qy: Float, rx: Float, ry: Float) =
+            (qx - px) * (ry - py) - (qy - py) * (rx - px)
+        val d1 = orient(cx, cy, dx, dy, ax, ay)
+        val d2 = orient(cx, cy, dx, dy, bx, by)
+        val d3 = orient(ax, ay, bx, by, cx, cy)
+        val d4 = orient(ax, ay, bx, by, dx, dy)
+        return ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))
+    }
+
+    /** [loop] (`u, v` pairs, closed) simplified to within [tolerance] metres. */
+    private fun simplify(loop: FloatArray, tolerance: Float): FloatArray {
+        val n = loop.size / 2
+        if (n < 4) return loop
+        // Split at the two points furthest apart, simplify each half.
+        var far = 0
+        var farD = 0f
+        for (i in 1 until n) {
+            val d = hypot(loop[i * 2] - loop[0], loop[i * 2 + 1] - loop[1])
+            if (d > farD) {
+                farD = d
+                far = i
+            }
+        }
+        val keep = BooleanArray(n)
+        keep[0] = true
+        keep[far] = true
+        fun dp(from: Int, to: Int) {
+            if (to - from < 2) return
+            val ax = loop[from * 2]
+            val ay = loop[from * 2 + 1]
+            val bx = loop[(to % n) * 2]
+            val by = loop[(to % n) * 2 + 1]
+            val len = max(hypot(bx - ax, by - ay), 1e-6f)
+            var worst = -1
+            var worstD = tolerance
+            for (i in from + 1 until to) {
+                val px = loop[(i % n) * 2]
+                val py = loop[(i % n) * 2 + 1]
+                val d = abs((bx - ax) * (ay - py) - (ax - px) * (by - ay)) / len
+                if (d > worstD) {
+                    worstD = d
+                    worst = i
+                }
+            }
+            if (worst < 0) return
+            keep[worst % n] = true
+            dp(from, worst)
+            dp(worst, to)
+        }
+        dp(0, far)
+        dp(far, n)
+        val out = ArrayList<Float>()
+        for (i in 0 until n) if (keep[i]) {
+            out += loop[i * 2]
+            out += loop[i * 2 + 1]
+        }
+        return out.toFloatArray()
+    }
+
+    private const val HALF = 0.5f
+}

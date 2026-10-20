@@ -6,6 +6,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.sin
@@ -296,12 +297,14 @@ class RoomSurveyTest {
     }
 
     @Test
-    fun `three walls give a plan and no area`() {
+    fun `three walls give a plan and an estimated area`() {
         val survey = Room().box(east = false).survey()
 
-        assertNull(survey.area)
-        assertNull(survey.perimeter)
-        assertNull(survey.length)
+        // The missing wall is deduced where the floor was seen to end: the figures it bounds are estimates.
+        assertNear(20f, survey.area?.value, 3 * AREA)
+        assertTrue(survey.area!!.estimate)
+        assertTrue(survey.perimeter!!.estimate)
+        assertTrue(survey.length!!.estimate)
         // The pair that was seen is measured.
         assertNear(4f, survey.width?.value)
         assertTrue(SurveyGap.MissingWall in survey.gaps)
@@ -316,12 +319,14 @@ class RoomSurveyTest {
     }
 
     @Test
-    fun `two walls give no area either`() {
+    fun `two walls give an estimated area, the pair seen measured`() {
         val survey = Room().box(east = false, west = false).survey()
 
-        assertNull(survey.area)
-        assertNull(survey.length)
+        assertNear(20f, survey.area?.value, 3 * AREA)
+        assertTrue(survey.area!!.estimate)
+        assertTrue(survey.length!!.estimate)
         assertNear(4f, survey.width?.value)
+        assertFalse(survey.width!!.estimate)
         assertTrue(SurveyGap.MissingWall in survey.gaps)
     }
 
@@ -351,7 +356,7 @@ class RoomSurveyTest {
         assertEquals(0.45f, east.seenShare, 0.05f)
         assertFalse(east.seen)
         assertTrue(east.length.estimate)
-        assertNull(survey.area)
+        assertTrue(survey.area!!.estimate)
         assertTrue(RoomSurveyor.MIN_SEEN_SHARE > east.seenShare)
         // The two walls that end on it end on an estimate: their lengths are estimates too.
         val ending = survey.walls.filter { it.horizontal }
@@ -549,7 +554,7 @@ class RoomSurveyTest {
     }
 
     @Test
-    fun `a wall square to no other is said, and the area it cuts is an estimate`() {
+    fun `a wall square to no other is drawn as it stands, and the area it cuts is measured`() {
         // 5 x 4 m with a corner cut by a wall from (5, 2.5) to (3.5, 4).
         val room = Room()
             .slab(0f, 3.5f, 0f, 4f, 0f)
@@ -569,16 +574,15 @@ class RoomSurveyTest {
         }
         val survey = room.survey()
 
-        assertTrue(SurveyGap.ObliqueWall in survey.gaps)
-        // The advice to scan a missing wall would never resolve it: it is not given.
-        assertFalse(SurveyGap.MissingWall in survey.gaps)
+        // 20 m² less the cut corner's 1.125 m², the oblique wall 2.12 m long.
+        assertFalse(SurveyGap.ObliqueWall in survey.gaps)
+        assertTrue(survey.gaps.isEmpty())
         assertTrue(survey.hasPlan)
-        assertTrue(survey.area!!.estimate)
-        assertTrue(survey.perimeter!!.estimate)
-        assertEquals(0f, survey.area!!.plusMinus, 0f)
-        assertTrue(survey.hasEstimates)
-        // A room whose walls are all square has no such gap.
-        assertFalse(SurveyGap.ObliqueWall in Room().box().survey().gaps)
+        assertEquals(5, survey.walls.size)
+        assertNear(18.875f, survey.area?.value, AREA)
+        assertFalse(survey.area!!.estimate)
+        assertNear(17.12f, survey.perimeter?.value, 0.05f)
+        assertTrue(survey.walls.any { abs(it.length.value - 2.121f) < 0.05f && it.seen })
     }
 
     @Test
