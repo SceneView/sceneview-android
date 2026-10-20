@@ -1,8 +1,10 @@
 package io.github.sceneview.loaders
 
 import android.os.Looper
+import android.util.Log
 import com.google.android.filament.gltfio.AssetLoader
 import com.google.android.filament.gltfio.FilamentAsset
+import com.google.android.filament.gltfio.ResourceLoader
 import io.github.sceneview.model.Model
 import io.github.sceneview.node.FilamentWithoutJni
 import kotlinx.coroutines.CoroutineScope
@@ -26,6 +28,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.Implementation
 import org.robolectric.annotation.Implements
 import org.robolectric.annotation.LooperMode
+import org.robolectric.shadows.ShadowLog
 import java.io.File
 import java.nio.Buffer
 import java.util.Collections
@@ -36,7 +39,8 @@ import java.util.Collections
  *
  * A real [ModelLoader] over a Filament whose natives return zero (Robolectric instruments
  * `com.google.android.filament`), except where the shadows below say otherwise: every parse
- * "succeeds" with asset handle [ASSET], which names one external resource, [RESOURCE].
+ * "succeeds" with asset handle [ASSET], which names the external resources [resourceUris], and
+ * gltfio's `asyncBeginLoad` answers [beginAccepted].
  */
 @RunWith(RobolectricTestRunner::class)
 @LooperMode(LooperMode.Mode.PAUSED)
@@ -44,7 +48,8 @@ import java.util.Collections
     instrumentedPackages = ["com.google.android.filament"],
     shadows = [
         ModelLoaderResourceFailureTest.ParsingAssetLoader::class,
-        ModelLoaderResourceFailureTest.OneResourceAsset::class,
+        ModelLoaderResourceFailureTest.ListedResourcesAsset::class,
+        ModelLoaderResourceFailureTest.AnsweringResourceLoader::class,
     ],
 )
 class ModelLoaderResourceFailureTest {
@@ -54,6 +59,9 @@ class ModelLoaderResourceFailureTest {
     @Before
     fun setUp() {
         destroyedAssets.clear()
+        resourceUris = arrayOf(TEXTURE)
+        beginAccepted = true
+        ShadowLog.clear()
         loader = ModelLoader(FilamentWithoutJni.engine(), RuntimeEnvironment.getApplication())
     }
 
@@ -73,13 +81,50 @@ class ModelLoaderResourceFailureTest {
     }
 
     @Test
-    fun `a missing external resource loads the model without it`() {
-        // RESOURCE resolves next to the model file, where it does not exist.
+    fun `a missing texture loads the model without it, and says so`() {
+        // TEXTURE resolves next to the model file, where it does not exist.
         val result = await { loader.loadModelAsync(modelFileUri(), onResult = it) }
 
         assertTrue("onResult must be called", result.called)
-        assertNotNull("A missing resource must not fail the whole load", result.value)
+        assertNotNull("A missing texture must not fail the whole load", result.value)
         assertEquals("The loaded model must stay alive", emptyList<Long>(), destroyedAssets.toList())
+        assertWarned(TEXTURE, "model.gltf", "loading the model without it")
+    }
+
+    @Test
+    fun `a missing buffer fails the load and destroys the model`() {
+        resourceUris = arrayOf(BUFFER, TEXTURE)
+
+        val result = await { loader.loadModelAsync(modelFileUri(), onResult = it) }
+
+        assertTrue("onResult must be called", result.called)
+        assertNull("A model without its geometry buffer must not be handed out", result.value)
+        assertEquals("The model created before the miss must be destroyed", listOf(ASSET), destroyedAssets.toList())
+        assertWarned(BUFFER, "model.gltf", "the model was destroyed")
+    }
+
+    @Test
+    fun `a present buffer loads, even when a texture is missing`() {
+        resourceUris = arrayOf(BUFFER, TEXTURE)
+
+        val result = await { loader.loadModelAsync(modelFileUri(withBuffer = true), onResult = it) }
+
+        assertTrue("onResult must be called", result.called)
+        assertNotNull(result.value)
+        assertEquals(emptyList<Long>(), destroyedAssets.toList())
+    }
+
+    @Test
+    fun `a begin gltfio refuses fails the load and destroys the model`() {
+        resourceUris = emptyArray()
+        beginAccepted = false
+
+        val result = await { loader.loadModelAsync(modelFileUri(), onResult = it) }
+
+        assertTrue("onResult must be called", result.called)
+        assertNull(result.value)
+        assertEquals(listOf(ASSET), destroyedAssets.toList())
+        assertWarned("refused", "model.gltf")
     }
 
     @Test
@@ -139,21 +184,41 @@ class ModelLoaderResourceFailureTest {
         }
     }
 
-    /** Every asset names one external resource, [RESOURCE]. */
+    /** Every asset names the external resources [resourceUris]. */
     @Implements(FilamentAsset::class)
-    @Suppress("UnusedParameter", "FunctionOnlyReturningConstant") // Robolectric shadows mirror native signatures
-    class OneResourceAsset {
+    @Suppress("UnusedParameter") // Robolectric shadows mirror native signatures
+    class ListedResourcesAsset {
         companion object {
             @JvmStatic
             @Implementation
-            fun nGetResourceUriCount(nativeAsset: Long): Int = 1
+            fun nGetResourceUriCount(nativeAsset: Long): Int = resourceUris.size
 
             @JvmStatic
             @Implementation
             fun nGetResourceUris(nativeAsset: Long, result: Array<String?>) {
-                result[0] = RESOURCE
+                resourceUris.copyInto(result)
             }
         }
+    }
+
+    /** gltfio's `asyncBeginLoad` answers [beginAccepted]. */
+    @Implements(ResourceLoader::class)
+    @Suppress("UnusedParameter") // Robolectric shadows mirror native signatures
+    class AnsweringResourceLoader {
+        companion object {
+            @JvmStatic
+            @Implementation
+            fun nAsyncBeginLoad(nativeLoader: Long, nativeAsset: Long): Boolean = beginAccepted
+        }
+    }
+
+    /** Some `Log.w` under the `ModelLoader` tag mentions every one of [fragments]. */
+    private fun assertWarned(vararg fragments: String) {
+        val warnings = ShadowLog.getLogsForTag("ModelLoader").filter { it.type == Log.WARN }
+        assertTrue(
+            "Expected a ModelLoader warning naming ${fragments.toList()}, got ${warnings.map { it.msg }}",
+            warnings.any { log -> fragments.all { it in log.msg } },
+        )
     }
 
     private class Result(var called: Boolean = false, var value: Model? = null)
@@ -173,23 +238,38 @@ class ModelLoaderResourceFailureTest {
         return result
     }
 
-    /** A model file that exists, alone in its folder: its resource [RESOURCE] does not. */
-    private fun modelFileUri(): String {
+    /**
+     * A `model.gltf` that declares [BUFFER] as its buffer and [TEXTURE] as its image. Alone in its
+     * folder, so neither resource exists next to it — except [BUFFER] when [withBuffer].
+     */
+    private fun modelFileUri(withBuffer: Boolean = false): String {
         val folder = File.createTempFile("model", "").apply {
             delete()
             mkdirs()
             deleteOnExit()
         }
         val file = File(folder, "model.gltf").apply {
-            writeBytes(ByteArray(64))
+            writeText(
+                """{"asset":{"version":"2.0"},"buffers":[{"uri":"$BUFFER","byteLength":4}],""" +
+                    """"images":[{"uri":"$TEXTURE"}]}""",
+            )
             deleteOnExit()
         }
+        if (withBuffer) File(folder, BUFFER).apply { writeBytes(ByteArray(4)) }.deleteOnExit()
         return "file://${file.absolutePath}"
     }
 
     private companion object {
         const val ASSET = 7L
-        const val RESOURCE = "missing.bin"
+        const val BUFFER = "scene.bin"
+        const val TEXTURE = "missing.png"
+
+        @Volatile
+        var resourceUris: Array<String> = arrayOf(TEXTURE)
+
+        @Volatile
+        var beginAccepted = true
+
         val destroyedAssets: MutableList<Long> = Collections.synchronizedList(mutableListOf<Long>())
     }
 }
