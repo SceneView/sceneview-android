@@ -39,7 +39,7 @@ describe("ANIMATION_GUIDE", () => {
   it("contains AR animation example", () => {
     expect(ANIMATION_GUIDE).toContain("ARSceneView(");
     expect(ANIMATION_GUIDE).toContain("AnchorNode");
-    expect(ANIMATION_GUIDE).toContain("hitResult.createAnchor");
+    expect(ANIMATION_GUIDE).toContain("createAnchorOrNull()");
   });
 
   it("includes key takeaways section", () => {
@@ -67,7 +67,7 @@ describe("GESTURE_GUIDE", () => {
   });
 
   it("contains AR tap-to-place example", () => {
-    expect(GESTURE_GUIDE).toContain("hitResult.createAnchor");
+    expect(GESTURE_GUIDE).toContain("createAnchorOrNull()");
     expect(GESTURE_GUIDE).toContain("AnchorNode");
     expect(GESTURE_GUIDE).toContain("ARSceneView(");
     expect(GESTURE_GUIDE).toContain("planeRenderer");
@@ -153,7 +153,8 @@ describe("PERFORMANCE_TIPS", () => {
   });
 
   it("contains post-processing optimization table", () => {
-    expect(PERFORMANCE_TIPS).toContain("postProcessing");
+    expect(PERFORMANCE_TIPS).toContain("isPostProcessingEnabled = false");
+    expect(PERFORMANCE_TIPS).not.toContain("postProcessing = false");
     expect(PERFORMANCE_TIPS).toContain("Bloom");
     expect(PERFORMANCE_TIPS).toContain("SSAO");
     expect(PERFORMANCE_TIPS).toContain("FXAA");

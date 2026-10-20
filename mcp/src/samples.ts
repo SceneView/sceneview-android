@@ -142,6 +142,7 @@ fun ARModelViewerScreen() {
     val modelLoader = rememberModelLoader(engine)
     val modelInstance = rememberModelInstance(modelLoader, "models/toy_car.glb")
     var anchor by remember { mutableStateOf<Anchor?>(null) }
+    var latestFrame by remember { mutableStateOf<Frame?>(null) }
 
     ARSceneView(
         modifier = Modifier.fillMaxSize(),
@@ -154,9 +155,16 @@ fun ARModelViewerScreen() {
                     Config.DepthMode.AUTOMATIC else Config.DepthMode.DISABLED
             config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
         },
-        onTouchEvent = { event, hitResult ->
-            if (event.action == MotionEvent.ACTION_UP && hitResult != null)
-                anchor = hitResult.createAnchor()
+        onSessionUpdated = { _, frame -> latestFrame = frame },
+        onTouchEvent = { event, _ ->
+            // The callback's hitResult is a scene-node hit (io.github.sceneview.collision.HitResult),
+            // null on an empty plane and without createAnchor(): hit-test the latest ARCore Frame.
+            if (event.action == MotionEvent.ACTION_UP) {
+                latestFrame?.hitTest(event)
+                    ?.firstOrNull { (it.trackable as? Plane)?.isPoseInPolygon(it.hitPose) == true }
+                    ?.createAnchorOrNull()
+                    ?.let { anchor = it }
+            }
             true
         }
     ) {
@@ -2142,6 +2150,7 @@ fun ARSurfaceCursorScreen() {
     val view = LocalView.current
     val modelInstance = rememberModelInstance(modelLoader, "models/chair.glb")
     var placedAnchors by remember { mutableStateOf(listOf<Anchor>()) }
+    var latestFrame by remember { mutableStateOf<Frame?>(null) }
 
     ARSceneView(
         modifier = Modifier.fillMaxSize(),
@@ -2153,9 +2162,15 @@ fun ARSurfaceCursorScreen() {
                 Config.DepthMode.AUTOMATIC else Config.DepthMode.DISABLED
             config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
         },
-        onTouchEvent = { event, hitResult ->
-            if (event.action == MotionEvent.ACTION_UP && hitResult != null) {
-                placedAnchors = placedAnchors + hitResult.createAnchor()
+        onSessionUpdated = { _, frame -> latestFrame = frame },
+        onTouchEvent = { event, _ ->
+            // The callback's hitResult is a scene-node hit (io.github.sceneview.collision.HitResult),
+            // null on an empty plane and without createAnchor(): hit-test the latest ARCore Frame.
+            if (event.action == MotionEvent.ACTION_UP) {
+                latestFrame?.hitTest(event)
+                    ?.firstOrNull { (it.trackable as? Plane)?.isPoseInPolygon(it.hitPose) == true }
+                    ?.createAnchorOrNull()
+                    ?.let { placedAnchors = placedAnchors + it }
             }
             true
         }

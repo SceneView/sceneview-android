@@ -232,14 +232,21 @@ fun ARAnimatedModel() {
     val modelLoader = rememberModelLoader(engine)
     val modelInstance = rememberModelInstance(modelLoader, "models/dancing_character.glb")
     var anchor by remember { mutableStateOf<Anchor?>(null) }
+    var latestFrame by remember { mutableStateOf<Frame?>(null) }
 
     ARSceneView(
         engine = engine,
         modelLoader = modelLoader,
         planeRenderer = true,
-        onTouchEvent = { event, hitResult ->
-            if (event.action == MotionEvent.ACTION_UP && hitResult != null) {
-                anchor = hitResult.createAnchor()
+        onSessionUpdated = { _, frame -> latestFrame = frame },
+        onTouchEvent = { event, _ ->
+            // The callback's hitResult is a scene-node hit (io.github.sceneview.collision.HitResult),
+            // null on an empty plane and without createAnchor(): hit-test the latest ARCore Frame.
+            if (event.action == MotionEvent.ACTION_UP) {
+                latestFrame?.hitTest(event)
+                    ?.firstOrNull { (it.trackable as? Plane)?.isPoseInPolygon(it.hitPose) == true }
+                    ?.createAnchorOrNull()
+                    ?.let { anchor = it }
             }
             true
         }
@@ -362,15 +369,21 @@ fun TapToPlaceAR() {
     val modelLoader = rememberModelLoader(engine)
     val modelInstance = rememberModelInstance(modelLoader, "models/furniture.glb")
     var anchor by remember { mutableStateOf<Anchor?>(null) }
+    var latestFrame by remember { mutableStateOf<Frame?>(null) }
 
     ARSceneView(
         engine = engine,
         modelLoader = modelLoader,
         planeRenderer = true,
-        onTouchEvent = { event, hitResult ->
-            if (event.action == MotionEvent.ACTION_UP && hitResult != null) {
-                // Create an anchor at the tap location on the AR plane
-                anchor = hitResult.createAnchor()
+        onSessionUpdated = { _, frame -> latestFrame = frame },
+        onTouchEvent = { event, _ ->
+            // The callback's hitResult is a scene-node hit (io.github.sceneview.collision.HitResult),
+            // null on an empty plane and without createAnchor(): hit-test the latest ARCore Frame.
+            if (event.action == MotionEvent.ACTION_UP) {
+                latestFrame?.hitTest(event)
+                    ?.firstOrNull { (it.trackable as? Plane)?.isPoseInPolygon(it.hitPose) == true }
+                    ?.createAnchorOrNull()
+                    ?.let { anchor = it }
             }
             true
         }
@@ -482,7 +495,8 @@ fun MultiModelSelectionScreen() {
                 scaleToUnits = 0.5f,
                 position = Position(-1f, 0f, 0f),
                 isEditable = true,
-                onTap = { selectedModel = "chair" }
+                // Per-node tap: Node.onSingleTapConfirmed is (MotionEvent) -> Boolean
+                apply = { onSingleTapConfirmed = { selectedModel = "chair"; true } }
             )
         }
         table?.let { instance ->
@@ -491,7 +505,7 @@ fun MultiModelSelectionScreen() {
                 scaleToUnits = 0.5f,
                 position = Position(1f, 0f, 0f),
                 isEditable = true,
-                onTap = { selectedModel = "table" }
+                apply = { onSingleTapConfirmed = { selectedModel = "table"; true } }
             )
         }
     }
@@ -533,10 +547,10 @@ fun SurfaceCursorAR() {
 
 1. **\`isEditable = true\`** — one-liner for pinch/drag/tap on any ModelNode.
 2. **\`onTouchEvent\`** — full MotionEvent access for custom gesture logic.
-3. **AR tap-to-place** — use \`hitResult.createAnchor()\` in \`onTouchEvent\` with \`ACTION_UP\`.
+3. **AR tap-to-place** — on \`ACTION_UP\` in \`onTouchEvent\`, hit-test the latest ARCore \`Frame\` (from \`onSessionUpdated\`) and call \`createAnchorOrNull()\` on the plane hit. The callback's own \`hitResult\` is a scene-node hit with no \`createAnchor()\`.
 4. **Custom rotation/scale** — track touch deltas or use \`ScaleGestureDetector\`.
 5. **HitResultNode** — AR surface cursor that follows the center of the screen.
-6. **Multi-model** — use \`onTap\` callback per ModelNode for selection.
+6. **Multi-model** — set \`onSingleTapConfirmed\` per ModelNode (in \`apply\`) for selection, or use \`rememberOnGestureListener(onSingleTapConfirmed = { e, node -> })\` on the scene.
 `;
 
 // ─── Performance Tips ────────────────────────────────────────────────────────
@@ -753,11 +767,17 @@ val environment = rememberEnvironment(engine, "environments/sky_2k.hdr")
 ## 6. Post-Processing
 
 \`\`\`kotlin
-// Disable post-processing for simpler scenes (saves ~2ms per frame)
+// Lighter preset: shadows, SSAO and bloom off, dynamic resolution on
 SceneView(
     engine = engine,
-    postProcessing = false // skips bloom, SSAO, tone mapping
-) {
+    renderQuality = RenderQuality.Performance
+) { /* ... */ }
+
+// Or disable post-processing entirely on the Filament View (no bloom, SSAO, tone mapping, FXAA)
+val view = rememberView(engine) {
+    createView(engine).apply { isPostProcessingEnabled = false }
+}
+SceneView(engine = engine, view = view) {
     // Simpler rendering, better FPS
 }
 \`\`\`
@@ -808,5 +828,5 @@ For detailed GPU profiling:
 4. **Frustum culling** — break scenes into multiple nodes for automatic culling.
 5. **Instancing** — reuse the same \`modelInstance\` for repeated objects.
 6. **Profile** — use Systrace or AGI to find real bottlenecks, don't guess.
-7. **Post-processing** — disable what you don't need (\`postProcessing = false\`).
+7. **Post-processing** — disable what you don't need (\`renderQuality = RenderQuality.Performance\`, or \`view.isPostProcessingEnabled = false\`).
 `;
