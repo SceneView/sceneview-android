@@ -1186,8 +1186,11 @@ fun DemoScaffold(
                         dockBand = dockBandClearance,
                         navigationBarInset = navigationBarInset,
                     )
+                    // A hidden dock with nothing in the band leaves the scrim nothing to ground: it
+                    // would only wash out what the page pins there itself (#4730).
                     AnimatedVisibility(
-                        visible = chromeVisible || (!focused && overlaysShown && bottomStackShown && !compactHeight),
+                        visible = (chromeVisible && !dockHidden) ||
+                            (!focused && overlaysShown && bottomStackShown && !compactHeight),
                         enter = fadeIn(SceneViewTokens.Motion.fade()),
                         exit = fadeOut(SceneViewTokens.Motion.fade()),
                         modifier = Modifier.align(Alignment.BottomCenter),
