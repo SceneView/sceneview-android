@@ -1,0 +1,2 @@
+<!-- category: Added -->
+- **3D Scan (demo)**: the plan, the area and the report read the room's real shape from the scan: walls of any layout (L, T, U, oblique), doors and windows with their sizes, the ceiling height, and a wall never seen marked as deduced rather than invented — with no figure at all when fewer than two walls were seen. A closed structure mesh and a cheap live reading of the walls are ready for the screens to use (#4744).
