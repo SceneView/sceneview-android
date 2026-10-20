@@ -403,6 +403,7 @@ dependencies {
     // ui-tooling provides the runtime that renders @Preview functions in the AS pane;
     // shipping it in debug only avoids bundling the inspector into release APKs.
     debugImplementation libs.androidx.compose.ui.tooling
+    debugImplementation "androidx.compose.runtime:runtime-tracing" // TEMP #4743
 
     // SceneView — 3D + AR
     implementation project(":sceneview")

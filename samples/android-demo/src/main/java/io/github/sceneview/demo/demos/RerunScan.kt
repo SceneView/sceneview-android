@@ -332,6 +332,7 @@ internal class ScanCapture private constructor(
      */
     fun fuseDepth(depth: ScanDepth, image: ScanImage?) {
         val dense = dense ?: return
+        if (io.github.sceneview.demo.PerfAb.on("nofusion")) return // TEMP #4743
         if (image == null) {
             intake.count(Outcome.NoImage)
             return
@@ -341,7 +342,8 @@ internal class ScanCapture private constructor(
             intake.count(Outcome.Unreadable)
             return
         }
-        model?.offer(frame, scope)
+        if (!io.github.sceneview.demo.PerfAb.on("notsdf")) model?.offer(frame, scope) // TEMP #4743
+        if (io.github.sceneview.demo.PerfAb.on("nodensefuse")) return // TEMP #4743
         fusing.set(true)
         fuseJob = scope.launch(Dispatchers.Default) {
             try {

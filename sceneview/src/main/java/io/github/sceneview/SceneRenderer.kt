@@ -269,7 +269,9 @@ class SceneRenderer(
     ): Boolean {
         val sc = swapChainRef.get() ?: return false
 
+        android.os.Trace.beginSection("SR:before") // TEMP #4743
         onBeforeRender()
+        android.os.Trace.endSection() // TEMP #4743
 
         if (shouldPresent?.invoke() == false) {
             // Still drain: the queue's grace periods are counted in frames of the engine, and a
@@ -280,6 +282,7 @@ class SceneRenderer(
         }
 
         var presented = false
+        android.os.Trace.beginSection("SR:render" + System.identityHashCode(view) % 1000) // TEMP #4743
         if (renderer.beginFrame(sc, frameTimeNanos)) {
             renderer.render(view)
             renderer.endFrame()
@@ -293,6 +296,7 @@ class SceneRenderer(
             surfaceMirrorer?.onFrame(engine, view, frameTimeNanos)
             presented = true
         }
+        android.os.Trace.endSection() // TEMP #4743
 
         // Destroy GPU resources whose grace period has elapsed, after endFrame on the main (render)
         // thread — see EngineDestroyQueue (sceneview/sceneview#874). Driven here rather than from

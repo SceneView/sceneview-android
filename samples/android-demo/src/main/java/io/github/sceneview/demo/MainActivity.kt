@@ -193,6 +193,7 @@ class MainActivity : ComponentActivity() {
         // QA-mode tracks the latest intent, not "stickily true forever" — otherwise any
         // app on the device could flip it on once via `--ez qa_mode true` and leave the
         // showcase frozen until process death.
+        PerfAb.load(getExternalFilesDir(null)) // TEMP #4743 A/B
         DemoSettings.qaMode = intent?.getBooleanExtra("qa_mode", false) ?: false
         DemoSettings.qaBackdrop = resolveQaBackdrop(intent)
         // Optional id of a visual state a demo should pin itself to (#3421, #3455). One extra

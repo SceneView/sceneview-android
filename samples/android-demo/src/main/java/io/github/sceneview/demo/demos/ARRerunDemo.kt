@@ -1829,7 +1829,7 @@ private fun RerunLiveScreen(
                 )
                 // The floor map is room guidance, and an area's: an object has no ground to cover (#4647).
                 val mapsFloor = phase in SCAN_MAP_PHASES && scanScope.mapsGround
-                if (recording && scanMedia != null && mapsFloor) {
+                if (recording && scanMedia != null && mapsFloor && !io.github.sceneview.demo.PerfAb.on("nomap")) {
                     ScanCoverageMap(
                         state = scanCoverage,
                         modifier = Modifier
@@ -1959,10 +1959,10 @@ private fun RerunLiveScreen(
                 surfaceType = qaCameraBackdropSurfaceType(),
                 cameraStream = if (qaBackdrop) null else cameraStream,
                 playbackDataset = arPlaybackDataset,
-                planeRenderer = true,
+                planeRenderer = !io.github.sceneview.demo.PerfAb.on("noplanes"), // TEMP #4743
                 sessionConfiguration = { session: Session, config: Config ->
                     config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
-                    config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
+                    config.lightEstimationMode = if (io.github.sceneview.demo.PerfAb.on("nohdr")) Config.LightEstimationMode.DISABLED else Config.LightEstimationMode.ENVIRONMENTAL_HDR // TEMP #4743
                     // Rerun v2 tier B: ARCore's raw depth where the phone has it, never where it
                     // does not — that phone keeps the sparse v1 scan, and says so.
                     val depth = runCatching {
@@ -1997,8 +1997,8 @@ private fun RerunLiveScreen(
                     // A scan rides on the same pass while it is scanning.
                     // Paused, in review or saving, a capture takes nothing: no path, no points.
                     val capturing = scan == null || phase.integrates
-                    if (qaDebug == null && !qaRecord && capturing) {
-                        debugRecorder.record(debugSession.trace, session, frame, anchors, scan)
+                    if (qaDebug == null && !qaRecord && capturing && !io.github.sceneview.demo.PerfAb.on("norecord")) { // TEMP #4743
+                        io.github.sceneview.demo.tr("Rec:record") { debugRecorder.record(debugSession.trace, session, frame, anchors, scan) } // TEMP #4743
                     }
                 },
                 // A forced QA state hides the SDK's "Couldn't start AR" card so the screen

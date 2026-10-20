@@ -1684,12 +1684,16 @@ fun ARSceneView(
                     // AR frame update — feed ARCore data into camera, lights, planes.
                     arCore.session?.let { session ->
                         try {
-                            session.updateOrNull()?.let { frame ->
+                            android.os.Trace.beginSection("AR:update") // TEMP #4743
+                            val upd = session.updateOrNull()
+                            android.os.Trace.endSection() // TEMP #4743
+                            upd?.let { frame ->
                                 hasNewArFrame =
                                     lastArFrameTimestamp.getAndSet(frame.timestamp) != frame.timestamp
                                 val trackingFailureReason = readTrackingFailureReason(
                                     trackingStateLog, session, frame, frameTimeNanos
                                 )
+                                android.os.Trace.beginSection("AR:onARFrame") // TEMP #4743
                                 onARFrame(
                                     engine = engine,
                                     scene = scene,
@@ -1707,6 +1711,8 @@ fun ARSceneView(
                                     session = session,
                                     frame = frame
                                 )
+                                android.os.Trace.endSection() // TEMP #4743
+                                android.os.Trace.beginSection("AR:notifyHost") // TEMP #4743
                                 notifyHostOfFrame(
                                     prevTrackingFailureRef = prevTrackingFailureRef,
                                     onTrackingFailureChangedRef = onTrackingFailureChangedRef,
@@ -1715,6 +1721,7 @@ fun ARSceneView(
                                     frame = frame,
                                     trackingFailureReason = trackingFailureReason
                                 )
+                                android.os.Trace.endSection() // TEMP #4743
                             }
                         } catch (e: Exception) {
                             android.util.Log.e(
@@ -1729,7 +1736,9 @@ fun ARSceneView(
                     // nothing under the nodes' cached transform handles.
                     engine.sortTransformsIfUnsorted()
                     modelLoader.updateLoad()
+                    android.os.Trace.beginSection("AR:dispatch") // TEMP #4743
                     frameDispatch.dispatch(childNodes, frameTimeNanos)
+                    android.os.Trace.endSection() // TEMP #4743
 
                     // A drag / twist / pinch of an AR object still coasting after release: one
                     // step, capped like SceneView's so a stalled frame never jumps the object.

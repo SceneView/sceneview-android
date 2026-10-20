@@ -191,21 +191,25 @@ internal class ArDebugRecorder {
         trace.addPose(nanos, display)
 
         val capture = scan?.takeIf { it.trace === trace }
-        capture?.recordDepthStats(nanos)
+        io.github.sceneview.demo.tr("Rec:depthStats") { capture?.recordDepthStats(nanos) }
         val pointsDue = pointsGate.isDue(nanos)
         val photoDue = capture?.wantsPhoto(display) == true
         // A new raw-depth image (Rerun v2 dense map), when the scan has depth and is free to fuse.
-        val depth = capture?.acquireDepth(frame)
+        val depth = io.github.sceneview.demo.tr("Rec:acquireDepth") { capture?.acquireDepth(frame) }
         // One camera image per frame at most, shared by the colours, the photo and the depth.
         val needsImage = pointsDue || photoDue || depth != null
-        val image = if (needsImage) capture?.acquire(frame) else null
+        val image = io.github.sceneview.demo.tr("Rec:acquireImage") {
+            if (needsImage) capture?.acquire(frame) else null
+        }
         try {
             if (pointsDue) {
                 pointsGate.mark(nanos)
-                recordPoints(trace, nanos, frame, capture, image)
+                io.github.sceneview.demo.tr("Rec:points") { recordPoints(trace, nanos, frame, capture, image) }
             }
-            if (capture != null && photoDue && image != null) capture.takePhoto(nanos, image, display)
-            if (capture != null && depth != null) capture.fuseDepth(depth, image)
+            if (capture != null && photoDue && image != null && !io.github.sceneview.demo.PerfAb.on("nophoto")) {
+                io.github.sceneview.demo.tr("Rec:photo") { capture.takePhoto(nanos, image, display) }
+            }
+            if (capture != null && depth != null) io.github.sceneview.demo.tr("Rec:fuse") { capture.fuseDepth(depth, image) }
         } finally {
             image?.close()
             depth?.close()
@@ -213,7 +217,7 @@ internal class ArDebugRecorder {
 
         if (planesGate.isDue(nanos)) {
             planesGate.mark(nanos)
-            recordPlanes(trace, nanos, session)
+            io.github.sceneview.demo.tr("Rec:planes") { recordPlanes(trace, nanos, session) }
         }
 
         for (anchor in anchors) {
@@ -791,6 +795,7 @@ internal fun ArDebugSceneView(
     walls: ScanWallsState? = null,
     drawWalls: Boolean = true,
 ) {
+    if (transparent && io.github.sceneview.demo.PerfAb.on("nooverlay")) return // TEMP #4743
     val shown by rememberUpdatedState(onShown)
     val wallsDrawn by rememberUpdatedState(drawWalls)
     val observer by rememberUpdatedState(observe)
@@ -851,7 +856,9 @@ internal fun ArDebugSceneView(
             renderer = renderer,
             cameraNode = cameraNode,
             isOpaque = !transparent,
-            frameRatePolicy = FrameRatePolicy.Continuous(maxFps = if (compact) PIP_FPS else null),
+            frameRatePolicy = FrameRatePolicy.Continuous(
+                maxFps = if (compact || (transparent && io.github.sceneview.demo.PerfAb.on("ov30"))) PIP_FPS else null,
+            ),
             autoCenterContent = false,
             environment = environment,
             cameraManipulator = orbit,
@@ -866,6 +873,21 @@ internal fun ArDebugSceneView(
                     view.configureForDebug(colorGrading)
                     // Bloom spreads past the layers' alpha: over the camera it would haze it.
                     if (transparent) view.bloomOptions = view.bloomOptions.apply { enabled = false }
+                    // TEMP #4743 A/B
+                    val ab = io.github.sceneview.demo.PerfAb
+                    if (ab.on("nomsaa")) {
+                        view.multiSampleAntiAliasingOptions =
+                            view.multiSampleAntiAliasingOptions.apply { enabled = false }
+                    }
+                    if (ab.on("nopost")) view.isPostProcessingEnabled = false
+                    if (ab.on("halfres")) {
+                        view.dynamicResolutionOptions = view.dynamicResolutionOptions.apply {
+                            enabled = true
+                            homogeneousScaling = true
+                            minScale = 0.5f
+                            maxScale = 0.5f
+                        }
+                    }
                 }
                 session.tick(dt)
                 // From the phone's eye, through the phone's lens (#4716): ARCore's projection for
@@ -894,7 +916,7 @@ internal fun ArDebugSceneView(
                 val frame = clock.frame?.takeIf {
                     trace.version == clock.version && time == it.time ||
                         frameTimeNanos - clock.frameAtNanos < FRAME_INTERVAL_NS
-                } ?: trace.frameAt(time).also {
+                } ?: io.github.sceneview.demo.tr("OV:frameAt") { trace.frameAt(time) }.also {
                     clock.frame = it
                     clock.version = trace.version
                     clock.frameAtNanos = frameTimeNanos
@@ -925,7 +947,7 @@ internal fun ArDebugSceneView(
                             clock.subjectFor = whole
                         }
                 } else {
-                    SceneSubject(ArDebugGeometry.contentBounds(whole), room = replayLayers?.measure)
+                    io.github.sceneview.demo.tr("OV:bounds") { SceneSubject(ArDebugGeometry.contentBounds(whole), room = replayLayers?.measure) }
                 }
                 val bounds = subject.bounds
                 // The room's dimensions are written outside its walls: where they are drawn, the
@@ -938,13 +960,13 @@ internal fun ArDebugSceneView(
                     // Turns the automatic framing to the room's good side before it is first shown.
                     orbit.recenter()
                 }
-                val home = ArDebugFraming.homeWithMeasure(
+                val home = io.github.sceneview.demo.tr("OV:home") { ArDebugFraming.homeWithMeasure(
                     bounds, measured, floorY, orbit.viewportHeight,
                     orbit.home.azimuthDegrees, orbit.verticalFovDegrees, orbit.aspect,
                     elevationDegrees = orbit.homeElevation,
                     band = orbit.band,
                     fill = if (finished) 1f else ArDebugFraming.GROWING_FILL,
-                )
+                ) }
                 // Full screen (#4558): how much larger the room is drawn once the chrome is gone —
                 // the fit for the whole view against the fit for the chrome's band.
                 orbit.focusBand?.let { focusBand ->
@@ -959,7 +981,7 @@ internal fun ArDebugSceneView(
                         orbit.focusScale = (home.distance / homeFull.distance).coerceIn(1f, MAX_FOCUS_SCALE)
                     }
                 }
-                val followed = follow?.invoke(frame)
+                val followed = io.github.sceneview.demo.tr("OV:follow") { follow?.invoke(frame) }
                 // Following, the view frames the room — moved by what a picked box needs to be seen.
                 if (orbit.following) {
                     if (follow == null) {
@@ -997,7 +1019,10 @@ internal fun ArDebugSceneView(
                 // The picture-in-picture packs the room into a few hundred pixels: full-size points
                 // would read as noise there, so they shrink while lines keep their weight.
                 val pointStyle = if (compact) ArDebugStyle(style.metresPerPixel * PIP_POINT_SCALE) else style
-                layers.sync(frame, style, pointStyle, stageBoundsOf(bounds), floorY, visible, replayLayers)
+                if (!io.github.sceneview.demo.PerfAb.on("nolayers")) { // TEMP #4743
+                    io.github.sceneview.demo.tr("OV:layers") { layers.sync(frame, style, pointStyle, stageBoundsOf(bounds), floorY, visible, replayLayers) }
+                }
+                android.os.Trace.beginSection("OV:replayLayers")
                 replayLayers?.sync(
                     frame, pointStyle, floorY,
                     ReplayVisibility(
@@ -1011,10 +1036,13 @@ internal fun ArDebugSceneView(
                     ),
                     eye = CameraRig.eye(orbit.pose).let { Vec3(it.x, it.y, it.z) },
                 )
+                android.os.Trace.endSection()
                 objectPick?.sync(style)
 
-                observer?.invoke(frame)
-                if (walls != null) wallLayer?.sync(walls, dt, shown = wallsDrawn)
+                if (!io.github.sceneview.demo.PerfAb.on("noobserve")) io.github.sceneview.demo.tr("OV:observe") { observer?.invoke(frame) } // TEMP #4743
+                if (walls != null && !io.github.sceneview.demo.PerfAb.on("nowalldraw")) {
+                    io.github.sceneview.demo.tr("OV:walls") { wallLayer?.sync(walls, dt, shown = wallsDrawn) }
+                }
                 if (frame.anchors != anchors) anchors = frame.anchors
                 if (frameTimeNanos - clock.statsAtNanos >= STATS_INTERVAL_NS) {
                     clock.statsAtNanos = frameTimeNanos

@@ -604,11 +604,14 @@ internal class ReplayLayers(
         if (live != null) {
             // Recording: the latest snapshot, drawn whole. One upload a snapshot, about a second.
             val snapshot = live()
-            if (snapshot != null && snapshot !== liveDenseShown) {
+            val ab = io.github.sceneview.demo.PerfAb // TEMP #4743
+            if (snapshot != null && snapshot !== liveDenseShown &&
+                (liveDenseShown == null || !ab.on("noupload"))
+            ) {
                 liveDenseShown = snapshot
-                uploadDense(atlas, node, snapshot)
+                io.github.sceneview.demo.tr("DN:upload") { uploadDense(atlas, node, snapshot) } // TEMP #4743
             }
-            node.isVisible = shown && liveDenseShown != null
+            node.isVisible = shown && liveDenseShown != null && !ab.on("nodense")
             return
         }
         val count = if (dense === media.dense) media.pointCountAt(frame.time) else dense?.cloud?.count ?: 0

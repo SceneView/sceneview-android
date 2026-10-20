@@ -158,17 +158,21 @@ internal class ScanCoverageState {
         record: ArDebugTrace? = null,
         saved: ArDebugTrace? = null,
     ) {
+        android.os.Trace.beginSection("OB:coverage") // TEMP #4743
+        android.os.Trace.beginSection("OB:grid") // TEMP #4743
         var grew = when {
             saved != null -> grid.updateSaved(saved, frame.time, { frame.mapPoints }, dense, denseCount)
             dense != null -> grid.update(dense, denseCount)
             else -> grid.update(frame.mapPoints)
         }
+        android.os.Trace.endSection() // TEMP #4743
         // A live depth scan's dense cloud, a new snapshot every few seconds (#4540): the feature
         // map alone stops at its cap, and the figure froze while the cloud kept growing.
         if (snapshotCells != null && snapshotCells !== lastSnapshot) {
             lastSnapshot = snapshotCells
             grew = grid.addCells(snapshotCells) || grew
         }
+        android.os.Trace.beginSection("OB:record") // TEMP #4743
         if (record != null && grid.version != recordedVersion) {
             recordedVersion = grid.version
             val keys = LongArray(grid.covered)
@@ -176,6 +180,7 @@ internal class ScanCoverageState {
             grid.forEachCovered { cx, cz -> keys[n++] = CoverageGrid.key(cx, cz) }
             record.addFloorCellsAt(frame.time, keys)
         }
+        android.os.Trace.endSection() // TEMP #4743
         coachLine = coach.update(frame.time, frame.camera, grew)
         if (coach.facingWall != facingWall) facingWall = coach.facingWall
         // [pose] is the phone now: the trace's while it records, the live one while paused (#4718).
@@ -184,6 +189,7 @@ internal class ScanCoverageState {
         trail = frame.trail
         pose?.let { heading = ScanFollow.headingOf(it, heading) }
         headingDegrees = heading ?: 0f
+        android.os.Trace.beginSection("OB:floors") // TEMP #4743
         val floors = frame.planes.filter { it.kind == DebugPlaneKind.Floor && it.vertexCount >= 3 }
         val key = floors.fold(floors.size) { acc, plane -> acc * KEY_PRIME + plane.polygon.contentHashCode() }
         val reshaped = key != floorKey || grid.version != extentVersion
@@ -196,6 +202,8 @@ internal class ScanCoverageState {
             resets = grid.resets
         }
         if (reshaped || moved) tick++
+        android.os.Trace.endSection() // TEMP #4743
+        android.os.Trace.endSection() // TEMP #4743
     }
 
     /** The covered cells as one path, and the outline of what is covered, in world metres (XZ). */
@@ -350,7 +358,7 @@ internal fun ScanCoverageMap(
         Box {
             val canvas = if (expanded) Modifier.fillMaxWidth().aspectRatio(1f) else Modifier.size(ScanMapSize)
             Canvas(canvas.clip(mapShape).background(ArOverlay.meterTrack, mapShape)) {
-                drawMap(state, MapFitMargin.toPx(), MapHatchStep.toPx(), MapEdgeWidth.toPx())
+                io.github.sceneview.demo.tr("MAP:draw") { drawMap(state, MapFitMargin.toPx(), MapHatchStep.toPx(), MapEdgeWidth.toPx()) } // TEMP #4743
             }
             if (!expanded && onToggle != null) {
                 // The map opens: the corner says so, like a picture-in-picture's.

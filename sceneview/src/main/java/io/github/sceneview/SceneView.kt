@@ -1167,7 +1167,9 @@ fun SceneView(
                         // TransformManager already sorted and reindex nothing (Engine.kt).
                         engine.sortTransformsIfUnsorted()
                         modelLoader.updateLoad()
+                        android.os.Trace.beginSection("SV:dispatch") // TEMP #4743
                         frameDispatch.dispatch(childNodesRef.get(), frameTimeNanos)
+                        android.os.Trace.endSection() // TEMP #4743
 
                         // One time step for everything this loop advances itself: capped, so a
                         // stall does not spend an ease in one frame, and nominal after a park —
@@ -1286,7 +1288,9 @@ fun SceneView(
                     // dropped its loading cover and every capture in that window — the Maestro
                     // screenshot included — recorded a blank viewport.
                     if (presented) {
+                        android.os.Trace.beginSection("SV:onFrame") // TEMP #4743
                         currentOnFrame.value?.invoke(frameTimeNanos)
+                        android.os.Trace.endSection() // TEMP #4743
                     }
 
                     // Pay down the settle debt only if a frame was really presented. `renderFrame`
