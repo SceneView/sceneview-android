@@ -38,7 +38,7 @@ curl -s -X POST "$BASE_URL/v1/events" \
 echo ""
 echo "==> Stats endpoint:"
 echo "    $BASE_URL/v1/stats"
-# The read routes fail closed (503) without STATS_TOKEN — see DEPLOY.md.
+# The read routes fail closed (401) without STATS_TOKEN — see DEPLOY.md.
 STATS_TOKEN="${STATS_TOKEN:-$(sed -n 's/^STATS_TOKEN=//p' .dev.vars 2>/dev/null || true)}"
 if [ -n "$STATS_TOKEN" ]; then
   curl -s -H "Authorization: Bearer $STATS_TOKEN" "$BASE_URL/v1/stats" | (command -v jq &>/dev/null && jq . || cat)

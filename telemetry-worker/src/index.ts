@@ -23,8 +23,10 @@ app.use("/v1/batch", ingestionCors);
 
 // ── Read-route auth — fail closed ────────────────────────────────────────────
 // Every read route requires `Authorization: Bearer <STATS_TOKEN>`. When the
-// STATS_TOKEN secret is not configured the routes answer 503 instead of
-// serving data: a missing secret must never mean open access.
+// STATS_TOKEN secret is not configured, every request is refused: a missing
+// secret must never mean open access. The refusal is the same 401 a wrong
+// token gets, so a caller cannot tell whether the secret is set; the missing
+// secret is only reported in the worker's own logs.
 
 const encoder = new TextEncoder();
 
@@ -45,13 +47,28 @@ async function timingSafeEqualStrings(a: string, b: string): Promise<boolean> {
   return diff === 0;
 }
 
+/**
+ * Credentials of a `Bearer` Authorization header, or null for any other
+ * header. The scheme name is case-insensitive (RFC 7235 §2.1), so `bearer`
+ * and `BEARER` are accepted; it is followed by one or more spaces.
+ */
+function bearerCredentials(header: string | undefined): string | null {
+  const match = /^bearer +(.*)$/i.exec(header ?? "");
+  return match ? match[1] : null;
+}
+
 const requireStatsToken: MiddlewareHandler<{ Bindings: Env }> = async (c, next) => {
   const token = c.env.STATS_TOKEN;
   if (!token) {
-    return c.json({ error: "stats_token_not_configured" }, 503);
+    console.error(
+      "STATS_TOKEN is not configured: every read route answers 401 until it is set (wrangler secret put STATS_TOKEN).",
+    );
   }
-  const auth = c.req.header("Authorization") ?? "";
-  if (!(await timingSafeEqualStrings(auth, `Bearer ${token}`))) {
+  const credentials = bearerCredentials(c.req.header("Authorization"));
+  // The comparison always runs, so a request takes the same path whether the
+  // secret is set or not; only its result is ignored when it is missing.
+  const matches = await timingSafeEqualStrings(credentials ?? "", token ?? "");
+  if (!token || credentials === null || !matches) {
     return c.json({ error: "unauthorized" }, 401, {
       "WWW-Authenticate": "Bearer",
     });
@@ -626,6 +643,12 @@ app.get("/v1/funnel", requireStatsToken, async (c) => {
 });
 
 // ── Export endpoint (CSV download for analytics) ─────────────────────────────
+// The export never carries install_id, raw or hashed. Its rows are close to
+// unique (millisecond timestamp, client, versions, tool), so two exports with
+// overlapping windows share rows: any per-install value in them, even a hash
+// salted per export, could be chained from one file to the next. Per-install
+// counts are served by /v1/stats, /v1/top-clients and /v1/funnel, which
+// compute them inside the worker.
 app.get("/v1/export", requireStatsToken, async (c) => {
   // Query param validation
   const rawDays = c.req.query("days") ?? "7";
@@ -642,7 +665,7 @@ app.get("/v1/export", requireStatsToken, async (c) => {
     let bindings: (string | number)[];
 
     if (eventType) {
-      query = `SELECT timestamp, event, client, client_ver, mcp_ver, tier, tool, install_id, bot_likelihood
+      query = `SELECT timestamp, event, client, client_ver, mcp_ver, tier, tool, bot_likelihood
                FROM events
                WHERE ingested >= datetime('now', '-' || ? || ' days')
                  AND event = ?
@@ -650,7 +673,7 @@ app.get("/v1/export", requireStatsToken, async (c) => {
                LIMIT 10000`;
       bindings = [days, eventType];
     } else {
-      query = `SELECT timestamp, event, client, client_ver, mcp_ver, tier, tool, install_id, bot_likelihood
+      query = `SELECT timestamp, event, client, client_ver, mcp_ver, tier, tool, bot_likelihood
                FROM events
                WHERE ingested >= datetime('now', '-' || ? || ' days')
                ORDER BY ingested DESC
@@ -666,7 +689,6 @@ app.get("/v1/export", requireStatsToken, async (c) => {
       mcp_ver: string;
       tier: string;
       tool: string | null;
-      install_id: string | null;
       bot_likelihood: number | null;
     };
 
@@ -676,7 +698,7 @@ app.get("/v1/export", requireStatsToken, async (c) => {
 
     // Build CSV — header + rows
     const lines: string[] = [
-      "timestamp,event,client,client_ver,mcp_ver,tier,tool,install_id,bot_likelihood",
+      "timestamp,event,client,client_ver,mcp_ver,tier,tool,bot_likelihood",
     ];
 
     for (const row of result.results) {
@@ -688,7 +710,6 @@ app.get("/v1/export", requireStatsToken, async (c) => {
         row.mcp_ver,
         row.tier,
         row.tool ?? "",
-        row.install_id ?? "",
         row.bot_likelihood !== null && row.bot_likelihood !== undefined
           ? String(row.bot_likelihood)
           : "",
