@@ -76,7 +76,7 @@ class MeasureLiveTest {
     @Test
     fun `a point at a wall's foot is told, and kept where it was measured`() {
         val point = Position(0.4f, floorY, -1.95f)
-        val foot = measureWallFootAt(point, listOf(wall))
+        val foot = measureWallFootAt(point, listOf(wall), floorY)
         assertNotNull(foot)
         // Display only: the point is not moved onto the squared wall line (#4750 review).
         assertEquals(point, foot!!.position)
@@ -86,15 +86,25 @@ class MeasureLiveTest {
 
     @Test
     fun `a floor point away from the wall, or past its end, is not on its foot`() {
-        assertNull(measureWallFootAt(Position(0f, floorY, -1.5f), listOf(wall)))
-        assertNull(measureWallFootAt(Position(2f, floorY, -2f), listOf(wall)))
-        assertNull(measureWallFootAt(Position(0f, floorY, -2f), emptyList()))
+        assertNull(measureWallFootAt(Position(0f, floorY, -1.5f), listOf(wall), floorY))
+        assertNull(measureWallFootAt(Position(2f, floorY, -2f), listOf(wall), floorY))
+        assertNull(measureWallFootAt(Position(0f, floorY, -2f), emptyList(), floorY))
+    }
+
+    @Test
+    fun `a point by the wall but off the floor is not on its foot`() {
+        // Halfway up the wall, and on a 45 cm low table pushed against it: same plan distance.
+        assertNull(measureWallFootAt(Position(0f, floorY + 1.2f, -1.97f), listOf(wall), floorY))
+        assertNull(measureWallFootAt(Position(0f, floorY + 0.45f, -1.97f), listOf(wall), floorY))
+        // The floor plane a few centimetres off the walls' floor still counts.
+        assertNotNull(measureWallFootAt(Position(0f, floorY + 0.04f, -1.97f), listOf(wall), floorY))
+        assertNotNull(measureWallFootAt(Position(0f, floorY - 0.04f, -1.97f), listOf(wall), floorY))
     }
 
     @Test
     fun `the nearest of two walls wins`() {
         val near = LiveWall(id = 2, ax = -1.5f, az = -2.08f, bx = 1.5f, bz = -2.08f, bornAt = 0f)
-        val foot = measureWallFootAt(Position(0f, floorY, -2.06f), listOf(wall, near))!!
+        val foot = measureWallFootAt(Position(0f, floorY, -2.06f), listOf(wall, near), floorY)!!
         assertEquals(-2.08f, foot.a.z, 1e-4f)
     }
 
@@ -110,7 +120,24 @@ class MeasureLiveTest {
     fun `the raising height follows the read, without jitter`() {
         assertEquals(2.4f, measureRaisingHeight(read = 2.402f, shown = 2.4f, epsilon = 0.005f)!!, 0f)
         assertEquals(2.5f, measureRaisingHeight(read = 2.5f, shown = 2.4f, epsilon = 0.005f)!!, 0f)
-        assertEquals(0.05f, measureRaisingHeight(read = 0.05f, shown = null, epsilon = 0.005f)!!, 0f)
+    }
+
+    @Test
+    fun `aiming at the floor at the wall's foot locks no height (#4751)`() {
+        // Camera 1.5 m up, a 3 m wall 2 m ahead, aiming at the floor where it meets the wall.
+        val a = Position(-1.5f, floorY, -2f)
+        val b = Position(1.5f, floorY, -2f)
+        val eye = Position(0f, floorY + 1.5f, 0f)
+        val atFoot = measureWallHeightFromRay(eye, Position(0f, -1.5f, -2f), a, b)
+        val read = measureRaisingHeight(read = atFoot, shown = 2.4f, epsilon = 0.005f)
+        assertNull(read)
+        // Set height is refused and disabled, instead of locking the 5 cm minimum.
+        assertEquals(
+            MeasureRefusal.OffWall,
+            measureRefusal(tracking = true, phase = MeasurePhase.Raising, aimFound = false, heightFound = read != null),
+        )
+        // Aiming a metre up the same wall reads it.
+        assertEquals(1f, measureWallHeightFromRay(eye, Position(0f, -0.5f, -2f), a, b)!!, 1e-4f)
     }
 
     // ── Closing the shape (#4750 review) ───────────────────────────────────────────────────

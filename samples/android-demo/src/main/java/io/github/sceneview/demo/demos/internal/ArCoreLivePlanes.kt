@@ -34,14 +34,19 @@ fun livePlanePolygon(local: FloatArray, transformPoint: (FloatArray) -> FloatArr
 /**
  * The floor the live walls stand on: the lowest upward-facing plane's mean height, `null` before
  * one is tracked. Walls are not drawn floating, so a screen waits for this. With [cameraY], a
- * plane less than [MIN_FLOOR_DROP_M] under the camera is a table or a counter, never the floor:
- * with only a table tracked so far, the walls wait for the floor instead of standing on the table.
+ * plane less than [MIN_FLOOR_DROP_M] under the camera is a table or a counter, and loses to any
+ * plane that far under it: with a table and the floor tracked, the walls stand on the floor. When
+ * no upward plane is that far under the camera — the phone held low, someone crouching to measure
+ * a skirting board — the lowest one is the floor all the same, so the walls never vanish for that
+ * (a table tracked alone stands in until the floor shows up).
  */
-fun livePlanesFloorY(planes: List<LivePlane>, cameraY: Float? = null): Float? = planes
-    .filter { it.kind == LivePlane.Kind.Floor && it.vertexCount >= MIN_POLYGON_VERTICES }
-    .map { plane -> (0 until plane.vertexCount).sumOf { plane.polygon[it * 3 + 1].toDouble() }.toFloat() / plane.vertexCount }
-    .filter { cameraY == null || it <= cameraY - MIN_FLOOR_DROP_M }
-    .minOrNull()
+fun livePlanesFloorY(planes: List<LivePlane>, cameraY: Float? = null): Float? {
+    val heights = planes
+        .filter { it.kind == LivePlane.Kind.Floor && it.vertexCount >= MIN_POLYGON_VERTICES }
+        .map { plane -> (0 until plane.vertexCount).sumOf { plane.polygon[it * 3 + 1].toDouble() }.toFloat() / plane.vertexCount }
+    val lowest = heights.minOrNull() ?: return null
+    return heights.filter { cameraY == null || it <= cameraY - MIN_FLOOR_DROP_M }.minOrNull() ?: lowest
+}
 
 /** [this] plane's boundary in world space: `polygon` through `centerPose`. */
 fun Plane.worldPolygon(): FloatArray {
@@ -95,6 +100,12 @@ fun Session.livePlanes(ids: LivePlaneIds): List<LivePlane> {
         }
 }
 
+/**
+ * A polygon needs three corners to bound anything, and ARCore hands a TRACKING plane over with
+ * at least three. Dropping a shorter one here changes nothing for Measure against main: its two
+ * readers of the planes, `measurePlaneSnapTargets` and `measureFloorLevel`, already skip an
+ * outline under three corners, and its hits still come from `Frame.hitTest`.
+ */
 private const val MIN_POLYGON_VERTICES = 3
 
 /** How far under the camera the floor is at least; a nearer upward plane is furniture. */

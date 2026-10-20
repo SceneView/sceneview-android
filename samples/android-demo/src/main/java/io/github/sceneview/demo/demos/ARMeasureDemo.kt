@@ -322,13 +322,17 @@ fun ARMeasureDemo(onBack: () -> Unit) {
     )
     val coaching = arCoreAvailability == null && !arSessionFailed && guidance.isCoaching
 
-    // Snap haptics: one tick each time the reticle locks onto something new.
-    LaunchedEffect(aim?.snap?.kind, aim?.closes, aim?.wallFoot != null) {
-        if (aim?.closes == true || aim?.wallFoot != null ||
-            (aim?.snap?.kind ?: MeasureSnapKind.None) != MeasureSnapKind.None
-        ) {
-            haptic.selection()
-        }
+    // Snap haptics: one tick each time the reticle locks onto something new. The wall's foot
+    // only counts with no snap on: crossing a wall's foot along a snapped edge is not a new lock.
+    val snapKind = aim?.snap?.kind ?: MeasureSnapKind.None
+    val lock: Any? = when {
+        aim?.closes == true -> MeasureAimLock.Close
+        snapKind != MeasureSnapKind.None -> snapKind
+        aim?.wallFoot != null -> MeasureAimLock.WallFoot
+        else -> null
+    }
+    LaunchedEffect(lock) {
+        if (lock != null) haptic.selection()
     }
 
     val phase = board.phase
@@ -900,7 +904,13 @@ internal fun MeasureAddButton(
 }
 
 internal const val MEASURE_ADD_TAG = "measure_add"
+// DESIGN.md has no disabled-opacity token: M3's 0.38 disables a control on a surface, but this
+// shutter sits on the camera feed, where 0.38 lost the ring on bright floors. 0.45 keeps it seen
+// while it plainly reads as off; the refusal line under the reticle says why.
 private const val ADD_REFUSED_ALPHA = 0.45f
+
+/** What the reticle locked onto besides a snap, for the snap haptic. */
+private enum class MeasureAimLock { Close, WallFoot }
 private val AddButtonSize = SceneViewTokens.Space.x3l + SceneViewTokens.Space.sm // 72 dp, a camera shutter
 private val AddDiscSize = SceneViewTokens.Space.x2l + SceneViewTokens.Space.sm // 56 dp
 private val AddRingWidth = SceneViewTokens.Space.xs - SceneViewTokens.Space.xs / 4 // 3 dp
@@ -1489,7 +1499,7 @@ private fun findMeasureAim(
     }
     // The live walls only tell the point is on a wall's foot; they never move it (#4750 review).
     val foot = if (walls != null && mode != MeasureMode.Distance) {
-        measureWallFootAt(snapped, walls.walls)?.let { it.a to it.b }
+        measureWallFootAt(snapped, walls.walls, walls.floorY)?.let { it.a to it.b }
     } else {
         null
     }

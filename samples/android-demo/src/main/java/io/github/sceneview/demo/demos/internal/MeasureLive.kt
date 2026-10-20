@@ -17,12 +17,19 @@ import kotlin.math.sqrt
 data class MeasureWallFoot(val position: Position, val a: Position, val b: Position)
 
 /**
- * The recognised wall whose foot [point] stands on, within [tolerance] of it in plan, or `null`.
- * Display only: the reticle draws the seam and says "Wall foot", while the point itself stays
+ * The recognised wall whose foot [point] stands on, within [tolerance] of it in plan and within
+ * [WALL_FOOT_LEVEL_M] of the walls' floor [floorY], or `null`. A point the same distance from the
+ * wall but on a table or halfway up the wall is not on its foot. Display only: the reticle draws the seam and says "Wall foot", while the point itself stays
  * where ARCore measured and the snapper put it — the live walls are squared and extended, so
  * they never move a point (#4750 review). The nearest wall wins.
  */
-fun measureWallFootAt(point: Position, walls: List<LiveWall>, tolerance: Float = WALL_FOOT_NEAR_M): MeasureWallFoot? {
+fun measureWallFootAt(
+    point: Position,
+    walls: List<LiveWall>,
+    floorY: Float,
+    tolerance: Float = WALL_FOOT_NEAR_M,
+): MeasureWallFoot? {
+    if (abs(point.y - floorY) > WALL_FOOT_LEVEL_M) return null
     var best: MeasureWallFoot? = null
     var bestDistance = tolerance
     for (wall in walls) {
@@ -139,5 +146,13 @@ fun <P> measureAction(board: MeasureBoard<P>, closes: Boolean): MeasureAction = 
 private const val WALL_MIN_LENGTH_M = 0.05f
 private const val SPAN_SLACK_M = 0.1f
 private const val WALL_FOOT_NEAR_M = 0.1f
+
+/**
+ * How far above or below the walls' floor a point still stands on a wall's foot. The floor is one
+ * plane's mean height and ARCore's floor planes are a few centimetres apart across a room, so
+ * 10 cm absorbs that noise and a skirting board; the lowest furniture worth telling apart (a
+ * low table, ~40 cm) or a point on the wall itself stays well outside it.
+ */
+private const val WALL_FOOT_LEVEL_M = 0.1f
 private const val MIN_FACING_SQ = 1e-8f
 private const val MIN_UP = 1e-3f

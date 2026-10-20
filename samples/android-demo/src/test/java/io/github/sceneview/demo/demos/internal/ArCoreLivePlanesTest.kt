@@ -59,12 +59,22 @@ class ArCoreLivePlanesTest {
     }
 
     @Test
-    fun `a table just under the camera is never the floor`() {
+    fun `a table just under the camera never wins over the floor`() {
         // Phone held at 0 m: the table 0.7 m under it is furniture, the floor 1.4 m under it is not.
         val table = LivePlane(1, LivePlane.Kind.Floor, floatArrayOf(0f, -0.7f, 0f, 1f, -0.7f, 0f, 1f, -0.7f, 1f))
         val floor = LivePlane(2, LivePlane.Kind.Floor, floatArrayOf(0f, -1.4f, 0f, 2f, -1.4f, 0f, 2f, -1.4f, 2f))
-        assertNull(livePlanesFloorY(listOf(table), cameraY = 0f))
+        // Only the table tracked so far: it stands in until the floor shows up (the crouching fallback).
+        assertEquals(-0.7f, livePlanesFloorY(listOf(table), cameraY = 0f)!!, 1e-5f)
         assertEquals(-1.4f, livePlanesFloorY(listOf(table, floor), cameraY = 0f)!!, 1e-5f)
+    }
+
+    @Test
+    fun `held low or crouching, the lowest upward plane is the floor`() {
+        // Phone 0.5 m above the floor: no upward plane is 0.8 m under it, the floor is still found.
+        val floor = LivePlane(2, LivePlane.Kind.Floor, floatArrayOf(0f, -0.5f, 0f, 2f, -0.5f, 0f, 2f, -0.5f, 2f))
+        assertEquals(-0.5f, livePlanesFloorY(listOf(floor), cameraY = 0f)!!, 1e-5f)
+        val step = LivePlane(4, LivePlane.Kind.Floor, floatArrayOf(0f, -0.3f, 0f, 1f, -0.3f, 0f, 1f, -0.3f, 1f))
+        assertEquals(-0.5f, livePlanesFloorY(listOf(step, floor), cameraY = 0f)!!, 1e-5f)
     }
 
     @Test
