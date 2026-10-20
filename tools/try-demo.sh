@@ -8,7 +8,7 @@
 #
 #  Requirements:
 #    - Android device connected via USB/Wi-Fi with USB debugging ON
-#    - Java 17+ (for local build)
+#    - Java 21+ (for local build)
 #    - `adb` on PATH (comes with Android SDK platform-tools) — required.
 #    - Google's `android` CLI is OPTIONAL, and used only for JSON layouts and
 #      LF/CRLF-safe screenshots. NOT for installing: its `android run` has a
