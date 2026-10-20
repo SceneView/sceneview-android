@@ -44,7 +44,7 @@ served the full reference since it was first published: the sitemap, the docs,
 at it, and external indexes already cite it. Renaming would break every one of
 those for no reader's benefit, so the missing index is added here instead of
 replacing what the URL serves. `https://sceneview.github.io/llms-full.txt`
-serves a ~12 kB compact overview for a small context window.
+serves a ~13 kB compact overview for a small context window.
 
 ---
 
@@ -57,16 +57,49 @@ dependencies {
     implementation("io.github.sceneview:arsceneview:4.60.0") // AR (includes sceneview)
 }
 ```
-The app module needs `compileSdk = 37` (SceneView's AndroidX dependencies require it); `minSdk` stays 24.
+The app module needs `compileSdk = 37` (the published AARs declare `minCompileSdk=37`), `minSdk` 24 or higher, AGP 9.4.0+ and Kotlin 2.4 (SceneView is compiled with 2.4.21). SceneView and its `kotlin-math` dependency ship Java 21 bytecode with public `inline` functions, so the app compiles Java and Kotlin with JVM target 21:
+```kotlin notest Gradle Kotlin DSL (app module build.gradle.kts), not a Kotlin source file
+android {
+    compileSdk = 37
+    defaultConfig { minSdk = 24 }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+    }
+}
+kotlin {
+    compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21) }
+}
+```
 
 ### AndroidManifest.xml (AR apps)
+`arsceneview` already declares the `CAMERA` permission and `com.google.ar.core` = `optional`.
+An **AR Optional** app (it also works without AR) declares the AR camera and the camera as
+optional features. The library leaves both to the app, and without them the `CAMERA`
+permission implies a required camera:
 ```xml
-<uses-permission android:name="android.permission.CAMERA" />
-<uses-feature android:name="android.hardware.camera.ar" android:required="true" />
-<application>
-    <meta-data android:name="com.google.ar.core" android:value="required" />
-</application>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-feature android:name="android.hardware.camera.ar" android:required="false" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+</manifest>
 ```
+An **AR Required** app overrides the library's value with `tools:replace`; without it, the
+manifest merger fails:
+```xml
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <uses-feature android:name="android.hardware.camera.ar" android:required="true" />
+    <application>
+        <meta-data
+            android:name="com.google.ar.core"
+            android:value="required"
+            tools:replace="android:value" />
+    </application>
+</manifest>
+```
+
+`sceneview` also merges `INTERNET` (models from a URL) and `VIBRATE` (haptics) into the app's
+manifest; remove either with `tools:node="remove"` if the app does not want it.
 
 ---
 
@@ -1032,7 +1065,7 @@ Install:
 ```yaml
 # pubspec.yaml
 dependencies:
-  flutter_sceneview: ^4.39.0
+  flutter_sceneview: ^4.60.0
 ```
 
 Alternative — pin the repo via git (package name at tag v4.24.0 and earlier
