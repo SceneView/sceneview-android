@@ -151,9 +151,19 @@ If the AR session never initialises or immediately throws an exception:
    ship with it pre-installed, the user must install it from the Play Store.
 3. **Physical device required.** ARCore has very limited emulator support. Always test AR features
    on a physical device.
-4. **Manifest metadata.** `arsceneview` already declares `com.google.ar.core` as `optional`,
-   so an app that can function without AR declares nothing. An AR Required app overrides the
-   value with `tools:replace`; without it, the manifest merger fails:
+4. **Manifest metadata.** `arsceneview` already declares `com.google.ar.core` as `optional`.
+   An app that can function without AR declares the AR camera and the camera as optional
+   features:
+
+```xml
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-feature android:name="android.hardware.camera.ar" android:required="false" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+</manifest>
+```
+
+   An AR Required app overrides the `com.google.ar.core` value with `tools:replace`; without
+   it, the manifest merger fails:
 
 ```xml
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"

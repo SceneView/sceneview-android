@@ -2,7 +2,7 @@
 
 > Open-source 3D & AR SDK for Android and iOS. Compose-native on Android (Filament + ARCore), SwiftUI-native on iOS (RealityKit + ARKit), shared core via Kotlin Multiplatform.
 
-This file is the short one: about 12 kB, sized to fit a small context window.
+This file is the short one: about 13 kB, sized to fit a small context window.
 The complete reference — every composable, every node type, every recipe — is
 `https://sceneview.github.io/llms.txt`, and it also carries an index of the
 documentation. The two file names are the reverse of the llmstxt.org
@@ -63,8 +63,17 @@ The app module needs `compileSdk = 37`, `minSdk` 24 or higher, AGP 9.4.0+, Kotli
 
 ### AndroidManifest.xml (AR apps only)
 `arsceneview` already declares the `CAMERA` permission and `com.google.ar.core` = `optional`.
-An **AR Optional** app declares nothing. An **AR Required** app overrides the library's value
-with `tools:replace`; without it, the manifest merger fails:
+An **AR Optional** app (it also works without AR) declares the AR camera and the camera as
+optional features. The library leaves both to the app, and without them the `CAMERA`
+permission implies a required camera:
+```xml
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-feature android:name="android.hardware.camera.ar" android:required="false" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+</manifest>
+```
+An **AR Required** app overrides the library's value with `tools:replace`; without it, the
+manifest merger fails:
 ```xml
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">

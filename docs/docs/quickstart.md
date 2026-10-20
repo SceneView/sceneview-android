@@ -72,9 +72,19 @@ install time with no prompt. An app that does not want one removes it with
 
 ### AR manifest
 
-`arsceneview` declares `com.google.ar.core` as `optional` in its own manifest.
+`arsceneview` declares `com.google.ar.core` as `optional` in its own manifest. It leaves the
+camera features to the app.
 
-- **AR Optional** (the app also works without AR): declare nothing.
+- **AR Optional** (the app also works without AR): declare the AR camera and the camera as
+  optional features. Without them, the `CAMERA` permission implies a required camera.
+
+```xml
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-feature android:name="android.hardware.camera.ar" android:required="false" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+</manifest>
+```
+
 - **AR Required** (the app cannot run without ARCore): override the library's value with
   `tools:replace`. Without it, the manifest merger fails.
 

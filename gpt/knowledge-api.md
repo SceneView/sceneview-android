@@ -28,7 +28,7 @@
 ## Reference
 
 - [Full API reference](https://sceneview.github.io/llms.txt): this file — setup, composables, every node type, threading rules, recipes
-- [Compact overview](https://sceneview.github.io/llms-full.txt): the same ground in ~12 kB, when the full file will not fit
+- [Compact overview](https://sceneview.github.io/llms-full.txt): the same ground in ~13 kB, when the full file will not fit
 - [Generated API docs — 3D](https://sceneview.github.io/api/sceneview/latest/sceneview/): Dokka output for `sceneview`
 - [Generated API docs — AR](https://sceneview.github.io/api/sceneview/latest/arsceneview/): Dokka output for `arsceneview`
 

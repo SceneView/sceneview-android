@@ -20,9 +20,12 @@ dependencies {
 
 ### AndroidManifest permissions
 
-`arsceneview` already declares the `CAMERA` permission and marks ARCore as optional, so an
-app that also works without AR declares nothing. This codelab builds an AR Required app: it
-overrides the library's value with `tools:replace`, without which the manifest merger fails.
+`arsceneview` already declares the `CAMERA` permission and marks ARCore as optional. An app
+that also works without AR only declares the camera features as optional:
+`<uses-feature android:name="android.hardware.camera.ar" android:required="false" />` and
+`<uses-feature android:name="android.hardware.camera" android:required="false" />`.
+This codelab builds an AR Required app: it overrides the library's value with
+`tools:replace`, without which the manifest merger fails.
 
 ```xml
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"

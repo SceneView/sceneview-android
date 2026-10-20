@@ -121,9 +121,10 @@ state.** For placement without a tap, grounded and gesture-ready, start from
 `AutoPlacementScene` (see [`llms.txt`](./llms.txt)).
 
 `arsceneview` already declares the `CAMERA` permission and marks ARCore as optional. An AR
-Optional app declares nothing; an AR Required app overrides the value with
-`tools:replace="android:value"`, as shown in the [AR manifest](docs/docs/quickstart.md#ar-manifest)
-section.
+Optional app declares `android.hardware.camera.ar` and `android.hardware.camera` as
+`<uses-feature … android:required="false" />`; an AR Required app overrides the ARCore value
+with `tools:replace="android:value"`. Both snippets are in the
+[AR manifest](docs/docs/quickstart.md#ar-manifest) section.
 
 ### iOS / macOS / visionOS (SwiftUI)
 
