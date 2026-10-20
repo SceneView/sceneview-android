@@ -55,6 +55,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import io.github.sceneview.demo.R
 import io.github.sceneview.demo.demos.internal.ArDebugFrame
+import io.github.sceneview.demo.demos.internal.ArDebugTrace
+import io.github.sceneview.demo.demos.internal.ScanFloorArea
 import io.github.sceneview.demo.demos.internal.CoverageGrid
 import io.github.sceneview.demo.demos.internal.DebugPlaneKind
 import io.github.sceneview.demo.demos.internal.DebugPose
@@ -69,7 +71,6 @@ import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
-import kotlin.math.roundToInt
 
 /**
  * What the scan has, fed frame by frame from the 3D view's `observe` (#4631): the floor
@@ -110,9 +111,9 @@ internal class ScanCoverageState {
         private set
 
     /**
-     * The floor covered so far, in m² (#4717): covered cells times a cell's area, to a tenth.
-     * It only grows within the capture: a share of a room whose outline grows with the scan fell
-     * as the scan went on, so the map says how much is covered, never of how much.
+     * The floor covered so far, in m² ([ScanFloorArea], #4717, #4734): the one figure the live
+     * map, the replay and the result say. It only grows within the capture; a replay scrubbed
+     * back follows it down.
      */
     var coveredSquareMetres by mutableFloatStateOf(0f)
         private set
@@ -131,6 +132,8 @@ internal class ScanCoverageState {
     private var extentVersion = -1
     private var floorKey = 0
     private var lastSnapshot: LongArray? = null
+    private var recordedVersion = -1
+    private var resets = 0
 
     /**
      * [dense] is a v2 scan's dense cloud (flat xyz), of which [denseCount] surfels are found by
@@ -138,21 +141,40 @@ internal class ScanCoverageState {
      * room is drawn from depth does not read `Floor 0 % covered` under that room (#4619).
      * [snapshotCells] are the floor cells a live depth scan's dense cloud covers as it stands,
      * found off the main thread ([CoverageGrid.coveredKeys]) and added once each new snapshot on
-     * top of the feature points: live and replay then count the same depth points.
+     * top of the feature points.
+     *
+     * One source for the figure (#4734): a live capture passes its trace as [record], which keeps
+     * every cell covered as it is; a saved scan's replay passes its trace as [saved], and covers
+     * what the capture recorded by [frame]'s time ([CoverageGrid.updateSaved]). Live, replay and
+     * result ([ScanFloorArea.ofSaved]) then say the same m².
      */
+    @Suppress("LongParameterList") // the live and the replay feeds, one call each
     fun observe(
         frame: ArDebugFrame,
         dense: FloatArray? = null,
         denseCount: Int = 0,
         pose: DebugPose? = frame.camera,
         snapshotCells: LongArray? = null,
+        record: ArDebugTrace? = null,
+        saved: ArDebugTrace? = null,
     ) {
-        var grew = if (dense != null) grid.update(dense, denseCount) else grid.update(frame.mapPoints)
+        var grew = when {
+            saved != null -> grid.updateSaved(saved, frame.time, { frame.mapPoints }, dense, denseCount)
+            dense != null -> grid.update(dense, denseCount)
+            else -> grid.update(frame.mapPoints)
+        }
         // A live depth scan's dense cloud, a new snapshot every few seconds (#4540): the feature
         // map alone stops at its cap, and the figure froze while the cloud kept growing.
         if (snapshotCells != null && snapshotCells !== lastSnapshot) {
             lastSnapshot = snapshotCells
             grew = grid.addCells(snapshotCells) || grew
+        }
+        if (record != null && grid.version != recordedVersion) {
+            recordedVersion = grid.version
+            val keys = LongArray(grid.covered)
+            var n = 0
+            grid.forEachCovered { cx, cz -> keys[n++] = CoverageGrid.key(cx, cz) }
+            record.addFloorCellsAt(frame.time, keys)
         }
         coachLine = coach.update(frame.time, frame.camera, grew)
         if (coach.facingWall != facingWall) facingWall = coach.facingWall
@@ -169,8 +191,9 @@ internal class ScanCoverageState {
             floorKey = key
             extentVersion = grid.version
             extent = grid.floorExtent(floors.map { it.polygon })
-            val area = (grid.covered * grid.cellMetres * grid.cellMetres * TENTHS).roundToInt() / TENTHS
-            if (area > coveredSquareMetres) coveredSquareMetres = area
+            val area = grid.squareMetres
+            if (area > coveredSquareMetres || grid.resets != resets) coveredSquareMetres = area
+            resets = grid.resets
         }
         if (reshaped || moved) tick++
     }
@@ -247,7 +270,6 @@ internal class ScanCoverageState {
 
         private const val EPSILON = 1e-3f
         private const val KEY_PRIME = 31
-        private const val TENTHS = 10f
     }
 }
 
@@ -548,3 +570,10 @@ private const val ARROW_HALF_WIDTH = 0.46f
 
 internal const val SCAN_COVERAGE_MAP_TAG = "scan_coverage_map"
 internal const val SCAN_COVERAGE_MAP_EXPANDED_TAG = "scan_coverage_map_expanded"
+
+/**
+ * This saved scan's floor covered, in m² ([ScanFloorArea.ofSaved]): the figure its replay ends
+ * on, which the result says too (#4734). Off the main thread: an old scan bins its whole cloud.
+ */
+internal fun RerunReplayMedia.floorCoveredSquareMetres(): Float =
+    ScanFloorArea.ofSaved(trace, dense?.cloud?.positions, pointCountAt(trace.duration))
