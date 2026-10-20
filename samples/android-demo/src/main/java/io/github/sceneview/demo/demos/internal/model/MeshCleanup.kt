@@ -304,56 +304,82 @@ internal object MeshCleanup {
     }
 
     /**
-     * Closes the small holes only: a border loop of at most [maxEdges] edges spanning at most
+     * Closes the small holes: a border loop of at most [maxEdges] edges spanning at most
      * [maxSpanM] gets a fan of triangles around its centre, coloured as its rim. A large opening
      * — a doorway, a part of the room nobody scanned — is left open rather than invented.
-     * Returns the mesh and how many holes were closed.
+     *
+     * With the flattening's [facePlane] and [planes], a hole whose whole rim lies on one plane —
+     * the lace a scanned wall comes out as — closes up to [MAX_PLANE_HOLE_EDGES] edges and
+     * [MAX_PLANE_HOLE_SPAN_M] across, triangulated on that plane, no vertex added: the wall was
+     * there, the depth just missed it. A rim on two planes — a hole at a corner, a doorway down
+     * to the floor — keeps the small-hole rule. Returns the mesh and how many holes were closed.
      */
+    @Suppress("CyclomaticComplexMethod", "LongMethod")
     fun fillSmallHoles(
         mesh: WorkMesh,
         maxEdges: Int = MAX_HOLE_EDGES,
         maxSpanM: Float = MAX_HOLE_SPAN_M,
+        facePlane: IntArray? = null,
+        planes: List<Plane> = emptyList(),
     ): Pair<WorkMesh, Int> {
         if (mesh.triangleCount == 0) return mesh to 0
         val topology = MeshTopology(mesh.vertexCount, mesh.indices)
         val idx = mesh.indices
-        val next = IntArray(mesh.vertexCount) { -1 }
-        val outgoing = IntArray(mesh.vertexCount)
+        // Border half-edges, by corner: a loop is followed corner to corner around each vertex's
+        // own fan, so lace — holes touching at a vertex — still comes apart into its loops.
+        val border = BooleanArray(idx.size)
         for (t in 0 until mesh.triangleCount) {
             for (k in 0 until 3) {
                 if (topology.neighbours[t * 3 + k] >= 0) continue
                 val a = idx[t * 3 + k]
                 val b = idx[t * 3 + (k + 1) % 3]
-                if (hasEdge(topology, idx, b, a)) continue // a non-manifold edge, not a border
-                next[a] = b
-                outgoing[a]++
+                if (!hasEdge(topology, idx, b, a)) border[t * 3 + k] = true // else non-manifold
             }
         }
-        val visited = BooleanArray(mesh.vertexCount)
+        val onPlanes = facePlane != null && planes.isNotEmpty()
+        val longest = if (onPlanes) maxOf(maxEdges, MAX_PLANE_HOLE_EDGES) else maxEdges
+        val visited = BooleanArray(idx.size)
+        val stamp = IntArray(mesh.vertexCount)
         val loops = ArrayList<IntArray>()
-        val loop = IntArray(maxEdges + 1)
-        for (start in 0 until mesh.vertexCount) {
-            if (next[start] < 0 || visited[start] || outgoing[start] != 1) continue
+        val planeTriangles = IntList(INITIAL_PLANE_TRIANGLES)
+        var planeHoles = 0
+        val loop = IntArray(longest + 1)
+        val loopFace = IntArray(longest + 1)
+        for (start in border.indices) {
+            if (!border[start] || visited[start]) continue
             var length = 0
-            var v = start
+            var corner = start
             var closed = false
-            while (length <= maxEdges) {
-                if (outgoing[v] != 1 || visited[v]) break
-                visited[v] = true
-                loop[length++] = v
-                v = next[v]
-                if (v == start) {
+            var simple = true
+            while (length <= longest) {
+                visited[corner] = true
+                val v = idx[corner]
+                if (stamp[v] == start + 1) simple = false
+                stamp[v] = start + 1
+                loop[length] = v
+                loopFace[length++] = corner / 3
+                corner = nextBorder(topology, idx, border, corner)
+                if (corner < 0 || visited[corner] && corner != start) break
+                if (corner == start) {
                     closed = true
                     break
                 }
             }
-            if (!closed || length < 3 || length > maxEdges) continue
-            if (span(mesh.positions, loop, length) > maxSpanM) continue
+            if (!closed || !simple || length < 3 || length > longest) continue
+            val holeSpan = span(mesh.positions, loop, length)
+            val plane = if (onPlanes) rimPlane(facePlane!!, loopFace, length) else -1
+            if (plane >= 0 && holeSpan <= MAX_PLANE_HOLE_SPAN_M &&
+                PlaneHoles.triangulate(mesh.positions, loop, length, planes[plane], planeTriangles)
+            ) {
+                planeHoles++
+                continue
+            }
+            if (length > maxEdges || holeSpan > maxSpanM) continue
             loops += loop.copyOf(length)
         }
-        if (loops.isEmpty()) return mesh to 0
+        if (loops.isEmpty() && planeHoles == 0) return mesh to 0
         val added = loops.size
-        val extraTriangles = loops.sumOf { if (it.size == 3) 1 else it.size }
+        val extraTriangles = loops.sumOf { if (it.size == 3) 1 else it.size } + planeTriangles.size / 3
         val positions = mesh.positions.copyOf(mesh.positions.size + added * 3)
         val colors = mesh.colors.copyOf(mesh.vertexCount + added)
         val indices = idx.copyOf(idx.size + extraTriangles * 3)
@@ -388,7 +414,36 @@ internal object MeshCleanup {
             }
             vertex++
         }
-        return WorkMesh(positions, colors, indices) to added
+        for (i in 0 until planeTriangles.size) indices[write++] = planeTriangles[i]
+        return WorkMesh(positions, colors, indices) to added + planeHoles
+    }
+
+    /** The plane every face along a loop's rim ([faces]) lies on, or -1 when they run over more than one, or none. */
+    private fun rimPlane(facePlane: IntArray, faces: IntArray, length: Int): Int {
+        val plane = facePlane[faces[0]]
+        if (plane < 0) return -1
+        for (i in 1 until length) if (facePlane[faces[i]] != plane) return -1
+        return plane
+    }
+
+    /**
+     * The border half-edge that follows [corner]'s (a → b) round its hole: the first border edge
+     * leaving b, turning about b through the faces on [corner]'s side. `-1` past a non-manifold edge.
+     */
+    private fun nextBorder(topology: MeshTopology, idx: IntArray, border: BooleanArray, corner: Int): Int {
+        var t = corner / 3
+        var out = t * 3 + (corner % 3 + 1) % 3 // the edge of t leaving b
+        val b = idx[out]
+        repeat(MAX_FAN_STEPS) {
+            if (border[out]) return out
+            val across = topology.neighbours[out]
+            if (across < 0 || across == corner / 3) return -1
+            t = across
+            out = -1
+            for (k in 0 until 3) if (idx[t * 3 + k] == b) out = t * 3 + k
+            if (out < 0) return -1
+        }
+        return -1
     }
 
     /** The mean edge length of [mesh]: the scale its filters work at. */
@@ -529,6 +584,14 @@ internal object MeshCleanup {
 
     /** ...spanning no more than this. */
     const val MAX_HOLE_SPAN_M = 0.25f
+
+    /** The longest rim of a hole within one plane that [fillSmallHoles] closes: a wall's lace, not a window. */
+    const val MAX_PLANE_HOLE_EDGES = 160
+
+    /** The widest hole within one plane that [fillSmallHoles] closes. */
+    const val MAX_PLANE_HOLE_SPAN_M = 0.9f
+    private const val INITIAL_PLANE_TRIANGLES = 4096
+    private const val MAX_FAN_STEPS = 64
 
     const val SMOOTH_NORMAL_PASSES = 3
     const val SMOOTH_VERTEX_PASSES = 8

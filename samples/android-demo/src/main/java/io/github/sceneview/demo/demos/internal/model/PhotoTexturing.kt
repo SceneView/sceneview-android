@@ -26,7 +26,35 @@ internal class PhotoTexture(
     val width: Int,
     val height: Int,
     val stats: PhotoTextureStats,
-)
+) {
+    /**
+     * This texture with its atlas half as fine, each texel the mean of the two by two it covers:
+     * the corners' [uv] are fractions of the atlas, so they hold. A last-odd row or column folds
+     * into the one before.
+     */
+    fun halved(): PhotoTexture {
+        val w = maxOf(1, width / 2)
+        val h = maxOf(1, height / 2)
+        val out = IntArray(w * h)
+        for (y in 0 until h) for (x in 0 until w) {
+            var r = 0
+            var g = 0
+            var b = 0
+            var n = 0
+            val y1 = if (y == h - 1) height else y * 2 + 2
+            val x1 = if (x == w - 1) width else x * 2 + 2
+            for (sy in y * 2 until y1) for (sx in x * 2 until x1) {
+                val c = atlas[sy * width + sx]
+                r += c shr 16 and 0xFF
+                g += c shr 8 and 0xFF
+                b += c and 0xFF
+                n++
+            }
+            out[y * w + x] = PhotoTexturing.rgb(r / n, g / n, b / n)
+        }
+        return PhotoTexture(chart, uv, out, w, h, stats)
+    }
+}
 
 /** What texturing found and did, for the log, the tests and the corpus report. */
 internal data class PhotoTextureStats(

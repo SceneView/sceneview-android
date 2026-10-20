@@ -17,6 +17,13 @@ object RerunMeshGlb {
     fun write(mesh: RerunMesh, generator: String = "SceneView Rerun"): ByteArray =
         writeShared(mesh, generator, fullResolution = true, floorOrigin = false)
 
+    /** The size of [write]'s binary chunk for [mesh]: its `.glb` is this and a small JSON header. */
+    fun binaryBytes(mesh: RerunMesh): Int {
+        val n = mesh.vertexCount
+        val indexBytes = mesh.indices.size * if (n <= MAX_SHORT_VERTICES) 2 else 4
+        return n * (12 + 12 + 4) + pad(indexBytes)
+    }
+
     /**
      * The model a share sends: [mesh] simplified to [targetTriangles] ([RerunMeshSimplifier]) unless
      * [fullResolution], and with [floorOrigin] resting on Y=0 and centred in X/Z — what a viewer
@@ -54,8 +61,7 @@ object RerunMeshGlb {
      */
     private fun encode(mesh: RerunMesh, generator: String): ByteArray {
         val n = mesh.vertexCount
-        // 65535 is the reserved primitive-restart value and is forbidden in glTF indices.
-        val shortIndices = n <= 65535
+        val shortIndices = n <= MAX_SHORT_VERTICES
         val positionBytes = n * 12
         val normalBytes = n * 12
         val colorBytes = n * 4
@@ -159,6 +165,9 @@ object RerunMeshGlb {
     }
 
     private fun pad(size: Int) = (size + 3) and 3.inv()
+
+    /** 65535 is the reserved primitive-restart value and is forbidden in glTF indices. */
+    private const val MAX_SHORT_VERTICES = 65535
 
     /** sRGB byte → linear byte, glTF's colour space for `COLOR_0`. */
     internal val LINEAR = ByteArray(256) { i ->

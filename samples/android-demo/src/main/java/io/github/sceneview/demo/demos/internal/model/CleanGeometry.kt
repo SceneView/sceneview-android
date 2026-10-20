@@ -14,6 +14,8 @@ internal data class CleanGeometryStats(
     val flatShare: Float,
     val holesFilled: Int,
     val planeList: List<Plane> = emptyList(),
+    /** RMS distance (m) of the flat faces' vertices to their planes before the snap: the depth noise measured. */
+    val noiseM: Float = 0f,
 )
 
 /*
@@ -23,6 +25,9 @@ internal data class CleanGeometryStats(
  */
 internal object CleanGeometry {
     fun of(mesh: RerunMesh): WorkMesh = WorkMesh(mesh.positions.copyOf(), mesh.colors.copyOf(), mesh.indices.copyOf())
+
+    /** [mesh]'s own arrays, which [clean] then works in: for a caller done with [mesh]. */
+    fun consuming(mesh: RerunMesh): WorkMesh = WorkMesh(mesh.positions, mesh.colors, mesh.indices)
 
     /**
      * The most triangles [clean] takes. Each step rebuilds a face table, a topology and a grid
@@ -52,7 +57,12 @@ internal object CleanGeometry {
         progress(PROGRESS_SMOOTH)
         val flattening = PlaneFlattening.flatten(mesh) { progress(PROGRESS_SMOOTH) }
         progress(PROGRESS_PLANES)
-        val (filled, holes) = MeshCleanup.fillSmallHoles(mesh)
+        // The lace a wall's missed depth leaves closes on its plane; a hole at a corner stays small-only.
+        val (filled, holes) = MeshCleanup.fillSmallHoles(
+            mesh,
+            facePlane = flattening.facePlane,
+            planes = flattening.planes,
+        )
         mesh = filled
         progress(1f)
         val stats = CleanGeometryStats(
@@ -66,6 +76,7 @@ internal object CleanGeometry {
             flatShare = if (flattening.totalArea > 0f) flattening.flatArea / flattening.totalArea else 0f,
             holesFilled = holes,
             planeList = flattening.planes,
+            noiseM = flattening.noiseM,
         )
         return mesh to stats
     }

@@ -16,6 +16,8 @@ internal class Flattening(
     val flatArea: Float,
     val totalArea: Float,
     val snappedVertices: Int,
+    /** How far the flat regions' vertices lay from their planes before the snap, RMS: the scan's own noise. */
+    val noiseM: Float = 0f,
 )
 
 /*
@@ -40,17 +42,19 @@ internal object PlaneFlattening {
         val totalArea = faces.areas.sum()
         if (n == 0) return Flattening(emptyList(), IntArray(0), 0f, 0f, 0)
         val topology = MeshTopology(mesh.vertexCount, mesh.indices)
-        val label = grow(topology, faces, cos(Math.toRadians(maxAngleDeg.toDouble())).toFloat(), maxDistanceM)
+        val minCos = cos(Math.toRadians(maxAngleDeg.toDouble())).toFloat()
+        val grown = grow(topology, faces, minCos, maxDistanceM)
         tick()
-        var regions = label.max() + 1
-        val area = FloatArray(regions)
-        for (t in 0 until n) area[label[t]] += faces.areas[t]
-        // Small regions are not planes worth flattening: their faces stay free.
-        val keepId = IntArray(regions) { -1 }
+        val grownRegions = grown.max() + 1
+        val area = FloatArray(grownRegions)
+        for (t in 0 until n) area[grown[t]] += faces.areas[t]
+        // Small regions are not planes worth flattening on their own: their faces stay free,
+        // unless they lie on one of the planes found ([gather]).
+        val keepId = IntArray(grownRegions) { -1 }
         var kept = 0
-        for (r in 0 until regions) if (area[r] >= minAreaM2) keepId[r] = kept++
-        for (t in 0 until n) label[t] = keepId[label[t]]
-        regions = kept
+        for (r in 0 until grownRegions) if (area[r] >= minAreaM2) keepId[r] = kept++
+        val label = IntArray(n) { keepId[grown[it]] }
+        var regions = kept
         var planes = (0 until regions).map { fit(faces, label, it) }
         // One wall split in two by a cabinet is still one wall: merge regions on the same plane.
         val merged = mergeCoplanar(planes)
@@ -59,12 +63,140 @@ internal object PlaneFlattening {
             regions = merged.second
             planes = (0 until regions).map { fit(faces, label, it) }
         }
+        if (gather(faces, grown, keepId, label, planes, minCos, maxSnapM)) {
+            planes = (0 until regions).map { fit(faces, label, it) }
+        }
         absorb(topology, faces, label, planes)
         tick()
+        val noise = noise(mesh, label, planes)
         val snapped = snap(mesh, topology, faces, label, planes, maxSnapM)
         var flatArea = 0f
         for (t in 0 until n) if (label[t] >= 0) flatArea += faces.areas[t]
-        return Flattening(planes, label, flatArea, totalArea, snapped)
+        return Flattening(planes, label, flatArea, totalArea, snapped, noise)
+    }
+
+    /**
+     * Gives the small regions a real wall breaks into to the plane they lie on. A scan's wall is
+     * lace — holes cut it into islands — and its ripple splits what is left into patches that
+     * each turn a little: none reaches [MIN_PLANE_AREA_M2] alone, so [grow] keeps none, and the
+     * wall stays as scanned. A region joins a plane when its mean normal is within the growing
+     * angle of the plane's, it lies on average within [MERGE_DISTANCE_M] of the plane — a second
+     * pass of the same wall, drifted a few centimetres behind it, shows through the first one's
+     * holes — every face of it within [maxDistance] (the snap's reach), and it lies within
+     * [GATHER_MARGIN_M] of the plane's own extent. A curtain's pleats, a cushion, a shelf turn away
+     * or stand off: they stay free. Returns whether any region joined.
+     */
+    @Suppress("LongParameterList", "CyclomaticComplexMethod", "NestedBlockDepth")
+    private fun gather(
+        faces: FaceGeometry,
+        grown: IntArray,
+        keepId: IntArray,
+        label: IntArray,
+        planes: List<Plane>,
+        minCos: Float,
+        maxDistance: Float,
+    ): Boolean {
+        if (planes.isEmpty()) return false
+        val n = faces.count
+        val extent = FloatArray(planes.size * 6)
+        for (p in planes.indices) {
+            for (axis in 0 until 3) {
+                extent[p * 6 + axis] = Float.MAX_VALUE
+                extent[p * 6 + 3 + axis] = -Float.MAX_VALUE
+            }
+        }
+        for (t in 0 until n) {
+            val p = label[t]
+            if (p < 0) continue
+            for (axis in 0 until 3) {
+                val c = faces.centroids[t * 3 + axis]
+                if (c < extent[p * 6 + axis]) extent[p * 6 + axis] = c
+                if (c > extent[p * 6 + 3 + axis]) extent[p * 6 + 3 + axis] = c
+            }
+        }
+        // The faces of each region, contiguous: a counting sort on the region id.
+        val regions = keepId.size
+        val start = IntArray(regions + 1)
+        for (t in 0 until n) start[grown[t] + 1]++
+        for (r in 0 until regions) start[r + 1] += start[r]
+        val members = IntArray(n)
+        val fill = start.copyOf(regions)
+        for (t in 0 until n) members[fill[grown[t]]++] = t
+        var joined = false
+        for (r in 0 until regions) {
+            if (keepId[r] >= 0) continue
+            var nx = 0.0
+            var ny = 0.0
+            var nz = 0.0
+            var cx = 0.0
+            var cy = 0.0
+            var cz = 0.0
+            var a = 0.0
+            for (i in start[r] until start[r + 1]) {
+                val t = members[i]
+                val w = faces.areas[t].toDouble() + AREA_EPSILON
+                nx += faces.normals[t * 3] * w
+                ny += faces.normals[t * 3 + 1] * w
+                nz += faces.normals[t * 3 + 2] * w
+                cx += faces.centroids[t * 3] * w
+                cy += faces.centroids[t * 3 + 1] * w
+                cz += faces.centroids[t * 3 + 2] * w
+                a += w
+            }
+            val length = sqrt(nx * nx + ny * ny + nz * nz)
+            if (length <= 0.0) continue
+            cx /= a
+            cy /= a
+            cz /= a
+            var best = -1
+            var bestOff = maxDistance
+            for (p in planes.indices) {
+                val plane = planes[p]
+                if ((nx * plane.nx + ny * plane.ny + nz * plane.nz) / length < minCos) continue
+                val o = p * 6
+                if (cx < extent[o] - GATHER_MARGIN_M || cx > extent[o + 3] + GATHER_MARGIN_M ||
+                    cy < extent[o + 1] - GATHER_MARGIN_M || cy > extent[o + 4] + GATHER_MARGIN_M ||
+                    cz < extent[o + 2] - GATHER_MARGIN_M || cz > extent[o + 5] + GATHER_MARGIN_M
+                ) {
+                    continue
+                }
+                if (abs(plane.distance(cx.toFloat(), cy.toFloat(), cz.toFloat())) > MERGE_DISTANCE_M) continue
+                var worst = 0f
+                for (i in start[r] until start[r + 1]) {
+                    val t = members[i]
+                    val d = abs(plane.distance(faces.centroids[t * 3], faces.centroids[t * 3 + 1], faces.centroids[t * 3 + 2]))
+                    if (d > worst) worst = d
+                    if (worst > bestOff) break
+                }
+                if (worst <= bestOff) {
+                    best = p
+                    bestOff = worst
+                }
+            }
+            if (best < 0) continue
+            for (i in start[r] until start[r + 1]) label[members[i]] = best
+            joined = true
+        }
+        return joined
+    }
+
+    /** The RMS distance of the flat faces' vertices to their planes, before the snap moves them. */
+    private fun noise(mesh: WorkMesh, label: IntArray, planes: List<Plane>): Float {
+        var sum = 0.0
+        var count = 0L
+        val p = mesh.positions
+        for (t in label.indices) {
+            val id = label[t]
+            if (id < 0) continue
+            val plane = planes[id]
+            for (k in 0 until 3) {
+                val v = mesh.indices[t * 3 + k] * 3
+                val d = plane.distance(p[v], p[v + 1], p[v + 2]).toDouble()
+                sum += d * d
+                count++
+            }
+        }
+        return if (count > 0) sqrt(sum / count).toFloat() else 0f
     }
 
     /** Region growing across edges from the flattest faces first; every face ends in a region. */
@@ -512,12 +644,20 @@ internal object PlaneFlattening {
     /** Within this of level or plumb, a plane is made exactly level or plumb. */
     const val GRAVITY_SNAP_DEG = 4.0
 
+    /** How far past a plane's own faces a region may lie and still join it: a hole's width or two. */
+    private const val GATHER_MARGIN_M = 0.3f
     private const val RELAX_PASSES = 12
     private const val LOW_INT = 0xFFFFFFFFL
     private const val ABSORB_ANGLE_DEG = 45.0
     private const val ABSORB_DISTANCE_M = 0.02f
     private const val MERGE_ANGLE_DEG = 5.0
-    private const val MERGE_DISTANCE_M = 0.025f
+
+    /**
+     * Two planes facing the same way this close are one surface: a wall a pass of drifted depth
+     * left doubled a few centimetres behind itself, under two voxels apart — closer than the
+     * TSDF can tell a real panel from its wall.
+     */
+    private const val MERGE_DISTANCE_M = 0.045f
     private const val MAX_PLANES_AT_VERTEX = 6
     private const val MIN_CREASE_SIN = 0.34f // planes meeting at under ~20° do not make a crease
     private const val MIN_CORNER_DET = 0.2f

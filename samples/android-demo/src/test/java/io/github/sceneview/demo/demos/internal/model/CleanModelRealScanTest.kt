@@ -3,6 +3,7 @@ package io.github.sceneview.demo.demos.internal.model
 import io.github.sceneview.demo.demos.internal.DenseCloud
 import io.github.sceneview.demo.demos.internal.RerunMesh
 import io.github.sceneview.demo.demos.internal.RerunMeshGlb
+import io.github.sceneview.demo.demos.internal.RerunTsdf
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -384,10 +385,11 @@ class CleanModelRealScanTest {
 /**
  * The finish of [CleanModelRealScanTest]'s furnished room in a JVM of its own, its heap capped
  * at a mid-range phone's ([HEAP_MB], a Pixel 4a's `dalvik.vm.heapgrowthlimit`). What the result
- * screen holds meanwhile stays live too: [APP_BYTES] for the rest of the app, the recording's TSDF
- * and dense cloud ([CLOUD_POINTS_PER_TRIANGLE] points per raw triangle, as the recordings have),
- * the raw surface, and its `.glb`, shown while the finish runs. Prints [FINISHED] and its figures
- * when it fits.
+ * screen holds meanwhile stays live too: [APP_BYTES] for the rest of the app, the recording's dense
+ * cloud ([CLOUD_POINTS_PER_TRIANGLE] points per raw triangle, as the recordings have), its TSDF
+ * unless meshing let it go (half its budget or more, as the screen does), and the raw surface's
+ * `.glb`, shown while the finish runs in the surface's own arrays. Prints [FINISHED] and its
+ * figures when it fits.
  */
 object HeapCappedFinish {
     const val FINISHED = "FINISHED"
@@ -401,9 +403,8 @@ object HeapCappedFinish {
     @JvmStatic
     fun main(@Suppress("UNUSED_PARAMETER") args: Array<String>) {
         val app = ByteArray(APP_BYTES)
-        val scan = RealScanRoom.scan(furnished = true)
-        val tsdf = scan.tsdf
-        val raw: RerunMesh = scan.mesh
+        val (raw, tsdf, tsdfBytes) = scanned()
+        val rawTriangles = raw.triangleCount
         val cloud = cloudOf(raw, (raw.triangleCount * CLOUD_POINTS_PER_TRIANGLE).toInt())
         val rawGlb = RerunMeshGlb.write(raw)
         val runtime = Runtime.getRuntime()
@@ -416,16 +417,27 @@ object HeapCappedFinish {
             }
         }
         val start = System.nanoTime()
-        val result = CleanModel.build(raw, RealScanRoom.modelPhotos(furnished = true), JvmAtlasEncoder)
+        val result = CleanModel.build(raw, RealScanRoom.modelPhotos(furnished = true), JvmAtlasEncoder, consume = true)
         val ms = (System.nanoTime() - start) / NANOS_PER_MS
         println(
-            "$FINISHED ${raw.triangleCount} -> ${result.stats.finalTriangles} triangles, " +
+            "$FINISHED $rawTriangles -> ${result.stats.finalTriangles} triangles, " +
                 "glb ${result.glb.size / MB.toFloat()} MB (raw ${rawGlb.size / MB.toFloat()} MB), " +
                 "peak used ${peak.get() / MB} MB of $HEAP_MB, $ms ms; held: app ${app.size / MB} MB, " +
-                "tsdf ${tsdf.bytes / MB} MB, cloud ${cloud.count} points",
+                "tsdf ${tsdfBytes / MB} MB ${if (tsdf != null) "held" else "let go"}, cloud ${cloud.count} points",
         )
         System.out.flush()
         exitProcess(0)
+    }
+
+    /**
+     * The furnished room's raw surface, its TSDF unless the screen lets it go once meshed (half the
+     * app's budget, [RerunTsdf.MAX_BYTES], or more), and the TSDF's size. In a function of its own,
+     * so nothing in `main`'s frame holds what is let go.
+     */
+    private fun scanned(): Triple<RerunMesh, RerunTsdf?, Long> {
+        val scan = RealScanRoom.scan(furnished = true)
+        val tsdf = scan.tsdf.takeIf { it.bytes < RerunTsdf.MAX_BYTES / 2 }
+        return Triple(scan.mesh, tsdf, scan.tsdf.bytes)
     }
 
     /** A dense cloud of [points] points on [mesh]'s vertices, as large as a recording's. */

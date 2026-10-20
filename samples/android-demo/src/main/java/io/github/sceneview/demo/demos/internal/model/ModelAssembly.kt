@@ -24,6 +24,10 @@ internal class ModelMesh(
     val vertexCount: Int get() = colors.size
     val triangleCount: Int get() = (texturedIndices.size + plainIndices.size) / 3
 
+    /** The same model with [texture] in place of its own: an atlas resampled, its corners unchanged. */
+    fun withTexture(texture: PhotoTexture): ModelMesh =
+        ModelMesh(positions, normals, colors, uv, texturedIndices, plainIndices, texture)
+
     /** All faces in one list, textured first: what a reader of the plain model gets. */
     fun asRerunMesh(): RerunMesh = RerunMesh(positions, normals, colors, texturedIndices + plainIndices)
 }
@@ -168,6 +172,11 @@ internal class IntList(capacity: Int = 1024) {
     }
 
     operator fun get(i: Int): Int = data[i]
+
+    /** Drops everything added after the first [length] values. */
+    fun truncate(length: Int) {
+        size = length
+    }
 
     fun toArray(): IntArray = data.copyOf(size)
 }

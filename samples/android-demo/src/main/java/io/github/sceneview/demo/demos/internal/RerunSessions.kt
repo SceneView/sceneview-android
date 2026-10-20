@@ -296,7 +296,7 @@ class RerunSessionStore(val root: File) {
 
     /**
      * Keeps [model] as session [id]'s result, next to its capture: `model.glb`, then `model.json`,
-     * so a model only reads back once it is whole.
+     * so a model only reads back once it is whole. A model not [RerunScanModel.finished] is not kept.
      *
      * @throws IllegalStateException when the session is gone, or a file does not write.
      */
@@ -328,6 +328,8 @@ class RerunSessionStore(val root: File) {
     }
 
     private fun writeModel(dir: File, model: RerunScanModel) {
+        // A fallback is shown, never kept: the next open tries the finished model again.
+        if (!model.finished) return
         // A stale `model.json` must never describe a new `model.glb` half-written next to it.
         File(dir, MODEL_INFO).delete()
         writeAtomically(File(dir, MODEL_GLB), model.glb)

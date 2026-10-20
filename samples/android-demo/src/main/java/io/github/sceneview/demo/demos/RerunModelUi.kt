@@ -281,7 +281,10 @@ internal object RerunLiveModels {
     }
 }
 
-/** A built mesh: its `.glb`, its size, and what building it took. */
+/**
+ * A built mesh: its `.glb`, its size, and what building it took. [finished] when [CleanModel]
+ * finished it; `false` for the raw surface, shown first or kept when the finish failed.
+ */
 internal class RerunModelBuild(
     val glb: ByteArray,
     val bounds: FloatArray,
@@ -290,14 +293,23 @@ internal class RerunModelBuild(
     val buildMs: Long,
     val voxelBytes: Long,
     val budgetReached: Boolean,
+    val finished: Boolean = true,
 )
 
 /**
  * Meshes [source] — fuse (unless done), mesh, then finish ([CleanModel]): clean, simplify, texture
  * from its photos and write — reporting its share done to [progress]. A finish that fails writes
  * the raw surface instead; one that runs out of memory lets the error through, for the points.
+ *
+ * A surface of [RAW_FIRST_TRIANGLES] or more takes a phone longer to finish than a result should
+ * keep the user waiting: when [onRaw] is given, that raw surface goes to it first (not
+ * [RerunModelBuild.finished]), and the finished model, in the same place, replaces it.
  */
-internal fun buildRerunModel(source: RerunModelSource, progress: (Float) -> Unit): RerunModelBuild {
+internal fun buildRerunModel(
+    source: RerunModelSource,
+    onRaw: ((RerunModelBuild) -> Unit)? = null,
+    progress: (Float) -> Unit,
+): RerunModelBuild {
     val started = System.nanoTime()
     val meshed = mesh(source, progress)
     val extraction = meshed.extraction
@@ -308,10 +320,37 @@ internal fun buildRerunModel(source: RerunModelSource, progress: (Float) -> Unit
         is RerunModelSource.Surfels -> source.photos
         is RerunModelSource.Synthetic -> syntheticPhotos()
     }
-    val finished = if (mesh.triangleCount > 0) finish(mesh, photos) { progress(MESH_SHARE + (1f - MESH_SHARE) * it) } else null
+    val rawGlb = if (onRaw != null && mesh.triangleCount >= RAW_FIRST_TRIANGLES) {
+        RerunMeshGlb.write(mesh).also { glb ->
+            onRaw(
+                RerunModelBuild(
+                    glb = glb,
+                    bounds = mesh.bounds(),
+                    triangles = mesh.triangleCount,
+                    vertices = mesh.vertexCount,
+                    buildMs = (meshedAt - started) / NS_PER_MS,
+                    voxelBytes = meshed.bytes,
+                    budgetReached = meshed.droppedBlocks > 0,
+                    finished = false,
+                ),
+            )
+        }
+    } else {
+        null
+    }
+    // Once its .glb is written, the raw surface's own arrays are what the finish works in: a
+    // copy of a big scan is the heap a mid-range phone does not have (a Pixel 4a's 192 MB).
+    val rawTriangles = mesh.triangleCount
+    val rawVertices = mesh.vertexCount
+    val rawBounds = mesh.bounds()
+    val finished = if (rawTriangles > 0) {
+        finish(mesh, photos, consume = rawGlb != null) { progress(MESH_SHARE + (1f - MESH_SHARE) * it) }
+    } else {
+        null
+    }
     val glb = when {
         finished != null -> finished.glb
-        mesh.triangleCount > 0 -> RerunMeshGlb.write(mesh)
+        rawTriangles > 0 -> rawGlb ?: RerunMeshGlb.write(mesh)
         else -> ByteArray(0)
     }
     progress(1f)
@@ -319,7 +358,7 @@ internal fun buildRerunModel(source: RerunModelSource, progress: (Float) -> Unit
     val finishedMesh = finished?.model?.asRerunMesh()
     Log.i(
         TAG,
-        "model (${source::class.simpleName}): ${mesh.triangleCount} triangles, ${mesh.vertexCount} vertices " +
+        "model (${source::class.simpleName}): $rawTriangles triangles, $rawVertices vertices " +
             "(${extraction.rawTriangles} raw, ${extraction.droppedComponents} pieces dropped, " +
             "capped ${extraction.capped}); " +
             "fused ${meshed.fuseMs} ms, meshed ${(meshedAt - started) / NS_PER_MS - meshed.fuseMs} ms, " +
@@ -330,12 +369,13 @@ internal fun buildRerunModel(source: RerunModelSource, progress: (Float) -> Unit
     )
     return RerunModelBuild(
         glb = glb,
-        bounds = (finishedMesh ?: mesh).bounds(),
-        triangles = finishedMesh?.triangleCount ?: mesh.triangleCount,
-        vertices = finishedMesh?.vertexCount ?: mesh.vertexCount,
+        bounds = finishedMesh?.bounds() ?: rawBounds,
+        triangles = finishedMesh?.triangleCount ?: rawTriangles,
+        vertices = finishedMesh?.vertexCount ?: rawVertices,
         buildMs = (done - started) / NS_PER_MS,
         voxelBytes = meshed.bytes,
         budgetReached = meshed.droppedBlocks > 0,
+        finished = finished != null,
     )
 }
 
@@ -385,10 +425,11 @@ private fun mesh(source: RerunModelSource, progress: (Float) -> Unit): Meshed {
 /**
  * [mesh] finished by [CleanModel]; `null` (logged) when that fails — cancellation goes through, and
  * so does running out of memory: writing the raw surface next, in a spent heap, would only fail
- * again after the whole wait. The result then falls back to the points.
+ * again after the whole wait. The result then falls back to the points. With [consume], [mesh]'s
+ * arrays are worked in, not copied: its `.glb` is already written, and [mesh] is not read again.
  */
-private fun finish(mesh: RerunMesh, photos: ModelPhotos?, progress: (Float) -> Unit): CleanModelResult? =
-    runCatching { CleanModel.build(mesh, photos, JpegAtlasEncoder, progress = progress) }
+private fun finish(mesh: RerunMesh, photos: ModelPhotos?, consume: Boolean, progress: (Float) -> Unit): CleanModelResult? =
+    runCatching { CleanModel.build(mesh, photos, JpegAtlasEncoder, consume = consume, progress = progress) }
         .onFailure { if (it is CancellationException || it is OutOfMemoryError) throw it }
         .onFailure { Log.w(TAG, "finishing the model failed: the raw surface is kept", it) }
         .getOrNull()
@@ -413,16 +454,24 @@ private object JpegAtlasEncoder : AtlasEncoder {
 /**
  * The scan's model: the meshed surface, or — when meshing finds none — the scan's coloured points
  * as small squares ([RerunPointsMesh]). `null` when there is neither. Off the main thread.
+ * Only the finished model is [RerunScanModel.finished]: the raw surface a failed finish leaves,
+ * or the points, are shown but not kept, and the next open tries again. [onRaw] hears a big
+ * scan's raw surface while it finishes ([buildRerunModel]).
  *
  * [progress] is also where a cancelled build stops: it may throw [CancellationException], which
  * goes through untouched — a screen left mid-build stops meshing instead of racing the next one.
  */
-internal fun buildScanModel(source: RerunModelSource, progress: (Float) -> Unit): RerunScanModel? {
+internal fun buildScanModel(
+    source: RerunModelSource,
+    onRaw: ((RerunScanModel) -> Unit)? = null,
+    progress: (Float) -> Unit,
+): RerunScanModel? {
     val skipMesh = source is RerunModelSource.Synthetic && source.meshFails
     val mesh = if (skipMesh) {
         null
     } else {
-        runCatching { buildRerunModel(source) { progress(it * MESH_PART) } }
+        val raw = onRaw?.let { show -> { build: RerunModelBuild -> show(build.scanModel()) } }
+        runCatching { buildRerunModel(source, raw) { progress(it * MESH_PART) } }
             .onFailure { if (it is CancellationException) throw it }
             .onFailure { Log.w(TAG, "meshing failed", it) }
             .getOrNull()
@@ -430,14 +479,7 @@ internal fun buildScanModel(source: RerunModelSource, progress: (Float) -> Unit)
     }
     if (mesh != null) {
         progress(1f)
-        return RerunScanModel(
-            kind = RerunScanModel.Kind.Mesh,
-            glb = mesh.glb,
-            bounds = mesh.bounds,
-            triangles = mesh.triangles,
-            vertices = mesh.vertices,
-            budgetReached = mesh.budgetReached,
-        )
+        return mesh.scanModel()
     }
     val cloud = when (source) {
         is RerunModelSource.Live -> source.cloud
@@ -454,8 +496,19 @@ internal fun buildScanModel(source: RerunModelSource, progress: (Float) -> Unit)
         bounds = RerunPointsMesh.framingBounds(points),
         triangles = points.triangleCount,
         vertices = points.vertexCount,
+        finished = false,
     )
 }
+
+private fun RerunModelBuild.scanModel() = RerunScanModel(
+    kind = RerunScanModel.Kind.Mesh,
+    glb = glb,
+    bounds = bounds,
+    triangles = triangles,
+    vertices = vertices,
+    budgetReached = budgetReached,
+    finished = finished,
+)
 
 /** QA only: the ray-cast room's depth, fused into coloured points as a recording fuses them. */
 internal fun syntheticCloud(): DenseCloud {
@@ -468,10 +521,18 @@ internal fun syntheticCloud(): DenseCloud {
 private sealed interface ModelState {
     data object Loading : ModelState
 
-    class Ready(val model: RerunScanModel) : ModelState
+    /**
+     * [model] shown; not [final] while it is a big scan's raw surface, its finished model on the
+     * way. Framed by [framedBy]: the first model shown, so the finished one replacing the raw
+     * surface keeps the camera, the reveal and the toggles where they are.
+     */
+    class Ready(val model: RerunScanModel, val final: Boolean = true, val framedBy: RerunScanModel = model) : ModelState
 
     data object Failed : ModelState
 }
+
+/** The model is known for good: the finished one, the fallback, or none. */
+private val ModelState.settled: Boolean get() = this == ModelState.Failed || (this as? ModelState.Ready)?.final == true
 
 /**
  * A scan's result: its model, full screen and still on the themed stage, opened at a three-quarter
@@ -510,6 +571,7 @@ internal fun RerunModelScreen(
         } else {
             null
         }
+        var shownFirst: RerunScanModel? = null
         val model = kept ?: source?.let { from ->
             withContext(Dispatchers.Default) {
                 val job = coroutineContext.job
@@ -517,14 +579,20 @@ internal fun RerunModelScreen(
                     progress = share
                     job.ensureActive()
                 }
-                runCatching { buildScanModel(from, report) }
+                // A big scan's raw surface is shown while it finishes; the model then takes its place.
+                val raw = { surface: RerunScanModel ->
+                    shownFirst = surface
+                    value = ModelState.Ready(surface, final = false)
+                }
+                runCatching { buildScanModel(from, raw, report) }
                     .onFailure { if (it is CancellationException) throw it }
                     .onFailure { Log.w(TAG, "model build failed", it) }
                     .getOrNull()
             }
         }
-        // A model built now is kept with its scan, so the next open reads it instead of meshing again.
-        val keepAs = id?.takeIf { kept == null && store != null }
+        // A model finished now is kept with its scan, so the next open reads it instead of meshing
+        // again. A fallback is not: the next open tries again, from the TSDF still held.
+        val keepAs = id?.takeIf { kept == null && store != null && model?.finished == true }
         if (keepAs != null && model != null) {
             val saved = withContext(Dispatchers.IO) {
                 runCatching { checkNotNull(store).saveModel(keepAs, model) }
@@ -533,10 +601,12 @@ internal fun RerunModelScreen(
             }
             if (saved) (source as? RerunModelSource.Live)?.release()
         }
-        value = if (model != null) ModelState.Ready(model) else ModelState.Failed
+        value = if (model != null) ModelState.Ready(model, framedBy = shownFirst ?: model) else ModelState.Failed
     }
     val model = (state as? ModelState.Ready)?.model
-    LaunchedEffect(state) { if (state != ModelState.Loading) onModel(model) }
+    val settled = state.settled
+    LaunchedEffect(state) { if (state.settled) onModel(model) }
+    val framedBy = (state as? ModelState.Ready)?.framedBy
     // Created before the SceneView, so released after its node (Compose forgets in reverse).
     // On the main thread, as every Filament call (CLAUDE.md).
     val instance = remember(model) {
@@ -556,13 +626,13 @@ internal fun RerunModelScreen(
     // The reveal, the 3D ↔ Plan crane and the tour (#4631), every one cut short by a touch.
     val cinematics = remember(orbit) { ScanResultCinematics(orbit) }
     SideEffect {
-        model?.bounds?.let { b -> cinematics.extent = maxOf(b[3] - b[0], b[5] - b[2]).coerceAtLeast(MIN_EXTENT_M) }
+        framedBy?.bounds?.let { b -> cinematics.extent = maxOf(b[3] - b[0], b[5] - b[2]).coerceAtLeast(MIN_EXTENT_M) }
     }
     // Read live by the framing below, so a toggle and the frame that flies to it agree.
-    var plan by remember(model) { mutableStateOf(false) }
-    var touring by remember(model) { mutableStateOf(false) }
-    var shown by remember(model) { mutableStateOf(false) }
-    var hintVisible by remember(model) { mutableStateOf(true) }
+    var plan by remember(framedBy) { mutableStateOf(false) }
+    var touring by remember(framedBy) { mutableStateOf(false) }
+    var shown by remember(framedBy) { mutableStateOf(false) }
+    var hintVisible by remember(framedBy) { mutableStateOf(true) }
     LaunchedEffect(shown, hintStays) {
         if (shown && !hintStays) {
             delay(HINT_MS)
@@ -585,7 +655,7 @@ internal fun RerunModelScreen(
         topOverlay = { ScanNameCard(title = title, saved = id != null, onRename = rename) },
         bottomOverlay = {
             when {
-                state == ModelState.Loading -> ModelStatusCard(
+                !settled -> ModelStatusCard(
                     text = stringResource(R.string.scan_result_creating),
                     progress = { progress },
                 )
@@ -672,7 +742,7 @@ internal fun RerunModelScreen(
             label = stringResource(R.string.scan_result_export_label),
             caption = stringResource(R.string.scan_result_export),
             onClick = onExport,
-            enabled = state != ModelState.Loading,
+            enabled = settled,
         ),
     ) {
         val chrome = LocalStageChrome.current
@@ -685,14 +755,14 @@ internal fun RerunModelScreen(
             view.configureForDebug(colorGrading)
             onDispose { }
         }
-        val framing = remember(model, orbit) {
-            model?.let { DollhouseFraming(it.bounds, RerunResultView.ELEVATION, orbit.verticalFovDegrees) }
+        val framing = remember(framedBy, orbit) {
+            framedBy?.let { DollhouseFraming(it.bounds, RerunResultView.ELEVATION, orbit.verticalFovDegrees) }
         }
         // The floor plan: the same room, the same turn, straight down from the map's elevation.
-        val planFraming = remember(model, orbit) {
-            model?.let { DollhouseFraming(it.bounds, ArDebugFraming.MAP_ELEVATION, orbit.verticalFovDegrees) }
+        val planFraming = remember(framedBy, orbit) {
+            framedBy?.let { DollhouseFraming(it.bounds, ArDebugFraming.MAP_ELEVATION, orbit.verticalFovDegrees) }
         }
-        val opening = remember(model, orbit) { DollhouseOpening() }
+        val opening = remember(framedBy, orbit) { DollhouseOpening() }
         BoxWithConstraints(Modifier.fillMaxSize().background(chrome.ground)) {
             // What the chrome leaves of the view at rest — below the name, above the dock, between
             // the window's safe sides — less a gutter: the model opens whole in there (#4492). Held
@@ -1034,6 +1104,12 @@ private const val FUSE_SHARE = 0.3f
 
 /** Where meshing ends on the progress bar: finishing the model ([CleanModel]) takes the rest. */
 private const val MESH_SHARE = 0.45f
+
+/**
+ * A raw surface this big is shown while it finishes: a Pixel 4a took 23.5 s to finish 192k
+ * triangles, so from about this size the finish passes the 20 s a result may keep the user waiting.
+ */
+internal const val RAW_FIRST_TRIANGLES = 120_000
 private const val ATLAS_JPEG_QUALITY = 85
 
 /** The mesh's share of the progress bar; the points fallback, when needed, takes the rest. */

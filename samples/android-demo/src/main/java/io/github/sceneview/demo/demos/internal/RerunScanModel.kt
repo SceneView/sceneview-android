@@ -28,6 +28,13 @@ class RerunScanModel(
     val vertices: Int,
     /** The TSDF ran out of memory: part of the space is left out. */
     val budgetReached: Boolean = false,
+    /**
+     * Built in full. `false` for a fallback shown while the finish failed — the raw surface, or
+     * the points when meshing did — which is never kept with its scan
+     * ([RerunSessionStore.saveModel]): the next open builds the model again. Not written to
+     * `model.json`: a model read back was finished.
+     */
+    val finished: Boolean = true,
 ) {
     init {
         require(bounds.size == BOUNDS) { "six bounds" }
@@ -61,14 +68,19 @@ class RerunScanModel(
     )
 
     companion object {
-        const val VERSION = 1
+        /**
+         * `model.json`'s format. 2: the finished model ([io.github.sceneview.demo.demos.internal.model.CleanModel]);
+         * a 1 is the raw surface an earlier app kept, read as none so the scan finishes it again.
+         */
+        const val VERSION = 2
         private const val BOUNDS = 6
         private val pretty = Json { prettyPrint = true }
         private val lenient = Json { ignoreUnknownKeys = true; isLenient = true }
 
         /**
-         * `null` when [info] is not a whole `model.json`, was written by a newer app ([VERSION]),
-         * or [glb] is not a `.glb`: the scan then builds its model again.
+         * `null` when [info] is not a whole `model.json`, was written in another format than this
+         * app's ([VERSION]: an earlier app's raw surface, or a newer app's), or [glb] is not a
+         * `.glb`: the scan then builds its model again.
          */
         @Suppress("ReturnCount") // one early return per required key
         fun parse(info: String, glb: ByteArray): RerunScanModel? {
@@ -76,7 +88,7 @@ class RerunScanModel(
             val root = runCatching { lenient.parseToJsonElement(info) as? JsonObject }.getOrNull() ?: return null
             fun number(key: String) = (root[key] as? JsonPrimitive)?.takeIf { !it.isString }
             val version = number("version")?.intOrNull ?: return null
-            if (version !in 1..VERSION) return null
+            if (version != VERSION) return null
             val kind = Kind.of((root["kind"] as? JsonPrimitive)?.takeIf { it.isString }?.content) ?: return null
             val bounds = (root["bounds"] as? JsonArray)
                 ?.mapNotNull { (it as? JsonPrimitive)?.floatOrNull }
