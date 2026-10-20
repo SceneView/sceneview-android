@@ -4,6 +4,7 @@ import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.acos
 import kotlin.math.floor
+import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
 
@@ -25,6 +26,7 @@ internal class CoverageGrid(
 ) {
     private val counts = HashMap<Long, Int>()
     private var consumed = 0
+    private var cellsConsumed = 0
 
     /** Covered cells, `(cx, cz)` packed by [key]. */
     private val coveredCells = LinkedHashSet<Long>()
@@ -35,6 +37,13 @@ internal class CoverageGrid(
     /** How many times the covered set changed: a cheap "redraw?" for whoever draws it. */
     var version = 0
         private set
+
+    /** How many times the grid started again ([reset]): a replay scrubbed back. */
+    var resets = 0
+        private set
+
+    /** The floor covered, in m² ([ScanFloorArea.squareMetres] of [covered]). */
+    val squareMetres: Float get() = ScanFloorArea.squareMetres(covered, cellMetres)
 
     var minCx = 0
         private set
@@ -90,10 +99,50 @@ internal class CoverageGrid(
         return grew
     }
 
+    /**
+     * Covers the first [count] floor cells [trace] recorded ([ArDebugTrace.addFloorCells]) not
+     * covered yet: a saved scan's own record, so its replay covers what its capture covered,
+     * cell for cell (#4734). A smaller [count] (a replay scrubbed back) starts the grid again.
+     */
+    fun updateRecorded(trace: ArDebugTrace, count: Int): Boolean {
+        if (count < cellsConsumed) reset()
+        var grew = false
+        for (i in cellsConsumed until count) {
+            val key = trace.floorCell(i)
+            if (coveredCells.add(key)) {
+                include(cxOf(key), czOf(key))
+                grew = true
+            }
+        }
+        cellsConsumed = maxOf(cellsConsumed, count)
+        if (grew) version++
+        return grew
+    }
+
+    /**
+     * Covers what a saved scan had covered at [time], the one way the replay and the result
+     * both read it (#4734): the cells its capture recorded, or, for a scan saved before they
+     * were, its dense cloud's first [denseCount] surfels ([dense]) or else its feature points.
+     */
+    fun updateSaved(
+        trace: ArDebugTrace,
+        time: Float,
+        mapPoints: () -> FloatArray,
+        dense: FloatArray?,
+        denseCount: Int,
+    ): Boolean =
+        when {
+            trace.hasFloorCells -> updateRecorded(trace, trace.floorCellsAt(time))
+            dense != null -> update(dense, denseCount)
+            else -> update(mapPoints())
+        }
+
     fun reset() {
         counts.clear()
         coveredCells.clear()
         consumed = 0
+        cellsConsumed = 0
+        resets++
         minCx = 0
         maxCx = -1
         minCz = 0
@@ -248,6 +297,28 @@ internal class CoverageGrid(
             return true
         }
     }
+}
+
+/**
+ * The floor a scan covered, in m² (#4734): covered cells times a cell's area, to a tenth. The
+ * one figure the live map, the replay and the result say, each off the same cells — the live
+ * capture records them in its trace ([ArDebugTrace.addFloorCells]) and the other two read them
+ * back ([CoverageGrid.updateSaved]). Never of how much: a share of a room whose outline grows
+ * with the scan fell as the scan went on.
+ */
+object ScanFloorArea {
+    fun squareMetres(cells: Int, cellMetres: Float = CoverageGrid.CELL_METRES): Float =
+        (cells * cellMetres * cellMetres * TENTHS).roundToInt() / TENTHS
+
+    /** A saved scan's floor covered at its end: what its replay reaches, what its result says. */
+    fun ofSaved(trace: ArDebugTrace, dense: FloatArray?, denseCount: Int): Float {
+        val grid = CoverageGrid()
+        val end = trace.duration
+        grid.updateSaved(trace, end, { trace.frameAt(end).mapPoints }, dense, denseCount)
+        return grid.squareMetres
+    }
+
+    private const val TENTHS = 10f
 }
 
 /**
