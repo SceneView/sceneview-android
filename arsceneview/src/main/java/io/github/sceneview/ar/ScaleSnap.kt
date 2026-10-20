@@ -9,8 +9,7 @@ import kotlin.math.sin
  * The pinch-scale detent of automatic placement: one source of truth for the default 25–400 % range,
  * the 100 % snap window and the elastic rebound played when a pinch lands on 100 %.
  *
- * Pure math — the pivot node applies it, tests pin it. The same numbers ship on iOS
- * (`ARScaleSnap`).
+ * Pure math — the pivot node applies it, tests pin it.
  */
 internal object ScaleSnap {
     const val MIN: Float = 0.25f

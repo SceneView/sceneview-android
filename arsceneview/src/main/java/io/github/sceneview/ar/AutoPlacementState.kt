@@ -129,7 +129,9 @@ class AutoPlacementState {
      *
      * Widen it when the base size is not the only sensible one — a 1:16 miniature that the
      * user may pinch all the way up to real size takes `0.25f..16f`. The 100 % detent stays
-     * at the base size. An empty or non-positive range is ignored.
+     * at the base size. An empty or non-positive range is ignored. Changing it does not resize
+     * an object already placed: [scaleFactor] keeps its value, even outside the new range,
+     * until the next pinch, [scaleTo] or double-tap brings it back inside.
      *
      * ```kotlin
      * val state = remember { AutoPlacementState().apply { scaleRange = 0.25f..16f } }
@@ -327,6 +329,7 @@ class AutoPlacementState {
         isAdjusting = false
         isSelected = false
         scaleFactor = 1f
+        cameraHeight = null
         moveAction = null
         rotateAction = null
         scaleAction = null

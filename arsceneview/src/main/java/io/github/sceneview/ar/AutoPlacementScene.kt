@@ -585,7 +585,8 @@ fun AutoPlacementScene(
  *
  * Gestures, as Scene Viewer and AR Quick Look:
  * - **Pinch** follows the fingers 1:1 relative to where they landed (spreading them twice as
- *   far doubles the object), limited to 25–400 % of the base, snapping to 100 % within ±4 %
+ *   far doubles the object), limited to [AutoPlacementState.scaleRange] (25–400 % of the base by
+ *   default), snapping to 100 % within ±4 %
  *   with a short elastic rebound.
  * - **Twist** turns the object about its base.
  * - **Double-tap** ([AutoPlacementState.toggleBaseScale]) animates back to 100 %; at 100 % it
@@ -1070,16 +1071,30 @@ internal enum class DragEnd {
     /** The drag never began: nothing to commit, no adjustment to close. */
     NONE,
 
-    /** The finger lifted: the room stays where it was dragged, on a new anchor. */
+    /** The object stays where it was dragged, on a new anchor. */
     COMMIT,
 
-    /** A second finger landed: a pinch or twist starts, and the room goes back on its anchor. */
+    /**
+     * A second finger landed right after the first one started sliding: a pinch or twist is
+     * starting, not a move, and the object goes back on its anchor.
+     */
     REVERT;
 
     companion object {
-        fun of(began: Boolean, pointerCount: Int): DragEnd = when {
+        /** A drag at most this long when a second finger lands is the start of a pinch or twist. */
+        const val SLIP_MAX_MS = 300L
+
+        /** ...and one that carried the object at most this far, metres. */
+        const val SLIP_MAX_M = 0.05f
+
+        /**
+         * [began]: the drag opened an adjustment. [pointerCount]: fingers down as it ends.
+         * [elapsedMs] and [travelM]: how long it lasted and how far it carried the object. A real
+         * move followed by a two-finger twist is committed like any other.
+         */
+        fun of(began: Boolean, pointerCount: Int, elapsedMs: Long, travelM: Float): DragEnd = when {
             !began -> NONE
-            pointerCount > 1 -> REVERT
+            pointerCount > 1 && elapsedMs <= SLIP_MAX_MS && travelM <= SLIP_MAX_M -> REVERT
             else -> COMMIT
         }
     }
@@ -1116,6 +1131,9 @@ private class AutomaticAnchorNode(
 
     /** This drag opened an adjustment: only a drag that did closes one ([DragEnd]). */
     private var dragging = false
+
+    /** When this drag began, `MotionEvent.eventTime`. */
+    private var dragStartMs = 0L
     init { isEditable = true }
 
     /** Accessibility moves obey the same polygon/range/anchor checks as a drag. */
@@ -1140,6 +1158,7 @@ private class AutomaticAnchorNode(
         val grab = grabOffset(e) ?: return false
         if (!state.beginAdjustment()) return false
         dragging = true
+        dragStartMs = e.eventTime
         offset = floatArrayOf(grab.x, grab.y, grab.z)
         pending = null
         interruptedMove = false
@@ -1176,15 +1195,20 @@ private class AutomaticAnchorNode(
     }
 
     override fun onMoveEnd(detector: MoveGestureDetector, e: MotionEvent) {
-        when (DragEnd.of(began = dragging, pointerCount = e.pointerCount)) {
+        val target = pending?.pose
+        val travel = if (target == null) 0f else ViewportProjection.distance(
+            target.tx(), target.ty(), target.tz(), anchor.pose.tx(), anchor.pose.ty(), anchor.pose.tz(),
+        )
+        when (DragEnd.of(dragging, e.pointerCount, e.eventTime - dragStartMs, travel)) {
             // The detector also ends a drag it never began — a second finger landing before the
             // first one travelled: that drag opened no adjustment, so it closes none (closing
             // one would end the pinch the two fingers are starting).
             DragEnd.NONE -> return
             DragEnd.COMMIT -> if (state.isAdjusting) commitMove()
-            // A second finger turns the drag into a pinch or a twist (#4731): the few pixels the
-            // first finger travelled first are not a move. Committed, each pinch walked the room
-            // a few centimetres away from where it was set down. Back on its anchor instead.
+            // A second finger landing right after the first started sliding is a pinch or a
+            // twist starting (#4731): the few pixels the first finger slid are not a move.
+            // Committed, each pinch walked the object a few centimetres away from where it was
+            // set down. Back on its anchor instead.
             DragEnd.REVERT -> {
                 pending = null
                 interruptedMove = false

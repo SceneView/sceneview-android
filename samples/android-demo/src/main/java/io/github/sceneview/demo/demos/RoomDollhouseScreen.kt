@@ -79,6 +79,7 @@ import io.github.sceneview.demo.common.placement.PlacementCard
 import io.github.sceneview.demo.demos.internal.ArDebugOrbitCamera
 import io.github.sceneview.demo.demos.internal.DollhouseArControl
 import io.github.sceneview.demo.demos.internal.DollhouseCopy
+import io.github.sceneview.demo.demos.internal.DollhousePlace
 import io.github.sceneview.demo.demos.internal.DollhouseScale
 import io.github.sceneview.demo.demos.internal.DollhouseStage
 import io.github.sceneview.demo.demos.internal.RerunStoredSession
@@ -301,7 +302,10 @@ internal fun RoomDollhouseScreen(
             {
                 DollhouseRecordingChip(
                     // Where the room stands, said only once it does, and only when it is known.
-                    place = if (inRoom) DollhouseCopy.place(place) else null,
+                    // Held sideways the scale line below already says "Real size": once is enough.
+                    place = if (inRoom && !(compactHeight && showsScale && place == DollhousePlace.RealSize)) {
+                        DollhouseCopy.place(place)
+                    } else null,
                     title = session?.title ?: title,
                     origin = origin,
                     scale = if (fit != null && showsScale && compactHeight) {
@@ -471,14 +475,18 @@ internal fun RoomDollhouseScreen(
                         // centred on it, around the camera (DollhouseOrientation).
                         // At real size the room rests on the floor, not on the table the
                         // miniature stood on (#4720).
+                        // `placement.pose` is no state: a finished drag replaces it, then ends the
+                        // adjustment. Reading the phase here is what recomposes this block after
+                        // each placement and each committed drag, so the pose below is the new one.
+                        val phase = state.phase
                         val placedY = placement.pose.ty()
                         val drop = if (realSize) {
                             RoomDollhouse.floorDrop(state.floorHeight, placedY, state.scaleFactor)
                         } else 0f
-                        // Where it rests, for the chip: the floor once it dropped to it. Read on
-                        // each placement and each finished drag (the phase recomposes this).
+                        // Where it rests, for the chip: the floor once it dropped to it; kept while
+                        // a drag is under way, read again once it is committed.
                         val rests = if (drop != 0f) state.floorHeight else placedY
-                        SideEffect { if (state.phase != PlacementPhase.ADJUSTING) restY = rests }
+                        SideEffect { if (phase != PlacementPhase.ADJUSTING) restY = rests }
                         Node(
                             position = Position(y = drop, z = orientation.offsetZ(realSize, scale)),
                             rotation = Rotation(y = orientation.yawDegrees),

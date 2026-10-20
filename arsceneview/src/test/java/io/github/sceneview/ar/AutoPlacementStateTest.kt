@@ -587,6 +587,8 @@ class AutoPlacementStateTest {
         state.onCamera(null)
         state.onCamera(Float.NaN)
         assertEquals(-0.50f, state.cameraHeight)
+        state.dismiss()
+        assertEquals("a dismissed state knows no camera", null, state.cameraHeight)
     }
 
     // ── The scale range ───────────────────────────────────────────────────────────────
