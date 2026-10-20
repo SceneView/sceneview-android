@@ -18,7 +18,7 @@ That's it. The script builds the demo app and installs it on your connected Andr
 
 !!! tip "Requirements"
     - Android device with **USB debugging** enabled
-    - **JDK 21+** installed (the Android modules compile to Java 21)
+    - **JDK 21+** installed (the demo and the libraries it builds compile to Java 21)
     - **adb** on your PATH (comes with Android Studio)
     - Optional: Google's [`android` CLI](https://developer.android.com/tools/agents/android-cli)
       for JSON UI dumps and LF/CRLF-safe screenshots. **Not for installing** —

@@ -8,17 +8,24 @@ Thanks for your interest in contributing! This guide covers everything you need 
 
 ### Prerequisites
 
-- **JDK 21** — every Android module compiles to Java 21 (`sceneview/build.gradle`,
-  `arsceneview/build.gradle` and `samples/android-demo/build.gradle`:
-  `JavaVersion.VERSION_21`, `jvmTarget = "21"`) and declares no JVM toolchain, so the
-  JDK that runs Gradle compiles them: it must be JDK 21 or newer.
+- **JDK 21** for the root Gradle build. `sceneview`, `arsceneview` and the Android demos
+  it includes (`samples/android-demo`, `android-tv-demo`, `android-auto-demo`) compile to
+  Java 21 (`JavaVersion.VERSION_21`, `JvmTarget.JVM_21`, e.g. `sceneview/build.gradle`) and
+  declare no JVM toolchain, so the JDK that runs Gradle compiles them.
+  `sceneview-compose` and `samples/desktop-demo` declare `jvmToolchain(21)`: Gradle uses an
+  installed JDK 21, or downloads one through the foojay resolver in `settings.gradle`.
+  The Flutter plugin and demo and the React Native module are separate Gradle builds that
+  target Java 17 (`flutter/sceneview_flutter/android/build.gradle`,
+  `react-native/react-native-sceneview/android/build.gradle.kts`); CI builds the Flutter
+  job with JDK 17.
 - **Android Studio** with an Android Gradle Plugin 9.4 release (the build uses AGP 9.4.1,
   `gradle/libs.versions.toml`)
 - **Xcode 16+** (for SceneViewSwift / iOS work only — Swift 6 and the iOS 18 floor).
   CI builds with Xcode 26 (`.github/workflows/ios.yml:145-148`); no job tests Xcode 16.
-- **bash, python3 and curl** on the `PATH` — every demo and website build runs
-  `tools/fetch-assets.sh` (see [Assets](#assets)). On macOS they come with the
-  Command Line Tools (`xcode-select --install`); on Windows, build from WSL.
+- **bash, python3 and curl** on the `PATH` for `tools/fetch-assets.sh`, which the Android,
+  TV and Auto demo builds and the iOS demo build run (see [Assets](#assets)). On macOS
+  they come with the Command Line Tools (`xcode-select --install`); on Windows, build
+  from WSL.
 - Optional but recommended: Google's [`android` CLI](https://developer.android.com/tools/agents/android-cli)
   for agent-driven QA.
 
@@ -31,8 +38,8 @@ Only install what the part you work on needs.
 | Any Android module | Android SDK platform `platforms;android-37.0` (`compileSdk 37`) | `sceneview/build.gradle`, `arsceneview/build.gradle`, `samples/android-demo/build.gradle` |
 | Android demo **release** build | NDK `28.2.13676358` (strips native symbols) | `samples/android-demo/build.gradle` (`ndkVersion`) |
 | `:sceneview-core:allTests`, `sceneview-web` tests | Chrome or Chromium (Karma runs `useChromeHeadless()`) | `sceneview-core/build.gradle.kts:33`, `sceneview-web/build.gradle.kts:33` |
-| Flutter plugin and demo | Flutter 3.41.6 | `.github/workflows/ci.yml` (`flutter-demo` job) |
-| MCP server, web demos, React Native | Node.js 20 (`mcp/package.json` accepts `>=18`) | `.github/workflows/ci.yml` (`web-desktop` job), `mcp/package.json` |
+| Flutter plugin and demo | Flutter 3.10.0 or newer; CI tests 3.41.6 | `flutter/sceneview_flutter/pubspec.yaml` (`environment`), `.github/workflows/ci.yml` (`flutter-demo` job) |
+| MCP server, web demo (`npx http-server`), React Native | Node.js 18 or newer; CI runs Node 20 | `mcp/package.json` (`engines`), `.github/workflows/ci.yml` (`web-desktop` job) |
 
 The demo app's Firebase setup is optional: the Google Services plugin is only applied
 when a `google-services.json` is present, so a fork builds without one
@@ -63,16 +70,27 @@ bash tools/fetch-assets.sh --scope android
 ```
 
 `--scope android` fetches what the Android demo uses, about 55 MiB. Without `--scope`, the
-script fetches every platform's assets, about 780 MiB (iOS and web models included). You
-can also skip this step for Android: `samples/android-demo/build.gradle` runs
-`fetch-assets.sh --scope android` before every build.
+script fetches every platform's assets, about 780 MiB (iOS and web models included).
+
+Some builds run the script themselves, so a plain build of them also works:
+
+- **Gradle**: the `fetchAssets` task runs before `preBuild` and before unit tests in
+  `samples/android-demo` (`--scope android`), `samples/android-tv-demo`
+  (`--scope tv --scope android`) and `samples/android-auto-demo`
+  (`--scope android --scope web`).
+- **Xcode**: the iOS demo's *Fetch assets* build phase runs `--scope ios` before Copy
+  Bundle Resources (`samples/ios-demo/SceneViewDemo.xcodeproj`).
+- **CI**: workflows call it through `.github/actions/fetch-assets`, the website deploy
+  (`docs.yml`) included, with `--scope web`.
+
+Nothing runs it locally for the website (`--scope web`, `website-static/models/platforms`)
+or the web demo's splat test page (`--scope web-test`): run it by hand before serving
+them. The Flutter and React Native demos use no file from the manifest.
 
 Files are downloaded once into `~/.cache/sceneview-assets/` (shared by every clone and
 worktree, override with `SCENEVIEW_ASSETS_CACHE`), verified, then cloned (APFS / reflink)
-or copied into place. The Android and TV demo builds and the iOS demo's first build phase
-run the same script, so a plain build also works. `--scope android|ios|tv|web` limits
-the fetch, `--check` verifies what is in place. A sparse checkout must include `assets/`
-and `tools/`.
+or copied into place. `--scope android|ios|tv|web|web-test` limits the fetch, `--check`
+verifies what is in place. A sparse checkout must include `assets/` and `tools/`.
 
 To add or replace an asset, put the file at its path and run
 `bash tools/fetch-assets.sh --register <path>`: it updates the manifest and prints the
