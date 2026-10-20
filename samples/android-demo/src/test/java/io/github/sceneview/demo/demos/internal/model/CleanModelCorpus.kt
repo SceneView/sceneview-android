@@ -12,6 +12,7 @@ import io.github.sceneview.demo.demos.internal.RerunResultView
 import io.github.sceneview.demo.demos.internal.RerunRrdReader
 import io.github.sceneview.demo.demos.internal.RerunScanFile
 import io.github.sceneview.demo.demos.internal.RerunScanModel
+import io.github.sceneview.demo.demos.internal.RerunSessionStore
 import io.github.sceneview.demo.demos.internal.RerunTsdf
 import io.github.sceneview.demo.demos.internal.SvpcCodec
 import kotlinx.serialization.json.JsonObject
@@ -27,6 +28,13 @@ import java.io.File
  */
 internal object CleanModelCorpus {
     val EXTENSIONS = setOf(RerunScanFile.EXTENSION, "rrd")
+
+    /** A scan of the corpus: a `*.svscan` or `*.rrd` file, or a session folder as the app keeps it. */
+    fun isScan(file: File): Boolean = if (file.isDirectory) {
+        File(file, RerunCapturePack.MANIFEST).isFile
+    } else {
+        file.isFile && file.extension.lowercase() in EXTENSIONS
+    }
 
     /** What [file] gave: its figures, as written to `stats.json`. */
     fun run(file: File, out: File): JsonObject {
@@ -137,6 +145,10 @@ internal object CleanModelCorpus {
     }
 
     private fun read(file: File): RerunCapturePack {
+        if (file.isDirectory) {
+            // A session folder as the app keeps it (`files/rerun/sessions/<id>/`), read as the app reads it.
+            return checkNotNull(RerunSessionStore(file.parentFile).capture(file.name)) { "incomplete session folder" }
+        }
         val bytes = file.readBytes()
         return when (file.extension.lowercase()) {
             RerunScanFile.EXTENSION -> checkNotNull(RerunScanFile.read(bytes)) { "not a scan file" }

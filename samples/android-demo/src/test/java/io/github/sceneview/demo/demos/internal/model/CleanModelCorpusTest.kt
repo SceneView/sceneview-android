@@ -31,7 +31,8 @@ import java.util.Locale
  *   ./gradlew :samples:android-demo:testDebugUnitTest --tests '*CleanModelCorpusTest*'
  * ```
  *
- * Every `*.svscan` and `*.rrd` in the corpus gets a folder in the output ([CleanModelCorpus]:
+ * Every `*.svscan` and `*.rrd` in the corpus, and every session folder the app keeps
+ * (`files/rerun/sessions/<id>/`, pulled with `run-as`), gets a folder in the output ([CleanModelCorpus]:
  * both GLBs, both thumbnails, `stats.json`) and a line in `summary.json`. Skipped without the
  * two variables. The second test runs the same code on a synthetic recording, so it is known to
  * work end to end before a real scan reaches it.
@@ -46,10 +47,10 @@ class CleanModelCorpusTest {
         val out = System.getenv(OUT)?.let(::File)
         assumeTrue("$CORPUS and $OUT not set", corpus != null && out != null)
         val scans = checkNotNull(corpus).walkTopDown()
-            .filter { it.isFile && it.extension.lowercase() in CleanModelCorpus.EXTENSIONS }
+            .filter(CleanModelCorpus::isScan)
             .sortedBy { it.path }
             .toList()
-        assumeTrue("no *.svscan or *.rrd in $corpus", scans.isNotEmpty())
+        assumeTrue("no *.svscan, *.rrd or session folder in $corpus", scans.isNotEmpty())
         val results = runAll(scans, checkNotNull(out))
         results.forEach(::println)
     }
