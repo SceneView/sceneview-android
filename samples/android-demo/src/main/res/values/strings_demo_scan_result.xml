@@ -26,6 +26,7 @@
     <!-- The result's ground legend (#4719): the share of the floor slab the scan saw -->
     <string name="scan_coverage_floor">Floor %1$d %% covered</string>
     <string name="scan_coverage_label">Scan map: %1$s of floor covered. The hatched part is still to scan.</string>
+    <string name="scan_coverage_label_percent">Scan map: %1$d%% of the floor covered. The hatched part is still to scan.</string>
     <!-- Map to complete, the live map opened (#4718) -->
     <string name="scan_coverage_title">Map to complete</string>
     <string name="scan_coverage_covered">Covered · %1$s</string>

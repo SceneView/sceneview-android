@@ -743,7 +743,7 @@ private fun groundOf(model: RerunScanModel): GroundBuild? = runCatching {
 private fun FloorLegend(percent: Int) {
     val chrome = LocalStageChrome.current
     val shape = RoundedCornerShape(SceneViewTokens.Radius.full)
-    val label = stringResource(R.string.scan_coverage_label, percent)
+    val label = stringResource(R.string.scan_coverage_label_percent, percent)
     val colors = ScanGroundColors.current()
     Row(
         modifier = Modifier
