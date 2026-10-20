@@ -215,7 +215,9 @@ PhysicsNode(node = modelNode, restitution = 0.6f, floorY = 0f, radius = 0.1f)
 
 ### AR Nodes
 ```kotlin
-AnchorNode(anchor = hitResult.createAnchor()) { ModelNode(...) }
+// Place on a confirmed tap on empty space (rememberOnGestureListener(onSingleTapConfirmed = { e, node -> if (node == null) … })),
+// never on ACTION_UP in onTouchEvent: anchor = latestFrame?.hitTest(e)?.firstOrNull { (it.trackable as? Plane)?.isPoseInPolygon(it.hitPose) == true }?.createAnchorOrNull()
+AnchorNode(anchor = anchor) { ModelNode(...) }
 HitResultNode(xPx = screenCenterX, yPx = screenCenterY) { SphereNode(radius = 0.02f) }
 ReticleNode(xPx = screenCenterX, yPx = screenCenterY, onHitResultChanged = { hit -> }) { /* marker */ }
 PlaneDiscoveryGuide(cameraReady, isTracking, anyPlaneTracked, trackingFailureReason) — ARCore-Elements onboarding overlay: hand hint at 3 s, help at 8 s, 750 ms fade-out on first plane, contextual lost copy (#2241)

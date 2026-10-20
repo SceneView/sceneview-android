@@ -164,9 +164,11 @@ rendering engine used inside Google Search and Google Play Store.
 ARSceneView(
     planeRenderer = true,
     onSessionUpdated = { _, frame ->
-        anchor = frame.getUpdatedPlanes()
-            .firstOrNull { it.type == Plane.Type.HORIZONTAL_UPWARD_FACING }
-            ?.let { it.createAnchorOrNull(it.centerPose) }
+        if (anchor == null) { // place once on the first floor plane, then keep that anchor
+            anchor = frame.getUpdatedPlanes()
+                .firstOrNull { it.type == Plane.Type.HORIZONTAL_UPWARD_FACING }
+                ?.let { it.createAnchorOrNull(it.centerPose) }
+        }
     }
 ) {
     anchor?.let { a ->
