@@ -126,8 +126,11 @@ internal object WallLines {
     /** A vertical face is furniture when the same wall is seen this much higher, within [STRIP_M] behind it. */
     const val FURNITURE_UNDER_M = 0.2f
 
-    /** A direction within this of square to the room is square to it. */
+    /** A direction within this of square to the room is squared, when its surfels agree ([SQUARE_STACK_SHARE]). */
     const val SNAP_DEG = 7f
+
+    /** A family is squared when its surfels stack along the square normal at least this tightly, against their own. */
+    const val SQUARE_STACK_SHARE = 0.9f
 
     private const val STRIP_M = 1f
     private const val BEHIND_MIN_M = 0.1f
@@ -219,20 +222,47 @@ internal object WallLines {
             // The peak's own direction: the mean of the surfels around it.
             var sx = 0.0
             var sy = 0.0
+            val near = IntArrayList()
             for (k in 0 until n) {
                 val i = vertical[k]
                 val a = degreesOf(cloud.nu[i], cloud.nv[i])
                 if (angleDiff(a, p + HALF) > FAMILY_REFINE_DEG) continue
+                near.add(i)
                 val len = hypot(cloud.nu[i], cloud.nv[i])
                 sx += cloud.nu[i] / len
                 sy += cloud.nv[i] / len
             }
             var a = degreesOf(sx.toFloat(), sy.toFloat())
             val square = round(a / QUARTER) * QUARTER
-            if (abs(a - square) <= SNAP_DEG) a = square % DEGREES
+            // Squared only when the surfels say so: they stack along the square normal about as
+            // tightly as along their own. A wall built a few degrees off square keeps its turn.
+            if (abs(a - square) <= SNAP_DEG && stackOf(cloud, near, square) >= stackOf(cloud, near, a) * SQUARE_STACK_SHARE) {
+                a = square % DEGREES
+            }
             if (families.none { angleDiff(it, a) < FAMILY_APART_DEG }) families += a
         }
         return families.sorted()
+    }
+
+    /**
+     * How tightly [members] stack along the normal at [degrees]: the chance that two of them fall
+     * in the same [BIN_M] slice of offset, averaged over two placements of the slices.
+     */
+    private fun stackOf(cloud: FrameCloud, members: IntArrayList, degrees: Float): Double {
+        if (members.size == 0) return 0.0
+        val rad = degrees * PI.toFloat() / HALF_TURN
+        val nu = cos(rad)
+        val nv = sin(rad)
+        val o = FloatArray(members.size) { cloud.u[members[it]] * nu + cloud.v[members[it]] * nv }
+        val lo = o.min()
+        val bins = min(MAX_BINS, ((o.max() - lo) / BIN_M).toInt() + 2)
+        var sum = 0.0
+        for (shift in floatArrayOf(0f, HALF)) {
+            val hist = IntArray(bins)
+            for (x in o) hist[((x - lo) / BIN_M + shift).toInt().coerceIn(0, bins - 1)]++
+            for (c in hist) sum += c.toDouble() * c
+        }
+        return sum / 2 / (members.size.toDouble() * members.size)
     }
 
     /** The candidate lines of one family: peaks of the surfels' offsets, weighed by the cells they cover. */

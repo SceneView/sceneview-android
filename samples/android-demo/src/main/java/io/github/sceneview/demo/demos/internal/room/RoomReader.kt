@@ -34,6 +34,17 @@ internal object RoomReader {
     private const val CELL_KEY_SPAN = 32_768
     private const val HALF = 0.5f
     private const val NANOS_PER_MILLI = 1e6f
+    private const val RUN_SIN = 0.05f
+    private const val RUN_M = 0.3f
+
+    /**
+     * Nothing is read farther than this from the scan's origin: a stray value — a fusion's
+     * overflow, a pose gone wild — would otherwise size a histogram or a raster.
+     */
+    const val MAX_COORD_M = 1000f
+
+    /** An ARCore plane wider than this along either axis is no plane of a room: it is not sampled. */
+    const val MAX_PLANE_M = 50f
 
     fun read(scan: RoomScan): RoomStructure {
         val normals = scan.normals
@@ -41,12 +52,56 @@ internal object RoomReader {
         if (normals == null || normals.size < count * 3 || count < RoomLevels.MIN_SURFELS) {
             return RoomStructure.empty(RoomGap.NoDepth)
         }
-        return readCloud(scan.positions, normals, scan.trail, CELL_M, MIN_SUPPORT, full = true)
+        val (positions, sound) = soundCloud(scan.positions, normals)
+        if (positions.size / 3 < RoomLevels.MIN_SURFELS) return RoomStructure.empty(RoomGap.NoDepth)
+        return readCloud(positions, sound, soundTrail(scan.trail), CELL_M, MIN_SUPPORT, full = true)
+            ?: RoomStructure.empty(RoomGap.NoWalls)
+    }
+
+    /**
+     * The cloud without its broken surfels: a coordinate not finite or beyond [MAX_COORD_M], a
+     * normal not finite. The arrays themselves when every surfel is sound, as a phone's always are.
+     */
+    fun soundCloud(positions: FloatArray, normals: FloatArray): Pair<FloatArray, FloatArray> {
+        val count = positions.size / 3
+        var broken = 0
+        for (i in 0 until count) if (!sound(positions, normals, i)) broken++
+        if (broken == 0) return positions to normals
+        val p = FloatArray((count - broken) * 3)
+        val n = FloatArray(p.size)
+        var k = 0
+        for (i in 0 until count) {
+            if (!sound(positions, normals, i)) continue
+            positions.copyInto(p, k, i * 3, i * 3 + 3)
+            normals.copyInto(n, k, i * 3, i * 3 + 3)
+            k += 3
+        }
+        return p to n
+    }
+
+    /** The camera's path without its broken steps. */
+    fun soundTrail(trail: FloatArray): FloatArray {
+        val steps = trail.size / 3
+        val kept = (0 until steps).filter { within(trail, it * 3, 3) }
+        if (kept.size == steps) return trail
+        val out = FloatArray(kept.size * 3)
+        for ((k, i) in kept.withIndex()) trail.copyInto(out, k * 3, i * 3, i * 3 + 3)
+        return out
+    }
+
+    private fun sound(positions: FloatArray, normals: FloatArray, i: Int): Boolean =
+        within(positions, i * 3, 3) && normals[i * 3].isFinite() && normals[i * 3 + 1].isFinite() && normals[i * 3 + 2].isFinite()
+
+    /** [count] values from [from] all finite and within [MAX_COORD_M]: NaN fails the comparison. */
+    private fun within(values: FloatArray, from: Int, count: Int): Boolean {
+        for (k in from until from + count) if (!(abs(values[k]) <= MAX_COORD_M)) return false
+        return true
     }
 
     /** The cheap reading: the cloud thinned to [LIVE_MAX_SURFELS], ARCore's planes added, read on [LIVE_CELL_M] cells. */
     fun live(scan: RoomScan): LiveRoom {
         val started = System.nanoTime()
+        val trail = soundTrail(scan.trail)
         val cloudNormals = scan.normals
         val count = scan.positions.size / 3
         val usable = cloudNormals != null && cloudNormals.size >= count * 3 && count > 0
@@ -56,14 +111,15 @@ internal object RoomReader {
         val normals = Floats(kept * 3 + PLANE_RESERVE)
         if (usable) positions.thinned(scan.positions, stride, kept)
         if (usable) normals.thinned(cloudNormals!!, stride, kept)
-        planeSamples(scan, positions, normals)
-        val p = positions.toArray()
-        val n = normals.toArray()
-        val structure = if (p.size / 3 < RoomLevels.MIN_SURFELS) {
-            RoomStructure.empty(RoomGap.NoDepth)
+        planeSamples(scan.planes, trail, positions, normals)
+        val (p, n) = soundCloud(positions.toArray(), normals.toArray())
+        // No floor found: no floor height either, rather than the scan's origin.
+        val read = if (p.size / 3 < RoomLevels.MIN_SURFELS) {
+            null
         } else {
-            readCloud(p, n, scan.trail, LIVE_CELL_M, LIVE_MIN_SUPPORT, full = false)
+            readCloud(p, n, trail, LIVE_CELL_M, LIVE_MIN_SUPPORT, full = false)
         }
+        val structure = read ?: RoomStructure.empty(RoomGap.NoDepth)
         val walls = structure.walls.filter { !it.deduced }.map {
             LiveRoomWall(it.ax, it.az, it.bx, it.bz, it.height, it.confidence)
         }
@@ -72,29 +128,29 @@ internal object RoomReader {
             outline[k * 2] = w.ax
             outline[k * 2 + 1] = w.az
         }
-        val floorY = structure.floorY.takeIf { structure.gaps.firstOrNull() != RoomGap.NoDepth }
+        val floorY = read?.floorY
         val millis = (System.nanoTime() - started) / NANOS_PER_MILLI
         return LiveRoom(walls, outline, structure.area?.value, floorY, millis)
     }
 
     /** ARCore's wall and floor planes as surfels on a [PLANE_STEP_M] grid, walls facing the camera's path. */
     @Suppress("NestedBlockDepth", "CyclomaticComplexMethod")
-    private fun planeSamples(scan: RoomScan, positions: Floats, normals: Floats) {
+    private fun planeSamples(planes: List<RoomPlane>, trail: FloatArray, positions: Floats, normals: Floats) {
         var cx = 0.0
         var cz = 0.0
-        val steps = scan.trail.size / 3
+        val steps = trail.size / 3
         for (k in 0 until steps) {
-            cx += scan.trail[k * 3]
-            cz += scan.trail[k * 3 + 2]
+            cx += trail[k * 3]
+            cz += trail[k * 3 + 2]
         }
         if (steps > 0) {
             cx /= steps
             cz /= steps
         }
-        for (plane in scan.planes) {
+        for (plane in planes) {
             val poly = plane.polygon
             val m = poly.size / 3
-            if (m < 3) continue
+            if (m < 3 || !within(poly, 0, m * 3) || !narrow(poly, 0) || !narrow(poly, 1) || !narrow(poly, 2)) continue
             when (plane.kind) {
                 RoomPlaneKind.Wall -> {
                     // Newell's normal, levelled; turned towards where the camera went.
@@ -148,6 +204,17 @@ internal object RoomReader {
         }
     }
 
+    /** The polygon's extent along axis [axis] is under [MAX_PLANE_M]. */
+    private fun narrow(poly: FloatArray, axis: Int): Boolean {
+        var lo = Float.POSITIVE_INFINITY
+        var hi = Float.NEGATIVE_INFINITY
+        for (k in axis until poly.size step 3) {
+            lo = min(lo, poly[k])
+            hi = max(hi, poly[k])
+        }
+        return hi - lo <= MAX_PLANE_M
+    }
+
     /** Calls [emit] on a [PLANE_STEP_M] grid inside the polygon ([a], [b]). */
     private inline fun fill(a: FloatArray, b: FloatArray, emit: (Float, Float) -> Unit) {
         val a0 = a.min()
@@ -183,8 +250,8 @@ internal object RoomReader {
         cell: Float,
         minSupport: Int,
         full: Boolean,
-    ): RoomStructure {
-        val floor = RoomLevels.floorOf(positions, normals, trail) ?: return RoomStructure.empty(RoomGap.NoWalls)
+    ): RoomStructure? {
+        val floor = RoomLevels.floorOf(positions, normals, trail) ?: return null
         val yaw = RoomLevels.yawOf(positions, normals, floor.y)
         val c = cos(yaw)
         val s = sin(yaw)
@@ -279,8 +346,13 @@ internal object RoomReader {
             Read(length, hit.toFloat() / samples, runs, openings)
         }
         val seen = BooleanArray(n) { outline.sides[it].line != null && reads[it].share >= RoomStructure.MIN_SEEN_SHARE }
-        if (seen.count { it } < if (full) RoomStructure.MIN_SEEN_WALLS else 1) {
-            // An outline (almost) no wall was seen along is only the floor's extent: not drawn.
+        val drawn = (0 until n).any {
+            seen[it] && reads[it].length * reads[it].share >= RoomStructure.MIN_SEEN_SHARE * runOf(outline.u, outline.v, it)
+        }
+        if (!drawn) {
+            // An outline no wall was seen along is only the floor's extent: not drawn. One wall
+            // seen along half the straight run of outline it stands on draws the plan — a stub of
+            // wall on a floor's edge does not; the figures wait for [RoomStructure.MIN_SEEN_WALLS].
             return RoomStructure.empty(RoomGap.NoWalls, floor.y, floor.thickness, height)
         }
         // No figure is given tighter than the thinnest layer a cloud is read to.
@@ -343,6 +415,44 @@ internal object RoomReader {
                 RoomGap.Ceiling.takeIf { height == null },
             ),
         )
+    }
+
+    /**
+     * The length of the straight run of outline side [i] lies on: it and the neighbouring sides
+     * that carry on along the same line, within [RUN_SIN] of its direction and [RUN_M] of it.
+     */
+    private fun runOf(u: FloatArray, v: FloatArray, i: Int): Float {
+        val n = u.size
+        fun length(k: Int) = hypot(u[(k + 1) % n] - u[k], v[(k + 1) % n] - v[k])
+        val len = length(i)
+        if (len <= 0f) return 0f
+        val tu = (u[(i + 1) % n] - u[i]) / len
+        val tv = (v[(i + 1) % n] - v[i]) / len
+        fun onLine(k: Int): Boolean {
+            val l = length(k)
+            if (l <= 0f) return true
+            val du = (u[(k + 1) % n] - u[k]) / l
+            val dv = (v[(k + 1) % n] - v[k]) / l
+            val from = abs((u[k] - u[i]) * tv - (v[k] - v[i]) * tu)
+            val to = abs((u[(k + 1) % n] - u[i]) * tv - (v[(k + 1) % n] - v[i]) * tu)
+            val far = max(from, to)
+            return du * tu + dv * tv > 0f && abs(du * tv - dv * tu) <= RUN_SIN && far <= RUN_M
+        }
+        var run = len
+        var k = (i + 1) % n
+        var steps = 0
+        while (k != i && steps < n && onLine(k)) {
+            run += length(k)
+            k = (k + 1) % n
+            steps++
+        }
+        var j = (i + n - 1) % n
+        while (j != k && j != i && steps < n && onLine(j)) {
+            run += length(j)
+            j = (j + n - 1) % n
+            steps++
+        }
+        return run
     }
 
     /** The volume under the ceiling: the area times the height, each one's scatter carried. */

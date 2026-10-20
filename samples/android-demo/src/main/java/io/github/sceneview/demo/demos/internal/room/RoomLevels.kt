@@ -24,7 +24,10 @@ internal object RoomLevels {
     /** A ceiling is a height only once this much of it was seen. */
     const val MIN_CEILING_AREA_M2 = 1f
 
-    /** The lowest a ceiling is looked for above the floor. */
+    /**
+     * The lowest a ceiling is looked for above the floor. A wall cupboard's underside sits lower,
+     * so an attic ceiling under it gives no height ([RoomGap.Ceiling]) rather than a wrong one.
+     */
     const val MIN_CEILING_M = 2f
 
     /** Ceiling seen this far from the height that is given, over [MIN_CEILING_AREA_M2], is a second level. */
@@ -48,6 +51,7 @@ internal object RoomLevels {
     private const val HALF = 0.5f
     private const val TAIL = 0.05
     private const val QUARTERS = 4f
+    private const val MAX_BINS = 1 shl 17
 
     /** The floor: its height, the thickness of its layer, and whether a denser layer lies above it. */
     class Floor(val y: Float, val thickness: Float, val rival: Boolean)
@@ -77,7 +81,8 @@ internal object RoomLevels {
             hi = lo + (hi - lo) / 2
         }
         val bins = ((hi - lo) / BIN_M).toInt() + 1
-        if (bins < 2) return null
+        // A layer this wide is a broken cloud, not a room: no histogram is sized on it.
+        if (bins < 2 || bins > MAX_BINS) return null
         val hist = IntArray(bins)
         for (i in 0 until n) {
             if (normals[i * 3 + 1] < UP) continue
