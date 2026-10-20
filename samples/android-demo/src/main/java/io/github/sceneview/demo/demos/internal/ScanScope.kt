@@ -214,13 +214,32 @@ object ScanScopeCopy {
     /**
      * The capture's coaching [line] ([ScanCopy.coaching]) in [scope]'s words: its two guidance
      * lines follow what is scanned, and a home paused before room [nextRoom] says how to get there.
+     * A room's scan given the [walls] it recognised guides from wall to wall instead: [done] once
+     * they close the room, else the [turn] to the next gap ([ScanGuide.cue]); and when nothing new
+     * comes while a wall is missing, it says how to catch a plain wall (#4540 live walls).
      * Every other line — tracking lost, the photo cap, the detail — says the same in every scope.
      */
-    fun coaching(scope: ScanScope, line: String?, nextRoom: Int? = null): String? = when {
-        nextRoom != null && nextRoom > 1 && line == ScanCopy.COACH_PAUSED -> between(nextRoom - 1, nextRoom)
-        line == ScanCopy.COACH_SCANNING -> scanning(scope)
-        line == ScanCopy.COACH_NOTHING_NEW -> nothingNew(scope)
-        else -> line
+    @Suppress("LongParameterList") // one input per thing the line can say
+    fun coaching(
+        scope: ScanScope,
+        line: String?,
+        nextRoom: Int? = null,
+        walls: Int? = null,
+        turn: ScanTurn? = null,
+        done: Boolean = false,
+    ): String? {
+        val found = walls ?: -1
+        val rooms = found >= 0 && scope.hasFloorPlan
+        return when {
+            nextRoom != null && nextRoom > 1 && line == ScanCopy.COACH_PAUSED -> between(nextRoom - 1, nextRoom)
+            rooms && done && (line == ScanCopy.COACH_SCANNING || line == ScanCopy.COACH_STILL) -> ScanCopy.ROOM_DONE
+            line == ScanCopy.COACH_SCANNING && rooms && turn != null && found >= 1 -> ScanCopy.turnHint(turn)
+            line == ScanCopy.COACH_SCANNING && rooms -> ScanCopy.wallGuide(found)
+            line == ScanCopy.COACH_SCANNING -> scanning(scope)
+            line == ScanCopy.COACH_NOTHING_NEW && rooms && found < ScanGuide.ROOM_WALLS -> ScanCopy.COACH_BLANK_WALL
+            line == ScanCopy.COACH_NOTHING_NEW -> nothingNew(scope)
+            else -> line
+        }
     }
 
     // Whole home (#4647): the room's review, the pause between rooms, and the summary.

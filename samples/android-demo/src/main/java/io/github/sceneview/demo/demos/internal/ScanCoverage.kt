@@ -66,6 +66,32 @@ internal class CoverageGrid(
         return grew
     }
 
+    /**
+     * Covers every cell [points]' first [count] surfels fill with [minPoints] or more, in one pass
+     * and without remembering the points: the live dense cloud is a whole new snapshot each time,
+     * not a prefix of the last, so [update]'s prefix would bin the wrong points (#4540 live walls —
+     * the live figure froze at the feature map's 12,000-point cap while the dense cloud still
+     * grew). A cell once covered stays covered. Returns `true` when a cell became covered.
+     */
+    fun cover(points: FloatArray, count: Int = points.size / 3): Boolean {
+        val total = count.coerceIn(0, points.size / 3)
+        val local = HashMap<Long, Int>()
+        var grew = false
+        for (i in 0 until total) {
+            val cx = cellOf(points[i * 3])
+            val cz = cellOf(points[i * 3 + 2])
+            val key = key(cx, cz)
+            val n = (local[key] ?: 0) + 1
+            local[key] = n
+            if (n == minPoints && coveredCells.add(key)) {
+                include(cx, cz)
+                grew = true
+            }
+        }
+        if (grew) version++
+        return grew
+    }
+
     fun reset() {
         counts.clear()
         coveredCells.clear()
@@ -205,12 +231,14 @@ internal class CoverageGrid(
  * - [Line.Slower] — the phone moves faster than [MAX_SPEED_M_PER_S]; depth does not keep up.
  * - [Line.NothingNew] — moving, yet no cell became covered for [STALL_SECONDS]: the surfaces are
  *   too close, too far, or it is pointed at nothing.
+ * - [Line.Still] — standing still and nothing new for [STILL_SECONDS]: the scan waits for the
+ *   phone to move (#4540 — "0 points" sat frozen for a minute with nothing said).
  *
  * A line holds [holdSeconds] once shown so it can be read, and goes when its cause has gone.
  */
 class ScanCoach(private val holdSeconds: Float = HOLD_SECONDS) {
 
-    enum class Line { Slower, NothingNew }
+    enum class Line { Slower, NothingNew, Still }
 
     /** The line to show now, `null` for none. */
     var line: Line? = null
@@ -255,6 +283,7 @@ class ScanCoach(private val holdSeconds: Float = HOLD_SECONDS) {
         val wanted = when {
             speed > MAX_SPEED_M_PER_S -> Line.Slower
             speed > MOVING_M_PER_S && time - grewAt > STALL_SECONDS -> Line.NothingNew
+            time - grewAt > STILL_SECONDS -> Line.Still
             else -> null
         }
         val held = line != null && !shownAt.isNaN() && time - shownAt < holdSeconds
@@ -285,6 +314,9 @@ class ScanCoach(private val holdSeconds: Float = HOLD_SECONDS) {
 
         /** Moving this long without a new cell is pointing at nothing. */
         const val STALL_SECONDS = 3f
+
+        /** Still this long with nothing new, the scan is waiting on the phone to move. */
+        const val STILL_SECONDS = 5f
 
         /** The speed's time constant: a hand's tremor out, a stride in. */
         const val SMOOTHING_SECONDS = 0.5f

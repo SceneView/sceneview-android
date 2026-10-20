@@ -58,9 +58,11 @@ class ArDebugSession(initial: ArDebugTrace = ArDebugTrace()) {
      */
     fun count(frame: ArDebugFrame, points: Int = frame.mapPointCount, floorY: Float? = null) {
         val counted = ArDebugStats.of(frame, trace.duration, points)
-        stats = if (floorY == null) counted else counted.copy(room = RoomMeasure.of(frame.planes, floorY)?.let { room ->
-            room.scanSummary(Locale.getDefault())
-        })
+        // No room's area before two walls are seen (#4540): one wall and the floor named a room
+        // that was only the floor in front of it.
+        stats = if (floorY == null) counted else counted.copy(room = RoomMeasure.of(frame.planes, floorY)
+            ?.takeIf { PlaneWallSource.wallCount(frame.planes, floorY) >= MIN_ROOM_WALLS }
+            ?.scanSummary(Locale.getDefault()))
     }
 
     /**
@@ -144,6 +146,9 @@ class ArDebugSession(initial: ArDebugTrace = ArDebugTrace()) {
 
     companion object {
         private const val END_EPSILON_S = 0.05f
+
+        /** Walls seen before a room's area is named: one wall and a floor are not a room. */
+        const val MIN_ROOM_WALLS = 2
 
         /** How long a looping replay rests on its last frame before starting over. */
         const val LOOP_HOLD_S = 2.5f

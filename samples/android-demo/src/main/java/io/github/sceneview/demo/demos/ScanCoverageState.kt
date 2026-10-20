@@ -126,14 +126,31 @@ internal class ScanCoverageState {
     private var pathsVersion = -1
     private var extentVersion = -1
     private var floorKey = 0
+    private var lastSnapshot: FloatArray? = null
 
     /**
      * [dense] is a v2 scan's dense cloud (flat xyz), of which [denseCount] surfels are found by
      * [frame]'s time: it stands in for the feature points, as it does in the 3D view, so a scan whose
      * room is drawn from depth does not read `Floor 0 % covered` under that room (#4619).
+     * [snapshot] is a live depth scan's dense cloud as it stands ([snapshotCount] surfels), each
+     * new one binned once on top of the feature points ([CoverageGrid.cover]): live and replay
+     * then count the same depth points.
      */
-    fun observe(frame: ArDebugFrame, dense: FloatArray? = null, denseCount: Int = 0, pose: DebugPose? = frame.camera) {
-        val grew = if (dense != null) grid.update(dense, denseCount) else grid.update(frame.mapPoints)
+    fun observe(
+        frame: ArDebugFrame,
+        dense: FloatArray? = null,
+        denseCount: Int = 0,
+        pose: DebugPose? = frame.camera,
+        snapshot: FloatArray? = null,
+        snapshotCount: Int = 0,
+    ) {
+        var grew = if (dense != null) grid.update(dense, denseCount) else grid.update(frame.mapPoints)
+        // A live depth scan's dense cloud, a new snapshot every few seconds (#4540): the feature
+        // map alone stops at its cap, and the figure froze while the cloud kept growing.
+        if (snapshot != null && snapshot !== lastSnapshot) {
+            lastSnapshot = snapshot
+            grew = grid.cover(snapshot, snapshotCount) || grew
+        }
         coachLine = coach.update(frame.time, frame.camera, grew)
         // [pose] is the phone now: the trace's while it records, the live one while paused (#4718).
         val moved = pose != camera
@@ -391,7 +408,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawMap(
                         clipPath(floor) {
                             // Never over what is covered: a covered cell reads solid.
                             clipPath(cells, ClipOp.Difference) {
-                                drawHatch(extent, hatchStep / pxPerMetre, pxPerMetre / edgeWidth)
+                                drawHatch(extent, gridMetres(hatchStep / pxPerMetre), pxPerMetre / edgeWidth)
                             }
                         }
                         drawPath(
@@ -446,7 +463,12 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawTrail(
     drawPath(path, color, style = Stroke(width = width, cap = StrokeCap.Round, join = StrokeJoin.Round))
 }
 
-/** Diagonal hatching over [extent]'s box, [step] metres apart; the caller clips it to the floor. */
+/**
+ * The floor still to scan, as plan paper (#4540, "a dimensioned grid"): a square grid over
+ * [extent]'s box, [step] apart and anchored on whole multiples of it, so it stays put as the room
+ * grows; every [MAJOR_EVERY]th line a shade stronger, the way a plan marks its metres. The caller
+ * clips it to the floor.
+ */
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawHatch(
     extent: List<Pair<Float, Float>>,
     step: Float,
@@ -456,17 +478,30 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawHatch(
     val maxX = extent.maxOf { it.first }
     val minZ = extent.minOf { it.second }
     val maxZ = extent.maxOf { it.second }
-    val span = (maxX - minX) + (maxZ - minZ)
-    val color = ArOverlay.onScrimMuted.copy(alpha = HATCH_ALPHA)
+    val minor = ArOverlay.onScrimMuted.copy(alpha = HATCH_ALPHA)
+    val major = ArOverlay.onScrimMuted.copy(alpha = GRID_MAJOR_ALPHA)
     // One edge width wide, whatever the units the caller draws in.
     val width = 1f / unitsPerLine
-    var d = 0f
-    while (d <= span) {
-        // Lines at 45°: x + z = minX + minZ + d.
-        drawLine(color, Offset(minX + d, minZ), Offset(minX + d - span, minZ + span), strokeWidth = width)
-        d += step
+    var i = kotlin.math.floor(minX / step).toInt()
+    while (i * step <= maxX) {
+        val color = if (Math.floorMod(i, MAJOR_EVERY) == 0) major else minor
+        drawLine(color, Offset(i * step, minZ), Offset(i * step, maxZ), strokeWidth = width)
+        i++
+    }
+    var j = kotlin.math.floor(minZ / step).toInt()
+    while (j * step <= maxZ) {
+        val color = if (Math.floorMod(j, MAJOR_EVERY) == 0) major else minor
+        drawLine(color, Offset(minX, j * step), Offset(maxX, j * step), strokeWidth = width)
+        j++
     }
 }
+
+/**
+ * The map's grid pitch in metres: the coverage cell's, so each square is one cell to cover, or a
+ * metre when the map is drawn too small for cells to read ([minStep] metres apart at least).
+ */
+private fun gridMetres(minStep: Float): Float =
+    if (CoverageGrid.CELL_METRES >= minStep) CoverageGrid.CELL_METRES else GRID_MAJOR_METRES
 
 /** `112 dp`: the map reads a room at a glance and leaves the live view its middle. */
 private val ScanMapSize = Space.x4l + Space.md
@@ -494,7 +529,12 @@ private const val MARKER_MAX_RADIUS = 12f
 
 /** The marker's height in the map: below the middle, most of the map ahead of you. */
 private const val MARKER_HEIGHT = 0.7f
-private const val HATCH_ALPHA = 0.45f
+private const val HATCH_ALPHA = 0.3f
+
+/** The grid's metre lines: every fourth line of a 25 cm grid, a shade stronger. */
+private const val MAJOR_EVERY = 4
+private const val GRID_MAJOR_ALPHA = 0.6f
+private const val GRID_MAJOR_METRES = 1f
 private const val COVERED_ALPHA = 0.6f
 private const val LUMINANCE_MID = 0.5f
 private const val ARROW_TIP = 0.62f
