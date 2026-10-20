@@ -207,7 +207,7 @@ viewModelScope.launch(Dispatchers.IO) {
 
 ### ARCore Threading
 - \`Session.update()\` must run on the main thread (SceneView handles this via \`onSessionUpdated\`).
-- \`hitResult.createAnchor()\` is safe on the main thread (called from \`onTouchEvent\` which runs on main).
+- \`createAnchorOrNull()\` on an ARCore hit from \`frame.hitTest(event)\` is safe on the main thread (\`onTouchEvent\` runs on main).
 - Cloud anchor hosting/resolving is async — SceneView's \`CloudAnchorNode\` handles the callbacks correctly.
 `;
 
@@ -246,7 +246,7 @@ export const TROUBLESHOOTING_GUIDE = `# SceneView Troubleshooting Guide
 1. \`rememberModelInstance\` returns null while loading — are you null-checking it?
 2. Is the model path correct? Assets go in \`src/main/assets/models/\`
 3. Is \`scaleToUnits\` too small or too large? Try \`1.0f\`
-4. Is there a light in the scene? Add a directional light: \`LightNode(apply = { intensity(100_000.0f); direction(0f, -1f, 0f) })\`
+4. Is there a light in the scene? Add a directional light: \`LightNode(type = LightManager.Type.DIRECTIONAL, apply = { intensity(100_000.0f); direction(0f, -1f, 0f) })\`
 5. Is the camera pointing at the model? Default camera is at origin looking -Z
 
 ### AR Camera Feed Shows but No Planes Detected
@@ -280,7 +280,7 @@ export const TROUBLESHOOTING_GUIDE = `# SceneView Troubleshooting Guide
 - Reduce model polygon count (< 100K triangles)
 - Use KTX2 compressed textures (1024x1024 max)
 - Avoid per-frame allocations in \`onFrame\` callbacks
-- Disable post-processing if not needed: \`SceneView(postProcessing = false)\`
+- Lighten or disable post-processing if not needed: \`SceneView(renderQuality = RenderQuality.Performance)\`, or \`view.isPostProcessingEnabled = false\` on the Filament \`View\`
 - Profile with Android GPU Inspector
 
 ### High Memory Usage
@@ -575,14 +575,21 @@ ARSceneView(
 ### Tap-to-Place with Anchor
 \`\`\`kotlin
 var anchor by remember { mutableStateOf<Anchor?>(null) }
+var latestFrame by remember { mutableStateOf<Frame?>(null) }
 
 ARSceneView(
     engine = engine,
     modelLoader = modelLoader,
     planeRenderer = true,
-    onTouchEvent = { event, hitResult ->
-        if (event.action == MotionEvent.ACTION_UP && hitResult != null) {
-            anchor = hitResult.createAnchor()
+    onSessionUpdated = { _, frame -> latestFrame = frame },
+    onTouchEvent = { event, _ ->
+        // The callback's hitResult is a scene-node hit (io.github.sceneview.collision.HitResult),
+        // null on an empty plane and without createAnchor(): hit-test the latest ARCore Frame.
+        if (event.action == MotionEvent.ACTION_UP) {
+            latestFrame?.hitTest(event)
+                ?.firstOrNull { (it.trackable as? Plane)?.isPoseInPolygon(it.hitPose) == true }
+                ?.createAnchorOrNull()
+                ?.let { anchor = it }
         }
         true
     }

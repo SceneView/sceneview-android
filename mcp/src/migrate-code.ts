@@ -217,9 +217,9 @@ const MIGRATION_RULES: MigrationRule[] = [
     id: "replace-onTapArPlane",
     pattern: /\.onTapArPlane\s*\{/g,
     replacement:
-      "// .onTapArPlane removed — use ARSceneView(onTouchEvent = { hitResult, motionEvent ->",
+      "// .onTapArPlane removed — use ARSceneView(onSessionUpdated = { _, frame -> latestFrame = frame }, onTouchEvent = { motionEvent, _ ->",
     explanation:
-      "`.onTapArPlane` removed. Use `ARSceneView(onTouchEvent = { hitResult, motionEvent -> ... })` and call `hitResult.createAnchor()` yourself.",
+      "`.onTapArPlane` removed. Keep the latest `Frame` from `onSessionUpdated`, then in `ARSceneView(onTouchEvent = { motionEvent, _ -> ... })` call `latestFrame?.hitTest(motionEvent)?.firstOrNull()?.createAnchorOrNull()` (the callback's own hitResult is a scene-node hit, not an ARCore one).",
   },
 ];
 
@@ -323,7 +323,7 @@ export function migrateCode(code: string): MigrationResult {
   }
   if (code.includes("onTapArPlane")) {
     warnings.push(
-      "`onTapArPlane` callback removed. In 3.0, use `onTouchEvent` on `ARScene` and call `hitResult.createAnchor()` yourself."
+      "`onTapArPlane` callback removed. In 3.0, use `onTouchEvent` on `ARSceneView` and hit-test the latest ARCore `Frame` (`frame.hitTest(motionEvent)`), then `createAnchorOrNull()` on the result."
     );
   }
 

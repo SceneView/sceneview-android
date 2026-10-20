@@ -243,7 +243,7 @@ let node = try await ModelNode(asset)           // then display it
 | `CubeNode` | `GeometryNode.cube()` |
 | `SphereNode` | `GeometryNode.sphere()` |
 | `ShapeNode` | `ShapeNode(points:)` |
-| `LightNode(apply = { })` | `LightNode.directional()` |
+| `LightNode(type = LightManager.Type.DIRECTIONAL)` | `LightNode.directional()` |
 | `rememberEnvironment` | `.environment(.studio)` |
 | `CameraManipulator` | `CameraControls` |
 

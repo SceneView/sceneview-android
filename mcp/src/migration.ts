@@ -244,7 +244,7 @@ SceneView(
 - [ ] Replace \`TransformableNode\` → \`isEditable = true\`
 - [ ] Replace \`PlacementNode\` → \`AnchorNode\` + \`HitResultNode\`
 - [ ] Replace \`ViewRenderable\` → \`ViewNode\` with Compose lambda
-- [ ] Fix \`LightNode { … }\` → \`LightNode(apply = { … })\`
+- [ ] Fix \`LightNode { … }\` → \`LightNode(type = LightManager.Type.POINT, apply = { … })\` (\`type\` is required)
 - [ ] Remove manual \`engine.destroy()\` calls
 - [ ] Replace manual \`worldPosition\` in AR → \`AnchorNode\`
 - [ ] Replace \`ArFragment\` → \`ARSceneView()\` composable

@@ -41,6 +41,16 @@ object ArDebugLogWriter {
             put("kept", event.kept)
             put("total", event.total)
         }.toString()
+        is ArDebugEvent.FloorCells -> buildJsonObject {
+            put("t", event.nanos)
+            put("type", "floor_cells")
+            putJsonArray("cells") {
+                for (key in event.keys) {
+                    add(JsonPrimitive(CoverageGrid.cxOf(key)))
+                    add(JsonPrimitive(CoverageGrid.czOf(key)))
+                }
+            }
+        }.toString()
     }
 
     /** The whole log, one event per line. */

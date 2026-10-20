@@ -9,7 +9,7 @@ Get the demo app running on your device in under a minute.
 Clone the repo and run:
 
 ```bash
-git clone https://github.com/sceneview/sceneview.git
+git clone --filter=blob:none https://github.com/sceneview/sceneview.git
 cd sceneview
 ./tools/try-demo.sh
 ```
@@ -18,7 +18,7 @@ That's it. The script builds the demo app and installs it on your connected Andr
 
 !!! tip "Requirements"
     - Android device with **USB debugging** enabled
-    - **Java 17+** installed
+    - **JDK 21+** installed (the demo and the libraries it builds compile to Java 21)
     - **adb** on your PATH (comes with Android Studio)
     - Optional: Google's [`android` CLI](https://developer.android.com/tools/agents/android-cli)
       for JSON UI dumps and LF/CRLF-safe screenshots. **Not for installing** —
@@ -131,7 +131,7 @@ Filament rendering engine, optimized for mobile
 
 ```bash
 # Clone
-git clone https://github.com/sceneview/sceneview.git
+git clone --filter=blob:none https://github.com/sceneview/sceneview.git
 cd sceneview
 
 # Build just the demo
