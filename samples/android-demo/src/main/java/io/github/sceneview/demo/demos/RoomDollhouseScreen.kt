@@ -39,6 +39,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -78,10 +79,12 @@ import io.github.sceneview.demo.common.placement.PlacementCard
 import io.github.sceneview.demo.demos.internal.ArDebugOrbitCamera
 import io.github.sceneview.demo.demos.internal.DollhouseArControl
 import io.github.sceneview.demo.demos.internal.DollhouseCopy
+import io.github.sceneview.demo.demos.internal.DollhouseScale
 import io.github.sceneview.demo.demos.internal.DollhouseStage
 import io.github.sceneview.demo.demos.internal.RerunStoredSession
 import io.github.sceneview.demo.demos.internal.RoomDollhouse
 import io.github.sceneview.demo.demos.internal.ScanRoomStatus
+import io.github.sceneview.demo.demos.internal.dollhousePlace
 import io.github.sceneview.demo.demos.internal.dollhouseStage
 import io.github.sceneview.demo.demos.internal.scanRoomStatus
 import io.github.sceneview.demo.theme.LocalStageChrome
@@ -232,6 +235,24 @@ internal fun RoomDollhouseScreen(
         state.selectPlacement()
         state.scaleTo(1f)
     }
+    // The pinch runs continuously from a quarter of the tabletop scale up to real size, in both
+    // modes (#4731): it used to stop at 400 % of the miniature, a 1:16 room at 1:4.
+    val pinchRange = room?.fit?.let { DollhouseScale.pinchRange(it, realSize) }
+    SideEffect { if (pinchRange != null) state.scaleRange = pinchRange }
+    // How much the placed room is pinched: 1 outside AR, where nothing is.
+    val pinch = if (inRoom && state.hasPlacement) state.scaleFactor else 1f
+    // The height the placed room rests at, read off its placement; null until one stands.
+    var restY by remember(state) { mutableStateOf<Float?>(null) }
+    val place = room?.fit?.let { fit ->
+        dollhousePlace(
+            placed = inRoom && state.hasPlacement,
+            realSize = realSize,
+            absoluteScale = DollhouseScale.absolute(fit, realSize, pinch),
+            restY = restY,
+            floorY = state.floorHeight,
+            cameraY = state.cameraHeight,
+        )
+    }
     val pickSession = { picked: RerunStoredSession ->
         if (picked.id != session?.id) onPickSession(picked)
     }
@@ -272,17 +293,19 @@ internal fun RoomDollhouseScreen(
         // Held sideways, the pill above the dock would stand in the middle of the room's band:
         // the scale moves into the recording's chip, in the top end corner (#4527).
         peekHeader = if (fit != null && showsScale && !compactHeight) {
-            DollhouseCopy.peek(title, fit, realSize && inRoom)
+            DollhouseCopy.peek(title, fit, realSize && inRoom, pinch)
         } else null,
         onReset = if (inRoom) ::reset else null,
         // Which recording stands, by name and date, and the way to stand another.
         topOverlay = if (stage == DollhouseStage.InRoom || stage == DollhouseStage.Preview) {
             {
                 DollhouseRecordingChip(
+                    // Where the room stands, said only once it does, and only when it is known.
+                    place = if (inRoom) DollhouseCopy.place(place) else null,
                     title = session?.title ?: title,
                     origin = origin,
                     scale = if (fit != null && showsScale && compactHeight) {
-                        DollhouseCopy.size(fit, realSize && inRoom)
+                        DollhouseCopy.size(fit, realSize && inRoom, pinch)
                     } else null,
                     corner = compactHeight,
                     note = if (compactHeight && stage == DollhouseStage.Preview && !arAvailable) {
@@ -298,7 +321,7 @@ internal fun RoomDollhouseScreen(
             Text(DollhouseCopy.INTRO, style = MaterialTheme.typography.bodyMedium)
             if (fit != null && hasSurfaces) {
                 Text(
-                    text = DollhouseCopy.size(fit, realSize && inRoom),
+                    text = DollhouseCopy.size(fit, realSize && inRoom, pinch),
                     style = MaterialTheme.typography.titleSmall,
                     modifier = Modifier.padding(top = Space.sm),
                 )
@@ -448,9 +471,14 @@ internal fun RoomDollhouseScreen(
                         // centred on it, around the camera (DollhouseOrientation).
                         // At real size the room rests on the floor, not on the table the
                         // miniature stood on (#4720).
+                        val placedY = placement.pose.ty()
                         val drop = if (realSize) {
-                            RoomDollhouse.floorDrop(state.floorHeight, placement.pose.ty(), state.scaleFactor)
+                            RoomDollhouse.floorDrop(state.floorHeight, placedY, state.scaleFactor)
                         } else 0f
+                        // Where it rests, for the chip: the floor once it dropped to it. Read on
+                        // each placement and each finished drag (the phase recomposes this).
+                        val rests = if (drop != 0f) state.floorHeight else placedY
+                        SideEffect { if (state.phase != PlacementPhase.ADJUSTING) restY = rests }
                         Node(
                             position = Position(y = drop, z = orientation.offsetZ(realSize, scale)),
                             rotation = Rotation(y = orientation.yawDegrees),
@@ -481,11 +509,12 @@ internal fun RoomDollhouseScreen(
 }
 
 /**
- * The recording on the table, by name and date, on glass: a tap lists every kept recording,
+ * The recording, by name and date, on glass, under where it stands ([place], when known): a tap lists every kept recording,
  * newest first, with how many surfaces each kept — picking one stands it instead.
  */
 @Composable
 private fun DemoTopOverlayScope.DollhouseRecordingChip(
+    place: String?,
     title: String,
     origin: String?,
     choices: List<LandingSession>,
@@ -515,11 +544,14 @@ private fun DemoTopOverlayScope.DollhouseRecordingChip(
             horizontalArrangement = Arrangement.spacedBy(Space.sm),
         ) {
             Column(modifier = Modifier.weight(1f, fill = false)) {
-                Text(
-                    text = DollhouseCopy.ON_THE_TABLE,
-                    style = Type.caption.copy(color = chrome.onGlassMuted),
-                    maxLines = 1,
-                )
+                if (place != null) {
+                    Text(
+                        text = place,
+                        style = Type.caption.copy(color = chrome.onGlassMuted),
+                        maxLines = 1,
+                        modifier = Modifier.testTag(DOLLHOUSE_PLACE_TAG),
+                    )
+                }
                 Text(
                     text = title,
                     style = Type.card.copy(color = chrome.onGlass),
@@ -687,3 +719,4 @@ internal const val DOLLHOUSE_NO_SURFACES_TAG = "ar_rerun_dollhouse_no_surfaces"
 internal const val DOLLHOUSE_RECORDING_TAG = "ar_rerun_dollhouse_recording"
 internal const val DOLLHOUSE_CHOICE_TAG = "ar_rerun_dollhouse_choice"
 internal const val DOLLHOUSE_PREVIEW_TAG = "ar_rerun_dollhouse_preview"
+internal const val DOLLHOUSE_PLACE_TAG = "ar_rerun_dollhouse_place"

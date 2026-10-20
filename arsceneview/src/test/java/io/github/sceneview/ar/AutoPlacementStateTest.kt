@@ -573,4 +573,49 @@ class AutoPlacementStateTest {
         state.onFloor(null)
         assertEquals("a floor lost for a while keeps its height", -1.42f, state.floorHeight)
     }
+
+    @Test
+    fun `the camera height follows the phone in steps, not every frame`() {
+        val state = AutoPlacementState()
+        assertEquals(null, state.cameraHeight)
+        state.onCamera(0.10f)
+        assertEquals(0.10f, state.cameraHeight)
+        state.onCamera(0.13f)
+        assertEquals("three centimetres is a hand's sway", 0.10f, state.cameraHeight)
+        state.onCamera(-0.50f)
+        assertEquals("crouching moves it", -0.50f, state.cameraHeight)
+        state.onCamera(null)
+        state.onCamera(Float.NaN)
+        assertEquals(-0.50f, state.cameraHeight)
+    }
+
+    // ── The scale range ───────────────────────────────────────────────────────────────
+
+    @Test
+    fun `scaleTo clamps to the scale range, 25 to 400 percent by default`() {
+        val state = AutoPlacementState()
+        val scales = mutableListOf<Float>()
+        state.scaleAction = { scales += it }
+        state.requestPlacement()
+        state.onFrame(FrameInput(0, true, true)) { true }
+        state.selectPlacement()
+        assertEquals(0.25f..4f, state.scaleRange)
+        state.scaleTo(9f)
+        // A 1:16 miniature that may grow up to real size (#4731).
+        state.scaleRange = 0.25f..16f
+        state.scaleTo(9f)
+        state.scaleTo(40f)
+        assertEquals(listOf(4f, 9f, 16f), scales)
+    }
+
+    @Test
+    fun `an unusable scale range falls back to the default one`() {
+        val state = AutoPlacementState()
+        state.scaleRange = 0f..2f
+        assertEquals(0.25f..4f, state.usableScaleRange)
+        state.scaleRange = 0.5f..Float.POSITIVE_INFINITY
+        assertEquals(0.25f..4f, state.usableScaleRange)
+        state.scaleRange = 0.01f..1f
+        assertEquals(0.01f..1f, state.usableScaleRange)
+    }
 }
