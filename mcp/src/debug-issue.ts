@@ -169,7 +169,7 @@ fun DebugModelViewer() {
 5. **Objects not appearing on tap?**
    - Is \`onTouchEvent\` wired up?
    - Is \`hitResult\` null? Log it: \`Log.d("AR", "hitResult: $hitResult")\`
-   - Are you creating an anchor? \`hitResult.createAnchor()\` must be called.
+   - Are you creating an anchor? The \`hitResult\` passed to \`onTouchEvent\` is a scene-node hit with no \`createAnchor()\`: hit-test the latest ARCore \`Frame\` (\`frame.hitTest(event)\`) and call \`createAnchorOrNull()\` on the plane hit.
    - Is the model loaded? Check \`rememberModelInstance\` is not null.
 
 6. **Anchor drift / objects moving?**
@@ -297,7 +297,7 @@ fun DebugModelViewer() {
 | Too many draw calls | Merge meshes in 3D editor (1 material = 1 draw call) |
 | Per-frame allocations | Reuse objects in \`onFrame\`, avoid creating Position/Rotation each frame |
 | Multiple engines | Use single \`rememberEngine()\`, never create multiple |
-| Post-processing enabled | Disable if not needed: \`SceneView(postProcessing = false)\` |
+| Post-processing enabled | Lighten or disable if not needed: \`SceneView(renderQuality = RenderQuality.Performance)\`, or \`view.isPostProcessingEnabled = false\` |
 | Shadow-casting lights | Each shadow light = extra depth pass. Limit to 1-2. |
 
 #### High Memory (>500MB)
@@ -433,7 +433,7 @@ SceneView(
     onFrame = { Log.d("SV", "Frame rendered") } // If not logged, SceneView isn't rendering
 ) {
     // Minimal visible content
-    CubeNode(engine = engine, size = 1.0f)
+    CubeNode(size = Size(1.0f))
     LightNode(type = LightManager.Type.DIRECTIONAL, apply = { intensity(100_000f) })
 }
 \`\`\``,
@@ -504,7 +504,7 @@ SceneView(
 1. Check \`hitResult\` is not null — log it.
 2. Ensure plane detection is enabled: \`planeFindingMode = HORIZONTAL_AND_VERTICAL\`.
 3. Plane renderer helps user see where planes are: \`planeRenderer = true\`.
-4. Create anchor from hit: \`hitResult.createAnchor()\`.
+4. Create the anchor from an ARCore hit: \`latestFrame?.hitTest(event)?.firstOrNull()?.createAnchorOrNull()\` (the \`onTouchEvent\` \`hitResult\` is a scene-node hit).
 
 ### Camera Orbit Not Working
 
@@ -665,13 +665,16 @@ SceneView(
 
 For smooth node transforms (not skeletal animation):
 \`\`\`kotlin
-// Use SmoothTransform from sceneview-core
+// ModelNode has no smoothing parameter: keep a reference to the node and ask it to
+// interpolate. Don't also pass \`position\` — the composable assigns it directly.
+var shipNode by remember { mutableStateOf<io.github.sceneview.node.Node?>(null) }
 ModelNode(
     modelInstance = instance,
-    // Position changes are smoothly interpolated
-    position = targetPosition,
-    smoothSpeed = 5.0f
+    apply = { shipNode = this }
 )
+LaunchedEffect(shipNode, targetPosition) {
+    shipNode?.transform(position = targetPosition, smooth = true, smoothSpeed = 5.0f)
+}
 \`\`\`
 
 ### Common Animation Issues
