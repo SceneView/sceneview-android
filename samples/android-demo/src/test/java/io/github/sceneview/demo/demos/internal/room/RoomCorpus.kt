@@ -4,8 +4,10 @@ import io.github.sceneview.demo.demos.internal.ArDebugTrace
 import io.github.sceneview.demo.demos.internal.DenseCloud
 import io.github.sceneview.demo.demos.internal.FakeRerunImageCodec
 import io.github.sceneview.demo.demos.internal.OpenedCapture
+import io.github.sceneview.demo.demos.internal.RerunCapturePack
 import io.github.sceneview.demo.demos.internal.RerunRrdReader
 import io.github.sceneview.demo.demos.internal.RerunScanFile
+import io.github.sceneview.demo.demos.internal.RerunSessionStore
 import io.github.sceneview.demo.demos.internal.RoomMeasure
 import io.github.sceneview.demo.demos.internal.RoomSurvey
 import io.github.sceneview.demo.demos.internal.RoomSurveyor
@@ -40,9 +42,10 @@ class CorpusResult(
 )
 
 /**
- * Runs the room engine over a folder of recordings (`*.svscan`, `*.rrd`), read with the app's own
- * readers, and writes for each scan `<name>.json` (its figures, before and after) and `<name>.png`
- * (the plan from above), plus `summary.json` for the whole folder.
+ * Runs the room engine over a folder of recordings (`*.svscan`, `*.rrd`, or a kept session's
+ * directory as the app stores it — `capture-manifest.json` and its two siblings, named after the
+ * session), read with the app's own readers, and writes for each scan `<name>.json` (its figures,
+ * before and after) and `<name>.png` (the plan from above), plus `summary.json` for the whole folder.
  */
 object RoomCorpus {
     private const val LIVE_WARMUP = 30
@@ -55,7 +58,7 @@ object RoomCorpus {
     fun run(corpus: File, out: File): List<CorpusResult> {
         out.mkdirs()
         val files = corpus.walkTopDown()
-            .filter { it.isFile && (it.extension == "svscan" || it.extension == "rrd") }
+            .filter { isScanFile(it) || isSessionDirectory(it) }
             .sortedBy { it.path }
             .toList()
         val results = files.map { file ->
@@ -70,7 +73,13 @@ object RoomCorpus {
         return results
     }
 
+    private fun isScanFile(file: File) = file.isFile && (file.extension == "svscan" || file.extension == "rrd")
+
+    private fun isSessionDirectory(file: File) = file.isDirectory && File(file, RerunCapturePack.MANIFEST).isFile
+
     private fun open(file: File): OpenedCapture? {
+        // A kept session: read the way the app reads its own sessions back.
+        if (file.isDirectory) return RerunSessionStore(file.absoluteFile.parentFile).capture(file.name)?.open()
         val data = file.readBytes()
         return when (file.extension) {
             "rrd" -> RerunRrdReader.recording(data, FakeRerunImageCodec).pack.open()

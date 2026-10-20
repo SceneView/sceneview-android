@@ -33,7 +33,8 @@ import kotlin.math.abs
  *   ./gradlew :samples:android-demo:testDebugUnitTest --rerun --tests '*RoomStructureCorpusTest*'
  * ```
  *
- * Each `*.svscan` or `*.rrd` gets `<name>.json` (area, height, perimeter, walls with their lengths
+ * Each `*.svscan`, `*.rrd` or kept session directory (the app's `rerun/sessions/<id>/`, pulled from a
+ * phone) gets `<name>.json` (area, height, perimeter, walls with their lengths
  * and whether each was seen or deduced, openings; the old measures' figures beside the engine's;
  * timings) and `<name>.png` (the plan from above). Without the two variables the real-scan test is
  * skipped; the synthetic one always runs the same path on a recording built here.
@@ -48,18 +49,13 @@ class RoomStructureCorpusTest {
         val out = System.getenv(OUT)
         assumeTrue("$CORPUS and $OUT not set", !corpus.isNullOrBlank() && !out.isNullOrBlank())
         val results = RoomCorpus.run(File(corpus!!), File(out!!))
-        assertTrue("no *.svscan or *.rrd under $corpus", results.isNotEmpty())
+        assertTrue("no *.svscan, *.rrd or session directory under $corpus", results.isNotEmpty())
     }
 
     @Test
     fun `the corpus runs end to end on a synthetic recording`() {
         val room = RoomStructureTest.OPENINGS
-        val capture = RoomStructureTest.capture("openings", room)
-        val lens = ReplayManifest.parse(String(FakeRerunImageCodec.showcase().manifest))!!.lens
-        val device = ScanDevice("android", "Pixel 9", ScanDevice.TIER_DEPTH, ScanDevice.SOURCE_RAW_DEPTH)
-        val pack = runBlocking {
-            RerunCaptureBuilder.build(eventsOf(capture), lens, emptyList(), device, capture.cloud, DenseFusion.VOXEL_M)
-        }
+        val pack = syntheticPack()
         val corpus = folder.newFolder("corpus")
         File(corpus, "synthetic-room.svscan").writeBytes(RerunScanFile.write(pack))
         val out = folder.newFolder("out")
@@ -83,6 +79,30 @@ class RoomStructureCorpusTest {
         val png = File(out, "synthetic-room.png").readBytes()
         assertTrue("a plan image", png.size > PlanCanvas.SIGNATURE.size && png.copyOf(PlanCanvas.SIGNATURE.size).contentEquals(PlanCanvas.SIGNATURE))
         assertEquals(1, Json.parseToJsonElement(File(out, "summary.json").readText()).jsonArray.size)
+    }
+
+    @Test
+    fun `a kept session directory reads like its scan file`() {
+        val pack = syntheticPack()
+        val corpus = folder.newFolder("corpus")
+        File(corpus, "room.svscan").writeBytes(RerunScanFile.write(pack))
+        val session = File(corpus, "sessions/0F1E2D3C").apply { mkdirs() }
+        for ((name, bytes) in pack.files()) File(session, name).writeBytes(bytes)
+
+        val results = RoomCorpus.run(corpus, folder.newFolder("out")).associateBy { it.name }
+
+        assertEquals(setOf("room", "0F1E2D3C"), results.keys)
+        val file = results.getValue("room").structure!!.area!!.value
+        val kept = results.getValue("0F1E2D3C").structure!!.area!!.value
+        assertEquals(file, kept, 1e-4f)
+    }
+
+    /** [RoomStructureTest.OPENINGS] recorded and built into a capture, as the phone keeps it. */
+    private fun syntheticPack() = runBlocking {
+        val capture = RoomStructureTest.capture("openings", RoomStructureTest.OPENINGS)
+        val lens = ReplayManifest.parse(String(FakeRerunImageCodec.showcase().manifest))!!.lens
+        val device = ScanDevice("android", "Pixel 9", ScanDevice.TIER_DEPTH, ScanDevice.SOURCE_RAW_DEPTH)
+        RerunCaptureBuilder.build(eventsOf(capture), lens, emptyList(), device, capture.cloud, DenseFusion.VOXEL_M)
     }
 
     /** The journal a phone would keep of [capture]: its walk, then the planes ARCore found. */
