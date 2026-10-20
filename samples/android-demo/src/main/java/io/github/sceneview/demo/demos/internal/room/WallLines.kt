@@ -108,11 +108,19 @@ internal class WallLine(
  * The walls of a scan, as lines: vertical surfels grouped by the way they face (a family per
  * direction, snapped square to the room when within a few degrees), then by how far along it
  * they stand. Two layers of one wall — a scan that drifted draws it twice — are one line; a face
- * seen lower than the wall behind it is furniture.
+ * seen lower than the wall behind it is furniture. A face seen only low, as a phone held towards
+ * the floor sees walls, is a wall when nothing stands behind it.
  */
 internal object WallLines {
-    /** A vertical face has to reach this high above the floor to be a wall and not furniture. */
+    /** A vertical face reaching this high above the floor is a wall, not furniture, unless the wall is seen behind it. */
     const val WALL_MIN_TOP_M = 1.3f
+
+    /**
+     * A vertical face seen only this high — a phone held towards the floor sees walls up to about
+     * 0.9 m — is a wall when nothing stands within [STRIP_M] behind it: a sofa's front has its
+     * seat and back there, a wall has the other side nobody saw.
+     */
+    const val LOW_WALL_MIN_TOP_M = 0.6f
 
     /** A wall is a line seen on more than this much of its length. */
     const val MIN_WALL_SEEN_M = 0.6f
@@ -155,6 +163,12 @@ internal object WallLines {
     private const val TOP_SHARE = 0.9f
     private const val OVERLAP_SHARE = 0.5f
     private const val MIN_HORIZONTAL = 0.5f
+    private const val LOW_BEHIND_FROM_M = 0.15f
+    private const val LOW_ALONG_M = 0.1f
+    private const val STANDING_FROM_M = 0.25f
+    private const val STANDING_TO_M = 2f
+    private const val BEHIND_SHARE = 4
+    private const val FACING_ALONG = 0.5f
 
     /** Reads the wall lines of [cloud] on [column]-wide columns; [minSupport] cells make a candidate. */
     @Suppress("LongMethod", "CyclomaticComplexMethod")
@@ -171,6 +185,7 @@ internal object WallLines {
         if (nVertical == 0) return emptyList()
         val families = familiesOf(cloud, vertical, nVertical)
         if (families.isEmpty()) return emptyList()
+        val standing = standingOf(cloud)
         // Each vertical surfel joins the family it faces, if any is near enough.
         val assigned = Array(families.size) { IntArrayList() }
         for (k in 0 until nVertical) {
@@ -192,10 +207,50 @@ internal object WallLines {
             val rad = families[f] * PI.toFloat() / HALF_TURN
             val nu = cos(rad).let { if (abs(it) < EPSILON) 0f else it }
             val nv = sin(rad).let { if (abs(it) < EPSILON) 0f else it }
-            candidates += linesOf(cloud, assigned[f].toArray(), f, nu, nv, column, minSupport)
+            candidates += linesOf(cloud, assigned[f].toArray(), f, nu, nv, column, minSupport, standing)
         }
-        val merged = mergeLayers(cloud, candidates, column)
-        return withoutFurniture(cloud, merged, column)
+        val merged = mergeLayers(cloud, candidates, column, standing)
+        return withoutFurniture(cloud, merged, column, standing)
+    }
+
+    /** What could stand behind a face seen low: surfels from [STANDING_FROM_M] to [STANDING_TO_M] above the floor. */
+    private fun standingOf(cloud: FrameCloud): IntArray {
+        val standing = IntArrayList()
+        for (i in 0 until cloud.count) if (cloud.h[i] in STANDING_FROM_M..STANDING_TO_M) standing.add(i)
+        return standing.toArray()
+    }
+
+    /**
+     * For each of [columns] columns of a line at [offset], how many [standing] surfels that are
+     * not its [members] stand from [LOW_BEHIND_FROM_M] to [STRIP_M] behind it, within
+     * [LOW_ALONG_M] along. A face running away from the line — the next wall at a corner — does
+     * not count: only a top, or a face turned the line's way.
+     */
+    @Suppress("LongParameterList")
+    private fun behindOf(
+        cloud: FrameCloud,
+        members: IntArray,
+        standing: IntArray,
+        nu: Float,
+        nv: Float,
+        offset: Float,
+        t0: Float,
+        column: Float,
+        columns: Int,
+    ): IntArray {
+        val behind = IntArray(columns)
+        val own = members.copyOf().also { it.sort() }
+        for (i in standing) {
+            val o = cloud.u[i] * nu + cloud.v[i] * nv
+            if (o > offset - LOW_BEHIND_FROM_M || o < offset - STRIP_M) continue
+            if (abs(cloud.ny[i]) <= RoomLevels.VERTICAL && abs(cloud.nu[i] * nu + cloud.nv[i] * nv) < FACING_ALONG) continue
+            val t = cloud.u[i] * -nv + cloud.v[i] * nu
+            val k0 = max(0, floor((t - LOW_ALONG_M - t0) / column).toInt())
+            val k1 = min(columns - 1, floor((t + LOW_ALONG_M - t0) / column).toInt())
+            if (k0 > k1 || own.binarySearch(i) >= 0) continue
+            for (k in k0..k1) behind[k]++
+        }
+        return behind
     }
 
     /** The directions the walls face, in degrees of the room's frame: the peaks of the vertical surfels' azimuths. */
@@ -275,6 +330,7 @@ internal object WallLines {
         nv: Float,
         column: Float,
         minSupport: Int,
+        standing: IntArray,
     ): List<WallLine> {
         if (members.isEmpty()) return emptyList()
         val o = FloatArray(members.size)
@@ -336,11 +392,15 @@ internal object WallLines {
             }
             if (best >= 0) groups[best].add(members[k])
         }
-        return groups.mapNotNull { lineOf(cloud, it.toArray(), family, nu, nv, column, null) }
+        return groups.mapNotNull { lineOf(cloud, it.toArray(), family, nu, nv, column, null, standing) }
     }
 
-    /** A line from its surfels: where they stand, how they spread, which columns they cover and how high. */
-    @Suppress("LongParameterList")
+    /**
+     * A line from its surfels: where they stand, how they spread, which columns they cover and how
+     * high. A column is seen up to [WALL_MIN_TOP_M]; one seen only from [LOW_WALL_MIN_TOP_M] is
+     * when less than a [BEHIND_SHARE]th of its own surfels of [standing] stand behind it.
+     */
+    @Suppress("LongParameterList", "CyclomaticComplexMethod")
     fun lineOf(
         cloud: FrameCloud,
         members: IntArray,
@@ -349,14 +409,17 @@ internal object WallLines {
         nv: Float,
         column: Float,
         keep: ((Int) -> Boolean)?,
+        standing: IntArray? = null,
     ): WallLine? {
         if (members.isEmpty()) return null
         var tMin = Float.POSITIVE_INFINITY
         var tMax = Float.NEGATIVE_INFINITY
+        var offsetSum = 0.0
         for (i in members) {
             val t = cloud.u[i] * -nv + cloud.v[i] * nu
             tMin = min(tMin, t)
             tMax = max(tMax, t)
+            offsetSum += cloud.u[i] * nu + cloud.v[i] * nv
         }
         val t0 = floor(tMin / column) * column
         val columns = ((tMax - t0) / column).toInt() + 1
@@ -367,8 +430,16 @@ internal object WallLines {
             counts[k]++
             tops[k] = max(tops[k], cloud.h[i])
         }
+        val low = { k: Int -> counts[k] >= MIN_COLUMN_SURFELS && tops[k] >= LOW_WALL_MIN_TOP_M && tops[k] < WALL_MIN_TOP_M }
+        val behind = if (standing != null && (0 until columns).any(low)) {
+            behindOf(cloud, members, standing, nu, nv, (offsetSum / members.size).toFloat(), t0, column, columns)
+        } else {
+            null
+        }
         val seen = BooleanArray(columns) {
-            counts[it] >= MIN_COLUMN_SURFELS && tops[it] >= WALL_MIN_TOP_M && (keep == null || keep(it))
+            val wall = tops[it] >= WALL_MIN_TOP_M ||
+                behind != null && low(it) && behind[it] < max(MIN_COLUMN_SURFELS, counts[it] / BEHIND_SHARE)
+            counts[it] >= MIN_COLUMN_SURFELS && wall && (keep == null || keep(it))
         }
         val kept = IntArrayList()
         var sum = 0.0
@@ -391,7 +462,7 @@ internal object WallLines {
 
     /** Two layers of one wall, close and side by side and as high as each other, are one line. */
     @Suppress("NestedBlockDepth")
-    private fun mergeLayers(cloud: FrameCloud, lines: List<WallLine>, column: Float): List<WallLine> {
+    private fun mergeLayers(cloud: FrameCloud, lines: List<WallLine>, column: Float, standing: IntArray): List<WallLine> {
         val parent = IntArray(lines.size) { it }
         fun root(i: Int): Int {
             var r = i
@@ -414,7 +485,7 @@ internal object WallLines {
             if (group.size == 1) return@mapNotNull lines[group[0]]
             val first = lines[group[0]]
             val members = group.flatMap { lines[it].members.asList() }.sorted().toIntArray()
-            lineOf(cloud, members, first.family, first.nu, first.nv, column, null)
+            lineOf(cloud, members, first.family, first.nu, first.nv, column, null, standing)
         }
     }
 
@@ -423,7 +494,7 @@ internal object WallLines {
      * behind it (within [STRIP_M]) by [FURNITURE_UNDER_M] — a wardrobe's front before the wall
      * seen over it. A line left with too little of it seen is no wall.
      */
-    private fun withoutFurniture(cloud: FrameCloud, lines: List<WallLine>, column: Float): List<WallLine> {
+    private fun withoutFurniture(cloud: FrameCloud, lines: List<WallLine>, column: Float, standing: IntArray): List<WallLine> {
         val result = ArrayList<WallLine>()
         for (line in lines) {
             val behind = lines.filter {
@@ -433,13 +504,13 @@ internal object WallLines {
             val kept = if (behind.isEmpty()) {
                 line
             } else {
-                lineOf(cloud, line.members, line.family, line.nu, line.nv, column) { k ->
+                lineOf(cloud, line.members, line.family, line.nu, line.nv, column, { k ->
                     val t = line.t0 + (k + HALF) * column
                     behind.none { other ->
                         val j = floor((t - other.t0) / column).toInt()
                         j in other.seen.indices && other.seen[j] && other.tops[j] > line.tops[k] + FURNITURE_UNDER_M
                     }
-                }
+                }, standing)
             } ?: continue
             if (kept.seen.count { it } * column > MIN_WALL_SEEN_M + column / 2) result += kept
         }

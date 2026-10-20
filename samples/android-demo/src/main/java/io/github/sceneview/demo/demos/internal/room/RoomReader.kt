@@ -37,6 +37,10 @@ internal object RoomReader {
     private const val RUN_SIN = 0.05f
     private const val RUN_M = 0.3f
 
+    /** Parallel planes closer than this, facing the same way, are one wall: a scan that drifted draws a wall twice. */
+    private const val SAME_WALL_M = 0.1f
+    private const val SAME_WALL_FACING = 0.94f
+
     /**
      * Nothing is read farther than this from the scan's origin: a stray value — a fusion's
      * overflow, a pose gone wild — would otherwise size a histogram or a raster.
@@ -287,7 +291,7 @@ internal object RoomReader {
         val members = BooleanArray(cloud.count)
         for (line in lines) for (i in line.members) members[i] = true
         val outline = RoomOutline.of(cloud, lines, trailU, trailV, floor.thickness, cell, members)
-            ?: return RoomStructure.empty(RoomGap.NoWalls, floor.y, floor.thickness)
+            ?: return RoomStructure.empty(RoomGap.NoWalls, floor.y, floor.thickness, ceiling { _, _ -> true })
         val raster = outline.raster
         val height = if (full) {
             ceiling { u, v ->
@@ -382,7 +386,11 @@ internal object RoomReader {
             )
         }
         val rough = seen.any { !it }
-        val measured = seen.count { it } >= RoomStructure.MIN_SEEN_WALLS
+        // The figures need the room closed by walls: each side seen, or deduced between two seen
+        // ones — and at least [RoomStructure.MIN_SEEN_WALLS] distinct walls, one wall seen twice
+        // counting once.
+        val closed = (0 until n).all { seen[it] || seen[(it + n - 1) % n] && seen[(it + 1) % n] }
+        val measured = closed && distinctWalls(outline.sides, seen) >= RoomStructure.MIN_SEEN_WALLS
         val area = abs(RoomOutline.signedArea(outline.u, outline.v))
         var areaSpread = 0f
         for (i in 0 until n) areaSpread += reads[i].length * spread[i]
@@ -415,6 +423,20 @@ internal object RoomReader {
                 RoomGap.Ceiling.takeIf { height == null },
             ),
         )
+    }
+
+    /** How many distinct walls the [seen] sides stand on: two sides on one line, or on parallel lines closer than [SAME_WALL_M], are one. */
+    private fun distinctWalls(sides: List<Side>, seen: BooleanArray): Int {
+        val walls = ArrayList<WallLine>()
+        for (i in sides.indices) {
+            val line = sides[i].line ?: continue
+            if (!seen[i]) continue
+            val known = walls.any {
+                it === line || it.nu * line.nu + it.nv * line.nv >= SAME_WALL_FACING && abs(it.offset - line.offset) < SAME_WALL_M
+            }
+            if (!known) walls += line
+        }
+        return walls.size
     }
 
     /**

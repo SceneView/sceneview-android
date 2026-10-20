@@ -47,7 +47,8 @@ internal class Outline(
 /**
  * Where the room is, and the polygon that bounds it. The walls are drawn as barriers on a raster
  * of the floor; the room is what the camera's path reaches over seen floor without crossing a
- * wall, with every place no way from outside reaches; its edge is then read side by side off the
+ * wall — from the seen floor nearest to it where the floor under the camera was not seen — with
+ * every place no way from outside reaches; its edge is then read side by side off the
  * walls it runs along. A side no wall was seen along is deduced: closed where the floor was seen
  * to end, in the room's directions when one fits.
  */
@@ -83,6 +84,9 @@ internal object RoomOutline {
     private const val MAX_STEPS = 4_000_000
     private const val UNLABELED = -1
     private const val DEGENERATE_M = 0.05f
+
+    /** A step of the camera's path over unseen floor looks this far for the seen floor nearest to it. */
+    private const val NEAREST_FLOOR_M = 3f
 
     /**
      * The outline of the room in [cloud] bounded by [lines], on [cell]-metre cells; `null` when
@@ -249,8 +253,13 @@ internal object RoomOutline {
         return Raster(minU, minV, cell, nu, nv)
     }
 
-    /** The cells of the room's inside: the component of passable floor that holds most of the camera's path. */
-    @Suppress("ReturnCount", "CyclomaticComplexMethod")
+    /**
+     * The cells of the room's inside: the component of passable floor that holds most of the
+     * camera's path. A phone sees the floor ahead of it, seldom the floor under it: a step over
+     * floor not seen votes for the seen floor nearest to it, within [NEAREST_FLOOR_M] and without
+     * crossing a wall.
+     */
+    @Suppress("ReturnCount", "CyclomaticComplexMethod", "LongMethod", "NestedBlockDepth")
     private fun insideOf(
         raster: Raster,
         evidence: BooleanArray,
@@ -284,9 +293,68 @@ internal object RoomOutline {
             components++
         }
         if (seeds.isNotEmpty()) {
+            val stray = ArrayList<Int>()
             for (s in seeds) {
+                if (!evidence[s]) {
+                    stray += s
+                    continue
+                }
                 if (label[s] < 0) flood(s)
                 votes[label[s]] = votes[label[s]] + 1
+            }
+            if (stray.isNotEmpty()) {
+                // One search from every stray step at once, each cell held by the step nearest to it.
+                val origin = IntArray(n) { -1 }
+                val search = IntArray(n)
+                val steps = ArrayList<Int>()
+                val weight = ArrayList<Int>()
+                var head = 0
+                var tail = 0
+                for (s in stray) {
+                    if (origin[s] < 0) {
+                        origin[s] = steps.size
+                        steps += s
+                        weight += 0
+                        search[tail++] = s
+                    }
+                    weight[origin[s]] = weight[origin[s]] + 1
+                }
+                val voted = BooleanArray(steps.size)
+                val reach = (NEAREST_FLOOR_M / raster.cell).toInt()
+                var depth = 0
+                var layerEnd = tail
+                var any = false
+                while (head < tail) {
+                    if (head == layerEnd) {
+                        depth++
+                        layerEnd = tail
+                        if (depth > reach) break
+                    }
+                    val k = search[head++]
+                    val o = origin[k]
+                    if (evidence[k]) {
+                        if (!voted[o]) {
+                            voted[o] = true
+                            any = true
+                            if (label[k] < 0) flood(k)
+                            votes[label[k]] = votes[label[k]] + weight[o]
+                        }
+                        continue
+                    }
+                    forNeighbours(raster, k) { m ->
+                        if (origin[m] < 0 && !barrier[m]) {
+                            origin[m] = o
+                            search[tail++] = m
+                        }
+                    }
+                }
+                // No seen floor near the path at all: each stray step stands on its own.
+                if (!any) {
+                    for (s in stray) {
+                        if (label[s] < 0) flood(s)
+                        votes[label[s]] = votes[label[s]] + 1
+                    }
+                }
             }
         } else {
             for (k in 0 until n) if (label[k] < 0 && evidence[k] && !barrier[k]) flood(k)

@@ -11,8 +11,9 @@ package io.github.sceneview.demo.demos.internal.room
  *
  * What the scan did not see is not invented. A wall the scan never saw is "deduced": the outline
  * is closed along where the floor was seen to end, the wall marked as such, and every figure it
- * bounds an estimate. Under [RoomStructure.MIN_SEEN_WALLS] seen walls no figure is given at all:
- * what is left is an indicative plan.
+ * bounds an estimate. A figure is given only when the walls close the room — each side seen, or
+ * deduced between two seen ones — on at least [RoomStructure.MIN_SEEN_WALLS] distinct walls (one
+ * wall seen twice counts once); otherwise what is left is an indicative plan.
  */
 
 /** A scan as the engine reads it: the dense cloud's surfels (a normal per point), the camera's path, ARCore's planes. */
@@ -105,7 +106,8 @@ enum class RoomGap {
 
 /**
  * The structure of one room. [walls] is its outline in order, the room on each wall's normal
- * side — empty when no wall was seen. Every figure is `null` under [MIN_SEEN_WALLS] seen walls
+ * side — empty when no wall was seen. Every figure is `null` unless the walls close the room —
+ * each side seen, or deduced between two seen ones — on at least [MIN_SEEN_WALLS] distinct walls
  * ([gaps] says what is missing); [ceilingHeight] is `null` when the ceiling was not seen.
  *
  * @property floorY the floor's height in the scan's frame, [floorThickness] how thick its layer of surfels is.
@@ -130,7 +132,7 @@ class RoomStructure(
     /** How many walls of the outline were seen. */
     val seenWalls: Int get() = walls.count { it.seen }
 
-    /** The figures a room is sold on are given: at least [MIN_SEEN_WALLS] walls were seen. */
+    /** The figures a room is sold on are given: its walls close it, on at least [MIN_SEEN_WALLS] distinct walls. */
     val measured: Boolean get() = area != null
 
     /** The doors and windows of every wall. */
@@ -140,7 +142,7 @@ class RoomStructure(
     fun mesh(): StructureMesh = StructureMesh.of(this)
 
     companion object {
-        /** Under this many seen walls, no figure is given: the outline is an indicative plan. */
+        /** Under this many distinct seen walls, no figure is given: the outline is an indicative plan. */
         const val MIN_SEEN_WALLS = 2
 
         /** A wall seen on less than this share of its length is not seen: its length is an estimate. */
@@ -177,7 +179,7 @@ class LiveRoomWall(
 /**
  * What [RoomStructure.live] reads: the walls seen so far and the outline they suggest
  * ([outline], `x, z` per corner in the scan's frame; empty while there is none), with its area
- * once [RoomStructure.MIN_SEEN_WALLS] walls are seen. [millis] is how long the reading took.
+ * once the walls seen close the room, as [RoomStructure.area]. [millis] is how long the reading took.
  */
 class LiveRoom(
     val walls: List<LiveRoomWall>,
