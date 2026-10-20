@@ -12,8 +12,10 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.FileNotFoundException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -146,6 +148,21 @@ class ModelLoaderCancellationTest {
             job.join()
             assertEquals(listOf("model"), destroyed)
         }
+
+    @Test
+    fun `destroyOnCancel frees a created model when resource loading fails`() = runBlocking {
+        // A `.bin` or texture that cannot be read, after the model was created and registered:
+        // no caller will ever hold the model, so nothing but this cleanup can free it.
+        val destroyed = mutableListOf<String>()
+        val failure = FileNotFoundException("missing.bin")
+        val thrown = runCatching {
+            destroyOnCancel<String, Unit>("model", destroy = { destroyed += it }, dispatcher = main) {
+                throw failure
+            }
+        }.exceptionOrNull()
+        assertSame("The failure still reaches the caller", failure, thrown)
+        assertEquals(listOf("model"), destroyed)
+    }
 
     @Test
     fun `destroyOnCancel leaves a model alone when resource loading completes`() = runBlocking {

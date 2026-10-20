@@ -78,6 +78,7 @@ class RememberModelInstanceThreadTest {
             0,
             onMain,
         )
+        assertTrue("The model was parsed at least once", createAssetThreads.isNotEmpty())
         assertTrue(
             "Filament's parse must stay on the main thread (ran on ${createAssetThreads.map { it.name }})",
             createAssetThreads.all { it === mainThread },
@@ -86,6 +87,7 @@ class RememberModelInstanceThreadTest {
 
     /** Records the thread of every decode; decodes nothing, so the texture is left as it was. */
     @Implements(BitmapFactory::class)
+    @Suppress("UnusedParameter", "FunctionOnlyReturningConstant") // Robolectric shadows mirror native signatures
     class RecordingBitmapFactory {
         companion object {
             @JvmStatic
@@ -99,6 +101,7 @@ class RememberModelInstanceThreadTest {
 
     /** gltfio's loader with a non-zero handle (its constructor demands one), recording parses. */
     @Implements(AssetLoader::class)
+    @Suppress("UnusedParameter", "FunctionOnlyReturningConstant") // Robolectric shadows mirror native signatures
     class RecordingAssetLoader {
         companion object {
             @JvmStatic

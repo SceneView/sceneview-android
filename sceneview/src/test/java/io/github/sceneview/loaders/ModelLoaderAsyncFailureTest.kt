@@ -101,6 +101,7 @@ class ModelLoaderAsyncFailureTest {
 
     /** gltfio's `AssetLoader` refuses a zero native handle; give it one. Nothing else differs. */
     @Implements(AssetLoader::class)
+    @Suppress("UnusedParameter", "FunctionOnlyReturningConstant") // Robolectric shadows mirror native signatures
     class LiveAssetLoader {
         companion object {
             @JvmStatic
