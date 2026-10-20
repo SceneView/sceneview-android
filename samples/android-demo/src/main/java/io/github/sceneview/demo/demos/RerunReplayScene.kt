@@ -13,6 +13,7 @@ import androidx.annotation.ColorInt
 import com.google.android.filament.ColorGrading
 import com.google.android.filament.Engine
 import com.google.android.filament.EntityManager
+import com.google.android.filament.Material
 import com.google.android.filament.MaterialInstance
 import com.google.android.filament.Skybox
 import com.google.android.filament.SwapChainFlags
@@ -121,7 +122,14 @@ internal class RerunReplayMedia(
  * [mesh] one square surfel per point in the plane of its normal, [atlas] its colours
  * ([DenseSurfels.ATLAS_SIZE]² RGBA), both built off the main thread.
  */
-internal class ReplayDenseLayer(val cloud: DenseCloud, val voxelM: Float, val mesh: DebugMesh, val atlas: ByteArray) {
+internal class ReplayDenseLayer(
+    val cloud: DenseCloud,
+    val voxelM: Float,
+    val mesh: DebugMesh,
+    val atlas: ByteArray,
+    /** [mesh]'s corners minus their surfel's centre ([DenseSurfels.cornerOffsets]), built with it. */
+    val offsets: FloatArray = DenseSurfels.cornerOffsets(mesh),
+) {
     companion object {
         /** The dense cloud [manifest] indexes in [archive], built for drawing; `null` without one. */
         fun of(manifest: ReplayManifest, archive: ByteArray): ReplayDenseLayer? {
@@ -218,13 +226,21 @@ internal fun warmUpReplay(engine: Engine, materialLoader: MaterialLoader) {
         .sampler(Texture.Sampler.SAMPLER_2D)
         .format(Texture.InternalFormat.SRGB8_A8)
         .build(engine)
+    val surfelMaterial = materialLoader.createMaterial(SURFEL_MATERIAL)
     val instances = listOf(
         materialLoader.createUnlitColorInstance(Color.WHITE),
         materialLoader.createUnlitColorInstance(Color.TRANSPARENT),
         materialLoader.createImageInstance(texture),
+        materialLoader.createInstance(surfelMaterial).apply {
+            setParameter("texture", texture, TextureSampler())
+            setParameter("maxSide", DenseSurfels.MAX_SCREEN_SIDE)
+            setParameter("nearFade", DenseSurfels.NEAR_FADE_M)
+        },
     )
     // Each draws one degenerate triangle: enough to bind, and so compile, its program.
-    val nodes = instances.mapIndexed { i, instance -> DebugLayerNode(engine, instance, i, textured = true) }
+    val nodes = instances.mapIndexed { i, instance ->
+        DebugLayerNode(engine, instance, i, textured = true, surfels = i == instances.lastIndex)
+    }
     val skybox = Skybox.Builder().color(0f, 0f, 0f, 1f).build(engine)
     val colorGrading = ColorGrading.Builder().toneMapper(ToneMapper.Linear()).build(engine)
     val scene = engine.createScene().also { scene ->
@@ -255,11 +271,15 @@ internal fun warmUpReplay(engine: Engine, materialLoader: MaterialLoader) {
     engine.destroySkybox(skybox)
     engine.destroyColorGrading(colorGrading)
     instances.forEach(materialLoader::destroyMaterialInstance)
+    materialLoader.destroyMaterial(surfelMaterial)
     EngineDestroyQueue.of(engine).enqueueTexture(texture)
 }
 
 /** The off-screen warm-up's size: past bloom's seven halvings, nothing more. */
 private const val WARM_UP_SIZE = 128
+
+/** The dense layer's surfels, size clamped on screen (#4742): `scan_surfel.mat`. */
+private const val SURFEL_MATERIAL = "materials/scan_surfel.filamat"
 
 /** 240×320 frames at a half: 120×160, ~77 KB each — the 184 of them fit in 14 MB. */
 private const val THUMBNAIL_SAMPLE_SIZE = 2
@@ -342,8 +362,21 @@ internal class ReplayLayers(
             .build(engine)
             .also(textures::add)
     }
+    /**
+     * The dense layer's material: the image material's look, a surfel nearer than
+     * [DenseSurfels.NEAR_FADE_M] shrunk towards a dot and any capped at
+     * [DenseSurfels.MAX_SCREEN_SIDE] (#4742), so one the camera passes close to never fills it.
+     */
+    private val surfelMaterial: Material? = denseAtlas?.let { materialLoader.createMaterial(SURFEL_MATERIAL) }
     private val denseNode: DebugLayerNode? = denseAtlas?.let { atlas ->
-        DebugLayerNode(engine, material(atlas, nearest), POINTS_PRIORITY, textured = true)
+        val instance = materialLoader.createInstance(surfelMaterial!!).also {
+            it.setParameter("texture", atlas, nearest)
+            it.setParameter("maxSide", DenseSurfels.MAX_SCREEN_SIDE)
+            it.setParameter("nearFade", DenseSurfels.NEAR_FADE_M)
+            it.setDepthWrite(true)
+            materials += it
+        }
+        DebugLayerNode(engine, instance, POINTS_PRIORITY, textured = true, surfels = true)
             .also { node -> dense?.let { uploadDense(atlas, node, it) } }
     }
 
@@ -581,7 +614,7 @@ internal class ReplayLayers(
             engine, 0,
             Texture.PixelBufferDescriptor(ByteBuffer.wrap(dense.atlas), Texture.Format.RGBA, Texture.Type.UBYTE),
         )
-        node.upload(dense.mesh)
+        node.upload(dense.mesh, dense.offsets)
     }
 
     private fun syncShadows(frame: ArDebugFrame, shown: Boolean) {
@@ -656,6 +689,7 @@ internal class ReplayLayers(
     /** Material instances and textures, once the nodes are gone. */
     fun destroy() {
         materials.forEach { materialLoader.destroyMaterialInstance(it) }
+        surfelMaterial?.let(materialLoader::destroyMaterial)
         textures.forEach(::retire)
         frameTextures.values.forEach(::retire)
         materials.clear()
