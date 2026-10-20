@@ -1,0 +1,2 @@
+<!-- category: Added -->
+- **3D Scan (demo)**: the finished model is clean. Floating debris is removed, doubled surfaces are merged, and floors, walls and worktops are flattened onto their planes. Small holes are closed. The model is textured from the scan's key photos, with exposure levelled and seams blended, and falls back to vertex colours where no photo sees it. It is simplified to a phone budget. The exported and shared `.glb` is that same textured model, and any viewer opens it (#4745).
