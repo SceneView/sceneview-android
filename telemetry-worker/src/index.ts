@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import type { MiddlewareHandler } from "hono";
 import { cors } from "hono/cors";
 import type { Env } from "./env.js";
 import { isRateLimited } from "./rate-limit.js";
@@ -6,16 +7,57 @@ import { rollupYesterday } from "./rollup.js";
 
 const app = new Hono<{ Bindings: Env }>();
 
-// ── CORS — allow calls from any origin (npx, browser, etc.) ─────────────────
-app.use(
-  "/v1/*",
-  cors({
-    origin: "*",
-    allowMethods: ["GET", "POST", "OPTIONS"],
-    allowHeaders: ["content-type", "authorization"],
-    maxAge: 86400,
-  }),
-);
+// ── CORS — ingestion only ────────────────────────────────────────────────────
+// The ingestion routes accept events from any origin (npx, browser, etc.).
+// The read routes (stats, timeseries, top-clients, funnel, export) send no
+// CORS headers at all, so a third-party web page cannot read them from a
+// visitor's browser.
+const ingestionCors = cors({
+  origin: "*",
+  allowMethods: ["GET", "POST", "OPTIONS"],
+  allowHeaders: ["content-type", "authorization"],
+  maxAge: 86400,
+});
+app.use("/v1/events", ingestionCors);
+app.use("/v1/batch", ingestionCors);
+
+// ── Read-route auth — fail closed ────────────────────────────────────────────
+// Every read route requires `Authorization: Bearer <STATS_TOKEN>`. When the
+// STATS_TOKEN secret is not configured the routes answer 503 instead of
+// serving data: a missing secret must never mean open access.
+
+const encoder = new TextEncoder();
+
+/**
+ * Constant-time string comparison. Both inputs are hashed to fixed-length
+ * SHA-256 digests first, so neither the content nor the length of the
+ * expected value leaks through response timing.
+ */
+async function timingSafeEqualStrings(a: string, b: string): Promise<boolean> {
+  const [da, db] = await Promise.all([
+    crypto.subtle.digest("SHA-256", encoder.encode(a)),
+    crypto.subtle.digest("SHA-256", encoder.encode(b)),
+  ]);
+  const va = new Uint8Array(da);
+  const vb = new Uint8Array(db);
+  let diff = 0;
+  for (let i = 0; i < va.length; i++) diff |= va[i] ^ vb[i];
+  return diff === 0;
+}
+
+const requireStatsToken: MiddlewareHandler<{ Bindings: Env }> = async (c, next) => {
+  const token = c.env.STATS_TOKEN;
+  if (!token) {
+    return c.json({ error: "stats_token_not_configured" }, 503);
+  }
+  const auth = c.req.header("Authorization") ?? "";
+  if (!(await timingSafeEqualStrings(auth, `Bearer ${token}`))) {
+    return c.json({ error: "unauthorized" }, 401, {
+      "WWW-Authenticate": "Bearer",
+    });
+  }
+  await next();
+};
 
 // ── Health check ─────────────────────────────────────────────────────────────
 app.get("/health", (c) => {
@@ -263,16 +305,7 @@ app.post("/v1/batch", async (c) => {
 });
 
 // ── Stats endpoint (simple read-only dashboard data) ─────────────────────────
-app.get("/v1/stats", async (c) => {
-  // Bearer token guard — only enforced when STATS_TOKEN is configured
-  const token = c.env.STATS_TOKEN;
-  if (token) {
-    const auth = c.req.header("Authorization") ?? "";
-    if (auth !== `Bearer ${token}`) {
-      return c.json({ error: "unauthorized" }, 401);
-    }
-  }
-
+app.get("/v1/stats", requireStatsToken, async (c) => {
   // Period selector: ?days=1|7|30|90 (default: 1 → preserves prior 24h behavior)
   const rawDays = c.req.query("days") ?? "1";
   const days = Math.min(Math.max(parseInt(rawDays, 10) || 1, 1), 90);
@@ -370,16 +403,7 @@ app.get("/v1/stats", async (c) => {
 });
 
 // ── Timeseries endpoint (Grafana JSON datasource / charting) ─────────────────
-app.get("/v1/timeseries", async (c) => {
-  // Bearer token guard — same as /v1/stats
-  const token = c.env.STATS_TOKEN;
-  if (token) {
-    const auth = c.req.header("Authorization") ?? "";
-    if (auth !== `Bearer ${token}`) {
-      return c.json({ error: "unauthorized" }, 401);
-    }
-  }
-
+app.get("/v1/timeseries", requireStatsToken, async (c) => {
   // Query param validation
   const rawDays = c.req.query("days") ?? "30";
   const metric = c.req.query("metric") ?? "events";
@@ -499,15 +523,7 @@ app.get("/v1/timeseries", async (c) => {
 });
 
 // ── Top clients endpoint (most active users) ─────────────────────────────────
-app.get("/v1/top-clients", async (c) => {
-  const token = c.env.STATS_TOKEN;
-  if (token) {
-    const auth = c.req.header("Authorization") ?? "";
-    if (auth !== `Bearer ${token}`) {
-      return c.json({ error: "unauthorized" }, 401);
-    }
-  }
-
+app.get("/v1/top-clients", requireStatsToken, async (c) => {
   const days = Math.min(
     Math.max(parseInt(c.req.query("days") ?? "7", 10) || 7, 1),
     90,
@@ -548,15 +564,7 @@ app.get("/v1/top-clients", async (c) => {
 });
 
 // ── Funnel endpoint (conversion: install → first call → 10th call → power user) ──
-app.get("/v1/funnel", async (c) => {
-  const token = c.env.STATS_TOKEN;
-  if (token) {
-    const auth = c.req.header("Authorization") ?? "";
-    if (auth !== `Bearer ${token}`) {
-      return c.json({ error: "unauthorized" }, 401);
-    }
-  }
-
+app.get("/v1/funnel", requireStatsToken, async (c) => {
   const days = Math.min(
     Math.max(parseInt(c.req.query("days") ?? "30", 10) || 30, 1),
     90,
@@ -618,16 +626,7 @@ app.get("/v1/funnel", async (c) => {
 });
 
 // ── Export endpoint (CSV download for analytics) ─────────────────────────────
-app.get("/v1/export", async (c) => {
-  // Bearer token guard — same as /v1/stats
-  const token = c.env.STATS_TOKEN;
-  if (token) {
-    const auth = c.req.header("Authorization") ?? "";
-    if (auth !== `Bearer ${token}`) {
-      return c.json({ error: "unauthorized" }, 401);
-    }
-  }
-
+app.get("/v1/export", requireStatsToken, async (c) => {
   // Query param validation
   const rawDays = c.req.query("days") ?? "7";
   const eventType = c.req.query("event_type");
