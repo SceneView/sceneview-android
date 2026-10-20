@@ -1075,48 +1075,64 @@ AugmentedFaceNode(
 Hosts an anchor to the ARCore Cloud (returns a cloud anchor ID) or resolves a previously hosted one. Requires an ARCore Cloud Anchor API key. The composable always takes a local `anchor`; hosting is an explicit `host(session, ttlDays)` call (`ttlDays` in `1..365`), and `onHosted` receives the ID **and** the `CloudAnchorState`.
 
 ```kotlin
+import com.google.ar.core.Frame
+import com.google.ar.core.Session
+
+var arSession by remember { mutableStateOf<Session?>(null) }
+var latestFrame by remember { mutableStateOf<Frame?>(null) }
+var hostStatus by remember { mutableStateOf<String?>(null) }
 val cloudNode = remember {
     java.util.concurrent.atomic.AtomicReference<
         io.github.sceneview.ar.node.CloudAnchorNode?
     >(null)
 }
-var hostingFuture by remember { mutableStateOf<HostCloudAnchorFuture?>(null) }
 
+// ARSceneView parameter — keeps the session and the latest frame:
+//   onSessionUpdated = { session, frame -> arSession = session; latestFrame = frame }
+
+// Inside ARSceneView { } (ARSceneScope):
 CloudAnchorNode(
     anchor = localAnchor,
     onHosted = { cloudAnchorId, state ->
-        if (cloudAnchorId != null && !state.isError) saveCloudId(cloudAnchorId)
+        hostStatus = if (cloudAnchorId != null && !state.isError) {
+            saveCloudId(cloudAnchorId)
+            "Anchor hosted"
+        } else {
+            "Hosting failed: $state"
+        }
     },
     apply = { cloudNode.set(this) }
 )
 
+// Regular Compose UI, outside ARSceneView (e.g. a Box overlay on top of it):
 Button(onClick = {
+    val session = arSession ?: return@Button
     val cameraPose = latestFrame?.camera?.pose ?: return@Button
-    val quality = arSession.estimateFeatureMapQualityForHosting(cameraPose)
-    if (quality != Session.FeatureMapQuality.INSUFFICIENT) {
-        hostingFuture?.cancel()
-        hostingFuture = cloudNode.get()?.host(arSession, ttlDays = 7)
+    if (session.estimateFeatureMapQualityForHosting(cameraPose) ==
+        Session.FeatureMapQuality.INSUFFICIENT
+    ) {
+        hostStatus = "Move around to capture more of the scene"
+    } else {
+        hostStatus = "Hosting…"
+        cloudNode.get()?.host(session, ttlDays = 7)
     }
 }) { Text("Host anchor") }
-
-DisposableEffect(Unit) {
-    onDispose { hostingFuture?.cancel() }
-}
+hostStatus?.let { Text(it) }
 ```
 
-Here `latestFrame` is updated from `ARSceneView(onSessionUpdated = { _, frame -> latestFrame = frame })`.
-Do not start hosting while feature-map quality is `INSUFFICIENT`, and always cancel the returned
-future when the hosting UI leaves composition.
+Do not start hosting while feature-map quality is `INSUFFICIENT`: tell the user to move around
+instead. There is no future to keep or cancel: `host()` cancels the node's previous request, and
+the node cancels an in-flight request when it leaves composition.
 
 Or on the resolving side — resolve the ID to an `Anchor` first, then declare the node:
 
 ```kotlin
 var resolved by remember { mutableStateOf<Anchor?>(null) }
 DisposableEffect(arSession, savedCloudId) {
-    val future = arSession.resolveCloudAnchorAsync(savedCloudId) { anchor, state ->
+    val future = arSession?.resolveCloudAnchorAsync(savedCloudId) { anchor, state ->
         if (!state.isError) resolved = anchor
     }
-    onDispose { future.cancel() }
+    onDispose { future?.cancel() }
 }
 // In the ARSceneView content:
 resolved?.let { anchor ->
