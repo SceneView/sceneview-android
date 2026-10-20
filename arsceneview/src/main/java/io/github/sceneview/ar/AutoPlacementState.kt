@@ -124,12 +124,35 @@ class AutoPlacementState {
     }
 
     /**
-     * Accessibility alternative: uniform base-size multiplier, clamped to 25–400%. Ignored
-     * while [allowsScaling] is `false`.
+     * How far the pinch, [scaleTo] and the double-tap may resize the placed object, as a
+     * multiplier of its base size: 25–400 % by default, Scene Viewer's range.
+     *
+     * Widen it when the base size is not the only sensible one — a 1:16 miniature that the
+     * user may pinch all the way up to real size takes `0.25f..16f`. The 100 % detent stays
+     * at the base size. An empty or non-positive range is ignored. Changing it does not resize
+     * an object already placed: [scaleFactor] keeps its value, even outside the new range,
+     * until the next pinch, [scaleTo] or double-tap brings it back inside.
+     *
+     * ```kotlin
+     * val state = remember { AutoPlacementState().apply { scaleRange = 0.25f..16f } }
+     * ```
+     */
+    var scaleRange: ClosedFloatingPointRange<Float> by mutableStateOf(ScaleSnap.RANGE)
+
+    /** [scaleRange], or the default one when it is unusable. */
+    internal val usableScaleRange: ClosedFloatingPointRange<Float>
+        get() = scaleRange.takeIf {
+            it.start > 0f && it.start.isFinite() && it.endInclusive.isFinite() && it.start <= it.endInclusive
+        } ?: ScaleSnap.RANGE
+
+    /**
+     * Accessibility alternative: uniform base-size multiplier, clamped to [scaleRange]
+     * (25–400 % by default). Ignored while [allowsScaling] is `false`.
      */
     fun scaleTo(factor: Float) {
         if (allowsScaling && canManipulate && factor.isFinite()) {
-            scaleAction?.invoke(factor.coerceIn(0.25f, 4f))
+            val range = usableScaleRange
+            scaleAction?.invoke(factor.coerceIn(range.start, range.endInclusive))
         }
     }
 
@@ -200,6 +223,22 @@ class AutoPlacementState {
         if (height == null) return
         val current = floorHeight
         if (current == null || abs(height - current) >= FLOOR_STEP_M) floorHeight = height
+    }
+
+    /**
+     * The camera's height in ARCore world space (metres), `null` before the camera tracks. With
+     * [floorHeight] it tells a placement on the floor (the camera a standing person's height
+     * above it) from one on a table. [AutoPlacementScene] keeps it up to date, in
+     * [CAMERA_STEP_M] steps so walking around does not recompose whoever reads it every frame.
+     */
+    var cameraHeight: Float? by mutableStateOf(null)
+        private set
+
+    /** The tracked camera's height this frame ([cameraHeight]); `null` while it does not track. */
+    internal fun onCamera(height: Float?) {
+        if (height == null || !height.isFinite()) return
+        val current = cameraHeight
+        if (current == null || abs(height - current) >= CAMERA_STEP_M) cameraHeight = height
     }
 
     private var searchStartedAt: Long? = null
@@ -290,6 +329,7 @@ class AutoPlacementState {
         isAdjusting = false
         isSelected = false
         scaleFactor = 1f
+        cameraHeight = null
         moveAction = null
         rotateAction = null
         scaleAction = null
@@ -436,6 +476,9 @@ class AutoPlacementState {
     companion object {
         /** How far the floor moves before [floorHeight] follows it: under its frame-to-frame jitter. */
         internal const val FLOOR_STEP_M = 0.01f
+
+        /** How far the camera moves up or down before [cameraHeight] follows it. */
+        internal const val CAMERA_STEP_M = 0.05f
 
         /** Scanning without a usable surface for this long shows the help card (§2.2). */
         const val NO_SURFACE_TIMEOUT_MS = 10_000L

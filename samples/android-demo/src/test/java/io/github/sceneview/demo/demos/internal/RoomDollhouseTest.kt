@@ -326,11 +326,93 @@ class RoomDollhouseTest {
     }
 
     @Test
-    fun `the copy names the scale and the size on the table`() {
+    fun `the copy names the scale and the size`() {
         val fit = DollhouseFit(0f, 0f, 0f, width = 4f, height = 2.5f, depth = 3f, denominator = 12)
         assertEquals("Room · Scale 1:12", DollhouseCopy.peek("Room", fit, realSize = false))
         assertEquals("Room · Real size", DollhouseCopy.peek("Room", fit, realSize = true))
-        assertEquals("Scale 1:12 · 33 × 25 cm on the table", DollhouseCopy.size(fit, realSize = false))
+        // Where it stands is the chip's to say: "on the table" was wrong on the floor (#4731).
+        assertEquals("Scale 1:12 · 33 × 25 cm", DollhouseCopy.size(fit, realSize = false))
+    }
+
+    /** The scale label followed nothing: a 1:16 room pinched to 1:7 still read 1:16 (#4731). */
+    @Test
+    fun `the scale label and the size follow the pinch`() {
+        val fit = DollhouseFit(0f, 0f, 0f, width = 4f, height = 2.5f, depth = 3f, denominator = 16)
+        assertEquals("Room · Scale 1:16", DollhouseCopy.peek("Room", fit, realSize = false, scaleFactor = 1f))
+        assertEquals("Room · Scale 1:8", DollhouseCopy.peek("Room", fit, realSize = false, scaleFactor = 2f))
+        assertEquals("Scale 1:8 · 50 × 38 cm", DollhouseCopy.size(fit, realSize = false, scaleFactor = 2f))
+        // Pinched all the way up, the miniature is the room at its own size.
+        assertEquals("Room · Real size", DollhouseCopy.peek("Room", fit, realSize = false, scaleFactor = 16f))
+        // Real size pinched to half reads as a scale too, not as "Real size".
+        assertEquals("Room · Scale 1:2", DollhouseCopy.peek("Room", fit, realSize = true, scaleFactor = 0.5f))
+        assertEquals("Scale 1:2 · 200 × 150 cm", DollhouseCopy.size(fit, realSize = true, scaleFactor = 0.5f))
+    }
+
+    /** Only Real size could be resized; 1:16 stopped at 400 %, 1:4 (#4731). */
+    @Test
+    fun `the pinch runs from a quarter of the tabletop scale up to real size in both modes`() {
+        val fit = DollhouseFit(0f, 0f, 0f, width = 4f, height = 2.5f, depth = 3f, denominator = 16)
+        val table = DollhouseScale.pinchRange(fit, realSize = false)
+        assertEquals(0.25f, table.start, 1e-6f)
+        assertEquals(16f, table.endInclusive, 1e-6f)
+        val real = DollhouseScale.pinchRange(fit, realSize = true)
+        assertEquals(1f / 64f, real.start, 1e-6f)
+        assertEquals(1f, real.endInclusive, 1e-6f)
+        // The same absolute sizes either way: one continuous range, whichever mode the pinch is in.
+        for (realSize in listOf(false, true)) {
+            val range = DollhouseScale.pinchRange(fit, realSize)
+            assertEquals(1f / 64f, DollhouseScale.absolute(fit, realSize, range.start), 1e-6f)
+            assertEquals(1f, DollhouseScale.absolute(fit, realSize, range.endInclusive), 1e-6f)
+            // Each mode's own size (factor 1) is inside its range: the SDK's 100 % detent holds.
+            assertTrue(1f in range)
+        }
+        // A bigger room's miniature reaches real size from further down.
+        val hall = fit.copy(denominator = 40)
+        assertEquals(40f, DollhouseScale.pinchRange(hall, realSize = false).endInclusive, 1e-5f)
+    }
+
+    @Test
+    fun `a scale is named by the nearest model maker's denominator`() {
+        assertEquals(16, DollhouseScale.denominator(1f / 16f))
+        assertEquals(7, DollhouseScale.denominator(1f / 16f * 2.3f))
+        assertEquals(1, DollhouseScale.denominator(1f))
+        assertEquals(1, DollhouseScale.denominator(0f))
+        assertTrue(DollhouseScale.isReal(0.97f))
+        assertFalse(DollhouseScale.isReal(0.9f))
+    }
+
+    /** "On the table" stayed on screen on the floor, and at real size (#4731). */
+    @Test
+    fun `the chip says where the room stands, or nothing`() {
+        fun place(
+            placed: Boolean = true,
+            realSize: Boolean = false,
+            absolute: Float = 1f / 16f,
+            restY: Float? = -1.3f,
+            floorY: Float? = -1.3f,
+            cameraY: Float? = 0f,
+        ) = dollhousePlace(placed, realSize, absolute, restY, floorY, cameraY)
+        // Nothing placed yet: nothing said.
+        assertNull(place(placed = false))
+        // On the floor, the phone held 1.3 m over it.
+        assertEquals(DollhousePlace.Floor, place())
+        // On a table 0.74 m over the tracked floor.
+        assertEquals(DollhousePlace.Table, place(restY = -0.56f))
+        // A table with no floor tracked yet, the phone 0.6 m over it: not known, so not said.
+        assertNull(place(restY = -0.6f, floorY = -0.6f))
+        assertNull(place(restY = -0.6f, floorY = null))
+        // The floor with no floor tracked yet is still the floor, from the camera's height.
+        assertEquals(DollhousePlace.Floor, place(floorY = null))
+        // At real size, it is the room at its own size, wherever the miniature stood.
+        assertEquals(DollhousePlace.RealSize, place(realSize = true, absolute = 1f, restY = -0.56f))
+        // Real size pinched down rests where it dropped: the floor.
+        assertEquals(DollhousePlace.Floor, place(realSize = true, absolute = 0.5f))
+        // A miniature pinched all the way up in table mode stays where it stands.
+        assertEquals(DollhousePlace.Table, place(absolute = 1f, restY = -0.56f))
+        assertEquals("On the floor", DollhouseCopy.place(DollhousePlace.Floor))
+        assertEquals("On the table", DollhouseCopy.place(DollhousePlace.Table))
+        assertEquals("Real size", DollhouseCopy.place(DollhousePlace.RealSize))
+        assertNull(DollhouseCopy.place(null))
     }
 
     @Test
@@ -388,7 +470,9 @@ class RoomDollhouseTest {
         assertEquals("Scale 1:12", DollhouseCopy.pinched(fit, 1f, realSize = false))
         assertEquals("Scale 1:6", DollhouseCopy.pinched(fit, 2f, realSize = false))
         assertEquals("Scale 1:48", DollhouseCopy.pinched(fit, 0.25f, realSize = false))
-        assertEquals("50% of real size", DollhouseCopy.pinched(fit, 0.5f, realSize = true))
+        assertEquals("Scale 1:2", DollhouseCopy.pinched(fit, 0.5f, realSize = true))
+        assertEquals("Real size", DollhouseCopy.pinched(fit, 1f, realSize = true))
+        assertEquals("Real size", DollhouseCopy.pinched(fit, 12f, realSize = false))
     }
 
     @Test

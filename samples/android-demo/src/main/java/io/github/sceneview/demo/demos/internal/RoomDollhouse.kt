@@ -518,6 +518,93 @@ data class DollhouseOrientation(val yawDegrees: Float, val front: Float) {
     fun offsetZ(realSize: Boolean, scale: Float): Float = if (realSize) -front * scale else 0f
 }
 
+/**
+ * How big the placed room may be pinched (#4731): one continuous range of absolute scales, from a
+ * quarter of its tabletop scale up to its real size, whichever mode it stands in. The pinch used to
+ * be the SDK's 25–400 % of each mode's own size: a 1:16 miniature stopped at 1:4, and only Real
+ * size could be resized towards the miniature.
+ *
+ * The placement's pinch is a multiplier of the size the mode draws at ([base]): the tabletop scale
+ * on the table, 1 at real size. [pinchRange] is the same absolute range in that multiplier.
+ */
+object DollhouseScale {
+    /** The smallest a room is pinched to, as a share of its tabletop scale: Scene Viewer's 25 %. */
+    const val MIN_OF_TABLETOP = 0.25f
+
+    /** Real size: the largest a room is pinched to. A room bigger than itself reads as nothing. */
+    const val REAL = 1f
+
+    /** Within this share of real size, the room *is* at real size (the SDK's 100 % detent is 4 %). */
+    const val REAL_WINDOW = 0.04f
+
+    /** The scale the mode draws the room at, before any pinch. */
+    fun base(fit: DollhouseFit, realSize: Boolean): Float = if (realSize) REAL else fit.scale
+
+    /** The room's absolute scale once pinched by [factor]: `1/16` for a 1:16 miniature, 1 at real size. */
+    fun absolute(fit: DollhouseFit, realSize: Boolean, factor: Float): Float = base(fit, realSize) * factor
+
+    /** Every absolute scale the room may stand at: a quarter of the tabletop scale up to real size. */
+    fun absoluteRange(fit: DollhouseFit): ClosedFloatingPointRange<Float> = fit.scale * MIN_OF_TABLETOP..REAL
+
+    /** [absoluteRange] as a multiplier of [base]: what `AutoPlacementState.scaleRange` takes. */
+    fun pinchRange(fit: DollhouseFit, realSize: Boolean): ClosedFloatingPointRange<Float> {
+        val base = base(fit, realSize)
+        val range = absoluteRange(fit)
+        return range.start / base..range.endInclusive / base
+    }
+
+    /** Whether a room at [absolute] scale stands at its real size. */
+    fun isReal(absolute: Float): Boolean = absolute >= REAL - REAL_WINDOW
+
+    /** The model maker's denominator of [absolute]: 16 for `1:16`, at least 1. */
+    fun denominator(absolute: Float): Int =
+        if (absolute <= 0f || !absolute.isFinite()) 1 else max(1, (1f / absolute).roundToInt())
+}
+
+/** Where the placed room stands, as the recording's chip says it (#4731). */
+enum class DollhousePlace { Table, Floor, RealSize }
+
+/**
+ * Where the placed room stands, from what ARCore tracks (#4731) — or `null` when that cannot be
+ * told, so the chip says nothing rather than something wrong. It used to say "On the table"
+ * whatever: on the floor, at real size, before anything was placed.
+ *
+ * [restY] is the height the room rests at — the anchor's, or the floor's once a room at real
+ * size dropped to it ([RoomDollhouse.floorDrop]); [floorY] the lowest tracked plane
+ * (`AutoPlacementState.floorHeight`), [cameraY] the camera's height
+ * (`AutoPlacementState.cameraHeight`). A plane well above the tracked floor is a table; the lowest
+ * one is the floor when the camera is a standing person's height above it. The lowest plane with
+ * the camera close above it may be a table with no floor seen yet: unknown.
+ */
+@Suppress("ReturnCount", "LongParameterList") // one early answer per fact
+fun dollhousePlace(
+    placed: Boolean,
+    realSize: Boolean,
+    absoluteScale: Float,
+    restY: Float?,
+    floorY: Float?,
+    cameraY: Float?,
+): DollhousePlace? {
+    if (!placed) return null
+    if (realSize && DollhouseScale.isReal(absoluteScale)) return DollhousePlace.RealSize
+    val y = restY ?: return null
+    if (floorY != null && y - floorY > DollhousePlaceRule.TABLE_ABOVE_FLOOR_M) return DollhousePlace.Table
+    if (cameraY != null && cameraY - y >= DollhousePlaceRule.CAMERA_ABOVE_FLOOR_M) return DollhousePlace.Floor
+    return null
+}
+
+/** The thresholds [dollhousePlace] reads heights against. */
+object DollhousePlaceRule {
+    /** A surface this far above the tracked floor is furniture: the lowest coffee table is 0.3 m. */
+    const val TABLE_ABOVE_FLOOR_M = 0.25f
+
+    /**
+     * The camera this far above the surface is held by someone standing on it: a phone at chest
+     * height is 1.1–1.4 m over the floor, and 0.4–0.9 m over a 0.75 m table.
+     */
+    const val CAMERA_ABOVE_FLOOR_M = 1.0f
+}
+
 /** What the dollhouse screen shows, decided from what is known — see [dollhouseStage]. */
 enum class DollhouseStage {
     /** The kept sessions are still being listed, or the chosen one is being read. */
@@ -623,6 +710,7 @@ object DollhouseCopy {
         "past the floor and the walls."
     const val OTHER_RECORDINGS = "Or stand another recording"
     const val ON_THE_TABLE = "On the table"
+    const val ON_THE_FLOOR = "On the floor"
     const val CHANGE_RECORDING = "Change recording"
     const val NO_SURFACES = "No surfaces"
     const val RESET_HOLD = "Room removed. Point at a table — it stands where you aim."
@@ -658,9 +746,24 @@ object DollhouseCopy {
 
     private fun scale(denominator: Int): String = "Scale 1:$denominator"
 
-    /** `Room · Sep 28, 2:32 PM · Scale 1:20`. */
-    fun peek(title: String, fit: DollhouseFit, realSize: Boolean): String =
-        "$title · ${if (realSize) REAL_SIZE else scale(fit)}"
+    /**
+     * The scale the room stands at now, pinch included (#4731): `Scale 1:7` for a 1:16 miniature
+     * pinched to a bit more than twice its size, [REAL_SIZE] once it reaches its own size.
+     */
+    fun scaleAt(absolute: Float): String =
+        if (DollhouseScale.isReal(absolute)) REAL_SIZE else scale(DollhouseScale.denominator(absolute))
+
+    /** `Room · Sep 28, 2:32 PM · Scale 1:20`, the scale following the pinch. */
+    fun peek(title: String, fit: DollhouseFit, realSize: Boolean, scaleFactor: Float = 1f): String =
+        "$title · ${scaleAt(DollhouseScale.absolute(fit, realSize, scaleFactor))}"
+
+    /** What the recording's chip says of where the room stands; `null` says nothing. */
+    fun place(place: DollhousePlace?): String? = when (place) {
+        DollhousePlace.Table -> ON_THE_TABLE
+        DollhousePlace.Floor -> ON_THE_FLOOR
+        DollhousePlace.RealSize -> REAL_SIZE
+        null -> null
+    }
 
     /**
      * The dock's scale toggle: always named [REAL_SIZE] and lit while the room stands at real
@@ -683,18 +786,24 @@ object DollhouseCopy {
         return parts.joinToString(" · ")
     }
 
-    /** `Scale 1:20 · 30 × 22 cm on the table`, or `Real size` when the room stands at its own size. */
-    fun size(fit: DollhouseFit, realSize: Boolean): String {
-        if (realSize) return "$REAL_SIZE · the room at its own size"
-        val (w, d) = fit.footprintCentimetres().let { it[0] to it[1] }
-        return "${scale(fit)} · $w × $d cm on the table"
+    /**
+     * `Scale 1:20 · 30 × 22 cm`, the footprint at the scale the room stands at now, or `Real size
+     * · the room at its own size`. Where it stands is the chip's to say ([place]): "on the table"
+     * here was wrong on the floor (#4731).
+     */
+    fun size(fit: DollhouseFit, realSize: Boolean, scaleFactor: Float = 1f): String {
+        val absolute = DollhouseScale.absolute(fit, realSize, scaleFactor)
+        if (DollhouseScale.isReal(absolute)) return "$REAL_SIZE · the room at its own size"
+        val w = Math.round(fit.width * absolute * 100f).coerceAtLeast(1)
+        val d = Math.round(fit.depth * absolute * 100f).coerceAtLeast(1)
+        return "${scaleAt(absolute)} · $w × $d cm"
     }
 
     /**
-     * The status pill while pinching: the scale the miniature now stands at (`Scale 1:6` once a 1:12
-     * room is pinched to twice its size), or, at real size, how much of it is left.
+     * The status pill while pinching: the scale the room now stands at, in every mode — `Scale 1:6`
+     * once a 1:12 room is pinched to twice its size, `Scale 1:2` for a room at real size pinched
+     * to half, [REAL_SIZE] when a miniature is pinched all the way up.
      */
     fun pinched(fit: DollhouseFit, scaleFactor: Float, realSize: Boolean): String =
-        if (realSize) "${(scaleFactor * 100f).roundToInt()}% of real size"
-        else scale(max(1, (fit.denominator / scaleFactor).roundToInt()))
+        scaleAt(DollhouseScale.absolute(fit, realSize, scaleFactor))
 }
