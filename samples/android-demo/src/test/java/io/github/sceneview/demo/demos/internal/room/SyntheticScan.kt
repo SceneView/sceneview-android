@@ -21,12 +21,17 @@ class SyntheticOpening(val wall: Int, val from: Float, val width: Float, val sil
 /** A box standing in the room: furniture. */
 class SyntheticBox(val x0: Float, val x1: Float, val z0: Float, val z1: Float, val top: Float)
 
+/** Floor outside the room, over [x0]..[x1] × [z0]..[z1]: the next room's, seen through a doorway. */
+class SyntheticFloor(val x0: Float, val x1: Float, val z0: Float, val z1: Float)
+
 /**
  * A room to scan: its floor's outline [x], [z] counter-clockwise seen from above (+Y up, the room
  * on the left of each wall's walk), its walls floor to [height], the [openings] cut in them and
  * the [boxes] standing in it. [hidden] walls are never seen: a ray that reaches one returns no
  * depth. [drift] moves wall [driftWall] out by that much in every other frame: a scan that drew
- * the wall twice. [noise] is the depth's Gaussian spread, as a share of the depth.
+ * the wall twice. [noise] is the depth's Gaussian spread, as a share of the depth. Walls are seen
+ * only up to [seenUpTo] — a phone held towards the floor sees their foot and nothing higher — and
+ * the floor goes on outside the room over [nextDoor], for whatever a doorway lets the camera see.
  */
 class SyntheticRoom(
     val x: FloatArray,
@@ -38,6 +43,8 @@ class SyntheticRoom(
     val driftWall: Int = -1,
     val drift: Float = 0f,
     val noise: Float = 0f,
+    val seenUpTo: Float = Float.POSITIVE_INFINITY,
+    val nextDoor: List<SyntheticFloor> = emptyList(),
 ) {
     val area: Float
         get() {
@@ -100,9 +107,10 @@ object SyntheticScan {
     private const val STEP_M = 1f
     private const val CLEAR_M = 0.6f
     private const val YAWS = 8
-    private val PITCHES = floatArrayOf(-0.6f, 0f, 0.5f)
+    val PITCHES = floatArrayOf(-0.6f, 0f, 0.5f)
     private const val MM = 1000f
     private const val GREY = 0xff808080.toInt()
+    private const val PLANE_FROM_M = 0.3f
 
     /** The walk's stops: a grid over the floor, each clear of the walls and boxes. */
     fun stops(room: SyntheticRoom): List<Vec3> {
@@ -129,12 +137,16 @@ object SyntheticScan {
         return stops
     }
 
-    /** The poses: at each stop, a turn of [YAWS] headings at each of [PITCHES]. */
-    fun poses(room: SyntheticRoom, upTo: Float = 1f): List<DebugPose> {
-        val stops = stops(room)
+    /** The poses: at each stop of [walk], a turn of [YAWS] headings at each of [pitches]. */
+    fun poses(
+        room: SyntheticRoom,
+        upTo: Float = 1f,
+        walk: List<Vec3> = stops(room),
+        pitches: FloatArray = PITCHES,
+    ): List<DebugPose> {
         val poses = ArrayList<DebugPose>()
-        for (stop in stops) {
-            for (pitch in PITCHES) {
+        for (stop in walk) {
+            for (pitch in pitches) {
                 for (k in 0 until YAWS) {
                     poses += RerunSyntheticRoom.lookPose(stop, (k * 2 * Math.PI / YAWS).toFloat(), pitch)
                 }
@@ -145,11 +157,17 @@ object SyntheticScan {
 
     /**
      * The scan of [room]: the first [share] of the walk's frames, fused. [seed] fixes the noise:
-     * the same room is the same cloud, every run.
+     * the same room is the same cloud, every run. The camera stops at each of [walk] and looks at [pitches].
      */
-    fun capture(room: SyntheticRoom, share: Float = 1f, seed: Long = 7L): SyntheticCapture {
+    fun capture(
+        room: SyntheticRoom,
+        share: Float = 1f,
+        seed: Long = 7L,
+        walk: List<Vec3> = stops(room),
+        pitches: FloatArray = PITCHES,
+    ): SyntheticCapture {
         val random = Random(seed)
-        val poses = poses(room, share)
+        val poses = poses(room, share, walk, pitches)
         val fusion = DenseFusion()
         for ((index, pose) in poses.withIndex()) {
             fusion.add(DepthBackProjection.project(frame(room, pose, index % 2 == 1, random)))
@@ -164,13 +182,17 @@ object SyntheticScan {
         return SyntheticCapture(cloud, trail, planesOf(room), poses)
     }
 
-    /** The planes ARCore would find: the floor, and each seen wall a little short of its corners. */
+    /**
+     * The planes ARCore would find: the floor, and each seen wall a little short of its corners,
+     * no higher than it was seen.
+     */
     fun planesOf(room: SyntheticRoom): List<RoomPlane> {
         val planes = ArrayList<RoomPlane>()
         val n = room.x.size
         planes += RoomPlane(RoomPlaneKind.Floor, FloatArray(n * 3) { k -> if (k % 3 == 0) room.x[k / 3] else if (k % 3 == 1) 0f else room.z[k / 3] })
+        val top = min(2f, room.seenUpTo)
         for (i in 0 until n) {
-            if (i in room.hidden) continue
+            if (i in room.hidden || top <= PLANE_FROM_M) continue
             val j = (i + 1) % n
             val inset = 0.1f / room.wallLength(i)
             val ax = room.x[i] + (room.x[j] - room.x[i]) * inset
@@ -179,7 +201,7 @@ object SyntheticScan {
             val bz = room.z[j] - (room.z[j] - room.z[i]) * inset
             planes += RoomPlane(
                 RoomPlaneKind.Wall,
-                floatArrayOf(ax, 0.3f, az, bx, 0.3f, bz, bx, 2f, bz, ax, 2f, az),
+                floatArrayOf(ax, PLANE_FROM_M, az, bx, PLANE_FROM_M, bz, bx, top, bz, ax, top, az),
             )
         }
         return planes
@@ -235,14 +257,17 @@ object SyntheticScan {
                     }
                     if (inHole) continue
                     best = t
-                    blind = i in room.hidden
+                    blind = i in room.hidden || y > room.seenUpTo
                 }
                 // Floor and ceiling.
                 for (level in floatArrayOf(0f, room.height)) {
                     if (abs(dir.y) < 1e-9f) continue
                     val t = (level - pose.y) / dir.y
                     if (t <= 1e-4f || t >= best) continue
-                    if (!room.inside(pose.x + dir.x * t, pose.z + dir.z * t)) continue
+                    val hx = pose.x + dir.x * t
+                    val hz = pose.z + dir.z * t
+                    val beyond = level == 0f && room.nextDoor.any { hx > it.x0 && hx < it.x1 && hz > it.z0 && hz < it.z1 }
+                    if (!room.inside(hx, hz) && !beyond) continue
                     best = t
                     blind = false
                 }
