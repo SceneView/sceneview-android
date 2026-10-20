@@ -477,6 +477,11 @@ dependencies {
         exclude group: 'com.google.auto.value', module: 'auto-value'
     }
 
+    // ONNX Runtime — the 3D Scan's furniture detector (YOLOX-Tiny, internal/semantic). The
+    // model is an asset fetched like the GLBs (assets/ml, tools/fetch-assets.sh), never in git.
+    // The JVM artifact below runs the very same detector in the unit tests (photos, real scans).
+    implementation libs.onnxruntime.android
+
     // JVM tests on Robolectric — no emulator needed.
     testImplementation libs.robolectric
     testImplementation libs.androidx.test.junit
@@ -501,6 +506,9 @@ dependencies {
     // comment there.
 
     testImplementation libs.kotlin.coroutines.test
+    // The scan recogniser's detector on the JVM: same version and `ai.onnxruntime` API as the
+    // Android artifact, with the desktop native libraries (SceneRecognitionCorpusTest).
+    testImplementation libs.onnxruntime.jvm
     // Local HTTP double for SketchfabService's cooperative-cancellation test
     // (#2644) — proves an aborted search releases its socket instead of
     // running to completion behind the debounce.

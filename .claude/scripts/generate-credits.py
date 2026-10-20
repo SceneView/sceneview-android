@@ -475,6 +475,13 @@ NON_CATALOG_BUNDLED = {
         "sourceUrl": "https://github.com/sceneview/sceneview/blob/main/LICENSE",
         "note": "Generated procedurally by `tools/generate-splat-sphere.py`",
     },
+    "yolox_tiny.onnx": {
+        "name": "YOLOX-Tiny (COCO object detector, ONNX)",
+        "author": "Megvii Inc. (Megvii-BaseDetection/YOLOX)",
+        "license": "Apache-2.0",
+        "sourceUrl": "https://github.com/Megvii-BaseDetection/YOLOX/releases/tag/0.1.1rc0",
+        "note": "On-device furniture detector of the 3D Scan replay (`internal/semantic`)",
+    },
     "pose_landmarker_lite.task": {
         "name": "MediaPipe Pose Landmarker (lite)",
         "author": "Google LLC",

@@ -139,6 +139,10 @@ mediapipeTasksVision = "0.10.26"
 # namespace, which failed AGP 9's app manifest merge; `:samples:android-demo:processDebugMainManifest`
 # is the proof for any bump. `litert-gpu` must stay declared or `Backend.Gpu` loses its accelerator.
 litert = "2.3.0"
+# ONNX Runtime (MIT) — the 3D Scan's furniture detector (YOLOX-Tiny, Apache-2.0) on the phone, and
+# the same detector in the JVM tests that judge it on photos and on real scans: one runtime, two
+# platform artifacts with the same `ai.onnxruntime` API, so a corpus run measures what ships.
+onnxruntime = "1.30.0"
 
 # Publishing & Docs
 mavenPublish = "0.37.0"
@@ -276,6 +280,8 @@ mlkit-genai-prompt = { group = "com.google.mlkit", name = "genai-prompt", versio
 mediapipe-tasks-vision = { group = "com.google.mediapipe", name = "tasks-vision", version.ref = "mediapipeTasksVision" }
 litert = { group = "com.google.ai.edge.litert", name = "litert", version.ref = "litert" }
 litert-gpu = { group = "com.google.ai.edge.litert", name = "litert-gpu", version.ref = "litert" }
+onnxruntime-android = { group = "com.microsoft.onnxruntime", name = "onnxruntime-android", version.ref = "onnxruntime" }
+onnxruntime-jvm = { group = "com.microsoft.onnxruntime", name = "onnxruntime", version.ref = "onnxruntime" }
 
 # Testing
 androidx-test-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxTestJunit" }

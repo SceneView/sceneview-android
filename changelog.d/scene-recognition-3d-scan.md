@@ -1,0 +1,2 @@
+<!-- category: Added -->
+- **Demo app: 3D Scan recognises doors, windows and furniture.** Replaying a scan with a dense cloud now outlines the beds, sofas, chairs, tables, cabinets, TVs and plants it shows, each with its name, size and how sure the scan is. Furniture comes from an on-device detector (YOLOX-Tiny, Apache-2.0) run on a few keyframes, lifted into the cloud and fused across views. Doors and windows come from the holes in the walls.

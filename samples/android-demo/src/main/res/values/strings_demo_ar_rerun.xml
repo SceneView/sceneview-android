@@ -75,4 +75,21 @@
     <string name="demo_ar_rerun_plan_pdf_page">Page %1$d of %2$d</string>
     <string name="demo_ar_rerun_plan_pdf_walls_continued">Walls (continued)</string>
     <string name="demo_ar_rerun_plan_content_description">Floor plan of the room</string>
+    <!-- Scene recognition: the name written over a box the scan recognized. -->
+    <string name="demo_ar_rerun_recognized_bed">Bed</string>
+    <string name="demo_ar_rerun_recognized_sofa">Sofa</string>
+    <string name="demo_ar_rerun_recognized_chair">Chair</string>
+    <string name="demo_ar_rerun_recognized_table">Table</string>
+    <string name="demo_ar_rerun_recognized_bench">Bench</string>
+    <string name="demo_ar_rerun_recognized_toilet">Toilet</string>
+    <string name="demo_ar_rerun_recognized_sink">Sink</string>
+    <string name="demo_ar_rerun_recognized_refrigerator">Fridge</string>
+    <string name="demo_ar_rerun_recognized_oven">Oven</string>
+    <string name="demo_ar_rerun_recognized_microwave">Microwave</string>
+    <string name="demo_ar_rerun_recognized_television">TV</string>
+    <string name="demo_ar_rerun_recognized_plant">Plant</string>
+    <string name="demo_ar_rerun_recognized_door">Door</string>
+    <string name="demo_ar_rerun_recognized_window">Window</string>
+    <!-- %1$s what was recognised (Sofa), %2$d how sure the scan is, in percent. -->
+    <string name="demo_ar_rerun_recognized_description">%1$s, recognized by the scan, %2$d%% sure</string>
 </resources>

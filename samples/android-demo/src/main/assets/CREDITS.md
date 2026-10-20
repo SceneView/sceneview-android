@@ -113,6 +113,8 @@ Assets bundled: **50**.
   Compiled from `samples/android-demo/src/main/materials/viewer_grid.mat` (3D viewers' ground grid, #4651)
 - `mediapipe/pose_landmarker_lite.task` — **[MediaPipe Pose Landmarker (lite)](https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker)** by Google LLC — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) (5.8 MB)  
   On-device pose model bundle used by `ARBodyTrackerDemo`
+- `ml/yolox_tiny.onnx` — **[YOLOX-Tiny (COCO object detector, ONNX)](https://github.com/Megvii-BaseDetection/YOLOX/releases/tag/0.1.1rc0)** by Megvii Inc. (Megvii-BaseDetection/YOLOX) — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) (20.2 MB)  
+  On-device furniture detector of the 3D Scan replay (`internal/semantic`)
 - `rerun/sample-session.jsonl` — **[sample-session.jsonl](https://github.com/sceneview/sceneview/blob/main/LICENSE)** by SceneView project — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) (176 KB)  
   Synthetic room walk in the Rerun bridge wire format — QA fixture of `ARRerunDemo`'s in-app 3D view (#3950)
 - `rerun/showcase/showcase-manifest.json` — **[showcase-manifest.json](https://github.com/sceneview/sceneview/blob/main/LICENSE)** by SceneView project — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) (11 KB)  

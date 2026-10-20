@@ -344,6 +344,7 @@ device-qa-report.json
 /samples/android-demo/src/main/assets/environments/*.ktx
 /samples/android-demo/src/main/assets/splats/*.spz
 /samples/android-demo/src/main/assets/splats/*.ply
+/samples/android-demo/src/main/assets/ml/*.onnx
 /samples/android-tv-demo/src/main/assets/models/*.glb
 /samples/ios-demo/SceneViewDemo/Models/*.usdz
 /samples/ios-demo/SceneViewDemo/Environments/*.hdr
