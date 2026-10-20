@@ -723,7 +723,9 @@ export function generateScene(description: string): GeneratedScene {
       "                        ?.firstOrNull { (it.trackable as? Plane)?.isPoseInPolygon(it.hitPose) == true }"
     );
     lines.push("                        ?.createAnchorOrNull()");
-    lines.push("                        ?.let { anchor = it } // the old AnchorNode detaches its anchor");
+    lines.push(
+      "                        ?.let { anchor = it } // the old AnchorNode detaches its anchor"
+    );
     lines.push("                }");
     lines.push("            }");
     lines.push("        )");

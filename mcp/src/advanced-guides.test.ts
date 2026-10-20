@@ -100,7 +100,9 @@ describe("GESTURE_GUIDE", () => {
     expect(tapToPlace).toContain("import io.github.sceneview.rememberOnGestureListener\n");
     // The key takeaway teaches the same hook.
     expect(GESTURE_GUIDE).not.toContain("on `ACTION_UP` in `onTouchEvent`, hit-test");
-    expect(GESTURE_GUIDE).toContain("**AR tap-to-place** — in `onGestureListener = rememberOnGestureListener(onSingleTapConfirmed");
+    expect(GESTURE_GUIDE).toContain(
+      "**AR tap-to-place** — in `onGestureListener = rememberOnGestureListener(onSingleTapConfirmed"
+    );
   });
 
   it("contains drag-to-rotate with custom sensitivity", () => {
