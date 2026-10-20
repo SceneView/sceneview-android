@@ -1,5 +1,6 @@
 package io.github.sceneview.demo.demos
 
+import android.graphics.Bitmap
 import android.util.Log
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
@@ -76,6 +77,8 @@ import io.github.sceneview.demo.R
 import io.github.sceneview.demo.demoContentPadding
 import io.github.sceneview.demo.demos.internal.ArDebugFraming
 import io.github.sceneview.demo.demos.internal.ArDebugOrbitCamera
+import io.github.sceneview.demo.demos.internal.BakePhoto
+import io.github.sceneview.demo.demos.internal.DebugPose
 import io.github.sceneview.demo.demos.internal.DenseCloud
 import io.github.sceneview.demo.demos.internal.DenseFusion
 import io.github.sceneview.demo.demos.internal.DepthBackProjection
@@ -86,6 +89,7 @@ import io.github.sceneview.demo.demos.internal.FramingInsets
 import io.github.sceneview.demo.demos.internal.RerunCapturePack
 import io.github.sceneview.demo.demos.internal.RerunGlbMesh
 import io.github.sceneview.demo.demos.internal.RerunMarchingCubes
+import io.github.sceneview.demo.demos.internal.RerunMesh
 import io.github.sceneview.demo.demos.internal.RerunMeshGlb
 import io.github.sceneview.demo.demos.internal.RerunPointsMesh
 import io.github.sceneview.demo.demos.internal.RerunResultView
@@ -97,6 +101,11 @@ import io.github.sceneview.demo.demos.internal.ScanGround
 import io.github.sceneview.demo.demos.internal.ScanGroundMeshes
 import io.github.sceneview.demo.demos.internal.ScanPreset
 import io.github.sceneview.demo.demos.internal.ScanResultCinematics
+import io.github.sceneview.demo.demos.internal.model.AtlasEncoder
+import io.github.sceneview.demo.demos.internal.model.CleanModel
+import io.github.sceneview.demo.demos.internal.model.CleanModelResult
+import io.github.sceneview.demo.demos.internal.model.ModelPhoto
+import io.github.sceneview.demo.demos.internal.model.ModelPhotos
 import io.github.sceneview.demo.isDemoCompactHeight
 import io.github.sceneview.demo.theme.LocalStageChrome
 import io.github.sceneview.demo.theme.SceneViewTokens
@@ -121,6 +130,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.concurrent.atomic.AtomicBoolean
@@ -129,16 +139,19 @@ import java.util.concurrent.atomic.AtomicBoolean
  * The 3D Scan's result: at the end of a scan, the space as one meshed, coloured 3D model — its raw
  * depth fused into a TSDF ([RerunTsdf]) while it recorded, meshed by marching cubes
  * ([RerunMarchingCubes]) when the scan stops, kept next to the scan ([RerunSessionStore.saveModel])
- * and shown here, still, on the themed stage. Exported as a `.glb` ([RerunMeshGlb]).
+ * and shown here, still, on the themed stage. The marching cubes' raw surface is finished by
+ * [CleanModel] — cleaned, flattened, simplified and textured from the scan's key photos — and
+ * exported as that same `.glb`.
  */
 
 /** What a scan's model is built from. */
 internal sealed interface RerunModelSource {
     /**
      * The TSDF the recording fused from ARCore's raw depth, frame by frame: the full model.
-     * [cloud], the recording's coloured points, is the fallback when meshing finds no surface.
+     * [cloud], the recording's coloured points, is the fallback when meshing finds no surface;
+     * [photos], its key photos, texture the model.
      */
-    class Live(tsdf: RerunTsdf, val cloud: DenseCloud?) : RerunModelSource {
+    class Live(tsdf: RerunTsdf, val cloud: DenseCloud?, val photos: ModelPhotos? = null) : RerunModelSource {
         @Volatile
         private var held: RerunTsdf? = tsdf
 
@@ -156,7 +169,7 @@ internal sealed interface RerunModelSource {
     }
 
     /** A kept scan's surfel cloud, when its raw depth is gone: the scan reopened later. */
-    class Surfels(val cloud: DenseCloud) : RerunModelSource
+    class Surfels(val cloud: DenseCloud, val photos: ModelPhotos? = null) : RerunModelSource
 
     /**
      * QA only: the ray-cast room, the emulator's stand-in for a camera (it cannot run AR). With
@@ -168,9 +181,27 @@ internal sealed interface RerunModelSource {
         /** The model [pack] can build: its live TSDF when this process recorded it, else [media]'s surfels. */
         fun of(pack: RerunCapturePack?, media: RerunReplayMedia?): RerunModelSource? {
             val cloud = media?.dense?.cloud?.takeIf { it.count > 0 }
-            return RerunLiveModels.find(pack)?.let { Live(it, cloud) }
-                ?: cloud?.takeIf { it.normals != null }?.let(::Surfels)
+            val photos = media?.let(::photosOf)
+            return RerunLiveModels.find(pack)?.let { Live(it, cloud, photos) }
+                ?: cloud?.takeIf { it.normals != null }?.let { Surfels(it, photos) }
         }
+
+        /** [media]'s key photos, decoded only when the texture picks them, each bitmap let go once read. */
+        private fun photosOf(media: RerunReplayMedia): ModelPhotos? =
+            ModelPhotos.of(media.trace, media.manifest.lens) { path ->
+                media.decode(path)?.let { bitmap ->
+                    try {
+                        val argb = IntArray(bitmap.width * bitmap.height)
+                        bitmap.getPixels(argb, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+                        BakePhoto(UNPOSED, bitmap.width, bitmap.height, argb)
+                    } finally {
+                        bitmap.recycle()
+                    }
+                }
+            }
+
+        /** [ModelPhotos.of] puts each photo at its trace pose; the decoder's pose is not read. */
+        private val UNPOSED = DebugPose(0f, 0f, 0f)
     }
 }
 
@@ -250,7 +281,11 @@ internal class RerunModelBuild(
     val budgetReached: Boolean,
 )
 
-/** Meshes [source] — fuse (unless done), mesh, write — reporting its share done to [progress]. */
+/**
+ * Meshes [source] — fuse (unless done), mesh, then finish ([CleanModel]): clean, simplify, texture
+ * from its photos and write — reporting its share done to [progress]. A finish that fails writes
+ * the raw surface instead.
+ */
 internal fun buildRerunModel(source: RerunModelSource, progress: (Float) -> Unit): RerunModelBuild {
     val started = System.nanoTime()
     val (tsdf, minWeight) = when (source) {
@@ -270,28 +305,65 @@ internal fun buildRerunModel(source: RerunModelSource, progress: (Float) -> Unit
     val base = if (source is RerunModelSource.Live) 0f else FUSE_SHARE
     val extraction = RerunMarchingCubes.extractWhole(tsdf, minWeight) { progress(base + (MESH_SHARE - base) * it) }
     val mesh = extraction.mesh
-    val glb = if (mesh.triangleCount > 0) RerunMeshGlb.write(mesh) else ByteArray(0)
+    val meshed = System.nanoTime()
+    val photos = when (source) {
+        is RerunModelSource.Live -> source.photos
+        is RerunModelSource.Surfels -> source.photos
+        is RerunModelSource.Synthetic -> syntheticPhotos()
+    }
+    val finished = if (mesh.triangleCount > 0) finish(mesh, photos) { progress(MESH_SHARE + (1f - MESH_SHARE) * it) } else null
+    val glb = when {
+        finished != null -> finished.glb
+        mesh.triangleCount > 0 -> RerunMeshGlb.write(mesh)
+        else -> ByteArray(0)
+    }
     progress(1f)
     val done = System.nanoTime()
+    val finishedMesh = finished?.model?.asRerunMesh()
     Log.i(
         TAG,
         "model (${source::class.simpleName}): ${mesh.triangleCount} triangles, ${mesh.vertexCount} vertices " +
             "(${extraction.rawTriangles} raw, ${extraction.droppedComponents} pieces dropped, " +
             "capped ${extraction.capped}); " +
-            "fused ${(fused - started) / NS_PER_MS} ms, meshed ${(done - fused) / NS_PER_MS} ms; " +
+            "fused ${(fused - started) / NS_PER_MS} ms, meshed ${(meshed - fused) / NS_PER_MS} ms, " +
+            "finished ${(done - meshed) / NS_PER_MS} ms (${finished?.stats ?: "raw surface"}); " +
             "tsdf ${tsdf.frames} frames, ${tsdf.blockCount} blocks, ${tsdf.bytes / MB} MB, " +
             "dropped ${tsdf.droppedBlocks}; " +
             "glb ${glb.size / KB} KB",
     )
     return RerunModelBuild(
         glb = glb,
-        bounds = mesh.bounds(),
-        triangles = mesh.triangleCount,
-        vertices = mesh.vertexCount,
+        bounds = (finishedMesh ?: mesh).bounds(),
+        triangles = finishedMesh?.triangleCount ?: mesh.triangleCount,
+        vertices = finishedMesh?.vertexCount ?: mesh.vertexCount,
         buildMs = (done - started) / NS_PER_MS,
         voxelBytes = tsdf.bytes,
         budgetReached = tsdf.budgetReached,
     )
+}
+
+/** [mesh] finished by [CleanModel]; `null` (logged) when that fails — cancellation goes through. */
+private fun finish(mesh: RerunMesh, photos: ModelPhotos?, progress: (Float) -> Unit): CleanModelResult? =
+    runCatching { CleanModel.build(mesh, photos, JpegAtlasEncoder, progress = progress) }
+        .onFailure { if (it is CancellationException) throw it }
+        .onFailure { Log.w(TAG, "finishing the model failed: the raw surface is kept", it) }
+        .getOrNull()
+
+/** QA only: the ray-cast room's key photos, as a recording keeps them. */
+private fun syntheticPhotos(): ModelPhotos =
+    ModelPhotos(RerunSyntheticRoom.PHOTO_LENS, RerunSyntheticRoom.photos().map { shot -> ModelPhoto(shot.pose) { shot } })
+
+/** The texture atlas as the `.glb` embeds it. */
+private object JpegAtlasEncoder : AtlasEncoder {
+    override fun jpeg(argb: IntArray, width: Int, height: Int): ByteArray? {
+        val bitmap = Bitmap.createBitmap(argb, width, height, Bitmap.Config.ARGB_8888)
+        return try {
+            ByteArrayOutputStream().also { bitmap.compress(Bitmap.CompressFormat.JPEG, ATLAS_JPEG_QUALITY, it) }
+                .toByteArray().takeIf { it.isNotEmpty() }
+        } finally {
+            bitmap.recycle()
+        }
+    }
 }
 
 /**
@@ -903,8 +975,11 @@ private const val NS_PER_MS = 1_000_000L
 
 /** A live TSDF voxel meshes once two medium-confidence views (or one sure one) agree on it. */
 private const val LIVE_MIN_WEIGHT = 1f
-private const val FUSE_SHARE = 0.5f
-private const val MESH_SHARE = 0.95f
+private const val FUSE_SHARE = 0.3f
+
+/** Where meshing ends on the progress bar: finishing the model ([CleanModel]) takes the rest. */
+private const val MESH_SHARE = 0.45f
+private const val ATLAS_JPEG_QUALITY = 85
 
 /** The mesh's share of the progress bar; the points fallback, when needed, takes the rest. */
 private const val MESH_PART = 0.9f
