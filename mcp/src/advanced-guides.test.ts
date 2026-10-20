@@ -42,6 +42,16 @@ describe("ANIMATION_GUIDE", () => {
     expect(ANIMATION_GUIDE).toContain("createAnchorOrNull()");
   });
 
+  it("places the AR model on a confirmed tap on empty space, not on ACTION_UP", () => {
+    expect(ANIMATION_GUIDE).toContain("onSingleTapConfirmed = { event, node ->");
+    expect(ANIMATION_GUIDE).toContain("if (node == null)");
+    expect(ANIMATION_GUIDE).not.toContain("ACTION_UP)");
+    expect(ANIMATION_GUIDE).not.toContain("anchorCreated");
+    expect(ANIMATION_GUIDE).toContain("import com.google.ar.core.Plane\n");
+    expect(ANIMATION_GUIDE).toContain("import io.github.sceneview.ar.arcore.createAnchorOrNull\n");
+    expect(ANIMATION_GUIDE).toContain("import io.github.sceneview.rememberOnGestureListener\n");
+  });
+
   it("includes key takeaways section", () => {
     expect(ANIMATION_GUIDE).toContain("Key Takeaways");
     expect(ANIMATION_GUIDE).toContain("Compose animations");
@@ -71,6 +81,26 @@ describe("GESTURE_GUIDE", () => {
     expect(GESTURE_GUIDE).toContain("AnchorNode");
     expect(GESTURE_GUIDE).toContain("ARSceneView(");
     expect(GESTURE_GUIDE).toContain("planeRenderer");
+  });
+
+  it("places on a confirmed tap on empty space, never on ACTION_UP", () => {
+    const tapToPlace = GESTURE_GUIDE.slice(
+      GESTURE_GUIDE.indexOf("## 3. Tap-to-Place in AR"),
+      GESTURE_GUIDE.indexOf("## 4. ")
+    );
+    expect(tapToPlace).toContain("onGestureListener = rememberOnGestureListener(");
+    expect(tapToPlace).toContain("onSingleTapConfirmed = { event, node ->");
+    expect(tapToPlace).toContain("if (node == null)");
+    expect(tapToPlace).toContain("isEditable = true");
+    expect(tapToPlace).not.toContain("onTouchEvent = {");
+    expect(tapToPlace).not.toContain("MotionEvent.ACTION_UP");
+    expect(tapToPlace).not.toContain("anchorCreated");
+    expect(tapToPlace).toContain("import com.google.ar.core.Plane\n");
+    expect(tapToPlace).toContain("import io.github.sceneview.ar.arcore.createAnchorOrNull\n");
+    expect(tapToPlace).toContain("import io.github.sceneview.rememberOnGestureListener\n");
+    // The key takeaway teaches the same hook.
+    expect(GESTURE_GUIDE).not.toContain("on `ACTION_UP` in `onTouchEvent`, hit-test");
+    expect(GESTURE_GUIDE).toContain("**AR tap-to-place** — in `onGestureListener = rememberOnGestureListener(onSingleTapConfirmed");
   });
 
   it("contains drag-to-rotate with custom sensitivity", () => {

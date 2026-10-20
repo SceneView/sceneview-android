@@ -55,14 +55,21 @@ describe("getPlatformSetup", () => {
     expect(result).toContain("ARScene");
   });
 
-  it("uses an in-polygon ARCore plane hit and preserves gestures when placement fails", () => {
+  it("places on a confirmed tap on an in-polygon ARCore plane, not on ACTION_UP", () => {
     const result = getPlatformSetup("android", "ar");
     expect(result).toContain("onSessionUpdated = { _, frame -> latestFrame = frame }");
+    expect(result).toContain("onGestureListener = rememberOnGestureListener(");
+    expect(result).toContain("onSingleTapConfirmed = { event, node ->");
+    expect(result).toContain("if (node == null)");
     expect(result).toContain("(it.trackable as? Plane)?.isPoseInPolygon(it.hitPose) == true");
     expect(result).toContain("createAnchorOrNull()");
-    expect(result).toContain("anchorCreated = true");
+    expect(result).not.toContain("anchorCreated");
+    expect(result).not.toContain("MotionEvent.ACTION_UP)");
+    expect(result).not.toContain("onTouchEvent = {");
     expect(result).not.toContain("hitResult.createAnchor()");
-    expect(result).not.toMatch(/onTouchEvent\s*=\s*\{[\s\S]*?\n\s*true\s*\n\s*}/);
+    expect(result).toContain("import com.google.ar.core.Plane\n");
+    expect(result).toContain("import io.github.sceneview.ar.arcore.createAnchorOrNull\n");
+    expect(result).toContain("import io.github.sceneview.rememberOnGestureListener\n");
   });
 
   it("returns iOS 3D setup with SPM dependency", () => {

@@ -136,7 +136,25 @@ fun ModelViewerScreen() {
     tags: ["ar", "model", "anchor", "plane-detection", "placement", "gestures"],
     dependency: "io.github.sceneview:arsceneview:" + LATEST_SCENEVIEW_RELEASE + "",
     prompt: `Create an AR screen that detects surfaces and lets the user tap to place a GLB model. Support pinch-to-scale and drag-to-rotate. Use SceneView \`io.github.sceneview:arsceneview:${LATEST_SCENEVIEW_RELEASE}\`.`,
-    code: `@Composable
+    code: `import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import com.google.ar.core.Anchor
+import com.google.ar.core.Config
+import com.google.ar.core.Frame
+import com.google.ar.core.Plane
+import io.github.sceneview.ar.ARSceneView
+import io.github.sceneview.ar.arcore.createAnchorOrNull
+import io.github.sceneview.rememberEngine
+import io.github.sceneview.rememberModelInstance
+import io.github.sceneview.rememberModelLoader
+import io.github.sceneview.rememberOnGestureListener
+
+@Composable
 fun ARModelViewerScreen() {
     val engine = rememberEngine()
     val modelLoader = rememberModelLoader(engine)
@@ -156,21 +174,19 @@ fun ARModelViewerScreen() {
             config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
         },
         onSessionUpdated = { _, frame -> latestFrame = frame },
-        onTouchEvent = { event, _ ->
-            // The callback's hitResult is a scene-node hit (io.github.sceneview.collision.HitResult),
-            // null on an empty plane and without createAnchor(): hit-test the latest ARCore Frame.
-            var anchorCreated = false
-            if (event.action == MotionEvent.ACTION_UP) {
-                latestFrame?.hitTest(event)
-                    ?.firstOrNull { (it.trackable as? Plane)?.isPoseInPolygon(it.hitPose) == true }
-                    ?.createAnchorOrNull()
-                    ?.let {
-                        anchor = it
-                        anchorCreated = true
-                    }
+        // A confirmed single tap, never a raw ACTION_UP: the end of a drag or a pinch on the
+        // placed model must not move it. Leaving onTouchEvent unset keeps the model's gestures.
+        onGestureListener = rememberOnGestureListener(
+            onSingleTapConfirmed = { event, node ->
+                if (node == null) { // empty space, not the placed model
+                    latestFrame?.hitTest(event)
+                        ?.firstOrNull { (it.trackable as? Plane)?.isPoseInPolygon(it.hitPose) == true }
+                        ?.createAnchorOrNull()
+                        // Replacing the state key disposes the old AnchorNode, which detaches its anchor.
+                        ?.let { anchor = it }
+                }
             }
-            anchorCreated
-        }
+        )
     ) {
         anchor?.let { a ->
             AnchorNode(anchor = a) {
@@ -2146,7 +2162,28 @@ fun SpringAnimationScreen() {
     tags: ["ar", "cursor", "plane-detection", "placement"],
     dependency: "io.github.sceneview:arsceneview:" + LATEST_SCENEVIEW_RELEASE + "",
     prompt: `Create an AR screen with a surface cursor (reticle) in the center of the screen that follows detected surfaces, using HitResultNode. Tap to place a model at the cursor position. Use SceneView \`io.github.sceneview:arsceneview:${LATEST_SCENEVIEW_RELEASE}\`.`,
-    code: `@Composable
+    code: `import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalView
+import com.google.ar.core.Anchor
+import com.google.ar.core.Config
+import com.google.ar.core.Frame
+import com.google.ar.core.Plane
+import io.github.sceneview.ar.ARSceneView
+import io.github.sceneview.ar.arcore.createAnchorOrNull
+import io.github.sceneview.rememberEngine
+import io.github.sceneview.rememberMaterialLoader
+import io.github.sceneview.rememberModelInstance
+import io.github.sceneview.rememberModelLoader
+import io.github.sceneview.rememberOnGestureListener
+
+@Composable
 fun ARSurfaceCursorScreen() {
     val engine = rememberEngine()
     val modelLoader = rememberModelLoader(engine)
@@ -2167,28 +2204,32 @@ fun ARSurfaceCursorScreen() {
             config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
         },
         onSessionUpdated = { _, frame -> latestFrame = frame },
-        onTouchEvent = { event, _ ->
-            // The callback's hitResult is a scene-node hit (io.github.sceneview.collision.HitResult),
-            // null on an empty plane and without createAnchor(): hit-test the latest ARCore Frame.
-            var anchorCreated = false
-            if (event.action == MotionEvent.ACTION_UP) {
-                latestFrame?.hitTest(event)
-                    ?.firstOrNull { (it.trackable as? Plane)?.isPoseInPolygon(it.hitPose) == true }
-                    ?.createAnchorOrNull()
-                    ?.let {
-                        placedAnchors = placedAnchors + it
-                        anchorCreated = true
-                    }
+        // A confirmed single tap, never a raw ACTION_UP: the end of a drag or a pinch on a
+        // placed model must not drop another one. Leaving onTouchEvent unset keeps those gestures.
+        onGestureListener = rememberOnGestureListener(
+            onSingleTapConfirmed = { _, node ->
+                if (node == null) { // empty space, not a placed model
+                    // Place at the cursor (screen centre), wherever the finger landed.
+                    latestFrame?.hitTest(view.width / 2f, view.height / 2f)
+                        ?.firstOrNull { (it.trackable as? Plane)?.isPoseInPolygon(it.hitPose) == true }
+                        ?.createAnchorOrNull()
+                        ?.let { placedAnchors = placedAnchors + it } // keep every placed model
+                }
             }
-            anchorCreated
-        }
+        )
     ) {
         // Surface cursor — follows the center of the screen
         val cursorMat = remember(materialLoader) {
             materialLoader.createColorInstance(Color.White.copy(alpha = 0.6f))
         }
         HitResultNode(xPx = view.width / 2f, yPx = view.height / 2f) {
-            CylinderNode(radius = 0.03f, height = 0.005f, materialInstance = cursorMat)
+            CylinderNode(
+                radius = 0.03f,
+                height = 0.005f,
+                materialInstance = cursorMat,
+                // Not touchable, so a tap on the reticle still counts as empty space.
+                apply = { isTouchable = false }
+            )
         }
 
         // Placed models

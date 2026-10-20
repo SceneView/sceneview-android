@@ -652,6 +652,17 @@ export function generateScene(description: string): GeneratedScene {
 
   // Generate Kotlin code
   const lines: string[] = [];
+  if (isAR) {
+    // The AR-only imports an AI cannot guess: `Plane` exists in three packages and
+    // `createAnchorOrNull` is an extension. Compose and SceneView entry points are the usual ones.
+    lines.push("import com.google.ar.core.Anchor");
+    lines.push("import com.google.ar.core.Config");
+    lines.push("import com.google.ar.core.Frame");
+    lines.push("import com.google.ar.core.Plane");
+    lines.push("import io.github.sceneview.ar.arcore.createAnchorOrNull");
+    lines.push("import io.github.sceneview.rememberOnGestureListener");
+    lines.push("");
+  }
   lines.push("@Composable");
   lines.push(`fun GeneratedScene() {`);
   lines.push("    val engine = rememberEngine()");
@@ -700,21 +711,22 @@ export function generateScene(description: string): GeneratedScene {
     );
     lines.push("        },");
     lines.push("        onSessionUpdated = { _, frame -> latestFrame = frame },");
-    lines.push("        onTouchEvent = { event, _ ->");
-    lines.push("            var anchorCreated = false");
-    lines.push("            if (event.action == MotionEvent.ACTION_UP) {");
-    lines.push("                latestFrame?.hitTest(event)");
+    // Place on a confirmed single tap on empty space, never on a raw ACTION_UP: that also
+    // fires at the end of every drag or pinch, and returning true from onTouchEvent
+    // swallows the model's own gestures. The AnchorNode keyed on `anchor` detaches the
+    // previous anchor when it is replaced, so no explicit detach() is needed.
+    lines.push("        onGestureListener = rememberOnGestureListener(");
+    lines.push("            onSingleTapConfirmed = { event, node ->");
+    lines.push("                if (node == null) { // empty space, not a placed model");
+    lines.push("                    latestFrame?.hitTest(event)");
     lines.push(
-      "                    ?.firstOrNull { (it.trackable as? Plane)?.isPoseInPolygon(it.hitPose) == true }"
+      "                        ?.firstOrNull { (it.trackable as? Plane)?.isPoseInPolygon(it.hitPose) == true }"
     );
-    lines.push("                    ?.createAnchorOrNull()");
-    lines.push("                    ?.let {");
-    lines.push("                        anchor = it");
-    lines.push("                        anchorCreated = true");
-    lines.push("                    }");
+    lines.push("                        ?.createAnchorOrNull()");
+    lines.push("                        ?.let { anchor = it } // the old AnchorNode detaches its anchor");
+    lines.push("                }");
     lines.push("            }");
-    lines.push("            anchorCreated");
-    lines.push("        }");
+    lines.push("        )");
     lines.push("    ) {");
     lines.push("        anchor?.let { a ->");
     lines.push("            AnchorNode(anchor = a) {");
