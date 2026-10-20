@@ -1075,14 +1075,38 @@ AugmentedFaceNode(
 Hosts an anchor to the ARCore Cloud (returns a cloud anchor ID) or resolves a previously hosted one. Requires an ARCore Cloud Anchor API key. The composable always takes a local `anchor`; hosting is an explicit `host(session, ttlDays)` call (`ttlDays` in `1..365`), and `onHosted` receives the ID **and** the `CloudAnchorState`.
 
 ```kotlin
+val cloudNode = remember {
+    java.util.concurrent.atomic.AtomicReference<
+        io.github.sceneview.ar.node.CloudAnchorNode?
+    >(null)
+}
+var hostingFuture by remember { mutableStateOf<HostCloudAnchorFuture?>(null) }
+
 CloudAnchorNode(
     anchor = localAnchor,
     onHosted = { cloudAnchorId, state ->
         if (cloudAnchorId != null && !state.isError) saveCloudId(cloudAnchorId)
     },
-    apply = { host(arSession, ttlDays = 7) }   // arSession: from onSessionCreated
+    apply = { cloudNode.set(this) }
 )
+
+Button(onClick = {
+    val cameraPose = latestFrame?.camera?.pose ?: return@Button
+    val quality = arSession.estimateFeatureMapQualityForHosting(cameraPose)
+    if (quality != Session.FeatureMapQuality.INSUFFICIENT) {
+        hostingFuture?.cancel()
+        hostingFuture = cloudNode.get()?.host(arSession, ttlDays = 7)
+    }
+}) { Text("Host anchor") }
+
+DisposableEffect(Unit) {
+    onDispose { hostingFuture?.cancel() }
+}
 ```
+
+Here `latestFrame` is updated from `ARSceneView(onSessionUpdated = { _, frame -> latestFrame = frame })`.
+Do not start hosting while feature-map quality is `INSUFFICIENT`, and always cancel the returned
+future when the hosting UI leaves composition.
 
 Or on the resolving side — resolve the ID to an `Anchor` first, then declare the node:
 
