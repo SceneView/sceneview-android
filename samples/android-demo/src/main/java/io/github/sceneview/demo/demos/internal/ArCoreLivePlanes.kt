@@ -33,11 +33,15 @@ fun livePlanePolygon(local: FloatArray, transformPoint: (FloatArray) -> FloatArr
 
 /**
  * The floor the live walls stand on: the lowest upward-facing plane's mean height, `null` before
- * one is tracked. Walls are not drawn floating, so a screen waits for this.
+ * one is tracked. Walls are not drawn floating, so a screen waits for this. With [cameraY], a
+ * plane less than [MIN_FLOOR_DROP_M] under the camera is a table or a counter, never the floor:
+ * with only a table tracked so far, the walls wait for the floor instead of standing on the table.
  */
-fun livePlanesFloorY(planes: List<LivePlane>): Float? = planes
+fun livePlanesFloorY(planes: List<LivePlane>, cameraY: Float? = null): Float? = planes
     .filter { it.kind == LivePlane.Kind.Floor && it.vertexCount >= MIN_POLYGON_VERTICES }
-    .minOfOrNull { plane -> (0 until plane.vertexCount).sumOf { plane.polygon[it * 3 + 1].toDouble() }.toFloat() / plane.vertexCount }
+    .map { plane -> (0 until plane.vertexCount).sumOf { plane.polygon[it * 3 + 1].toDouble() }.toFloat() / plane.vertexCount }
+    .filter { cameraY == null || it <= cameraY - MIN_FLOOR_DROP_M }
+    .minOrNull()
 
 /** [this] plane's boundary in world space: `polygon` through `centerPose`. */
 fun Plane.worldPolygon(): FloatArray {
@@ -57,17 +61,41 @@ val Plane.liveKind: LivePlane.Kind
     }
 
 /**
- * Every plane ARCore tracks in [this] session right now, merged ones left out, as live planes.
- * [ids] keeps one stable id per ARCore plane across frames (ARCore hands the same `Plane` back,
- * equal to itself), which is what lets [PlaneWallSource] skip a frame where nothing changed.
+ * One stable id per ARCore plane across frames (ARCore hands the same `Plane` back, equal to
+ * itself), which is what lets [PlaneWallSource] skip a frame where nothing changed. Merged and
+ * stopped planes are dropped so the map does not grow all session long; an id is never reused.
  */
-fun Session.livePlanes(ids: MutableMap<Plane, Int>): List<LivePlane> =
-    runCatching { getAllTrackables(Plane::class.java) }.getOrNull().orEmpty()
+class LivePlaneIds {
+    private val ids = HashMap<Plane, Int>()
+    private var next = 1
+
+    /** [plane]'s id, a new one the first time it is seen. */
+    fun of(plane: Plane): Int = ids.getOrPut(plane) { next++ }
+
+    /** Forgets every plane ARCore merged into another or stopped tracking. */
+    fun prune() {
+        ids.keys.removeAll { it.subsumedBy != null || it.trackingState == TrackingState.STOPPED }
+    }
+
+    /** Forgets every plane, for a fresh start. */
+    fun clear() {
+        ids.clear()
+    }
+}
+
+/** Every plane ARCore tracks in [this] session right now, merged ones left out, as live planes. */
+fun Session.livePlanes(ids: LivePlaneIds): List<LivePlane> {
+    ids.prune()
+    return runCatching { getAllTrackables(Plane::class.java) }.getOrNull().orEmpty()
         .filter { it.trackingState == TrackingState.TRACKING && it.subsumedBy == null }
         .mapNotNull { plane ->
             val polygon = plane.worldPolygon()
             if (polygon.size / 3 < MIN_POLYGON_VERTICES) return@mapNotNull null
-            LivePlane(ids.getOrPut(plane) { ids.size + 1 }, plane.liveKind, polygon)
+            LivePlane(ids.of(plane), plane.liveKind, polygon)
         }
+}
 
 private const val MIN_POLYGON_VERTICES = 3
+
+/** How far under the camera the floor is at least; a nearer upward plane is furniture. */
+private const val MIN_FLOOR_DROP_M = 0.8f

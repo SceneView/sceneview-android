@@ -8,69 +8,52 @@ import kotlin.math.abs
 import kotlin.math.sqrt
 
 /*
- * What Measure (#4732) adds on top of the shared live walls: the reticle landing on a wall's foot,
+ * What Measure (#4732) adds on top of the shared live walls: the reticle telling a wall's foot,
  * labels that read the right way up, why a point is refused, and what the add button does next.
  * Pure, so each rule runs in a JVM test.
  */
 
-/** The reticle on a recognised wall: [position], its foot under the aim, on the wall [a]–[b]. */
+/** A point on a recognised wall's foot: [position], on the wall [a]–[b] at the point's level. */
 data class MeasureWallFoot(val position: Position, val a: Position, val b: Position)
 
 /**
- * Where the camera ray meets one of the recognised [walls] (standing on [floorY], [height] tall),
- * dropped to the wall's foot at [level]: the point a wall measure wants, without aiming at the
- * seam by hand. `null` when the ray reaches the floor before any wall — the user aims at the floor
- * in front of it — or misses every wall.
+ * The recognised wall whose foot [point] stands on, within [tolerance] of it in plan, or `null`.
+ * Display only: the reticle draws the seam and says "Wall foot", while the point itself stays
+ * where ARCore measured and the snapper put it — the live walls are squared and extended, so
+ * they never move a point (#4750 review). The nearest wall wins.
  */
-fun measureLiveWallFoot(
-    origin: Position,
-    direction: Position,
-    walls: List<LiveWall>,
-    floorY: Float,
-    height: Float,
-    level: Float = floorY,
-): MeasureWallFoot? {
+fun measureWallFootAt(point: Position, walls: List<LiveWall>, tolerance: Float = WALL_FOOT_NEAR_M): MeasureWallFoot? {
     var best: MeasureWallFoot? = null
-    var bestT = Float.MAX_VALUE
+    var bestDistance = tolerance
     for (wall in walls) {
         val ex = wall.bx - wall.ax
         val ez = wall.bz - wall.az
         val length = sqrt(ex * ex + ez * ez)
         if (length < WALL_MIN_LENGTH_M) continue
-        val nx = -ez / length
-        val nz = ex / length
-        val denominator = direction.x * nx + direction.z * nz
-        if (abs(denominator) < PARALLEL) continue
-        val t = ((wall.ax - origin.x) * nx + (wall.az - origin.z) * nz) / denominator
-        if (t <= 0f || t >= bestT) continue
-        val hx = origin.x + direction.x * t
-        val hy = origin.y + direction.y * t
-        val hz = origin.z + direction.z * t
-        val along = ((hx - wall.ax) * ex + (hz - wall.az) * ez) / length
+        val along = ((point.x - wall.ax) * ex + (point.z - wall.az) * ez) / length
         if (along < -SPAN_SLACK_M || along > length + SPAN_SLACK_M) continue
-        if (hy < floorY - BELOW_FLOOR_SLACK_M || hy > floorY + height + ABOVE_TOP_SLACK_M) continue
-        val s = (along / length).coerceIn(0f, 1f)
-        bestT = t
+        val distance = abs((point.x - wall.ax) * ez - (point.z - wall.az) * ex) / length
+        if (distance > bestDistance) continue
+        bestDistance = distance
         best = MeasureWallFoot(
-            position = Position(wall.ax + ex * s, level, wall.az + ez * s),
-            a = Position(wall.ax, level, wall.az),
-            b = Position(wall.bx, level, wall.bz),
+            position = point,
+            a = Position(wall.ax, point.y, wall.az),
+            b = Position(wall.bx, point.y, wall.bz),
         )
     }
-    val wallFoot = best ?: return null
-    // Aiming at the floor in front of a wall is a floor point, not the wall's foot.
-    val floorT = if (direction.y < -PARALLEL) (floorY - origin.y) / direction.y else Float.MAX_VALUE
-    return wallFoot.takeIf { floorT <= 0f || floorT >= bestT - FLOOR_FIRST_SLACK_M }
+    return best
 }
 
 /**
- * The feet of the recognised [walls] on [level], as snap targets: each foot an edge, its two ends
- * corners — the room's corners where two walls meet, already squared by [PlaneWallSource].
+ * The wall height shown while raising, from this frame's [read] and the [shown] one: `null` as
+ * soon as the aim leaves the wall — no stale height to lock (#4751) — and [shown] kept while the
+ * read stays within [epsilon] of it, so the walls don't jitter.
  */
-fun measureLiveWallTargets(walls: List<LiveWall>, level: Float): MeasureSnapContext = MeasureSnapContext(
-    corners = walls.flatMap { listOf(Position(it.ax, level, it.az), Position(it.bx, level, it.bz)) },
-    edges = walls.map { Position(it.ax, level, it.az) to Position(it.bx, level, it.bz) },
-)
+fun measureRaisingHeight(read: Float?, shown: Float?, epsilon: Float): Float? = when {
+    read == null -> null
+    shown != null && abs(read - shown) <= epsilon -> shown
+    else -> read
+}
 
 /**
  * The orientation of a length label at [label] seen from [eye]: its front (local `+Z`) toward the
@@ -154,10 +137,7 @@ fun <P> measureAction(board: MeasureBoard<P>, closes: Boolean): MeasureAction = 
 }
 
 private const val WALL_MIN_LENGTH_M = 0.05f
-private const val PARALLEL = 1e-4f
 private const val SPAN_SLACK_M = 0.1f
-private const val BELOW_FLOOR_SLACK_M = 0.05f
-private const val ABOVE_TOP_SLACK_M = 0.3f
-private const val FLOOR_FIRST_SLACK_M = 0.02f
+private const val WALL_FOOT_NEAR_M = 0.1f
 private const val MIN_FACING_SQ = 1e-8f
 private const val MIN_UP = 1e-3f

@@ -99,7 +99,6 @@ internal class ScanWallsState(private val source: LiveWallSource = PlaneWallSour
     }
 }
 
-
 /**
  * Draws a [ScanWallsState] in the live view: its walls through the shared [LiveWallLayer] (the
  * same walls Measure shows while it measures, #4732), and the floor edges no wall stands on yet

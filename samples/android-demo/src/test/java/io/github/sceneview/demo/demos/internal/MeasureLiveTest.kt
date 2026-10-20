@@ -74,51 +74,61 @@ class MeasureLiveTest {
     private val wall = LiveWall(id = 1, ax = -1.5f, az = -2f, bx = 1.5f, bz = -2f, bornAt = 0f)
 
     @Test
-    fun `aiming at a wall lands on its foot, under the aim`() {
-        val foot = measureLiveWallFoot(
-            origin = Position(0.4f, 0f, 0f),
-            direction = Position(0f, -0.1f, -1f),
-            walls = listOf(wall),
-            floorY = floorY,
-            height = 2.4f,
-        )
+    fun `a point at a wall's foot is told, and kept where it was measured`() {
+        val point = Position(0.4f, floorY, -1.95f)
+        val foot = measureWallFootAt(point, listOf(wall))
         assertNotNull(foot)
-        assertEquals(0.4f, foot!!.position.x, 1e-4f)
-        assertEquals(floorY, foot.position.y, 1e-4f)
-        assertEquals(-2f, foot.position.z, 1e-4f)
+        // Display only: the point is not moved onto the squared wall line (#4750 review).
+        assertEquals(point, foot!!.position)
         assertEquals(Position(-1.5f, floorY, -2f), foot.a)
         assertEquals(Position(1.5f, floorY, -2f), foot.b)
     }
 
     @Test
-    fun `aiming at the floor in front of the wall is not the wall`() {
-        // Steeply down: the floor 1 m ahead comes before the wall 2 m ahead.
-        val foot = measureLiveWallFoot(Position(0f, 0f, 0f), Position(0f, -1.4f, -1f), listOf(wall), floorY, 2.4f)
-        assertNull(foot)
+    fun `a floor point away from the wall, or past its end, is not on its foot`() {
+        assertNull(measureWallFootAt(Position(0f, floorY, -1.5f), listOf(wall)))
+        assertNull(measureWallFootAt(Position(2f, floorY, -2f), listOf(wall)))
+        assertNull(measureWallFootAt(Position(0f, floorY, -2f), emptyList()))
     }
 
     @Test
-    fun `aiming past the wall's end, or above it, misses`() {
-        assertNull(measureLiveWallFoot(Position(0f, 0f, 0f), Position(1.5f, 0f, -1f), listOf(wall), floorY, 2.4f))
-        assertNull(measureLiveWallFoot(Position(0f, 0f, 0f), Position(0f, 1f, -1f), listOf(wall), floorY, 2.4f))
-        assertNull(measureLiveWallFoot(Position(0f, 0f, 0f), Position(0f, 0f, 1f), listOf(wall), floorY, 2.4f))
+    fun `the nearest of two walls wins`() {
+        val near = LiveWall(id = 2, ax = -1.5f, az = -2.08f, bx = 1.5f, bz = -2.08f, bornAt = 0f)
+        val foot = measureWallFootAt(Position(0f, floorY, -2.06f), listOf(wall, near))!!
+        assertEquals(-2.08f, foot.a.z, 1e-4f)
+    }
+
+    // ── Raising height (#4751) ─────────────────────────────────────────────────────────────
+
+    @Test
+    fun `the raising height is dropped as soon as the aim leaves the wall`() {
+        assertNull(measureRaisingHeight(read = null, shown = 2.4f, epsilon = 0.005f))
+        assertNull(measureRaisingHeight(read = null, shown = null, epsilon = 0.005f))
     }
 
     @Test
-    fun `the nearest of two walls wins, dropped to the given level`() {
-        val far = LiveWall(id = 2, ax = -1.5f, az = -4f, bx = 1.5f, bz = -4f, bornAt = 0f)
-        val foot = measureLiveWallFoot(
-            Position(0f, 0f, 0f), Position(0f, 0f, -1f), listOf(far, wall), floorY, 2.4f, level = -1.38f,
-        )!!
-        assertEquals(-2f, foot.position.z, 1e-4f)
-        assertEquals(-1.38f, foot.position.y, 1e-4f)
+    fun `the raising height follows the read, without jitter`() {
+        assertEquals(2.4f, measureRaisingHeight(read = 2.402f, shown = 2.4f, epsilon = 0.005f)!!, 0f)
+        assertEquals(2.5f, measureRaisingHeight(read = 2.5f, shown = 2.4f, epsilon = 0.005f)!!, 0f)
+        assertEquals(0.05f, measureRaisingHeight(read = 0.05f, shown = null, epsilon = 0.005f)!!, 0f)
     }
 
+    // ── Closing the shape (#4750 review) ───────────────────────────────────────────────────
+
     @Test
-    fun `wall feet are snap edges and their ends corners`() {
-        val targets = measureLiveWallTargets(listOf(wall), floorY)
-        assertEquals(listOf(Position(-1.5f, floorY, -2f), Position(1.5f, floorY, -2f)), targets.corners)
-        assertEquals(listOf(Position(-1.5f, floorY, -2f) to Position(1.5f, floorY, -2f)), targets.edges)
+    fun `tapping on the first point closes the shape, with no new point`() {
+        var room = MeasureBoard<Int>(mode = MeasureMode.Room)
+        for (p in 1..3) room = room.tap(p, closesOutline = false)
+        val closed = room.tap(null, closesOutline = true)
+        assertTrue(closed != room)
+        assertTrue(closed.figures.last().closed)
+        assertEquals(MeasurePhase.Raising, closed.phase)
+
+        var chain = MeasureBoard<Int>(mode = MeasureMode.Distance)
+        for (p in 1..3) chain = chain.tap(p, closesOutline = false)
+        val loop = chain.tap(null, closesOutline = true)
+        assertTrue(loop.figures.last().closed)
+        assertEquals(3, loop.figures.last().points.size)
     }
 
     // ── Refusals and the add button's action ───────────────────────────────────────────────

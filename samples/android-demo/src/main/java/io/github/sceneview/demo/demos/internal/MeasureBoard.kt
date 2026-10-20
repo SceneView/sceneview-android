@@ -98,9 +98,10 @@ data class MeasureBoard<P>(
         }
         val next = when {
             figure.raising -> figure // Locking needs the height: see lockHeight.
-            point == null -> figure
+            // Closing reuses the first point, so it needs no new one: check it before the null.
             closesOutline && figure.points.size >= MIN_OUTLINE_POINTS && mode != MeasureMode.Wall ->
                 figure.copy(closed = true, raising = mode == MeasureMode.Room)
+            point == null -> figure
             else -> {
                 val grown = figure.copy(points = figure.points + point)
                 if (mode == MeasureMode.Wall && grown.points.size == 2) grown.copy(raising = true) else grown

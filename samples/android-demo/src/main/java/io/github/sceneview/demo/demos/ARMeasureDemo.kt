@@ -8,29 +8,31 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Undo
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.Done
 import androidx.compose.material.icons.rounded.Height
 import androidx.compose.material.icons.rounded.IosShare
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -38,15 +40,16 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -54,17 +57,13 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLocale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.platform.testTag
-import androidx.compose.foundation.background
-import androidx.compose.material3.Icon
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
-import kotlinx.coroutines.delay
 import androidx.compose.ui.unit.IntSize
 import com.google.android.filament.Box as FilamentBox
 import com.google.android.filament.Material
@@ -80,77 +79,78 @@ import com.google.ar.core.Session
 import com.google.ar.core.TrackingFailureReason
 import com.google.ar.core.TrackingState
 import io.github.sceneview.ar.ARCoachingOverlay
+import io.github.sceneview.ar.arcore.hitTestDepth
 import io.github.sceneview.ar.ARCoreAvailability
+import io.github.sceneview.ar.ArGuidanceCue
 import io.github.sceneview.ar.ARSceneScope
 import io.github.sceneview.ar.ARSceneView
-import io.github.sceneview.ar.ArGuidanceCue
-import io.github.sceneview.ar.arcore.hitTestDepth
 import io.github.sceneview.ar.rememberARCameraNode
 import io.github.sceneview.ar.rememberARCameraStream
 import io.github.sceneview.ar.rememberArGuidanceState
 import io.github.sceneview.demo.ARCameraInitScrim
-import io.github.sceneview.demo.DemoScaffold
-import io.github.sceneview.demo.DockItem
-import io.github.sceneview.demo.LocalDemoChromeBottomInset
-import io.github.sceneview.demo.R
 import io.github.sceneview.demo.common.ForcedTrackingFailure
 import io.github.sceneview.demo.common.QaCameraBackdrop
 import io.github.sceneview.demo.common.qaCameraBackdropEnabled
 import io.github.sceneview.demo.common.qaCameraBackdropSurfaceType
 import io.github.sceneview.demo.common.rememberQaCameraBackdropActive
 import io.github.sceneview.demo.common.shareText
+import io.github.sceneview.demo.demos.internal.formatMeasureArea
+import io.github.sceneview.demo.demos.internal.formatMeasureLength
+import io.github.sceneview.demo.demos.internal.liveKind
 import io.github.sceneview.demo.demos.internal.LivePlane
+import io.github.sceneview.demo.demos.internal.LivePlaneIds
+import io.github.sceneview.demo.demos.internal.livePlanes
+import io.github.sceneview.demo.demos.internal.livePlanesFloorY
 import io.github.sceneview.demo.demos.internal.LiveWall
 import io.github.sceneview.demo.demos.internal.LiveWallMotion
 import io.github.sceneview.demo.demos.internal.LiveWallSnapshot
 import io.github.sceneview.demo.demos.internal.MeasureAction
-import io.github.sceneview.demo.demos.internal.MeasureBoard
-import io.github.sceneview.demo.demos.internal.MeasureRefusal
-import io.github.sceneview.demo.demos.internal.PlaneWallSource
-import io.github.sceneview.demo.demos.internal.liveKind
-import io.github.sceneview.demo.demos.internal.livePlanes
-import io.github.sceneview.demo.demos.internal.livePlanesFloorY
 import io.github.sceneview.demo.demos.internal.measureAction
-import io.github.sceneview.demo.demos.internal.measureLabelQuaternion
-import io.github.sceneview.demo.demos.internal.measureLiveWallFoot
-import io.github.sceneview.demo.demos.internal.measureLiveWallTargets
-import io.github.sceneview.demo.demos.internal.measureRefusal
+import io.github.sceneview.demo.demos.internal.MeasureBoard
 import io.github.sceneview.demo.demos.internal.MeasureCandidateControl
-import io.github.sceneview.demo.demos.internal.MeasureFigure
-import io.github.sceneview.demo.demos.internal.MeasureFigureNumbers
-import io.github.sceneview.demo.demos.internal.MeasureMode
-import io.github.sceneview.demo.demos.internal.MeasurePhase
-import io.github.sceneview.demo.demos.internal.MeasurePlane
-import io.github.sceneview.demo.demos.internal.MeasurePlaneKind
-import io.github.sceneview.demo.demos.internal.MeasureSnap
-import io.github.sceneview.demo.demos.internal.MeasureSnapKind
-import io.github.sceneview.demo.demos.internal.MeasureUnitSystem
-import io.github.sceneview.demo.demos.internal.WALL_MAX_HEIGHT
-import io.github.sceneview.demo.demos.internal.WALL_MIN_HEIGHT
-import io.github.sceneview.demo.demos.internal.formatMeasureArea
-import io.github.sceneview.demo.demos.internal.formatMeasureLength
 import io.github.sceneview.demo.demos.internal.measureClosesOutline
 import io.github.sceneview.demo.demos.internal.measureDistanceMeters
+import io.github.sceneview.demo.demos.internal.MeasureFigure
+import io.github.sceneview.demo.demos.internal.MeasureFigureNumbers
 import io.github.sceneview.demo.demos.internal.measureFigureNumbers
 import io.github.sceneview.demo.demos.internal.measureFigureOutline
 import io.github.sceneview.demo.demos.internal.measureFirstFloorPoint
 import io.github.sceneview.demo.demos.internal.measureFloorLevel
+import io.github.sceneview.demo.demos.internal.measureLabelQuaternion
 import io.github.sceneview.demo.demos.internal.measureLabelScale
 import io.github.sceneview.demo.demos.internal.measureLerp
 import io.github.sceneview.demo.demos.internal.measureMidpoint
+import io.github.sceneview.demo.demos.internal.MeasureMode
 import io.github.sceneview.demo.demos.internal.measureOnLevel
+import io.github.sceneview.demo.demos.internal.MeasurePhase
+import io.github.sceneview.demo.demos.internal.MeasurePlane
+import io.github.sceneview.demo.demos.internal.MeasurePlaneKind
 import io.github.sceneview.demo.demos.internal.measurePlaneSnapTargets
 import io.github.sceneview.demo.demos.internal.measurePointsMoved
+import io.github.sceneview.demo.demos.internal.measureRaisingHeight
 import io.github.sceneview.demo.demos.internal.measureRayFloorHit
+import io.github.sceneview.demo.demos.internal.MeasureRefusal
+import io.github.sceneview.demo.demos.internal.measureRefusal
 import io.github.sceneview.demo.demos.internal.measureRoomHeightFromRay
 import io.github.sceneview.demo.demos.internal.measureShareText
+import io.github.sceneview.demo.demos.internal.MeasureSnap
+import io.github.sceneview.demo.demos.internal.MeasureSnapKind
 import io.github.sceneview.demo.demos.internal.measureSnapTolerance
 import io.github.sceneview.demo.demos.internal.measureTriangulateXZ
+import io.github.sceneview.demo.demos.internal.MeasureUnitSystem
+import io.github.sceneview.demo.demos.internal.measureWallFootAt
 import io.github.sceneview.demo.demos.internal.measureWallHeightFromRay
 import io.github.sceneview.demo.demos.internal.measureWallIndices
 import io.github.sceneview.demo.demos.internal.measureWallVertices
+import io.github.sceneview.demo.demos.internal.PlaneWallSource
 import io.github.sceneview.demo.demos.internal.snapMeasureTarget
 import io.github.sceneview.demo.demos.internal.snapSquareCorner
+import io.github.sceneview.demo.demos.internal.WALL_MAX_HEIGHT
+import io.github.sceneview.demo.demos.internal.WALL_MIN_HEIGHT
+import io.github.sceneview.demo.DemoScaffold
+import io.github.sceneview.demo.DockItem
+import io.github.sceneview.demo.LocalDemoChromeBottomInset
+import io.github.sceneview.demo.R
 import io.github.sceneview.demo.rememberArPlaybackDataset
 import io.github.sceneview.demo.theme.SceneViewTokens
 import io.github.sceneview.demo.ui.ConnectedChoiceRow
@@ -163,8 +163,8 @@ import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberMaterialLoader
 import io.github.sceneview.safeDestroyGeometry
 import io.github.sceneview.sample.rememberUnlitMaterialInstance
+import kotlinx.coroutines.delay
 import java.util.Locale
-import kotlin.math.abs
 
 /** Measured points: small white beads, like the system Measure apps. */
 private const val POINT_RADIUS = 0.007f
@@ -268,6 +268,8 @@ fun ARMeasureDemo(onBack: () -> Unit) {
     var aim by remember { mutableStateOf<MeasureAimView?>(null) }
     // Height the walls follow while raising; `null` until the aim crosses a wall.
     var liveHeight by remember { mutableStateOf<Float?>(null) }
+    // The last height read on the wall: the rising walls keep it while the aim is off.
+    var shownHeight by remember { mutableStateOf<Float?>(null) }
     var viewport by remember { mutableStateOf(IntSize.Zero) }
     var isTracking by remember { mutableStateOf(false) }
     var cameraReady by remember { mutableStateOf(false) }
@@ -337,7 +339,7 @@ fun ARMeasureDemo(onBack: () -> Unit) {
         measureFigureOutline(figure.mode, figure.points.mapNotNull { positions[it] })
     }
     val figureNumbers: List<MeasureFigureNumbers> = board.figures.mapIndexed { i, figure ->
-        measureFigureNumbers(figure, figureOutlines[i], liveHeight)
+        measureFigureNumbers(figure, figureOutlines[i], shownHeight)
     }
     fun len(m: Float) = formatMeasureLength(m, units, locale)
     fun area(m: Float) = formatMeasureArea(m, units, locale)
@@ -379,7 +381,10 @@ fun ARMeasureDemo(onBack: () -> Unit) {
             } else {
                 commit(next)
                 tapRefusal = null
-                if (next.phase == MeasurePhase.Raising) liveHeight = null
+                if (next.phase == MeasurePhase.Raising) {
+                    liveHeight = null
+                    shownHeight = null
+                }
                 if (current?.view?.closes == true) haptic.success() else haptic.light()
             }
         }
@@ -392,7 +397,10 @@ fun ARMeasureDemo(onBack: () -> Unit) {
         chromeToggleOnTap = false,
         onBack = onBack,
         peekHeader = if (coaching && board.isEmpty) null else measureHint(board, aim, action, liveWallCount),
-        onReset = { commit(board.clear()) },
+        onReset = {
+            commit(board.clear())
+            liveWalls.reset()
+        },
         controls = {
             MeasureSettings(
                 units = units,
@@ -522,7 +530,7 @@ fun ARMeasureDemo(onBack: () -> Unit) {
 
                     // One read of ARCore's planes a frame: the live walls and the snapper share it.
                     val livePlanes = if (isTracking) session?.livePlanes(liveWalls.planeIds).orEmpty() else emptyList()
-                    val walls = liveWalls.update(livePlanes, frame.timestamp)
+                    val walls = liveWalls.update(livePlanes, origin.y, frame.timestamp)
                     if (walls.walls.size != liveWallCount) liveWallCount = walls.walls.size
                     // Walls matter to Wall and Room; while a figure raises its own, it is the one shown.
                     val wallsShown = board.mode != MeasureMode.Distance && board.phase != MeasurePhase.Raising
@@ -536,9 +544,10 @@ fun ARMeasureDemo(onBack: () -> Unit) {
                         } else {
                             null
                         }
-                        if (height != null && abs(height - (liveHeight ?: -1f)) > HEIGHT_EPSILON) {
-                            liveHeight = height
-                        }
+                        // Off the wall there is no height to lock: the shutter says why (#4751).
+                        val read = measureRaisingHeight(height, liveHeight, HEIGHT_EPSILON)
+                        if (read != liveHeight) liveHeight = read
+                        if (read != null && read != shownHeight) shownHeight = read
                     } else {
                         val next = if (isTracking && viewport.width > 0 && viewport.height > 0) {
                             findMeasureAim(
@@ -569,7 +578,7 @@ fun ARMeasureDemo(onBack: () -> Unit) {
                         MeasureFigureNodes(
                             figure = figure,
                             outline = figureOutlines[index],
-                            liveHeight = liveHeight,
+                            liveHeight = shownHeight,
                             cameraPosition = cameraPosition,
                             eye = cameraNode,
                             len = ::len,
@@ -840,11 +849,14 @@ internal fun MeasureAddButton(
         },
     )
     val alpha = if (refused) ADD_REFUSED_ALPHA else 1f
+    // An opaque scrim behind the disc: the shutter stays readable in front of a light wall.
+    val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val scrim = if (dark) overlay.scrimDark else overlay.scrimLight
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Surface(
             onClick = onClick,
             shape = CircleShape,
-            color = overlay.meterTrack,
+            color = scrim,
             border = BorderStroke(AddRingWidth, overlay.onScrim.copy(alpha = alpha)),
             modifier = Modifier
                 .size(AddButtonSize)
@@ -1024,11 +1036,11 @@ internal fun MeasureReticle(
             aim?.closes == true -> R.string.demo_ar_measure_snap_close
             kind == MeasureSnapKind.Point -> R.string.demo_ar_measure_snap_point
             kind == MeasureSnapKind.Corner -> R.string.demo_ar_measure_snap_corner
+            kind == MeasureSnapKind.Square -> R.string.demo_ar_measure_snap_square
+            onFoot -> R.string.demo_ar_measure_snap_wall
             kind == MeasureSnapKind.Edge -> R.string.demo_ar_measure_snap_edge
             kind == MeasureSnapKind.Vertical -> R.string.demo_ar_measure_snap_vertical
             kind == MeasureSnapKind.Level -> R.string.demo_ar_measure_snap_level
-            kind == MeasureSnapKind.Square -> R.string.demo_ar_measure_snap_square
-            onFoot -> R.string.demo_ar_measure_snap_wall
             else -> null
         }
         val lastChip = remember { intArrayOf(R.string.demo_ar_measure_snap_point) }
@@ -1428,16 +1440,8 @@ private fun findMeasureAim(
     val activeOutline = if (active != null) outlines.lastOrNull().orEmpty() else emptyList()
     val floorY = activeOutline.firstOrNull()?.y?.takeIf { mode != MeasureMode.Distance }
 
-    // Aimed at a recognised wall, a wall or room point lands on the wall's foot (#4732).
-    val wallFoot = if (walls != null && mode != MeasureMode.Distance && walls.walls.isNotEmpty()) {
-        measureLiveWallFoot(origin, direction, walls.walls, walls.floorY, walls.height, level = floorY ?: walls.floorY)
-    } else {
-        null
-    }
-    var hit: MeasureHit? = wallFoot?.let {
-        MeasureHit(it.position, MeasureHitSource.Plane, null, MeasurePlaneKind.Vertical)
-    }
-    if (hit == null && floorY != null) {
+    var hit: MeasureHit? = null
+    if (floorY != null) {
         measureRayFloorHit(origin, direction, floorY)?.let { hit = MeasureHit(it, MeasureHitSource.Floor, null, null) }
     }
     if (hit == null) hit = hitTestCenter(frame, session, x, y, allowDepth)
@@ -1445,7 +1449,6 @@ private fun findMeasureAim(
     val rawPosition = when {
         floorY != null -> measureOnLevel(raw.position, floorY)
         // The first corner of a wall or a room may be aimed on the wall's foot: drop it to the floor.
-        wallFoot != null -> wallFoot.position
         mode != MeasureMode.Distance -> measureFirstFloorPoint(raw.position, raw.planeKind, measureFloorLevel(planes))
         else -> raw.position
     }
@@ -1455,11 +1458,7 @@ private fun findMeasureAim(
     val pointPositions = board.allPoints.distinct().mapNotNull { anchor ->
         positions[anchor]?.let { if (floorY != null) measureOnLevel(it, floorY) else it }
     }
-    val planeTargets = measurePlaneSnapTargets(mode, planes, level)
-    val wallTargets = if (walls != null && level != null) measureLiveWallTargets(walls.walls, level) else null
-    val context = planeTargets.copy(
-        corners = planeTargets.corners + wallTargets?.corners.orEmpty(),
-        edges = planeTargets.edges + wallTargets?.edges.orEmpty(),
+    val context = measurePlaneSnapTargets(mode, planes, level).copy(
         points = pointPositions,
         previous = activeOutline.lastOrNull().takeIf { mode == MeasureMode.Distance },
     )
@@ -1488,7 +1487,12 @@ private fun findMeasureAim(
     } else {
         { session?.createAnchor(Pose.makeTranslation(snapped.x, snapped.y, snapped.z)) }
     }
-    val foot = wallFoot?.let { it.a to it.b }
+    // The live walls only tell the point is on a wall's foot; they never move it (#4750 review).
+    val foot = if (walls != null && mode != MeasureMode.Distance) {
+        measureWallFootAt(snapped, walls.walls)?.let { it.a to it.b }
+    } else {
+        null
+    }
     return MeasureAim(MeasureAimView(snap, closes, raw.source, foot), createAnchor, reuse)
 }
 
@@ -1562,7 +1566,7 @@ private fun LivePlane.toMeasurePlane(): MeasurePlane = MeasurePlane(
  * frame, eased by a [LiveWallMotion]. Nothing is shown before a floor is tracked.
  */
 private class MeasureLiveWalls {
-    val planeIds = HashMap<Plane, Int>()
+    val planeIds = LivePlaneIds()
     private val source = PlaneWallSource()
     val motion = LiveWallMotion()
     private var snapshot = LiveWallSnapshot.Empty
@@ -1572,12 +1576,22 @@ private class MeasureLiveWalls {
     var dt = 0f
         private set
 
-    fun update(planes: List<LivePlane>, timestampNanos: Long): LiveWallSnapshot {
+    fun update(planes: List<LivePlane>, cameraY: Float, timestampNanos: Long): LiveWallSnapshot {
         dt = if (lastNanos == 0L || timestampNanos <= lastNanos) 0f else (timestampNanos - lastNanos) / NANOS_PER_SECOND
         lastNanos = timestampNanos
-        val floorY = livePlanesFloorY(planes) ?: return snapshot
+        val floorY = livePlanesFloorY(planes, cameraY) ?: return snapshot
         snapshot = source.update(planes, floorY, timestampNanos / NANOS_PER_SECOND)
         return snapshot
+    }
+
+    /** Forgets every wall: a reset leaves no ghost wall behind. */
+    fun reset() {
+        planeIds.clear()
+        source.reset()
+        motion.reset()
+        snapshot = LiveWallSnapshot.Empty
+        lastNanos = 0L
+        dt = 0f
     }
 
     private companion object {

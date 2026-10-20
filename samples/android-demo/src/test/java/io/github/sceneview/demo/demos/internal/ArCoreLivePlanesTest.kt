@@ -59,6 +59,15 @@ class ArCoreLivePlanesTest {
     }
 
     @Test
+    fun `a table just under the camera is never the floor`() {
+        // Phone held at 0 m: the table 0.7 m under it is furniture, the floor 1.4 m under it is not.
+        val table = LivePlane(1, LivePlane.Kind.Floor, floatArrayOf(0f, -0.7f, 0f, 1f, -0.7f, 0f, 1f, -0.7f, 1f))
+        val floor = LivePlane(2, LivePlane.Kind.Floor, floatArrayOf(0f, -1.4f, 0f, 2f, -1.4f, 0f, 2f, -1.4f, 2f))
+        assertNull(livePlanesFloorY(listOf(table), cameraY = 0f))
+        assertEquals(-1.4f, livePlanesFloorY(listOf(table, floor), cameraY = 0f)!!, 1e-5f)
+    }
+
+    @Test
     fun `no floor before one is tracked`() {
         val wall = LivePlane(3, LivePlane.Kind.Wall, floatArrayOf(0f, -1f, 0f, 1f, -1f, 0f, 1f, 0f, 0f))
         assertNull(livePlanesFloorY(listOf(wall)))
