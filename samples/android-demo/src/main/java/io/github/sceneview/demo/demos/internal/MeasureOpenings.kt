@@ -8,7 +8,7 @@ import kotlin.math.sqrt
 
 /*
  * Doors and windows marked on a measured wall, so the wall's net area — what a painter or a
- * plasterer prices — leaves them out. Pure, so each rule runs in a JVM test.
+ * plasterer covers — leaves them out. Pure, so each rule runs in a JVM test.
  */
 
 /**

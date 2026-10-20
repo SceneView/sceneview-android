@@ -105,6 +105,12 @@ enum class MeasureRefusal {
 
     /** ARCore would not anchor the point; a retry usually works. */
     AnchorFailed,
+
+    /** Marking a door or a window, and the aim is off the wall it goes on. */
+    OpeningOffWall,
+
+    /** The opening's second corner is too close to its first: no door or window there. */
+    OpeningTooSmall,
 }
 
 /** The [MeasureRefusal] for this frame, `null` when the add button would act. */

@@ -31,7 +31,7 @@ import kotlin.math.tan
  * The target is a median error of 3 % at most and a maximum of 5 %, on the floor area, the
  * perimeter, the wall (paint) area and the volume. One case misses it, and is held to what it
  * does instead: without wall planes, the 6° square snap — validated on device and left as it is —
- * squares the 95° room's 95° and 85° corners, and how much that costs depends on where the
+ * squares the 95° room's 95° and 85° corners, and how far that moves the figures depends on where the
  * trace starts.
  *
  * The figures of each case are in its name, so they read in the test log.
@@ -93,7 +93,7 @@ class MeasurePrecisionTest(private val name: String, private val case: Precision
 
         private val TARGET = Bounds(median = 3f, max = 5f)
 
-        /** The 95° room without wall planes: the square snap's cost, measured, not the target. */
+        /** The 95° room without wall planes: what the square snap does to it, measured, not the target. */
         private val SQUARED = Bounds(median = 4f, max = 11f)
 
         private val ROOMS = listOf(

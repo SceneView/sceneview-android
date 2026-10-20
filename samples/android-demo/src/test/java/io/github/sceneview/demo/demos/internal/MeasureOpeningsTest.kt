@@ -10,7 +10,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Locale
 
-/** What a professional prices: wall net of its doors and windows, a room's paint area and volume. */
+/** What a tradesperson works from: a wall net of its doors and windows, a room's paint area and volume. */
 class MeasureOpeningsTest {
     private fun p(x: Float, y: Float, z: Float) = Position(x, y, z)
 
