@@ -161,9 +161,18 @@ class ScanCoachTest {
     }
 
     @Test
-    fun `standing still says nothing`() {
+    fun `standing still says nothing at first, then that the scan waits on the phone`() {
         val coach = ScanCoach()
-        coach.walk(speed = 0f, seconds = 10f)
+        val t = coach.walk(speed = 0f, seconds = ScanCoach.STILL_SECONDS - 1f)
+        assertNull(coach.line)
+        coach.walk(speed = 0f, seconds = 2f, from = t)
+        assertEquals(ScanCoach.Line.Still, coach.line)
+    }
+
+    @Test
+    fun `standing still while the scan grows says nothing`() {
+        val coach = ScanCoach()
+        coach.walk(speed = 0f, seconds = 10f, grow = true)
         assertNull(coach.line)
     }
 

@@ -158,7 +158,9 @@ import io.github.sceneview.demo.demos.internal.DollhouseCopy
 import io.github.sceneview.demo.demos.internal.RoomDollhouse
 import io.github.sceneview.demo.demos.internal.ScanBack
 import io.github.sceneview.demo.demos.internal.ScanClock
+import io.github.sceneview.demo.demos.internal.ScanActivity
 import io.github.sceneview.demo.demos.internal.ScanCopy
+import io.github.sceneview.demo.demos.internal.ScanWallWalk
 import io.github.sceneview.demo.demos.internal.DebugPose
 import io.github.sceneview.demo.demos.internal.ScanDetail
 import io.github.sceneview.demo.demos.internal.turnedBy
@@ -350,7 +352,7 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
             when (qaState) {
                 QA_STATE_RECORD_OBJECT -> ScanScope.Object
                 QA_STATE_RECORD_HOME, QA_STATE_HOME_SUMMARY -> ScanScope.Home
-                QA_STATE_RECORD, QA_STATE_RECORD_NO_DEPTH -> ScanScope.Room
+                QA_STATE_RECORD, QA_STATE_RECORD_NO_DEPTH, QA_STATE_RECORD_WALLS -> ScanScope.Room
                 QA_STATE_RECORD_AREA -> ScanScope.Area
                 else -> ScanScopeStore.last(context)
             },
@@ -1365,7 +1367,12 @@ private fun RerunLiveScreen(
     LaunchedEffect(qaRecord, sample, take) {
         val source = sample?.takeIf { qaRecord } ?: return@LaunchedEffect
         val events = withContext(Dispatchers.IO) {
-            context.assets.open(RerunReplayAssets.LOG).bufferedReader().useLines { parseArDebugLog(it) }
+            // #4540: a turn round a synthetic room, whose walls the sample's close take lacks.
+            if (qaState == QA_STATE_RECORD_WALLS) {
+                ScanWallWalk.events()
+            } else {
+                context.assets.open(RerunReplayAssets.LOG).bufferedReader().useLines { parseArDebugLog(it) }
+            }
         }
         val player = ArDebugLogPlayer(events, loopPauseSeconds = QA_RECORD_NEVER_LOOP_S)
         player.trace.keyframeSpacing = ReplayGeometry.KEYFRAME_SPACING_M
@@ -1409,6 +1416,8 @@ private fun RerunLiveScreen(
     val scanLens = remember(scanMedia) { ScanLens() }
     // What the capture has covered (#4631): the live map and the coach read it, frame by frame.
     val scanCoverage = remember(scanMedia) { ScanCoverageState() }
+    // A room's walls, recognised as it is scanned (#4540): Room and Home only.
+    val scanWalls = remember(scanMedia, scanScope) { if (scanScope.hasFloorPlan) ScanWallsState() else null }
     // Tapped open, the live map is the map to complete (#4718).
     var scanMapExpanded by remember(scanMedia) { mutableStateOf(false) }
     // The phone now, written each AR frame (#4718): paused, the trace records nothing, and the
@@ -1692,6 +1701,13 @@ private fun RerunLiveScreen(
             delay(HUD_TICK_MS)
         }
     }
+    // #4540: no usable depth for two seconds — the real cause of a count frozen at zero.
+    val depthStarved by produceState(false, scan) {
+        while (true) {
+            value = scan?.depthStarved ?: false
+            delay(HUD_TICK_MS)
+        }
+    }
     val photoLimitReached by produceState(false, scan, qaLong) {
         while (true) {
             value = scan?.isPhotoLimitReached ?: qaLong?.shownPhotoLimit ?: false
@@ -1742,6 +1758,15 @@ private fun RerunLiveScreen(
                     points = capturedPoints,
                     label = ScanScopeCopy.label(scanScope, roomNumber),
                     photoLimit = photoLimitReached && photoNoticeOver,
+                    activity = ScanActivity.of(
+                        phase = phase,
+                        trackingLost = trackingLost,
+                        coach = scanCoverage.coachLine,
+                        lowTexture = lowTexture,
+                        depthStarved = depthStarved,
+                        done = scanWalls?.done == true,
+                    ),
+                    room = scanWalls,
                 )
             } else if (debugFullScreen) {
                 ArDebugLegend(debugSession)
@@ -1785,7 +1810,12 @@ private fun RerunLiveScreen(
                         ),
                     trackingFailureReason = trackingFailureReason,
                     // Before a scan, the wait is for Record; during one, ARCore's own guidance.
-                    searching = if (recording) null else ScanCopy.WAITING,
+                    // The scan starts by itself as soon as AR is ready: said while it gets ready (#4540).
+                    searching = when {
+                        recording -> null
+                        !autoStarted && qaDebug == null && !qaRecord -> ScanCopy.STARTING
+                        else -> ScanCopy.WAITING
+                    },
                     isConnected = isConnected,
                     sharing = sharing,
                     onSaveAndShare = onSaveAndShare,
@@ -1798,6 +1828,8 @@ private fun RerunLiveScreen(
                         modifier = Modifier
                             .align(if (scanMapExpanded) Alignment.CenterHorizontally else Alignment.Start)
                             .padding(horizontal = Space.md),
+                        // A room's area waits on two walls (#4540): one wall and the floor are not a room.
+                        showFloor = scanWalls == null || scanWalls.wallCount >= ArDebugSession.MIN_ROOM_WALLS,
                         expanded = scanMapExpanded,
                         onToggle = { scanMapExpanded = !scanMapExpanded },
                     )
@@ -1849,8 +1881,13 @@ private fun RerunLiveScreen(
                                     detail = scan?.denseDetail ?: qaLong?.shownDetail ?: ScanDetail.Fine,
                                     coach = scanCoverage.coachLine,
                                     lowTexture = lowTexture,
+                                    depthStarved = depthStarved,
                                 ),
                                 nextRoom = roomNumber.takeIf { betweenRooms },
+                                walls = scanWalls?.wallCount,
+                                turn = scanWalls?.turn,
+                                done = scanWalls?.done == true,
+                                facingWall = scanCoverage.facingWall,
                             ),
                             onTogglePause = {
                                 betweenRooms = false
@@ -2012,6 +2049,7 @@ private fun RerunLiveScreen(
                     materialLoader = materialLoader,
                     livePose = scanLivePose,
                     saving = phase == ScanPhase.Saving,
+                    walls = scanWalls,
                 )
             }
 
@@ -2342,9 +2380,13 @@ private const val QA_STATE_RECORD_AREA = "record-area"
 private const val QA_STATE_CHOOSE = "choose"
 private const val QA_STATE_HOME_SUMMARY = "home-summary"
 
+/** QA only (#4540): a room's scan turning round a synthetic room, its walls rising as they are found. */
+private const val QA_STATE_RECORD_WALLS = "record-walls"
+
 private val RECORD_QA_STATES =
     setOf(
         QA_STATE_RECORD,
+        QA_STATE_RECORD_WALLS,
         QA_STATE_RECORD_TRACKING_LOST,
         QA_STATE_RECORD_SAVE_FAILED,
         QA_STATE_RECORD_OBJECT,

@@ -1,6 +1,19 @@
 package io.github.sceneview.demo.demos
 
 import androidx.compose.foundation.background
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.rounded.UTurnLeft
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import io.github.sceneview.demo.demos.internal.ScanActivity
+import io.github.sceneview.demo.demos.internal.ScanTurn
 import io.github.sceneview.math.Position
 import io.github.sceneview.demo.demos.internal.OrbitPose
 import androidx.compose.runtime.remember
@@ -40,10 +53,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
 import com.google.android.filament.Engine
 import io.github.sceneview.demo.demos.internal.ArDebugFormat
@@ -70,6 +88,9 @@ import io.github.sceneview.loaders.ModelLoader
 /**
  * The capture's status: the red dot and `Scanning · 0:42` (`Paused` while frozen), then the
  * points captured, counted off the scan from zero and never shown against a cap.
+ *
+ * [activity] says what the capture is doing ([ScanActivity]); a room's scan adds its [room] gauge:
+ * the walls found and how far along the room is ([ScanRoomGauge]).
  */
 @Composable
 internal fun ScanHud(
@@ -78,6 +99,8 @@ internal fun ScanHud(
     points: Int,
     label: String? = null,
     photoLimit: Boolean = false,
+    activity: ScanActivity? = null,
+    room: ScanWallsState? = null,
 ) {
     val clock = ArDebugFormat.clock(seconds)
     OverlayCard(testTag = SCAN_HUD_TAG) {
@@ -95,7 +118,8 @@ internal fun ScanHud(
             )
             Spacer(Modifier.width(Space.sm))
             // What is being scanned leads (#4647): `Room 2 · Scanning · 0:42`.
-            val status = ScanCopy.status(phase, clock)
+            // Working, paused or stuck (#4540): stuck says so, and the coaching line says why.
+            val status = activity?.let { ScanCopy.status(it, clock) } ?: ScanCopy.status(phase, clock)
             Text(
                 text = label?.let { "$it · $status" } ?: status,
                 style = OnScrimTitle,
@@ -108,6 +132,7 @@ internal fun ScanHud(
             maxLines = 1,
             modifier = Modifier.testTag(SCAN_POINTS_TAG),
         )
+        if (room != null) ScanRoomGauge(room)
         if (photoLimit) {
             // Said once in the coaching line; from then on, this small reminder (#4717).
             Row(
@@ -126,6 +151,99 @@ internal fun ScanHud(
         }
     }
 }
+
+/**
+ * A room's scan so far (#4540 live walls): `3 walls` over a ten-segment meter (DESIGN.md "Meters",
+ * one segment per 10 %), lit in `accent-progress`, then `accent-success` once the walls close the
+ * room — the moment to tap Finish. The share is the meter alone, said aloud to TalkBack: the one
+ * figure on screen is the map's area, once two walls are seen.
+ */
+@Composable
+internal fun ScanRoomGauge(room: ScanWallsState) {
+    val done = room.done
+    val share = room.completion
+    val lit = if (done) ArOverlay.accentSuccess else ArOverlay.accentProgress
+    Column(
+        verticalArrangement = Arrangement.spacedBy(Space.xs),
+        modifier = Modifier
+            .semantics(mergeDescendants = true) { stateDescription = ScanCopy.completion(share) }
+            .testTag(SCAN_ROOM_GAUGE_TAG),
+    ) {
+        Text(
+            text = ScanCopy.wallsFound(room.wallCount),
+            style = OnScrimBody,
+            maxLines = 1,
+        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(Space.xs),
+            modifier = Modifier.widthIn(max = ArOverlay.maxWidth).fillMaxWidth(),
+        ) {
+            val segments = if (done) GAUGE_SEGMENTS else (share * GAUGE_SEGMENTS).toInt()
+            repeat(GAUGE_SEGMENTS) { i ->
+                val color by animateColorAsState(
+                    targetValue = if (i < segments) lit else ArOverlay.meterTrack,
+                    animationSpec = tween(SceneViewTokens.Duration.mediumMillis),
+                    label = "scanGauge$i",
+                )
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .height(Space.sm)
+                        .background(color, RoundedCornerShape(SceneViewTokens.Radius.xs)),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * The turn to the next gap of a room's scan (#4540, "arrows to say turn this way"): a glass disc at
+ * the screen's edge on that side, an arrow in `accent-guidance`, the colour of the dashed gap in
+ * the room. Behind the phone, it sits in the middle with a turning arrow; ahead, the gap is in
+ * view and the dashes speak for it.
+ */
+@Composable
+internal fun BoxScope.ScanTurnArrow(turn: ScanTurn?) {
+    val shown = turn?.takeIf { it != ScanTurn.Ahead }
+    // Kept through the fade-out, so the arrow leaves from where it was.
+    var last by remember { mutableStateOf(ScanTurn.Left) }
+    if (shown != null) last = shown
+    // Left and right are the room's, not the reading direction's: the same side in RTL.
+    val alignment = when (last) {
+        ScanTurn.Left -> AbsoluteAlignment.CenterLeft
+        ScanTurn.Right -> AbsoluteAlignment.CenterRight
+        else -> Alignment.Center
+    }
+    AnimatedVisibility(
+        visible = shown != null,
+        enter = fadeIn(tween(SceneViewTokens.Duration.mediumMillis)),
+        exit = fadeOut(tween(SceneViewTokens.Duration.mediumMillis)),
+        modifier = Modifier.align(alignment).padding(Space.md).testTag(SCAN_TURN_TAG),
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(SceneViewTokens.Layout.touchTarget + Space.md)
+                .background(LocalStageChrome.current.card, CircleShape),
+        ) {
+            // Drawn left to right whatever the locale: a mirrored arrow would point at the wrong wall.
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                Icon(
+                    imageVector = when (last) {
+                        ScanTurn.Left -> Icons.AutoMirrored.Rounded.ArrowBack
+                        ScanTurn.Right -> Icons.AutoMirrored.Rounded.ArrowForward
+                        else -> Icons.Rounded.UTurnLeft
+                    },
+                    contentDescription = ScanCopy.turnHint(last),
+                    tint = ArOverlay.accentGuidance,
+                    modifier = Modifier.size(SceneViewTokens.Layout.touchTarget - Space.sm),
+                )
+            }
+        }
+    }
+}
+
+private const val GAUGE_SEGMENTS = 10
 
 /**
  * Under a capture still open: the one coaching line, then Pause (Resume while paused) and the
@@ -393,6 +511,9 @@ private fun ScanHint(text: String) {
  * slow orbit round the whole cloud ([ScanFollow.savingPose]) while the scan is fused and written.
  * It sets out from the phone's own eye ([ScanSavingOrbit], [EyeHandoff]): the first frame after the
  * stop tap is the camera's view of the frame before, eased from there onto the orbit.
+ *
+ * [walls] (#4540), a room's scan only: the walls recognised so far rise in the room, on the
+ * camera, and the floor edges still open are dashed where the next wall should be.
  */
 @Composable
 @Suppress("LongParameterList") // the demo's shared engine, handed down once
@@ -407,6 +528,7 @@ internal fun ScanLiveView(
     materialLoader: MaterialLoader,
     livePose: (traced: DebugPose?) -> DebugPose? = { it },
     saving: Boolean = false,
+    walls: ScanWallsState? = null,
 ) {
     // Saving, the view is handed back to the automatic framing, which the orbit then drives.
     LaunchedEffect(saving) { if (saving) orbit.recenter() }
@@ -433,8 +555,16 @@ internal fun ScanLiveView(
                 val phone = follow.poseFor(livePose(frame.camera))
                 savingOrbit?.poseFor(phone, media.dense?.cloud?.positions ?: frame.mapPoints, orbit) ?: phone
             },
-            observe = { frame -> coverage.observe(frame, pose = livePose(frame.camera)) },
+            observe = { frame ->
+                val pose = livePose(frame.camera)
+                coverage.observe(frame, pose = pose, snapshotCells = media.liveDense?.invoke()?.coveredCells)
+                walls?.observe(frame, coverage, pose)
+            },
+            // The walls stand in the room while it is scanned; saving, the orbit shows the cloud.
+            walls = walls,
+            drawWalls = !saving,
         )
+        if (walls != null && !saving) ScanTurnArrow(walls.turn)
     }
 }
 
@@ -466,6 +596,8 @@ private val SCAN_LIVE_GROUPS = setOf(DebugGroup.Points)
 private val ScanDotSize = Space.md - Space.xs / 2
 
 internal const val SCAN_HUD_TAG = "ar_rerun_scan_hud"
+internal const val SCAN_ROOM_GAUGE_TAG = "ar_rerun_scan_room_gauge"
+internal const val SCAN_TURN_TAG = "ar_rerun_scan_turn"
 internal const val SCAN_STAGE_TAG = "ar_rerun_scan_stage"
 internal const val SCAN_RECENTER_TAG = "ar_rerun_scan_recenter"
 internal const val SCAN_POINTS_TAG = "ar_rerun_scan_points"

@@ -1,5 +1,10 @@
 package io.github.sceneview.demo.demos.internal
 
+import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.acos
+import kotlin.math.floor
+import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
@@ -62,6 +67,25 @@ internal class CoverageGrid(
             }
         }
         consumed = total
+        if (grew) version++
+        return grew
+    }
+
+    /**
+     * Covers the cells [keys] ([key]-packed) names, a live depth snapshot's covered cells found
+     * off the main thread ([coveredKeys]): the live dense cloud is a whole new snapshot each time,
+     * not a prefix of the last, so [update]'s prefix would bin the wrong points (#4540 live walls —
+     * the live figure froze at the feature map's 12,000-point cap while the dense cloud still
+     * grew). A cell once covered stays covered. Returns `true` when a cell became covered.
+     */
+    fun addCells(keys: LongArray): Boolean {
+        var grew = false
+        for (key in keys) {
+            if (coveredCells.add(key)) {
+                include(cxOf(key), czOf(key))
+                grew = true
+            }
+        }
         if (grew) version++
         return grew
     }
@@ -175,6 +199,34 @@ internal class CoverageGrid(
         /** Points before a cell counts: one stray depth sample is not a surface. */
         const val MIN_POINTS = 3
 
+        /**
+         * The cells [points]' first [count] surfels (xyz triples) fill with [minPoints] or more,
+         * [key]-packed, each once: a sort, no map, so it costs a worker a few milliseconds for a
+         * live snapshot's 150,000 surfels. Off the main thread.
+         */
+        fun coveredKeys(
+            points: FloatArray,
+            count: Int = points.size / 3,
+            cellMetres: Float = CELL_METRES,
+            minPoints: Int = MIN_POINTS,
+        ): LongArray {
+            val total = count.coerceIn(0, points.size / 3)
+            val keys = LongArray(total) { i ->
+                key(floor(points[i * 3] / cellMetres).toInt(), floor(points[i * 3 + 2] / cellMetres).toInt())
+            }
+            keys.sort()
+            val covered = LongArray(total)
+            var n = 0
+            var i = 0
+            while (i < total) {
+                var j = i
+                while (j < total && keys[j] == keys[i]) j++
+                if (j - i >= minPoints) covered[n++] = keys[i]
+                i = j
+            }
+            return covered.copyOf(n)
+        }
+
         @PublishedApi
         internal fun key(cx: Int, cz: Int): Long = (cx.toLong() shl 32) or (cz.toLong() and 0xffffffffL)
 
@@ -203,14 +255,16 @@ internal class CoverageGrid(
  * by default. Two things it says, from the phone's own movement and whether the grid still grows:
  *
  * - [Line.Slower] — the phone moves faster than [MAX_SPEED_M_PER_S]; depth does not keep up.
- * - [Line.NothingNew] — moving, yet no cell became covered for [STALL_SECONDS]: the surfaces are
- *   too close, too far, or it is pointed at nothing.
+ * - [Line.NothingNew] — moving or turning, yet no cell became covered for [STALL_SECONDS]: the
+ *   surfaces are too close, too far, too plain, or it is pointed at nothing.
+ * - [Line.Still] — standing still, not turning, and nothing new for [STILL_SECONDS]: the scan waits for the
+ *   phone to move (#4540 — "0 points" sat frozen for a minute with nothing said).
  *
  * A line holds [holdSeconds] once shown so it can be read, and goes when its cause has gone.
  */
 class ScanCoach(private val holdSeconds: Float = HOLD_SECONDS) {
 
-    enum class Line { Slower, NothingNew }
+    enum class Line { Slower, NothingNew, Still }
 
     /** The line to show now, `null` for none. */
     var line: Line? = null
@@ -220,9 +274,26 @@ class ScanCoach(private val holdSeconds: Float = HOLD_SECONDS) {
     var speed = 0f
         private set
 
+    /**
+     * How fast the way the phone looks turns, smoothed, in degrees a second — left and right, up
+     * and down: sweeping a wall top to bottom is moving too. The view direction itself, not a
+     * heading: pointed at the floor, a heading spins with the slightest roll and faked a turn.
+     */
+    var turnRate = 0f
+        private set
+
+    /**
+     * Whether the phone looks at the walls rather than at the floor or the ceiling: more than
+     * [LEVEL_DEGREES] up or down, a plain wall is not what it sees.
+     */
+    var facingWall = true
+        private set
+
     private var lastTime = Float.NaN
     private var lastX = 0f
     private var lastZ = 0f
+    private val lastLook = FloatArray(3)
+    private var looked = false
     private var grewAt = Float.NaN
     private var shownAt = Float.NaN
 
@@ -233,6 +304,7 @@ class ScanCoach(private val holdSeconds: Float = HOLD_SECONDS) {
             lastTime = time
             lastX = camera.x
             lastZ = camera.z
+            look(camera)
             grewAt = time
             return line
         }
@@ -247,6 +319,7 @@ class ScanCoach(private val holdSeconds: Float = HOLD_SECONDS) {
             val instant = sqrt(dx * dx + dz * dz) / dt
             val blend = (dt / SMOOTHING_SECONDS).coerceAtMost(1f)
             speed += (instant - speed) * blend
+            turnRate += (look(camera) / dt - turnRate) * blend
             lastTime = time
             lastX = camera.x
             lastZ = camera.z
@@ -254,7 +327,9 @@ class ScanCoach(private val holdSeconds: Float = HOLD_SECONDS) {
         if (grew) grewAt = time
         val wanted = when {
             speed > MAX_SPEED_M_PER_S -> Line.Slower
-            speed > MOVING_M_PER_S && time - grewAt > STALL_SECONDS -> Line.NothingNew
+            (speed > MOVING_M_PER_S || turnRate > TURNING_DEGREES_PER_S) && time - grewAt > STALL_SECONDS ->
+                Line.NothingNew
+            time - grewAt > STILL_SECONDS -> Line.Still
             else -> null
         }
         val held = line != null && !shownAt.isNaN() && time - shownAt < holdSeconds
@@ -265,10 +340,37 @@ class ScanCoach(private val holdSeconds: Float = HOLD_SECONDS) {
         return line
     }
 
+    /**
+     * Takes [pose]'s view direction as the last one, sets [facingWall] off it, and returns the
+     * angle it turned from the one before, in degrees (`0` for the first).
+     */
+    private fun look(pose: DebugPose): Float {
+        val f = pose.rotate(0f, 0f, -1f)
+        val norm = sqrt(f.x * f.x + f.y * f.y + f.z * f.z)
+        if (norm < TINY) return 0f
+        val x = f.x / norm
+        val y = f.y / norm
+        val z = f.z / norm
+        facingWall = abs(y) <= sin(LEVEL_DEGREES / DEGREES_PER_RADIAN)
+        val turned = if (looked) {
+            acos((x * lastLook[0] + y * lastLook[1] + z * lastLook[2]).coerceIn(-1f, 1f)) * DEGREES_PER_RADIAN
+        } else {
+            0f
+        }
+        lastLook[0] = x
+        lastLook[1] = y
+        lastLook[2] = z
+        looked = true
+        return turned
+    }
+
     fun reset() {
         line = null
         speed = 0f
+        turnRate = 0f
+        facingWall = true
         lastTime = Float.NaN
+        looked = false
         grewAt = Float.NaN
         shownAt = Float.NaN
     }
@@ -283,10 +385,23 @@ class ScanCoach(private val holdSeconds: Float = HOLD_SECONDS) {
         /** Slower than this the phone is standing still, and nothing new is expected. */
         const val MOVING_M_PER_S = 0.15f
 
+        private const val TINY = 1e-6f
+
+        /** Turning faster than this on the spot is looking round, not standing still. */
+        const val TURNING_DEGREES_PER_S = 8f
+
         /** Moving this long without a new cell is pointing at nothing. */
         const val STALL_SECONDS = 3f
 
+        /** Still this long with nothing new, the scan is waiting on the phone to move. */
+        const val STILL_SECONDS = 5f
+
         /** The speed's time constant: a hand's tremor out, a stride in. */
         const val SMOOTHING_SECONDS = 0.5f
+
+        /** Further up or down than this, the phone looks at the floor or the ceiling. */
+        const val LEVEL_DEGREES = 45f
+
+        private const val DEGREES_PER_RADIAN = (180.0 / PI).toFloat()
     }
 }

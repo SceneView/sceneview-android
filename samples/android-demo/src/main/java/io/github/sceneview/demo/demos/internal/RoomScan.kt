@@ -427,6 +427,70 @@ object ScanCopy {
     fun status(phase: ScanPhase, clock: String): String =
         "${if (phase == ScanPhase.Scanning) SCANNING else PAUSED} · $clock"
 
+    // What the capture is doing, said in one word (#4540 live walls): working, paused, or stuck.
+    const val STUCK = "Stuck"
+
+    /** The top line of the capture from what it is doing: `Scanning · 0:42`, `Stuck · 0:42`. */
+    fun status(activity: ScanActivity, clock: String): String {
+        val word = when (activity) {
+            ScanActivity.Working -> SCANNING
+            ScanActivity.Paused -> PAUSED
+            ScanActivity.Stuck -> STUCK
+        }
+        return "$word · $clock"
+    }
+
+    /** The walls recognised so far, beside the points: `No walls yet`, `1 wall`, `3 walls`. */
+    fun wallsFound(walls: Int): String =
+        if (walls <= 0) WALLS_NONE else "$walls ${label(walls, "wall", "walls")}"
+
+    const val WALLS_NONE = "No walls yet"
+
+    /** A room whose walls close it, or whose gauge is full: the scan can end (#4540). */
+    const val ROOM_DONE = "Room complete — tap Finish"
+
+    /** A depth scan getting no usable depth: the true cause of a count stuck at zero. */
+    const val COACH_NO_DEPTH = "No depth yet — keep the lens clear and move slowly"
+
+    /** Standing still with nothing new: the scan waits on the phone. */
+    const val COACH_STILL = "Move the phone to scan more"
+
+    /** A wall still missing while nothing new comes: plain walls give ARCore little to hold. */
+    const val COACH_BLANK_WALL = "Plain wall? Get closer, at an angle, with a corner in view"
+
+    /** Nothing new while a wall is missing, the phone looking at the floor or the ceiling. */
+    const val COACH_FACE_WALLS = "Raise the phone to the walls"
+
+    /** Before the first frame tracks: the scan starts by itself, as soon as AR is ready. */
+    const val STARTING = "Getting AR ready — the scan starts by itself"
+
+    /** The turn to the part of the room no wall was seen on yet ([ScanGuide.cue]). */
+    fun turnHint(turn: ScanTurn): String = when (turn) {
+        ScanTurn.Left -> "Turn left — no wall seen there yet"
+        ScanTurn.Right -> "Turn right — no wall seen there yet"
+        ScanTurn.Behind -> "Turn around — no wall seen behind you yet"
+        ScanTurn.Ahead -> "Sweep ahead — no wall seen there yet"
+    }
+
+    /** The gauge's figure: `0 %` to `100 %`, the room's scan done so far ([ScanGuide.completion]). */
+    fun completion(share: Float): String = "${(share.coerceIn(0f, 1f) * PERCENT).toInt()} %"
+
+    private const val PERCENT = 100
+
+    // The next step of a room's scan, from the walls recognised so far (#4540 live walls).
+    const val WALLS_FIRST = "Point at a wall and sweep along it"
+    const val WALLS_NEXT = "Turn to the next wall"
+    const val WALLS_FOLLOW = "Follow the walls round the room"
+    const val WALLS_CLOSE = "Keep going round, then tap Finish"
+
+    /** The guidance line of a room's scan once it can see walls: what to do next, in a few words. */
+    fun wallGuide(walls: Int): String = when {
+        walls <= 0 -> WALLS_FIRST
+        walls == 1 -> WALLS_NEXT
+        walls < ScanGuide.ROOM_WALLS -> WALLS_FOLLOW
+        else -> WALLS_CLOSE
+    }
+
     /** The capture's one count, from zero and never against a cap: `124,300 points captured`. */
     fun pointsCaptured(points: Int): String {
         val n = points.coerceAtLeast(0)
@@ -452,8 +516,10 @@ object ScanCopy {
      * The one coaching line under the capture, or `null` when a card speaks instead. Tracking loss
      * first, then a full map, then the photo limit while its one notice lasts ([photoLimitReached]
      * is that notice, not the lasting state, #4717), then what the user can act on — a surface
-     * with too little texture ([lowTexture]), moving too fast — then the dense map's
-     * "Adjusting detail", then the [coach]'s "nothing new" (#4631), then the plain advice.
+     * with no usable depth ([depthStarved], before texture: a starved depth gate looks like a
+     * blank surface, #4540), with too little texture ([lowTexture]), moving too fast — then the dense map's
+     * "Adjusting detail", then the [coach]'s "nothing new" (#4631) and "standing still", then the
+     * plain advice.
      */
     @Suppress("LongParameterList") // one flag per cause the line can speak of
     fun coaching(
@@ -463,15 +529,18 @@ object ScanCopy {
         detail: ScanDetail = ScanDetail.Fine,
         coach: ScanCoach.Line? = null,
         lowTexture: Boolean = false,
+        depthStarved: Boolean = false,
     ): String? = when (phase) {
         ScanPhase.Scanning -> when {
             trackingLost -> TRACKING_LOST
             detail == ScanDetail.Full -> SCAN_FULL
             photoLimitReached -> FULL
+            depthStarved -> COACH_NO_DEPTH
             lowTexture -> COACH_LOW_TEXTURE
             coach == ScanCoach.Line.Slower -> COACH_SLOWER
             detail == ScanDetail.Adjusting -> ADJUSTING_DETAIL
             coach == ScanCoach.Line.NothingNew -> COACH_NOTHING_NEW
+            coach == ScanCoach.Line.Still -> COACH_STILL
             else -> COACH_SCANNING
         }
         ScanPhase.Paused -> COACH_PAUSED
