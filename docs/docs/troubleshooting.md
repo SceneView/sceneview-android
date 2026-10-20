@@ -145,7 +145,7 @@ modelLoader.loadModelInstanceAsync("models/helmet.glb") { instance ->
 
 If the AR session never initialises or immediately throws an exception:
 
-1. **Camera permission.** `ARScene` requires `android.permission.CAMERA`. Request it before
+1. **Camera permission.** `ARSceneView` requires `android.permission.CAMERA`. Request it before
    displaying the AR composable.
 2. **ARCore installed.** The device needs *Google Play Services for AR*. On devices that do not
    ship with it pre-installed, the user must install it from the Play Store.
@@ -168,6 +168,7 @@ If the AR session never initialises or immediately throws an exception:
 ```xml
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+    <uses-feature android:name="android.hardware.camera.ar" android:required="true" />
     <application>
         <meta-data
             android:name="com.google.ar.core"
