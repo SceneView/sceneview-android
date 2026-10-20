@@ -20,17 +20,23 @@ dependencies {
 
 ### AndroidManifest permissions
 
+`arsceneview` already declares the `CAMERA` permission and marks ARCore as optional, so an
+app that also works without AR declares nothing. This codelab builds an AR Required app: it
+overrides the library's value with `tools:replace`, without which the manifest merger fails.
+
 ```xml
-<uses-permission android:name="android.permission.CAMERA" />
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
-<uses-feature android:name="android.hardware.camera.ar" android:required="true" />
+    <uses-feature android:name="android.hardware.camera.ar" android:required="true" />
 
-<application>
-    <!-- Required for ARCore -->
-    <meta-data
-        android:name="com.google.ar.core"
-        android:value="required" />
-</application>
+    <application>
+        <meta-data
+            android:name="com.google.ar.core"
+            android:value="required"
+            tools:replace="android:value" />
+    </application>
+</manifest>
 ```
 
 ### Runtime camera permission

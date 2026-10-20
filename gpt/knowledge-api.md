@@ -1415,11 +1415,17 @@ model grows in from 55 % over 260 ms and shrinks away on tracking loss (opaque g
 cannot fade).
 `placement.hasCameraFrame` is true from the first camera frame, tracked or not — key a
 "starting camera" cover on it, not on `INITIALIZING`.
+`placement.floorHeight` is the lowest tracked upward plane's world Y (`null` until one is
+tracked): content placed on a table that must stand on the floor drops by
+`floorHeight - pose.ty()`.
 
 `AutoPlacementModel` grounds the complete model bounds, preserves the contact pivot
 while rotating/scaling, and constrains dragging to supported plane geometry. Its
 0.3 m longest-dimension default is **Preview size**; `scaleToUnits = null` retains
-trustworthy authored units (**Actual size**). Scale limits are 25–400% of that base.
+trustworthy authored units (**Actual size**). Scale limits are 25–400% of that base by default;
+set `AutoPlacementState.scaleRange` (default `0.25f..4f`) to widen them, e.g. `0.25f..16f` for a
+1:16 miniature that may be pinched up to real size. `AutoPlacementState.cameraHeight` is the
+tracked camera's world height in metres (`null` until it tracks).
 For content that must stay at real size (furniture, a pool, a shed), set
 `placement.allowsScaling = false` — `remember { AutoPlacementState().apply { allowsScaling = false } }`:
 the pinch, the double-tap and `scaleTo` stop resizing it, drag and twist still move and turn
@@ -1466,7 +1472,7 @@ Author wall models with **+Y up and +Z front** (or supply `assetRotation`).
 `AutoPlacementModel` puts the bounding box's back and bottom at the contact pivot and
 faces its front toward the camera side of the wall, even if the detected normal points
 away. Drag projects the grab offset into the destination wall and validates its polygon;
-twist rotates in the wall plane; pinch preserves contact at 25–400% of the base size.
+twist rotates in the wall plane; pinch preserves contact within `scaleRange` (25–400% of the base size by default).
 The anchor frame retains the Android surface convention: +Y is the wall normal and
 −Z points up. `directWallPose(point, normal, towardViewer)` is an additive pure helper
 returning the authored +Y-up/+Z-front frame at the exact wall point; it requires a finite
@@ -2012,7 +2018,7 @@ The extension calls `Frame.acquireDepthImage16Bits()` and **must not** be invoke
 from a background coroutine. See also: `DepthMeshNode` (depth → renderable mesh)
 and `rememberDepthCollider` (depth → physics collider).
 
-**Cross-platform:** Android-only. The iOS counterpart is `ARView.raycast(from:allowing:.any)` — see [cheatsheet-ios.md "AR Depth & Cloud Anchors"](docs/docs/cheatsheet-ios.md) (#1813). Web tracked in #1778.
+**Cross-platform:** Android-only. The iOS counterpart is `ARView.raycast(from:allowing:.any)` — see [cheatsheet-ios.md "AR Depth & Cloud Anchors"](https://github.com/sceneview/sceneview/blob/main/docs/docs/cheatsheet-ios.md) (#1813). Web tracked in #1778.
 
 ```kotlin
 data class DepthHitResult(
@@ -2511,7 +2517,7 @@ must run on the AR frame / GL-main thread. The composable handles this for you (
 `node.latestSnapshot` consumers from a background coroutine. See also: `Frame.hitTestDepth`
 (raycast against the same depth image) and `rememberDepthCollider` (depth → physics collider).
 
-**Cross-platform:** Android-only. iOS equivalent is `ARMeshAnchor` via `ARWorldTrackingConfiguration.sceneReconstruction = .mesh` (LiDAR-only). SceneViewSwift: pass `ARSessionConfiguration(sceneReconstruction: .mesh)` to `ARSceneView`, or call `SceneReconstructionNode.enableReconstruction(in:)` on a bare `ARView` (see "iOS: ARSceneView (low-level / manual placement)") — see [cheatsheet-ios.md "AR Depth & Cloud Anchors"](docs/docs/cheatsheet-ios.md) (#1813). Web tracked in #1778.
+**Cross-platform:** Android-only. iOS equivalent is `ARMeshAnchor` via `ARWorldTrackingConfiguration.sceneReconstruction = .mesh` (LiDAR-only). SceneViewSwift: pass `ARSessionConfiguration(sceneReconstruction: .mesh)` to `ARSceneView`, or call `SceneReconstructionNode.enableReconstruction(in:)` on a bare `ARView` (see "iOS: ARSceneView (low-level / manual placement)") — see [cheatsheet-ios.md "AR Depth & Cloud Anchors"](https://github.com/sceneview/sceneview/blob/main/docs/docs/cheatsheet-ios.md) (#1813). Web tracked in #1778.
 
 ```kotlin
 @Composable fun ARSceneScope.rememberDepthMesh(
@@ -2613,7 +2619,7 @@ Thin physics wrapper over `DepthMeshNode` (#1739) — same edge-discontinuity cu
 triangles across depth jumps. See also: `DepthMeshNode` (the underlying renderable mesh) and
 `Frame.hitTestDepth` (single-ray raycast against the same depth image).
 
-**Cross-platform:** Android-only. iOS equivalent rebuilds `CollisionComponent`s per `ARMeshAnchor` (LiDAR-only, requires Scene Reconstruction). SceneViewSwift: pass `ARSessionConfiguration(sceneReconstruction: .mesh)` to `ARSceneView`, or call `SceneReconstructionNode.enableReconstruction(in:)` on a bare `ARView` (see "iOS: ARSceneView (low-level / manual placement)") — see [cheatsheet-ios.md "AR Depth & Cloud Anchors"](docs/docs/cheatsheet-ios.md) (#1813). Web tracked in #1778.
+**Cross-platform:** Android-only. iOS equivalent rebuilds `CollisionComponent`s per `ARMeshAnchor` (LiDAR-only, requires Scene Reconstruction). SceneViewSwift: pass `ARSessionConfiguration(sceneReconstruction: .mesh)` to `ARSceneView`, or call `SceneReconstructionNode.enableReconstruction(in:)` on a bare `ARView` (see "iOS: ARSceneView (low-level / manual placement)") — see [cheatsheet-ios.md "AR Depth & Cloud Anchors"](https://github.com/sceneview/sceneview/blob/main/docs/docs/cheatsheet-ios.md) (#1813). Web tracked in #1778.
 
 ```kotlin
 @Composable fun ARSceneScope.rememberDepthCollider(
@@ -3052,7 +3058,7 @@ DisposableEffect(cloudAnchorId) { onDispose { resolveFuture.cancel() } }
 
 **Privacy disclosure (required).** ARCore Cloud Anchors upload feature points from the user's surroundings to Google. Surface a clear in-app disclosure and link to the ARCore data policy (https://developers.google.com/ar/data-privacy) before hosting.
 
-**Cross-platform:** iOS ships the **Future + cancel-on-dispose lifecycle** as `SceneViewSwift.CloudAnchorNode.host(ttlDays:completion:operation:)` / `.resolve(cloudAnchorId:completion:operation:)`, each returning a cancellable `CloudAnchorFuture` — cancel it from SwiftUI `.onDisappear` (the analogue of Android's `DisposableEffect { onDispose { future.cancel() } }`), #1859. To keep the core library dependency-free, the actual `GARSession.hostCloudAnchor` round-trip (Google's `arcore-ios-sdk` Swift Package) is supplied by the app through the `operation` closure; `CloudAnchorFuture` owns only the portable, single-fire cancellation gate (never fires after `cancel()`/dealloc). See [cheatsheet-ios.md "AR Depth & Cloud Anchors"](docs/docs/cheatsheet-ios.md) (#1813). Web has no Cloud Anchor runtime.
+**Cross-platform:** iOS ships the **Future + cancel-on-dispose lifecycle** as `SceneViewSwift.CloudAnchorNode.host(ttlDays:completion:operation:)` / `.resolve(cloudAnchorId:completion:operation:)`, each returning a cancellable `CloudAnchorFuture` — cancel it from SwiftUI `.onDisappear` (the analogue of Android's `DisposableEffect { onDispose { future.cancel() } }`), #1859. To keep the core library dependency-free, the actual `GARSession.hostCloudAnchor` round-trip (Google's `arcore-ios-sdk` Swift Package) is supplied by the app through the `operation` closure; `CloudAnchorFuture` owns only the portable, single-fire cancellation gate (never fires after `cancel()`/dealloc). See [cheatsheet-ios.md "AR Depth & Cloud Anchors"](https://github.com/sceneview/sceneview/blob/main/docs/docs/cheatsheet-ios.md) (#1813). Web has no Cloud Anchor runtime.
 
 ### CloudAnchorRegistry — local persistence helper for hosted Cloud Anchor IDs
 

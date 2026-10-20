@@ -82,16 +82,40 @@ dependencies {
     implementation("io.github.sceneview:arsceneview:4.60.0") // AR (includes sceneview)
 }
 ```
-The app module needs `compileSdk = 37` (SceneView's AndroidX dependencies require it); `minSdk` stays 24.
+The app module needs `compileSdk = 37` (the published AARs declare `minCompileSdk=37`), `minSdk` 24 or higher, AGP 9.4.0+ and Kotlin 2.4 (SceneView is compiled with 2.4.21). SceneView and its `kotlin-math` dependency ship Java 21 bytecode with public `inline` functions, so the app compiles Java and Kotlin with JVM target 21:
+```kotlin notest Gradle Kotlin DSL (app module build.gradle.kts), not a Kotlin source file
+android {
+    compileSdk = 37
+    defaultConfig { minSdk = 24 }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+    }
+}
+kotlin {
+    compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21) }
+}
+```
 
 ### AndroidManifest.xml (AR apps)
+`arsceneview` already declares the `CAMERA` permission and `com.google.ar.core` = `optional`.
+An **AR Optional** app declares nothing. An **AR Required** app overrides the library's value
+with `tools:replace`; without it, the manifest merger fails:
 ```xml
-<uses-permission android:name="android.permission.CAMERA" />
-<uses-feature android:name="android.hardware.camera.ar" android:required="true" />
-<application>
-    <meta-data android:name="com.google.ar.core" android:value="required" />
-</application>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <uses-feature android:name="android.hardware.camera.ar" android:required="true" />
+    <application>
+        <meta-data
+            android:name="com.google.ar.core"
+            android:value="required"
+            tools:replace="android:value" />
+    </application>
+</manifest>
 ```
+
+`sceneview` also merges `INTERNET` (models from a URL) and `VIBRATE` (haptics) into the app's
+manifest; remove either with `tools:node="remove"` if the app does not want it.
 
 ---
 
@@ -2064,7 +2088,7 @@ The extension calls `Frame.acquireDepthImage16Bits()` and **must not** be invoke
 from a background coroutine. See also: `DepthMeshNode` (depth → renderable mesh)
 and `rememberDepthCollider` (depth → physics collider).
 
-**Cross-platform:** Android-only. The iOS counterpart is `ARView.raycast(from:allowing:.any)` — see [cheatsheet-ios.md "AR Depth & Cloud Anchors"](docs/docs/cheatsheet-ios.md) (#1813). Web tracked in #1778.
+**Cross-platform:** Android-only. The iOS counterpart is `ARView.raycast(from:allowing:.any)` — see [cheatsheet-ios.md "AR Depth & Cloud Anchors"](https://github.com/sceneview/sceneview/blob/main/docs/docs/cheatsheet-ios.md) (#1813). Web tracked in #1778.
 
 ```kotlin
 data class DepthHitResult(
@@ -2563,7 +2587,7 @@ must run on the AR frame / GL-main thread. The composable handles this for you (
 `node.latestSnapshot` consumers from a background coroutine. See also: `Frame.hitTestDepth`
 (raycast against the same depth image) and `rememberDepthCollider` (depth → physics collider).
 
-**Cross-platform:** Android-only. iOS equivalent is `ARMeshAnchor` via `ARWorldTrackingConfiguration.sceneReconstruction = .mesh` (LiDAR-only). SceneViewSwift: pass `ARSessionConfiguration(sceneReconstruction: .mesh)` to `ARSceneView`, or call `SceneReconstructionNode.enableReconstruction(in:)` on a bare `ARView` (see "iOS: ARSceneView (low-level / manual placement)") — see [cheatsheet-ios.md "AR Depth & Cloud Anchors"](docs/docs/cheatsheet-ios.md) (#1813). Web tracked in #1778.
+**Cross-platform:** Android-only. iOS equivalent is `ARMeshAnchor` via `ARWorldTrackingConfiguration.sceneReconstruction = .mesh` (LiDAR-only). SceneViewSwift: pass `ARSessionConfiguration(sceneReconstruction: .mesh)` to `ARSceneView`, or call `SceneReconstructionNode.enableReconstruction(in:)` on a bare `ARView` (see "iOS: ARSceneView (low-level / manual placement)") — see [cheatsheet-ios.md "AR Depth & Cloud Anchors"](https://github.com/sceneview/sceneview/blob/main/docs/docs/cheatsheet-ios.md) (#1813). Web tracked in #1778.
 
 ```kotlin
 @Composable fun ARSceneScope.rememberDepthMesh(
@@ -2665,7 +2689,7 @@ Thin physics wrapper over `DepthMeshNode` (#1739) — same edge-discontinuity cu
 triangles across depth jumps. See also: `DepthMeshNode` (the underlying renderable mesh) and
 `Frame.hitTestDepth` (single-ray raycast against the same depth image).
 
-**Cross-platform:** Android-only. iOS equivalent rebuilds `CollisionComponent`s per `ARMeshAnchor` (LiDAR-only, requires Scene Reconstruction). SceneViewSwift: pass `ARSessionConfiguration(sceneReconstruction: .mesh)` to `ARSceneView`, or call `SceneReconstructionNode.enableReconstruction(in:)` on a bare `ARView` (see "iOS: ARSceneView (low-level / manual placement)") — see [cheatsheet-ios.md "AR Depth & Cloud Anchors"](docs/docs/cheatsheet-ios.md) (#1813). Web tracked in #1778.
+**Cross-platform:** Android-only. iOS equivalent rebuilds `CollisionComponent`s per `ARMeshAnchor` (LiDAR-only, requires Scene Reconstruction). SceneViewSwift: pass `ARSessionConfiguration(sceneReconstruction: .mesh)` to `ARSceneView`, or call `SceneReconstructionNode.enableReconstruction(in:)` on a bare `ARView` (see "iOS: ARSceneView (low-level / manual placement)") — see [cheatsheet-ios.md "AR Depth & Cloud Anchors"](https://github.com/sceneview/sceneview/blob/main/docs/docs/cheatsheet-ios.md) (#1813). Web tracked in #1778.
 
 ```kotlin
 @Composable fun ARSceneScope.rememberDepthCollider(
@@ -3104,7 +3128,7 @@ DisposableEffect(cloudAnchorId) { onDispose { resolveFuture.cancel() } }
 
 **Privacy disclosure (required).** ARCore Cloud Anchors upload feature points from the user's surroundings to Google. Surface a clear in-app disclosure and link to the ARCore data policy (https://developers.google.com/ar/data-privacy) before hosting.
 
-**Cross-platform:** iOS ships the **Future + cancel-on-dispose lifecycle** as `SceneViewSwift.CloudAnchorNode.host(ttlDays:completion:operation:)` / `.resolve(cloudAnchorId:completion:operation:)`, each returning a cancellable `CloudAnchorFuture` — cancel it from SwiftUI `.onDisappear` (the analogue of Android's `DisposableEffect { onDispose { future.cancel() } }`), #1859. To keep the core library dependency-free, the actual `GARSession.hostCloudAnchor` round-trip (Google's `arcore-ios-sdk` Swift Package) is supplied by the app through the `operation` closure; `CloudAnchorFuture` owns only the portable, single-fire cancellation gate (never fires after `cancel()`/dealloc). See [cheatsheet-ios.md "AR Depth & Cloud Anchors"](docs/docs/cheatsheet-ios.md) (#1813). Web has no Cloud Anchor runtime.
+**Cross-platform:** iOS ships the **Future + cancel-on-dispose lifecycle** as `SceneViewSwift.CloudAnchorNode.host(ttlDays:completion:operation:)` / `.resolve(cloudAnchorId:completion:operation:)`, each returning a cancellable `CloudAnchorFuture` — cancel it from SwiftUI `.onDisappear` (the analogue of Android's `DisposableEffect { onDispose { future.cancel() } }`), #1859. To keep the core library dependency-free, the actual `GARSession.hostCloudAnchor` round-trip (Google's `arcore-ios-sdk` Swift Package) is supplied by the app through the `operation` closure; `CloudAnchorFuture` owns only the portable, single-fire cancellation gate (never fires after `cancel()`/dealloc). See [cheatsheet-ios.md "AR Depth & Cloud Anchors"](https://github.com/sceneview/sceneview/blob/main/docs/docs/cheatsheet-ios.md) (#1813). Web has no Cloud Anchor runtime.
 
 ### CloudAnchorRegistry — local persistence helper for hosted Cloud Anchor IDs
 
@@ -5124,7 +5148,7 @@ Sample: `SceneRecorderState` (`samples/android-demo/.../recording/SceneRecorderS
 
 ## AR Recording & Playback — debug without a phone
 
-ARCore captures the **entire** AR session (camera frames, IMU, planes, depth, anchors, light estimation) into an MP4. SceneView wraps this with [`ARRecorder`](arsceneview/src/main/java/io/github/sceneview/ar/recording/ARRecorder.kt) for recording and a `playbackDataset` parameter on `ARSceneView` for replay. The replayed session re-runs as if you were there: hit-tests return the same results, planes appear at the same moment, anchors track at the same poses.
+ARCore captures the **entire** AR session (camera frames, IMU, planes, depth, anchors, light estimation) into an MP4. SceneView wraps this with [`ARRecorder`](https://github.com/sceneview/sceneview/blob/main/arsceneview/src/main/java/io/github/sceneview/ar/recording/ARRecorder.kt) for recording and a `playbackDataset` parameter on `ARSceneView` for replay. The replayed session re-runs as if you were there: hit-tests return the same results, planes appear at the same moment, anchors track at the same poses.
 
 ### Why this matters
 
@@ -5277,7 +5301,7 @@ ARSceneView(playbackDatasetUri = pickedUri) { /* … */ }
 //    IllegalArgumentException at session creation.
 ```
 
-See [`ARRecorder.kt`](arsceneview/src/main/java/io/github/sceneview/ar/recording/ARRecorder.kt).
+See [`ARRecorder.kt`](https://github.com/sceneview/sceneview/blob/main/arsceneview/src/main/java/io/github/sceneview/ar/recording/ARRecorder.kt).
 
 ### AR Record interpretation — quantify a replayed session (#1441)
 
@@ -5316,7 +5340,7 @@ val report = interpreter.interpretation
 - Call `interpreter.reset()` to interpret another dataset with the same instance.
 - The pure folding core (`ARRecordInterpreterCore`, ARCore-free) is JVM-unit-tested directly.
 
-See [`ARRecordInterpreter.kt`](arsceneview/src/main/java/io/github/sceneview/ar/recording/ARRecordInterpreter.kt).
+See [`ARRecordInterpreter.kt`](https://github.com/sceneview/sceneview/blob/main/arsceneview/src/main/java/io/github/sceneview/ar/recording/ARRecordInterpreter.kt).
 
 ### iOS — `ARRecorder` (record-only via ReplayKit, v4.3.0+)
 
@@ -5385,7 +5409,7 @@ ARSceneView(
 - **Not all devices support EIS.** Always gate with `session.isImageStabilizationModeSupported(Config.ImageStabilizationMode.EIS)` — calling `setImageStabilizationMode(EIS)` on an unsupported device throws.
 - **Back-camera only.** EIS is not supported with `Session.Feature.FRONT_CAMERA`. The `isImageStabilizationModeSupported` check returns `false` for front-camera sessions, so the gate above already covers selfie configurations — but be aware that toggling EIS in a front-camera demo will be a no-op.
 - **Toggling at runtime works** via `session.configure {}`, but the camera background can briefly stutter while the stabilization buffers re-prime. If you expose an in-app toggle, prefer remounting via `key(eisEnabled) { ARSceneView(...) }` for a clean swap.
-- **Interactive demo** at [`samples/android-demo/src/main/java/io/github/sceneview/demo/demos/ARImageStabilizationDemo.kt`](samples/android-demo/src/main/java/io/github/sceneview/demo/demos/ARImageStabilizationDemo.kt).
+- **Interactive demo** at [`samples/android-demo/src/main/java/io/github/sceneview/demo/demos/ARImageStabilizationDemo.kt`](https://github.com/sceneview/sceneview/blob/main/samples/android-demo/src/main/java/io/github/sceneview/demo/demos/ARImageStabilizationDemo.kt).
 
 ---
 
@@ -5648,7 +5672,7 @@ setSpatialAudioListenerPose(cameraPos, cameraForward, cameraUp)  // call as the 
 
 **Phases.** Phase 1 (this release) ships positional playback with inverse / linear falloff. The listener is **caller-driven** in phase 1 — call `setSpatialAudioListenerPose` from your render loop. Automatic camera-tracked listening and anchor-attached listeners are phase 2. Occlusion and reverb zones are phase 3. See [#1900](https://github.com/sceneview/sceneview/issues/1900).
 
-**Interactive demos** — Android [`SpatialAudioDemo.kt`](samples/android-demo/src/main/java/io/github/sceneview/demo/demos/SpatialAudioDemo.kt), iOS [`SpatialAudioDemo.swift`](samples/ios-demo/SceneViewDemo/Views/Demos/SpatialAudioDemo.swift), and the **Spatial Audio** tab of the Web demo.
+**Interactive demos** — Android [`SpatialAudioDemo.kt`](https://github.com/sceneview/sceneview/blob/main/samples/android-demo/src/main/java/io/github/sceneview/demo/demos/SpatialAudioDemo.kt), iOS [`SpatialAudioDemo.swift`](https://github.com/sceneview/sceneview/blob/main/samples/ios-demo/SceneViewDemo/Views/Demos/SpatialAudioDemo.swift), and the **Spatial Audio** tab of the Web demo.
 
 ---
 
@@ -6350,8 +6374,8 @@ fun RoomMemory(folder: File) {
 
 What the SDK does not do: rebuild the room as a 3D model you can orbit. The demo's orbit view
 (path, photos, floor, points) is sample code — copy
-[`ArDebugView.kt`](samples/android-demo/src/main/java/io/github/sceneview/demo/demos/ArDebugView.kt)
-and [`RerunReplayScene.kt`](samples/android-demo/src/main/java/io/github/sceneview/demo/demos/RerunReplayScene.kt).
+[`ArDebugView.kt`](https://github.com/sceneview/sceneview/blob/main/samples/android-demo/src/main/java/io/github/sceneview/demo/demos/ArDebugView.kt)
+and [`RerunReplayScene.kt`](https://github.com/sceneview/sceneview/blob/main/samples/android-demo/src/main/java/io/github/sceneview/demo/demos/RerunReplayScene.kt).
 iOS: `ARRecorder` records a video of the walk only (see the iOS section above) — no replay.
 
 ### Measure how much floor a room scan has seen
@@ -6408,7 +6432,7 @@ For a replayed recording, `rememberARRecordInterpreter()` gives `interpretation.
 without any of this — but it counts every surface found, walls and tables included. The demo's
 `Room 3.9 × 3.8 m · 15 m²` line is a different figure: the rectangle around the floor and walls,
 squared to the walls. It is sample code
-([`RoomMeasure.kt`](samples/android-demo/src/main/java/io/github/sceneview/demo/demos/internal/RoomMeasure.kt)),
+([`RoomMeasure.kt`](https://github.com/sceneview/sceneview/blob/main/samples/android-demo/src/main/java/io/github/sceneview/demo/demos/internal/RoomMeasure.kt)),
 and it over-reads on large or open spaces (#4328).
 
 ### Draw a room's outline from a scan
@@ -6478,7 +6502,7 @@ fun RoomOutline() {
 The outline is what the phone saw of the floor, so it is ragged where furniture stands. For a
 rectangle squared to the walls with its two lengths written along the sides, the way the demo
 draws it, copy `RoomMeasure` and `MeasureDrawing` from
-[`RoomMeasure.kt`](samples/android-demo/src/main/java/io/github/sceneview/demo/demos/internal/RoomMeasure.kt).
+[`RoomMeasure.kt`](https://github.com/sceneview/sceneview/blob/main/samples/android-demo/src/main/java/io/github/sceneview/demo/demos/internal/RoomMeasure.kt).
 
 ---
 
@@ -9730,7 +9754,7 @@ Install:
 ```yaml
 # pubspec.yaml
 dependencies:
-  flutter_sceneview: ^4.39.0
+  flutter_sceneview: ^4.60.0
 ```
 
 Alternative — pin the repo via git (package name at tag v4.24.0 and earlier
