@@ -110,6 +110,7 @@ class RoomStructureRealScanTest {
             lines += "${summary(case, structure)}, full ${"%.1f".format(full[RUNS / 2])} ms, " +
                 "live ${"%.2f".format(live.first())} ms, ${scan.positions.size / 3} points" + (problem?.let { " — $it" } ?: "")
         }
+        lines.forEach { println("RoomStructure real-scan-like $it") }
         assertTrue(lines.joinToString(" | "), !failed)
     }
 
