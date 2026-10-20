@@ -128,6 +128,40 @@ class ModelLoaderResourceFailureTest {
     }
 
     @Test
+    fun `createModel throws on a missing buffer and destroys the model`() {
+        resourceUris = arrayOf(BUFFER, TEXTURE)
+
+        val failure = runCatching { loader.createModel(File(java.net.URI(modelFileUri()))) }.exceptionOrNull()
+
+        assertTrue("Expected IllegalArgumentException, got $failure", failure is IllegalArgumentException)
+        assertEquals(listOf(ASSET), destroyedAssets.toList())
+        assertWarned(BUFFER, "the model was destroyed")
+    }
+
+    @Test
+    fun `createModel skips a missing texture and keeps the model`() {
+        resourceUris = arrayOf(BUFFER, TEXTURE)
+
+        val model = loader.createModel(File(java.net.URI(modelFileUri(withBuffer = true))))
+
+        assertNotNull(model)
+        assertEquals(emptyList<Long>(), destroyedAssets.toList())
+        assertWarned(TEXTURE, "loading the model without it")
+    }
+
+    @Test
+    fun `createModel throws when gltfio refuses the begin`() {
+        resourceUris = emptyArray()
+        beginAccepted = false
+
+        val failure = runCatching { loader.createModel(File(java.net.URI(modelFileUri()))) }.exceptionOrNull()
+
+        assertTrue("Expected IllegalArgumentException, got $failure", failure is IllegalArgumentException)
+        assertEquals(listOf(ASSET), destroyedAssets.toList())
+        assertWarned("refused")
+    }
+
+    @Test
     fun `a load failing after the model was created destroys that model`() {
         val result = await {
             loader.loadModelAsync(

@@ -38,6 +38,7 @@ import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.IOException
 import java.nio.Buffer
 import java.nio.ByteBuffer
 
@@ -188,7 +189,9 @@ class ModelLoader(
      *                           if you need to call [createInstance] on this model later.
      * @param resourceResolver   Resolves GLTF external resource file names to buffers.
      * @return The loaded [Model].
-     * @throws IllegalArgumentException if the buffer cannot be parsed.
+     * @throws IllegalArgumentException if the buffer cannot be parsed, or if one of its external
+     * `.bin` buffers cannot be resolved (the model is destroyed and the miss logged). A texture the
+     * resolver cannot read is logged and skipped.
      *
      * WebP glTF textures (`EXT_texture_webp`) embedded in the payload are re-encoded to PNG first,
      * because Filament's Android build registers no `image/webp` decoder and would otherwise render
@@ -203,13 +206,16 @@ class ModelLoader(
         buffer: Buffer,
         releaseSourceData: Boolean = true,
         resourceResolver: (resourceFileName: String) -> Buffer? = { null }
-    ): Model = (assetLoader.createAsset(buffer.toFilamentModelSource())
-        ?: throw IllegalArgumentException("Failed to parse glTF model from buffer")).also { model ->
+    ): Model {
+        val source = buffer.toFilamentModelSource()
+        val model = assetLoader.createAsset(source)
+            ?: throw IllegalArgumentException("Failed to parse glTF model from buffer")
         models += model
-        loadResources(model, resourceResolver)
+        loadResources(model, source, resourceResolver)
         if (releaseSourceData) {
             model.releaseSourceData()
         }
+        return model
     }
 
     /**
@@ -510,10 +516,11 @@ class ModelLoader(
         resourceResolver: (resourceFileName: String) -> Buffer? = { null }
     ): List<ModelInstance> =
         arrayOfNulls<ModelInstance>(count).apply {
-            (assetLoader.createInstancedAsset(buffer.toFilamentModelSource(), this)
+            val source = buffer.toFilamentModelSource()
+            (assetLoader.createInstancedAsset(source, this)
                 ?: throw IllegalArgumentException("Failed to parse glTF model from buffer")).also { model ->
                 models += model
-                loadResources(model, resourceResolver)
+                loadResources(model, source, resourceResolver)
                 model.releaseSourceData()
             }
         }.filterNotNull()
@@ -801,12 +808,43 @@ class ModelLoader(
     /**
      * Feeds the binary content of an external resource into the loader's URI cache.
      */
-    private fun loadResources(model: Model, resourceResolver: (String) -> Buffer?) {
-        for (uri in model.resourceUris) {
-            resourceResolver(uri)?.let { resourceLoader.addResourceData(uri, it) }
+    /**
+     * The synchronous counterpart of [loadModelThen]'s resource step, same rule: a missing texture
+     * is logged and skipped, a missing buffer (or a begin gltfio refuses) destroys [model] and
+     * throws, rather than handing out a model with no geometry.
+     */
+    @MainThread
+    private fun loadResources(model: Model, source: Buffer, resourceResolver: (String) -> Buffer?) {
+        // `data:` URIs are decoded by gltfio itself; only the others are resolved here.
+        val uris = model.resourceUris.filterNot { it.startsWith("data:") }
+        val bufferUris = if (uris.isEmpty()) emptySet() else GltfBufferUris.of(source, uris)
+        val missing = mutableListOf<String>()
+        for (uri in uris) {
+            val data = try {
+                resourceResolver(uri)
+            } catch (error: IOException) {
+                Log.w(TAG, "Could not read $uri", error)
+                null
+            }
+            when {
+                data != null -> resourceLoader.addResourceData(uri, data)
+                uri in bufferUris -> missing += uri
+                else -> Log.w(TAG, "Could not read $uri; loading the model without it")
+            }
         }
-        asyncLoad.begin(model)
+        val failure = when {
+            missing.isNotEmpty() -> "Could not load a glTF model without ${missing.joinToString()}"
+            !asyncLoad.begin(model) -> "gltfio refused to begin the resource load of a glTF model"
+            else -> null
+        }
         resourceLoader.evictResourceData()
+        if (failure != null) {
+            // Nothing is decoding for a refused begin: empty the slot so the destroy is immediate.
+            asyncLoad.cancelIfInFlight(model)
+            destroyModel(model)
+            Log.w(TAG, "$failure; the model was destroyed")
+            throw IllegalArgumentException(failure)
+        }
     }
 
     companion object {
