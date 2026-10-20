@@ -80,6 +80,8 @@ import io.github.sceneview.SurfaceType
 import io.github.sceneview.demo.demos.internal.ArDebugFormat
 import io.github.sceneview.demo.demos.internal.ArDebugFrame
 import io.github.sceneview.demo.demos.internal.ArDebugFraming
+import io.github.sceneview.demo.demos.internal.PlaneWallSource
+import io.github.sceneview.demo.demos.internal.livePlanesOf
 import io.github.sceneview.demo.demos.internal.ArDebugGeometry
 import io.github.sceneview.demo.demos.internal.ArDebugOrbitCamera
 import io.github.sceneview.demo.demos.internal.ArDebugSession
@@ -720,6 +722,9 @@ private fun skyboxAlpha(transparent: Boolean): Float = if (transparent) 0f else 
  *
  * [measuresRoom] off — an object's scan (#4683) — the replay neither draws nor names a room's
  * dimensions, nor frames room for them.
+ *
+ * [walls], 3D Scan's live walls (#4540), drawn by a [ScanWallLayer] once the caller's [observe]
+ * has fed them the frame, while [drawWalls]; hidden, they still give the room its wall count.
  */
 @Composable
 @Suppress("LongParameterList") // the demo's shared engine, handed down once, and one flag per reading
@@ -740,8 +745,11 @@ internal fun ArDebugSceneView(
     observe: ((ArDebugFrame) -> Unit)? = null,
     selection: ScanSelection? = null,
     cornerCard: DpSize = DpSize.Zero,
+    walls: ScanWallsState? = null,
+    drawWalls: Boolean = true,
 ) {
     val shown by rememberUpdatedState(onShown)
+    val wallsDrawn by rememberUpdatedState(drawWalls)
     val observer by rememberUpdatedState(observe)
     // The ground and palette of the stage this view is drawn on (#4080): the dark stage under
     // media chrome, the light one on a themed stage in light theme.
@@ -772,6 +780,9 @@ internal fun ArDebugSceneView(
         replay?.let { ReplayLayers(engine, materialLoader, it, measureInk, measureHalo) }
     }
     DisposableEffect(replayLayers) { onDispose { replayLayers?.destroy() } }
+    // 3D Scan's live walls (#4540): created before the SceneView, released after its nodes.
+    val wallLayer = remember(engine, materialLoader, walls) { walls?.let { ScanWallLayer(engine, materialLoader) } }
+    DisposableEffect(wallLayer) { onDispose { wallLayer?.destroy() } }
     // The theme's colours, on the layers the scene already draws.
     SideEffect {
         materials.paint(palette)
@@ -960,6 +971,7 @@ internal fun ArDebugSceneView(
                 objectPick?.sync(style)
 
                 observer?.invoke(frame)
+                if (walls != null) wallLayer?.sync(walls, dt, shown = wallsDrawn)
                 if (frame.anchors != anchors) anchors = frame.anchors
                 if (frameTimeNanos - clock.statsAtNanos >= STATS_INTERVAL_NS) {
                     clock.statsAtNanos = frameTimeNanos
@@ -971,7 +983,15 @@ internal fun ArDebugSceneView(
                 // draw ([ReplayLayers.measure]), so the two never disagree — and on the frame the
                 // floor redraws them, rather than a stats tick later.
                 if (replayLayers != null) {
-                    val room = replayLayers.measure?.takeIf { measuresRoom }?.scanSummary(Locale.getDefault())
+                    // A scan still growing names no room before two walls are seen (#4540).
+                    val room = replayLayers.measure?.takeIf { measuresRoom }
+                        ?.takeIf {
+                            // The walls the HUD counts when it counts them: one figure on screen.
+                            replay?.growing != true ||
+                                (walls?.wallCount ?: PlaneWallSource.wallCount(livePlanesOf(frame), floorY)) >=
+                                ArDebugSession.MIN_ROOM_WALLS
+                        }
+                        ?.scanSummary(Locale.getDefault())
                     if (session.stats.room != room) session.stats = session.stats.copy(room = room)
                 }
                 // onFrame only fires for a frame that reached the surface (#3444): counting them is
@@ -991,6 +1011,7 @@ internal fun ArDebugSceneView(
             // its material instances are destroyed, and the next set's nodes are attached.
             key(layers) { Node(apply = { layers.nodes.values.forEach { addChildNode(it) } }) }
             key(replayLayers) { Node(apply = { replayLayers?.nodes?.forEach { addChildNode(it) } }) }
+            key(wallLayer) { Node(apply = { wallLayer?.nodes?.forEach { addChildNode(it) } }) }
             // The picked object's tint and box are rebuilt with the replay, so they get the same
             // treatment.
             key(objectPick) { Node(apply = { objectPick?.nodes?.forEach { addChildNode(it) } }) }

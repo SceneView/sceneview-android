@@ -39,7 +39,7 @@ internal class ScanDenseMap(
     /**
      * The dense map as the live 3D card draws it: a snapshot taken after a fusion at most every
      * [LIVE_INTERVAL_NS], [LIVE_MAX_SURFELS] at most of the surfels at least two depth frames
-     * saw, meshed and coloured off the main thread. `null` until the first one.
+     * saw, meshed and coloured off the main thread, with the floor cells it covers. `null` until the first one.
      */
     @Volatile
     var live: ReplayDenseLayer? = null
@@ -149,7 +149,8 @@ internal class ScanDenseMap(
         liveAtNanos = now
         val cloud = fusion.cloud(minViews = DenseFusion.MIN_VIEWS, maxPoints = LIVE_MAX_SURFELS)
         if (cloud.count == 0) return
-        live = ReplayDenseLayer.of(cloud, fusion.voxelM)
+        // The floor cells it covers are found here too, on the worker: the live map reads them.
+        live = ReplayDenseLayer.of(cloud, fusion.voxelM, withCells = true)
     }
 
     companion object {
