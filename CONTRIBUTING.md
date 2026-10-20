@@ -8,27 +8,47 @@ Thanks for your interest in contributing! This guide covers everything you need 
 
 ### Prerequisites
 
-- **JDK 17** (for Android/KMP modules)
-- **Android Studio** (latest stable recommended)
-- **Xcode 16+** (for SceneViewSwift / iOS work only — Swift 6 and the iOS 18 floor)
+- **JDK 21** — every Android module compiles to Java 21 (`sceneview/build.gradle`,
+  `arsceneview/build.gradle` and `samples/android-demo/build.gradle`:
+  `JavaVersion.VERSION_21`, `jvmTarget = "21"`) and declares no JVM toolchain, so the
+  JDK that runs Gradle compiles them: it must be JDK 21 or newer.
+- **Android Studio** with an Android Gradle Plugin 9.4 release (the build uses AGP 9.4.1,
+  `gradle/libs.versions.toml`)
+- **Xcode 16+** (for SceneViewSwift / iOS work only — Swift 6 and the iOS 18 floor).
+  CI builds with Xcode 26 (`.github/workflows/ios.yml:145-148`); no job tests Xcode 16.
 - **bash, python3 and curl** on the `PATH` — every demo and website build runs
   `tools/fetch-assets.sh` (see [Assets](#assets)). On macOS they come with the
   Command Line Tools (`xcode-select --install`); on Windows, build from WSL.
 - Optional but recommended: Google's [`android` CLI](https://developer.android.com/tools/agents/android-cli)
-  for agent-driven QA. Bootstrap in one shot:
-  ```bash
-  bash .claude/scripts/android-env-check.sh --fix
-  ```
-  This installs the binary to `~/.local/bin/android` and registers the SceneView
-  agent skill under `~/.android/cli/skills/xr/sceneview/`, so `android skills list`
-  exposes it to any AI agent on this host.
+  for agent-driven QA.
+
+#### Toolchain by task
+
+Only install what the part you work on needs.
+
+| You work on | You need | Source |
+|---|---|---|
+| Any Android module | Android SDK platform `platforms;android-37.0` (`compileSdk 37`) | `sceneview/build.gradle`, `arsceneview/build.gradle`, `samples/android-demo/build.gradle` |
+| Android demo **release** build | NDK `28.2.13676358` (strips native symbols) | `samples/android-demo/build.gradle` (`ndkVersion`) |
+| `:sceneview-core:allTests`, `sceneview-web` tests | Chrome or Chromium (Karma runs `useChromeHeadless()`) | `sceneview-core/build.gradle.kts:33`, `sceneview-web/build.gradle.kts:33` |
+| Flutter plugin and demo | Flutter 3.41.6 | `.github/workflows/ci.yml` (`flutter-demo` job) |
+| MCP server, web demos, React Native | Node.js 20 (`mcp/package.json` accepts `>=18`) | `.github/workflows/ci.yml` (`web-desktop` job), `mcp/package.json` |
+
+The demo app's Firebase setup is optional: the Google Services plugin is only applied
+when a `google-services.json` is present, so a fork builds without one
+(`samples/android-demo/build.gradle`).
 
 ### Clone and open
 
 ```bash
-git clone https://github.com/sceneview/sceneview.git
+git clone --filter=blob:none https://github.com/sceneview/sceneview.git
 cd sceneview
 ```
+
+`--filter=blob:none` downloads the full commit history but fetches file contents only
+for the commit you check out (older blobs arrive on demand, e.g. on `git log -p`). The
+repository's history carries large binaries, so this is much faster than a full clone.
+A plain `git clone` also works.
 
 Open the project in Android Studio. Gradle sync will pull all dependencies automatically.
 
@@ -39,8 +59,13 @@ git. They live in the `assets-v1` GitHub Release, listed with their sha256 in
 [`assets/manifest.json`](assets/manifest.json). After cloning, run once:
 
 ```bash
-bash tools/fetch-assets.sh
+bash tools/fetch-assets.sh --scope android
 ```
+
+`--scope android` fetches what the Android demo uses, about 55 MiB. Without `--scope`, the
+script fetches every platform's assets, about 780 MiB (iOS and web models included). You
+can also skip this step for Android: `samples/android-demo/build.gradle` runs
+`fetch-assets.sh --scope android` before every build.
 
 Files are downloaded once into `~/.cache/sceneview-assets/` (shared by every clone and
 worktree, override with `SCENEVIEW_ASSETS_CACHE`), verified, then cloned (APFS / reflink)
@@ -585,7 +610,7 @@ When adding a new material, pick a profile by deployment target and add an entry
 
 A material change can compile, pass unit tests, and still render wrong (the v4.16.x plane-renderer "white blob", #2224, is the canonical example — three "fixes" shipped before the real cause was found). Compile + unit tests are **not** a visual gate. This is the validated flow, refined while fixing #2224.
 
-**1 — Diagnose & iterate on the shader on a plain Mac, with no ARCore.** ARCore cannot run in an Android emulator on Apple Silicon (x86 needs TCG → ARCore watchdog-timeouts; arm64 has no ARCore camera bridge — see `feedback_arcore_emulator_mac_dead_end` / issue #1645, definitively closed). **But pure Filament rendering works perfectly on the standard arm64 emulator.** So isolate the shader: render the exact committed `.filamat` on a static, hand-built mesh in a **non-AR** `SceneView`, with no ARCore session — the pattern in [`PlaneGridPreviewDemo`](samples/android-demo/src/main/java/io/github/sceneview/demo/demos/PlaneGridPreviewDemo.kt) (debug-only, `adb shell am start -n io.github.sceneview.demo.qa/io.github.sceneview.demo.DemoHostActivity --es demo_id plane-grid-preview`). Mirror the AR render pipeline: pass `renderQuality = RenderQuality.Performance` (bloom/SSAO **off**, like `ARSceneView`) — the default `SceneView` keeps bloom on, which washes a translucent material into a uniform blob and hides the real output.
+**1 — Diagnose & iterate on the shader on a plain Mac, with no ARCore.** ARCore cannot run in an Android emulator on Apple Silicon (x86 needs TCG → ARCore watchdog-timeouts; arm64 has no ARCore camera bridge — see `feedback_arcore_emulator_mac_dead_end` / issue #1645, definitively closed). **But pure Filament rendering works perfectly on the standard arm64 emulator.** So isolate the shader: render the exact committed `.filamat` on a static, hand-built mesh in a **non-AR** `SceneView`, with no ARCore session — the pattern in [`PlaneGridPreviewDemo`](samples/android-demo/src/debug/java/io/github/sceneview/demo/demos/PlaneGridPreviewDemo.kt) (debug-only, `adb shell am start -n io.github.sceneview.demo.qa/io.github.sceneview.demo.DemoHostActivity --es demo_id plane-grid-preview`). Mirror the AR render pipeline: pass `renderQuality = RenderQuality.Performance` (bloom/SSAO **off**, like `ARSceneView`) — the default `SceneView` keeps bloom on, which washes a translucent material into a uniform blob and hides the real output.
 
 **2 — Pixel-measure, don't eyeball.** Capture `adb exec-out screencap -p`, convert to BMP (`sips -s format bmp`), parse pixels (no ImageMagick on most Macs). Over a known background you can read the actual composite. #2224's root cause was found this way: an unlit `blending: transparent` material that writes a straight (non-premultiplied) `baseColor.rgb` composites as `color + (1-α)·bg` (colour at full strength) instead of `lerp(bg, color, α)`, so capping `α` never reduces the colour. Fix: premultiply in the fragment — `material.baseColor.rgb = <color> * material.baseColor.a;`. A distinguishing test (render with two different `color` values and check the slope) tells premultiplied from straight-add unambiguously.
 
