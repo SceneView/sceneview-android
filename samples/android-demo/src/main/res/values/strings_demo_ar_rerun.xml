@@ -54,6 +54,7 @@
     <string name="demo_ar_rerun_plan_made_with">Made with SceneView.</string>
     <!-- %1$s the scale bar's length in metres. -->
     <string name="demo_ar_rerun_plan_scale_bar">%1$s m</string>
+    <string name="demo_ar_rerun_plan_scale_bar_feet">%1$s ft</string>
     <string name="demo_ar_rerun_plan_empty_title">No plan for this scan yet</string>
     <string name="demo_ar_rerun_plan_gap_no_depth">This scan has no depth: scan the room again on a phone with a depth sensor.</string>
     <string name="demo_ar_rerun_plan_gap_no_walls">Scan the walls from the floor up to above your head.</string>
@@ -71,6 +72,7 @@
     <string name="demo_ar_rerun_plan_pdf_title">Floor plan</string>
     <!-- %1$d the scale's denominator: 50 for 1:50. -->
     <string name="demo_ar_rerun_plan_pdf_scale">Scale 1:%1$d when printed at 100%% (A4) · dimensions in metres</string>
+    <string name="demo_ar_rerun_plan_pdf_scale_feet">Scale 1:%1$d when printed at 100%% (A4) · dimensions in feet and inches</string>
     <!-- %1$d the page, %2$d how many there are. -->
     <string name="demo_ar_rerun_plan_pdf_page">Page %1$d of %2$d</string>
     <string name="demo_ar_rerun_plan_pdf_walls_continued">Walls (continued)</string>
