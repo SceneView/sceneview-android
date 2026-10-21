@@ -137,6 +137,7 @@ import io.github.sceneview.demo.demos.internal.MeasurePhase
 import io.github.sceneview.demo.demos.internal.MeasurePlane
 import io.github.sceneview.demo.demos.internal.MeasurePlaneKind
 import io.github.sceneview.demo.demos.internal.MeasurePlanOpening
+import io.github.sceneview.demo.demos.internal.measurePlanCard
 import io.github.sceneview.demo.demos.internal.measurePlanOpenings
 import io.github.sceneview.demo.demos.internal.measurePointHapticEvent
 import io.github.sceneview.demo.demos.internal.measurePointsMoved
@@ -761,8 +762,8 @@ fun MeasureScreen(onBack: () -> Unit) {
                 page = page,
                 title = stringResource(R.string.demo_ar_measure_plan_room),
                 date = planDate,
-                len = ::len,
-                area = ::area,
+                locale = locale,
+                units = units,
                 onClose = { plan = null },
             )
         }
@@ -789,8 +790,8 @@ private fun MeasurePlanOverlay(
     page: MeasurePlanPage,
     title: String,
     date: String,
-    len: (Float) -> String,
-    area: (Float) -> String,
+    locale: Locale,
+    units: MeasureUnitSystem,
     onClose: () -> Unit,
 ) {
     BackHandler(onBack = onClose)
@@ -806,17 +807,13 @@ private fun MeasurePlanOverlay(
             modeSwitch = null,
             bottomOverlay = if (net != null) {
                 {
-                    val openings = page.openings.map {
-                        stringResource(
-                            R.string.demo_ar_measure_plan_opening,
-                            it.wall,
-                            len(it.opening.width),
-                            len(it.opening.height),
-                        )
+                    val card = measurePlanCard(net, page.openings, locale, units)
+                    val openings = card.openings.map {
+                        stringResource(R.string.demo_ar_measure_plan_opening, it.wall, it.width, it.height)
                     }
                     MeasureReadoutCard(
                         MeasureReadout(
-                            value = area(net),
+                            value = card.netWallArea,
                             label = stringResource(R.string.demo_ar_measure_label_net_walls),
                             details = openings.joinToString(" · "),
                         ),

@@ -1,6 +1,7 @@
 package io.github.sceneview.demo.demos.internal
 
 import io.github.sceneview.math.Position
+import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -91,6 +92,32 @@ fun measurePlanOpenings(outline: List<Position>, openings: List<MeasureOpening>)
         .sortedWith(compareBy({ it.first }, { it.second.opening.from }))
         .map { it.second }
 }
+
+/** One door or window on the card under a traced room's plan: the plan's [wall] letter, its [width] × [height]. */
+data class MeasurePlanCardOpening(val wall: String, val width: String, val height: String)
+
+/** The card under a traced room's plan: the walls' [netWallArea], then each of its [openings]. */
+data class MeasurePlanCard(val netWallArea: String, val openings: List<MeasurePlanCardOpening>)
+
+/**
+ * The card Plan shows under a traced room's plan when it has doors or windows: [netWallArea]
+ * (m²) and each of [openings], written under [locale] in [units] — the Measure screen's.
+ */
+fun measurePlanCard(
+    netWallArea: Float,
+    openings: List<MeasurePlanOpening>,
+    locale: Locale,
+    units: MeasureUnitSystem = MeasureUnitSystem.forLocale(locale),
+): MeasurePlanCard = MeasurePlanCard(
+    netWallArea = formatMeasureArea(netWallArea, units, locale),
+    openings = openings.map {
+        MeasurePlanCardOpening(
+            wall = it.wall,
+            width = formatMeasureLength(it.opening.width, units, locale),
+            height = formatMeasureLength(it.opening.height, units, locale),
+        )
+    },
+)
 
 /**
  * A traced outline on the plan's page: its [corners] clockwise from the one nearest the top-left,
