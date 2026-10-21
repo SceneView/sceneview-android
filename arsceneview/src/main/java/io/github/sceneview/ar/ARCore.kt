@@ -8,6 +8,7 @@ import android.util.Log
 import androidx.annotation.MainThread
 import com.google.ar.core.ArCoreApk.Availability
 import com.google.ar.core.Config
+import com.google.ar.core.RecordingStatus
 import com.google.ar.core.Session
 import com.google.ar.core.TrackingFailureReason
 import io.github.sceneview.ar.arcore.ARSession
@@ -253,6 +254,8 @@ class ARCore(
         override val canRun: Boolean get() = session?.isClosed == false
         override fun start() {
             val session = session ?: return
+            // A session closed a moment ago may still be releasing the camera (#4771).
+            sessionTeardown.awaitIdle()
             try {
                 session.resume()
             } catch (exception: Exception) {
@@ -594,24 +597,36 @@ class ARCore(
      * A session that is still resumed is paused first (#4026). `ARSceneView` leaving
      * composition while its Activity stays in the foreground — a demo swapping a replay for a
      * gallery, a screen dropping its AR view — closes a session no lifecycle `ON_PAUSE` ever
-     * reached, and ARCore's documented order is `pause()` then `close()`, both on the main
-     * thread.
+     * reached, and ARCore's documented order is `pause()` then `close()`.
+     *
+     * The call returns at once (#4771). [onSessionPaused] runs here, on the main thread, while
+     * the session is still valid; then the session counts as closed ([ARSession.isClosed]) and
+     * ARCore's pause and close — about 350 ms of camera teardown on a Pixel 4a — run on a
+     * background thread, so the screen a navigation lands on keeps animating. A session that
+     * resumes before they are done waits for them.
      *
      * Review the API reference for important considerations before calling close() in apps with
      * more complicated lifecycle requirements: [Session.close]
      *
      * Closing the session that runs the camera hands the camera back to the session it had
-     * taken it from, when that one is still resumed (see [CameraHandover]).
+     * taken it from, when that one is still resumed (see [CameraHandover]), once the closed
+     * session has released it.
      */
     @MainThread
     fun destroy() {
-        cameraArbiter.destroy(cameraClient) {
-            session?.let {
-                synchronized(it) {
-                    if (session == null) return@synchronized
-                    closeSessionInOrder(isResumed = it.isResumed, pause = it::pause, close = it::close)
-                    session = null
-                }
+        cameraArbiter.destroy(cameraClient) { onClosed ->
+            val closing = session
+            session = null
+            // A session still recording finalizes its file when it pauses, and a recorder
+            // stopped by the same disposal returns that file at once: that one closes inline.
+            val recording = closing != null && runCatching {
+                closing.recordingStatus == RecordingStatus.OK
+            }.getOrDefault(false)
+            val teardown = closing?.beginClose()
+            when {
+                teardown == null -> onClosed()
+                recording -> { teardown(); onClosed() }
+                else -> sessionTeardown.run(teardown, onClosed)
             }
         }
     }

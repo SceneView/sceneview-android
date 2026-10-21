@@ -14,6 +14,7 @@ import com.google.ar.core.Session
 import com.google.ar.core.exceptions.CameraNotAvailableException
 import com.google.ar.core.exceptions.MissingGlContextException
 import com.google.ar.core.exceptions.SessionPausedException
+import io.github.sceneview.ar.closeSessionInOrder
 import io.github.sceneview.ar.node.ARCameraNode
 
 class ARSession(
@@ -173,6 +174,43 @@ class ARSession(
         isResumed = false
         frame = null
         super.close()
+    }
+
+    /**
+     * Closes the session in two halves, so the main thread does not wait for ARCore (#4771).
+     *
+     * On a Pixel 4a, pausing a running session (the camera closing) and closing it take about
+     * 350 ms. Run on the main thread when an `ARSceneView` leaves the composition, that froze
+     * the screen being navigated to for twenty frames. This half runs on the main thread and
+     * returns at once: [onPaused] runs while the session is still valid, then [isClosed] turns
+     * `true`, so no reader on the main thread enters the session again. The returned block is
+     * the native half — `pause()` if the session was running, then `close()` — and may run on
+     * any thread, which ARCore's reference recommends for `close()`.
+     *
+     * @return the native teardown to run, or `null` when the session was already closed.
+     */
+    internal fun beginClose(): (() -> Unit)? {
+        if (isClosed) return null
+        val wasResumed = isResumed
+        if (wasResumed) {
+            isResumed = false
+            try {
+                onPaused(this)
+            } catch (e: RuntimeException) {
+                // Like a pause that throws before a close (#4026): the session is torn down
+                // either way, and leaking it is worse than a callback that did not finish.
+                android.util.Log.w("ARCore", "onSessionPaused failed while closing the session", e)
+            }
+        }
+        if (!closeGate.tryClose()) return null
+        frame = null
+        return {
+            closeSessionInOrder(
+                isResumed = wasResumed,
+                pause = { super.pause() },
+                close = { super.close() },
+            )
+        }
     }
 
     /**
