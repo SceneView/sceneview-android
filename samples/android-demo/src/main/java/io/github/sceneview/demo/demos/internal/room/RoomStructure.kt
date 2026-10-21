@@ -108,7 +108,8 @@ enum class RoomGap {
  * The structure of one room. [walls] is its outline in order, the room on each wall's normal
  * side — empty when no wall was seen. Every figure is `null` unless the walls close the room —
  * each side seen, or deduced between two seen ones — on at least [MIN_SEEN_WALLS] distinct walls
- * ([gaps] says what is missing); [ceilingHeight] is `null` when the ceiling was not seen.
+ * ([gaps] says what is missing), but a [length] or [width] measured between two seen walls;
+ * [ceilingHeight] is `null` when the ceiling was not seen.
  *
  * @property floorY the floor's height in the scan's frame, [floorThickness] how thick its layer of surfels is.
  * @property yaw the room's turn about +Y from the scan's axes: the turn that squares its main walls.
@@ -142,8 +143,11 @@ class RoomStructure(
     fun mesh(): StructureMesh = StructureMesh.of(this)
 
     companion object {
-        /** Under this many distinct seen walls, no figure is given: the outline is an indicative plan. */
-        const val MIN_SEEN_WALLS = 2
+        /**
+         * Under this many distinct seen walls, no figure is given: the outline is an indicative
+         * plan. Two walls never close a room — two facing ones leave its length to the floor's edge.
+         */
+        const val MIN_SEEN_WALLS = 3
 
         /** A wall seen on less than this share of its length is not seen: its length is an estimate. */
         const val MIN_SEEN_SHARE = 0.5f

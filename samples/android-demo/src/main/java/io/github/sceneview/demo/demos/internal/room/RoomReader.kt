@@ -415,8 +415,9 @@ internal object RoomReader {
             area = areaFigure.takeIf { measured },
             perimeter = perimeter.takeIf { measured },
             volume = volumeOf(areaFigure, height).takeIf { measured },
-            length = (if (turned) alongV else alongU).takeIf { measured },
-            width = (if (turned) alongU else alongV).takeIf { measured },
+            // Between two seen walls a length is measured, closed room or not; an estimate is not given.
+            length = (if (turned) alongV else alongU).takeIf { measured || !it.estimate },
+            width = (if (turned) alongU else alongV).takeIf { measured || !it.estimate },
             confidence = if (total > 0f) seenLength / total else 0f,
             gaps = listOfNotNull(
                 RoomGap.MissingWall.takeIf { rough },
