@@ -91,14 +91,15 @@ class MeasureOpeningsTest {
     // ── The board ───────────────────────────────────────────────────────────────────────────
 
     @Test
-    fun `openings go on a measured wall only`() {
+    fun `openings go on a measured wall or a raised room only`() {
         val door = MeasureOpening(1f, 1.9f, 0f, 2.1f)
         val raising = MeasureBoard<Int>(mode = MeasureMode.Wall).tap(1, false).tap(2, false)
         assertNull(raising.openingWall)
         assertSame(raising, raising.addOpening(door))
-        val room = MeasureBoard<Int>(mode = MeasureMode.Room)
-            .tap(1, false).tap(2, false).tap(3, false).tap(null, true).lockHeight(2.5f)
-        assertNull(room.openingWall)
+        val walls = MeasureBoard<Int>(mode = MeasureMode.Room).tap(1, false).tap(2, false).tap(3, false).tap(null, true)
+        assertNull(walls.openingWall)
+        val room = walls.lockHeight(2.5f)
+        assertSame(room.figures.last(), room.openingWall)
         // Back in Distance, the wall stays as it was.
         assertNull(wallBoard().withMode(MeasureMode.Distance).openingWall)
 
