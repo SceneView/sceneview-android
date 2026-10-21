@@ -77,7 +77,9 @@ class RoomStructureRealScanTest {
             !case.figures && RoomGap.MissingWall !in structure.gaps -> "no missing wall"
             case.figures && area == null -> "no area"
             case.estimated && !area!!.estimate -> "an area not marked as an estimate"
-            case.estimated && (structure.length?.estimate == true || structure.width?.estimate == true) -> "an estimated length"
+            // Walls that do not close the room give a length only measured between two seen walls.
+            case.estimated && structure.seenWalls < RoomStructure.MIN_SEEN_WALLS &&
+                (structure.length?.estimate == true || structure.width?.estimate == true) -> "an estimated length"
             case.figures && abs(area!!.value - case.room.area) / case.room.area >= case.maxError -> "area off"
             else -> null
         }
@@ -277,6 +279,9 @@ class RoomStructureRealScanTest {
         val structure = RoomStructure.read(capture(L_CORNER).scan())
         val summary = summary(L_CORNER, structure)
         val room = L_CORNER.room
+        // Its west and north walls never seen, both its spans stand on the floor's edge: estimates.
+        assertTrue("$summary: a length not marked as an estimate", structure.length?.estimate == true)
+        assertTrue("$summary: a width not marked as an estimate", structure.width?.estimate == true)
         for (i in room.x.indices) {
             val off = structure.walls.minOf { hypot(it.ax - room.x[i], it.az - room.z[i]) }
             assertTrue("$summary: corner $i ${"%.2f".format(off)} m off", off < CORNER_NEAR_M)
