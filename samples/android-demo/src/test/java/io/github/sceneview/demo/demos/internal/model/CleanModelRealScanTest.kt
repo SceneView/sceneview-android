@@ -49,7 +49,9 @@ class CleanModelRealScanTest {
     fun `a small room keeps its photo texture, however light its raw surface`() {
         // A small room's raw surface weighs less than its textured model: the atlas alone is a few
         // hundred kilobytes. The texture is what the finish is for, so only a fixed cap bounds it.
-        val raw = RerunMeshSimplifier.simplify(RealScanRoom.raw(furnished = true), SMALL_ROOM_TRIANGLES)
+        // The scan's lace of holes would hold the simplifier five times over that budget: its
+        // borders collapse too.
+        val raw = RerunMeshSimplifier.simplify(RealScanRoom.raw(furnished = true), SMALL_ROOM_TRIANGLES, collapseBorders = true)
         val rawGlb = RerunMeshGlb.write(raw)
         val result = CleanModel.build(raw, RealScanRoom.modelPhotos(furnished = true), JvmAtlasEncoder)
         val stats = result.stats
