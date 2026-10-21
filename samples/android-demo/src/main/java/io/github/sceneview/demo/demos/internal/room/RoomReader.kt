@@ -55,7 +55,7 @@ internal object RoomReader {
     /** A wall seen this near a corner reaches it: a side deduced there is held by it. */
     private const val CORNER_REACH_M = 0.3f
 
-    /** A wall seen along this much of the outline draws the plan, however long the side it stands on. */
+    /** A side seen along this much draws the plan, however long the straight run it stands on. */
     private const val DRAWS_PLAN_M = 1f
 
     /**
@@ -438,14 +438,14 @@ internal object RoomReader {
         val seen = BooleanArray(n) { outline.sides[it].line != null && reads[it].share >= RoomStructure.MIN_SEEN_SHARE }
         val drawn = (0 until n).any {
             val along = reads[it].length * reads[it].share
-            val half = seen[it] && along >= RoomStructure.MIN_SEEN_SHARE * runOf(outline.u, outline.v, it)
-            outline.sides[it].line != null && (along >= DRAWS_PLAN_M || half)
+            seen[it] && (along >= DRAWS_PLAN_M || along >= RoomStructure.MIN_SEEN_SHARE * runOf(outline.u, outline.v, it))
         }
         if (!drawn) {
-            // An outline no wall was seen along is only the floor's extent: not drawn. One wall
-            // seen along [DRAWS_PLAN_M], or along half the straight run of outline it stands on,
-            // draws the plan — a shorter stub of wall on a floor's edge does not; the figures wait
-            // for [RoomStructure.MIN_SEEN_WALLS].
+            // An outline no wall was seen along is only the floor's extent: not drawn. One side
+            // seen — its wall along half of it — draws the plan when the wall is seen along
+            // [DRAWS_PLAN_M], or along half the straight run of outline it stands on. A wall seen
+            // along under half the side it stands on is a stub on the floor's edge, however long:
+            // it does not; the figures wait for [RoomStructure.MIN_SEEN_WALLS].
             return RoomStructure.empty(RoomGap.NoWalls, floor.y, floor.thickness, height)
         }
         // No figure is given tighter than the thinnest layer a cloud is read to.
