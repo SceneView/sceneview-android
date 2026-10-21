@@ -32,7 +32,9 @@ import java.nio.channels.FileChannel
  * `SCENEVIEW_SCAN_CORPUS` is opened with the demo's own readers, recognised with the app's
  * detector, and written under `SCENEVIEW_SCAN_OUT/<scan>/`: `recognized.json` (what was found: label,
  * box, confidence, views; and per keyframe its detections and timings), one annotated
- * `keyframe-NN.png` per keyframe, and `timings.txt`. Skipped when either variable is unset.
+ * `keyframe-NN.png` per keyframe, and `timings.txt`. `SCENEVIEW_SCAN_OUT/summary.txt` names the
+ * detector the run used, then gives one line per scan: what was found, or why it was skipped (not a
+ * readable scan, no dense cloud). Skipped when either variable is unset.
  *
  * ```
  * SCENEVIEW_SCAN_CORPUS=~/scans SCENEVIEW_SCAN_OUT=/tmp/recognized \
@@ -41,9 +43,10 @@ import java.nio.channels.FileChannel
  *
  * The detector is the file `SCENEVIEW_SCENE_MODEL` names, else the app's own YOLOX-Tiny,
  * downloaded once into `<java.io.tmpdir>/sceneview-scene-detector/` and checked as the app checks
- * it. Without network and without `SCENEVIEW_SCENE_MODEL`, the scans are still recognised for their
- * doors and windows, which need no detector — what a phone shows while it downloads one — and the
- * photo run is skipped. CI sets none of these variables, so it never downloads anything. `SCENEVIEW_SCENE_PHOTOS` runs the models on a
+ * it. A path there that is no file stops the run instead of dropping to no detector. With
+ * `SCENEVIEW_SCENE_MODEL=none`, or without network, the scans are still recognised for their doors
+ * and windows, which need no detector — what a phone shows while it downloads one — and the photo
+ * run is skipped. CI sets none of these variables, so it never downloads anything. `SCENEVIEW_SCENE_PHOTOS` runs the models on a
  * folder of plain photos instead, for the found / missed / time-per-photo table.
  */
 class SceneRecognitionCorpusTest {
@@ -178,17 +181,20 @@ class SceneRecognitionCorpusTest {
 
     /**
      * Recognises each of [scans] into [out] with [model] (name and file), or with [NoDetector] —
-     * doors and windows only — when there is none.
+     * doors and windows only — when there is none. Each line it prints also goes to [SUMMARY], as
+     * it comes: a run stopped by one scan still says how the others went.
      */
     private fun recognizeAll(scans: List<File>, out: File, model: Pair<String, File>?) {
+        val summary = File(out.apply { mkdirs() }, SUMMARY).apply { writeText("") }
+        val note = { line: String -> println(line); summary.appendText(line + "\n") }
         if (model == null) {
-            println("no detector (set $MODEL, or run with network to download it): doors and windows only")
-            scans.forEach { run(it, NoDetector, out) }
+            note("detector: ${NoDetector.name} — doors and windows only ($MODEL=$NO_MODEL, or no network to download the app's)")
+            scans.forEach { run(it, NoDetector, out, note) }
             return
         }
         val (name, file) = model
-        println("recognising ${scans.size} scans with $name")
-        OnnxSceneDetector(mapped(file), name).use { detector -> scans.forEach { run(it, detector, out) } }
+        note("detector: $name ($file), ${scans.size} scans")
+        OnnxSceneDetector(mapped(file), name).use { detector -> scans.forEach { run(it, detector, out, note) } }
     }
 
     /** Every [KEYFRAME_STEP]th of [frames]: the photos a recording keeps. */
@@ -216,13 +222,13 @@ class SceneRecognitionCorpusTest {
     /**
      * Recognises the scan in [file] with [detector] — with [NoDetector], its openings only, no photo
      * read, as the app's first pass — and writes its outputs under [out]; `null`
-     * (and a line saying why) for a file that is no readable scan or has no dense cloud.
+     * (and a line to [note] saying why) for a file that is no readable scan or has no dense cloud.
      */
-    private fun run(file: File, detector: SceneDetector, out: File): SceneRecognition? {
-        val opened = open(file) ?: return null.also { println("${file.name}: not a readable scan") }
+    private fun run(file: File, detector: SceneDetector, out: File, note: (String) -> Unit = ::println): SceneRecognition? {
+        val opened = open(file) ?: return null.also { note("${file.name}: not a readable scan") }
         val dense = opened.manifest.dense
         val cloud = dense?.let { opened.bytesOf(it.path) }?.let { SvpcCodec.decode(it) }
-            ?: return null.also { println("${file.name}: no dense cloud (a sparse scan): nothing to lift into") }
+            ?: return null.also { note("${file.name}: no dense cloud (a sparse scan): nothing to lift into") }
         val objects = ScanObjects.of(cloud, dense.voxelM)
         val keyframes = SceneRecognizer.keyframes(opened.trace, opened.manifest.lens)
         val images = HashMap<String, SceneImage>()
@@ -244,7 +250,7 @@ class SceneRecognitionCorpusTest {
         }
         timings.append("total\t\t\t\t\t\t${recognition.totalMillis} ms, ${recognition.frames.size} keyframes\n")
         File(dir, "timings.txt").writeText(timings.toString())
-        println("${file.name}: " + SceneInventory.lines(recognition.items).joinToString("; ").ifEmpty { "nothing" } +
+        note("${file.name}: " + SceneInventory.lines(recognition.items).joinToString("; ").ifEmpty { "nothing" } +
             " (${recognition.totalMillis} ms)")
         return recognition
     }
@@ -258,13 +264,18 @@ class SceneRecognitionCorpusTest {
     }.getOrNull()
 
     /**
-     * The models to run, by name: the files [spec] names (`:`-separated), else the
+     * The models to run, by name: none for [NO_MODEL]; the files [spec] names (`:`-separated) —
+     * one that is no file stops the run, a typo never drops it to no detector unseen; else the
      * app's own detector, downloaded once into the temp folder by the app's own store. Empty when
-     * that download fails (no network): the caller skips.
+     * that download fails (no network).
      */
     private fun models(spec: String?): List<Pair<String, File>> {
+        if (spec == NO_MODEL) return emptyList()
         spec?.let { paths ->
-            return paths.split(File.pathSeparator).map(::File).filter { it.isFile }.map { it.nameWithoutExtension to it }
+            return paths.split(File.pathSeparator).map(::File).map { file ->
+                require(file.isFile) { "$MODEL names $file, which is not a file" }
+                file.nameWithoutExtension to file
+            }
         }
         val cache = File(System.getProperty("java.io.tmpdir"), DOWNLOAD_DIR)
         val file = runBlocking { SceneModelStore(cache).fetch() }
