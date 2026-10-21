@@ -218,7 +218,7 @@ class RerunPlanShareTest {
     }
 
     @Test
-    fun `a survey with no plan offers no DXF: its share menu is the PDF and the text`() {
+    fun `a survey with no plan offers no DXF, its share menu holding the PDF and the text`() {
         composeRule.setContent { RerunPlanView(survey = RoomSurvey.empty(SurveyGap.NoWalls), title = TITLE, date = null) }
         composeRule.waitForIdle()
         composeRule.onNodeWithText(DXF_LABEL).assertDoesNotExist()
