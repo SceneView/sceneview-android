@@ -258,7 +258,7 @@ export const TROUBLESHOOTING_GUIDE = `# SceneView Troubleshooting Guide
 
 ### "ARCore not installed" on Device
 **Fix:**
-- Ensure \`<meta-data android:name="com.google.ar.core" android:value="required" />\` is in manifest
+- Ensure \`<meta-data android:name="com.google.ar.core" android:value="required" tools:replace="android:value" />\` is in manifest (with \`xmlns:tools\` on \`<manifest>\`: arsceneview declares "optional", so the merge fails without the override)
 - Install Google Play Services for AR from Play Store
 - Some emulators don't support ARCore — test on a real device
 
@@ -470,7 +470,8 @@ dependencies {
         <!-- Required: tells Play Store this app needs ARCore -->
         <!-- Use "required" to block installs on non-AR devices -->
         <!-- Use "optional" to allow install but degrade gracefully -->
-        <meta-data android:name="com.google.ar.core" android:value="required" />
+        <!-- arsceneview declares "optional": overriding it needs xmlns:tools="http://schemas.android.com/tools" on <manifest> -->
+        <meta-data android:name="com.google.ar.core" android:value="required" tools:replace="android:value" />
 
         <!-- Required ONLY for Cloud Anchors / Geospatial / Streetscape.
              Inject via manifestPlaceholders in app/build.gradle (read from

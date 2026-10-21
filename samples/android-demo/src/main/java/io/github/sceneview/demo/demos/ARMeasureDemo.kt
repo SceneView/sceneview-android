@@ -87,6 +87,7 @@ import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.rememberARCameraNode
 import io.github.sceneview.ar.rememberARCameraStream
 import io.github.sceneview.ar.rememberArGuidanceState
+import io.github.sceneview.ar.rememberHostLifecycle
 import io.github.sceneview.demo.ARCameraInitScrim
 import io.github.sceneview.demo.common.ForcedTrackingFailure
 import io.github.sceneview.demo.common.QaCameraBackdrop
@@ -593,6 +594,7 @@ fun MeasureScreen(onBack: () -> Unit) {
             Box(modifier = Modifier.fillMaxSize()) {
                 if (qaBackdrop) QaCameraBackdrop(seed = "ar-measure")
                 ARSceneView(
+                    lifecycle = rememberHostLifecycle(),
                     onSessionFailure = { arSessionFailed = true },
                     modifier = Modifier.fillMaxSize().onSizeChanged {
                         viewport = it

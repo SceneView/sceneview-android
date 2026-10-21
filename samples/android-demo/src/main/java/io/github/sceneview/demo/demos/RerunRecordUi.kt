@@ -19,6 +19,7 @@ import io.github.sceneview.demo.demos.internal.OrbitPose
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.material.icons.Icons
@@ -30,7 +31,11 @@ import io.github.sceneview.demo.R
 import io.github.sceneview.demo.demos.internal.DebugGroup
 import io.github.sceneview.demo.demos.internal.DebugPose
 import io.github.sceneview.demo.demos.internal.ScanFollow
+import io.github.sceneview.demo.demos.internal.ScanObserveGate
 import io.github.sceneview.demo.demos.internal.ScanSavingOrbit
+import io.github.sceneview.demo.demos.internal.ScanOpenTop
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import io.github.sceneview.demo.ui.GlassActionPill
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -508,7 +513,9 @@ private fun ScanHint(text: String) {
  * The phone's eye is the live pose too, paused or not, so resuming does not move the view.
  *
  * [saving] (#4719): the camera fades out under an opaque veil and the view leaves the phone for a
- * slow orbit round the whole cloud ([ScanFollow.savingPose]) while the scan is fused and written.
+ * slow dollhouse orbit round the whole cloud ([ScanSavingOrbit]) while the scan is fused and written:
+ * it rises out of the room through its open top first, never through a wall nor past a point (#4742).
+ * Its ceiling is cut off ([ScanOpenTop]) while the scan is [reviewing], ahead of the save.
  * It sets out from the phone's own eye ([ScanSavingOrbit], [EyeHandoff]): the first frame after the
  * stop tap is the camera's view of the frame before, eased from there onto the orbit.
  *
@@ -529,6 +536,7 @@ internal fun ScanLiveView(
     livePose: (traced: DebugPose?) -> DebugPose? = { it },
     saving: Boolean = false,
     walls: ScanWallsState? = null,
+    reviewing: Boolean = false,
 ) {
     // Saving, the view is handed back to the automatic framing, which the orbit then drives.
     LaunchedEffect(saving) { if (saving) orbit.recenter() }
@@ -538,6 +546,28 @@ internal fun ScanLiveView(
         label = "scanVeil",
     )
     val savingOrbit = remember(saving) { if (saving) ScanSavingOrbit() else null }
+    // Saving, the room loses its lid (#4742): the orbit rises out through its top, past no ceiling.
+    // Cut while the scan is reviewed, so it is ready by the save; the orbit holds on the phone's
+    // eye until it is drawn.
+    val cutting = reviewing || saving
+    var openTop by remember { mutableStateOf<ReplayDenseLayer?>(null) }
+    var lidOff by remember { mutableStateOf(false) }
+    val savingNow by rememberUpdatedState(saving)
+    LaunchedEffect(cutting) {
+        openTop = null
+        lidOff = false
+        if (!cutting) return@LaunchedEffect
+        media.liveDense?.invoke()?.let { whole ->
+            openTop = withContext(Dispatchers.Default) {
+                ReplayDenseLayer.of(ScanOpenTop.cloud(whole.cloud), whole.voxelM)
+            }
+        }
+        lidOff = true
+    }
+    val drawn = remember(media) {
+        media.liveDense?.let { live -> media.withLiveDense { openTop?.takeIf { savingNow } ?: live() } } ?: media
+    }
+    val observed = remember(coverage, walls) { ScanObserveGate() }
     Box(modifier = Modifier.fillMaxSize().testTag(SCAN_STAGE_TAG)) {
         // Only the camera is dimmed: the cloud is drawn by its own view, above the veil.
         Box(Modifier.fillMaxSize().background(veil))
@@ -548,22 +578,22 @@ internal fun ScanLiveView(
             modelLoader = modelLoader,
             materialLoader = materialLoader,
             modifier = Modifier.fillMaxSize(),
-            replay = media,
+            replay = drawn,
             transparent = true,
             visible = { it in SCAN_LIVE_GROUPS },
             follow = { frame ->
                 val phone = follow.poseFor(livePose(frame.camera))
-                savingOrbit?.poseFor(phone, media.dense?.cloud?.positions ?: frame.mapPoints, orbit) ?: phone
+                val cloud = drawn.liveDense?.invoke()?.cloud ?: media.dense?.cloud
+                savingOrbit?.poseFor(phone, cloud?.positions ?: frame.mapPoints, orbit, ready = lidOff) ?: phone
             },
             observe = { frame ->
                 val pose = livePose(frame.camera)
-                coverage.observe(
-                    frame,
-                    pose = pose,
-                    snapshotCells = media.liveDense?.invoke()?.coveredCells,
-                    record = media.trace,
-                )
-                walls?.observe(frame, coverage, pose)
+                val cells = media.liveDense?.invoke()?.coveredCells
+                // The view hands the same frame to every render until it rebuilds one (#4743).
+                if (observed.isNew(frame, pose, cells)) {
+                    coverage.observe(frame, pose = pose, snapshotCells = cells, record = media.trace)
+                    walls?.observe(frame, coverage, pose)
+                }
             },
             // The walls stand in the room while it is scanned; saving, the orbit shows the cloud.
             walls = walls,

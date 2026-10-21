@@ -310,7 +310,7 @@ fun ARSceneView(
     onGestureListener: GestureDetector.OnGestureListener? = rememberOnGestureListener(),
     onTouchEvent: ((e: MotionEvent, hitResult: HitResult?) -> Boolean)? = null,
     permissionHandler: ARPermissionHandler? = null,   // omit for auto-detect from ComponentActivity; passing null explicitly SKIPS permission checks
-    lifecycle: Lifecycle = LocalLifecycleOwner.current.lifecycle,
+    lifecycle: Lifecycle = LocalLifecycleOwner.current.lifecycle,   // inside a NavHost with transitions pass rememberHostLifecycle() — see the note below
     cameraPermissionOverlay: (@Composable BoxScope.(ARCameraPermissionState) -> Unit)? = { ARCameraPermissionOverlay(it) },   // Built-in "Camera access needed" card; null draws nothing.
     arCoreAvailabilityOverlay: (@Composable BoxScope.(ARCoreAvailabilityState) -> Unit)? = { ARCoreAvailabilityOverlay(it) },  // Built-in "ARCore missing / couldn't start AR" card; null draws nothing.
     onARCoreAvailability: ((availability: ARCoreAvailability?) -> Unit)? = null,   // Non-null = ARCore cannot serve the session; null = it can again.
@@ -323,6 +323,31 @@ fun ARSceneView(
 without touching the screen, so the composable sets `keepScreenOn` on its host view and hands
 the previous value back when it leaves the composition. Nothing to add in app code; a 3D
 `SceneView` leaves the display timeout alone.
+
+**Note — AR screen inside a `NavHost`: pass `lifecycle = rememberHostLifecycle()`.** By default
+`ARSceneView` follows `LocalLifecycleOwner`, which inside a `NavHost` is the destination: it leaves
+`RESUMED` when the exit transition *starts*, so the camera stops and its last image stays frozen on
+screen for the whole transition. `rememberHostLifecycle()` (opt-in, `io.github.sceneview.ar`)
+returns the host ACTIVITY's lifecycle: the session runs while the composable is in the
+composition and the activity is resumed, pauses when the activity pauses, and is closed on
+disposal. Do not add your own `session.pause()` on navigation.
+
+```kotlin
+@Composable
+fun ArDestination() {   // the content of a NavHost `composable("ar") { ArDestination() }`
+    ARSceneView(
+        modifier = Modifier.fillMaxSize(),
+        lifecycle = rememberHostLifecycle(),
+    )
+}
+```
+
+Keep the default where the host keeps the AR screen composed but not visible (a `ViewPager2`
+page, a screen under a full-screen `dialog()` destination): with `rememberHostLifecycle()` the
+camera would stay on there. Two `ARSceneView`s resumed at once share the single camera: the one
+that resumed last runs, the other keeps its last frame and gets the camera back when the newer
+one is disposed, paused or fails to resume. Known limit: on a predictive back gesture from one AR
+screen to another, the screen under the finger is frozen until the gesture ends.
 
 **Note — `renderQuality` on `ARSceneView` is NULLABLE (#2524, v4.19.0+).** Unlike the 3D
 `SceneView` (where it defaults to `RenderQuality.Default`), the AR composable defaults
@@ -3976,6 +4001,8 @@ class ModelLoader(engine: Engine, context: Context) {
 }
 ```
 
+**Failures:** a `load*Async` that fails (missing file, a `.gltf` whose `.bin` cannot be read, unreachable URL, unparsable payload) calls `onResult(null)` (an empty list for `loadInstancedModelAsync`) on the main thread and logs a `Log.w` under the `ModelLoader` logcat tag (`rememberModelInstance` for that composable); it never crashes the app. A missing texture is logged and the model loads without it. The synchronous `createModel*` / `createInstancedModel` throw `IllegalArgumentException` (model destroyed, logged) when a `.bin` cannot be resolved; a texture that fails to resolve is logged and skipped. `clear()` cancels the running loads and leaves the loader reusable; only `destroy()` ends it.
+
 **WebP textures:** every entry point above re-encodes embedded `EXT_texture_webp` textures to PNG
 before Filament sees them, because Filament's Android build ships no `image/webp` decoder (#2305).
 The cost is one decode + PNG encode per WebP texture — on the calling thread for the synchronous
@@ -4746,6 +4773,7 @@ SceneView(surfaceType = SurfaceType.TextureSurface, isOpaque = false)  // Textur
 | Problem | Cause | Fix |
 |---------|-------|-----|
 | Model not showing | `rememberModelInstance` returns null | Always null-check: `model?.let { ModelNode(...) }` |
+| Model stays `null` / `onResult(null)` | Load failed: missing file or `.bin`, bad URL, unparsable payload | Read logcat tags `ModelLoader` and `rememberModelInstance`; the loader stays usable after a failure and after `clear()` |
 | Black screen | No environment / no light | Add `mainLightNode` and `environment` |
 | Crash on background thread | Filament JNI on wrong thread | Use `rememberModelInstance` or `Dispatchers.Main` |
 | AR not starting | Missing CAMERA permission or ARCore | Handle `onSessionFailure`, check `ArCoreApk.checkAvailability()` |
@@ -6730,7 +6758,7 @@ class SceneRenderer(engine: Engine, view: View, renderer: Renderer) {
 
     fun attachToSurfaceView(surfaceView: SurfaceView, isOpaque: Boolean, context: Context, display: Display, onTouch: ((MotionEvent) -> Unit)? = null)
     fun attachToTextureView(textureView: TextureView, isOpaque: Boolean, context: Context, display: Display, onTouch: ((MotionEvent) -> Unit)? = null)
-    fun renderFrame(frameTimeNanos: Long, onBeforeRender: () -> Unit)
+    fun renderFrame(frameTimeNanos: Long, shouldPresent: (() -> Boolean)? = null, onBeforeRender: () -> Unit): Boolean  // true when a frame reached the surface
     fun applyResize(width: Int, height: Int)
     fun destroy()
 }
