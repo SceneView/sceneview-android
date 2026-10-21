@@ -4,17 +4,21 @@ import io.github.sceneview.demo.demos.internal.Vec3
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.Random
 import kotlin.math.abs
+import kotlin.math.atan2
 import kotlin.math.floor
+import kotlin.math.hypot
 
 /**
  * The room engine on synthetic scans shaped like the phone scans that defeated it: walls seen only
  * up to 0.9 m, floor seen only ahead of the camera, a doorway the floor runs on through, one wall
  * seen twice, two walls of four, an L and a T seen on three quarters of their length, corners
- * hidden behind furniture, a headboard against a wall. When a figure is given it is within
- * [MAX_ERROR] of the room's, or the case's own bound; where the walls seen do not close the room,
- * none is, and the plan is still drawn — but two adjacent walls alone give an area marked as an
- * estimate, the floor seen standing for the other two.
+ * hidden behind furniture, a headboard against a wall, a bedroom whose clutter outweighs its walls,
+ * one wall seen along a stretch of it, a garage's storage fronts. When a figure is given it is
+ * within [MAX_ERROR] of the room's, or the case's own bound; where the walls seen do not close the
+ * room, none is, and the plan is still drawn — but two adjacent walls alone give an area marked as
+ * an estimate, the floor seen standing for the other two.
  */
 class RoomStructureRealScanTest {
 
@@ -133,6 +137,28 @@ class RoomStructureRealScanTest {
     }
 
     @Test
+    fun `walls each under 3 % of the vertical surfels, among clutter turned every way, are walls`() {
+        val scan = capture(CLUTTERED).scan()
+        val shares = intArrayOf(0, 90, 180, 270).map { facingShare(scan, it) }
+        val summary = shares.joinToString { "%.2f %%".format(it * 100) }
+        assertTrue("walls' shares $summary", shares.all { it < CLUTTERED_WALL_SHARE })
+        check(CLUTTERED)
+    }
+
+    @Test
+    fun `one wall seen along 1,5 m of a 5 m side still draws the plan`() {
+        val structure = RoomStructure.read(capture(STRETCH).scan())
+        val summary = summary(STRETCH, structure)
+        assertTrue("$summary: a wall stands where one was seen", structure.walls.any { !it.deduced })
+        check(STRETCH)
+    }
+
+    @Test
+    fun `storage fronts 2 m high before a garage's walls are furniture`() {
+        check(GARAGE)
+    }
+
+    @Test
     fun `two passes on one wall 15 cm apart are one wall`() {
         val structure = RoomStructure.read(capture(APART).scan())
         val summary = summary(APART, structure)
@@ -197,6 +223,27 @@ class RoomStructureRealScanTest {
         assertTrue(lines.joinToString(" | "), !failed)
     }
 
+    /**
+     * The share of [scan]'s vertical surfels, from [RoomLevels.WALL_FROM_M] up, that face within
+     * [FACING_DEG] of [degrees] — about +Y, from +X towards +Z: a wall's peak as the engine smooths it.
+     */
+    private fun facingShare(scan: RoomScan, degrees: Int): Float {
+        val normals = scan.normals ?: return 0f
+        var vertical = 0
+        var facing = 0
+        for (i in 0 until scan.positions.size / 3) {
+            val nx = normals[i * 3]
+            val nz = normals[i * 3 + 2]
+            if (abs(normals[i * 3 + 1]) > RoomLevels.VERTICAL || hypot(nx, nz) < HORIZONTAL) continue
+            if (scan.positions[i * 3 + 1] < RoomLevels.WALL_FROM_M) continue
+            vertical++
+            val a = Math.toDegrees(atan2(nz, nx).toDouble()).toFloat()
+            val off = abs(((a - degrees) % FULL_TURN + FULL_TURN + HALF_TURN) % FULL_TURN - HALF_TURN)
+            if (off <= FACING_DEG) facing++
+        }
+        return if (vertical > 0) facing.toFloat() / vertical else 0f
+    }
+
     /** The share of the camera's path that stands over floor the scan saw. */
     private fun trailOverFloor(scan: RoomScan): Float {
         val normals = scan.normals ?: return 0f
@@ -234,6 +281,17 @@ class RoomStructureRealScanTest {
         /** The budgets of [RoomStructureTest]: a full reading's median, a live reading's best run. */
         const val FULL_BUDGET_MS = 1000.0
         const val LIVE_BUDGET_MS = 20.0
+
+        /** A wall's peak of azimuths, as the engine smooths it: within this many degrees. */
+        const val FACING_DEG = 3.5f
+        const val HORIZONTAL = 0.5f
+        const val FULL_TURN = 360f
+        const val HALF_TURN = 180f
+
+        const val CLUTTER_SEED = 11L
+
+        /** A direction holding this share of the vertical surfels is a family of walls on its own. */
+        const val CLUTTERED_WALL_SHARE = 0.03f
 
         /** How high a phone held towards the floor sees the walls. */
         const val LOW_M = 0.9f
@@ -337,7 +395,69 @@ class RoomStructureRealScanTest {
             maxError = 0.01f,
         )
 
-        val CASES = listOf(LOW_WALLS, FLOOR_AHEAD, DOOR, TWICE, TWO_LOW, TWO, L_PART, T_PART, CORNERS, HEADBOARD)
+        /**
+         * Round clutter [radius] round, [top] high, about [step] apart over [x0]..[x1] × [z0]..[z1]:
+         * each thing moved off the grid by up to a quarter step, so that no row of them lines up.
+         */
+        fun posts(x0: Float, x1: Float, z0: Float, z1: Float, step: Float, radius: Float, top: Float): List<SyntheticPost> {
+            val random = Random(CLUTTER_SEED)
+            val posts = ArrayList<SyntheticPost>()
+            var x = x0
+            while (x <= x1 + 1e-3f) {
+                var z = z0
+                while (z <= z1 + 1e-3f) {
+                    val dx = (random.nextFloat() - 0.5f) * step / 2
+                    val dz = (random.nextFloat() - 0.5f) * step / 2
+                    posts += SyntheticPost(x + dx, z + dz, radius, top)
+                    z += step
+                }
+                x += step
+            }
+            return posts
+        }
+
+        /**
+         * A 4 × 3.5 m bedroom seen only up to 1 m, its normals spread as a phone's are (12°), round
+         * clutter 1.2 m high standing all over its middle: each wall makes under 3 % of the
+         * vertical surfels, as the walls of a cluttered bedroom scanned with a phone did.
+         */
+        val CLUTTERED = Case(
+            "cluttered bedroom",
+            SyntheticRoom(
+                floatArrayOf(0f, 4f, 4f, 0f),
+                floatArrayOf(0f, 0f, 3.5f, 3.5f),
+                seenUpTo = 1f,
+                normalSpread = 12f,
+                clutter = posts(0.6f, 3.4f, 0.6f, 2.9f, 0.3f, 0.12f, 1.2f),
+            ),
+            figures = true,
+        )
+
+        /** The rectangle with one wall of four seen, and that one only along 1.5 m of its 5 m: no figure, but a plan. */
+        val STRETCH = Case(
+            "one wall seen on 1.5 m",
+            SyntheticRoom(RECTANGLE_X, RECTANGLE_Z, hidden = setOf(1, 2, 3), seenAlong = mapOf(0 to 1.75f..3.25f)),
+            figures = false,
+        )
+
+        /**
+         * A 6 × 5.5 m garage seen floor to ceiling, storage units 0.5 m deep standing against two of
+         * its walls, 2 m and 1.8 m high: their fronts face the camera, the walls are seen above them.
+         */
+        val GARAGE = Case(
+            "garage",
+            SyntheticRoom(
+                floatArrayOf(0f, 6f, 6f, 0f),
+                floatArrayOf(0f, 0f, 5.5f, 5.5f),
+                height = 2.6f,
+                boxes = listOf(SyntheticBox(0.4f, 5.4f, 0f, 0.5f, 2f), SyntheticBox(5.5f, 6f, 1f, 4.5f, 1.8f)),
+            ),
+            figures = true,
+        )
+
+        val CASES = listOf(
+            LOW_WALLS, FLOOR_AHEAD, DOOR, TWICE, TWO_LOW, TWO, L_PART, T_PART, CORNERS, HEADBOARD, CLUTTERED, STRETCH, GARAGE,
+        )
 
         /** Two facing walls of four, one drawn in two passes 15 cm apart, each seeing half of it. */
         val APART = Case(

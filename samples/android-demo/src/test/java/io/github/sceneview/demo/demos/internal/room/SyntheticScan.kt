@@ -8,11 +8,14 @@ import io.github.sceneview.demo.demos.internal.DepthFrame
 import io.github.sceneview.demo.demos.internal.RerunSyntheticRoom
 import io.github.sceneview.demo.demos.internal.Vec3
 import java.util.Random
+import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
+import kotlin.math.sin
 import kotlin.math.sqrt
 
 /** A hole in wall [wall] of a [SyntheticRoom]: [from] metres along it, [width] wide, [sill] up, [height] tall. */
@@ -20,6 +23,12 @@ class SyntheticOpening(val wall: Int, val from: Float, val width: Float, val sil
 
 /** A box standing in the room: furniture. */
 class SyntheticBox(val x0: Float, val x1: Float, val z0: Float, val z1: Float, val top: Float)
+
+/**
+ * A round thing standing in the room — a lamp, a plant, a pile of clothes — seen all round: its
+ * faces turn every way. It is added to the fused cloud, not rendered: it hides nothing.
+ */
+class SyntheticPost(val x: Float, val z: Float, val radius: Float, val top: Float)
 
 /** Floor outside the room, over [x0]..[x1] × [z0]..[z1]: the next room's, seen through a doorway. */
 class SyntheticFloor(val x0: Float, val x1: Float, val z0: Float, val z1: Float)
@@ -38,6 +47,9 @@ class SyntheticFloor(val x0: Float, val x1: Float, val z0: Float, val z1: Float)
  * Nothing further than [reach] across the floor from the camera returns depth: a scan that stopped
  * before it went round the room. The floor further than [floorReach] across from the camera returns
  * none either: a floor the depth gives up on at a grazing angle, the walls still seen.
+ * Every normal of the fused cloud is turned about +Y by a Gaussian of [normalSpread] degrees: a
+ * phone's normals are not a renderer's. [clutter] stands in the room besides the [boxes]. A wall
+ * in [seenAlong] is seen only along that stretch, in metres from its start: blind elsewhere.
  */
 class SyntheticRoom(
     val x: FloatArray,
@@ -54,6 +66,9 @@ class SyntheticRoom(
     val nextDoor: List<SyntheticFloor> = emptyList(),
     val reach: Float = Float.POSITIVE_INFINITY,
     val floorReach: Float = Float.POSITIVE_INFINITY,
+    val normalSpread: Float = 0f,
+    val clutter: List<SyntheticPost> = emptyList(),
+    val seenAlong: Map<Int, ClosedFloatingPointRange<Float>> = emptyMap(),
 ) {
     val area: Float
         get() {
@@ -121,6 +136,9 @@ object SyntheticScan {
     private const val GREY = 0xff808080.toInt()
     private const val PLANE_FROM_M = 0.3f
 
+    /** The clutter's surfels stand this far apart: the fusion's voxel. */
+    private const val CLUTTER_STEP_M = DenseFusion.VOXEL_M
+
     /** The walk's stops: a grid over the floor, each clear of the walls and boxes. */
     fun stops(room: SyntheticRoom): List<Vec3> {
         val stops = ArrayList<Vec3>()
@@ -181,7 +199,7 @@ object SyntheticScan {
         for ((index, pose) in poses.withIndex()) {
             fusion.add(DepthBackProjection.project(frame(room, pose, index % 2 == 1, random)))
         }
-        val cloud = fusion.cloud(minViews = DenseFusion.MIN_VIEWS)
+        val cloud = cluttered(room, fusion.cloud(minViews = DenseFusion.MIN_VIEWS), Random(seed + 1))
         val trail = FloatArray(poses.size * 3)
         poses.forEachIndexed { i, p ->
             trail[i * 3] = p.x
@@ -189,6 +207,42 @@ object SyntheticScan {
             trail[i * 3 + 2] = p.z
         }
         return SyntheticCapture(cloud, trail, planesOf(room), poses)
+    }
+
+    /** [cloud] with the [room]'s normals spread and its clutter added; [cloud] itself when it has neither. */
+    private fun cluttered(room: SyntheticRoom, cloud: DenseCloud, random: Random): DenseCloud {
+        val fused = cloud.normals ?: return cloud
+        if (room.normalSpread <= 0f && room.clutter.isEmpty()) return cloud
+        val positions = ArrayList<Float>(cloud.positions.size)
+        val normals = ArrayList<Float>(cloud.positions.size)
+        for (i in 0 until cloud.count) {
+            val turn = Math.toRadians(random.nextGaussian() * room.normalSpread).toFloat()
+            val nx = fused[i * 3]
+            val nz = fused[i * 3 + 2]
+            for (k in 0 until 3) positions += cloud.positions[i * 3 + k]
+            normals += nx * cos(turn) - nz * sin(turn)
+            normals += fused[i * 3 + 1]
+            normals += nx * sin(turn) + nz * cos(turn)
+        }
+        for (post in room.clutter) {
+            val around = max(1, (2 * PI * post.radius / CLUTTER_STEP_M).roundToInt())
+            var y = CLUTTER_STEP_M / 2
+            while (y < post.top) {
+                // Each ring turned at random: no two things' faces line up on the same few azimuths.
+                val phase = random.nextFloat()
+                for (k in 0 until around) {
+                    val a = (2 * PI * (k + phase) / around).toFloat()
+                    positions += post.x + post.radius * cos(a)
+                    positions += y
+                    positions += post.z + post.radius * sin(a)
+                    normals += cos(a)
+                    normals += 0f
+                    normals += sin(a)
+                }
+                y += CLUTTER_STEP_M
+            }
+        }
+        return DenseCloud(positions.toFloatArray(), IntArray(positions.size / 3) { GREY }, normals.toFloatArray())
     }
 
     /**
@@ -203,11 +257,14 @@ object SyntheticScan {
         for (i in 0 until n) {
             if (i in room.hidden || top <= PLANE_FROM_M) continue
             val j = (i + 1) % n
-            val inset = 0.1f / room.wallLength(i)
-            val ax = room.x[i] + (room.x[j] - room.x[i]) * inset
-            val az = room.z[i] + (room.z[j] - room.z[i]) * inset
-            val bx = room.x[j] - (room.x[j] - room.x[i]) * inset
-            val bz = room.z[j] - (room.z[j] - room.z[i]) * inset
+            val length = room.wallLength(i)
+            val seen = room.seenAlong[i]
+            val from = (seen?.start ?: 0f) / length + 0.1f / length
+            val to = (seen?.endInclusive ?: length) / length - 0.1f / length
+            val ax = room.x[i] + (room.x[j] - room.x[i]) * from
+            val az = room.z[i] + (room.z[j] - room.z[i]) * from
+            val bx = room.x[i] + (room.x[j] - room.x[i]) * to
+            val bz = room.z[i] + (room.z[j] - room.z[i]) * to
             planes += RoomPlane(
                 RoomPlaneKind.Wall,
                 floatArrayOf(ax, PLANE_FROM_M, az, bx, PLANE_FROM_M, bz, bx, top, bz, ax, top, az),
@@ -268,7 +325,8 @@ object SyntheticScan {
                     if (inHole) continue
                     best = t
                     val otherHalf = room.driftHalves && i == room.driftWall && (along > room.wallLength(i) / 2f) != drifted
-                    blind = i in room.hidden || y > room.seenUpTo || otherHalf
+                    val off = room.seenAlong[i]?.let { along !in it } == true
+                    blind = i in room.hidden || y > room.seenUpTo || otherHalf || off
                     floorHit = false
                 }
                 // Floor and ceiling.
