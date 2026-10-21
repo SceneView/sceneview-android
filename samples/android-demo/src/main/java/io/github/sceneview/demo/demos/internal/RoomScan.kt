@@ -363,13 +363,23 @@ object ScanCopy {
         }
     }
 
-    /** A kept session's figures: `4.2 m · 3.8k points · 42 photos · 0:18`, as on iOS. */
-    fun figures(pathMetres: Float, points: Int, photos: Int, seconds: Float): String {
+    /**
+     * A kept session's figures: `4.2 m · 3.8k points · 42 photos · 0:18`, as on iOS. The path
+     * length takes the replay's units under [locale] (`13 ft 11 in` in US English), so the card
+     * and the replay it opens never disagree.
+     */
+    fun figures(
+        pathMetres: Float,
+        points: Int,
+        photos: Int,
+        seconds: Float,
+        locale: Locale = Locale.getDefault(),
+    ): String {
         val parts = mutableListOf(
-            ArDebugFormat.distance(pathMetres),
-            "${ArDebugFormat.compactCount(points)} ${label(points, "point", "points")}",
+            scanPathLength(pathMetres, locale),
+            "${ArDebugFormat.compactCount(points, locale)} ${label(points, "point", "points")}",
         )
-        if (photos > 0) parts += "${ArDebugFormat.count(photos)} ${label(photos, "photo", "photos")}"
+        if (photos > 0) parts += "${ArDebugFormat.count(photos, locale)} ${label(photos, "photo", "photos")}"
         if (seconds.isFinite() && seconds > 0f) parts += ArDebugFormat.clock(seconds)
         return parts.joinToString(" · ")
     }

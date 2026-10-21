@@ -4,6 +4,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -17,6 +19,19 @@ import java.util.Locale
  * into a recording without a device.
  */
 class ArRecordingModelTest {
+    // The copy under test is the English one, whatever the machine running it says.
+    private val locale = Locale.getDefault()
+
+    @Before
+    fun englishLocale() {
+        Locale.setDefault(Locale.US)
+    }
+
+    @After
+    fun restoreLocale() {
+        Locale.setDefault(locale)
+    }
+
 
     private val placement = RecordedPlacement(
         index = 2,
