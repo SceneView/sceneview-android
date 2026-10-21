@@ -368,49 +368,76 @@ internal object PlaneFlattening {
     }
 
     /**
-     * Groups planes within [MERGE_ANGLE_DEG] and [MERGE_DISTANCE_M]: the new id of each, and the
-     * count. Past [FREE_MERGE_M] apart, the smaller must also lie where the larger's faces are
-     * ([MIN_SHARE] of its footprint): a wall's second pass overlaps the wall, while a TV or a
-     * door's leaf stands where the wall has no faces at all.
+     * Groups planes within [MERGE_ANGLE_DEG] and [MERGE_DISTANCE_M] of a group's largest: the new
+     * id of each, and the count. Largest first, so each group is anchored on its widest sheet, and
+     * a plane joins the nearest group that takes it. Past [FREE_MERGE_M] from the anchor, the
+     * group's faces, all of them, must cover [MIN_SHARE] of the plane's footprint: a wall's second
+     * pass overlaps the wall, while a TV or a door's leaf stands where the wall has no faces at
+     * all. Against the group, not against one sheet of it: a door within a centimetre of a second
+     * pass beside it is no closer to the wall for that.
      */
     @Suppress("NestedBlockDepth")
     private fun mergeCoplanar(faces: FaceGeometry, label: IntArray, planes: List<Plane>): Pair<IntArray, Int> {
-        val parent = IntArray(planes.size) { it }
-        fun root(i: Int): Int {
-            var r = i
-            while (parent[r] != r) r = parent[r]
-            return r
-        }
+        val byPlane = Members(label, planes.size)
+        val area = FloatArray(planes.size)
+        for (t in label.indices) if (label[t] >= 0) area[label[t]] += faces.areas[t]
         val minCos = cos(Math.toRadians(MERGE_ANGLE_DEG)).toFloat()
-        val byPlane by lazy(LazyThreadSafetyMode.NONE) { Members(label, planes.size) }
-        for (i in planes.indices) {
-            for (j in i + 1 until planes.size) {
-                val p = planes[i]
-                val q = planes[j]
+        val group = IntArray(planes.size) { -1 }
+        val anchors = ArrayList<Int>()
+        val grids = ArrayList<Grid>()
+        val covered = ArrayList<LongArray>()
+        fun cells(g: Int, plane: Int): LongArray =
+            grids[g].cells(faces, byPlane.members, byPlane.start[plane], byPlane.start[plane + 1])
+        for (i in planes.indices.sortedByDescending { area[it] }) {
+            val q = planes[i]
+            var best = -1
+            var bestGap = 0f
+            for (g in anchors.indices) {
+                val p = planes[anchors[g]]
                 val facing = p.nx * q.nx + p.ny * q.ny + p.nz * q.nz
                 val gap = abs(p.offset - q.offset)
                 if (facing < minCos || gap > MERGE_DISTANCE_M) continue
-                if (gap > FREE_MERGE_M) {
-                    val grid = Grid(p)
-                    val a = grid.cells(faces, byPlane.members, byPlane.start[i], byPlane.start[i + 1])
-                    val b = grid.cells(faces, byPlane.members, byPlane.start[j], byPlane.start[j + 1])
-                    val share = if (a.size <= b.size) footprintShare(a, b) else footprintShare(b, a)
-                    if (share < MIN_SHARE) continue
-                }
-                val ra = root(i)
-                val rb = root(j)
-                if (ra != rb) parent[ra] = rb
+                if (best >= 0 && gap >= bestGap) continue
+                if (gap > FREE_MERGE_M && footprintShare(cells(g, i), covered[g]) < MIN_SHARE) continue
+                best = g
+                bestGap = gap
             }
+            if (best < 0) {
+                best = anchors.size
+                anchors += i
+                grids += Grid(q)
+                covered += cells(best, i)
+            } else {
+                covered[best] = union(covered[best], cells(best, i))
+            }
+            group[i] = best
         }
+        // Numbered as the planes come, as before any merge: a plane on its own keeps its id.
         val id = IntArray(planes.size) { -1 }
-        val rootId = IntArray(planes.size) { -1 }
+        val groupId = IntArray(anchors.size) { -1 }
         var count = 0
         for (i in planes.indices) {
-            val r = root(i)
-            if (rootId[r] < 0) rootId[r] = count++
-            id[i] = rootId[r]
+            val g = group[i]
+            if (groupId[g] < 0) groupId[g] = count++
+            id[i] = groupId[g]
         }
         return id to count
+    }
+
+    /** The cells in [a] or [b]; both sorted, without repeats, as is the union. */
+    private fun union(a: LongArray, b: LongArray): LongArray {
+        val out = LongArray(a.size + b.size)
+        var i = 0
+        var j = 0
+        var n = 0
+        while (i < a.size || j < b.size) {
+            out[n++] = when {
+                j >= b.size || (i < a.size && a[i] < b[j]) -> a[i++]
+                i >= a.size || b[j] < a[i] -> b[j++]
+                else -> a[i++].also { j++ }
+            }
+        }
+        return out.copyOf(n)
     }
 
     /** The share of the cells [own] that [other] covers too; both sorted, without repeats. */
