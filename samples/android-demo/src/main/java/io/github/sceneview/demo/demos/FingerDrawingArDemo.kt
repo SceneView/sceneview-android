@@ -28,6 +28,7 @@ import dev.romainguy.kotlin.math.Quaternion
 import io.github.sceneview.ar.ARCoreAvailability
 import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.rememberARCameraNode
+import io.github.sceneview.ar.rememberHostLifecycle
 import io.github.sceneview.demo.ARCameraInitScrim
 import io.github.sceneview.demo.DemoPreviewPlaceholder
 import io.github.sceneview.demo.DemoScaffold
@@ -310,6 +311,7 @@ private fun FingerDrawingArScene(onBack: () -> Unit, brush: FingerBrush) {
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             ARSceneView(
+                lifecycle = rememberHostLifecycle(),
                 modifier = Modifier.fillMaxSize(),
                 engine = engine,
                 materialLoader = materialLoader,

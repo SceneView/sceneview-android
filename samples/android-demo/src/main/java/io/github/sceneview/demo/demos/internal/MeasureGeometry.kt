@@ -318,10 +318,11 @@ private const val WALL_SPAN_SLACK = 0.25f
 /**
  * Height the user is aiming at on the vertical wall standing on floor line `a`–`b`: the
  * camera ray ([origin], [direction]) is intersected with that wall's vertical plane and the
- * hit's height above the line is returned, clamped to [WALL_MIN_HEIGHT]..[WALL_MAX_HEIGHT].
+ * hit's height above the line is returned, capped at [WALL_MAX_HEIGHT].
  *
- * `null` when the ray runs parallel to the wall, points away from it, or lands far past its
- * ends — the caller keeps the last height then, rather than jumping.
+ * `null` when the ray runs parallel to the wall, points away from it, lands far past its ends,
+ * or crosses the wall's plane under [WALL_MIN_HEIGHT] — aiming at the floor at the wall's foot
+ * reads no height at all, so Set height has nothing to lock (#4751) instead of the minimum.
  */
 fun measureWallHeightFromRay(
     origin: Position,
@@ -351,8 +352,11 @@ private fun wallRayHit(origin: Position, direction: Position, a: Position, b: Po
     val hz = origin.z + direction.z * t
     val along = ((hx - a.x) * ex + (hz - a.z) * ez) / length
     if (along < -spanSlack || along > length + spanSlack) return null
+    // At or under the foot the aim is on the floor, not on the wall: no height (#4751).
+    val height = hy - a.y
+    if (height < WALL_MIN_HEIGHT) return null
     val directionLength = sqrt(direction.x * direction.x + direction.y * direction.y + direction.z * direction.z)
-    return WallRayHit((hy - a.y).coerceIn(WALL_MIN_HEIGHT, WALL_MAX_HEIGHT), t * directionLength)
+    return WallRayHit(height.coerceAtMost(WALL_MAX_HEIGHT), t * directionLength)
 }
 
 /**
