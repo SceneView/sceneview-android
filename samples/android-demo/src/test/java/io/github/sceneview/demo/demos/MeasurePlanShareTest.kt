@@ -7,6 +7,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.core.content.IntentCompat
+import io.github.sceneview.demo.R
 import io.github.sceneview.demo.demos.internal.MeasureFigureNumbers
 import io.github.sceneview.demo.demos.internal.MeasureMode
 import io.github.sceneview.demo.demos.internal.MeasureOpening
@@ -16,6 +17,7 @@ import io.github.sceneview.demo.demos.internal.measureRoomSurvey
 import io.github.sceneview.demo.theme.SceneViewDemoTheme
 import io.github.sceneview.math.Position
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -30,7 +32,7 @@ import java.util.Locale
 /**
  * Measure's plan page in French, from its share button to the text the share sheet receives:
  * the text the page hands over, not one rebuilt beside it, writes every figure with the decimal
- * comma. The PDF is drawn from the same words, but onto a canvas no test reads back.
+ * comma and sets its walls apart with a semicolon. The PDF is drawn from the same words, but onto a canvas no test reads back.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = "fr-rFR-w411dp-h891dp-xhdpi")
@@ -99,5 +101,16 @@ class MeasurePlanShareTest {
         assertTrue(text, "12,0 m²" in text)
         assertTrue(text, "30,0 m³" in text)
         assertTrue(text, !point.containsMatchIn(text))
+    }
+
+    @Test
+    fun `French plan's shared text sets its walls apart with a semicolon, clear of the decimal comma`() {
+        val text = sharedText()
+        val walls = composeRule.activity.getString(R.string.demo_ar_rerun_plan_walls)
+        val line = text.lines().single { it.startsWith("$walls: ") }
+        // `A 4,00 m, B 3,00 m` reads as one more decimal: a semicolon ends each wall.
+        val parted = Regex("^" + Regex.escape(walls) + ": A [^;]+; B [^;]+; C [^;]+; D [^;]+$")
+        assertTrue(line, parted.matches(line))
+        assertFalse(line, ", " in line)
     }
 }
