@@ -319,14 +319,12 @@ class RoomSurveyTest {
     }
 
     @Test
-    fun `two walls give an estimated area, the pair seen measured`() {
+    fun `two walls give no area either`() {
         val survey = Room().box(east = false, west = false).survey()
 
-        assertNear(20f, survey.area?.value, 3 * AREA)
-        assertTrue(survey.area!!.estimate)
-        assertTrue(survey.length!!.estimate)
+        assertNull(survey.area)
+        assertNull(survey.length)
         assertNear(4f, survey.width?.value)
-        assertFalse(survey.width!!.estimate)
         assertTrue(SurveyGap.MissingWall in survey.gaps)
     }
 
