@@ -173,6 +173,7 @@ import io.github.sceneview.demo.DockItem
 import io.github.sceneview.demo.LocalDemoChromeBottomInset
 import io.github.sceneview.demo.R
 import io.github.sceneview.demo.rememberArPlaybackDataset
+import io.github.sceneview.demo.theme.LocalStageChrome
 import io.github.sceneview.demo.theme.SceneViewTokens
 import io.github.sceneview.demo.ui.ConnectedChoiceRow
 import io.github.sceneview.geometries.Geometry
@@ -1024,32 +1025,51 @@ private fun measureReadout(
 internal const val MEASURE_PLAN_CARD_TAG = "measure_plan_card"
 
 /**
- * `DESIGN.md` AR Overlay Card: scrim ground, hairline, `radius-lg`, `space-md` padding. Drawn
- * [overCamera] by default; the plan's page sets it `false`.
+ * `DESIGN.md` AR Overlay Card: scrim ground, hairline, `radius-lg`, `space-md` padding, drawn
+ * [overCamera] by default, in both themes. The plan's page sets it `false`: the card then stands
+ * on the themed stage, not on the camera, and takes the stage's card for the current theme
+ * ([LocalStageChrome], `DESIGN.md` Themed stage): `surface-container` glass with `on-surface`
+ * text in light theme, the same dark glass as over the camera in dark theme.
  */
 @Composable
 internal fun MeasureReadoutCard(
     readout: MeasureReadout,
     modifier: Modifier = Modifier,
-    @Suppress("UnusedParameter") overCamera: Boolean = true,
+    overCamera: Boolean = true,
 ) {
-    val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     val overlay = SceneViewTokens.ArOverlay
+    val ink: Color
+    val inkMuted: Color
+    val fill: Color
+    val edge: Color
+    if (overCamera) {
+        val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+        fill = if (dark) overlay.scrimDark else overlay.scrimLight
+        ink = overlay.onScrim
+        inkMuted = overlay.onScrimMuted
+        edge = SceneViewTokens.Glass.edgeRing
+    } else {
+        val stage = LocalStageChrome.current
+        fill = stage.card
+        ink = stage.onCard
+        inkMuted = stage.onCardMuted
+        edge = stage.edgeRing
+    }
     Surface(
         modifier = modifier.widthIn(max = overlay.maxWidth).semantics(mergeDescendants = true) {},
-        color = if (dark) overlay.scrimDark else overlay.scrimLight,
-        contentColor = overlay.onScrim,
+        color = fill,
+        contentColor = ink,
         shape = RoundedCornerShape(SceneViewTokens.Radius.lg),
-        border = BorderStroke(SceneViewTokens.Glass.edgeWidth, SceneViewTokens.Glass.edgeRing),
+        border = BorderStroke(SceneViewTokens.Glass.edgeWidth, edge),
     ) {
         Column(
             modifier = Modifier.padding(horizontal = SceneViewTokens.Space.md, vertical = SceneViewTokens.Space.sm),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(text = readout.label, style = SceneViewTokens.Type.caption, color = overlay.onScrimMuted)
-            Text(text = readout.value, style = SceneViewTokens.Type.display, color = overlay.onScrim)
+            Text(text = readout.label, style = SceneViewTokens.Type.caption, color = inkMuted)
+            Text(text = readout.value, style = SceneViewTokens.Type.display, color = ink)
             readout.details?.let {
-                Text(text = it, style = SceneViewTokens.Type.caption, color = overlay.onScrimMuted)
+                Text(text = it, style = SceneViewTokens.Type.caption, color = inkMuted)
             }
         }
     }
