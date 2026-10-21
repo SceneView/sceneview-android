@@ -2,6 +2,7 @@ package io.github.sceneview.demo.demos
 
 import android.app.Application
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.pdf.PdfDocument
@@ -113,9 +114,15 @@ class RerunPlanShareTest {
         return stream!!
     }
 
-    /** Opens [uri] as the app it was shared with would, through the app's FileProvider. */
+    /**
+     * Opens [uri] as the app it was shared with would, through the app's FileProvider as its manifest
+     * declares it: granting URI permissions and not exported, which FileProvider insists on.
+     */
     private fun readShared(uri: Uri): Result<String> {
-        Robolectric.setupContentProvider(FileProvider::class.java, "${app.packageName}.fileprovider")
+        val authority = "${app.packageName}.fileprovider"
+        val declared = app.packageManager.resolveContentProvider(authority, PackageManager.GET_META_DATA)
+        assertNotNull("the manifest declares no provider for $authority", declared)
+        Robolectric.buildContentProvider(FileProvider::class.java).create(declared!!)
         return runCatching { app.contentResolver.openInputStream(uri)!!.use { String(it.readBytes(), Charsets.ISO_8859_1) } }
     }
 
