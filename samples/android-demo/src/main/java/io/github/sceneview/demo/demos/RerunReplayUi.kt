@@ -114,8 +114,8 @@ internal fun RerunLayersSection(session: ArDebugSession, modifier: Modifier = Mo
         RerunReplayControls.layers.forEach { layer ->
             val value = when (layer.group) {
                 DebugGroup.Trail -> scanPathLength(stats.pathMetres, locale)
-                DebugGroup.Planes -> ArDebugFormat.count(stats.planes)
-                DebugGroup.Points -> ArDebugFormat.compactCount(stats.mapPoints)
+                DebugGroup.Planes -> ArDebugFormat.count(stats.planes, locale)
+                DebugGroup.Points -> ArDebugFormat.compactCount(stats.mapPoints, locale)
                 else -> null
             }
             LayerRow(layer, value, session)

@@ -1,2 +1,3 @@
 <!-- category: Changed -->
 - **Demo app: 3D Scan's floor covered and camera path follow the floor plan's units ([#4781](https://github.com/sceneview/sceneview/pull/4781)).** In US English the replay's result names the floor it covered in square feet and its settings name the camera path in feet and inches; in other languages both stay in metres, with the language's decimal separator.
+- **Demo app: the scan and recording figures write the phone's decimal separator ([#4781](https://github.com/sceneview/sceneview/pull/4781)).** Words and units stay in English, but on a French or German phone a file reads "4,7 MB", a path "3,2 m" and a count "1 204", as Measure already writes them.
