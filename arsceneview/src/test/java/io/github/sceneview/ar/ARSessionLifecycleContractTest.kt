@@ -10,7 +10,7 @@ import java.io.File
  * `ARSceneView` needs a Filament engine to be composed, and `ARCore` needs a native ARCore
  * `Session`. Both are build-time facts, read from the source like
  * `AnchorNodeEditableGateContractTest` does. The behaviour behind them is tested where it
- * lives: [HostLifecycleTest] for the default, [CameraArbiterTest] for the camera sharing.
+ * lives: [HostLifecycleTest] for the opt-in host lifecycle, [CameraArbiterTest] for the camera sharing.
  */
 class ARSessionLifecycleContractTest {
 
@@ -18,14 +18,14 @@ class ARSessionLifecycleContractTest {
     private fun source(name: String) = File("src/main/java/io/github/sceneview/ar/$name").readText()
 
     @Test
-    fun `every ARSceneView overload defaults its lifecycle to the host activity`() {
+    fun `every ARSceneView overload keeps LocalLifecycleOwner as its lifecycle default`() {
         val sceneView = source("ARSceneView.kt")
         val defaults = Regex("""\blifecycle: Lifecycle = ([^,\n]+),""").findAll(sceneView)
             .map { it.groupValues[1] }
             .toList()
 
         assertTrue("ARSceneView.kt declares no lifecycle parameter", defaults.isNotEmpty())
-        assertEquals(List(defaults.size) { "rememberHostLifecycle()" }, defaults)
+        assertEquals(List(defaults.size) { "LocalLifecycleOwner.current.lifecycle" }, defaults)
     }
 
     @Test

@@ -22,7 +22,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 /**
- * `ARSceneView` binds its session to the host activity by default, not to
+ * `rememberHostLifecycle()` binds an opted-in `ARSceneView` to the host activity, not to
  * `LocalLifecycleOwner`: a navigation destination leaves `RESUMED` when its exit transition
  * starts, which stopped the camera while the screen was still on screen.
  */

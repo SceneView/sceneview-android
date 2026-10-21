@@ -212,20 +212,18 @@ ARSceneView(
 
 ### Session lifecycle
 
-`ARSceneView(lifecycle = …)` defaults to `rememberHostLifecycle()`, the **host activity's**
-lifecycle, not `LocalLifecycleOwner`: the camera stays live while the screen animates in and out
-of a `NavHost`, pauses with the activity, and the session is closed on disposal.
+`ARSceneView` follows `LocalLifecycleOwner` by default. Inside a `NavHost` that is the
+destination, which stops the camera as soon as the exit transition starts: the last camera image
+stays frozen on screen while the screen animates out. Opt in to the host activity's lifecycle
+for an AR destination with transitions:
 
 ```kotlin
-ARSceneView()                                                     // follows the host activity
-ARSceneView(lifecycle = LocalLifecycleOwner.current.lifecycle)    // follows the destination / fragment view
+ARSceneView(lifecycle = rememberHostLifecycle())   // camera live through enter/exit transitions
 ```
 
-Pass the narrower lifecycle where the host keeps the screen composed but not visible: a Fragment
-page of a `ViewPager2`, a screen under a full-screen `dialog()` destination. A fragment hidden
-with `hide()` and a Compose `HorizontalPager` page have no lifecycle of their own: take the
-`ARSceneView` out of the composition. Two `ARSceneView`s composed at once share the single
-camera: the last one to resume runs.
+Keep the default where the AR screen stays composed but hidden (a `ViewPager2` page, a screen
+under a full-screen `dialog()`): with the host lifecycle the camera would stay on there. Two
+`ARSceneView`s resumed at once share the single camera: the last one to resume runs.
 
 ### Recording / playback
 
