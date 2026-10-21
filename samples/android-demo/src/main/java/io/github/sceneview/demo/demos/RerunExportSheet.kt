@@ -432,6 +432,7 @@ private fun FloorPlanRow(offer: PlanOffer, onClick: () -> Unit) {
                         PlanOffer.Measuring -> R.string.demo_ar_rerun_plan_measuring
                         PlanOffer.NoDepth -> R.string.demo_ar_rerun_plan_export_no_depth
                         PlanOffer.NoWalls -> R.string.demo_ar_rerun_plan_export_no_walls
+                        PlanOffer.Failed -> R.string.demo_ar_rerun_plan_export_failed
                     },
                 ),
                 style = Type.caption,

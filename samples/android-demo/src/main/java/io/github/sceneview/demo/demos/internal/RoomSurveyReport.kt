@@ -28,6 +28,9 @@ enum class PlanOffer {
 
     /** The scan has depth but too few walls for a plan. */
     NoWalls,
+
+    /** The measure failed or did not end in time ([SurveyGap.Unmeasured]): the row says so. */
+    Failed,
     ;
 
     companion object {
@@ -35,6 +38,7 @@ enum class PlanOffer {
         fun of(survey: RoomSurvey?): PlanOffer = when {
             survey == null -> Measuring
             survey.hasPlan -> Ready
+            SurveyGap.Unmeasured in survey.gaps -> Failed
             SurveyGap.NoDepth in survey.gaps -> NoDepth
             else -> NoWalls
         }

@@ -91,6 +91,9 @@ enum class SurveyGap {
 
     /** Too little ceiling seen for a height. */
     Ceiling,
+
+    /** The measure failed or did not end in time: nothing to scan again, the plan can be reopened. */
+    Unmeasured,
 }
 
 /**
@@ -128,8 +131,11 @@ class RoomSurvey(
             .any { !it.estimate }
 
     companion object {
-        fun empty(gap: SurveyGap) =
-            RoomSurvey(emptyList(), 0f, 0f, null, null, null, null, null, listOf(gap, SurveyGap.Ceiling), 0f, 0f, 0f)
+        fun empty(gap: SurveyGap) = RoomSurvey(
+            emptyList(), 0f, 0f, null, null, null, null, null,
+            // A room that was not measured lacks nothing it could be scanned for.
+            listOfNotNull(gap, SurveyGap.Ceiling.takeIf { gap != SurveyGap.Unmeasured }), 0f, 0f, 0f,
+        )
     }
 }
 

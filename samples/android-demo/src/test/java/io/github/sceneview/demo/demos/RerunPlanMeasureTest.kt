@@ -7,10 +7,15 @@ import io.github.sceneview.demo.demos.internal.DenseCloud
 import io.github.sceneview.demo.demos.internal.PlanOffer
 import io.github.sceneview.demo.demos.internal.ReplayLens
 import io.github.sceneview.demo.demos.internal.ReplayManifest
+import io.github.sceneview.demo.demos.internal.RoomSurvey
+import io.github.sceneview.demo.demos.internal.SurveyGap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertSame
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -18,6 +23,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * The export sheet's "Floor plan" row ends: on the plan or on why there is none, never on
@@ -79,11 +85,51 @@ class RerunPlanMeasureTest {
         }
     }
 
+    @Test
+    fun `a measure that fails ends on a plan that says the room was not measured`() {
+        val survey = runBlocking { measureRoom(scan()) { error("no grid") } }
+        assertEquals(listOf(SurveyGap.Unmeasured), survey.gaps)
+        assertEquals(PlanOffer.Failed, PlanOffer.of(survey))
+    }
+
+    @Test
+    fun `a measure that does not end in time ends on the same`() {
+        val held = CountDownLatch(1)
+        try {
+            val survey = runBlocking {
+                measureRoom(scan(), timeoutMs = SHORT_MS) {
+                    held.await(HOLD_S, TimeUnit.SECONDS)
+                    RoomSurvey.empty(SurveyGap.NoWalls)
+                }
+            }
+            assertEquals(PlanOffer.Failed, PlanOffer.of(survey))
+        } finally {
+            held.countDown()
+        }
+    }
+
+    @Test
+    fun `the same scan asked twice is measured once, and its survey kept`() {
+        val media = scan()
+        val runs = AtomicInteger(0)
+        val measured = RoomSurvey.empty(SurveyGap.NoWalls)
+        val survey = { _: RerunReplayMedia -> runs.incrementAndGet(); measured }
+        val first = runBlocking { measureRoom(media, survey = survey) }
+        val again = runBlocking { measureRoom(media, survey = survey) }
+        assertSame(measured, first)
+        assertSame(measured, again)
+        assertEquals(1, runs.get())
+        assertEquals(PlanOffer.NoWalls, PlanOffer.of(first))
+    }
+
     private companion object {
         const val VOXEL_M = 0.05f
 
         /** The longest the row may say "Measuring the room…". */
         const val BOUND_MS = 60_000L
+
+        /** A measure's timeout in the tests that wait on a real thread. */
+        const val SHORT_MS = 200L
 
         /** How long a blocker gets to start before the pool counts as full. */
         const val START_MS = 500L
