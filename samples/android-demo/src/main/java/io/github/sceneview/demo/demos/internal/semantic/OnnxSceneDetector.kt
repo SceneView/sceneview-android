@@ -4,24 +4,43 @@ import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
 import ai.onnxruntime.TensorInfo
+import java.nio.ByteBuffer
 import java.nio.FloatBuffer
 
 /**
  * A YOLOX detector ([YoloxCodec]) run by ONNX Runtime: `onnxruntime-android` in the app, the
- * desktop `onnxruntime` in the JVM tests — one API, so this class is both. [model] is the
- * `.onnx` file's bytes; the input's size is read from it (416 for Tiny and Nano).
+ * desktop `onnxruntime` in the JVM tests — one API, so this class is both. The model is the
+ * `.onnx` file's bytes, or a direct buffer over them (a file mapped in memory, never copied onto
+ * the heap); the input's size is read from it (416 for Tiny and Nano).
  */
-class OnnxSceneDetector(
-    model: ByteArray,
-    override val name: String = "yolox",
-    threads: Int = DEFAULT_THREADS,
-    private val minScore: Float = YoloxCodec.MIN_SCORE,
-    private val keep: (String) -> Boolean = { SceneLabel.ofDetector(it) != null },
+class OnnxSceneDetector private constructor(
+    override val name: String,
+    threads: Int,
+    private val minScore: Float,
+    private val keep: (String) -> Boolean,
+    open: (OrtEnvironment, OrtSession.SessionOptions) -> OrtSession,
 ) : SceneDetector {
+    constructor(
+        model: ByteArray,
+        name: String = "yolox",
+        threads: Int = DEFAULT_THREADS,
+        minScore: Float = YoloxCodec.MIN_SCORE,
+        keep: (String) -> Boolean = { SceneLabel.ofDetector(it) != null },
+    ) : this(name, threads, minScore, keep, { environment, options -> environment.createSession(model, options) })
+
+    /** [model] must be a direct buffer, as a mapped file is: ONNX Runtime reads it in place. */
+    constructor(
+        model: ByteBuffer,
+        name: String = "yolox",
+        threads: Int = DEFAULT_THREADS,
+        minScore: Float = YoloxCodec.MIN_SCORE,
+        keep: (String) -> Boolean = { SceneLabel.ofDetector(it) != null },
+    ) : this(name, threads, minScore, keep, { environment, options -> environment.createSession(model, options) })
+
     private val environment = OrtEnvironment.getEnvironment()
     private val session: OrtSession = OrtSession.SessionOptions().use { options ->
         options.setIntraOpNumThreads(threads)
-        environment.createSession(model, options)
+        open(environment, options)
     }
     private val inputName = session.inputNames.first()
 

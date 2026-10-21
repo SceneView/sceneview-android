@@ -21,6 +21,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
+import java.nio.channels.FileChannel
 
 /**
  * Recognition run on real recordings, off the phone: every `.svscan` and `.rrd` under
@@ -34,7 +35,7 @@ import java.io.File
  *   ./gradlew :samples:android-demo:testDebugUnitTest --tests '*SceneRecognitionCorpusTest*'
  * ```
  *
- * The model is `src/main/assets/ml/yolox_tiny.onnx` (fetched by `.claude/scripts/fetch-assets.sh
+ * The model is `src/main/assets/ml/yolox_tiny.onnx` (fetched by `tools/fetch-assets.sh
  * --scope android`) or the file `SCENEVIEW_SCENE_MODEL` names. `SCENEVIEW_SCENE_PHOTOS` runs the
  * models on a folder of plain photos instead, for the found / missed / time-per-photo table.
  */
@@ -66,7 +67,7 @@ class SceneRecognitionCorpusTest {
             val dir = File(out, "photos-${model.nameWithoutExtension}").apply { mkdirs() }
             val table = StringBuilder("photo\twidth\theight\tdetect_ms\tfound\n")
             val sheet = ArrayList<SceneImage>()
-            OnnxSceneDetector(model.readBytes(), model.nameWithoutExtension).use { detector ->
+            OnnxSceneDetector(mapped(model), model.nameWithoutExtension).use { detector ->
                 // The first run pays the session's warm-up: timed apart, not in the table.
                 val warm = System.nanoTime()
                 detector.detect(SceneImage(WARM_UP, WARM_UP, IntArray(WARM_UP * WARM_UP)))
@@ -175,6 +176,9 @@ class SceneRecognitionCorpusTest {
     /** The models to run: `SCENEVIEW_SCENE_MODEL` (paths, `:`-separated), else the bundled one if fetched. */
     private fun models(): List<File> = System.getenv(MODEL)?.split(File.pathSeparator)?.map(::File)?.filter { it.isFile }
         ?: listOf(File(BUNDLED_MODEL)).filter { it.isFile }
+
+    /** [model] mapped in memory, as the app maps it from the APK: a direct buffer, never on the heap. */
+    private fun mapped(model: File) = FileChannel.open(model.toPath()).use { it.map(FileChannel.MapMode.READ_ONLY, 0, it.size()) }
 
     private object NoDetector : SceneDetector {
         override val name = "none"

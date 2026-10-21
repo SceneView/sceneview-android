@@ -262,7 +262,9 @@ android {
         // which the APK zip stage still shrinks meaningfully.
         // `.task` is the MediaPipe bundle (a ZIP that MediaPipe memory-maps at
         // runtime) — re-compressing it in the APK breaks `createFromOptions`.
-        noCompress 'filamat', 'ktx', 'task'
+        // `.onnx` is the scan recogniser's detector: stored, it is memory-mapped
+        // straight from the APK instead of inflated onto the heap (20 MB).
+        noCompress 'filamat', 'ktx', 'task', 'onnx'
     }
     packaging {
         resources {
