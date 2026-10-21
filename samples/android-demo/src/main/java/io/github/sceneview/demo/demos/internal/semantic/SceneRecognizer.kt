@@ -1,6 +1,7 @@
 package io.github.sceneview.demo.demos.internal.semantic
 
 import io.github.sceneview.demo.demos.internal.ArDebugTrace
+import io.github.sceneview.demo.demos.internal.DebugPose
 import io.github.sceneview.demo.demos.internal.DenseCloud
 import io.github.sceneview.demo.demos.internal.ReplayLens
 import io.github.sceneview.demo.demos.internal.ScanObjects
@@ -104,7 +105,9 @@ class SceneRecognizer(
 
         /**
          * Up to [maxFrames] keyframes of [trace], spread evenly over the recording, each with the
-         * camera pose it was taken from; a photo with no pose is skipped.
+         * camera pose it was taken from; a photo with no pose is skipped. Each pose is looked up
+         * alone ([poseAt]): this runs while the replay is composed, and a whole frame of the trace
+         * would copy the trail and the map up to every photo.
          */
         fun keyframes(trace: ArDebugTrace, lens: ReplayLens, maxFrames: Int = MAX_FRAMES): List<SceneKeyframe> {
             val count = trace.imageCount
@@ -116,9 +119,24 @@ class SceneRecognizer(
             }
             return picked.mapNotNull { index ->
                 val time = trace.imageTime(index)
-                val pose = trace.frameAt(time).camera ?: return@mapNotNull null
+                val pose = poseAt(trace, time) ?: return@mapNotNull null
                 SceneKeyframe(index, trace.imagePath(index), time, SceneCamera(pose, lens))
             }
+        }
+
+        /**
+         * The camera of [trace] at [time], the same as [ArDebugTrace.frameAt] gives: the last pose
+         * recorded by then, or none before the first.
+         */
+        internal fun poseAt(trace: ArDebugTrace, time: Float): DebugPose? {
+            val t = time.coerceIn(0f, trace.duration)
+            var lo = 0
+            var hi = trace.poseCount
+            while (lo < hi) {
+                val mid = (lo + hi) ushr 1
+                if (trace.poseTime(mid) <= t) lo = mid + 1 else hi = mid
+            }
+            return if (lo > 0) trace.pose(lo - 1) else null
         }
 
         /**
