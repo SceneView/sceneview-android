@@ -29,6 +29,14 @@ internal object RoomReader {
     private const val UNSEEN_RUN_M = 0.3f
     private const val PLANE_STEP_M = 0.1f
     private const val PLANE_RESERVE = 8_192
+
+    /**
+     * The full reading adds a wall plane where the cloud saw less than this share of it, on
+     * [HINT_CELL_M] cells: the depth's surfels within [HINT_NEAR_M] of the plane are what it saw.
+     */
+    private const val HINT_SEEN_SHARE = 0.5f
+    private const val HINT_CELL_M = 0.1f
+    private const val HINT_NEAR_M = 0.1f
     private const val DOWN = -0.8f
     private const val CELL_KEY_SHIFT = 16_384
     private const val CELL_KEY_SPAN = 32_768
@@ -67,8 +75,68 @@ internal object RoomReader {
         }
         val (positions, sound) = soundCloud(scan.positions, normals)
         if (positions.size / 3 < RoomLevels.MIN_SURFELS) return RoomStructure.empty(RoomGap.NoDepth)
-        return readCloud(positions, sound, soundTrail(scan.trail), CELL_M, MIN_SUPPORT, full = true)
-            ?: RoomStructure.empty(RoomGap.NoWalls)
+        val trail = soundTrail(scan.trail)
+        val (p, n) = withWallPlanes(positions, sound, scan.planes, trail)
+        return readCloud(p, n, trail, CELL_M, MIN_SUPPORT, full = true) ?: RoomStructure.empty(RoomGap.NoWalls)
+    }
+
+    /**
+     * The cloud with ARCore's wall planes it saw less than [HINT_SEEN_SHARE] of added as surfels,
+     * on a [CELL_M] grid where it saw nothing of them: a wall the depth missed, or saw only in
+     * scraps, still stands where ARCore found it. A wall the depth saw is read from the depth
+     * alone, its doorways and windows with it.
+     */
+    @Suppress("NestedBlockDepth", "CyclomaticComplexMethod")
+    private fun withWallPlanes(
+        positions: FloatArray,
+        normals: FloatArray,
+        planes: List<RoomPlane>,
+        trail: FloatArray,
+    ): Pair<FloatArray, FloatArray> {
+        val walls = planes.filter { it.kind == RoomPlaneKind.Wall && usable(it.polygon) }
+        if (walls.isEmpty()) return positions to normals
+        val count = positions.size / 3
+        val vertical = IntArray(count)
+        var verticals = 0
+        for (i in 0 until count) if (abs(normals[i * 3 + 1]) <= RoomLevels.VERTICAL) vertical[verticals++] = i
+        val centre = centreOf(trail)
+        var out: Pair<Floats, Floats>? = null
+        for (plane in walls) {
+            val wall = wallOf(plane.polygon, centre) ?: continue
+            val t0 = wall.t.min()
+            val y0 = wall.y.min()
+            val cols = ceil((wall.t.max() - t0) / HINT_CELL_M).toInt() + 1
+            val rows = ceil((wall.y.max() - y0) / HINT_CELL_M).toInt() + 1
+            val seen = BooleanArray(cols * rows)
+            for (k in 0 until verticals) {
+                val i = vertical[k]
+                val x = positions[i * 3]
+                val z = positions[i * 3 + 2]
+                if (abs(x * wall.ux + z * wall.uz - wall.o) > HINT_NEAR_M) continue
+                val c = floor((x * -wall.uz + z * wall.ux - t0) / HINT_CELL_M).toInt()
+                val r = floor((positions[i * 3 + 1] - y0) / HINT_CELL_M).toInt()
+                if (c in 0 until cols && r in 0 until rows) seen[c * rows + r] = true
+            }
+            fun seenAt(t: Float, y: Float) =
+                seen[floor((t - t0) / HINT_CELL_M).toInt() * rows + floor((y - y0) / HINT_CELL_M).toInt()]
+            var cells = 0
+            var covered = 0
+            fill(wall.t, wall.y, HINT_CELL_M) { t, y ->
+                cells++
+                if (seenAt(t, y)) covered++
+            }
+            if (cells == 0 || covered >= cells * HINT_SEEN_SHARE) continue
+            val (p, n) = out ?: (Floats(positions.size + PLANE_RESERVE) to Floats(normals.size + PLANE_RESERVE)).also {
+                it.first.thinned(positions, 1, count)
+                it.second.thinned(normals, 1, count)
+                out = it
+            }
+            fill(wall.t, wall.y, CELL_M) { t, y ->
+                if (!seenAt(t, y)) wall.emit(t, y, p, n)
+            }
+        }
+        val added = out ?: return positions to normals
+        return added.first.toArray() to added.second.toArray()
     }
 
     /**
@@ -149,61 +217,21 @@ internal object RoomReader {
     /** ARCore's wall and floor planes as surfels on a [PLANE_STEP_M] grid, walls facing the camera's path. */
     @Suppress("NestedBlockDepth", "CyclomaticComplexMethod")
     private fun planeSamples(planes: List<RoomPlane>, trail: FloatArray, positions: Floats, normals: Floats) {
-        var cx = 0.0
-        var cz = 0.0
-        val steps = trail.size / 3
-        for (k in 0 until steps) {
-            cx += trail[k * 3]
-            cz += trail[k * 3 + 2]
-        }
-        if (steps > 0) {
-            cx /= steps
-            cz /= steps
-        }
+        val centre = centreOf(trail)
         for (plane in planes) {
             val poly = plane.polygon
+            if (!usable(poly)) continue
             val m = poly.size / 3
-            if (m < 3 || !within(poly, 0, m * 3) || !narrow(poly, 0) || !narrow(poly, 1) || !narrow(poly, 2)) continue
             when (plane.kind) {
                 RoomPlaneKind.Wall -> {
-                    // Newell's normal, levelled; turned towards where the camera went.
-                    var nx = 0.0
-                    var nz = 0.0
-                    var mx = 0.0
-                    var mz = 0.0
-                    for (i in 0 until m) {
-                        val j = (i + 1) % m
-                        nx += (poly[i * 3 + 1] - poly[j * 3 + 1]).toDouble() * (poly[i * 3 + 2] + poly[j * 3 + 2])
-                        nz += (poly[i * 3] - poly[j * 3]).toDouble() * (poly[i * 3 + 1] + poly[j * 3 + 1])
-                        mx += poly[i * 3]
-                        mz += poly[i * 3 + 2]
-                    }
-                    val len = hypot(nx, nz)
-                    if (len < 1e-6) continue
-                    var ux = (nx / len).toFloat()
-                    var uz = (nz / len).toFloat()
-                    if (steps > 0 && (cx - mx / m) * ux + (cz - mz / m) * uz < 0) {
-                        ux = -ux
-                        uz = -uz
-                    }
-                    // In the plane: along it (−uz, ux) and up.
-                    val ta = FloatArray(m) { poly[it * 3] * -uz + poly[it * 3 + 2] * ux }
-                    val ya = FloatArray(m) { poly[it * 3 + 1] }
-                    val o = (mx / m * ux + mz / m * uz).toFloat()
-                    fill(ta, ya) { t, y ->
-                        positions += o * ux + t * -uz
-                        positions += y
-                        positions += o * uz + t * ux
-                        normals += ux
-                        normals += 0f
-                        normals += uz
-                    }
+                    val wall = wallOf(poly, centre) ?: continue
+                    fill(wall.t, wall.y, PLANE_STEP_M) { t, y -> wall.emit(t, y, positions, normals) }
                 }
                 RoomPlaneKind.Floor -> {
                     val xa = FloatArray(m) { poly[it * 3] }
                     val za = FloatArray(m) { poly[it * 3 + 2] }
                     val y = (0 until m).map { poly[it * 3 + 1] }.average().toFloat()
-                    fill(xa, za) { x, z ->
+                    fill(xa, za, PLANE_STEP_M) { x, z ->
                         positions += x
                         positions += y
                         positions += z
@@ -217,6 +245,55 @@ internal object RoomReader {
         }
     }
 
+    /** A polygon of three corners or more, all sound, under [MAX_PLANE_M] along every axis. */
+    private fun usable(poly: FloatArray): Boolean {
+        val m = poly.size / 3
+        return m >= 3 && within(poly, 0, m * 3) && narrow(poly, 0) && narrow(poly, 1) && narrow(poly, 2)
+    }
+
+    /** Where the camera went on average, `x, z`; `null` without a trail. */
+    private fun centreOf(trail: FloatArray): DoubleArray? {
+        val steps = trail.size / 3
+        if (steps == 0) return null
+        var cx = 0.0
+        var cz = 0.0
+        for (k in 0 until steps) {
+            cx += trail[k * 3]
+            cz += trail[k * 3 + 2]
+        }
+        return doubleArrayOf(cx / steps, cz / steps)
+    }
+
+    /**
+     * A wall plane in its own frame: Newell's normal levelled, turned towards the camera's
+     * [centre]; its corners along it (−uz, ux) and up. `null` for a plane lying flat.
+     */
+    private fun wallOf(poly: FloatArray, centre: DoubleArray?): WallPlane? {
+        val m = poly.size / 3
+        var nx = 0.0
+        var nz = 0.0
+        var mx = 0.0
+        var mz = 0.0
+        for (i in 0 until m) {
+            val j = (i + 1) % m
+            nx += (poly[i * 3 + 1] - poly[j * 3 + 1]).toDouble() * (poly[i * 3 + 2] + poly[j * 3 + 2])
+            nz += (poly[i * 3] - poly[j * 3]).toDouble() * (poly[i * 3 + 1] + poly[j * 3 + 1])
+            mx += poly[i * 3]
+            mz += poly[i * 3 + 2]
+        }
+        val len = hypot(nx, nz)
+        if (len < 1e-6) return null
+        var ux = (nx / len).toFloat()
+        var uz = (nz / len).toFloat()
+        if (centre != null && (centre[0] - mx / m) * ux + (centre[1] - mz / m) * uz < 0) {
+            ux = -ux
+            uz = -uz
+        }
+        val t = FloatArray(m) { poly[it * 3] * -uz + poly[it * 3 + 2] * ux }
+        val y = FloatArray(m) { poly[it * 3 + 1] }
+        return WallPlane(ux, uz, (mx / m * ux + mz / m * uz).toFloat(), t, y)
+    }
+
     /** The polygon's extent along axis [axis] is under [MAX_PLANE_M]. */
     private fun narrow(poly: FloatArray, axis: Int): Boolean {
         var lo = Float.POSITIVE_INFINITY
@@ -228,20 +305,20 @@ internal object RoomReader {
         return hi - lo <= MAX_PLANE_M
     }
 
-    /** Calls [emit] on a [PLANE_STEP_M] grid inside the polygon ([a], [b]). */
-    private inline fun fill(a: FloatArray, b: FloatArray, emit: (Float, Float) -> Unit) {
+    /** Calls [emit] on a [step] grid inside the polygon ([a], [b]). */
+    private inline fun fill(a: FloatArray, b: FloatArray, step: Float, emit: (Float, Float) -> Unit) {
         val a0 = a.min()
         val a1 = a.max()
         val b0 = b.min()
         val b1 = b.max()
-        var p = floor(a0 / PLANE_STEP_M) * PLANE_STEP_M + PLANE_STEP_M / 2
+        var p = floor(a0 / step) * step + step / 2
         while (p < a1) {
-            var q = floor(b0 / PLANE_STEP_M) * PLANE_STEP_M + PLANE_STEP_M / 2
+            var q = floor(b0 / step) * step + step / 2
             while (q < b1) {
                 if (inside(a, b, p, q)) emit(p, q)
-                q += PLANE_STEP_M
+                q += step
             }
-            p += PLANE_STEP_M
+            p += step
         }
     }
 
@@ -570,6 +647,19 @@ internal object RoomReader {
     private fun keyV(key: Int, cell: Float): Float = (key % CELL_KEY_SPAN - CELL_KEY_SHIFT + HALF) * cell
 
     private const val EDGE_M = 0.01f
+}
+
+/** A wall plane in its own frame: normal ([ux], [uz]) at [o] along it, corners [t] along the wall and [y] up. */
+private class WallPlane(val ux: Float, val uz: Float, val o: Float, val t: FloatArray, val y: FloatArray) {
+    /** Adds the surfel at [t] along the wall, [y] up, facing the camera. */
+    fun emit(t: Float, y: Float, positions: Floats, normals: Floats) {
+        positions += o * ux + t * -uz
+        positions += y
+        positions += o * uz + t * ux
+        normals += ux
+        normals += 0f
+        normals += uz
+    }
 }
 
 /** A growing float array: the live reading's cloud, unboxed. */
