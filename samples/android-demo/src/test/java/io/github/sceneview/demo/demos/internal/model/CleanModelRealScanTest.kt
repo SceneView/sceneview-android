@@ -28,9 +28,10 @@ import kotlin.system.exitProcess
 /**
  * The clean model on a room as a phone really scans it ([RealScanRoom]): walls swelling by ±2 cm,
  * two walls scanned twice 3 cm apart, small key photos taken close and at an angle, then the same
- * room with a pleated curtain and a sofa. The finished model must come out light — about the
- * simplifier's budget, textured, and a file within [CleanModel]'s fixed cap — with its walls flat
- * and single, its furniture still in relief, and within a phone's heap; out of it, the raw surface.
+ * room with a pleated curtain and a sofa, and with a TV standing off a wall and a door set into
+ * another. The finished model must come out light — about the simplifier's budget, textured, and
+ * a file within [CleanModel]'s fixed cap — with its walls flat and single, its furniture, TV and
+ * door still in relief, and within a phone's heap; out of it, the raw surface.
  *
  * Each case gathers every figure and fails once, with all of them: CI prints only a failure.
  */
@@ -46,6 +47,11 @@ class CleanModelRealScanTest {
     @Test
     fun `a furnished room keeps its curtain and sofa in relief while its walls flatten`() {
         check(furnished = true)
+    }
+
+    @Test
+    fun `a TV off its wall and a door set into another keep their relief while the walls flatten`() {
+        check(furnished = false, reliefs = true)
     }
 
     @Test
@@ -234,15 +240,17 @@ class CleanModelRealScanTest {
         if (done >= share) throw OutOfMemoryError("finish at $done")
     }
 
-    private fun check(furnished: Boolean) {
-        val raw = RealScanRoom.raw(furnished)
+    private fun check(furnished: Boolean, reliefs: Boolean = false) {
+        val raw = RealScanRoom.raw(furnished, reliefs = reliefs)
         val rawGlb = RerunMeshGlb.write(raw)
-        val result = CleanModel.build(raw, RealScanRoom.modelPhotos(furnished), JvmAtlasEncoder)
+        val result = CleanModel.build(raw, RealScanRoom.modelPhotos(furnished, reliefs), JvmAtlasEncoder)
         val stats = result.stats
         val model = checkNotNull(result.model) { "out of memory in ${stats.outOfMemoryIn}" }
         val finalSurface = Surface(model.positions, model.texturedIndices + model.plainIndices)
         val rawSurface = Surface(raw.positions, raw.indices)
-        val excluded: (Float, Float, Float) -> Boolean = if (furnished) ::nearFurniture else { _, _, _ -> false }
+        val excluded = { x: Float, y: Float, z: Float ->
+            (furnished && nearFurniture(x, y, z)) || (reliefs && nearRelief(x, y, z))
+        }
         val rawWalls = walls(rawSurface, excluded)
         val finalWalls = walls(finalSurface, excluded)
         val rawLayers = layers(rawSurface)
@@ -250,7 +258,7 @@ class CleanModelRealScanTest {
         val texture = stats.texture
 
         val report = StringBuilder()
-        report.append(if (furnished) "furnished room" else "bare room")
+        report.append(if (furnished) "furnished room" else "bare room").append(if (reliefs) " with a TV and a door" else "")
             .append(": raw ${raw.triangleCount} triangles, glb ${rawGlb.size / KB} KB")
             .append(" -> ${stats.finalTriangles} triangles (${stats.simplifiedTriangles} simplified, target ${stats.simplifyTarget})")
             .append(", glb ${stats.glbBytes / KB} KB, atlas ${stats.atlasWidth}x${stats.atlasHeight}")
@@ -283,6 +291,16 @@ class CleanModelRealScanTest {
                 .append(", seat relief ${mm(rawSeat)} -> ${mm(finalSeat)} mm")
             if (finalCurtain < rawCurtain * MIN_CURTAIN_KEPT) problems += "curtain flattened"
             if (finalSeat < rawSeat * MIN_SEAT_KEPT) problems += "sofa flattened"
+        }
+        if (reliefs) {
+            val rawTv = tvRelief(rawSurface)
+            val finalTv = tvRelief(finalSurface)
+            val rawDoor = doorRelief(rawSurface)
+            val finalDoor = doorRelief(finalSurface)
+            report.append("; TV relief ${mm(rawTv)} -> ${mm(finalTv)} mm")
+                .append(", door relief ${mm(rawDoor)} -> ${mm(finalDoor)} mm")
+            if (finalTv < rawTv * MIN_RELIEF_KEPT) problems += "TV pressed onto its wall"
+            if (finalDoor < rawDoor * MIN_RELIEF_KEPT) problems += "door pressed onto its wall"
         }
         GlbCheck.problems(result.glb).takeIf { it.isNotEmpty() }?.let { problems += "glb: $it" }
         if (stats.totalMs > MAX_MS) problems += "${stats.totalMs} ms"
@@ -379,6 +397,57 @@ class CleanModelRealScanTest {
     private fun nearFurniture(x: Float, @Suppress("UNUSED_PARAMETER") y: Float, z: Float): Boolean =
         (x > CURTAIN_ZONE_X && z in CURTAIN_ZONE_Z0..CURTAIN_ZONE_Z1) ||
             (z < SOFA_ZONE_Z && x in -SOFA_ZONE_X..SOFA_ZONE_X)
+
+    /** The TV's and the door's walls around them, left out of the walls' flatness. */
+    private fun nearRelief(x: Float, y: Float, z: Float): Boolean =
+        RealScanRoom.TV.sdf(x, y, z) < RELIEF_MARGIN_M || RealScanRoom.DOOR.sdf(x, y, z) < RELIEF_MARGIN_M
+
+    /** How far the TV's screen stands off wall x = +2.5. */
+    private fun tvRelief(surface: Surface): Float =
+        relief(surface, RealScanRoom.TV, axis = 0, wallAt = RealScanRoom.ROOM.x1, inward = -1f)
+
+    /** How far the door's leaf sits into wall z = -3.5. */
+    private fun doorRelief(surface: Surface): Float =
+        relief(surface, RealScanRoom.DOOR, axis = 2, wallAt = RealScanRoom.ROOM.z0, inward = 1f)
+
+    /**
+     * How far a flat [panel] on the wall across [axis] at [wallAt] stands off or sits into it: the
+     * area-weighted depth of the faces turned to the room within [NEAR_M] of the wall, on the
+     * panel [RELIEF_INSET_M] clear of its edges, against that of the wall in a [RELIEF_RING_M]
+     * ring around it, [EDGE_M] clear of the other surfaces.
+     */
+    private fun relief(surface: Surface, panel: Box, axis: Int, wallAt: Float, inward: Float): Float {
+        val room = RealScanRoom.ROOM
+        val along = if (axis == 0) 2 else 0
+        var panelArea = 0.0
+        var panelDepth = 0.0
+        var ringArea = 0.0
+        var ringDepth = 0.0
+        for (t in 0 until surface.count) {
+            val c = t * 3
+            if (surface.normal[c + axis] * inward < FACING) continue
+            val depth = surface.centroid[c + axis]
+            if (abs(depth - wallAt) > NEAR_M) continue
+            val u = surface.centroid[c + along]
+            val y = surface.centroid[c + 1]
+            val onPanel = u in panel.lo(along) + RELIEF_INSET_M..panel.hi(along) - RELIEF_INSET_M &&
+                y in panel.y0 + RELIEF_INSET_M..panel.y1 - RELIEF_INSET_M
+            val nearPanel = u in panel.lo(along) - RELIEF_INSET_M..panel.hi(along) + RELIEF_INSET_M &&
+                y in panel.y0 - RELIEF_INSET_M..panel.y1 + RELIEF_INSET_M
+            val inRing = u in panel.lo(along) - RELIEF_RING_M..panel.hi(along) + RELIEF_RING_M &&
+                y in panel.y0 - RELIEF_RING_M..panel.y1 + RELIEF_RING_M &&
+                u in room.lo(along) + EDGE_M..room.hi(along) - EDGE_M && y in room.y0 + EDGE_M..room.y1 - EDGE_M
+            if (onPanel) {
+                panelArea += surface.area[t]
+                panelDepth += surface.area[t] * depth
+            } else if (inRing && !nearPanel) {
+                ringArea += surface.area[t]
+                ringDepth += surface.area[t] * depth
+            }
+        }
+        if (panelArea <= 0.0 || ringArea <= 0.0) return 0f
+        return abs(panelDepth / panelArea - ringDepth / ringArea).toFloat()
+    }
 
     /**
      * How many sheets the doubled walls show: the area of the faces within [NEAR_M] of each wall
@@ -494,6 +563,15 @@ class CleanModelRealScanTest {
         const val MAX_LAYERS = 1.3f
         const val MIN_CURTAIN_KEPT = 0.7f
         const val MIN_SEAT_KEPT = 0.6f
+
+        /**
+         * The share of the TV's and the door's 3.5 cm the model must keep: merged into their
+         * walls, they keep under a tenth of it.
+         */
+        const val MIN_RELIEF_KEPT = 0.75f
+        const val RELIEF_INSET_M = 0.1f
+        const val RELIEF_RING_M = 0.4f
+        const val RELIEF_MARGIN_M = 0.15f
 
         /** A desktop JVM's figure, a guard against a regression, not a phone's time. */
         const val MAX_MS = 15_000L

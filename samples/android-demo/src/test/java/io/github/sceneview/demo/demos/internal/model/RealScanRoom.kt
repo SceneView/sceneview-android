@@ -14,6 +14,7 @@ import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.floor
+import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -25,6 +26,8 @@ import kotlin.random.Random
  * grain), two walls scanned twice with the second pass left 3 cm behind the first, and key photos
  * of 180 × 320 taken close to the walls and at an angle. Furnished, it adds a pleated curtain and
  * a sofa with its cushions against two other walls: shapes the flattening must leave as they are.
+ * With its reliefs, it adds a TV standing 3.5 cm off one wall and a door set 3.5 cm into another:
+ * flat panels as close to their wall as a second pass is, which must stay off it.
  *
  * Each pass is fused into the real TSDF and meshed by the real marching cubes, as a recording's.
  * A second pass 3 cm off is its own sheet: fused into the same voxels, the two would average into
@@ -41,20 +44,29 @@ internal object RealScanRoom {
     val CURTAIN = Box(2.3f, 0.06f, -1.2f, 2.5f, 2.45f, 1.0f)
     val SOFA = Box(-1.0f, 0f, -3.5f, 1.0f, 0.85f, -2.6f)
 
+    /**
+     * The reliefs: a TV on wall x = +2.5, its screen 3.5 cm off the wall, and a door on wall
+     * z = -3.5, its leaf 3.5 cm back in the wall — each its own flat panel, within the distance
+     * a second pass of the wall lies at, and with no wall behind or in front of it.
+     */
+    val TV = Box(2.465f, 1.0f, 1.5f, 2.5f, 1.7f, 2.7f)
+    val DOOR = Box(1.35f, 0f, -3.535f, 2.25f, 2.05f, -3.5f)
+
     const val PHOTO_WIDTH = 180
     const val PHOTO_HEIGHT = 320
     const val PHOTO_FOCAL = 260f
     val PHOTO_LENS = ReplayLens(PHOTO_WIDTH / 2f / PHOTO_FOCAL, PHOTO_HEIGHT / 2f / PHOTO_FOCAL)
 
     /** The marching cubes' surface of the room, its doubled walls appended, as the app meshes a recording. */
-    fun raw(furnished: Boolean, depth: Depth = Depth.PHONE): RerunMesh = scan(furnished, depth).mesh
+    fun raw(furnished: Boolean, depth: Depth = Depth.PHONE, reliefs: Boolean = false): RerunMesh =
+        scan(furnished, depth, reliefs).mesh
 
     /** A recording of the room as the result screen opens it: its TSDF, and the surface meshed from it. */
     class Scan(val tsdf: RerunTsdf, val mesh: RerunMesh)
 
     /** [raw], with the room's TSDF the surface was meshed from. */
-    fun scan(furnished: Boolean, depth: Depth = Depth.PHONE): Scan {
-        val room = fuse(ROOM.inflate(MARGIN_M), depth, seed = 11) { x, y, z -> shell(x, y, z, furnished) }
+    fun scan(furnished: Boolean, depth: Depth = Depth.PHONE, reliefs: Boolean = false): Scan {
+        val room = fuse(ROOM.inflate(MARGIN_M), depth, seed = 11, reliefs = reliefs) { x, y, z -> shell(x, y, z, furnished, reliefs) }
         val meshes = mutableListOf(RerunMarchingCubes.extractWhole(room, FRAMES_MIN_WEIGHT).mesh)
         // The second passes: open sheets facing the room, 3 cm behind the wall they repeat.
         meshes += RerunMarchingCubes.extractWhole(
@@ -73,8 +85,9 @@ internal object RealScanRoom {
     }
 
     /** Signed distance to the room's surfaces, positive in its free space. */
-    fun shell(x: Float, y: Float, z: Float, furnished: Boolean): Float {
-        val walls = -ROOM.sdf(x, y, z)
+    fun shell(x: Float, y: Float, z: Float, furnished: Boolean, reliefs: Boolean = false): Float {
+        var walls = -ROOM.sdf(x, y, z)
+        if (reliefs) walls = max(min(walls, TV_BODY.sdf(x, y, z)), -DOOR_RECESS.sdf(x, y, z))
         if (!furnished) return walls
         return min(walls, min(curtain(x, y, z), sofa(x, y, z)))
     }
@@ -199,6 +212,7 @@ internal object RealScanRoom {
         seed: Int,
         phase: Float = 0f,
         region: Box? = null,
+        reliefs: Boolean = false,
         sdf: (Float, Float, Float) -> Float,
     ): RerunTsdf {
         val tsdf = RerunTsdf(maxBytes = TSDF_BYTES)
@@ -221,7 +235,7 @@ internal object RealScanRoom {
                         SHARED_SWELL * depth.error(x, y, z, 0f, seed) + (1f - SHARED_SWELL) * depth.error(x, y, z, phase, seed + 1)
                     }
                     val d = clean + error + (random.nextFloat() * 2f - 1f) * depth.whiteM
-                    tsdf.update(gx, gy, gz, d, 1f, paint(x, y, z))
+                    tsdf.update(gx, gy, gz, d, 1f, paint(x, y, z, reliefs))
                 }
             }
         }
@@ -259,8 +273,8 @@ internal object RealScanRoom {
     // ── Key photos ─────────────────────────────────────────────────────────────
 
     /** The key photos, each ray-cast only when the texture asks for it, as a recording's are decoded. */
-    fun modelPhotos(furnished: Boolean): ModelPhotos {
-        val scene = scene(furnished)
+    fun modelPhotos(furnished: Boolean, reliefs: Boolean = false): ModelPhotos {
+        val scene = scene(furnished, reliefs)
         return ModelPhotos(PHOTO_LENS, poses().mapIndexed { i, pose -> ModelPhoto(pose) { photo(scene, pose, i) } })
     }
 
@@ -309,12 +323,17 @@ internal object RealScanRoom {
         return BakePhoto(pose, PHOTO_WIDTH, PHOTO_HEIGHT, argb)
     }
 
-    /** What the photos see: the room's shell, and its furniture as boxes, coloured. */
-    private fun scene(furnished: Boolean): SyntheticScene {
+    /**
+     * What the photos see: the room's shell, and its furniture as boxes, coloured. The door is
+     * painted on its wall: 3.5 cm of recess moves its picture by under a pixel.
+     */
+    private fun scene(furnished: Boolean, reliefs: Boolean): SyntheticScene {
         val shell = SyntheticShape.Room(Vec3(ROOM.x0, ROOM.y0, ROOM.z0), Vec3(ROOM.x1, ROOM.y1, ROOM.z1)) { x, y, z ->
-            paint(x, y, z)
+            paint(x, y, z, reliefs)
         }
-        if (!furnished) return SyntheticScene(listOf(shell))
+        val tv = SyntheticShape.Box(Vec3(TV.x0, TV.y0, TV.z0), Vec3(TV.x1, TV.y1, TV.z1)) { x, y, z -> paint(x, y, z, reliefs) }
+        val reliefShapes = if (reliefs) listOf(tv) else emptyList()
+        if (!furnished) return SyntheticScene(listOf(shell) + reliefShapes)
         val curtain = SyntheticShape.Box(
             Vec3(CURTAIN.x0, CURTAIN.y0, CURTAIN.z0),
             Vec3(CURTAIN.x1, CURTAIN.y1, CURTAIN.z1),
@@ -322,17 +341,19 @@ internal object RealScanRoom {
         val sofa = SOFA_PARTS.map { (box, _) ->
             SyntheticShape.Box(Vec3(box.x0, box.y0, box.z0), Vec3(box.x1, box.y1, box.z1)) { x, y, z -> paint(x, y, z) }
         }
-        return SyntheticScene(listOf(shell, curtain) + sofa)
+        return SyntheticScene(listOf(shell, curtain) + sofa + reliefShapes)
     }
 
-    /** The scene's colours: planks on the floor, paint on the walls, a red curtain, a green sofa. */
-    fun paint(x: Float, y: Float, z: Float): Int = when {
+    /** The scene's colours: planks on the floor, paint on the walls, a red curtain, a green sofa, a black TV, a wooden door. */
+    fun paint(x: Float, y: Float, z: Float, reliefs: Boolean = false): Int = when {
         x in CURTAIN.x0 - PAINT_MARGIN_M..CURTAIN.x1 - SURFACE_M && y in CURTAIN.y0..CURTAIN.y1 && z in CURTAIN.z0..CURTAIN.z1 ->
             if (sin(TWO_PI * (z - CURTAIN.z0) / CURTAIN_PERIOD_M) > 0f) CURTAIN_LIGHT else CURTAIN_DARK
         x in SOFA.x0..SOFA.x1 && y in SOFA.y0 + SURFACE_M..SOFA.y1 + PAINT_MARGIN_M && z in SOFA.z0 + SURFACE_M..SOFA.z1 + PAINT_MARGIN_M ->
             SOFA_GREEN
+        reliefs && x > TV.x0 - PAINT_MARGIN_M && y in TV.y0..TV.y1 && z in TV.z0..TV.z1 -> TV_BLACK
         y < SURFACE_M + MAX_ERROR_M -> if (floor((x - ROOM.x0) / PLANK_M).toInt() % 2 == 0) OAK else OAK_DARK
         y > ROOM.y1 - SURFACE_M - MAX_ERROR_M -> CEILING
+        reliefs && z < ROOM.z0 + PAINT_MARGIN_M && x in DOOR.x0..DOOR.x1 && y < DOOR.y1 -> DOOR_WOOD
         z > ROOM.z1 - SURFACE_M - MAX_ERROR_M -> BLUE_GREY
         else -> WALL
     }
@@ -347,6 +368,10 @@ internal object RealScanRoom {
             add(Box(x0, 0.46f, -3.28f, x1, 0.84f, -3.12f) to 0.06f) // back cushions
         }
     }
+
+    /** The TV's body, run into the wall behind it; the door's recess, open to the room in front of it. */
+    private val TV_BODY = Box(TV.x0, TV.y0, TV.z0, TV.x1 + MARGIN_M, TV.y1, TV.z1)
+    private val DOOR_RECESS = Box(DOOR.x0, DOOR.y0, DOOR.z0, DOOR.x1, DOOR.y1, DOOR.z1 + MARGIN_M)
 
     /** As the app meshes a recording's depth frames (RerunModelUi's FRAMES_MIN_WEIGHT). */
     private const val FRAMES_MIN_WEIGHT = 1f
@@ -407,4 +432,6 @@ internal object RealScanRoom {
     private const val CURTAIN_LIGHT = 0xFFA33A3A.toInt()
     private const val CURTAIN_DARK = 0xFF7A2626.toInt()
     private const val SOFA_GREEN = 0xFF5E7A62.toInt()
+    private const val TV_BLACK = 0xFF26282B.toInt()
+    private const val DOOR_WOOD = 0xFF7B5A3C.toInt()
 }
