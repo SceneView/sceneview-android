@@ -532,7 +532,8 @@ object ScanCopy {
      * with no usable depth ([depthStarved], before texture: a starved depth gate looks like a
      * blank surface, #4540), with too little texture ([lowTexture]), moving too fast — then the dense map's
      * "Adjusting detail", then the [coach]'s "nothing new" (#4631) and "standing still", then the
-     * plain advice.
+     * plain advice. "Nothing new" never shows while the scan's points keep rising
+     * ([pointsRising]): the scan adds to the room, and the top line says it is working.
      */
     @Suppress("LongParameterList") // one flag per cause the line can speak of
     fun coaching(
@@ -543,6 +544,7 @@ object ScanCopy {
         coach: ScanCoach.Line? = null,
         lowTexture: Boolean = false,
         depthStarved: Boolean = false,
+        pointsRising: Boolean = false,
     ): String? = when (phase) {
         ScanPhase.Scanning -> when {
             trackingLost -> TRACKING_LOST
@@ -552,7 +554,7 @@ object ScanCopy {
             lowTexture -> COACH_LOW_TEXTURE
             coach == ScanCoach.Line.Slower -> COACH_SLOWER
             detail == ScanDetail.Adjusting -> ADJUSTING_DETAIL
-            coach == ScanCoach.Line.NothingNew -> COACH_NOTHING_NEW
+            coach == ScanCoach.Line.NothingNew && !pointsRising -> COACH_NOTHING_NEW
             coach == ScanCoach.Line.Still -> COACH_STILL
             else -> COACH_SCANNING
         }
