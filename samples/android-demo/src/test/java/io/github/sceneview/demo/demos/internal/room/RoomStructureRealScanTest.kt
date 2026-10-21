@@ -70,6 +70,7 @@ class RoomStructureRealScanTest {
     /** What is wrong with [case]'s reading, or `null`. */
     private fun problem(case: Case, structure: RoomStructure): String? {
         val area = structure.area
+        val reading = structure.reading
         return when {
             structure.walls.isEmpty() -> "no plan"
             !case.figures && area != null -> "a figure where the walls seen do not close the room"
@@ -77,8 +78,10 @@ class RoomStructureRealScanTest {
             !case.figures && RoomGap.MissingWall !in structure.gaps -> "no missing wall"
             case.figures && area == null -> "no area"
             case.estimated && !area!!.estimate -> "an area not marked as an estimate"
-            // Walls that do not close the room give a length only measured between two seen walls.
-            case.estimated && structure.seenWalls < RoomStructure.MIN_SEEN_WALLS &&
+            // Walls that do not close the room, or close it on fewer than [RoomStructure.MIN_SEEN_WALLS]
+            // distinct walls, give a length only measured between two seen walls.
+            case.estimated &&
+                (reading?.closed != true || (reading?.distinctWalls ?: 0) < RoomStructure.MIN_SEEN_WALLS) &&
                 (structure.length?.estimate == true || structure.width?.estimate == true) -> "an estimated length"
             case.figures && abs(area!!.value - case.room.area) / case.room.area >= case.maxError -> "area off"
             else -> null
@@ -312,8 +315,7 @@ class RoomStructureRealScanTest {
     @Test
     fun `the live area of two adjacent walls is marked as an estimate`() {
         val live = RoomStructure.live(capture(TWO_LOW).scan())
-        val area: Any? = live.area
-        assertTrue("live area $area", (area as? RoomFigure)?.estimate == true)
+        assertTrue("live area ${live.area}", live.area?.estimate == true)
     }
 
     @Test
@@ -325,8 +327,8 @@ class RoomStructureRealScanTest {
             abs(it.az - it.bz) < FRONT_NEAR_M && max(it.az, it.bz) < north - FRONT_NEAR_M && min(it.az, it.bz) > north - 1f
         }
         assertTrue("$summary: ${fronts.size} walls along the cupboards' fronts", fronts.isEmpty())
-        val area = structure.area?.value
-        assertTrue("$summary: area off", area == null || abs(area - CUPBOARDS.room.area) / CUPBOARDS.room.area < MAX_ERROR)
+        // The floor seen stands for the wall unseen: the room's full 20 m², marked as an estimate.
+        check(CUPBOARDS)
     }
 
     /** A case's full reading's median and live reading's best run. */
