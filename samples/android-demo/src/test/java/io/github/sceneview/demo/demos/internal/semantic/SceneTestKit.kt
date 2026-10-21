@@ -10,6 +10,9 @@ import io.github.sceneview.demo.demos.internal.ReplayLens
 import io.github.sceneview.demo.demos.internal.RerunSyntheticRoom
 import io.github.sceneview.demo.demos.internal.ScanBox
 import io.github.sceneview.demo.demos.internal.ScanObjects
+import io.github.sceneview.demo.demos.internal.SyntheticScene
+import io.github.sceneview.demo.demos.internal.SyntheticShape
+import io.github.sceneview.demo.demos.internal.Vec3
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
@@ -387,4 +390,56 @@ internal object SyntheticRoomScan {
     fun keyframes(step: Int = 1): List<SceneKeyframe> = frames.indices.step(step).map { i ->
         SceneKeyframe(i, "p$i", i.toFloat(), SceneCamera(frames[i].pose, SceneTestKit.lensOf(frames[i])))
     }
+}
+
+/**
+ * A 4 × 4 m room with a door cut in its north wall and a window in its east one, a larger room
+ * round it seen through them; scanned from three stops, each a full turn, as the demo's capture
+ * fuses its frames.
+ */
+internal object HoledRoomScan {
+    val frames: List<DepthFrame> by lazy { RerunSyntheticRoom.poses(stops = STOPS).map { scene().render(it) } }
+    val cloud: DenseCloud by lazy {
+        val fusion = DenseFusion()
+        frames.forEach { fusion.add(DepthBackProjection.project(it)) }
+        fusion.cloud()
+    }
+    val objects: ScanObjects by lazy { ScanObjects.of(cloud) }
+
+    /** Four walls 10 cm thick, the door and the window cut out, the larger room round them. */
+    private fun scene(): SyntheticScene {
+        fun wall(x0: Float, y0: Float, z0: Float, x1: Float, y1: Float, z1: Float) =
+            SyntheticShape.Box(Vec3(x0, y0, z0), Vec3(x1, y1, z1)) { _, _, _ -> WALL }
+        val outer = SyntheticShape.Room(Vec3(-OUTER, 0f, -OUTER), Vec3(OUTER, HEIGHT, OUTER)) { _, y, _ ->
+            if (y < SURFACE) FLOOR else OUTSIDE
+        }
+        val shapes = listOf(
+            outer,
+            // North, z = −2: a door from x 0 to 0.9, 2.05 m high.
+            wall(-R - T, 0f, -R - T, 0f, HEIGHT, -R),
+            wall(0.9f, 0f, -R - T, R + T, HEIGHT, -R),
+            wall(0f, 2.05f, -R - T, 0.9f, HEIGHT, -R),
+            // South and west, whole.
+            wall(-R - T, 0f, R, R + T, HEIGHT, R + T),
+            wall(-R - T, 0f, -R - T, -R, HEIGHT, R + T),
+            // East, x = 2: a window from z −0.6 to 0.6, 0.9 to 2.1 m up.
+            wall(R, 0f, -R - T, R + T, HEIGHT, -0.6f),
+            wall(R, 0f, 0.6f, R + T, HEIGHT, R + T),
+            wall(R, 0f, -0.6f, R + T, 0.9f, 0.6f),
+            wall(R, 2.1f, -0.6f, R + T, HEIGHT, 0.6f),
+        )
+        return SyntheticScene(shapes)
+    }
+
+    private const val R = 2f
+    private const val T = 0.1f
+    private const val OUTER = 3.5f
+    private const val HEIGHT = 2.6f
+    private const val SURFACE = 1e-3f
+    private val STOPS = listOf(Vec3(0f, 1.4f, 0.2f), Vec3(-0.6f, 1.3f, 0.6f), Vec3(0.6f, 1.5f, -0.4f))
+
+    // Scene content, not UI.
+    private const val WALL = 0xFFE8E2D6.toInt()
+    private const val FLOOR = 0xFFB08457.toInt()
+    private const val OUTSIDE = 0xFF8FA58A.toInt()
 }

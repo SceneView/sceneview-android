@@ -3,6 +3,8 @@ package io.github.sceneview.demo.demos.internal.semantic
 import io.github.sceneview.demo.demos.RerunCaptureBuilder
 import io.github.sceneview.demo.demos.ScanPhoto
 import io.github.sceneview.demo.demos.internal.ArDebugEvent
+import io.github.sceneview.demo.demos.internal.DenseCloud
+import io.github.sceneview.demo.demos.internal.DepthFrame
 import io.github.sceneview.demo.demos.internal.OpenedCapture
 import io.github.sceneview.demo.demos.internal.ReplayLens
 import io.github.sceneview.demo.demos.internal.RerunRrdReader
@@ -14,6 +16,8 @@ import io.github.sceneview.demo.demos.internal.SvpcCodec
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
@@ -51,17 +55,9 @@ class SceneRecognitionCorpusTest {
         val corpus = System.getenv(CORPUS)?.let(::File)
         val out = System.getenv(OUT)?.let(::File)
         assumeTrue("$CORPUS and $OUT unset: no corpus run", corpus != null && out != null)
-        val scans = corpus!!.walk().filter { it.isFile && it.extension in SCANS }.sorted().toList()
+        val scans = scansUnder(corpus!!)
         assumeTrue("no .svscan or .rrd under $corpus", scans.isNotEmpty())
-        val model = models().firstOrNull()
-        if (model == null) {
-            println("no detector (set $MODEL, or run with network to download it): doors and windows only")
-            scans.forEach { run(it, NoDetector, out!!) }
-            return
-        }
-        val (name, file) = model
-        println("recognising ${scans.size} scans with $name")
-        OnnxSceneDetector(mapped(file), name).use { detector -> scans.forEach { run(it, detector, out!!) } }
+        recognizeAll(scans, out!!, models(System.getenv(MODEL)).firstOrNull())
     }
 
     @Test
@@ -71,7 +67,7 @@ class SceneRecognitionCorpusTest {
         assumeTrue("$PHOTOS and $OUT unset: no photo run", photos != null && out != null)
         val files = photos!!.listFiles { f -> f.extension.lowercase() in IMAGES }.orEmpty().sorted()
         assumeTrue("no photos under $photos", files.isNotEmpty())
-        val models = models()
+        val models = models(System.getenv(MODEL))
         assumeTrue("no detector: set $MODEL, or run with network to download it", models.isNotEmpty())
         for ((name, model) in models) {
             val dir = File(out, "photos-$name").apply { mkdirs() }
@@ -105,22 +101,8 @@ class SceneRecognitionCorpusTest {
 
     @Test
     fun `a synthetic recording goes through the corpus run end to end`() {
-        val scan = SyntheticRoomScan
-        val picked = scan.frames.indices.step(KEYFRAME_STEP).toList()
-        val frames = picked.map { scan.frames[it] }
-        val paths = frames.indices.map { "images/%04d.jpg".format(it) }
-        val events = frames.flatMapIndexed { k, frame ->
-            val nanos = (k + 1) * FRAME_NANOS
-            listOf(ArDebugEvent.CameraPose(nanos, frame.pose), ArDebugEvent.Image(nanos + 1, paths[k]))
-        }
-        val photos = frames.mapIndexed { k, frame -> ScanPhoto(paths[k], SceneTestKit.jpeg(frame), frame.pose) }
-        val lens = ReplayLens.of(
-            RerunSyntheticRoom.DEPTH_WIDTH.toFloat(), RerunSyntheticRoom.DEPTH_HEIGHT.toFloat(),
-            RerunSyntheticRoom.FOCAL, RerunSyntheticRoom.FOCAL,
-        )!!
-        val device = ScanDevice("android", "Pixel 9", ScanDevice.TIER_DEPTH, ScanDevice.SOURCE_RAW_DEPTH)
-        val pack = runBlocking { RerunCaptureBuilder.build(events, lens, photos, device, scan.cloud) }
-        val file = folder.newFile("synthetic-room.svscan").apply { writeBytes(RerunScanFile.write(pack)) }
+        val frames = keyframesOf(SyntheticRoomScan.frames)
+        val file = folder.newFile("synthetic-room.svscan").apply { writeBytes(recording(frames, SyntheticRoomScan.cloud)) }
         val out = folder.newFolder("out")
 
         val recognition = TruthDetector(frames, TruthDetector.ROOM).use { run(file, it, out) }!!
@@ -139,6 +121,96 @@ class SceneRecognitionCorpusTest {
         val timings = File(dir, "timings.txt").readLines()
         assertEquals(SceneRecognizer.MAX_FRAMES + 2, timings.size)
         assertTrue(timings.last(), timings.last().startsWith("total"))
+    }
+
+    @Test
+    fun `with no detector, a recorded room goes through the corpus run for its door and window`() {
+        val corpus = folder.newFolder("corpus")
+        val frames = keyframesOf(HoledRoomScan.frames)
+        File(corpus, "holed-room.svscan").writeBytes(recording(frames, HoledRoomScan.cloud))
+        File(corpus, "sparse.svscan").writeBytes(recording(frames.take(1), cloud = null))
+        File(corpus, "cut-short.svscan").writeBytes(ByteArray(CUT_SHORT_BYTES) { it.toByte() })
+        File(corpus, "notes.txt").writeText("not a scan")
+        val out = folder.newFolder("out")
+
+        recognizeAll(scansUnder(corpus), out, model = null)
+
+        val dir = File(out, "holed-room")
+        val report = Json.parseToJsonElement(File(dir, "recognized.json").readText()).jsonObject
+        assertEquals(NoDetector.name, report.getValue("detector").jsonPrimitive.content)
+        val labels = report.getValue("items").jsonArray.map { it.jsonObject.getValue("label").jsonPrimitive.content }
+        assertEquals(listOf(SceneLabel.Door.wireName, SceneLabel.Window.wireName), labels.sorted())
+        assertTrue("no photo is read without a detector", report.getValue("frames").jsonArray.isEmpty())
+        assertTrue(dir.listFiles { f -> f.extension == "png" }.orEmpty().isEmpty())
+        val timings = File(dir, "timings.txt").readLines()
+        assertEquals(2, timings.size)
+        assertTrue(timings.last(), timings.last().startsWith("total"))
+        assertEquals(listOf("holed-room"), out.listFiles { f -> f.isDirectory }.orEmpty().map { it.name })
+
+        // What the run did, where its outputs are: which detector, and each scan's outcome.
+        val summary = File(out, SUMMARY)
+        assertTrue("no $SUMMARY in $out", summary.isFile)
+        val lines = summary.readLines()
+        assertTrue(lines.first(), lines.first().startsWith("detector: ${NoDetector.name}"))
+        val outcomes = lines.drop(1).associate { it.substringBefore(": ") to it.substringAfter(": ") }
+        assertEquals(listOf("cut-short.svscan", "holed-room.svscan", "sparse.svscan"), outcomes.keys.toList())
+        assertTrue(outcomes.toString(), "not a readable scan" in outcomes.getValue("cut-short.svscan"))
+        assertTrue(outcomes.toString(), "no dense cloud" in outcomes.getValue("sparse.svscan"))
+        val found = outcomes.getValue("holed-room.svscan")
+        assertTrue(found, SceneLabel.Door.wireName in found && SceneLabel.Window.wireName in found)
+    }
+
+    @Test
+    fun `a model named but missing stops the run, and none runs without a detector`() {
+        assertEquals(emptyList<Pair<String, File>>(), models(NO_MODEL))
+        val model = folder.newFile("yolox-tiny.onnx")
+        assertEquals(listOf("yolox-tiny" to model), models(model.path))
+
+        val missing = File(folder.root, "yolox-small.onnx").path
+        val failure = runCatching { models(model.path + File.pathSeparator + missing) }.exceptionOrNull()
+        assertTrue("a missing model was dropped without a word", failure is IllegalArgumentException)
+        assertTrue(failure!!.message, missing in failure.message.orEmpty())
+    }
+
+    /** Every `.svscan` and `.rrd` under [corpus], subfolders included, in name order. */
+    private fun scansUnder(corpus: File): List<File> =
+        corpus.walk().filter { it.isFile && it.extension in SCANS }.sorted().toList()
+
+    /**
+     * Recognises each of [scans] into [out] with [model] (name and file), or with [NoDetector] —
+     * doors and windows only — when there is none.
+     */
+    private fun recognizeAll(scans: List<File>, out: File, model: Pair<String, File>?) {
+        if (model == null) {
+            println("no detector (set $MODEL, or run with network to download it): doors and windows only")
+            scans.forEach { run(it, NoDetector, out) }
+            return
+        }
+        val (name, file) = model
+        println("recognising ${scans.size} scans with $name")
+        OnnxSceneDetector(mapped(file), name).use { detector -> scans.forEach { run(it, detector, out) } }
+    }
+
+    /** Every [KEYFRAME_STEP]th of [frames]: the photos a recording keeps. */
+    private fun keyframesOf(frames: List<DepthFrame>) = frames.filterIndexed { i, _ -> i % KEYFRAME_STEP == 0 }
+
+    /**
+     * A `.svscan` as the demo writes one: each of [frames] as a pose and a JPEG photo, the
+     * synthetic lens, and [cloud] as its dense cloud — none for a sparse scan.
+     */
+    private fun recording(frames: List<DepthFrame>, cloud: DenseCloud?): ByteArray {
+        val paths = frames.indices.map { "images/%04d.jpg".format(it) }
+        val events = frames.flatMapIndexed { k, frame ->
+            val nanos = (k + 1) * FRAME_NANOS
+            listOf(ArDebugEvent.CameraPose(nanos, frame.pose), ArDebugEvent.Image(nanos + 1, paths[k]))
+        }
+        val photos = frames.mapIndexed { k, frame -> ScanPhoto(paths[k], SceneTestKit.jpeg(frame), frame.pose) }
+        val lens = ReplayLens.of(
+            RerunSyntheticRoom.DEPTH_WIDTH.toFloat(), RerunSyntheticRoom.DEPTH_HEIGHT.toFloat(),
+            RerunSyntheticRoom.FOCAL, RerunSyntheticRoom.FOCAL,
+        )!!
+        val device = ScanDevice("android", "Pixel 9", ScanDevice.TIER_DEPTH, ScanDevice.SOURCE_RAW_DEPTH)
+        return RerunScanFile.write(runBlocking { RerunCaptureBuilder.build(events, lens, photos, device, cloud) })
     }
 
     /**
@@ -186,12 +258,12 @@ class SceneRecognitionCorpusTest {
     }.getOrNull()
 
     /**
-     * The models to run, by name: the files `SCENEVIEW_SCENE_MODEL` names (`:`-separated), else the
+     * The models to run, by name: the files [spec] names (`:`-separated), else the
      * app's own detector, downloaded once into the temp folder by the app's own store. Empty when
      * that download fails (no network): the caller skips.
      */
-    private fun models(): List<Pair<String, File>> {
-        System.getenv(MODEL)?.let { paths ->
+    private fun models(spec: String?): List<Pair<String, File>> {
+        spec?.let { paths ->
             return paths.split(File.pathSeparator).map(::File).filter { it.isFile }.map { it.nameWithoutExtension to it }
         }
         val cache = File(System.getProperty("java.io.tmpdir"), DOWNLOAD_DIR)
@@ -207,6 +279,13 @@ class SceneRecognitionCorpusTest {
         const val OUT = "SCENEVIEW_SCAN_OUT"
         const val PHOTOS = "SCENEVIEW_SCENE_PHOTOS"
         const val MODEL = "SCENEVIEW_SCENE_MODEL"
+
+        /** As [MODEL]: no detector, no download — the doors and windows only, as a phone without one. */
+        const val NO_MODEL = "none"
+
+        /** Under [OUT]: the detector of the run, then one line per scan — what was found, or why it was skipped. */
+        const val SUMMARY = "summary.txt"
+        const val CUT_SHORT_BYTES = 64
 
         /** Under `java.io.tmpdir`: kept between runs, so the detector downloads once per machine. */
         const val DOWNLOAD_DIR = "sceneview-scene-detector"
