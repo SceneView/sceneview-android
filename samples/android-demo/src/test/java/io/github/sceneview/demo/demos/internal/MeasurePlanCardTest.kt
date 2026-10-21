@@ -5,9 +5,9 @@ import org.junit.Test
 import java.util.Locale
 
 /**
- * The card under a traced room's plan is written in the plan's units: one page, one unit system.
- * The plan takes feet and inches in US English only ([SurveyFormat.units]); the card follows it,
- * whatever the country alone would suggest.
+ * One unit rule for Measure and its plan: feet and inches in US English, metres everywhere else
+ * ([SurveyFormat.units]). The Measure screen starts there ([MeasureUnitSystem.forLocale]); a unit
+ * picked in its settings goes to the plan's card as well: one page, one unit system.
  */
 class MeasurePlanCardTest {
 
@@ -17,11 +17,15 @@ class MeasurePlanCardTest {
         MeasurePlanOpening("C", MeasureOpening(from = 1f, to = 2.2f, bottom = 0.9f, top = 1.9f, wall = 2)),
     )
 
-    private fun card(locale: Locale) = measurePlanCard(NET_WALL_AREA, openings, locale)
+    /** The card under [locale], in the Measure screen's [units]: by default, the ones it starts with. */
+    private fun card(locale: Locale, units: MeasureUnitSystem = MeasureUnitSystem.forLocale(locale)) =
+        measurePlanCard(NET_WALL_AREA, openings, units, locale)
 
     @Test
-    fun `Spanish in the US reads the card in metres, as the plan`() {
-        val card = card(Locale.forLanguageTag("es-US"))
+    fun `Spanish in the US reads the screen and the card in metres`() {
+        val locale = Locale.forLanguageTag("es-US")
+        assertEquals(MeasureUnitSystem.Metric, MeasureUnitSystem.forLocale(locale))
+        val card = card(locale)
         assertEquals("31.9 m²", card.netWallArea)
         assertEquals(
             listOf(MeasurePlanCardOpening("B", "90 cm", "2.10 m"), MeasurePlanCardOpening("C", "1.20 m", "1.00 m")),
@@ -30,7 +34,17 @@ class MeasurePlanCardTest {
     }
 
     @Test
-    fun `US English reads the card in feet and inches, as the plan`() {
+    fun `English in Liberia reads the screen and the card in metres`() {
+        val locale = Locale.forLanguageTag("en-LR")
+        assertEquals(MeasureUnitSystem.Metric, MeasureUnitSystem.forLocale(locale))
+        val card = card(locale)
+        assertEquals("31.9 m²", card.netWallArea)
+        assertEquals(MeasurePlanCardOpening("B", "90 cm", "2.10 m"), card.openings.first())
+    }
+
+    @Test
+    fun `US English reads the screen and the card in feet and inches by default`() {
+        assertEquals(MeasureUnitSystem.Imperial, MeasureUnitSystem.forLocale(Locale.US))
         val card = card(Locale.US)
         assertEquals("343 ft²", card.netWallArea)
         assertEquals(
@@ -47,11 +61,24 @@ class MeasurePlanCardTest {
     }
 
     @Test
-    fun `the card and the plan never disagree on units`() {
+    fun `French with imperial picked in the settings reads the card in feet and inches`() {
+        val card = card(Locale.FRANCE, MeasureUnitSystem.Imperial)
+        assertEquals("343 ft²", card.netWallArea)
+        assertEquals(MeasurePlanCardOpening("B", "2 ft 11 in", "6 ft 11 in"), card.openings.first())
+    }
+
+    @Test
+    fun `US English with metric picked in the settings reads the card in metres`() {
+        val card = card(Locale.US, MeasureUnitSystem.Metric)
+        assertEquals("31.9 m²", card.netWallArea)
+        assertEquals(MeasurePlanCardOpening("B", "90 cm", "2.10 m"), card.openings.first())
+    }
+
+    @Test
+    fun `the Measure screen starts in the plan's units, whatever the locale`() {
         val locales = listOf("en-US", "es-US", "en-LR", "my-MM", "en-GB", "fr-FR", "de-DE", "en-CA").map(Locale::forLanguageTag)
         for (locale in locales) {
-            val feet = card(locale).netWallArea.endsWith("ft²")
-            assertEquals(locale.toLanguageTag(), SurveyFormat.units(locale) == MeasureUnitSystem.Imperial, feet)
+            assertEquals(locale.toLanguageTag(), SurveyFormat.units(locale), MeasureUnitSystem.forLocale(locale))
         }
     }
 

@@ -38,6 +38,15 @@ class MeasureHapticsTest {
     }
 
     @Test
+    fun `the aim stays silent while the plan covers the camera`() {
+        for (kind in MeasureSnapKind.entries) {
+            assertNull(kind.name, measureAimHapticEvent(kind, closes = false, covered = true))
+            assertNull(kind.name, measureAimHapticEvent(kind, closes = true, covered = true))
+        }
+        assertNull(measureAimHapticEvent(null, closes = true, covered = true))
+    }
+
+    @Test
     fun `a placed point is light, a closing one a success`() {
         assertEquals(MeasureHapticEvent.PointAdded, measurePointHapticEvent(closes = false))
         assertEquals(MeasureHapticEvent.OutlineClosed, measurePointHapticEvent(closes = true))
