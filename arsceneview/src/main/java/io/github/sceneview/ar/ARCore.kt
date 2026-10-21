@@ -8,6 +8,7 @@ import android.util.Log
 import androidx.annotation.MainThread
 import com.google.ar.core.ArCoreApk.Availability
 import com.google.ar.core.Config
+import com.google.ar.core.RecordingStatus
 import com.google.ar.core.Session
 import com.google.ar.core.TrackingFailureReason
 import io.github.sceneview.ar.arcore.ARSession
@@ -253,14 +254,28 @@ class ARCore(
         override val canRun: Boolean get() = session?.isClosed == false
         override fun start() {
             val session = session ?: return
-            try {
-                session.resume()
-            } catch (exception: Exception) {
-                // The session counts as resumed from the moment ARCore resumed it: whatever threw
-                // after that (the host's callback) is not a resume failure.
-                if (!session.isResumed) throw exception
-                hostCallbackFailure = exception
-            }
+            // A session closed a moment ago may still be releasing the camera (#4771). Past the
+            // wait, this session stays next in line and the close resumes it when done.
+            resumeOnceCameraFree(
+                awaitTeardowns = { sessionTeardown.awaitIdle() },
+                resume = {
+                    try {
+                        session.resume()
+                    } catch (exception: Exception) {
+                        // The session counts as resumed from the moment ARCore resumed it:
+                        // whatever threw after that (the host's callback) is not a resume failure.
+                        if (!session.isResumed) throw exception
+                        hostCallbackFailure = exception
+                    }
+                },
+                onStillClosing = {
+                    Log.w(
+                        "ARCore",
+                        "A closing ARCore session still holds the camera after " +
+                            "${SessionTeardown.AWAIT_TIMEOUT_MS} ms; resuming once it is closed",
+                    )
+                },
+            )
         }
         override fun stop() { session?.takeIf { it.isResumed }?.pause() }
         override fun onStartFailed(exception: Exception) {
@@ -303,6 +318,17 @@ class ARCore(
      */
     fun createSession(context: Context) {
         lastContext = context
+        // Never two native ARCore calls at once (#4771): a session closed a moment ago (an
+        // activity recreated by a rotation) may still be pausing on the teardown thread. Past the
+        // wait the session is created anyway: by then the pause is over, and ARCore documents
+        // that creating a session is not blocked by a close running on another thread.
+        if (!sessionTeardown.awaitIdle()) {
+            Log.w(
+                "ARCore",
+                "A closing ARCore session is still busy after ${SessionTeardown.AWAIT_TIMEOUT_MS} " +
+                    "ms; creating the new session alongside it",
+            )
+        }
         try {
             session = ARSession(
                 context,
@@ -594,25 +620,43 @@ class ARCore(
      * A session that is still resumed is paused first (#4026). `ARSceneView` leaving
      * composition while its Activity stays in the foreground — a demo swapping a replay for a
      * gallery, a screen dropping its AR view — closes a session no lifecycle `ON_PAUSE` ever
-     * reached, and ARCore's documented order is `pause()` then `close()`, both on the main
-     * thread.
+     * reached, and ARCore's documented order is `pause()` then `close()`.
+     *
+     * The call returns at once (#4771). [onSessionPaused] runs here, on the main thread, while
+     * the session is still valid; then the session counts as closed ([ARSession.isClosed]) and
+     * ARCore's pause and close — about 350 ms of camera teardown on a Pixel 4a — run on a
+     * background thread, so the screen a navigation lands on keeps animating. A session that
+     * resumes, or is created, before they are done waits for them. ARCore's pause runs there
+     * too, against the letter of its `Session.close()` advice; why is on [ARSession.beginClose].
+     *
+     * An exception thrown by ARCore's pause or close is logged, not rethrown: the session is
+     * gone either way, and the caller has long returned. A session that is recording is the
+     * exception to all of this: it closes inline, so the file its pause finalizes is complete
+     * when a recorder stopped by the same disposal returns it.
      *
      * Review the API reference for important considerations before calling close() in apps with
      * more complicated lifecycle requirements: [Session.close]
      *
      * Closing the session that runs the camera hands the camera back to the session it had
-     * taken it from, when that one is still resumed (see [CameraHandover]).
+     * taken it from, when that one is still resumed (see [CameraHandover]), once the closed
+     * session has released it.
      */
     @MainThread
     fun destroy() {
-        cameraArbiter.destroy(cameraClient) {
-            session?.let {
-                synchronized(it) {
-                    if (session == null) return@synchronized
-                    closeSessionInOrder(isResumed = it.isResumed, pause = it::pause, close = it::close)
-                    session = null
-                }
-            }
+        cameraArbiter.destroy(cameraClient) { onClosed ->
+            val closing = session
+            session = null
+            // A session still recording finalizes its file when it pauses, and a recorder
+            // stopped by the same disposal returns that file at once: that one closes inline.
+            val recording = closing != null && runCatching {
+                closing.recordingStatus == RecordingStatus.OK
+            }.getOrDefault(false)
+            runSessionClose(
+                teardown = closing?.beginClose(),
+                isRecording = recording,
+                runInBackground = sessionTeardown::run,
+                onClosed = onClosed,
+            )
         }
     }
 
