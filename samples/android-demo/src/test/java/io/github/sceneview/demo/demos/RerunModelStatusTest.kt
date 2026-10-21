@@ -26,6 +26,31 @@ class RerunModelStatusTest {
     }
 
     @Test
+    fun `the finished model replacing a big scan's raw surface fades the line out instead of removing it`() {
+        // While the raw surface finishes, the line shows over it.
+        val finishing = checkNotNull(ModelStatus.slot(mesh(finished = false), settled = false, rawShownFirst = false))
+        assertEquals(ModelStatus.Finishing, finishing.status)
+        assertTrue(finishing.visible)
+        // The swap: the same line keeps its room, faded. The model is framed above this slot, and
+        // a line that went would move the finished model the moment it takes the raw one's place.
+        val swapped = checkNotNull(ModelStatus.slot(mesh(finished = true), settled = true, rawShownFirst = true))
+        assertEquals(ModelStatus.Finishing, swapped.status)
+        assertFalse(swapped.visible)
+        // A finish that fails after the raw surface was shown still says why.
+        val failed = checkNotNull(ModelStatus.slot(mesh(finished = false), settled = true, rawShownFirst = true))
+        assertEquals(ModelStatus.RawUnfinished, failed.status)
+        assertTrue(failed.visible)
+    }
+
+    @Test
+    fun `a small scan or a reopened model never had a line under it, so none is laid out`() {
+        assertNull(ModelStatus.slot(mesh(finished = true), settled = true, rawShownFirst = false))
+        val creating = checkNotNull(ModelStatus.slot(model = null, settled = false, rawShownFirst = false))
+        assertEquals(ModelStatus.Creating, creating.status)
+        assertTrue(creating.visible)
+    }
+
+    @Test
     fun `a finished model needs no word, a failure or the points do`() {
         assertNull(ModelStatus.of(mesh(finished = true), settled = true))
         assertEquals(ModelStatus.Failed, ModelStatus.of(model = null, settled = true))
