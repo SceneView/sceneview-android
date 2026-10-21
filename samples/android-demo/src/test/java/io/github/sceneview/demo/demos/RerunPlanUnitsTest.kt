@@ -1,6 +1,8 @@
 package io.github.sceneview.demo.demos
 
 import android.graphics.Bitmap
+import android.graphics.Paint
+import android.graphics.Typeface
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -43,6 +45,9 @@ class RerunPlanUnitsTest {
     /** 4 × 3 m with its top-right corner cut at 45°, 2.50 m high: 11.5 m², walls of 3, 1.41, 2, 4 and 3 m. */
     private val traced = planSurvey(0f, 0f, 3f, 0f, 4f, 1f, 4f, 3f, 0f, 3f)
 
+    /** 7.29 × 6.05 m, scanned with a 25 cm scatter: about the widest figures a room's survey writes. */
+    private val wide = planSurvey(0f, 0f, 7.29f, 0f, 7.29f, 6.05f, 0f, 6.05f, spread = 0.25f)
+
     /** A figure written in metres: `4.00 m`, `11.5 m²`, `28.8 m³`. */
     private val metric = Regex("""\d m\b|m²|m³""")
 
@@ -54,7 +59,11 @@ class RerunPlanUnitsTest {
         return words!!
     }
 
-    /** Shows the traced room's plan under [chrome], saves it as [name] and returns every text on the screen. */
+    /**
+     * Shows the traced room's plan under [chrome], saves it as [name] and returns the texts its
+     * semantics tree holds: the figures beside the plan. The plan's own labels are drawn on its
+     * canvas, out of that tree; they are read through [SurveyReport.planTexts] instead.
+     */
     private fun render(chrome: StageChrome, name: String): List<String> {
         composeRule.setContent {
             CompositionLocalProvider(LocalStageChrome provides chrome) {
@@ -121,6 +130,23 @@ class RerunPlanUnitsTest {
 
     @Test
     @Config(qualifiers = "en-rUS")
+    fun `in US English the PDF's widest figure ends clear of the walls table beside it`() {
+        val rows = SurveyReport.rows(wide, words().survey).map { it.value }
+        assertEquals("23 ft 11 in × 19 ft 10 in ± 10 in", rows[1])
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            textSize = pdf("TEXT_SIZE")
+            typeface = Typeface.DEFAULT
+        }
+        // The same paper the hints under the figures keep before the walls table.
+        val limit = pdf("WALLS_X") - pdf("LEGEND_SPACE")
+        for (value in rows) {
+            val end = pdf("MARGIN") + pdf("VALUE_X") + paint.measureText(value)
+            assertTrue("\"$value\" ends at $end pt, past $limit pt", end <= limit)
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "en-rUS")
     fun `in US English the PDF's scale bar is a round number of feet`() {
         val (label, metres) = pdfScaleBar(words())
         val feet = Regex("""(\d+) ft""").matchEntire(label)?.groupValues?.get(1)?.toInt()
@@ -147,6 +173,10 @@ class RerunPlanUnitsTest {
         val (label, metres) = pdfScaleBar(words)
         assertEquals(label, label.removeSuffix(" m").toFloat(), metres, 0.001f)
     }
+
+    /** One of the PDF page's own measures, in points. */
+    private fun pdf(name: String): Float =
+        RoomPlanPdf::class.java.getDeclaredField(name).apply { isAccessible = true }.getFloat(null)
 
     private companion object {
         const val GLYPH = 0.55f

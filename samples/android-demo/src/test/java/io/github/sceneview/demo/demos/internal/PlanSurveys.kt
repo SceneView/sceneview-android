@@ -1,5 +1,6 @@
 package io.github.sceneview.demo.demos.internal
 
+import io.github.sceneview.demo.demos.internal.RoomPlanLayoutTest.Companion.WORDING
 import kotlin.math.abs
 import kotlin.math.hypot
 
@@ -50,3 +51,29 @@ internal fun planSurvey(vararg corners: Float, spread: Float = 0f, height: Float
         yaw = 0f,
     )
 }
+
+/** [WORDING] with its figures in feet and inches, its scale bar read through [scaleBar]. */
+internal fun imperialWording(scaleBar: String = "%1\$s ft") = SurveyWording(
+    heading = WORDING.heading,
+    area = WORDING.area,
+    dimensions = WORDING.dimensions,
+    perimeter = WORDING.perimeter,
+    height = WORDING.height,
+    volume = WORDING.volume,
+    rooms = WORDING.rooms,
+    room = WORDING.room,
+    total = WORDING.total,
+    span = WORDING.span,
+    walls = WORDING.walls,
+    wall = WORDING.wall,
+    notSeen = WORDING.notSeen,
+    notMeasured = WORDING.notMeasured,
+    estimated = WORDING.estimated,
+    estimateNote = WORDING.estimateNote,
+    spreadNote = WORDING.spreadNote,
+    notice = WORDING.notice,
+    madeWith = WORDING.madeWith,
+    scaleBar = scaleBar,
+    gaps = WORDING.gaps,
+    units = MeasureUnitSystem.Imperial,
+)

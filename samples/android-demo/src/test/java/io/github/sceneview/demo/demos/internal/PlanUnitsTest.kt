@@ -13,39 +13,19 @@ import java.util.Locale
  */
 class PlanUnitsTest {
 
-    /** [WORDING], its figures in feet and inches. */
-    private val imperial = SurveyWording(
-        heading = WORDING.heading,
-        area = WORDING.area,
-        dimensions = WORDING.dimensions,
-        perimeter = WORDING.perimeter,
-        height = WORDING.height,
-        volume = WORDING.volume,
-        rooms = WORDING.rooms,
-        room = WORDING.room,
-        total = WORDING.total,
-        span = WORDING.span,
-        walls = WORDING.walls,
-        wall = WORDING.wall,
-        notSeen = WORDING.notSeen,
-        notMeasured = WORDING.notMeasured,
-        estimated = WORDING.estimated,
-        estimateNote = WORDING.estimateNote,
-        spreadNote = WORDING.spreadNote,
-        notice = WORDING.notice,
-        madeWith = WORDING.madeWith,
-        scaleBar = WORDING.scaleBar,
-        gaps = WORDING.gaps,
-        units = MeasureUnitSystem.Imperial,
-    )
+    private val imperial = imperialWording()
 
-    /** 4.03 × 3.12 m and 2.50 m high, scanned: every figure with a 3 cm scatter. */
+    /**
+     * 4.03 × 3.12 m and 2.50 m high, scanned: every figure with a scatter of 0.03, the area's too —
+     * a fixture's figure; a real scan's area spreads by its sides' scatter times their length.
+     */
     private val scanned = planSurvey(0f, 0f, 4.03f, 0f, 4.03f, 3.12f, 0f, 3.12f, spread = 0.03f)
 
     @Test
     fun `only US English gets feet and inches`() {
         assertEquals(MeasureUnitSystem.Imperial, SurveyFormat.units(Locale.US))
-        for (locale in listOf(Locale.UK, Locale.FRANCE, Locale.CANADA, Locale.GERMANY, Locale("es", "US"))) {
+        val others = listOf(Locale.UK, Locale.FRANCE, Locale.CANADA, Locale.GERMANY, Locale.forLanguageTag("es-US"))
+        for (locale in others) {
             assertEquals(locale.toString(), MeasureUnitSystem.Metric, SurveyFormat.units(locale))
         }
     }
@@ -101,5 +81,11 @@ class PlanUnitsTest {
         assertArrayEquals(floatArrayOf(1f, 2f, 5f, 10f, 20f, 50f), bars.map { it / 0.3048f }.toFloatArray(), 1e-4f)
         assertNull(SurveyFormat.scaleBars(MeasureUnitSystem.Metric))
         assertEquals("10 ft", SurveyReport.planTexts(scanned, imperial).scale(10 * 0.3048f))
+    }
+
+    @Test
+    fun `the scale bar's feet are written through the wording, as its metres are`() {
+        val translated = imperialWording(scaleBar = "%1\$s pi")
+        assertEquals("10 pi", SurveyReport.planTexts(scanned, translated).scale(10 * 0.3048f))
     }
 }

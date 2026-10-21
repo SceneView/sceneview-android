@@ -20,11 +20,27 @@ class PlanObliqueWallTest {
     /** Half the text's size per character: a fixed stand-in for a font. */
     private val metrics = PlanMetrics(1f) { text, size -> text.length * size * 0.5f }
 
-    private fun layout(survey: RoomSurvey, width: Float = 340f, height: Float = 300f) =
-        RoomPlanLayout.layout(survey, SurveyReport.planTexts(survey, WORDING), width, height, metrics)
+    private fun layout(
+        survey: RoomSurvey,
+        width: Float = 340f,
+        height: Float = 300f,
+        wording: SurveyWording = WORDING,
+    ) = RoomPlanLayout.layout(survey, SurveyReport.planTexts(survey, wording), width, height, metrics)
 
     /** 4 × 3 m with its top-right corner cut at 45°: wall B runs from (3, 0) to (4, 1), 1.41 m long. */
     private val cut = planSurvey(0f, 0f, 3f, 0f, 4f, 1f, 4f, 3f, 0f, 3f)
+
+    /** 4 × 3 m, its right wall leaning out 5° from square. */
+    private val fiveDegrees = run {
+        val lean = 3f * tan(Math.toRadians(5.0)).toFloat()
+        planSurvey(0f, 0f, 4f, 0f, 4f + lean, 3f, 0f, 3f)
+    }
+
+    /** 4 m at the top, 5 m at the bottom, 3 m high: the whole right side is one leaning wall, 3.16 m long. */
+    private val trapezoid = planSurvey(0f, 0f, 4f, 0f, 5f, 3f, 0f, 3f)
+
+    /** A tall page, a square one and a wide one. */
+    private val pages = listOf(340f to 300f, 300f to 340f, 600f to 260f)
 
     /** Wall [i] on the page: its start, and its direction and outward normal, both unit. */
     private class Side(val ax: Float, val ay: Float, val bx: Float, val by: Float) {
@@ -104,8 +120,7 @@ class PlanObliqueWallTest {
 
     @Test
     fun `a wall five degrees off square is dimensioned at its true length, not its shadow`() {
-        val lean = 3f * tan(Math.toRadians(5.0)).toFloat()
-        val room = planSurvey(0f, 0f, 4f, 0f, 4f + lean, 3f, 0f, 3f)
+        val room = fiveDegrees
         val drawing = layout(room)
         val b = side(drawing, 1)
         val wall = room.walls[1].length.value * drawing.pxPerMetre
@@ -129,26 +144,52 @@ class PlanObliqueWallTest {
         }
     }
 
+    /**
+     * The side has no chain of its own, so nothing but the leaning wall's own reach widens its
+     * margin. Were it left at a bare side's, the dimension line, its ticks and its label would run
+     * off the first two pages.
+     */
     @Test
     fun `a side that is one leaning wall keeps its dimension and its label on the page`() {
-        val trapezoid = planSurvey(0f, 0f, 4f, 0f, 5f, 3f, 0f, 3f)
-        for ((width, height) in listOf(340f to 300f, 300f to 340f, 600f to 260f)) {
+        for ((width, height) in pages) {
             assertClean(layout(trapezoid, width, height))
         }
     }
 
+    /** A wall's label in feet and inches, `13' 10"`, is half as wide again as in metres, `4.20`. */
     @Test
-    fun `the area stands inside a room with a cut corner`() {
-        val drawing = layout(cut)
-        val area = drawing.texts.single { it.role == PlanTextRole.Area }
-        var crossings = 0
-        val n = drawing.floor.size / 2
-        for (i in 0 until n) {
-            val wall = side(drawing, i)
-            if ((wall.ay > area.cy) == (wall.by > area.cy)) continue
-            val at = wall.ax + (area.cy - wall.ay) * (wall.bx - wall.ax) / (wall.by - wall.ay)
-            if (at > area.cx) crossings++
+    fun `in feet and inches the leaning walls' dimensions stay on the page and clear of each other`() {
+        val imperial = imperialWording()
+        for ((name, room) in listOf("cut corner" to cut, "five degrees" to fiveDegrees, "trapezoid" to trapezoid)) {
+            for ((width, height) in pages) {
+                val drawing = layout(room, width, height, imperial)
+                val walls = drawing.texts.filter { it.role == PlanTextRole.Dimension }.map { it.text }
+                assertTrue("$name: $walls", walls.size == room.walls.size && walls.all { it.endsWith("\"") })
+                assertClean(drawing)
+            }
         }
-        assertEquals(1, crossings % 2)
+    }
+
+    /**
+     * The area's spot is searched over the points inside the floor. A long leaning wall is where
+     * a test that only counts the walls running up and down, by their first end, lets a point
+     * outside the room through: the widest such point is outside, left of the leaning wall.
+     */
+    @Test
+    fun `the area stands inside a room with a cut corner or a long leaning wall`() {
+        val leaning = planSurvey(3f, 0f, 4f, 0f, 4f, 3f, 0f, 3f)
+        for ((name, room) in listOf("cut corner" to cut, "leaning wall" to leaning)) {
+            val drawing = layout(room)
+            val area = drawing.texts.single { it.role == PlanTextRole.Area }
+            var crossings = 0
+            val n = drawing.floor.size / 2
+            for (i in 0 until n) {
+                val wall = side(drawing, i)
+                if ((wall.ay > area.cy) == (wall.by > area.cy)) continue
+                val at = wall.ax + (area.cy - wall.ay) * (wall.bx - wall.ax) / (wall.by - wall.ay)
+                if (at > area.cx) crossings++
+            }
+            assertEquals("$name: (${area.cx}, ${area.cy})", 1, crossings % 2)
+        }
     }
 }
