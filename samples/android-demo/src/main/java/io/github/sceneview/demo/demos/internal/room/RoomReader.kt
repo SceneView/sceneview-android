@@ -37,8 +37,11 @@ internal object RoomReader {
     private const val RUN_SIN = 0.05f
     private const val RUN_M = 0.3f
 
-    /** Parallel planes closer than this, facing the same way, are one wall: a scan that drifted draws a wall twice. */
-    private const val SAME_WALL_M = 0.1f
+    /**
+     * Parallel planes closer than this, facing the same way, are one wall: a scan that drifted
+     * draws a wall twice, two passes each seeing half of it as far apart as two layers of one wall.
+     */
+    private const val SAME_WALL_M = WallLines.WALL_MERGE_M
     private const val SAME_WALL_FACING = 0.94f
 
     /** A wall seen this near a corner reaches it: a side deduced there is held by it. */
