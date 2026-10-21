@@ -78,6 +78,9 @@ internal object RoomOutline {
     private const val AREA_AGREE = 0.15f
     private const val AREA_AGREE_M2 = 1f
     private const val SIMPLIFY_M = 0.1f
+
+    /** A corner of the outline along the region's edge moves this far at most to where the walls beside it meet. */
+    private const val CORNER_MOVE_M = 0.3f
     private const val EDGE_BAND_CELLS = 3
     private const val EDGE_PERCENTILE = 0.01f
     private const val MIN_EDGE_SURFELS = 20
@@ -194,7 +197,10 @@ internal object RoomOutline {
     /**
      * The outline along the region's edge [loop] (`u, v` pairs, closed, counter-clockwise),
      * simplified, each side deduced but one that runs along one of [lines]: that wall's, even
-     * where the walls did not close. `null` under three corners.
+     * where the walls did not close — on the wall itself, not on the region's edge, which stops
+     * short of the cells the wall is drawn on. Each corner is then where its two sides meet,
+     * unless that is more than [CORNER_MOVE_M] off the region's corner or the outline would
+     * cross itself. `null` under three corners.
      */
     fun alongRegion(loop: FloatArray, lines: List<WallLine>): Triple<FloatArray, FloatArray, List<Side>>? {
         val simplified = simplify(loop, SIMPLIFY_M)
@@ -208,9 +214,22 @@ internal object RoomOutline {
             val line = lines.firstOrNull {
                 it.nu * side.nu + it.nv * side.nv >= SAME_FACING && abs(it.offset - side.offset) <= SAME_SIDE_M
             }
-            if (line == null) side else Side(line, side.nu, side.nv, side.offset)
+            if (line == null) side else Side(line, line.nu, line.nv, line.offset)
         }
-        return Triple(su, sv, sides)
+        if (sides.none { it.line != null }) return Triple(su, sv, sides)
+        val cu = su.copyOf()
+        val cv = sv.copyOf()
+        for (i in 0 until m) {
+            val at = meet(sides[(i + m - 1) % m], sides[i]) ?: continue
+            if (hypot(at[0] - su[i], at[1] - sv[i]) > CORNER_MOVE_M) continue
+            cu[i] = at[0]
+            cv[i] = at[1]
+        }
+        if (signedArea(cu, cv) <= 0f || !simple(cu, cv)) {
+            // The walls do not hold the corners: the region's own edge, sides deduced.
+            return Triple(su, sv, (0 until m).map { sideThrough(su[it], sv[it], su[(it + 1) % m], sv[(it + 1) % m]) })
+        }
+        return Triple(cu, cv, sides)
     }
 
     @Suppress("LongParameterList", "ReturnCount")
