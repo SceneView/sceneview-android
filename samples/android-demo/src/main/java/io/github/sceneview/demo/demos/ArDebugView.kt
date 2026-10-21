@@ -361,6 +361,9 @@ internal class DebugLayerNode(
     private var pendingEmpty = true
     private var pendingOffsets: FloatArray? = null
 
+    /** The array [pendingOffsets] is copied into, kept so each deferred upload does not allocate one. */
+    private var offsetSpare: FloatArray? = null
+
     /**
      * CUSTOM0 staging for a [surfels] layer, reused across uploads: a live room is megabytes of
      * offsets per snapshot. Filament reads it asynchronously; [flight] guarantees the previous
@@ -395,7 +398,14 @@ internal class DebugLayerNode(
             pendingOffsets = null
         } else {
             pendingMesh.set(mesh!!)
-            pendingOffsets = offsets?.copyOf(minOf(offsets.size, mesh.vertexCount * 3))
+            pendingOffsets = offsets?.let { source ->
+                val size = minOf(source.size, mesh.vertexCount * 3)
+                // Reuse the held copy: a surfel layer's offsets run to megabytes per frame.
+                val target = offsetSpare?.takeIf { it.size >= size } ?: FloatArray(size)
+                offsetSpare = target
+                source.copyInto(target, 0, 0, size)
+                target
+            }
         }
     }
 
@@ -469,7 +479,11 @@ internal class DebugLayerNode(
             uploadedIndices = indexCount
             shownIndices = indexCount
         } catch (t: Throwable) {
-            if (tracked) flight.abort()
+            if (tracked) {
+                flight.abort()
+                // Filament may still read the scratch handed over before the throw: never refill it.
+                offsetScratch = null
+            }
             newVertexBuffer?.let { engine.safeDestroyVertexBuffer(it) }
             newIndexBuffer?.let { engine.safeDestroyIndexBuffer(it) }
             throw t
