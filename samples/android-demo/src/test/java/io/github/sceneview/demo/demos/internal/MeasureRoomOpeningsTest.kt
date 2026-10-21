@@ -15,20 +15,24 @@ import java.util.Locale
  * of the room's walls. The walls' net area leaves them out; the floor, the volume and the plan
  * stay what they were.
  *
- * On a room, an opening runs along its walls the way they were traced, from the first corner:
- * the walls unrolled into one strip, as long as the perimeter.
+ * On a room, an opening is kept on the wall it was marked on, along that wall from its start as
+ * it was traced: the walls before it may be re-measured longer or shorter, it stays as it was.
  */
 class MeasureRoomOpeningsTest {
     private fun p(x: Float, z: Float) = Position(x, 0f, z)
 
-    // A 4 × 3 m room traced from (0, 0): its first wall runs 0–4 m along the strip, the second
-    // 4–7 m, the third 7–11 m and the last, back to the first corner, 11–14 m. 2.5 m high.
+    // A 4 × 3 m room traced from (0, 0): its walls are counted from the first one, (0, 0) to
+    // (4, 0), to the last one, back to the first corner. 2.5 m high.
     private val corners = listOf(p(0f, 0f), p(4f, 0f), p(4f, 3f), p(0f, 3f))
+
+    /** The opening [from]..[to] metres along [wall] from its start, [bottom]..[top] up. */
+    private fun opening(wall: Int, from: Float, to: Float, bottom: Float, top: Float): MeasureOpening =
+        measureOpening(MeasureWallPoint(from, bottom, wall), MeasureWallPoint(to, top, wall))!!
 
     // A door 0.9 × 2.1 m on the second wall, half a metre from its start; a window 1.2 × 1 m
     // on the third, 1 m off the floor.
-    private val door = MeasureOpening(4.5f, 5.4f, 0f, 2.1f)
-    private val window = MeasureOpening(7.5f, 8.7f, 1f, 2f)
+    private val door = opening(wall = 1, from = 0.5f, to = 1.4f, bottom = 0f, top = 2.1f)
+    private val window = opening(wall = 2, from = 0.5f, to = 1.7f, bottom = 1f, top = 2f)
 
     private fun traced(): MeasureBoard<Position> =
         corners.fold(MeasureBoard<Position>(mode = MeasureMode.Room)) { board, corner -> board.tap(corner, false) }
@@ -56,9 +60,9 @@ class MeasureRoomOpeningsTest {
         var board = room()
         assertSame(board.figures.last(), board.openingWall)
         board = board.startOpening()
-            .tapOnWall(MeasureWallPoint(along = 5.4f, up = 2.1f))
-        assertEquals(MeasureWallPoint(5.4f, 2.1f), board.openingCorner)
-        board = board.tapOnWall(MeasureWallPoint(along = 4.5f, up = 0f))
+            .tapOnWall(MeasureWallPoint(along = 1.4f, up = 2.1f, wall = 1))
+        assertEquals(MeasureWallPoint(1.4f, 2.1f, wall = 1), board.openingCorner)
+        board = board.tapOnWall(MeasureWallPoint(along = 0.5f, up = 0f, wall = 1))
         assertEquals(listOf(door), board.figures.last().openings)
         assertFalse(board.markingOpening)
         assertNull(board.openingCorner)
@@ -91,7 +95,7 @@ class MeasureRoomOpeningsTest {
 
     @Test
     fun `a corner left on a room marks nothing once the room is left`() {
-        val marked = room().startOpening().tapOnWall(MeasureWallPoint(along = 5.4f, up = 2.1f))
+        val marked = room().startOpening().tapOnWall(MeasureWallPoint(along = 1.4f, up = 2.1f, wall = 1))
         assertNotNull(marked.openingCorner)
         // Another mode, or the next room started: the marking ends, corner and all.
         for (next in listOf(marked.withMode(MeasureMode.Wall), marked.tap(p(6f, 0f), false), marked.undo().undo())) {
@@ -119,8 +123,8 @@ class MeasureRoomOpeningsTest {
 
     @Test
     fun `an opening on the closing wall counts, and one marked twice counts once`() {
-        // The last wall, from the fourth corner back to the first: 11–14 m along the strip.
-        val back = MeasureOpening(12f, 13f, 1f, 2f)
+        // The last wall, from the fourth corner back to the first.
+        val back = opening(wall = 3, from = 1f, to = 2f, bottom = 1f, top = 2f)
         val numbers = room().addOpening(back).addOpening(back).addOpening(door).numbers()
         assertEquals(1f + 0.9f * 2.1f, numbers.openingsArea!!, 1e-4f)
         assertEquals(35f - 1f - 0.9f * 2.1f, numbers.netWallArea!!, 1e-4f)
@@ -169,11 +173,11 @@ class MeasureRoomOpeningsTest {
     }
 
     @Test
-    fun `the aim reads the wall it meets, along the walls from the first corner`() {
-        // The second wall, x = 4, 1 m from its start: 5 m along the strip.
-        assertPoint(MeasureWallPoint(5f, 1f, wall = 1), aim(at(4f, 1f, 1f)))
-        // The closing wall, from the last corner back to the first: from 11 m.
-        assertPoint(MeasureWallPoint(12f, 2f, wall = 3), aim(at(0f, 2f, 2f)))
+    fun `the aim reads the wall it meets, along that wall from its start`() {
+        // The second wall, x = 4, 1 m from its start.
+        assertPoint(MeasureWallPoint(1f, 1f, wall = 1), aim(at(4f, 1f, 1f)))
+        // The closing wall, from the last corner (0, 3) back to the first.
+        assertPoint(MeasureWallPoint(1f, 2f, wall = 3), aim(at(0f, 2f, 2f)))
         // Above the ceiling, nothing.
         assertNull(aim(at(4f, 2.8f, 1f)))
     }
@@ -187,14 +191,15 @@ class MeasureRoomOpeningsTest {
         assertEquals(2f, through.along, 1e-4f)
         val behind = aim(at(2f, 1f, 1.5f), from = outside, onWall = 2)
         assertEquals(2, behind!!.wall)
-        assertEquals(9f, behind.along, 1e-4f)
+        // The third wall runs from (4, 3) back to (0, 3).
+        assertEquals(2f, behind.along, 1e-4f)
     }
 
     @Test
     fun `just round a corner, the second corner stays on the first one's wall`() {
         val round = at(4f, 1f, 0.05f)
         // Free, the aim reads the second wall just past its start.
-        assertPoint(MeasureWallPoint(4.05f, 1f, wall = 1), aim(round))
+        assertPoint(MeasureWallPoint(0.05f, 1f, wall = 1), aim(round))
         // Held to the first wall, it is kept on that wall's end.
         val held = aim(round, onWall = 0)
         assertEquals(0, held!!.wall)
@@ -203,8 +208,9 @@ class MeasureRoomOpeningsTest {
 
     @Test
     fun `two corners on two walls mark nothing`() {
-        assertNull(measureOpening(MeasureWallPoint(3.5f, 0f, wall = 0), MeasureWallPoint(4.5f, 2f, wall = 1)))
-        assertEquals(door, measureOpening(MeasureWallPoint(4.5f, 0f, wall = 1), MeasureWallPoint(5.4f, 2.1f, wall = 1)))
+        assertNull(measureOpening(MeasureWallPoint(3.5f, 0f, wall = 0), MeasureWallPoint(0.5f, 2f, wall = 1)))
+        // Either corner first.
+        assertEquals(door, measureOpening(MeasureWallPoint(1.4f, 2.1f, wall = 1), MeasureWallPoint(0.5f, 0f, wall = 1)))
     }
 
     @Test
@@ -216,8 +222,29 @@ class MeasureRoomOpeningsTest {
         // On the closing wall, which runs from the last corner back to the first.
         assertCorners(
             listOf(at(0f, 1f, 2f), at(0f, 1f, 1f), at(0f, 2f, 1f), at(0f, 2f, 2f)),
-            measureFigureOpeningCorners(MeasureOpening(12f, 13f, 1f, 2f), corners, closed = true),
+            measureFigureOpeningCorners(opening(wall = 3, from = 1f, to = 2f, bottom = 1f, top = 2f), corners, closed = true),
         )
+    }
+
+    @Test
+    fun `an opening stays as wide as it was marked when the walls before it are re-measured`() {
+        // A door marked at the start of the third wall, (4, 3) to (0, 3): 0.05–0.95 m along it.
+        val first = aim(at(3.95f, 0f, 3f))!!
+        val second = aim(at(3.05f, 2.1f, 3f), onWall = first.wall)!!
+        val marked = measureOpening(first, second)!!
+        val board = room().addOpening(marked)
+        // The first two walls then read 4 and 3 cm longer, as their corners settle.
+        val settled = listOf(p(0f, 0f), p(4.04f, 0f), p(4.04f, 3.03f), p(0f, 3.03f))
+        // Drawn on the third wall, from its new start, as wide as it was marked.
+        assertCorners(
+            listOf(at(3.99f, 0f, 3.03f), at(3.09f, 0f, 3.03f), at(3.09f, 2.1f, 3.03f), at(3.99f, 2.1f, 3.03f)),
+            measureFigureOpeningCorners(marked, settled, closed = true),
+        )
+        // The same on the plan, and off the net wall area.
+        val onPlan = measurePlanOpenings(settled, listOf(marked)).single()
+        assertEquals(0.9f, onPlan.opening.width, 1e-4f)
+        val numbers = measureFigureNumbers(board.figures.last(), settled)
+        assertEquals(0.9f * 2.1f, numbers.openingsArea!!, 1e-4f)
     }
 
     private fun assertCorners(expected: List<Position>, actual: List<Position>) {
@@ -256,8 +283,8 @@ class MeasureRoomOpeningsTest {
         // clockwise, so each wall's openings are read from its other end.
         val other = listOf(p(4f, 0f), p(0f, 0f), p(0f, 3f), p(4f, 3f))
         // 0.5–1.4 m along the third wall traced, (0, 3) to (4, 3); 1–2 m along the first.
-        val third = MeasureOpening(7.5f, 8.4f, 0f, 2.1f)
-        val first = MeasureOpening(1f, 2f, 1f, 2f)
+        val third = opening(wall = 2, from = 0.5f, to = 1.4f, bottom = 0f, top = 2.1f)
+        val first = opening(wall = 0, from = 1f, to = 2f, bottom = 1f, top = 2f)
         val onPlan = measurePlanOpenings(other, listOf(first, third))
         assertEquals(2, onPlan.size)
         assertOnPlan("A", MeasureOpening(2.6f, 3.5f, 0f, 2.1f), onPlan[0])
