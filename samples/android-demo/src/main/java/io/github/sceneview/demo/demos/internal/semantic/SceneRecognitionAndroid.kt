@@ -94,9 +94,10 @@ private object ProcessDetector {
  * app restarts. One that ONNX Runtime will not load is deleted and fetched once more — a file
  * damaged on the device since its download —, and given up on if the new copy fails too. That
  * second copy is kept and marked ([SceneModelStore.markRefetched]): a later launch tries it again,
- * never a third download. The session lives as long as the process, whose end frees it; the shares
- * handed out close nothing ([Share]), so a replay that closes its detector cannot pull the session
- * from under another one.
+ * never a third download. A copy that loads clears the mark ([SceneModelStore.clearRefetched]), so
+ * a file damaged after that is fetched once more. The session lives as long as the process, whose
+ * end frees it; the shares handed out close nothing ([Share]), so a replay that closes its detector
+ * cannot pull the session from under another one.
  */
 internal class SceneDetectorShare(
     private val storeOf: suspend () -> SceneModelStore,
@@ -182,6 +183,7 @@ internal class SceneDetectorShare(
             val file = fetch(models, onState) ?: return null
             if (attempt > 0) models.markRefetched()
             open(file)?.let { built ->
+                models.clearRefetched()
                 detector = built
                 onState(SceneModelState.Ready)
                 return Share(built)

@@ -88,7 +88,8 @@ class SceneModelStore(
 ) {
     /**
      * Beside the detector's file when that copy was fetched again after ONNX Runtime refused an
-     * earlier one ([markRefetched]): kept across launches, deleted with the file by [discard].
+     * earlier one ([markRefetched]): kept across launches, deleted with the file by [discard], and
+     * once a copy loads ([clearRefetched]).
      */
     private val refetched = File(dir, "${asset.file}$REFETCHED")
 
@@ -168,6 +169,14 @@ class SceneModelStore(
 
     /** Whether the copy on the device was fetched again after ONNX Runtime refused one ([markRefetched]). */
     suspend fun isRefetched(): Boolean = withContext(Dispatchers.IO) { refetched.isFile }
+
+    /**
+     * Forgets [markRefetched] once ONNX Runtime has loaded the copy on the device: a file damaged
+     * there later is fetched once more, as a first refusal is.
+     */
+    suspend fun clearRefetched() {
+        withContext(Dispatchers.IO) { refetched.delete() }
+    }
 
     private fun fraction(onDisk: Long): Float =
         if (asset.bytes > 0L) (onDisk.toFloat() / asset.bytes).coerceIn(0f, 1f) else 0f

@@ -33,8 +33,8 @@ import java.util.concurrent.atomic.AtomicBoolean
  * the others wait for it and show its progress meanwhile. A download cut short — no network, the
  * replay left — resumes where it stopped; a file that fails its check is not fetched again; one
  * that ONNX Runtime refuses is fetched once more, never in a loop — not even one launch after the
- * other, until a copy loads: a file damaged after that is fetched once more. On a metered network nothing is fetched until the user asks, as for the HD pack; a download
- * already under way goes on.
+ * other, until a copy loads: a file damaged after that is fetched once more. On a metered network
+ * nothing is fetched until the user asks, as for the HD pack; a download already under way goes on.
  *
  * Every download goes to a local fake server, into the app's own storage.
  */
