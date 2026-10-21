@@ -26,13 +26,15 @@ import java.io.File
 import java.security.MessageDigest
 import java.util.Collections
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * The detector is shared by every replay of the process: the first one that needs it fetches it,
  * the others wait for it and show its progress meanwhile. A download cut short — no network, the
  * replay left — resumes where it stopped; a file that fails its check is not fetched again; one
- * that ONNX Runtime refuses is fetched once more, never in a loop. On a metered network nothing is
- * fetched until the user asks, as for the HD pack.
+ * that ONNX Runtime refuses is fetched once more, never in a loop — not even one launch after the
+ * other. On a metered network nothing is fetched until the user asks, as for the HD pack; a download
+ * already under way goes on.
  *
  * Every download goes to a local fake server, into the app's own storage.
  */
@@ -178,11 +180,57 @@ class SceneDetectorShareTest {
     }
 
     @Test
+    fun `a model refused after its second download is not fetched again at the next launch`() = runBlocking {
+        MockWebServer().use { server ->
+            repeat(3) { server.enqueue(ok(payload)) }
+            server.start()
+            var opened = 0
+            assertNull(share(server, opens = { opened++; null }).share())
+            assertEquals(2, server.requestCount)
+
+            // The app restarts: a new share on the same storage, ONNX Runtime refusing still.
+            val states = ArrayList<SceneModelState>()
+            assertNull(share(server, opens = { opened++; null }).share { states += it })
+
+            assertEquals("the copy kept on the device was not tried", 3, opened)
+            assertEquals("a third copy was fetched", 2, server.requestCount)
+            assertEquals(SceneModelState.Unusable, states.last())
+
+            // A launch where ONNX Runtime takes it uses that same copy, with no download.
+            assertNotNull(share(server).share())
+            assertEquals(2, server.requestCount)
+        }
+    }
+
+    @Test
+    fun `a replay opened on mobile data while another downloads shows that download`() = runBlocking {
+        MockWebServer().use { server ->
+            server.enqueue(slow(payload))
+            server.start()
+            val metered = AtomicBoolean(false)
+            val detectors = share(server, metered = metered::get)
+
+            val first = async(Dispatchers.Default) { detectors.share() }
+            until("the first replay's download") { part.length() > 0 }
+            // The phone left the Wi-Fi mid-download: the download under way goes on, asked for nothing.
+            metered.set(true)
+            val states = Collections.synchronizedList(ArrayList<SceneModelState>())
+            val second = async(Dispatchers.Default) { detectors.share { states += it } }
+            until("the second replay's progress") { states.any { it is SceneModelState.Downloading } }
+
+            assertFalse("the second replay asked for a download under way: $states", SceneModelState.Metered in states)
+            assertNotNull(first.await())
+            assertNotNull(second.await())
+            assertEquals(1, server.requestCount)
+        }
+    }
+
+    @Test
     fun `on a metered network nothing is fetched before the tap`() = runBlocking {
         MockWebServer().use { server ->
             server.enqueue(ok(payload))
             server.start()
-            val detectors = share(server, metered = true)
+            val detectors = share(server, metered = { true })
             val states = Collections.synchronizedList(ArrayList<SceneModelState>())
 
             val replay = async(Dispatchers.Default) { detectors.share { states += it } }
@@ -200,7 +248,7 @@ class SceneDetectorShareTest {
 
             // Once on the device it is used on any network, the next launch of the app included.
             val nextLaunch = ArrayList<SceneModelState>()
-            assertNotNull(share(server, metered = true).share { nextLaunch += it })
+            assertNotNull(share(server, metered = { true }).share { nextLaunch += it })
             assertEquals(listOf<SceneModelState>(SceneModelState.Ready), nextLaunch)
             assertEquals(1, server.requestCount)
         }
@@ -208,11 +256,11 @@ class SceneDetectorShareTest {
 
     private fun share(
         server: MockWebServer,
-        metered: Boolean = false,
+        metered: () -> Boolean = { false },
         opens: (File) -> SceneDetector? = { FakeDetector },
     ) = SceneDetectorShare(
         storeOf = { SceneModelStore(dir, OkHttpClient(), server.url("/").toString().trimEnd('/'), asset) },
-        metered = { metered },
+        metered = metered,
         open = { file -> opens(file) },
     )
 
