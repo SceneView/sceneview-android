@@ -3,15 +3,16 @@
 Decision record for hardware-accelerated 3D rendering on Desktop. `samples/desktop-demo`
 now consumes `SceneViewer`.
 
-**Last updated:** 2026-10-16 · **Decision:** superseded — see
+**Last updated:** 2026-10-21 · **Decision:** superseded — see
 [compose-multiplatform.md](compose-multiplatform.md). The offscreen architecture below
 still stands; the *binding supply* decision does not.
 
 > **2026-10-16 update — the binding is JNI, the floor is JDK 21.** Since filament-kmp
 > 0.7.0 the desktop binding calls Filament through JNI instead of Project Panama (FFM),
 > from `io.github.erkko68.filament:filament-jni-desktop`; filament-kmp itself needs
-> only JDK 17. SceneView is on 0.7.3 since
-> [#4518](https://github.com/sceneview/sceneview/pull/4518). The `sceneview-compose`
+> only JDK 17. SceneView moved to 0.7.3 in
+> [#4518](https://github.com/sceneview/sceneview/pull/4518) and is on 0.8.0 (Filament
+> 1.78.0) since [#4706](https://github.com/sceneview/sceneview/pull/4706). The `sceneview-compose`
 > desktop target now runs on **JDK 21+**, not 22+, and needs no
 > `--enable-native-access=ALL-UNNAMED`. 21 rather than 17 because the module exposes
 > `dev.romainguy:kotlin-math` (`Float3`…) as `api`, and kotlin-math 1.7.0+ ships JDK 21
