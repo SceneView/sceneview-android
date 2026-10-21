@@ -25,8 +25,8 @@ import java.nio.channels.FileChannel
 
 /**
  * Recognition run on real recordings, off the phone: every `.svscan` and `.rrd` under
- * `SCENEVIEW_SCAN_CORPUS` is opened with the demo's own readers, recognised with the bundled
- * model, and written under `SCENEVIEW_SCAN_OUT/<scan>/`: `recognized.json` (what was found: label,
+ * `SCENEVIEW_SCAN_CORPUS` is opened with the demo's own readers, recognised with the app's
+ * detector, and written under `SCENEVIEW_SCAN_OUT/<scan>/`: `recognized.json` (what was found: label,
  * box, confidence, views; and per keyframe its detections and timings), one annotated
  * `keyframe-NN.png` per keyframe, and `timings.txt`. Skipped when either variable is unset.
  *
@@ -35,9 +35,11 @@ import java.nio.channels.FileChannel
  *   ./gradlew :samples:android-demo:testDebugUnitTest --tests '*SceneRecognitionCorpusTest*'
  * ```
  *
- * The model is `src/main/assets/ml/yolox_tiny.onnx` (fetched by `tools/fetch-assets.sh
- * --scope android`) or the file `SCENEVIEW_SCENE_MODEL` names. `SCENEVIEW_SCENE_PHOTOS` runs the
- * models on a folder of plain photos instead, for the found / missed / time-per-photo table.
+ * The detector is the file `SCENEVIEW_SCENE_MODEL` names, else the app's own YOLOX-Tiny,
+ * downloaded once into `<java.io.tmpdir>/sceneview-scene-detector/` and checked as the app checks
+ * it. Without network and without `SCENEVIEW_SCENE_MODEL`, both runs are skipped. CI sets none of
+ * these variables, so it never downloads anything. `SCENEVIEW_SCENE_PHOTOS` runs the models on a
+ * folder of plain photos instead, for the found / missed / time-per-photo table.
  */
 class SceneRecognitionCorpusTest {
     @get:Rule
@@ -50,9 +52,11 @@ class SceneRecognitionCorpusTest {
         assumeTrue("$CORPUS and $OUT unset: no corpus run", corpus != null && out != null)
         val scans = corpus!!.walk().filter { it.isFile && it.extension in SCANS }.sorted().toList()
         assumeTrue("no .svscan or .rrd under $corpus", scans.isNotEmpty())
-        val detector = models().firstOrNull()?.let { OnnxSceneDetector(it.readBytes(), it.nameWithoutExtension) }
-        println("recognising ${scans.size} scans with ${detector?.name ?: "no model: openings only"}")
-        (detector ?: NoDetector).use { model -> scans.forEach { run(it, model, out!!) } }
+        val model = models().firstOrNull()
+        assumeTrue("no detector: set $MODEL, or run with network to download it", model != null)
+        val (name, file) = model!!
+        println("recognising ${scans.size} scans with $name")
+        OnnxSceneDetector(mapped(file), name).use { detector -> scans.forEach { run(it, detector, out!!) } }
     }
 
     @Test
@@ -61,13 +65,14 @@ class SceneRecognitionCorpusTest {
         val out = System.getenv(OUT)?.let(::File)
         assumeTrue("$PHOTOS and $OUT unset: no photo run", photos != null && out != null)
         val files = photos!!.listFiles { f -> f.extension.lowercase() in IMAGES }.orEmpty().sorted()
+        assumeTrue("no photos under $photos", files.isNotEmpty())
         val models = models()
-        assumeTrue("no photos or no model", files.isNotEmpty() && models.isNotEmpty())
-        for (model in models) {
-            val dir = File(out, "photos-${model.nameWithoutExtension}").apply { mkdirs() }
+        assumeTrue("no detector: set $MODEL, or run with network to download it", models.isNotEmpty())
+        for ((name, model) in models) {
+            val dir = File(out, "photos-$name").apply { mkdirs() }
             val table = StringBuilder("photo\twidth\theight\tdetect_ms\tfound\n")
             val sheet = ArrayList<SceneImage>()
-            OnnxSceneDetector(mapped(model), model.nameWithoutExtension).use { detector ->
+            OnnxSceneDetector(mapped(model), name).use { detector ->
                 // The first run pays the session's warm-up: timed apart, not in the table.
                 val warm = System.nanoTime()
                 detector.detect(SceneImage(WARM_UP, WARM_UP, IntArray(WARM_UP * WARM_UP)))
@@ -173,20 +178,22 @@ class SceneRecognitionCorpusTest {
         }
     }.getOrNull()
 
-    /** The models to run: `SCENEVIEW_SCENE_MODEL` (paths, `:`-separated), else the bundled one if fetched. */
-    private fun models(): List<File> = System.getenv(MODEL)?.split(File.pathSeparator)?.map(::File)?.filter { it.isFile }
-        ?: listOf(File(BUNDLED_MODEL)).filter { it.isFile }
-
-    /** [model] mapped in memory, as the app maps it from the APK: a direct buffer, never on the heap. */
-    private fun mapped(model: File) = FileChannel.open(model.toPath()).use { it.map(FileChannel.MapMode.READ_ONLY, 0, it.size()) }
-
-    private object NoDetector : SceneDetector {
-        override val name = "none"
-
-        override fun detect(image: SceneImage) = emptyList<Detection2D>()
-
-        override fun close() = Unit
+    /**
+     * The models to run, by name: the files `SCENEVIEW_SCENE_MODEL` names (`:`-separated), else the
+     * app's own detector, downloaded once into the temp folder by the app's own store. Empty when
+     * that download fails (no network): the caller skips.
+     */
+    private fun models(): List<Pair<String, File>> {
+        System.getenv(MODEL)?.let { paths ->
+            return paths.split(File.pathSeparator).map(::File).filter { it.isFile }.map { it.nameWithoutExtension to it }
+        }
+        val cache = File(System.getProperty("java.io.tmpdir"), DOWNLOAD_DIR)
+        val file = runBlocking { SceneModelStore(cache).fetch() }
+        return listOfNotNull(file?.let { SceneModel.NAME to it })
     }
+
+    /** [model] mapped in memory, as the app maps its downloaded copy: a direct buffer, never on the heap. */
+    private fun mapped(model: File) = FileChannel.open(model.toPath()).use { it.map(FileChannel.MapMode.READ_ONLY, 0, it.size()) }
 
     private companion object {
         const val CORPUS = "SCENEVIEW_SCAN_CORPUS"
@@ -194,8 +201,8 @@ class SceneRecognitionCorpusTest {
         const val PHOTOS = "SCENEVIEW_SCENE_PHOTOS"
         const val MODEL = "SCENEVIEW_SCENE_MODEL"
 
-        /** Relative to the module, where Gradle runs its unit tests. */
-        const val BUNDLED_MODEL = "src/main/assets/ml/yolox_tiny.onnx"
+        /** Under `java.io.tmpdir`: kept between runs, so the detector downloads once per machine. */
+        const val DOWNLOAD_DIR = "sceneview-scene-detector"
         val SCANS = setOf("svscan", "rrd")
         val IMAGES = setOf("jpg", "jpeg", "png")
         const val KEYFRAME_STEP = 6
