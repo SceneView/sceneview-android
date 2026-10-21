@@ -48,6 +48,24 @@ class SceneFusionTest {
     }
 
     @Test
+    fun `a chair a metre or two off the origin on a diagonal is boxed square, not turned`() {
+        // The session's origin is wherever the phone started, so furniture 1–2 m away along a
+        // diagonal is the common case: the box must not turn with where the chair stands.
+        val diagonal = listOf(1f to -1f, -1f to 1f, 1.2f to 1.2f, -1.2f to -1.2f, 1.4f to 1.4f, -1.4f to -1.4f)
+        val fits = diagonal.map { (x, z) ->
+            val points = slab(x, z, yaw = 0f, length = 0.5f, depth = 0.5f, height = 0.9f)
+            val box = FootprintFit.fit(points.cloud, points.all)!!
+            val truth = ScanBox(x, z, 0f, 0f, 0.5f, 0.5f, 0.9f)
+            Triple(x to z, quarterTurnOff(box.yaw), SceneFusion.footprintIou(box, truth))
+        }
+        val report = fits.joinToString("; ") { (at, turned, iou) ->
+            "(%.1f, %.1f): turned %.1f°, IoU %.2f".format(at.first, at.second, turned, iou)
+        }
+        println("diagonal chairs: $report")
+        assertTrue(report, fits.all { (_, turned, iou) -> turned <= MAX_TURN_DEG && iou >= MIN_SQUARE_IOU })
+    }
+
+    @Test
     fun `footprints overlap as their floor areas do`() {
         val a = TruthDetector.box(0f, 0f, 1f, 1f, 1f)
         assertEquals(1f, SceneFusion.footprintIou(a, a), 0.02f)
@@ -231,7 +249,19 @@ class SceneFusionTest {
         return DebugPose(x, y, z, qx / n, qy / n, qz / n, qw / n)
     }
 
+    /** How far [yaw] is from the world's axes, in degrees, a quarter turn being the same square. */
+    private fun quarterTurnOff(yaw: Float): Float {
+        val deg = (yaw * 180 / PI).toFloat().mod(90f)
+        return minOf(deg, 90f - deg)
+    }
+
     private companion object {
         const val STEP = 0.02f
+
+        /** A chair's box may turn this much off its sides, one degree past the fit's angle step… */
+        const val MAX_TURN_DEG = 2f
+
+        /** …and must cover this much of the chair's footprint (a 0.5 m square 2° off still covers 0.97). */
+        const val MIN_SQUARE_IOU = 0.85f
     }
 }
