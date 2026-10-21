@@ -643,9 +643,10 @@ abstract class BundleChangelogAsset extends DefaultTask {
     @OutputDirectory
     abstract DirectoryProperty getOutputDir()
 
-    // Collator order (collate-changelog.sh). `Changed` is the fallback bucket.
+    // Collator order and tags (collate-changelog.sh). `Changed` is the fallback
+    // bucket. WhatsNewCategoryAlignmentTest fails when the two drift apart.
     static final List<String> CATEGORIES =
-            ['Added', 'Changed', 'Fixed', 'Performance', 'Removed', 'Tests', 'Docs']
+            ['Added', 'Changed', 'Fixed', 'Security', 'Performance', 'Removed', 'Tests', 'Docs']
 
     // These helpers are deliberately NOT private. Gradle decorates the task
     // class at runtime, and a Groovy closure dispatching onto the decorated
@@ -655,6 +656,7 @@ abstract class BundleChangelogAsset extends DefaultTask {
         switch (raw.toLowerCase().trim()) {
             case ['added', 'new']: return 'Added'
             case ['fixed', 'fix', 'bugfix']: return 'Fixed'
+            case ['security']: return 'Security'
             case ['performance', 'perf']: return 'Performance'
             case ['removed', 'remove']: return 'Removed'
             case ['tests', 'test']: return 'Tests'
