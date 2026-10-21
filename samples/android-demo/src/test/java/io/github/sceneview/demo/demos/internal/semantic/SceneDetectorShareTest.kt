@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  * the others wait for it and show its progress meanwhile. A download cut short — no network, the
  * replay left — resumes where it stopped; a file that fails its check is not fetched again; one
  * that ONNX Runtime refuses is fetched once more, never in a loop — not even one launch after the
- * other. On a metered network nothing is fetched until the user asks, as for the HD pack; a download
+ * other, until a copy loads: a file damaged after that is fetched once more. On a metered network nothing is fetched until the user asks, as for the HD pack; a download
  * already under way goes on.
  *
  * Every download goes to a local fake server, into the app's own storage.
@@ -203,6 +203,29 @@ class SceneDetectorShareTest {
     }
 
     @Test
+    fun `a copy that loads clears the mark, so a file damaged later is fetched once more`() = runBlocking {
+        MockWebServer().use { server ->
+            repeat(4) { server.enqueue(ok(payload)) }
+            server.start()
+            // ONNX Runtime refuses the first copy and takes the one fetched again.
+            var opened = 0
+            assertNotNull(share(server, opens = { if (opened++ == 0) null else FakeDetector }).share())
+            assertEquals(2, server.requestCount)
+            assertFalse("the mark outlived a copy that loaded", store(server).isRefetched())
+
+            // Later the file is damaged on the device — same size, other bytes — and ONNX Runtime
+            // refuses it: the next launch fetches it once more, and only once.
+            File(dir, sha).let { file -> file.writeBytes(file.readBytes().also { it[0] = (it[0] + 1).toByte() }) }
+            val states = ArrayList<SceneModelState>()
+            assertNotNull(share(server, opens = { intactOrRefused(it) }).share { states += it })
+
+            assertEquals("the damaged copy was not fetched exactly once more", 3, server.requestCount)
+            assertEquals(SceneModelState.Ready, states.last())
+            assertFalse("the mark outlived a copy that loaded", store(server).isRefetched())
+        }
+    }
+
+    @Test
     fun `a replay opened on mobile data while another downloads shows that download`() = runBlocking {
         MockWebServer().use { server ->
             server.enqueue(slow(payload))
@@ -288,10 +311,18 @@ class SceneDetectorShareTest {
         metered: () -> Boolean = { false },
         opens: (File) -> SceneDetector? = { FakeDetector },
     ) = SceneDetectorShare(
-        storeOf = { SceneModelStore(dir, OkHttpClient(), server.url("/").toString().trimEnd('/'), asset) },
+        storeOf = { store(server) },
         metered = metered,
         open = { file -> opens(file) },
     )
+
+    /** The detector's store on the app's storage, as a launch of the app builds it. */
+    private fun store(server: MockWebServer) =
+        SceneModelStore(dir, OkHttpClient(), server.url("/").toString().trimEnd('/'), asset)
+
+    /** ONNX Runtime as it treats a file damaged on the device: it loads only the intact model. */
+    private fun intactOrRefused(file: File): SceneDetector? =
+        if (file.readBytes().contentEquals(payload)) FakeDetector else null
 
     private fun ok(body: ByteArray) = MockResponse.Builder().code(200).body(Buffer().write(body)).build()
 
