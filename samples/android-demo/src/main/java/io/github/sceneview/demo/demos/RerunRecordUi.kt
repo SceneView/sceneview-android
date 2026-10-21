@@ -12,6 +12,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.UTurnLeft
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import io.github.sceneview.demo.demos.internal.PointsRise
 import io.github.sceneview.demo.demos.internal.ScanActivity
 import io.github.sceneview.demo.demos.internal.ScanTurn
 import io.github.sceneview.math.Position
@@ -124,7 +125,11 @@ internal fun ScanHud(
             Spacer(Modifier.width(Space.sm))
             // What is being scanned leads (#4647): `Room 2 · Scanning · 0:42`.
             // Working, paused or stuck (#4540): stuck says so, and the coaching line says why.
-            val status = activity?.let { ScanCopy.status(it, clock) } ?: ScanCopy.status(phase, clock)
+            // Points still rising are a scan at work, whatever the floor's coverage says.
+            val rise = remember { PointsRise() }
+            val rising = rise.rising(points, seconds)
+            val shown = if (activity == ScanActivity.Stuck && rising) ScanActivity.Working else activity
+            val status = shown?.let { ScanCopy.status(it, clock) } ?: ScanCopy.status(phase, clock)
             Text(
                 text = label?.let { "$it · $status" } ?: status,
                 style = OnScrimTitle,
