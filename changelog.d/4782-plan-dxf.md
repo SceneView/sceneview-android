@@ -1,0 +1,2 @@
+<!-- category: Added -->
+- **Demo app: the 3D Scan floor plan is shared as a DXF drawing next to its PDF ([#4782](https://github.com/sceneview/sceneview/pull/4782)).** AutoCAD 2000 (AC1015) ASCII in millimetres, with the walls as one closed polyline and the wall lengths, the room's name and area and a "verify on site" legend on their own layers (`WALLS`, `OPENINGS`, `DIMENSIONS`, `TEXT`, `LEGEND`). Dimensions are plain lines and text carrying the plan's own figures and marks. The writer is pure Kotlin, with no new dependency.

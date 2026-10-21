@@ -895,7 +895,7 @@ private suspend fun sharePlanPdf(
         clipData = ClipData.newRawUri(file.name, uri)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
-    context.startActivity(Intent.createChooser(send, title).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    context.startActivity(Intent.createChooser(withPlanDxf(context, send, file, survey, words), title).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     return true
 }
 
