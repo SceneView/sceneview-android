@@ -20,8 +20,8 @@ import kotlin.math.sqrt
  * with the page (the turn that boxes it tightest, one of its own walls along x), its longer
  * side runs along x, y goes down the page, and the walls run clockwise from the corner nearest
  * the top-left — wall A along the top. Every wall was measured end to end, so every wall is
- * seen, and no figure is an estimate. A tape-measured figure has no scatter: its `±` is 0,
- * which the plan prints as its own rounding step.
+ * seen, and no figure is an estimate. A traced figure has no scatter: its `±` is 0, and the plan
+ * rounds each figure in its own units.
  *
  * `null` under three corners, or for an outline with no area.
  */
