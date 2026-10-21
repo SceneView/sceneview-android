@@ -14,9 +14,10 @@ import kotlin.math.sqrt
 /**
  * The floor plan as a DXF drawing, for a CAD tool to take it up where the PDF stops.
  *
- * AutoCAD 2000 (`AC1015`) in ASCII: the oldest version with the light polyline, which every CAD
- * tool still opens. One drawing unit is a millimetre (`$INSUNITS` 4), y up as CAD has it. Five
- * layers:
+ * DXF `AC1015` (R2000, the version AutoCAD 2000 introduced) in ASCII: the oldest version with the
+ * light polyline. Its structure follows the format's AC1015 reference, which the unit tests check
+ * by reading the file back. One drawing unit is a millimetre (`$INSUNITS` 4), y up as CAD has it.
+ * Five layers:
  * - [WALLS]: the room's outline, one closed polyline;
  * - [OPENINGS]: each door with its leaf and swing, each window with its frame, and its size;
  * - [DIMENSIONS]: each wall's length as plain lines and text. No DIMENSION entity: a CAD tool
@@ -65,7 +66,9 @@ object RoomPlanDxf {
     /**
      * Writes [survey] with its [openings] to [out] as a DXF drawing, its figures worded by [wording].
      *
-     * @param labels each wall's dimension, in the order of [RoomSurvey.walls]: the plan's own.
+     * @param labels each wall's dimension, in the order of [RoomSurvey.walls]: the plan's own. A
+     *   blank one, a wall with no length to give, leaves its wall undimensioned: no line without its figure.
+     * @throws IllegalArgumentException when a figure to draw is not a finite number.
      */
     fun write(
         out: OutputStream,
@@ -176,7 +179,7 @@ object RoomPlanDxf {
             ends.forEachIndexed { i, (a, b) ->
                 val label = labels.getOrElse(i) { "" }
                 val d = b - a
-                if (d.length < JOIN) return@forEachIndexed
+                if (label.isBlank() || d.length < JOIN) return@forEachIndexed
                 if (min(abs(d.x), abs(d.y)) > ALIGNED * max(abs(d.x), abs(d.y))) {
                     dimension(a, b, label, DIMENSION_OFFSET)
                     return@forEachIndexed
@@ -443,7 +446,7 @@ object RoomPlanDxf {
                 pair(50, 0.0)
                 pair(71, 0)
                 pair(42, DIMENSION_TEXT)
-                // A TrueType font: AutoCAD's own shape font has no ≈, ² or ×.
+                // A TrueType font: the standard shape font has no ≈, ² or ×.
                 pair(3, "arial.ttf")
                 pair(4, "")
             }
@@ -524,7 +527,7 @@ object RoomPlanDxf {
             }
         }
 
-        /** The dictionaries AutoCAD 2000 looks for, and the model's and the sheet's layouts. */
+        /** The dictionaries an R2000 reader looks for, and the model's and the sheet's layouts. */
         private fun StringBuilder.objects() {
             dictionary(root, "0", "ACAD_GROUP" to groups, "ACAD_LAYOUT" to layouts)
             dictionary(groups, root)
@@ -633,7 +636,7 @@ object RoomPlanDxf {
             const val PLOT_MODEL = 1024
             const val MILLIMETRES = 4
 
-            /** Name, colour (AutoCAD's index) and line weight (hundredths of a millimetre) of each layer. */
+            /** Name, colour index (ACI) and line weight (hundredths of a millimetre) of each layer. */
             val LAYERS = listOf(
                 Triple("0", 7, -3),
                 Triple(WALLS, 7, 50),
@@ -695,7 +698,7 @@ object RoomPlanDxf {
     private const val QUARTER_TURN = 90.0
     private const val ANGLE_EPSILON = 1e-3
 
-    /** [text] as AutoCAD 2000 reads it: ASCII, anything else as its `\U+XXXX` escape. */
+    /** [text] as an R2000 file carries it: ASCII, anything else as its `\U+XXXX` escape. */
     private fun encode(text: String): String = buildString {
         var i = 0
         while (i < text.length) {
@@ -739,8 +742,12 @@ object RoomPlanDxf {
         value()
     }
 
-    /** To the thousandth of a millimetre, its trailing zeros dropped. */
+    /**
+     * To the thousandth of a millimetre, its trailing zeros dropped. A figure that is not finite
+     * stops the drawing: written as `NaN` or `Infinity`, it would make the whole file unreadable.
+     */
     private fun number(value: Double): String {
+        require(value.isFinite()) { "a DXF figure must be a finite number, not $value" }
         val text = String.format(Locale.US, "%.3f", value).trimEnd('0').trimEnd('.')
         return if (text == "-0") "0" else text
     }
