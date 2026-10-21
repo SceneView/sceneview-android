@@ -1,5 +1,6 @@
 package io.github.sceneview.demo.demos
 
+import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
@@ -91,6 +92,7 @@ import io.github.sceneview.ar.rememberARCameraStream
 import io.github.sceneview.ar.rememberArGuidanceState
 import io.github.sceneview.ar.rememberHostLifecycle
 import io.github.sceneview.demo.ARCameraInitScrim
+import io.github.sceneview.demo.BuildConfig
 import io.github.sceneview.demo.common.ForcedTrackingFailure
 import io.github.sceneview.demo.common.LocalStatusBarIcons
 import io.github.sceneview.demo.common.QaCameraBackdrop
@@ -147,6 +149,8 @@ import io.github.sceneview.demo.demos.internal.MeasurePlanTap
 import io.github.sceneview.demo.demos.internal.measurePlanTap
 import io.github.sceneview.demo.demos.internal.measurePointHapticEvent
 import io.github.sceneview.demo.demos.internal.measurePointsMoved
+import io.github.sceneview.demo.demos.internal.MeasureQaPoint
+import io.github.sceneview.demo.demos.internal.measureQaLines
 import io.github.sceneview.demo.demos.internal.measureRaisingHeight
 import io.github.sceneview.demo.demos.internal.measureRayFloorHit
 import io.github.sceneview.demo.demos.internal.MeasureRefusal
@@ -237,6 +241,11 @@ private class MeasureAim(
     val view: MeasureAimView,
     val createAnchor: () -> Anchor?,
     val reuse: Anchor?,
+    /**
+     * What the debug QA log records for a point committed from this aim. Built only in debug
+     * builds and read only on a commit, so release does no extra work per frame.
+     */
+    val qa: (() -> MeasureQaPoint)?,
 )
 
 /** The reticle as the screen draws it — compared with [AIM_EPSILON] before each state write. */
@@ -335,14 +344,37 @@ fun MeasureScreen(onBack: () -> Unit) {
     DisposableEffect(Unit) {
         onDispose { latestBoard[0].allPoints.distinct().forEach { it.detach() } }
     }
-    fun commit(next: MeasureBoard<Anchor>) {
+    // Debug-only accuracy log (MeasureQaRecorder): what each point was committed from, and the
+    // last camera tracking state. Release builds never create the recorder.
+    val qaRecorder = remember { if (BuildConfig.DEBUG) MeasureQaRecorder(context) else null }
+    DisposableEffect(qaRecorder) { onDispose { qaRecorder?.close() } }
+    val qaPoints = remember { HashMap<Anchor, MeasureQaPoint>() }
+    val qaTracking = remember { arrayOfNulls<String>(1) }
+    fun recordQa(reason: String, logged: MeasureBoard<Anchor>) {
+        val recorder = qaRecorder ?: return
+        val lines = measureQaLines(
+            board = logged,
+            point = { anchor ->
+                val now = positions[anchor] ?: anchor.pose.toPosition()
+                qaPoints[anchor]?.copy(position = now) ?: MeasureQaPoint(now)
+            },
+            tracking = qaTracking[0],
+            liveHeight = shownHeight,
+            device = Build.MODEL,
+            app = BuildConfig.VERSION_NAME,
+        )
+        recorder.record(reason, logged.isEmpty, lines)
+    }
+    fun commit(next: MeasureBoard<Anchor>, qaReason: String) {
         val kept = next.allPoints.toSet()
         board.allPoints.distinct().filterNot { it in kept }.forEach { it.detach() }
+        qaPoints.keys.retainAll(kept)
         board = next
         positions = next.allPoints.distinct().associateWith { positions[it] ?: it.pose.toPosition() }
         aimControl.update(null)
         // The board ends a door or window when its wall goes: the wall aim goes with it.
         if (!next.markingOpening) wallAim = null
+        recordQa(qaReason, next)
     }
 
     var trackingFailureReason by remember { mutableStateOf<TrackingFailureReason?>(null) }
@@ -403,13 +435,13 @@ fun MeasureScreen(onBack: () -> Unit) {
         tapRefusalAt = System.nanoTime()
         haptic.play(MeasureHapticEvent.Refused)
     }
-    fun stopMarking() = commit(board.stopOpening())
+    fun stopMarking() = commit(board.stopOpening(), "opening-stop")
     // The opening's two corners: kept on the wall, either way round, once they are apart.
     fun markOpeningCorner() {
         val point = wallAim ?: return
         val first = board.openingCorner
         if (first == null) {
-            commit(board.withOpeningCorner(point))
+            commit(board.withOpeningCorner(point), "opening-corner")
             tapRefusal = null
             haptic.play(MeasureHapticEvent.OpeningCorner)
             return
@@ -418,7 +450,7 @@ fun MeasureScreen(onBack: () -> Unit) {
         if (opening == null) {
             refuse(MeasureRefusal.OpeningTooSmall)
         } else {
-            commit(board.addOpening(opening))
+            commit(board.addOpening(opening), "opening")
             stopMarking()
             tapRefusal = null
             haptic.play(MeasureHapticEvent.OpeningAdded)
@@ -432,7 +464,7 @@ fun MeasureScreen(onBack: () -> Unit) {
             markOpeningCorner()
         } else if (phase == MeasurePhase.Raising) {
             liveHeight?.let {
-                commit(board.lockHeight(it))
+                commit(board.lockHeight(it), "height")
                 haptic.play(MeasureHapticEvent.HeightLocked)
             }
         } else {
@@ -441,7 +473,9 @@ fun MeasureScreen(onBack: () -> Unit) {
             if (next == null || next == board) {
                 refuse(if (current == null) MeasureRefusal.NoSurface else MeasureRefusal.AnchorFailed)
             } else {
-                commit(next)
+                val qa = current?.qa?.takeIf { qaRecorder != null }?.invoke()
+                if (qa != null) next.allPoints.filterNot { it in qaPoints }.forEach { qaPoints[it] = qa }
+                commit(next, if (current?.view?.closes == true) "close" else "point")
                 tapRefusal = null
                 if (next.phase == MeasurePhase.Raising) {
                     liveHeight = null
@@ -477,7 +511,7 @@ fun MeasureScreen(onBack: () -> Unit) {
                 },
                 onReset = {
                     stopMarking()
-                    commit(board.clear())
+                    commit(board.clear(), "reset")
                     liveWalls.reset()
                 },
                 controls = { MeasureSettings(units = units, onUnits = { units = it }) },
@@ -487,7 +521,7 @@ fun MeasureScreen(onBack: () -> Unit) {
                         icon = Icons.Rounded.Done,
                         label = stringResource(R.string.demo_ar_measure_action_done),
                         onClick = {
-                            commit(board.finish())
+                            commit(board.finish(), "done")
                             haptic.play(MeasureHapticEvent.ChainEnded)
                         },
                         enabled = board.canFinish,
@@ -497,7 +531,7 @@ fun MeasureScreen(onBack: () -> Unit) {
                         label = stringResource(R.string.demo_ar_measure_action_undo),
                         onClick = {
                             // An opening's first corner goes before anything measured.
-                            commit(board.undo())
+                            commit(board.undo(), "undo")
                         },
                         enabled = !board.isEmpty,
                     ),
@@ -507,7 +541,7 @@ fun MeasureScreen(onBack: () -> Unit) {
                         label = stringResource(R.string.demo_ar_measure_action_clear),
                         onClick = {
                             stopMarking()
-                            commit(board.clear())
+                            commit(board.clear(), "clear")
                         },
                         enabled = !board.isEmpty,
                     ).takeIf { board.mode != MeasureMode.Room },
@@ -519,7 +553,7 @@ fun MeasureScreen(onBack: () -> Unit) {
                             if (marking) {
                                 stopMarking()
                             } else {
-                                commit(board.startOpening())
+                                commit(board.startOpening(), "opening-start")
                                 aimControl.update(null)
                                 aim = null
                             }
@@ -548,6 +582,7 @@ fun MeasureScreen(onBack: () -> Unit) {
                         icon = Icons.Rounded.IosShare,
                         label = shareTitle,
                         onClick = {
+                            recordQa("share", board)
                             shareText(
                                 context = context,
                                 text = measureShareText(figureNumbers, units, locale),
@@ -584,7 +619,7 @@ fun MeasureScreen(onBack: () -> Unit) {
                             mode = board.mode,
                             onSelect = { mode ->
                                 if (mode != board.mode) {
-                                    commit(board.withMode(mode))
+                                    commit(board.withMode(mode), "mode")
                                     haptic.play(MeasureHapticEvent.ModeChanged)
                                 }
                             },
@@ -630,6 +665,7 @@ fun MeasureScreen(onBack: () -> Unit) {
                         onSessionUpdated = sessionUpdated@{ _: Session, frame: Frame ->
                             cameraReady = true
                             isTracking = frame.camera.trackingState == TrackingState.TRACKING
+                            if (qaRecorder != null) qaTracking[0] = frame.camera.trackingState.name
                             // The plan covers the camera: nothing under it is read, aimed at or ticked.
                             if (plan != null) return@sessionUpdated
                             val cameraPose = frame.camera.pose
@@ -1798,7 +1834,23 @@ private fun findMeasureAim(
     } else {
         null
     }
-    return MeasureAim(MeasureAimView(snap, closes, raw.source, foot), createAnchor, reuse)
+    // Debug only, and lazy: release builds allocate nothing here, and no JNI call runs before a commit.
+    val qa: (() -> MeasureQaPoint)? = if (BuildConfig.DEBUG) {
+        {
+            MeasureQaPoint(
+                position = snapped,
+                source = raw.source.name,
+                snap = snap.kind.name,
+                plane = raw.plane?.let { plane -> runCatching { plane.type.name }.getOrNull() },
+                // The aim is at most a frame old; a frame ARCore already replaced may refuse.
+                timestampNs = runCatching { frame.timestamp }.getOrNull(),
+                cameraDistance = measureDistanceMeters(origin, snapped),
+            )
+        }
+    } else {
+        null
+    }
+    return MeasureAim(MeasureAimView(snap, closes, raw.source, foot), createAnchor, reuse, qa)
 }
 
 private const val REUSE_EPSILON = 0.002f
@@ -1809,6 +1861,8 @@ private class MeasureHit(
     val createHitAnchor: (() -> Anchor?)?,
     /** How the hit plane faces; `null` off a plane. */
     val planeKind: MeasurePlaneKind?,
+    /** The hit plane, for the QA log only (its type is read on a commit); `null` off a plane. */
+    val plane: Plane? = null,
 )
 
 /** Accuracy-ordered hit at the screen centre, without creating an anchor. */
@@ -1825,6 +1879,7 @@ private fun hitTestCenter(frame: Frame, session: Session?, x: Float, y: Float, a
             source = MeasureHitSource.Plane,
             createHitAnchor = { hit.takeIf { it.trackable.trackingState == TrackingState.TRACKING }?.createAnchor() },
             planeKind = plane.liveKind.toMeasureKind(),
+            plane = plane,
         )
     }
     if (allowDepth) {
