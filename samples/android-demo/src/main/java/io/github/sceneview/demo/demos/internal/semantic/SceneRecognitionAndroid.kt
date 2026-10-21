@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
 import androidx.annotation.StringRes
+import androidx.annotation.VisibleForTesting
 import io.github.sceneview.demo.R
 import io.github.sceneview.demo.hdpack.isOnMeteredNetwork
 import kotlinx.coroutines.CoroutineStart
@@ -236,7 +237,8 @@ internal class SceneDetectorShare(
  * interpreter built: the mapping on [Dispatchers.IO], the interpreter on [Dispatchers.Default]. A
  * device LiteRT has no native library for (32-bit x86) gets no detector, never a crash.
  */
-private suspend fun openSceneDetector(file: File): SceneDetector? = try {
+@VisibleForTesting
+internal suspend fun openSceneDetector(file: File): SceneDetector? = try {
     val mapped = withContext(Dispatchers.IO) {
         FileInputStream(file).use { it.channel.map(FileChannel.MapMode.READ_ONLY, 0, it.channel.size()) }
     }

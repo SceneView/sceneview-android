@@ -35,6 +35,13 @@ object YoloxCodec {
     const val MIN_SCORE = 0.3f
     const val NMS_IOU = 0.45f
     private const val BOX_VALUES = 5
+    private const val CHANNELS = 3
+
+    /** The input side of YOLOX-Tiny and Nano, for a model whose tensors do not say it. */
+    private const val DEFAULT_SIZE = 416
+
+    /** The input side of a model and the width of its output rows, read from its tensors. */
+    data class TensorLayout(val size: Int, val columns: Int)
 
     /**
      * Writes [image] letterboxed into a [size] × [size] input, channels first, into [into] (3 ×
@@ -143,6 +150,29 @@ object YoloxCodec {
         }
         return kept
     }
+
+    /**
+     * [planar] — the three planes [input] writes for a [size]² input — rewritten into [into] with
+     * the channels last, pixel after pixel: blue, green, red. That is how a conversion that moves
+     * the export's channel axis last (NCHW to NHWC, the channels kept in their order) reads it.
+     */
+    fun channelsLast(planar: FloatArray, size: Int, into: FloatArray) {
+        val pixels = size * size
+        require(planar.size >= CHANNELS * pixels && into.size >= CHANNELS * pixels) { "3 × $size² floats" }
+        for (channel in 0 until CHANNELS) {
+            val plane = channel * pixels
+            for (pixel in 0 until pixels) into[pixel * CHANNELS + channel] = planar[plane + pixel]
+        }
+    }
+
+    /**
+     * The layout a channels-last conversion's tensors give — [input] and [output] are their
+     * shapes: the input's side, `[1, size, size, 3]`, and the output's last dimension.
+     */
+    fun channelsLastLayout(input: IntArray, output: IntArray): TensorLayout = TensorLayout(
+        size = input.getOrElse(1) { 0 }.takeIf { it > 0 } ?: DEFAULT_SIZE,
+        columns = output.last(),
+    )
 
     /** How many rows a [size]² input gives: one per cell of the three grids. */
     fun rowsFor(size: Int): Int = STRIDES.sumOf { (size / it) * (size / it) }
