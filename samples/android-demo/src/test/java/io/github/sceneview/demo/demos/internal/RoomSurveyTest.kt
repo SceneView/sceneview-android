@@ -349,10 +349,15 @@ class RoomSurveyTest {
         assertTrue(rows[0], rows[0].startsWith(SurveyFormat.ESTIMATE) && rows[0].endsWith("ft²"))
         assertTrue(plan.area.toString(), plan.area!!.startsWith(SurveyFormat.ESTIMATE) && plan.area!!.endsWith("ft²"))
         assertEquals(survey.walls.size, walls.size)
-        // The walls bound an estimated area, so each length is given, as an estimate, in feet and inches.
+        // The walls bound an estimated area, so each length is given, as an estimate, in feet and inches:
+        // as a tape reads it in the wall table, as a dimension line writes it on the plan.
+        val marks = Regex("\\d+' \\d+\"")
         assertTrue(survey.walls.toString(), survey.walls.all { it.sized && it.length.estimate })
         assertTrue(walls.toString(), walls.all { it.startsWith(SurveyFormat.ESTIMATE) && " ft " in it })
-        assertTrue(plan.walls.toString(), plan.walls.all { it.startsWith(SurveyFormat.ESTIMATE) && " ft " in it })
+        assertTrue(
+            plan.walls.toString(),
+            plan.walls.all { it.startsWith(SurveyFormat.ESTIMATE) && marks.matches(it.removePrefix(SurveyFormat.ESTIMATE)) },
+        )
         assertTrue((rows + walls + plan.walls).toString(), (rows + walls + plan.walls).none { metric.containsMatchIn(it) })
     }
 
