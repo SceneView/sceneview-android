@@ -22,9 +22,9 @@ data class MeasureFigureNumbers(
     val wallArea: Float?,
     /** A room's floor area times its height; `null` until both are known. */
     val volume: Float? = null,
-    /** The area of the doors and windows marked on a wall; `null` with none marked. */
+    /** The area of the doors and windows marked on a wall or a room's walls; `null` with none marked. */
     val openingsArea: Float? = null,
-    /** A wall's area less its openings; `null` with none marked. */
+    /** The wall area less its openings — a wall's, or all of a room's walls'; `null` with none marked. */
     val netWallArea: Float? = null,
 )
 
@@ -62,7 +62,9 @@ fun <P> measureFigureNumbers(
     } else {
         null
     }
-    val openingsArea = if (figure.mode == MeasureMode.Wall && figure.openings.isNotEmpty() && height != null) {
+    // On a room the openings are marked along its walls unrolled (MeasureOpenings.kt), so the
+    // strip they cover is as long as the perimeter, as a wall's is as long as its width.
+    val openingsArea = if (figure.mode != MeasureMode.Distance && figure.openings.isNotEmpty() && height != null) {
         measureOpeningsArea(figure.openings, segments.sum(), height)
     } else {
         null
@@ -128,6 +130,8 @@ fun measureShareText(
                 f.outlineArea?.let { lines += "  Floor area: ${area(it)}" }
                 f.height?.let { lines += "  Ceiling height: ${len(it)}" }
                 f.wallArea?.let { lines += "  Wall area: ${area(it)}" }
+                f.openingsArea?.let { lines += "  Doors and windows: ${area(it)}" }
+                f.netWallArea?.let { lines += "  Net wall area: ${area(it)}" }
                 f.volume?.let { lines += "  Volume: ${volume(it)}" }
             }
         }

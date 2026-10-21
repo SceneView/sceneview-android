@@ -115,7 +115,9 @@ import io.github.sceneview.demo.demos.internal.measureDistanceMeters
 import io.github.sceneview.demo.demos.internal.MeasureFigure
 import io.github.sceneview.demo.demos.internal.MeasureFigureNumbers
 import io.github.sceneview.demo.demos.internal.measureFigureNumbers
+import io.github.sceneview.demo.demos.internal.measureFigureOpeningCorners
 import io.github.sceneview.demo.demos.internal.measureFigureOutline
+import io.github.sceneview.demo.demos.internal.measureFigureWallPointFromRay
 import io.github.sceneview.demo.demos.internal.measureFirstFloorPoint
 import io.github.sceneview.demo.demos.internal.measureFloorLevel
 import io.github.sceneview.demo.demos.internal.MeasureHaptic
@@ -129,11 +131,12 @@ import io.github.sceneview.demo.demos.internal.MeasureMode
 import io.github.sceneview.demo.demos.internal.measureOnLevel
 import io.github.sceneview.demo.demos.internal.MeasureOpening
 import io.github.sceneview.demo.demos.internal.measureOpening
-import io.github.sceneview.demo.demos.internal.measureOpeningCorners
 import io.github.sceneview.demo.demos.internal.measureOpeningsArea
 import io.github.sceneview.demo.demos.internal.MeasurePhase
 import io.github.sceneview.demo.demos.internal.MeasurePlane
 import io.github.sceneview.demo.demos.internal.MeasurePlaneKind
+import io.github.sceneview.demo.demos.internal.MeasurePlanOpening
+import io.github.sceneview.demo.demos.internal.measurePlanOpenings
 import io.github.sceneview.demo.demos.internal.measurePointHapticEvent
 import io.github.sceneview.demo.demos.internal.measurePointsMoved
 import io.github.sceneview.demo.demos.internal.measureRaisingHeight
@@ -153,7 +156,6 @@ import io.github.sceneview.demo.demos.internal.measureWallFootAt
 import io.github.sceneview.demo.demos.internal.measureWallHeightFromRay
 import io.github.sceneview.demo.demos.internal.measureWallIndices
 import io.github.sceneview.demo.demos.internal.MeasureWallPoint
-import io.github.sceneview.demo.demos.internal.measureWallPointFromRay
 import io.github.sceneview.demo.demos.internal.measureWallVertices
 import io.github.sceneview.demo.demos.internal.PlaneWallSource
 import io.github.sceneview.demo.demos.internal.RoomSurvey
@@ -300,7 +302,7 @@ fun MeasureScreen(onBack: () -> Unit) {
     // where the camera ray meets the wall. The marking itself lives on the board.
     var wallAim by remember { mutableStateOf<MeasureWallPoint?>(null) }
     // The room's plan, frozen when it opens, shown over the camera.
-    var plan by remember { mutableStateOf<RoomSurvey?>(null) }
+    var plan by remember { mutableStateOf<MeasurePlanPage?>(null) }
 
     // Walls recognised live from ARCore's vertical planes (#4732), the same helper and look as
     // 3D Scan's live view (#4540): fed once a frame, drawn by a LiveWallLayer.
@@ -490,6 +492,7 @@ fun MeasureScreen(onBack: () -> Unit) {
                     },
                     enabled = !board.isEmpty,
                 ),
+                // Room fills the dock with Door or window and Plan: there, Reset in the settings clears.
                 DockItem(
                     icon = Icons.Rounded.DeleteSweep,
                     label = stringResource(R.string.demo_ar_measure_action_clear),
@@ -498,8 +501,8 @@ fun MeasureScreen(onBack: () -> Unit) {
                         commit(board.clear())
                     },
                     enabled = !board.isEmpty,
-                ),
-                // On a measured wall: a door or a window, by two opposite corners; again to stop.
+                ).takeIf { board.mode != MeasureMode.Room },
+                // On a measured wall or room: a door or a window, by two opposite corners; again to stop.
                 DockItem(
                     icon = Icons.Rounded.SensorDoor,
                     label = stringResource(R.string.demo_ar_measure_action_opening),
@@ -514,14 +517,21 @@ fun MeasureScreen(onBack: () -> Unit) {
                     },
                     enabled = openingWall != null,
                     selected = marking,
-                ).takeIf { board.mode == MeasureMode.Wall },
+                ).takeIf { board.mode != MeasureMode.Distance },
                 // A traced, raised room: 3D Scan's dimensioned plan, and its PDF.
                 DockItem(
                     icon = Icons.Rounded.Map,
                     label = stringResource(R.string.demo_ar_measure_action_plan),
                     onClick = {
                         val figure = board.figures.getOrNull(planRoom)
-                        plan = figure?.let { measureRoomSurvey(figureOutlines[planRoom], it.height) }
+                        val outline = figureOutlines.getOrNull(planRoom).orEmpty()
+                        plan = figure?.let { measureRoomSurvey(outline, it.height) }?.let { survey ->
+                            MeasurePlanPage(
+                                survey = survey,
+                                openings = measurePlanOpenings(outline, figure.openings),
+                                numbers = figureNumbers[planRoom],
+                            )
+                        }
                     },
                     enabled = planRoom >= 0,
                 ).takeIf { board.mode == MeasureMode.Room },
@@ -637,7 +647,13 @@ fun MeasureScreen(onBack: () -> Unit) {
                             aimControl.update(null)
                             if (aim != null) aim = null
                             val read = if (isTracking) {
-                                openingWallPoint(wall, figureOutlines.lastOrNull().orEmpty(), origin, direction)
+                                openingWallPoint(
+                                    wall = wall,
+                                    outline = figureOutlines.lastOrNull().orEmpty(),
+                                    origin = origin,
+                                    direction = direction,
+                                    onWall = board.openingCorner?.wall,
+                                )
                             } else {
                                 null
                             }
@@ -695,7 +711,7 @@ fun MeasureScreen(onBack: () -> Unit) {
                     val pending = board.openingCorner?.let { first -> wallAim?.let { measureOpening(first, it) } }
                     val wallOutline = figureOutlines.lastOrNull()
                     if (marking && pending != null && wallOutline != null && wallOutline.size >= 2) {
-                        MeasureOpeningNode(pending, wallOutline[0], wallOutline[1], accent = true)
+                        MeasureOpeningNode(pending, wallOutline, closed = openingWall?.closed == true, accent = true)
                     }
                     aim?.let { view ->
                         MeasureAimNodes(
@@ -738,25 +754,45 @@ fun MeasureScreen(onBack: () -> Unit) {
         }
         // Over the camera, not instead of it: the session and its anchors live on underneath,
         // so Back finds the room as it was left.
-        plan?.let { survey ->
+        plan?.let { page ->
             MeasurePlanOverlay(
-                survey = survey,
+                page = page,
                 title = stringResource(R.string.demo_ar_measure_plan_room),
                 date = planDate,
+                len = ::len,
+                area = ::area,
                 onClose = { plan = null },
             )
         }
     }
 }
 
+/** A traced room's plan, frozen when Plan opens it: the plan, its doors and windows, its numbers. */
+private class MeasurePlanPage(
+    val survey: RoomSurvey,
+    val openings: List<MeasurePlanOpening>,
+    val numbers: MeasureFigureNumbers,
+)
+
 /**
  * A traced room as 3D Scan's Plan page: the same [RerunPlanView], its dimensioned plan and its
  * PDF and text shares, under a header of its own. Back, or the header's arrow, returns to the
  * camera.
+ *
+ * With doors or windows marked, a card under the plan names each one by the wall the plan
+ * letters it on, and reads the walls' net area.
  */
 @Composable
-private fun MeasurePlanOverlay(survey: RoomSurvey, title: String, date: String, onClose: () -> Unit) {
+private fun MeasurePlanOverlay(
+    page: MeasurePlanPage,
+    title: String,
+    date: String,
+    len: (Float) -> String,
+    area: (Float) -> String,
+    onClose: () -> Unit,
+) {
     BackHandler(onBack = onClose)
+    val net = page.numbers.netWallArea
     // Takes every touch: none reaches the camera screen under the page.
     Box(modifier = Modifier.fillMaxSize().pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent() } }) {
         DemoScaffold(
@@ -766,8 +802,30 @@ private fun MeasurePlanOverlay(survey: RoomSurvey, title: String, date: String, 
             opaqueSheet = true,
             hasScene = false,
             modeSwitch = null,
+            bottomOverlay = if (net != null) {
+                {
+                    val openings = page.openings.map {
+                        stringResource(
+                            R.string.demo_ar_measure_plan_opening,
+                            it.wall,
+                            len(it.opening.width),
+                            len(it.opening.height),
+                        )
+                    }
+                    MeasureReadoutCard(
+                        MeasureReadout(
+                            value = area(net),
+                            label = stringResource(R.string.demo_ar_measure_label_net_walls),
+                            details = openings.joinToString(" · "),
+                        ),
+                    )
+                }
+            } else {
+                null
+            },
+            bottomOverlayReservesScene = true,
         ) {
-            RerunPlanView(survey = survey, title = title, date = date)
+            RerunPlanView(survey = page.survey, title = title, date = date)
         }
     }
 }
@@ -791,7 +849,9 @@ private fun measureHint(
     val count = board.active?.points?.size ?: 0
     return stringResource(
         // A finished measure stays on screen: say the next point starts another one (#4732).
-        if (action == MeasureAction.StartNew && board.openingWall != null) {
+        if (action == MeasureAction.StartNew && board.openingWall?.mode == MeasureMode.Room) {
+            R.string.demo_ar_measure_hint_room_done
+        } else if (action == MeasureAction.StartNew && board.openingWall != null) {
             R.string.demo_ar_measure_hint_wall_done
         } else if (action == MeasureAction.StartNew) {
             R.string.demo_ar_measure_hint_new
@@ -905,6 +965,9 @@ private fun measureReadout(
                         n.outlineArea?.let { stringResource(R.string.demo_ar_measure_floor, area(it)) },
                         stringResource(R.string.demo_ar_measure_perimeter, len(n.length)),
                         n.wallArea?.let { stringResource(R.string.demo_ar_measure_walls, area(it)) },
+                        // Doors and windows marked on its walls: what they take off, and the walls left to cover.
+                        n.openingsArea?.let { stringResource(R.string.demo_ar_measure_openings, area(it)) },
+                        n.netWallArea?.let { stringResource(R.string.demo_ar_measure_net, area(it)) },
                         n.volume?.let { stringResource(R.string.demo_ar_measure_volume, volume(it)) },
                     ).joinToString(sep),
                 )
@@ -1292,7 +1355,7 @@ private fun ARSceneScope.MeasureFigureNodes(
             // With a door or a window marked, the wall reads what is left to cover.
             val wallArea = width * height - measureOpeningsArea(figure.openings, width, height)
             figure.openings.forEachIndexed { i, opening ->
-                key("opening-$i") { MeasureOpeningNode(opening, outline[0], outline[1], accent = false) }
+                key("opening-$i") { MeasureOpeningNode(opening, outline, closed = false, accent = false) }
             }
             MeasureLabel(
                 text = area(wallArea.coerceAtLeast(0f)),
@@ -1305,6 +1368,10 @@ private fun ARSceneScope.MeasureFigureNodes(
 
     if (figure.mode == MeasureMode.Room && figure.closed && outline.size >= MeasureBoard.MIN_OUTLINE_POINTS) {
         MeasureFloor(outline = outline)
+        // Its doors and windows, each on the wall it was marked on.
+        figure.openings.forEachIndexed { i, opening ->
+            key("opening-$i") { MeasureOpeningNode(opening, outline, closed = true, accent = false) }
+        }
         val numbers = measureFigureNumbers(figure, outline)
         numbers.outlineArea?.let {
             val cx = outline.map { p -> p.x }.average().toFloat()
@@ -1320,12 +1387,21 @@ private fun ARSceneScope.MeasureFigureNodes(
     }
 }
 
-/** A door or a window on the wall [a]–[b]: its outline, in the accent while it is being marked. */
+/**
+ * A door or a window on the walls standing on [outline] (looping back when [closed]): its
+ * outline on the wall it was marked on, in the accent while it is being marked.
+ */
 @Composable
-private fun ARSceneScope.MeasureOpeningNode(opening: MeasureOpening, a: Position, b: Position, accent: Boolean) {
+private fun ARSceneScope.MeasureOpeningNode(
+    opening: MeasureOpening,
+    outline: List<Position>,
+    closed: Boolean,
+    accent: Boolean,
+) {
     val overlay = SceneViewTokens.ArOverlay
     val material = rememberUnlitMaterialInstance(materialLoader, if (accent) overlay.accentProgress else overlay.onScrim)
-    val corners = measureOpeningCorners(opening, a, b)
+    val corners = measureFigureOpeningCorners(opening, outline, closed)
+    if (corners.isEmpty()) return
     TubeNode(points = corners + corners.first(), radius = LINE_RADIUS, materialInstance = material)
 }
 
@@ -1553,23 +1629,27 @@ private fun raisingHeight(
     else -> measureRoomHeightFromRay(origin, direction, outline, closed = true)
 }
 
-/** Where the camera ray meets the measured [wall] (its foot [outline]), `null` off it. */
+/**
+ * Where the camera ray meets the measured [wall] — a wall, or a room's walls — standing on its
+ * foot [outline], `null` off it; on the wall [onWall] only, once an opening's first corner is on it.
+ */
 private fun openingWallPoint(
     wall: MeasureFigure<Anchor>,
     outline: List<Position>,
     origin: Position,
     direction: Position,
+    onWall: Int?,
 ): MeasureWallPoint? {
     val height = wall.height ?: return null
     if (outline.size < 2) return null
-    return measureWallPointFromRay(origin, direction, outline[0], outline[1], height)
+    return measureFigureWallPointFromRay(origin, direction, outline, wall.closed, height, onWall)
 }
 
 /** Whether the aim on the wall moved enough to be worth a recomposition. */
 private fun wallPointChanged(next: MeasureWallPoint?, shown: MeasureWallPoint?): Boolean = when {
     next == shown -> false
     next == null || shown == null -> true
-    else -> abs(next.along - shown.along) > AIM_EPSILON || abs(next.up - shown.up) > AIM_EPSILON
+    else -> next.wall != shown.wall || abs(next.along - shown.along) > AIM_EPSILON || abs(next.up - shown.up) > AIM_EPSILON
 }
 
 /** Whether the reticle moved enough (or changed lock) to be worth a recomposition. */

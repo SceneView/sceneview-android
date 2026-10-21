@@ -7,21 +7,32 @@ import kotlin.math.min
 import kotlin.math.sqrt
 
 /*
- * Doors and windows marked on a measured wall, so the wall's net area — what a painter or a
- * plasterer covers — leaves them out. Pure, so each rule runs in a JVM test.
+ * Doors and windows marked on a measured wall or on the walls of a measured room, so the net
+ * wall area — what a painter or a plasterer covers — leaves them out. Pure, so each rule runs in
+ * a JVM test.
+ *
+ * A figure's walls stand on its floor outline, each from one point to the next, and on a room
+ * from the last corner back to the first. Unrolled in that order they make one strip, as long as
+ * the figure's length (a wall's width, a room's perimeter) and as high as its walls: the frame
+ * openings are marked in. A wall is a strip of one.
  */
 
 /**
- * A door or a window on a wall: a rectangle in the wall's own frame, [from]..[to] metres along
- * the wall from its first point, [bottom]..[top] metres above its foot.
+ * A door or a window on a figure's walls: a rectangle on the strip, [from]..[to] metres along the
+ * walls from the first point, [bottom]..[top] metres above the floor. It stands on one wall: its
+ * two corners are read on the same one.
  */
 data class MeasureOpening(val from: Float, val to: Float, val bottom: Float, val top: Float) {
     val width: Float get() = to - from
     val height: Float get() = top - bottom
 }
 
-/** A point on a wall, in the wall's frame: [along] its foot from the first point, [up] from the floor. */
-data class MeasureWallPoint(val along: Float, val up: Float)
+/**
+ * A point on a figure's walls: [along] the strip from the first point, [up] from the floor, on
+ * the [wall] it was read on (counted from the first point's). Two walls meet at a corner, where
+ * [along] alone could be either.
+ */
+data class MeasureWallPoint(val along: Float, val up: Float, val wall: Int = 0)
 
 /**
  * Where the camera ray ([origin], [direction]) meets the wall standing [height] metres on the
@@ -34,32 +45,81 @@ fun measureWallPointFromRay(
     a: Position,
     b: Position,
     height: Float,
+): MeasureWallPoint? = measureFigureWallPointFromRay(origin, direction, listOf(a, b), closed = false, height)
+
+/**
+ * Where the camera ray ([origin], [direction]) meets the walls standing [height] metres on a
+ * figure's floor [outline] — looping back to its first point when [closed] — on the strip and
+ * kept on the wall it meets. `null` when it meets none within [MEASURE_OPENING_SLACK_M] of its
+ * edges, or meets the nearest one above or below it.
+ *
+ * The nearest wall the ray crosses wins; only when it crosses none does an aim just past a
+ * wall's end read on that end. With [onWall], the ray reads that wall only: an opening's second
+ * corner stays on the wall of its first.
+ */
+fun measureFigureWallPointFromRay(
+    origin: Position,
+    direction: Position,
+    outline: List<Position>,
+    closed: Boolean,
+    height: Float,
+    onWall: Int? = null,
 ): MeasureWallPoint? {
-    val ex = b.x - a.x
-    val ez = b.z - a.z
-    val length = sqrt(ex * ex + ez * ez)
-    if (length < MIN_WALL_LENGTH_M) return null
-    val nx = -ez / length
-    val nz = ex / length
-    val denominator = direction.x * nx + direction.z * nz
-    if (abs(denominator) < RAY_PARALLEL_EPSILON) return null
-    val t = ((a.x - origin.x) * nx + (a.z - origin.z) * nz) / denominator
-    if (t <= 0f) return null
-    val hx = origin.x + direction.x * t
-    val hy = origin.y + direction.y * t
-    val hz = origin.z + direction.z * t
-    val along = ((hx - a.x) * ex + (hz - a.z) * ez) / length
-    val up = hy - a.y
-    val slack = MEASURE_OPENING_SLACK_M
-    if (along < -slack || along > length + slack || up < -slack || up > height + slack) return null
-    return MeasureWallPoint(along.coerceIn(0f, length), up.coerceIn(0f, height))
+    val walls = wallCount(outline, closed)
+    var best: WallHit? = null
+    var bestWall = -1
+    var bestOnWall = false
+    for (i in 0 until walls) {
+        if (onWall != null && i != onWall) continue
+        val hit = wallRayHit(origin, direction, outline[i], outline[(i + 1) % outline.size]) ?: continue
+        if (hit.along < -MEASURE_OPENING_SLACK_M || hit.along > hit.length + MEASURE_OPENING_SLACK_M) continue
+        val within = hit.along >= 0f && hit.along <= hit.length
+        val current = best
+        if (current == null || (within && !bestOnWall) || (within == bestOnWall && hit.t < current.t)) {
+            best = hit
+            bestWall = i
+            bestOnWall = within
+        }
+    }
+    val hit = best ?: return null
+    if (hit.up < -MEASURE_OPENING_SLACK_M || hit.up > height + MEASURE_OPENING_SLACK_M) return null
+    val start = wallStarts(outline, walls)[bestWall]
+    return MeasureWallPoint(start + hit.along.coerceIn(0f, hit.length), hit.up.coerceIn(0f, height), bestWall)
+}
+
+/**
+ * The wall of a figure's floor [outline] (looping back when [closed]) that [opening] stands on:
+ * the one under its middle. `null` without a wall.
+ */
+fun measureOpeningWall(opening: MeasureOpening, outline: List<Position>, closed: Boolean): Int? {
+    val walls = wallCount(outline, closed)
+    if (walls == 0) return null
+    val starts = wallStarts(outline, walls)
+    val middle = (opening.from + opening.to) / 2f
+    return (0 until walls).firstOrNull { middle < starts[it + 1] } ?: (walls - 1)
+}
+
+/**
+ * [opening] in the frame of the wall it stands on ([measureOpeningWall]): along that wall from
+ * its first point, kept on it. `null` without a wall.
+ */
+fun measureOpeningOnWall(opening: MeasureOpening, outline: List<Position>, closed: Boolean): MeasureOpening? {
+    val wall = measureOpeningWall(opening, outline, closed) ?: return null
+    val starts = wallStarts(outline, wallCount(outline, closed))
+    val length = starts[wall + 1] - starts[wall]
+    return opening.copy(
+        from = (opening.from - starts[wall]).coerceIn(0f, length),
+        to = (opening.to - starts[wall]).coerceIn(0f, length),
+    )
 }
 
 /**
  * The opening with [first] and [second] at opposite corners, or `null` when it is narrower or
- * lower than [MEASURE_OPENING_MIN_SIDE_M] — two taps on the same spot mark nothing.
+ * lower than [MEASURE_OPENING_MIN_SIDE_M] — two taps on the same spot mark nothing — or when
+ * they were read on two walls.
  */
 fun measureOpening(first: MeasureWallPoint, second: MeasureWallPoint): MeasureOpening? {
+    if (first.wall != second.wall) return null
     val opening = MeasureOpening(
         from = min(first.along, second.along),
         to = max(first.along, second.along),
@@ -121,6 +181,16 @@ fun measureOpeningCorners(opening: MeasureOpening, a: Position, b: Position): Li
     )
 }
 
+/**
+ * The four corners of [opening], marked on the strip of a figure's floor [outline] (looping back
+ * when [closed]), on the wall it stands on, in world space, for drawing.
+ */
+fun measureFigureOpeningCorners(opening: MeasureOpening, outline: List<Position>, closed: Boolean): List<Position> {
+    val wall = measureOpeningWall(opening, outline, closed) ?: return emptyList()
+    val local = measureOpeningOnWall(opening, outline, closed) ?: return emptyList()
+    return measureOpeningCorners(local, outline[wall], outline[(wall + 1) % outline.size])
+}
+
 /** How far off a wall's edges an aim still marks a corner on the edge itself. */
 const val MEASURE_OPENING_SLACK_M = 0.1f
 
@@ -129,3 +199,39 @@ const val MEASURE_OPENING_MIN_SIDE_M = 0.1f
 
 private const val MIN_WALL_LENGTH_M = 0.05f
 private const val RAY_PARALLEL_EPSILON = 1e-4f
+
+/** How many walls stand on [outline]: one per pair of points, and the closing one on a loop. */
+private fun wallCount(outline: List<Position>, closed: Boolean): Int = when {
+    closed && outline.size >= MeasureBoard.MIN_OUTLINE_POINTS -> outline.size
+    else -> (outline.size - 1).coerceAtLeast(0)
+}
+
+/** Where each of the first [walls] walls of [outline] starts on the strip, then where the strip ends. */
+private fun wallStarts(outline: List<Position>, walls: Int): FloatArray {
+    val starts = FloatArray(walls + 1)
+    for (i in 0 until walls) {
+        starts[i + 1] = starts[i] + measureDistanceMeters(outline[i], outline[(i + 1) % outline.size])
+    }
+    return starts
+}
+
+/** Where a ray meets the plane of the wall [a]–[b]: how far along the ray, and where on the wall. */
+private class WallHit(val t: Float, val along: Float, val up: Float, val length: Float)
+
+/** `null` when the wall is too short, or the ray runs along its plane or points away from it. */
+private fun wallRayHit(origin: Position, direction: Position, a: Position, b: Position): WallHit? {
+    val ex = b.x - a.x
+    val ez = b.z - a.z
+    val length = sqrt(ex * ex + ez * ez)
+    if (length < MIN_WALL_LENGTH_M) return null
+    val nx = -ez / length
+    val nz = ex / length
+    val denominator = direction.x * nx + direction.z * nz
+    if (abs(denominator) < RAY_PARALLEL_EPSILON) return null
+    val t = ((a.x - origin.x) * nx + (a.z - origin.z) * nz) / denominator
+    if (t <= 0f) return null
+    val hx = origin.x + direction.x * t
+    val hy = origin.y + direction.y * t
+    val hz = origin.z + direction.z * t
+    return WallHit(t = t, along = ((hx - a.x) * ex + (hz - a.z) * ez) / length, up = hy - a.y, length = length)
+}

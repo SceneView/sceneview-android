@@ -144,6 +144,134 @@ class MeasureRoomOpeningsTest {
         assertTrue(text, text.contains("  Volume: 30.0 m³"))
     }
 
+    // ── Aiming at a room's walls ────────────────────────────────────────────────────────────
+
+    private fun at(x: Float, y: Float, z: Float) = Position(x, y, z)
+
+    // Standing in the room, 1.5 m up.
+    private val eye = at(2f, 1.5f, 1.5f)
+
+    private fun aim(target: Position, from: Position = eye, onWall: Int? = null): MeasureWallPoint? =
+        measureFigureWallPointFromRay(
+            origin = from,
+            direction = Position(target.x - from.x, target.y - from.y, target.z - from.z),
+            outline = corners,
+            closed = true,
+            height = 2.5f,
+            onWall = onWall,
+        )
+
+    private fun assertPoint(expected: MeasureWallPoint, actual: MeasureWallPoint?) {
+        assertNotNull(actual)
+        assertEquals(expected.wall, actual!!.wall)
+        assertEquals(expected.along, actual.along, 1e-4f)
+        assertEquals(expected.up, actual.up, 1e-4f)
+    }
+
+    @Test
+    fun `the aim reads the wall it meets, along the walls from the first corner`() {
+        // The second wall, x = 4, 1 m from its start: 5 m along the strip.
+        assertPoint(MeasureWallPoint(5f, 1f, wall = 1), aim(at(4f, 1f, 1f)))
+        // The closing wall, from the last corner back to the first: from 11 m.
+        assertPoint(MeasureWallPoint(12f, 2f, wall = 3), aim(at(0f, 2f, 2f)))
+        // Above the ceiling, nothing.
+        assertNull(aim(at(4f, 2.8f, 1f)))
+    }
+
+    @Test
+    fun `the nearest wall wins, unless the first corner holds the aim to its own`() {
+        // From outside, through the first wall to the third one behind it.
+        val outside = at(2f, 1.5f, -2f)
+        val through = aim(at(2f, 1f, 1.5f), from = outside)
+        assertEquals(0, through!!.wall)
+        assertEquals(2f, through.along, 1e-4f)
+        val behind = aim(at(2f, 1f, 1.5f), from = outside, onWall = 2)
+        assertEquals(2, behind!!.wall)
+        assertEquals(9f, behind.along, 1e-4f)
+    }
+
+    @Test
+    fun `just round a corner, the second corner stays on the first one's wall`() {
+        val round = at(4f, 1f, 0.05f)
+        // Free, the aim reads the second wall just past its start.
+        assertPoint(MeasureWallPoint(4.05f, 1f, wall = 1), aim(round))
+        // Held to the first wall, it is kept on that wall's end.
+        val held = aim(round, onWall = 0)
+        assertEquals(0, held!!.wall)
+        assertEquals(4f, held.along, 1e-4f)
+    }
+
+    @Test
+    fun `two corners on two walls mark nothing`() {
+        assertNull(measureOpening(MeasureWallPoint(3.5f, 0f, wall = 0), MeasureWallPoint(4.5f, 2f, wall = 1)))
+        assertEquals(door, measureOpening(MeasureWallPoint(4.5f, 0f, wall = 1), MeasureWallPoint(5.4f, 2.1f, wall = 1)))
+    }
+
+    @Test
+    fun `an opening is drawn on the wall it was marked on`() {
+        assertCorners(
+            listOf(at(4f, 0f, 0.5f), at(4f, 0f, 1.4f), at(4f, 2.1f, 1.4f), at(4f, 2.1f, 0.5f)),
+            measureFigureOpeningCorners(door, corners, closed = true),
+        )
+        // On the closing wall, which runs from the last corner back to the first.
+        assertCorners(
+            listOf(at(0f, 1f, 2f), at(0f, 1f, 1f), at(0f, 2f, 1f), at(0f, 2f, 2f)),
+            measureFigureOpeningCorners(MeasureOpening(12f, 13f, 1f, 2f), corners, closed = true),
+        )
+    }
+
+    private fun assertCorners(expected: List<Position>, actual: List<Position>) {
+        assertEquals(expected.size, actual.size)
+        expected.zip(actual).forEach { (e, a) ->
+            assertEquals(e.x, a.x, 1e-4f)
+            assertEquals(e.y, a.y, 1e-4f)
+            assertEquals(e.z, a.z, 1e-4f)
+        }
+    }
+
+    // ── On the plan ─────────────────────────────────────────────────────────────────────────
+
+    private fun assertOnPlan(wall: String, expected: MeasureOpening, actual: MeasurePlanOpening) {
+        assertEquals(wall, actual.wall)
+        assertEquals(expected.from, actual.opening.from, 1e-4f)
+        assertEquals(expected.to, actual.opening.to, 1e-4f)
+        assertEquals(expected.bottom, actual.opening.bottom, 0f)
+        assertEquals(expected.top, actual.opening.top, 0f)
+    }
+
+    @Test
+    fun `the plan names each opening by its wall's letter`() {
+        // Traced clockwise on the page from its top-left corner: wall A is the first one traced.
+        val onPlan = measurePlanOpenings(corners, listOf(window, door))
+        assertEquals(2, onPlan.size)
+        assertOnPlan("B", MeasureOpening(0.5f, 1.4f, 0f, 2.1f), onPlan[0])
+        assertOnPlan("C", MeasureOpening(0.5f, 1.7f, 1f, 2f), onPlan[1])
+        val plan = measureRoomSurvey(corners, 2.5f)!!
+        assertEquals(3f, plan.walls.single { it.tag == "B" }.length.value, 1e-4f)
+    }
+
+    @Test
+    fun `traced the other way round, the plan runs each wall backwards`() {
+        // The same room from another corner, the other way round: the plan still walks it
+        // clockwise, so each wall's openings are read from its other end.
+        val other = listOf(p(4f, 0f), p(0f, 0f), p(0f, 3f), p(4f, 3f))
+        // 0.5–1.4 m along the third wall traced, (0, 3) to (4, 3); 1–2 m along the first.
+        val third = MeasureOpening(7.5f, 8.4f, 0f, 2.1f)
+        val first = MeasureOpening(1f, 2f, 1f, 2f)
+        val onPlan = measurePlanOpenings(other, listOf(first, third))
+        assertEquals(2, onPlan.size)
+        assertOnPlan("A", MeasureOpening(2.6f, 3.5f, 0f, 2.1f), onPlan[0])
+        assertOnPlan("C", MeasureOpening(2f, 3f, 1f, 2f), onPlan[1])
+        // The plan itself does not change for it.
+        assertEquals(12f, measureRoomSurvey(other, 2.5f)!!.area.value, 1e-4f)
+    }
+
+    @Test
+    fun `no plan, no openings on it`() {
+        assertTrue(measurePlanOpenings(corners.take(2), listOf(door)).isEmpty())
+        assertTrue(measurePlanOpenings(corners, emptyList()).isEmpty())
+    }
+
     @Test
     fun `the plan's volume is the readout's, openings or not`() {
         val board = room().addOpening(door).addOpening(window)

@@ -11,14 +11,19 @@ Three modes behind one mode pill, built against Apple Measure, Google Measure an
   Aim at the first point again to close the shape and read its area.
 - **Wall** — add the two ends of a wall where it meets the floor. The wall then rises with your
   aim, a translucent surface whose top follows the phone; **Set height** locks it and reads
-  width, height and area.
+  width, height and area. **Door or window** then marks an opening by two opposite corners on
+  the wall, and the readout adds what the openings take off and the net area left to cover.
 - **Room** — trace the floor corner by corner (a corner within a few degrees of square snaps to
   90°), close it on the first corner, and every wall rises together to the ceiling: floor area,
-  perimeter, ceiling height, wall area.
+  perimeter, ceiling height, wall area, volume. **Door or window** marks openings on any of its
+  walls the same way, two opposite corners on one wall, and the readout adds the openings and
+  the net wall area; the floor area and the volume do not change. **Plan** opens the room as
+  3D Scan's dimensioned plan, with its PDF and text shares; with openings marked, a card under
+  the plan names each one by the plan's wall letter and reads the net wall area.
 
 **Add point** commits the displayed candidate without a second raycast; tapping the camera never
-adds a point. Undo steps back one action at a time (a locked height, then the raised walls, then
-the closure, then a point). Share sends every figure as plain text. Units follow the locale
+adds a point. Undo steps back one action at a time (an opening's first corner, the last opening, a locked
+height, then the raised walls, then the closure, then a point). Share sends every figure as plain text. Units follow the locale
 (imperial in the US, Liberia, Myanmar) and can be switched in Settings.
 
 In Wall and Room every point after the first is the camera ray's hit on the **floor plane of the
@@ -119,12 +124,14 @@ Each center-target candidate is resolved in a fixed preference order, which is a
    not grown a plane over.
 3. **The depth image directly**, via SceneView's `Frame.hitTestDepth(x, y)`. This is what
    makes a *cluttered* space measurable rather than just its flat floor: a sofa, a slope, the
-   lip of a workbench, where no plane will ever appear. Toggleable in the settings sheet, and
-   disabled automatically on devices that report no depth support.
+   lip of a workbench, where no plane will ever appear. Used whenever the device supports
+   ARCore depth and skipped on the others; there is no switch for it, Settings holds only the
+   units.
 4. **A raw feature point**, last resort and the noisiest of the four.
 
-The demo names the source of each point on screen ("Point 3 on depth map"), because a
-measuring tool that hides how it got its number is a measuring tool you cannot calibrate.
+Each aim keeps its source (`MeasureHitSource`), but the screen does not show it: the chip under the
+reticle names what the aim snapped to (point, corner, edge, vertical, level, square corner, wall
+foot, close) or why a tap would do nothing.
 
 ### Anchors, not positions
 
@@ -143,7 +150,8 @@ The arithmetic behind every displayed number is pure Kotlin with no ARCore or Fi
 [`MeasureBoard.kt`](src/main/java/io/github/sceneview/demo/demos/internal/MeasureBoard.kt) (the tap and
 undo flow), [`MeasureUnits.kt`](src/main/java/io/github/sceneview/demo/demos/internal/MeasureUnits.kt) and
 [`MeasureReport.kt`](src/main/java/io/github/sceneview/demo/demos/internal/MeasureReport.kt) (share text),
-covered by `MeasureMathTest` and `MeasureGeometryTest`:
+covered by `MeasureMathTest` and `MeasureGeometryTest`; doors and windows, on a wall and on a
+room's walls, by `MeasureOpeningsTest` and `MeasureRoomOpeningsTest`:
 
 ```bash
 ./gradlew :samples:android-demo:testDebugUnitTest --tests '*MeasureMathTest*' --tests '*MeasureGeometryTest*'

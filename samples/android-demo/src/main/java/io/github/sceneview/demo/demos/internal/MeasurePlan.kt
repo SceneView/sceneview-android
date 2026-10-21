@@ -26,6 +26,86 @@ import kotlin.math.sqrt
  * `null` under three corners, or for an outline with no area.
  */
 fun measureRoomSurvey(outline: List<Position>, height: Float?): RoomSurvey? {
+    val page = planCorners(outline) ?: return null
+    val corners = page.corners
+    val walls = corners.indices.map { i ->
+        val (ax, ay) = corners[i]
+        val (bx, by) = corners[(i + 1) % corners.size]
+        val dx = bx - ax
+        val dy = by - ay
+        SurveyWall(
+            tag = planWallTag(i),
+            ax = ax,
+            ay = ay,
+            bx = bx,
+            by = by,
+            length = measured(sqrt(dx * dx + dy * dy)),
+            seenShare = 1f,
+            seen = true,
+            unseen = emptyList(),
+        )
+    }
+    return RoomSurvey(
+        walls = walls,
+        planLength = page.planLength,
+        planWidth = page.planWidth,
+        length = measured(page.planLength),
+        width = measured(page.planWidth),
+        area = measured(abs(page.signedArea)),
+        perimeter = measured(walls.sumOf { it.length.value.toDouble() }.toFloat()),
+        ceilingHeight = height?.let(::measured),
+        gaps = if (height == null) listOf(SurveyGap.Ceiling) else emptyList(),
+        floorY = outline.first().y,
+        floorThickness = 0f,
+        yaw = page.yaw,
+    )
+}
+
+/**
+ * A door or a window of a traced room, as its plan ([measureRoomSurvey]) shows it: on the wall
+ * the plan letters [wall], [opening] in that wall's frame — along it from its start as the plan
+ * runs it, clockwise from wall A.
+ */
+data class MeasurePlanOpening(val wall: String, val opening: MeasureOpening)
+
+/**
+ * The [openings] of the room traced along [outline], marked on its walls unrolled in the order
+ * they were traced ([MeasureOpening]), on its plan: each on the plan's wall it stands on, in the
+ * plan's wall order, then along each wall. Empty when the outline makes no plan.
+ */
+fun measurePlanOpenings(outline: List<Position>, openings: List<MeasureOpening>): List<MeasurePlanOpening> {
+    val page = planCorners(outline) ?: return emptyList()
+    val n = outline.size
+    return openings.mapNotNull { opening ->
+        val traced = measureOpeningWall(opening, outline, closed = true) ?: return@mapNotNull null
+        val local = measureOpeningOnWall(opening, outline, closed = true) ?: return@mapNotNull null
+        // The plan walks the room clockwise: traced the other way round, each wall runs backwards
+        // there, from the corner it ended on.
+        val index = page.order.indexOf(if (page.reversed) (traced + 1) % n else traced)
+        val length = measureDistanceMeters(outline[traced], outline[(traced + 1) % n])
+        val onPlan = if (page.reversed) local.copy(from = length - local.to, to = length - local.from) else local
+        index to MeasurePlanOpening(planWallTag(index), onPlan)
+    }
+        .sortedWith(compareBy({ it.first }, { it.second.opening.from }))
+        .map { it.second }
+}
+
+/**
+ * A traced outline on the plan's page: its [corners] clockwise from the one nearest the top-left,
+ * each the outline's corner [order] names; [reversed] when the outline was traced the other way.
+ */
+private class PlanCorners(
+    val corners: List<Pair<Float, Float>>,
+    val order: List<Int>,
+    val reversed: Boolean,
+    val signedArea: Float,
+    val yaw: Float,
+    val planLength: Float,
+    val planWidth: Float,
+)
+
+/** `null` under three corners, or for an outline with no area. */
+private fun planCorners(outline: List<Position>): PlanCorners? {
     if (outline.size < MeasureBoard.MIN_OUTLINE_POINTS) return null
     val turn = squaringTurn(outline)
     val c = cos(turn)
@@ -44,47 +124,30 @@ fun measureRoomSurvey(outline: List<Position>, height: Float?): RoomSurvey? {
     val minX = xs.min()
     val minY = ys.min()
     var corners = xs.indices.map { (xs[it] - minX) to (ys[it] - minY) }
+    var order = outline.indices.toList()
     val signed = signedArea(corners)
     if (abs(signed) < MIN_AREA_M2) return null
     // Positive on a page whose y goes down is clockwise: the room on the right of the walk.
-    if (signed < 0f) corners = corners.reversed()
+    val reversed = signed < 0f
+    if (reversed) {
+        corners = corners.reversed()
+        order = order.reversed()
+    }
     val first = corners.indices.minBy { corners[it].first + corners[it].second }
     corners = corners.drop(first) + corners.take(first)
-
-    val walls = corners.indices.map { i ->
-        val (ax, ay) = corners[i]
-        val (bx, by) = corners[(i + 1) % corners.size]
-        val dx = bx - ax
-        val dy = by - ay
-        SurveyWall(
-            tag = ('A' + i).toString(),
-            ax = ax,
-            ay = ay,
-            bx = bx,
-            by = by,
-            length = measured(sqrt(dx * dx + dy * dy)),
-            seenShare = 1f,
-            seen = true,
-            unseen = emptyList(),
-        )
-    }
-    val planLength = xs.max() - minX
-    val planWidth = ys.max() - minY
-    return RoomSurvey(
-        walls = walls,
-        planLength = planLength,
-        planWidth = planWidth,
-        length = measured(planLength),
-        width = measured(planWidth),
-        area = measured(abs(signed)),
-        perimeter = measured(walls.sumOf { it.length.value.toDouble() }.toFloat()),
-        ceilingHeight = height?.let(::measured),
-        gaps = if (height == null) listOf(SurveyGap.Ceiling) else emptyList(),
-        floorY = outline.first().y,
-        floorThickness = 0f,
+    order = order.drop(first) + order.take(first)
+    return PlanCorners(
+        corners = corners,
+        order = order,
+        reversed = reversed,
+        signedArea = signed,
         yaw = yaw,
+        planLength = xs.max() - minX,
+        planWidth = ys.max() - minY,
     )
 }
+
+private fun planWallTag(index: Int): String = ('A' + index).toString()
 
 private fun measured(value: Float) = SurveyFigure(value, plusMinus = 0f, estimate = false)
 

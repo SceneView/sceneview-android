@@ -9,7 +9,8 @@ package io.github.sceneview.demo.demos.internal
  *   the aim, a tap locks its height and reads its area. Doors and windows marked on it then
  *   come off its net area.
  * - [Room]: trace the floor corner by corner, tap the first corner to close it; all the
- *   walls rise together, a tap locks the ceiling height.
+ *   walls rise together, a tap locks the ceiling height. Doors and windows marked on any of
+ *   its walls then come off the walls' net area, as on a wall.
  */
 enum class MeasureMode { Distance, Wall, Room }
 
@@ -33,7 +34,8 @@ enum class MeasurePhase {
  * @property ended a Distance chain the user ended with Done, open: the next point starts a new chain.
  * @property raising the walls follow the aim (wall or room still open for a height).
  * @property height the locked wall height, metres; `null` until locked.
- * @property openings the doors and windows marked on a measured wall, left out of its net area.
+ * @property openings the doors and windows marked on a measured wall or a measured room's walls,
+ *   left out of their net area; on a room, along its walls unrolled ([MeasureOpening]).
  */
 data class MeasureFigure<P>(
     val mode: MeasureMode,
@@ -143,12 +145,16 @@ data class MeasureBoard<P>(
     }
 
     /**
-     * The measured wall an opening goes on: the last figure, when it is a wall with its height
-     * and Wall is still the mode. `null` otherwise.
+     * The measured figure an opening goes on: the last figure, when it is a wall with its height
+     * or a closed room with its ceiling height, and its mode is still the mode. `null` otherwise.
      */
     val openingWall: MeasureFigure<P>?
         get() = figures.lastOrNull()?.takeIf {
-            mode == MeasureMode.Wall && it.mode == MeasureMode.Wall && it.height != null && it.points.size == 2
+            it.mode == mode && it.height != null && when (mode) {
+                MeasureMode.Wall -> it.points.size == 2
+                MeasureMode.Room -> it.closed
+                MeasureMode.Distance -> false
+            }
         }
 
     /** Marking a door or a window: on, with no corner placed yet. */
