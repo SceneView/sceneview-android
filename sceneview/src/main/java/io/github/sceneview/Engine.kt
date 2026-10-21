@@ -120,9 +120,11 @@ internal fun Engine.destroyWhenBackendIdle(onDestroyed: () -> Unit = {}) {
  * "all pending commands" to execute (`Fence::waitAndDestroy(engine.createFence())`, Filament
  * v1.72.1 `Renderer.cpp`). A scene disposed while its shader programs are still being linked — an
  * activity destroyed right after a demo opened — parks the main thread on that whole backlog, an
- * ANR on an emulator (#3799). Deferred until the backend is idle, that inner wait has nothing left
- * to drain. When the backend is already idle — the usual case — the renderer is destroyed before
- * this function returns, exactly as [safeDestroyRenderer] would.
+ * ANR on an emulator (#3799). Deferred until the backend has executed everything queued before
+ * this call, that inner wait still covers whatever was queued since (the next scene's shader links,
+ * say): a wait bounded by that work, not the whole backlog. When the backend is already idle — the
+ * usual case — the renderer is destroyed before this function returns, exactly as
+ * [safeDestroyRenderer] would.
  */
 internal fun Engine.destroyRendererWhenBackendIdle(renderer: Renderer) {
     val startedAt = SystemClock.uptimeMillis()
