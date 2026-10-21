@@ -35,6 +35,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PictureAsPdf
+import androidx.compose.material.icons.rounded.SquareFoot
 import androidx.compose.material.icons.rounded.TextSnippet
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -294,14 +295,14 @@ internal fun RerunPlanView(survey: RoomSurvey?, title: String, date: String?, mo
             return@BoxWithConstraints
         }
         val wide = maxWidth > maxHeight
-        val sharePdf = {
+        // A file share writes its file in the background, and says so when it could not.
+        fun shareFile(share: suspend () -> Boolean) {
             scope.launch {
-                if (!sharePlanPdf(context, survey, words, title, date)) {
-                    Toast.makeText(context, failed, Toast.LENGTH_SHORT).show()
-                }
+                if (!share()) Toast.makeText(context, failed, Toast.LENGTH_SHORT).show()
             }
-            Unit
         }
+        val sharePdf = { shareFile { sharePlanPdf(context, survey, words, title, date) } }
+        val shareDxf = { shareFile { sharePlanDxf(context, survey, words, title) } }
         val shareText = { sharePlanText(context, SurveyReport.text(survey, words.survey, title, date), title) }
         val dock = maxOf(SETTINGS_FAB_RESERVED_SPACE, LocalDemoBottomChromeCover.current) + Space.md
         // Under the header: a scrolling column clips to its own box, which starts below the pills.
@@ -332,7 +333,7 @@ internal fun RerunPlanView(survey: RoomSurvey?, title: String, date: String?, mo
                         .padding(bottom = dock),
                     verticalArrangement = Arrangement.spacedBy(Space.md),
                 ) {
-                    SurveyDetails(survey, words, title, date, sharePdf, shareText)
+                    SurveyDetails(survey, words, title, date, PlanShares(sharePdf, shareDxf, shareText))
                 }
             }
         } else {
@@ -343,7 +344,7 @@ internal fun RerunPlanView(survey: RoomSurvey?, title: String, date: String?, mo
                     verticalArrangement = Arrangement.spacedBy(Space.md),
                 ) {
                     if (survey.hasPlan) PlanCard(survey, words)
-                    SurveyDetails(survey, words, title, date, sharePdf, shareText)
+                    SurveyDetails(survey, words, title, date, PlanShares(sharePdf, shareDxf, shareText))
                 }
             }
         }
@@ -445,15 +446,7 @@ private fun LegendMark(label: String, dashed: Boolean, ink: PlanInk, unit: Float
 
 /** The survey under (or beside) the plan: its figures, its walls, what is missing, the notes and the shares. */
 @Composable
-@Suppress("LongParameterList") // one survey, its words and its two shares
-private fun SurveyDetails(
-    survey: RoomSurvey,
-    words: PlanWords,
-    title: String,
-    date: String?,
-    onSharePdf: () -> Unit,
-    onShareText: () -> Unit,
-) {
+private fun SurveyDetails(survey: RoomSurvey, words: PlanWords, title: String, date: String?, shares: PlanShares) {
     val hints = SurveyReport.hints(survey, words.survey)
     PlanSection(words.surveyTitle, caption = SurveyReport.heading(words.survey, title, date)) {
         SurveyReport.rows(survey, words.survey).forEach { FigureRow(it) }
@@ -473,14 +466,25 @@ private fun SurveyDetails(
             SurveyReport.wallRows(survey, words.survey).forEach { FigureRow(it) }
         }
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+    // The share menu: the PDF, the same plan as a DXF drawing for a CAD tool, then the text.
+    // One share a line, so no label is cut short on a phone.
+    Column(
+        modifier = Modifier.fillMaxWidth().testTag(RERUN_PLAN_SHARES_TAG),
+        verticalArrangement = Arrangement.spacedBy(Space.sm),
+    ) {
         ShareButton(
             Icons.Rounded.PictureAsPdf, stringResource(R.string.demo_ar_rerun_plan_share_pdf), accent = true,
-            modifier = Modifier.weight(1f).testTag(RERUN_PLAN_SHARE_PDF_TAG), onClick = onSharePdf,
+            modifier = Modifier.fillMaxWidth().testTag(RERUN_PLAN_SHARE_PDF_TAG), onClick = shares.pdf,
         )
+        if (survey.hasPlan) {
+            ShareButton(
+                Icons.Rounded.SquareFoot, stringResource(R.string.demo_ar_rerun_plan_share_dxf), accent = false,
+                modifier = Modifier.fillMaxWidth().testTag(RERUN_PLAN_SHARE_DXF_TAG), onClick = shares.dxf,
+            )
+        }
         ShareButton(
             Icons.Rounded.TextSnippet, stringResource(R.string.demo_ar_rerun_plan_share_text), accent = false,
-            modifier = Modifier.weight(1f).testTag(RERUN_PLAN_SHARE_TEXT_TAG), onClick = onShareText,
+            modifier = Modifier.fillMaxWidth().testTag(RERUN_PLAN_SHARE_TEXT_TAG), onClick = shares.text,
         )
     }
     Column(Modifier.padding(horizontal = Space.xs), verticalArrangement = Arrangement.spacedBy(Space.xs)) {
@@ -533,6 +537,9 @@ internal fun FigureRow(row: SurveyRow) {
         )
     }
 }
+
+/** The plan's three shares, each on its own action: the PDF, the DXF drawing and the text. */
+private class PlanShares(val pdf: () -> Unit, val dxf: () -> Unit, val text: () -> Unit)
 
 @Composable
 private fun ShareButton(
@@ -877,26 +884,40 @@ private suspend fun sharePlanPdf(
 ): Boolean {
     val file = withContext(Dispatchers.IO) {
         runCatching {
-            val shareRoot = rerunShareDirectory(context, RERUN_SHARE_PLAN)
-            // Only the latest shared plan is kept: the share sheet has read it by the next share.
-            shareRoot.deleteRecursively()
-            val dir = File(shareRoot, UUID.randomUUID().toString()).apply { mkdirs() }
-            val name = words.pdfFile.format(title).replace(Regex("[\\\\/:*?\"<>|]"), "-")
-            File(dir, name).also { target ->
+            planShareFile(context, words.pdfFile.format(title)).also { target ->
                 target.outputStream().use { RoomPlanPdf.write(it, survey, words, title, date) }
             }
         }.getOrNull()
     } ?: return false
+    sharePlanFile(context, file, PDF_MIME_TYPE, title)
+    return true
+}
+
+/**
+ * A fresh file named [name] in the plan's share cache. Only the latest shared plan file is kept:
+ * the share sheet has read the last one by the next share.
+ */
+internal fun planShareFile(context: Context, name: String): File {
+    val shareRoot = rerunShareDirectory(context, RERUN_SHARE_PLAN)
+    shareRoot.deleteRecursively()
+    val dir = File(shareRoot, UUID.randomUUID().toString()).apply { mkdirs() }
+    return File(dir, name.replace(Regex("[\\\\/:*?\"<>|]"), "-"))
+}
+
+/**
+ * [file] alone handed to the share sheet as [mimeType]: one [Intent.ACTION_SEND], readable by
+ * the app it reaches, offered to every app that takes [mimeType].
+ */
+internal fun sharePlanFile(context: Context, file: File, mimeType: String, title: String) {
     val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
     val send = Intent(Intent.ACTION_SEND).apply {
-        type = PDF_MIME_TYPE
+        type = mimeType
         putExtra(Intent.EXTRA_STREAM, uri)
         putExtra(Intent.EXTRA_SUBJECT, title)
         clipData = ClipData.newRawUri(file.name, uri)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
-    context.startActivity(Intent.createChooser(withPlanDxf(context, send, file, survey, words), title).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-    return true
+    context.startActivity(Intent.createChooser(send, title).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
 }
 
 /** The survey's few lines, handed to the share sheet as plain text. */
@@ -950,7 +971,9 @@ internal const val RERUN_PLAN_TAG = "rerun-plan"
 internal const val RERUN_PLAN_DRAWING_TAG = "rerun-plan-drawing"
 internal const val RERUN_PLAN_HINTS_TAG = "rerun-plan-hints"
 internal const val RERUN_PLAN_ROOMS_TAG = "rerun-plan-rooms"
+internal const val RERUN_PLAN_SHARES_TAG = "rerun-plan-shares"
 internal const val RERUN_PLAN_SHARE_PDF_TAG = "rerun-plan-share-pdf"
+internal const val RERUN_PLAN_SHARE_DXF_TAG = "rerun-plan-share-dxf"
 internal const val RERUN_PLAN_SHARE_TEXT_TAG = "rerun-plan-share-text"
 
 /** The title QA's synthetic scan is kept under. */

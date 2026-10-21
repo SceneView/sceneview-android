@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Strings for the 3D Scan floor plan's DXF drawing, shared next to its PDF (`RerunPlanDxf.kt`).
+<!-- Strings for the 3D Scan floor plan's DXF drawing, shared on its own action beside the PDF's (`RerunPlanDxf.kt`).
      Android's resource merger fans every `res/values/*.xml` file in, see #1870. -->
 <resources>
+    <!-- The plan's share menu, right after "Share PDF": the plan as a DXF drawing for a CAD tool. -->
+    <string name="demo_ar_rerun_plan_share_dxf">Share DXF (CAD)</string>
     <!-- %1$s the scan's title. The first line under the drawing. -->
     <string name="demo_ar_rerun_plan_dxf_heading">%1$s · floor plan</string>
     <string name="demo_ar_rerun_plan_dxf_verify">Indicative plan, not a certified measurement: verify every figure on site.</string>

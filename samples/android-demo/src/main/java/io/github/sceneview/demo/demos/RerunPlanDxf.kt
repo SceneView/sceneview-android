@@ -1,47 +1,30 @@
 package io.github.sceneview.demo.demos
 
-import android.content.ClipData
 import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import androidx.core.content.FileProvider
 import io.github.sceneview.demo.R
 import io.github.sceneview.demo.demos.internal.MeasureUnitSystem
 import io.github.sceneview.demo.demos.internal.RoomPlanDxf
 import io.github.sceneview.demo.demos.internal.RoomSurvey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.File
 
 /**
- * [send], the share of the plan's [pdf], with the same plan as a DXF drawing beside it, for a CAD
- * tool to take it up: both files in one share. [send] as it is when the survey has no plan to
- * draw, or when the drawing could not be written.
+ * The survey's plan as a DXF drawing, for a CAD tool to take it up, written to the share cache and
+ * handed to the share sheet alone, typed [DXF_MIME_TYPE]; `false` when the survey has no plan to
+ * draw or the drawing could not be written. The drawing is named after the PDF of the same plan.
  */
-internal suspend fun withPlanDxf(context: Context, send: Intent, pdf: File, survey: RoomSurvey, words: PlanWords): Intent {
-    if (!survey.hasPlan) return send
-    val title = send.getStringExtra(Intent.EXTRA_SUBJECT).orEmpty()
+internal suspend fun sharePlanDxf(context: Context, survey: RoomSurvey, words: PlanWords, title: String): Boolean {
+    if (!survey.hasPlan) return false
     val drawing = planDxfWords(context, survey, words, title)
-    val dxf = withContext(Dispatchers.IO) {
+    val file = withContext(Dispatchers.IO) {
         runCatching {
-            File(pdf.parentFile, pdf.nameWithoutExtension + DXF_EXTENSION).also { target ->
+            planShareFile(context, words.pdfFile.format(title).substringBeforeLast('.') + DXF_EXTENSION).also { target ->
                 target.outputStream().use { RoomPlanDxf.write(it, survey, words.survey, drawing) }
             }
         }.getOrNull()
-    } ?: return send
-    val authority = "${context.packageName}.fileprovider"
-    val files = arrayListOf<Uri>(
-        FileProvider.getUriForFile(context, authority, pdf),
-        FileProvider.getUriForFile(context, authority, dxf),
-    )
-    return Intent(send).apply {
-        action = Intent.ACTION_SEND_MULTIPLE
-        // The type both files share: a PDF and a DXF drawing are both application files.
-        type = SHARED_MIME_TYPE
-        putParcelableArrayListExtra(Intent.EXTRA_STREAM, files)
-        clipData = ClipData.newRawUri(pdf.name, files[0]).apply { addItem(ClipData.Item(files[1])) }
-        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-    }
+    } ?: return false
+    sharePlanFile(context, file, DXF_MIME_TYPE, title)
+    return true
 }
 
 /** The drawing's words: its openings' names and the lines under the plan, the warning to check it on site first among the notes. */
@@ -65,4 +48,11 @@ private fun planDxfWords(context: Context, survey: RoomSurvey, words: PlanWords,
 )
 
 private const val DXF_EXTENSION = ".dxf"
-private const val SHARED_MIME_TYPE = "application/*"
+
+/**
+ * The drawing's type. The registered `image/vnd.dxf` would file it among images, and the share
+ * sheet would offer galleries and photo editors that cannot read it; Android's own type table has
+ * no DXF entry to borrow. `application/dxf`, the type in common use for DXF files, keeps it among
+ * documents: mail, cloud drives and file managers take it, and so do the CAD viewers that list it.
+ */
+private const val DXF_MIME_TYPE = "application/dxf"
