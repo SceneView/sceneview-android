@@ -10,6 +10,7 @@ import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.floor
 import kotlin.math.hypot
+import kotlin.math.max
 
 /**
  * The room engine on synthetic scans shaped like the phone scans that defeated it: walls seen only
@@ -17,7 +18,7 @@ import kotlin.math.hypot
  * seen twice, two walls of four, an L and a T seen on three quarters of their length, corners
  * hidden behind furniture, a headboard against a wall, a bedroom whose clutter outweighs its walls,
  * one wall seen along a stretch of it, a garage's storage fronts, walls the depth missed and ARCore
- * found as planes. When a figure is given it is
+ * found as planes, a side open onto the next room. When a figure is given it is
  * within [MAX_ERROR] of the room's, or the case's own bound; where the walls seen do not close the
  * room, none is, and the plan is still drawn — but two adjacent walls alone give an area marked as
  * an estimate, the floor seen standing for the other two.
@@ -177,6 +178,18 @@ class RoomStructureRealScanTest {
         assertNull(summary, structure.perimeter)
         assertNull(summary, structure.volume)
         assertTrue(summary, RoomGap.MissingWall in structure.gaps)
+    }
+
+    @Test
+    fun `a side open onto the next room closes on the opening`() {
+        for (case in listOf(OPEN, OPEN_WIDE)) {
+            check(case)
+            val structure = RoomStructure.read(capture(case).scan())
+            val summary = summary(case, structure)
+            val beyond = structure.walls.count { max(it.az, it.bz) > RECTANGLE_Z.max() + PAST_OPENING_M }
+            assertTrue("$summary: $beyond walls drawn into the next room", beyond == 0)
+            assertTrue("$summary: ${structure.walls.size} walls", structure.walls.size == RECTANGLE_X.size)
+        }
     }
 
     @Test
@@ -479,9 +492,38 @@ class RoomStructureRealScanTest {
             figures = true,
         )
 
+        /** The rectangle's north side open from wall to wall onto the next room, its floor seen 1.6 m on. */
+        val OPEN = Case(
+            "open onto the next room",
+            SyntheticRoom(
+                RECTANGLE_X,
+                RECTANGLE_Z,
+                openings = listOf(SyntheticOpening(wall = 2, from = 0f, width = 5f, sill = 0f, height = 2.5f)),
+                hidden = setOf(2),
+                nextDoor = listOf(SyntheticFloor(0f, 5f, 4f, 5.6f)),
+            ),
+            figures = true,
+        )
+
+        /** [OPEN], the next room 9 m wide: its floor seen on either side past the walls' ends. */
+        val OPEN_WIDE = Case(
+            "open onto a wider room",
+            SyntheticRoom(
+                RECTANGLE_X,
+                RECTANGLE_Z,
+                openings = listOf(SyntheticOpening(wall = 2, from = 0f, width = 5f, sill = 0f, height = 2.5f)),
+                hidden = setOf(2),
+                nextDoor = listOf(SyntheticFloor(-2f, 7f, 4f, 5.6f)),
+            ),
+            figures = true,
+        )
+
+        /** No wall of [OPEN] is drawn further into the next room than this. */
+        const val PAST_OPENING_M = 0.3f
+
         val CASES = listOf(
             LOW_WALLS, FLOOR_AHEAD, DOOR, TWICE, TWO_LOW, TWO, L_PART, T_PART, CORNERS, HEADBOARD, CLUTTERED, GARAGE,
-            PLANES,
+            PLANES, OPEN, OPEN_WIDE,
         )
 
         /** Two facing walls of four, one drawn in two passes 15 cm apart, each seeing half of it. */
