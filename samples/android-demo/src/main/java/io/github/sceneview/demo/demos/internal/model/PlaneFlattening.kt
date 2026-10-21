@@ -372,10 +372,10 @@ internal object PlaneFlattening {
      * id of each, and the count. Largest first, so each group is anchored on its widest sheet, and
      * a plane joins the nearest group that takes it, measured from where the plane's faces lie to
      * the anchor's plane. Past [FREE_MERGE_M] from the anchor, the group's faces, all of them, must
-     * cover [MIN_SHARE] of the plane's footprint: a wall's second pass overlaps the wall, while a
-     * TV or a door's leaf stands where the wall has no faces at all. Against the group, not
-     * against one sheet of it: a door within a centimetre of a second pass beside it is no closer
-     * to the wall for that.
+     * cover [MIN_SHARE] of the plane's faces ([Footprint.share]): a wall's second pass overlaps
+     * the wall, while a TV or a door's leaf stands where the wall has no faces at all. Against the
+     * group, not against one sheet of it: a door within a centimetre of a second pass beside it is
+     * no closer to the wall for that.
      */
     @Suppress("NestedBlockDepth")
     private fun mergeCoplanar(faces: FaceGeometry, label: IntArray, planes: List<Plane>): Pair<IntArray, Int> {
@@ -471,20 +471,22 @@ internal object PlaneFlattening {
         }
 
         /**
-         * The share of the cells of [own] this footprint covers. A cell is covered from
-         * [MIN_CELL_CENTROIDS] centroids: a wall that stops at a frame's edge still lies over part
-         * of each cell along it, and counted there it would cover a frame little wider than those
-         * cells.
+         * The share of [own]'s face centroids that lie in cells this footprint covers, a cell
+         * covered from [MIN_CELL_CENTROIDS] centroids. Weighed by [own]'s centroids, not by its
+         * cells: a wall that stops at a frame's edge still lies over each cell along it, but only
+         * the frame's rim lies in those cells, so the frame reads covered for that rim alone.
          */
         fun share(own: Footprint): Float {
-            if (own.cells.isEmpty()) return 0f
-            var shared = 0
+            var total = 0L
+            var shared = 0L
             var j = 0
-            for (key in own.cells) {
+            for (i in own.cells.indices) {
+                val key = own.cells[i]
+                total += own.counts[i]
                 while (j < cells.size && cells[j] < key) j++
-                if (j < cells.size && cells[j] == key && counts[j] >= MIN_CELL_CENTROIDS) shared++
+                if (j < cells.size && cells[j] == key && counts[j] >= MIN_CELL_CENTROIDS) shared += own.counts[i]
             }
-            return shared.toFloat() / own.cells.size
+            return if (total == 0L) 0f else shared.toFloat() / total
         }
     }
 
@@ -831,19 +833,14 @@ internal object PlaneFlattening {
      */
     private const val FREE_MERGE_M = 0.02f
 
-    /** Past [FREE_MERGE_M], how much of a sheet's footprint its wall must cover for the two to be one. */
+    /** Past [FREE_MERGE_M], how much of a sheet's faces its wall must cover for the two to be one. */
     private const val MIN_SHARE = 0.6f
 
     /** The footprint's cell: wider than the holes a scan leaves in a wall, much narrower than a TV. */
     private const val FOOTPRINT_CELL_M = 0.1f
 
-    /**
-     * The face centroids that make a cell covered ([Footprint.share]): about half of what a cell of
-     * wall holds at the TSDF's 2.5 cm voxel, so it scales with that voxel. Around a 40 x 30 cm
-     * frame set 4.5 to 5.5 cm into the cells, the wall holds 17 to 43 centroids in each cell along
-     * the frame's edges: from 24, the cells it covers fall to half of the frame's.
-     */
-    private const val MIN_CELL_CENTROIDS = 24
+    /** The face centroids that make a cell covered ([Footprint.share]): one may be a stray face. */
+    private const val MIN_CELL_CENTROIDS = 2
     private const val LEVEL_NORMAL_Y = 0.9f
     private const val MAX_PLANES_AT_VERTEX = 6
     private const val MIN_CREASE_SIN = 0.34f // planes meeting at under ~20° do not make a crease
