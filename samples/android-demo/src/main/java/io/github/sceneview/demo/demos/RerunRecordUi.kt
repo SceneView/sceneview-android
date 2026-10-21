@@ -31,6 +31,7 @@ import io.github.sceneview.demo.R
 import io.github.sceneview.demo.demos.internal.DebugGroup
 import io.github.sceneview.demo.demos.internal.DebugPose
 import io.github.sceneview.demo.demos.internal.ScanFollow
+import io.github.sceneview.demo.demos.internal.ScanObserveGate
 import io.github.sceneview.demo.demos.internal.ScanSavingOrbit
 import io.github.sceneview.demo.demos.internal.ScanOpenTop
 import kotlinx.coroutines.Dispatchers
@@ -566,6 +567,7 @@ internal fun ScanLiveView(
     val drawn = remember(media) {
         media.liveDense?.let { live -> media.withLiveDense { openTop?.takeIf { savingNow } ?: live() } } ?: media
     }
+    val observed = remember(coverage, walls) { ScanObserveGate() }
     Box(modifier = Modifier.fillMaxSize().testTag(SCAN_STAGE_TAG)) {
         // Only the camera is dimmed: the cloud is drawn by its own view, above the veil.
         Box(Modifier.fillMaxSize().background(veil))
@@ -586,13 +588,12 @@ internal fun ScanLiveView(
             },
             observe = { frame ->
                 val pose = livePose(frame.camera)
-                coverage.observe(
-                    frame,
-                    pose = pose,
-                    snapshotCells = media.liveDense?.invoke()?.coveredCells,
-                    record = media.trace,
-                )
-                walls?.observe(frame, coverage, pose)
+                val cells = media.liveDense?.invoke()?.coveredCells
+                // The view hands the same frame to every render until it rebuilds one (#4743).
+                if (observed.isNew(frame, pose, cells)) {
+                    coverage.observe(frame, pose = pose, snapshotCells = cells, record = media.trace)
+                    walls?.observe(frame, coverage, pose)
+                }
             },
             // The walls stand in the room while it is scanned; saving, the orbit shows the cloud.
             walls = walls,
