@@ -21,7 +21,8 @@ import java.util.jar.JarFile
  * long — its shader programs still being linked right after it appeared, say — parks the main
  * thread on the whole backlog, and the ANR report shows `Engine.destroyRenderer` on the main
  * thread. [destroyRendererWhenBackendIdle] polls a fence once per frame instead and releases the
- * renderer once that inner wait has nothing left to drain.
+ * renderer once everything queued before the teardown has executed; `terminate` then waits only
+ * for what was queued since.
  *
  * The scene's own renderer has gone that way since #3854. The one [SurfaceMirrorer] creates for its
  * mirror passes (in-app recording) did not: the mirrorer's `destroy()`, run when a recorded scene
@@ -52,15 +53,16 @@ class RendererReleaseContractTest {
 
     @Test
     fun `SurfaceMirrorer releases its mirror renderer once the backend is idle`() {
-        val destroyCalls = calledMethods(SurfaceMirrorer::class.java)
-            .filter { (caller, _) -> caller.startsWith("destroy") }
+        // Any method of the class may make the call: renaming or splitting destroy() must not
+        // break this, while going back to Engine.destroyRenderer leaves no such call at all.
+        val calls = calledMethods(SurfaceMirrorer::class.java)
         assertTrue(
-            "SurfaceMirrorer.destroy() must still release the renderer it created for its mirror " +
-                "passes, through destroyRendererWhenBackendIdle — dropping the release would " +
-                "leak it until the engine goes. Calls seen in destroy(): $destroyCalls",
-            destroyCalls.any { (_, call) ->
-                call.startsWith("$ENGINE_KT.destroyRendererWhenBackendIdle")
-            },
+            "SurfaceMirrorer must still release the renderer it created for its mirror passes, " +
+                "through destroyRendererWhenBackendIdle — dropping the release would leak it " +
+                "until the engine goes. Release calls seen: " +
+                calls.filter { (_, call) -> call.contains("destroy", ignoreCase = true) }
+                    .map { (caller, call) -> "$caller -> $call" },
+            calls.any { (_, call) -> call.startsWith("$ENGINE_KT.destroyRendererWhenBackendIdle") },
         )
     }
 

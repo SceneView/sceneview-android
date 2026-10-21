@@ -225,7 +225,8 @@ class SurfaceMirrorer {
 
     /**
      * Destroys every mirror's swap chain, clears the mirror list and releases the mirror renderer
-     * once the backend is idle, without blocking the calling (main) thread on it.
+     * once the backend has executed everything queued so far, without waiting for that queue on
+     * the calling (main) thread.
      *
      * Called by [io.github.sceneview.SceneRenderer.destroy] when the scene is disposed — a
      * mirrored recording ends with the view that feeds it.
@@ -246,10 +247,13 @@ class SurfaceMirrorer {
         // Not `destroyRenderer` on the spot: Filament's renderer teardown first waits, with no
         // bound, for every command already queued on the backend — the scene's last mirror passes
         // and, right after it appeared, its shader links. A recorded scene disposed then parked the
-        // main thread on that whole queue (#3799). This never waits on that fence: the release runs
-        // once the backend has drained — right away if it already has, otherwise on a later
-        // main-thread message — and the engine outlives it (its own destroy runs pending releases
-        // first).
+        // main thread on that whole queue (#3799). The release now runs on the main thread once
+        // everything queued before the teardown has executed — right away if it already has,
+        // otherwise on a later main-thread message — and the engine outlives it (its own destroy
+        // runs pending releases first). `FRenderer::terminate` still creates and waits on its own
+        // fence then, so it waits for whatever was queued since the teardown (the next scene's
+        // shader links, say): a wait bounded by that work, not the whole backlog — the same limit
+        // as the scene's own renderer (#3854).
         if (renderer != null) engine?.destroyRendererWhenBackendIdle(renderer)
     }
 
