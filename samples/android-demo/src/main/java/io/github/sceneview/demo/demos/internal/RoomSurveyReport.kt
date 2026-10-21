@@ -8,7 +8,8 @@ import kotlin.math.max
  *
  * The three outputs read the same rows and the same notes from here, so a figure carries the
  * same marks wherever it is read: "≈" in front of an estimate, which has no "±"; "±" behind a
- * measured figure, with the note that says it is the scan's scatter and not an accuracy.
+ * figure read with a scatter, with the note that says it is the scan's scatter and not an
+ * accuracy. A figure measured end to end, as in a room traced corner by corner, has neither.
  */
 
 /**
@@ -85,26 +86,41 @@ object SurveyReport {
     private const val ROOM_SEPARATOR = "; "
     private const val PLUS_MINUS = " ± "
 
-    /** `20.0 m² ± 0.3` when measured, `≈ 20.0 m²` when an estimate. */
+    /** `20.0 m² ± 0.3` when scanned, `20.0 m²` when traced, `≈ 20.0 m²` when an estimate. */
     fun area(figure: SurveyFigure): String = when {
         figure.estimate -> SurveyFormat.ESTIMATE + SurveyFormat.area(figure.value) + SQUARE_METRES
-        else -> SurveyFormat.area(figure.value) + SQUARE_METRES + PLUS_MINUS + SurveyFormat.areaSpread(figure.plusMinus)
+        else -> SurveyFormat.area(figure.value) + SQUARE_METRES + areaSpread(figure.plusMinus)
     }
 
     /**
-     * `37.4 m³ ± 1.2` when measured, `≈ 37.4 m³` when an estimate: to a tenth of a cubic metre,
-     * the area's own step — a finer one would claim more than the floor it stands on.
+     * `37.4 m³ ± 1.2` when scanned, `37.4 m³` when traced, `≈ 37.4 m³` when an estimate: to a
+     * tenth of a cubic metre, the area's own step — a finer one would claim more than the floor
+     * it stands on.
      */
     fun volume(figure: SurveyFigure): String = when {
         figure.estimate -> SurveyFormat.ESTIMATE + SurveyFormat.area(figure.value) + CUBIC_METRES
-        else -> SurveyFormat.area(figure.value) + CUBIC_METRES + PLUS_MINUS + SurveyFormat.areaSpread(figure.plusMinus)
+        else -> SurveyFormat.area(figure.value) + CUBIC_METRES + areaSpread(figure.plusMinus)
     }
 
-    /** `5.00 m ± 0.05` when measured, `≈ 5.00 m` when an estimate. */
+    /** `5.00 m ± 0.05` when scanned, `5.00 m` when traced, `≈ 5.00 m` when an estimate. */
     fun length(figure: SurveyFigure): String = when {
         figure.estimate -> SurveyFormat.ESTIMATE + SurveyFormat.length(figure.value) + METRES
-        else -> SurveyFormat.length(figure.value) + METRES + PLUS_MINUS + SurveyFormat.lengthSpread(figure.plusMinus)
+        else -> SurveyFormat.length(figure.value) + METRES + lengthSpread(figure.plusMinus)
     }
+
+    /**
+     * ` ± 0.05` behind a length read with a scatter; nothing behind one measured end to end, which
+     * has none to give — rounded up to a step, its 0 would read as a scatter of 5 cm.
+     */
+    private fun lengthSpread(plusMinus: Float): String =
+        if (plusMinus > 0f) PLUS_MINUS + SurveyFormat.lengthSpread(plusMinus) else ""
+
+    /** ` ± 0.3` behind an area or a volume read with a scatter; nothing behind one measured end to end. */
+    private fun areaSpread(plusMinus: Float): String =
+        if (plusMinus > 0f) PLUS_MINUS + SurveyFormat.areaSpread(plusMinus) else ""
+
+    /** `true` when [figure] is written with a "±": measured, and read with a scatter. */
+    private fun scattered(figure: SurveyFigure?): Boolean = figure != null && !figure.estimate && figure.plusMinus > 0f
 
     /** The scan's name and, when the scan has one, its date. */
     fun heading(wording: SurveyWording, title: String, date: String?): String =
@@ -117,11 +133,19 @@ object SurveyReport {
     /** What to go and scan, one line per thing the survey lacks. */
     fun hints(survey: RoomSurvey, wording: SurveyWording): List<String> = survey.gaps.mapNotNull { wording.gaps[it] }
 
-    /** What the marks in use mean: "≈" when a figure is an estimate, "±" when one is measured. */
+    /**
+     * What the marks in use mean: "≈" when a figure is an estimate, "±" when one is written with
+     * a scatter. A room traced corner by corner has none, and so no word about a scan.
+     */
     fun notes(survey: RoomSurvey, wording: SurveyWording): List<String> = listOfNotNull(
         wording.estimateNote.takeIf { survey.hasEstimates },
-        wording.spreadNote.takeIf { survey.hasSpread },
+        wording.spreadNote.takeIf { hasScatter(survey) },
     )
+
+    /** `true` when a figure of [survey] — a wall's length, as the table writes it, or the room's — carries a "±". */
+    private fun hasScatter(survey: RoomSurvey): Boolean =
+        survey.walls.any { it.seen && scattered(it.length) } ||
+            listOf(survey.area, survey.length, survey.width, survey.perimeter, survey.ceilingHeight).any(::scattered)
 
     /** The survey's figures: area, length × width, perimeter, ceiling height and volume — or what is missing. */
     fun rows(survey: RoomSurvey, wording: SurveyWording): List<SurveyRow> {
@@ -137,7 +161,7 @@ object SurveyReport {
             val both = SurveyFormat.length(length.value) + " × " + SurveyFormat.length(width.value) + METRES
             val value = when {
                 length.estimate || width.estimate -> SurveyFormat.ESTIMATE + both
-                else -> both + PLUS_MINUS + SurveyFormat.lengthSpread(max(length.plusMinus, width.plusMinus))
+                else -> both + lengthSpread(max(length.plusMinus, width.plusMinus))
             }
             rows += SurveyRow(wording.dimensions, value)
         } else {
@@ -202,8 +226,8 @@ object SurveyReport {
         area = survey.area?.let {
             (if (it.estimate) SurveyFormat.ESTIMATE else "") + SurveyFormat.area(it.value) + SQUARE_METRES
         },
-        // An estimate has no scatter to give.
-        areaNote = survey.area?.takeIf { !it.estimate }?.let {
+        // An estimate has no scatter to give, nor has an area measured end to end.
+        areaNote = survey.area?.takeIf(::scattered)?.let {
             PLUS_MINUS.trim() + " " + SurveyFormat.areaSpread(it.plusMinus) + SQUARE_METRES
         },
         scale = { metres -> wording.scaleBar.format(if (metres < 1f) "0.5" else metres.toInt().toString()) },
