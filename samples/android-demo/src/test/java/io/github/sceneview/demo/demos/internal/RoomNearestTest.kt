@@ -323,6 +323,156 @@ class RoomNearestTest {
         assertEquals(0.5f, found.distance, EPS)
     }
 
+    @Test
+    fun withNoSideGivenTheRoomIsOnTheRightOfTheWallsLine() {
+        // Walking from a to b along +X with +Y up, the right hand points to +Z.
+        val wall = ShellWall(0f, 0f, 4f, 0f, 0f, 0f)
+        val shell = RoomShell(listOf(wall))
+
+        val right = need(shell.nearest(2f, eye, 1f).wall, "wall")
+        assertVec(Vec3(0f, 0f, 1f), right.normal)
+        assertEquals(1f, right.distance, EPS)
+        assertFalse(right.fromBehind)
+        val left = need(shell.nearest(2f, eye, -1f).wall, "wall")
+        assertVec(Vec3(0f, 0f, 1f), left.normal)
+        assertTrue(left.fromBehind)
+
+        // The test room runs round so that every wall has the room on its right: no side given,
+        // every normal still points in.
+        val given = room(4f, 5f)
+        val unsided = given.map { it.copy(nx = 0f, nz = 0f) }
+        for (i in given.indices) {
+            val pose = DebugPose(2f, eye, 2.5f)
+            val expected = need(RoomShell(listOf(given[i])).nearest(pose).wall, "wall")
+            val actual = need(RoomShell(listOf(unsided[i])).nearest(pose).wall, "wall")
+            assertVec(expected.normal, actual.normal)
+            assertEquals(expected.offset, actual.offset, EPS)
+            assertFalse(actual.fromBehind)
+        }
+    }
+
+    @Test
+    fun aWallOrAnOpeningWithAnythingNotFiniteIsSkipped() {
+        val good = ShellWall(0f, 2f, 4f, 2f, 0f, -1f)
+        val pose = DebugPose(2f, eye, 1f)
+        val badSides = listOf(
+            ShellWall(0f, 0f, 4f, 0f, Float.NaN, 1f),
+            ShellWall(0f, 0f, 4f, 0f, 0f, Float.POSITIVE_INFINITY),
+            ShellWall(0f, 0f, 4f, 0f, Float.NEGATIVE_INFINITY, 0f),
+        )
+        for (bad in badSides) {
+            assertNull("$bad", RoomShell(listOf(bad)).nearest(pose).wall)
+            // Nearer than the good wall, yet skipped: the good one is found.
+            assertSame("$bad", good, need(RoomShell(listOf(bad, good)).nearest(DebugPose(2f, eye, 0.5f)).wall, "wall").wall)
+        }
+        assertNull(RoomShell(listOf(ShellWall(0f, 0f, Float.POSITIVE_INFINITY, 0f, 0f, 1f))).nearest(pose).wall)
+
+        val door = ShellOpening(1f, 0f, 2f, 0f, 0f, 2f)
+        val badOpenings = listOf(
+            door.copy(top = Float.POSITIVE_INFINITY),
+            door.copy(bottom = Float.NEGATIVE_INFINITY),
+            door.copy(top = Float.NaN),
+            door.copy(bx = Float.POSITIVE_INFINITY),
+        )
+        for (bad in badOpenings) {
+            assertNull("$bad", RoomShell(openings = listOf(bad)).nearest(pose).opening)
+        }
+
+        // A pose at an infinite height finds nothing either.
+        assertEquals(RoomNearest(null, null), RoomShell(listOf(good), listOf(door)).nearest(2f, Float.POSITIVE_INFINITY, 1f))
+    }
+
+    @Test
+    fun aConfidenceCountsBetween0And1AndNoneCountsAs0() {
+        val centre = DebugPose(2f, eye, 2f)
+        fun winner(vararg confidence: Float?): Int {
+            val walls = room(4f, 4f, confidence.toList())
+            val found = need(RoomShell(walls).nearest(centre).wall, "wall")
+            return walls.indexOfFirst { it === found.wall }
+        }
+
+        // 0, below 0, NaN and none are all no confidence: the first in the list wins.
+        assertEquals(0, winner(null, 0f, null, null))
+        assertEquals(0, winner(null, -0.5f, null, null))
+        assertEquals(0, winner(Float.NaN, null, -1f, 0f))
+        // Above 1 is no surer than 1.
+        assertEquals(0, winner(1f, 1.5f, null, null))
+        // Any confidence above 0 still beats none.
+        assertEquals(2, winner(null, Float.NaN, 0.01f, -2f))
+
+        val walls = room(4f, 4f)
+        val unknown = ShellOpening.onWall(walls[0], 1.5f, 1f, 0f, 2f)
+        val zero = ShellOpening.onWall(walls[2], 1.5f, 1f, 0f, 2f, 0f)
+        val found = need(RoomShell(walls, listOf(unknown, zero)).nearest(centre).opening, "opening")
+        assertSame(unknown, found.opening)
+        // The opening's own confidence comes back as its reader gave it.
+        assertEquals(0f, need(RoomShell(walls, listOf(zero)).nearest(centre).opening, "opening").confidence)
+    }
+
+    @Test
+    fun anOpeningOnAWallKeepsItsWidthPastTheWallsEndsButNotBelowZero() {
+        val wall = ShellWall(0f, 0f, 4f, 0f, 0f, 1f)
+
+        // From 3.5 m, 1 m wide, on a 4 m wall: it runs on past the wall's end, its width kept.
+        val past = ShellOpening.onWall(wall, 3.5f, 1f, 0f, 2f)
+        assertEquals(3.5f, past.ax, EPS)
+        assertEquals(4.5f, past.bx, EPS)
+        assertEquals(1f, past.width, EPS)
+        // Starting before the wall's start the same way.
+        val before = ShellOpening.onWall(wall, -0.2f, 0.9f, 0f, 2f)
+        assertEquals(-0.2f, before.ax, EPS)
+        assertEquals(0.7f, before.bx, EPS)
+        assertEquals(0.9f, before.width, EPS)
+
+        // A negative width is no width: the opening is noise and skipped.
+        val backwards = ShellOpening.onWall(wall, 2f, -0.9f, 0f, 2f)
+        assertEquals(0f, backwards.width, EPS)
+        assertNull(RoomShell(listOf(wall), listOf(backwards)).nearest(2f, eye, 1f).opening)
+    }
+
+    @Test
+    fun anOpeningWithNoHeightIsNoise() {
+        val walls = room(4f, 4f)
+        val flat = ShellOpening.onWall(walls[0], 1f, 0.9f, 1f, 1f)
+        val upsideDown = ShellOpening.onWall(walls[0], 1f, 0.9f, 2f, 0f)
+        assertNull(RoomShell(walls, listOf(flat)).nearest(1.4f, eye, 1f).opening)
+        assertNull(RoomShell(walls, listOf(upsideDown)).nearest(1.4f, eye, 1f).opening)
+    }
+
+    @Test
+    fun aCentimetreIsJustEnough() {
+        val pose = DebugPose(0f, eye, 1f)
+        // Exactly 1 cm is kept; just under it is noise.
+        assertNotNull(RoomShell(listOf(ShellWall(0f, 0f, 0.01f, 0f, 0f, 1f))).nearest(pose).wall)
+        assertNull(RoomShell(listOf(ShellWall(0f, 0f, 0.0099f, 0f, 0f, 1f))).nearest(pose).wall)
+
+        assertNotNull(RoomShell(openings = listOf(ShellOpening(0f, 0f, 0.01f, 0f, 0f, 0.01f))).nearest(pose).opening)
+        assertNull(RoomShell(openings = listOf(ShellOpening(0f, 0f, 0.0099f, 0f, 0f, 2f))).nearest(pose).opening)
+        assertNull(RoomShell(openings = listOf(ShellOpening(0f, 0f, 1f, 0f, 0f, 0.0099f))).nearest(pose).opening)
+    }
+
+    @Test
+    fun inTheWallsPlaneBesideOrAboveADoorTheDoorIsAsFarAsItsEdge() {
+        val walls = room(4f, 5f)
+        // In the south wall from x = 1.50 to 2.43, up to 2.04 m.
+        val door = ShellOpening.onWall(walls[0], 1.5f, 0.93f, 0f, 2.04f)
+        val shell = RoomShell(walls, listOf(door))
+
+        // Above the door, in the wall: 0.46 m up to its head, the wall right here.
+        val above = shell.nearest(1.965f, 2.5f, 0f)
+        val head = need(above.opening, "opening")
+        assertEquals(0.46f, head.distance, EPS)
+        assertVec(Vec3(1.965f, 2.04f, 0f), head.point)
+        assertEquals(0f, need(above.wall, "wall").distance, EPS)
+
+        // Beside it, in the wall: 0.3 m along to its jamb.
+        val beside = shell.nearest(2.73f, eye, 0f)
+        val jamb = need(beside.opening, "opening")
+        assertEquals(0.3f, jamb.distance, EPS)
+        assertVec(Vec3(2.43f, eye, 0f), jamb.point)
+        assertEquals(0f, need(beside.wall, "wall").distance, EPS)
+    }
+
     private companion object {
         const val EPS = 1e-4f
     }
