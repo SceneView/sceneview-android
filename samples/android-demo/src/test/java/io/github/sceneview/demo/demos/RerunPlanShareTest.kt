@@ -16,6 +16,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.core.content.FileProvider
 import androidx.core.content.IntentCompat
 import androidx.test.core.app.ApplicationProvider
 import io.github.sceneview.demo.R
@@ -25,6 +26,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -38,6 +40,7 @@ import org.robolectric.util.ReflectionHelpers
 import org.robolectric.util.ReflectionHelpers.ClassParameter
 import java.io.File
 import java.io.OutputStream
+import java.lang.reflect.Modifier
 
 /**
  * The floor plan's file shares, each tapped from the plan's share menu as a user would. "Share
@@ -55,6 +58,21 @@ class RerunPlanShareTest {
     val composeRule = createComposeRule()
 
     private val app: Application get() = ApplicationProvider.getApplicationContext()
+
+    /**
+     * FileProvider keeps each authority's roots in a static map, resolved once against the cache
+     * folder of the first test that shared a file. Each test has a cache folder of its own, so the
+     * map is emptied before each one, as a fresh process would have it.
+     */
+    @Before
+    fun forgetFileProviderRoots() {
+        FileProvider::class.java.declaredFields
+            .filter { Modifier.isStatic(it.modifiers) && Map::class.java.isAssignableFrom(it.type) }
+            .forEach { field ->
+                field.isAccessible = true
+                (field.get(null) as MutableMap<*, *>).clear()
+            }
+    }
 
     /** 4 × 3 m with its top-right corner cut at 45°, 2.50 m high: a room with a plan to draw. */
     private val traced = planSurvey(0f, 0f, 3f, 0f, 4f, 1f, 4f, 3f, 0f, 3f)
