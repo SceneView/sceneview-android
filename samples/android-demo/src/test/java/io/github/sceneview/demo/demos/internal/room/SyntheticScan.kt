@@ -34,6 +34,14 @@ class SyntheticPost(val x: Float, val z: Float, val radius: Float, val top: Floa
 class SyntheticFloor(val x0: Float, val x1: Float, val z0: Float, val z1: Float)
 
 /**
+ * Wall [wall] as the depth returns a wall it barely holds: only over [pieces], in metres along it,
+ * each turned about its middle by half [degrees] one way, the next the other way, and moved out
+ * from the wall by the next of [layers] in turn — shards of it, a few degrees and centimetres out
+ * of line. ARCore finds no plane on it.
+ */
+class SyntheticShards(val wall: Int, val pieces: List<ClosedFloatingPointRange<Float>>, val degrees: Float, val layers: FloatArray)
+
+/**
  * A room to scan: its floor's outline [x], [z] counter-clockwise seen from above (+Y up, the room
  * on the left of each wall's walk), its walls floor to [height], the [openings] cut in them and
  * the [boxes] standing in it. [hidden] walls are never seen: a ray that reaches one returns no
@@ -50,7 +58,8 @@ class SyntheticFloor(val x0: Float, val x1: Float, val z0: Float, val z1: Float)
  * Every normal of the fused cloud is turned about +Y by a Gaussian of [normalSpread] degrees: a
  * phone's normals are not a renderer's. [clutter] stands in the room besides the [boxes]. A wall
  * in [seenAlong] is seen only along that stretch, in metres from its start: blind elsewhere. The
- * depth never returns on a wall in [planeOnly], and ARCore still finds its plane.
+ * depth never returns on a wall in [planeOnly], and ARCore still finds its plane. The depth
+ * returns [shards] of one wall.
  */
 class SyntheticRoom(
     val x: FloatArray,
@@ -71,6 +80,7 @@ class SyntheticRoom(
     val clutter: List<SyntheticPost> = emptyList(),
     val seenAlong: Map<Int, ClosedFloatingPointRange<Float>> = emptyMap(),
     val planeOnly: Set<Int> = emptySet(),
+    val shards: SyntheticShards? = null,
 ) {
     val area: Float
         get() {
@@ -141,6 +151,8 @@ object SyntheticScan {
 
     /** The clutter's surfels stand this far apart: the fusion's voxel. */
     private const val CLUTTER_STEP_M = DenseFusion.VOXEL_M
+    private const val SHARD_NEAR_M = 0.05f
+    private const val SHARD_FACING = 0.9f
 
     /** The walk's stops: a grid over the floor, each clear of the walls and boxes. */
     fun stops(room: SyntheticRoom): List<Vec3> {
@@ -212,20 +224,21 @@ object SyntheticScan {
         return SyntheticCapture(cloud, trail, planesOf(room, poses), poses)
     }
 
-    /** [cloud] with the [room]'s normals spread and its clutter added; [cloud] itself when it has neither. */
+    /** [cloud] with the [room]'s normals spread, its clutter added and its shards cut; [cloud] itself when it has none. */
     private fun cluttered(room: SyntheticRoom, cloud: DenseCloud, random: Random): DenseCloud {
         val fused = cloud.normals ?: return cloud
-        if (room.normalSpread <= 0f && room.clutter.isEmpty()) return cloud
+        if (room.normalSpread <= 0f && room.clutter.isEmpty() && room.shards == null) return cloud
         val positions = ArrayList<Float>(cloud.positions.size)
         val normals = ArrayList<Float>(cloud.positions.size)
         for (i in 0 until cloud.count) {
             val turn = Math.toRadians(random.nextGaussian() * room.normalSpread).toFloat()
             val nx = fused[i * 3]
             val nz = fused[i * 3 + 2]
-            for (k in 0 until 3) positions += cloud.positions[i * 3 + k]
-            normals += nx * cos(turn) - nz * sin(turn)
-            normals += fused[i * 3 + 1]
-            normals += nx * sin(turn) + nz * cos(turn)
+            val p = floatArrayOf(cloud.positions[i * 3], cloud.positions[i * 3 + 1], cloud.positions[i * 3 + 2])
+            val n = floatArrayOf(nx * cos(turn) - nz * sin(turn), fused[i * 3 + 1], nx * sin(turn) + nz * cos(turn))
+            if (room.shards != null && !shard(room, room.shards, p, n)) continue
+            for (k in 0 until 3) positions += p[k]
+            for (k in 0 until 3) normals += n[k]
         }
         for (post in room.clutter) {
             val around = max(1, (2 * PI * post.radius / CLUTTER_STEP_M).roundToInt())
@@ -249,6 +262,41 @@ object SyntheticScan {
     }
 
     /**
+     * Whether the surfel at [p] facing [n] is kept with [shards] of [room]'s wall cut: a surfel of
+     * that wall only over a piece, moved and turned with it ([p] and [n] in place); any other as it is.
+     */
+    private fun shard(room: SyntheticRoom, shards: SyntheticShards, p: FloatArray, n: FloatArray): Boolean {
+        val i = shards.wall
+        val j = (i + 1) % room.x.size
+        val length = room.wallLength(i)
+        val dx = (room.x[j] - room.x[i]) / length
+        val dz = (room.z[j] - room.z[i]) / length
+        // The wall's normal into the room: the side its middle's neighbourhood is inside.
+        val side = if (room.inside(room.x[i] + dx * length / 2 - dz * SHARD_NEAR_M, room.z[i] + dz * length / 2 + dx * SHARD_NEAR_M)) 1f else -1f
+        val ox = -dz * side
+        val oz = dx * side
+        val along = (p[0] - room.x[i]) * dx + (p[2] - room.z[i]) * dz
+        val out = (p[0] - room.x[i]) * ox + (p[2] - room.z[i]) * oz
+        if (abs(out) > SHARD_NEAR_M || n[0] * ox + n[2] * oz < SHARD_FACING || along < 0f || along > length) return true
+        val k = shards.pieces.indexOfFirst { along in it }
+        if (k < 0) return false
+        val piece = shards.pieces[k]
+        val middle = (piece.start + piece.endInclusive) / 2
+        val turn = Math.toRadians((if (k % 2 == 0) 1.0 else -1.0) * shards.degrees / 2).toFloat()
+        val layer = shards.layers[k % shards.layers.size]
+        val cx = room.x[i] + dx * middle
+        val cz = room.z[i] + dz * middle
+        val rx = p[0] - cx
+        val rz = p[2] - cz
+        p[0] = cx + rx * cos(turn) - rz * sin(turn) + ox * layer
+        p[2] = cz + rx * sin(turn) + rz * cos(turn) + oz * layer
+        val nx = n[0]
+        n[0] = nx * cos(turn) - n[2] * sin(turn)
+        n[2] = nx * sin(turn) + n[2] * cos(turn)
+        return true
+    }
+
+    /**
      * The planes ARCore would find: the floor, and each seen wall a little short of its corners,
      * no higher than it was seen, and only as far as the room's reach from the camera's [poses].
      */
@@ -258,7 +306,7 @@ object SyntheticScan {
         planes += RoomPlane(RoomPlaneKind.Floor, FloatArray(n * 3) { k -> if (k % 3 == 0) room.x[k / 3] else if (k % 3 == 1) 0f else room.z[k / 3] })
         val top = min(2f, room.seenUpTo)
         for (i in 0 until n) {
-            if (i in room.hidden || top <= PLANE_FROM_M) continue
+            if (i in room.hidden || i == room.shards?.wall || top <= PLANE_FROM_M) continue
             val j = (i + 1) % n
             val length = room.wallLength(i)
             val seen = room.seenAlong[i] ?: 0f..length

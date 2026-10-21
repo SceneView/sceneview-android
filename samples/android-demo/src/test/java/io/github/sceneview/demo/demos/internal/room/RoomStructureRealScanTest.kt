@@ -18,7 +18,8 @@ import kotlin.math.max
  * seen twice, two walls of four, an L and a T seen on three quarters of their length, corners
  * hidden behind furniture, a headboard against a wall, a bedroom whose clutter outweighs its walls,
  * one wall seen along a stretch of it, a garage's storage fronts, walls the depth missed and ARCore
- * found as planes, a side open onto the next room. When a figure is given it is
+ * found as planes, a side open onto the next room, a wall returned only in shards out of line.
+ * When a figure is given it is
  * within [MAX_ERROR] of the room's, or the case's own bound; where the walls seen do not close the
  * room, none is, and the plan is still drawn — but two adjacent walls alone give an area marked as
  * an estimate, the floor seen standing for the other two.
@@ -190,6 +191,13 @@ class RoomStructureRealScanTest {
             assertTrue("$summary: $beyond walls drawn into the next room", beyond == 0)
             assertTrue("$summary: ${structure.walls.size} walls", structure.walls.size == RECTANGLE_X.size)
         }
+    }
+
+    @Test
+    fun `a wall returned only in shards out of line is one wall`() {
+        check(SHARDS)
+        val structure = RoomStructure.read(capture(SHARDS).scan())
+        assertTrue("${summary(SHARDS, structure)}: ${structure.seenWalls} walls seen", structure.seenWalls == 2)
     }
 
     @Test
@@ -518,12 +526,36 @@ class RoomStructureRealScanTest {
             figures = true,
         )
 
+        /**
+         * A 2 × 3.5 m room seen on two adjacent walls, the south one returned only in four shards
+         * 0.15 to 0.45 m long, 1.25 m of its 2 m, the last 20 cm from the east wall: turned 19°
+         * from each other, so in two families, and in three layers up to 6 cm in or out of line —
+         * as a wall of a real scan was, no piece of it seen along 0.6 m. The layers are such that
+         * no two shards of one family stand in line: two would make one line along 0.6 m.
+         */
+        val SHARDS = Case(
+            "a wall in shards",
+            SyntheticRoom(
+                floatArrayOf(0f, 2f, 2f, 0f),
+                floatArrayOf(0f, 0f, 3.5f, 3.5f),
+                hidden = setOf(2, 3),
+                shards = SyntheticShards(
+                    wall = 0,
+                    pieces = listOf(0.1f..0.55f, 0.7f..1f, 1.15f..1.3f, 1.45f..1.8f),
+                    degrees = 19f,
+                    layers = floatArrayOf(0.06f, -0.06f, 0f),
+                ),
+            ),
+            figures = true,
+            estimated = true,
+        )
+
         /** No wall of [OPEN] is drawn further into the next room than this. */
         const val PAST_OPENING_M = 0.3f
 
         val CASES = listOf(
             LOW_WALLS, FLOOR_AHEAD, DOOR, TWICE, TWO_LOW, TWO, L_PART, T_PART, CORNERS, HEADBOARD, CLUTTERED, GARAGE,
-            PLANES, OPEN, OPEN_WIDE,
+            PLANES, OPEN, OPEN_WIDE, SHARDS,
         )
 
         /** Two facing walls of four, one drawn in two passes 15 cm apart, each seeing half of it. */
