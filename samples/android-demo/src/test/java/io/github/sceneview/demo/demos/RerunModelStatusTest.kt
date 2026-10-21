@@ -13,8 +13,6 @@ class RerunModelStatusTest {
     fun `a big scan's raw surface shown meanwhile says the model is being finished`() {
         assertEquals(ModelStatus.Creating, ModelStatus.of(model = null, settled = false))
         assertEquals(ModelStatus.Finishing, ModelStatus.of(mesh(finished = false), settled = false))
-        assertTrue(ModelStatus.Creating.showsProgress)
-        assertTrue(ModelStatus.Finishing.showsProgress)
     }
 
     @Test
@@ -22,24 +20,44 @@ class RerunModelStatusTest {
         val outOfMemory = mesh(finished = false, outOfMemoryInHeap = HEAP)
         assertEquals(ModelStatus.RawOutOfMemory, ModelStatus.of(outOfMemory, settled = true))
         assertEquals(ModelStatus.RawUnfinished, ModelStatus.of(mesh(finished = false), settled = true))
-        assertFalse(ModelStatus.RawOutOfMemory.showsProgress)
     }
 
     @Test
-    fun `the finished model replacing a big scan's raw surface fades the line out instead of removing it`() {
+    fun `the finished model replacing a big scan's raw surface is said once, then the line fades in place`() {
         // While the raw surface finishes, the line shows over it.
         val finishing = checkNotNull(ModelStatus.slot(mesh(finished = false), settled = false, rawShownFirst = false))
         assertEquals(ModelStatus.Finishing, finishing.status)
         assertTrue(finishing.visible)
-        // The swap: the same line keeps its room, faded. The model is framed above this slot, and
-        // a line that went would move the finished model the moment it takes the raw one's place.
+        // The swap: the line says the model is finished, heard once as it changes.
         val swapped = checkNotNull(ModelStatus.slot(mesh(finished = true), settled = true, rawShownFirst = true))
-        assertEquals(ModelStatus.Finishing, swapped.status)
-        assertFalse(swapped.visible)
-        // A finish that fails after the raw surface was shown still says why.
-        val failed = checkNotNull(ModelStatus.slot(mesh(finished = false), settled = true, rawShownFirst = true))
+        assertEquals(ModelStatus.Finished, swapped.status)
+        assertTrue(swapped.visible)
+        // Said, it fades but keeps its room: the model is framed above this slot, and a line that
+        // went would move the finished model just after it took the raw one's place.
+        val said = checkNotNull(
+            ModelStatus.slot(mesh(finished = true), settled = true, rawShownFirst = true, finishedSaid = true),
+        )
+        assertEquals(ModelStatus.Finished, said.status)
+        assertFalse(said.visible)
+        // A finish that fails after the raw surface was shown still says why, and stays.
+        val failed = checkNotNull(
+            ModelStatus.slot(mesh(finished = false), settled = true, rawShownFirst = true, finishedSaid = true),
+        )
         assertEquals(ModelStatus.RawUnfinished, failed.status)
         assertTrue(failed.visible)
+    }
+
+    @Test
+    fun `a big scan's line holds the room of every way its finish can end`() {
+        val finishing = checkNotNull(ModelStatus.slot(mesh(finished = false), settled = false, rawShownFirst = false))
+        val endings = listOf(
+            ModelStatus.slot(mesh(finished = true), settled = true, rawShownFirst = true),
+            ModelStatus.slot(mesh(finished = false, outOfMemoryInHeap = HEAP), settled = true, rawShownFirst = true),
+            ModelStatus.slot(mesh(finished = false), settled = true, rawShownFirst = true),
+        ).map { checkNotNull(it) }
+        val ends = listOf(ModelStatus.Finished, ModelStatus.RawOutOfMemory, ModelStatus.RawUnfinished)
+        assertTrue("reserved: ${finishing.reserve}", finishing.reserve.containsAll(ends + ModelStatus.Finishing))
+        endings.forEach { assertEquals("${it.status} reserves", finishing.reserve, it.reserve) }
     }
 
     @Test

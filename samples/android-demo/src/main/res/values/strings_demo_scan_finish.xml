@@ -2,5 +2,6 @@
 <resources>
     <string name="scan_result_finishing">Finishing your model…</string>
     <string name="scan_result_raw_memory">Shown as scanned: finishing this model needs more memory than this phone has.</string>
+    <string name="scan_result_finished">Your model is finished.</string>
     <string name="scan_result_raw_unfinished">Shown as scanned: the model couldn\'t be finished. Open the scan again to retry.</string>
 </resources>

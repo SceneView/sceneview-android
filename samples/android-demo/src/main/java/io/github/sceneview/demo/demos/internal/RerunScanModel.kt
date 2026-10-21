@@ -11,6 +11,8 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import kotlin.math.abs
 import kotlin.math.sqrt
 
@@ -42,14 +44,27 @@ class RerunScanModel(
      * instead of failing the same finish again. A bigger heap finishes it again ([parse]).
      */
     val outOfMemoryInHeap: Long? = null,
+    /** The finishes that ran out of [outOfMemoryInHeap], this one included. */
+    val outOfMemoryAttempts: Int = 1,
 ) {
     init {
         require(bounds.size == BOUNDS) { "six bounds" }
         require(outOfMemoryInHeap == null || !finished) { "a finished model ran out of memory" }
+        require(outOfMemoryAttempts >= 1) { "at least one attempt" }
     }
 
     /** Kept with its scan ([RerunSessionStore.saveModel]): the finished model, or the raw surface left by [outOfMemoryInHeap]. */
     val keptWithScan: Boolean get() = finished || outOfMemoryInHeap != null
+
+    /** Stub: never finished again. */
+    val retriesFinish: Boolean get() = false
+
+    /** Stub: [built] as it is. */
+    fun finishedAgain(built: RerunScanModel?): RerunScanModel = built ?: this
+
+    /** Stub: [glb] copied for the renderer, unguarded. */
+    fun glbBuffer(allocate: (Int) -> ByteBuffer = ByteBuffer::allocateDirect): ByteBuffer? =
+        allocate(glb.size).order(ByteOrder.nativeOrder()).put(glb).also { it.rewind() }
 
     /** What the model is made of. */
     enum class Kind(val wireName: String) {
@@ -85,6 +100,9 @@ class RerunScanModel(
          * a 1 is the raw surface an earlier app kept, read as none so the scan finishes it again.
          */
         const val VERSION = 2
+
+        /** Stub: finishes run before running out of memory is final. */
+        const val OUT_OF_MEMORY_ATTEMPTS = 3
         private const val BOUNDS = 6
         private val pretty = Json { prettyPrint = true }
         private val lenient = Json { ignoreUnknownKeys = true; isLenient = true }
@@ -128,6 +146,9 @@ class RerunScanModel(
         private const val GLB_HEADER = 12
     }
 }
+
+/** Stub: the model the result screen reads its ground off. */
+internal fun groundSource(model: RerunScanModel?, @Suppress("UnusedParameter") settled: Boolean): RerunScanModel? = model
 
 /**
  * The fallback model when meshing fails: the scan's coloured points, each one a small square

@@ -709,17 +709,7 @@ internal fun RerunModelScreen(
         bottomOverlay = {
             // The finished model in a big scan's raw surface's place: framed by the raw one.
             val rawShownFirst = (state as? ModelState.Ready)?.let { it.framedBy !== it.model } == true
-            ModelStatus.slot(model, settled, rawShownFirst)?.let { slot ->
-                // Faded, not removed, on the swap: the model is framed above this slot (as the hint).
-                val statusAlpha by animateFloatAsState(if (slot.visible) 1f else 0f, motionFade(), label = "status")
-                ModelStatusCard(
-                    text = stringResource(slot.status.text),
-                    progress = { progress }.takeIf { slot.status.showsProgress },
-                    modifier = Modifier
-                        .alpha(statusAlpha)
-                        .then(if (slot.visible) Modifier else Modifier.clearAndSetSemantics { }),
-                )
-            }
+            ModelStatus.slot(model, settled, rawShownFirst)?.let { slot -> ModelStatusLine(slot, progress = { progress }) }
             // Laid out from the start and only faded: the model is framed above this slot, and a
             // hint that came and went would move the model when it goes.
             val hintShown = shown && hintVisible
@@ -961,6 +951,9 @@ internal enum class ModelStatus(@StringRes val text: Int, val showsProgress: Boo
 
     /** Shown as scanned, not kept: the next open tries the finish again. */
     RawUnfinished(R.string.scan_result_raw_unfinished),
+
+    /** Stub: the finished model in the raw surface's place. */
+    Finished(R.string.scan_result_finished),
     ;
 
     companion object {
@@ -980,14 +973,36 @@ internal enum class ModelStatus(@StringRes val text: Int, val showsProgress: Boo
          * faded — the model is framed above this slot, and a line that went would move it on the
          * swap. `null`: no line was ever under this model.
          */
-        fun slot(model: RerunScanModel?, settled: Boolean, rawShownFirst: Boolean): ModelStatusSlot? =
+        fun slot(
+            model: RerunScanModel?,
+            settled: Boolean,
+            rawShownFirst: Boolean,
+            @Suppress("UnusedParameter") finishedSaid: Boolean = false,
+        ): ModelStatusSlot? =
             of(model, settled)?.let { ModelStatusSlot(it, visible = true) }
                 ?: ModelStatusSlot(Finishing, visible = false).takeIf { rawShownFirst }
     }
 }
 
 /** [status] laid out under the model, seen while [visible]. */
-internal class ModelStatusSlot(val status: ModelStatus, val visible: Boolean)
+internal class ModelStatusSlot(val status: ModelStatus, val visible: Boolean) {
+    /** Stub: no other line reserved. */
+    val reserve: List<ModelStatus> get() = emptyList()
+}
+
+/** [slot] as the model screen lays it out under the model: faded, and not heard, once it is not [ModelStatusSlot.visible]. */
+@Composable
+internal fun ModelStatusLine(slot: ModelStatusSlot, modifier: Modifier = Modifier, progress: () -> Float = { 0f }) {
+    // Faded, not removed, on the swap: the model is framed above this slot (as the hint).
+    val statusAlpha by animateFloatAsState(if (slot.visible) 1f else 0f, motionFade(), label = "status")
+    ModelStatusCard(
+        text = stringResource(slot.status.text),
+        progress = progress.takeIf { slot.status.showsProgress },
+        modifier = modifier
+            .alpha(statusAlpha)
+            .then(if (slot.visible) Modifier else Modifier.clearAndSetSemantics { }),
+    )
+}
 
 /**
  * What the model screen is doing, or why it shows less than a surface. The line is announced as it

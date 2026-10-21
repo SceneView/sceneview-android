@@ -6,8 +6,13 @@ import io.github.sceneview.demo.demos.internal.DenseFusion
 import io.github.sceneview.demo.demos.internal.RerunMarchingCubes
 import io.github.sceneview.demo.demos.internal.RerunMesh
 import io.github.sceneview.demo.demos.internal.RerunMeshGlb
+import io.github.sceneview.demo.demos.internal.RerunGlbMesh
 import io.github.sceneview.demo.demos.internal.RerunMeshSimplifier
+import io.github.sceneview.demo.demos.internal.RerunScanModel
 import io.github.sceneview.demo.demos.internal.RerunTsdf
+import io.github.sceneview.demo.demos.internal.ScanGround
+import io.github.sceneview.demo.demos.internal.ScanGroundMeshes
+import io.github.sceneview.demo.demos.internal.groundSource
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -19,6 +24,7 @@ import org.junit.rules.TemporaryFolder
 import java.io.File
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.concurrent.thread
 import kotlin.math.abs
 import kotlin.math.max
@@ -171,8 +177,9 @@ class CleanModelRealScanTest {
     /**
      * [HeapCappedFinish] of a raw surface of [triangles] in a JVM capped at a phone's heap. What
      * stays live, not what a sampler saw used: the heap after each full collection, garbage gone,
-     * plus the copy the screen hands the renderer to show the raw surface meanwhile — ART
-     * allocates a direct buffer in its Java heap, which the child does not hold.
+     * plus, while it finishes, the copy the screen hands the renderer to show the raw surface
+     * meanwhile — ART allocates a direct buffer in its Java heap, which the child does not hold
+     * then. At the swap the child holds it all: both models, the finished one's copy and its ground.
      */
     private fun finishesWithinHeap(triangles: Int) {
         val log = folder.newFile("finish.log")
@@ -200,14 +207,23 @@ class CleanModelRealScanTest {
         assertTrue("timed out after $CHILD_TIMEOUT_S s: $tail", done)
         assertEquals(tail, 0, process.exitValue())
         assertTrue(tail, output.contains(HeapCappedFinish.FINISHED))
-        assertTrue("no full collection logged: $tail", collections.isNotEmpty())
+        val swapAt = stages.firstOrNull { it.second == HeapCappedFinish.SWAP }?.first
+        assertTrue("no swap reported: $tail", swapAt != null)
+        val finishing = collections.filter { it.atMs < swapAt!! }
+        val swapping = collections.filter { it.atMs >= swapAt!! }
+        assertTrue("no full collection logged: $tail", finishing.isNotEmpty())
+        assertTrue("no full collection at the swap: $tail", swapping.isNotEmpty())
 
-        val live = collections.maxOf { it.live }
+        val live = finishing.maxOf { it.live }
         val shown = Regex("${HeapCappedFinish.RAW_GLB}(\\d+)").find(output)?.groupValues?.get(1)?.toLong()
         assertTrue("no raw GLB size reported: $tail", shown != null)
-        val peak = live + shown!!
+        val swap = swapping.maxOf { it.live }
+        val peak = maxOf(live + shown!!, swap)
         val bar = HeapCappedFinish.HEAP_MB.toLong() * MB
-        println("live peak ${live / MB} MB + shown raw GLB ${shown / MB} MB = ${peak / MB} MB of ${bar / MB} MB")
+        println(
+            "live peak ${live / MB} MB + shown raw GLB ${shown / MB} MB, swap ${swap / MB} MB: " +
+                "${peak / MB} MB of ${bar / MB} MB",
+        )
         assertTrue("live peak ${peak / MB} MB over ${bar / MB} MB: $tail", peak <= bar)
     }
 
@@ -658,13 +674,18 @@ private class PaddedAtlasEncoder(private val padding: Int) : AtlasEncoder {
  * [APP_BYTES] for the rest of the app, the recording's dense cloud ([CLOUD_POINTS_PER_TRIANGLE]
  * points per raw triangle, as the recordings have, within [DenseFusion.MAX_POINTS]), its TSDF
  * unless meshing let it go (half its budget or more, as the screen does), and the raw surface's
- * `.glb`, shown while the finish works in the surface's own arrays and lets them go. Prints each
- * stage as it starts ([STAGE]), then [FINISHED] and its figures when it fits.
+ * `.glb`, shown while the finish works in the surface's own arrays and lets them go — with its
+ * ground when the screen reads one off it before it settles ([groundSource]). Then the swap
+ * ([SWAP]): the finished model in the raw one's place, the raw one still held (it frames the
+ * finished one), the finished `.glb` copied for the renderer (a direct buffer, in ART's Java
+ * heap) and its ground read off it, all held through a full collection. Prints each stage as it
+ * starts ([STAGE]), then [FINISHED] and its figures when it fits.
  */
 object HeapCappedFinish {
     const val FINISHED = "FINISHED"
     const val RAW_GLB = "rawGlbBytes="
     const val STAGE = "STAGE "
+    const val SWAP = "swap"
     const val HEAP_MB = 192
 
     /** The furnished room as it is, not tiled. */
@@ -673,6 +694,7 @@ object HeapCappedFinish {
     /** [CleanModel]'s stages, by the share of its progress each starts at. */
     private val STAGES = listOf("prepare" to 0f, "clean" to 0.1f, "simplify" to 0.4f, "texture" to 0.55f, "write" to 0.95f)
     private const val APP_BYTES = 32 * 1024 * 1024
+    private const val BOUNDS = 6
     private const val CLOUD_POINTS_PER_TRIANGLE = 0.85f
     private const val MB = 1024 * 1024
     private const val SAMPLE_MS = 20L
@@ -690,6 +712,14 @@ object HeapCappedFinish {
         val rawTriangles = raw.triangleCount
         val cloud = cloudOf(raw.mesh, minOf((rawTriangles * CLOUD_POINTS_PER_TRIANGLE).toInt(), DenseFusion.MAX_POINTS))
         val rawGlb = RerunMeshGlb.write(raw.mesh)
+        // The raw surface on screen, and its ground if the screen reads one off it meanwhile.
+        val shownRaw = RerunScanModel(
+            RerunScanModel.Kind.Mesh, rawGlb, FloatArray(BOUNDS), rawTriangles, raw.mesh.vertexCount, finished = false,
+        )
+        val rawGround = AtomicReference<Any?>()
+        val decoding = groundSource(shownRaw, settled = false)?.let { model ->
+            thread(isDaemon = true) { rawGround.set(groundOf(model.glb)) }
+        }
         val runtime = Runtime.getRuntime()
         val peak = AtomicLong()
         thread(isDaemon = true) {
@@ -709,6 +739,21 @@ object HeapCappedFinish {
             }
         }
         val ms = (System.nanoTime() - start) / NANOS_PER_MS
+        decoding?.join()
+        // The swap, everything the screen then holds held through a full collection.
+        println("$STAGE$SWAP ${System.currentTimeMillis()}")
+        val finished = RerunScanModel(
+            RerunScanModel.Kind.Mesh, result.glb, FloatArray(BOUNDS), maxOf(result.stats.finalTriangles, 1), 0,
+            finished = !result.stats.rawKept,
+            outOfMemoryInHeap = runtime.maxMemory().takeIf { result.stats.rawKept },
+        )
+        val rendered = result.glb.copyOf()
+        val ground = groundSource(finished, settled = true)?.let { groundOf(it.glb) }
+        System.gc()
+        println(
+            "held at the swap: raw ${shownRaw.glb.size / MB} MB, finished ${finished.glb.size / MB} MB, " +
+                "its copy ${rendered.size / MB} MB, ground ${ground != null}, raw ground ${rawGround.get() != null}",
+        )
         // Out of memory, the finish gives the raw surface back: that is no finish within the heap.
         println(
             "${if (result.stats.rawKept) "RAW SURFACE KEPT, out of memory in ${result.stats.outOfMemoryIn}:" else FINISHED} $rawTriangles -> ${result.stats.finalTriangles} triangles, " +
@@ -720,6 +765,16 @@ object HeapCappedFinish {
         System.out.flush()
         exitProcess(0)
     }
+
+    /**
+     * The ground the result screen reads off a model's `.glb` (`groundOf` in RerunModelUi.kt):
+     * the ground and its meshes, `null` when there is none.
+     */
+    private fun groundOf(glb: ByteArray): Pair<ScanGround, ScanGroundMeshes>? = runCatching {
+        val mesh = RerunGlbMesh.read(glb) ?: return@runCatching null
+        val ground = ScanGround.of(mesh.positions, mesh.normals, mesh.vertexCount) ?: return@runCatching null
+        ground to ScanGroundMeshes.of(ground)
+    }.getOrNull()
 
     /** A raw surface, its photos, and its TSDF if the screen keeps it, with its size. */
     private class Scanned(val surface: RawSurface, val photos: ModelPhotos, val tsdf: RerunTsdf?, val tsdfBytes: Long)
