@@ -14,7 +14,8 @@ import kotlin.math.sqrt
  * The walls 3D Scan shows while it scans (Room and Home): each wall it recognises stands on the
  * floor as a clean translucent quad, the way RoomPlan outlines a room as it is scanned. One wall
  * seen twice is one wall; a wall grows as more of it is seen and never shrinks, and it goes once
- * no plane holds it up any more. What counts as a wall is the room survey's rule ([WallRules]).
+ * no plane has held it up for [PlaneWallSource.RELEASE_S]. What counts as a wall is the room
+ * survey's rule ([WallRules]).
  */
 
 /**
@@ -81,10 +82,12 @@ interface LiveWallSource {
  * Walls from ARCore's vertical planes, by the room survey's rules ([WallRules]). ARCore cuts one
  * wall into several planes (a picture, a door frame, a wall seen from two places, a piece fitted
  * askew) and keeps planes of furniture: only a plane standing on the floor and rising past
- * standing height can be a wall; pieces on one line, and fits of one wall a little apart, are
- * joined into one wall; a wall is shown once seen long enough along one of the room's directions
- * and when it is not furniture before another wall; and the walls are squared to the room's
- * directions and joined at the corners they nearly meet at. A wall no plane holds up any more goes.
+ * standing height (or standing on the furniture before it) can be a wall; pieces on one line,
+ * and fits of one wall a little apart, are joined into one wall; a wall is shown once seen long
+ * enough along one of the room's directions and when it is not furniture before another wall; and
+ * the walls are squared to the room's directions and joined at the corners they nearly meet at. A
+ * wall no plane has held up for [RELEASE_S] goes. A plane ARCore refits a few centimetres across
+ * one of these thresholds keeps the verdict it had ([WallRules.HOLD_M]): a wall does not flicker.
  */
 class PlaneWallSource : LiveWallSource {
     private val tracks = ArrayList<Track>()
@@ -92,8 +95,14 @@ class PlaneWallSource : LiveWallSource {
     private var key = LongArray(0)
     private var last = LiveWallSnapshot.Empty
 
+    /** The planes that stood as walls the last time ([WallRules.standsAsWall]'s `held`), by id. */
+    private val standing = HashSet<Int>()
+
     /** The snapshot must be worked out again, whatever the planes: new, reset, or the height changed. */
     private var stale = true
+
+    /** A wall no plane holds up is waiting to go: the next update works it out even with the planes unchanged. */
+    private var releasing = false
 
     /**
      * The room's height, floor to ceiling in metres, measured some other way in the same session
@@ -107,14 +116,11 @@ class PlaneWallSource : LiveWallSource {
         }
 
     override fun update(planes: List<LivePlane>, floorY: Float, time: Float): LiveWallSnapshot {
-        // A plane is the same while its id and outline are: ARCore hands new objects every frame.
-        val newKey = LongArray(planes.size) { i ->
-            (planes[i].id.toLong() shl Int.SIZE_BITS) or (planes[i].polygon.contentHashCode().toLong() and MASK)
-        }
-        if (newKey.contentEquals(key) && !stale) return last
+        val newKey = keyOf(planes)
+        if (newKey.contentEquals(key) && !stale && !releasing) return last
         key = newKey
         stale = false
-        merge(clusters(laidOnHosts(pieces(planes, floorY))), time)
+        merge(clusters(laidOnHosts(pieces(planes, floorY, standing))), time)
         val ceiling = ceilingOf(planes, floorY)
         val height = WallRules.height(ceiling?.minus(floorY), measuredHeight).coerceIn(MIN_HEIGHT_M, MAX_HEIGHT_M)
         val next = LiveWallSnapshot(
@@ -130,28 +136,33 @@ class PlaneWallSource : LiveWallSource {
 
     override fun reset() {
         tracks.clear()
+        standing.clear()
         nextId = 0
         key = LongArray(0)
         last = LiveWallSnapshot.Empty
         stale = true
+        releasing = false
     }
 
     /**
      * Folds this update's [found] walls into the walls already known. Where a wall stands and which
      * way it runs is what ARCore's planes say now — a refit corrects its first rough fit — and what
      * was seen of it before keeps only its ends, so it never shrinks. A wall none of [found] holds
-     * up any more goes: its plane was refit to the furniture it was, or dropped.
+     * up goes once none has for [RELEASE_S] — its plane was refit to the furniture it was, or
+     * dropped — and keeps its id if one holds it up again before: ARCore drops a plane for a few
+     * frames as it refits it.
      */
     private fun merge(found: List<Segment>, time: Float) {
         val held = HashSet<Track>()
+        fun oneWall(a: Segment, b: Segment) = sameWall(a, b) || WallRules.duplicates(a, b)
         for (segment in found.sortedByDescending { it.length }) {
             // A second fit of a wall already held up, a little apart or askew: that wall, seen again.
-            val twin = tracks.firstOrNull { it in held && (sameWall(it.segment, segment) || WallRules.duplicates(it.segment, segment)) }
+            val twin = tracks.firstOrNull { it in held && oneWall(it.segment, segment) }
             if (twin != null) {
                 twin.segment = twin.segment.spanning(segment)
                 continue
             }
-            val matches = tracks.filter { it !in held && sameWall(it.segment, segment) }
+            val matches = tracks.filter { it !in held && oneWall(it.segment, segment) }
             if (matches.isEmpty()) {
                 tracks += Track(nextId++, time, segment).also { held += it }
                 continue
@@ -164,7 +175,10 @@ class PlaneWallSource : LiveWallSource {
             tracks.removeAll { it in matches && it !== keep }
             held += keep
         }
-        tracks.retainAll(held)
+        held.forEach { it.heldAt = time }
+        // Time running backwards is a replay sought back: what is not held up now goes at once.
+        tracks.removeAll { it !in held && (time - it.heldAt >= RELEASE_S || time < it.heldAt) }
+        releasing = tracks.size > held.size
     }
 
     /**
@@ -177,16 +191,21 @@ class PlaneWallSource : LiveWallSource {
         val families = WallRules.families(
             FloatArray(candidates.size) { candidates[it].segment.angle },
             FloatArray(candidates.size) { candidates[it].length },
+            candidates.map { it.square },
         )
         val fronts = candidates.mapNotNull { front ->
-            candidates.firstOrNull { it !== front && WallRules.standsBefore(front.segment, it.segment, ceilingY) }
+            candidates.firstOrNull { it !== front && WallRules.standsBefore(front.segment, it.segment, ceilingY, front.furniture) }
                 ?.let { front to it }
         }
         return candidates.mapNotNull { track ->
             val family = WallRules.familyOf(track.segment.angle, families) ?: return@mapNotNull null
             val hidden = fronts.any { (front, behind) ->
-                front === track || (track !== behind && WallRules.isSideOf(track.segment, front.segment, behind.segment))
+                front === track ||
+                    (track !== behind && WallRules.isSideOf(track.segment, front.segment, behind.segment, track.furniture))
             }
+            // Each verdict is kept for the next update, which holds it against a refit across its threshold.
+            track.square = family.square
+            track.furniture = hidden
             (track to family).takeIf { !hidden && WallRules.seenEnough(track.length, family.square) }
         }
     }
@@ -206,6 +225,15 @@ class PlaneWallSource : LiveWallSource {
 
     private class Track(val id: Int, val bornAt: Float, var segment: Segment) {
         val length: Float get() = segment.length
+
+        /** When a plane last held it up, seconds. */
+        var heldAt: Float = bornAt
+
+        /** Whether its direction was on the room's square the last time, `null` before it was judged. */
+        var square: Boolean? = null
+
+        /** Whether it was furniture before another wall, or the side of such, the last time; `null` before. */
+        var furniture: Boolean? = null
     }
 
     companion object {
@@ -233,31 +261,86 @@ class PlaneWallSource : LiveWallSource {
         const val MIN_HEIGHT_M = 0.6f
         const val MAX_HEIGHT_M = 4f
 
-        /** A ceiling lower than this over the floor is a table seen from below, not the ceiling. */
-        const val MIN_CEILING_M = 1.8f
+        /**
+         * A ceiling lower than this over the floor is a table seen from below or a high shelf, not
+         * the ceiling: the survey's [RoomSurveyor.MIN_CEILING_M].
+         */
+        const val MIN_CEILING_M = RoomSurveyor.MIN_CEILING_M
+
+        /** How long a wall no plane holds up any more stays, in seconds, waiting for its plane to come back. */
+        const val RELEASE_S = 0.5f
+
+        private val counted = Any()
+        private var countedKey = LongArray(0)
+        private var countedFloorY = Float.NaN
+        private var count = 0
 
         /**
          * The walls in [planes], each counted once, with no tracking — one call, one answer: a
          * finished recording's planes, which no live [PlaneWallSource] followed. A live scan reads
-         * its source's snapshot instead, the count the HUD shows.
+         * its source's snapshot instead, the count the HUD shows. A replay asks every frame: the
+         * count is worked out again only when the planes or the floor change.
          */
-        fun wallCount(planes: List<LivePlane>, floorY: Float): Int =
-            PlaneWallSource().update(planes, floorY, time = 0f).walls.size
+        fun wallCount(planes: List<LivePlane>, floorY: Float): Int {
+            val key = keyOf(planes)
+            synchronized(counted) {
+                if (floorY == countedFloorY && key.contentEquals(countedKey)) return count
+            }
+            val walls = PlaneWallSource().update(planes, floorY, time = 0f).walls.size
+            synchronized(counted) {
+                countedKey = key
+                countedFloorY = floorY
+                count = walls
+            }
+            return walls
+        }
+
+        /** The planes as they are: a plane is the same while its id and outline are, as ARCore hands new objects every frame. */
+        private fun keyOf(planes: List<LivePlane>) = LongArray(planes.size) { i ->
+            (planes[i].id.toLong() shl Int.SIZE_BITS) or (planes[i].polygon.contentHashCode().toLong() and MASK)
+        }
 
         /**
          * Each vertical plane that stands as a wall ([WallRules.standsAsWall]) as a floor segment:
-         * its line, its extent along it, its top.
+         * its line, its extent along it, its top. Its foot may stand on the furniture before it
+         * ([WallRules.furnitureTop]), which hides the rest. [standing] holds the ids of the planes
+         * that stood the last time, which keep standing a little past the thresholds, and is
+         * rewritten with this time's.
          */
-        internal fun pieces(planes: List<LivePlane>, floorY: Float): List<Segment> = planes.mapNotNull { plane ->
-            if (plane.kind != LivePlane.Kind.Wall || plane.vertexCount < 3) return@mapNotNull null
-            var bottom = Float.MAX_VALUE
-            var top = -Float.MAX_VALUE
-            for (i in 0 until plane.vertexCount) {
-                bottom = min(bottom, plane.polygon[i * 3 + 1])
-                top = max(top, plane.polygon[i * 3 + 1])
+        internal fun pieces(
+            planes: List<LivePlane>,
+            floorY: Float,
+            standing: MutableSet<Int> = HashSet(),
+        ): List<Segment> {
+            val before = HashSet(standing)
+            standing.clear()
+            return planes.mapNotNull { plane ->
+                if (plane.kind != LivePlane.Kind.Wall || plane.vertexCount < 3) return@mapNotNull null
+                var bottom = Float.MAX_VALUE
+                var top = -Float.MAX_VALUE
+                for (i in 0 until plane.vertexCount) {
+                    bottom = min(bottom, plane.polygon[i * 3 + 1])
+                    top = max(top, plane.polygon[i * 3 + 1])
+                }
+                val segment = Segment.ofPolygon(plane.polygon) ?: return@mapNotNull null
+                val held = plane.id in before
+                // Furniture is looked for only when the floor alone does not hold it up.
+                val stands = WallRules.standsAsWall(bottom, top, floorY, held) ||
+                    WallRules.standsAsWall(bottom, top, floorY, held, underY = furnitureUnder(plane, segment, planes, floorY))
+                if (!stands) return@mapNotNull null
+                standing += plane.id
+                segment.takeIf { it.length >= MIN_PIECE_M }
             }
-            if (!WallRules.standsAsWall(bottom, top, floorY)) return@mapNotNull null
-            Segment.ofPolygon(plane.polygon)?.takeIf { it.length >= MIN_PIECE_M }
+        }
+
+        /** The top of the highest furniture before [wall], the plane [plane], among [planes]: [floorY] for none. */
+        private fun furnitureUnder(plane: LivePlane, wall: Segment, planes: List<LivePlane>, floorY: Float): Float {
+            var under = floorY
+            for (other in planes) {
+                if (other === plane || other.kind == LivePlane.Kind.Ceiling || other.vertexCount < 3) continue
+                WallRules.furnitureTop(wall, other.polygon)?.let { under = max(under, it) }
+            }
+            return under
         }
 
         /** Each piece fitted askew along a longer one ([WallRules.shardOf]) laid onto that one's line. */
