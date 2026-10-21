@@ -66,6 +66,8 @@ class ModelLoaderResourceFailureTest {
         resourceUris = arrayOf(TEXTURE)
         beginAccepted = true
         loadProgress = 0f
+        assetHandle = ASSET
+        begunAssets.clear()
         cancelLoadCalls.set(0)
         evictCalls.set(0)
         ShadowLog.clear()
@@ -168,6 +170,37 @@ class ModelLoaderResourceFailureTest {
         assertEquals(listOf(ASSET), destroyedAssets.toList())
         assertWarned("refused", "meshopt")
         assertNoBlockingCancel()
+    }
+
+    @Test
+    fun `a refused begin leaves the load still decoding in flight, so its destroy waits`() {
+        resourceUris = emptyArray()
+        // Model A begins its load and still has textures decoding.
+        assetHandle = DECODING_ASSET
+        loadProgress = 0.5f
+        val decoding = await { loader.loadModelAsync(modelFileUri(), onResult = it) }.value
+        assertNotNull(decoding)
+
+        // Model B is refused: gltfio returned before draining A's decoders.
+        assetHandle = REFUSED_ASSET
+        beginAccepted = false
+        val refused = await { loader.loadModelAsync(modelFileUri(), onResult = it) }
+
+        assertNull(refused.value)
+        assertEquals("The refused model is freed at once", listOf(REFUSED_ASSET), destroyedAssets.toList())
+        assertEquals(
+            "The native load must be pointed back at A",
+            listOf(DECODING_ASSET, REFUSED_ASSET, DECODING_ASSET),
+            begunAssets.toList(),
+        )
+        assertEquals("A's decoding must not be cancelled by B's refusal", 0, cancelLoadCalls.get())
+
+        loader.destroyModel(decoding!!)
+
+        assertTrue(
+            "A must not be freed while its textures are decoding (#3868): deferred or cancelled first",
+            DECODING_ASSET !in destroyedAssets || cancelLoadCalls.get() > 0,
+        )
     }
 
     @Test
@@ -294,7 +327,7 @@ class ModelLoaderResourceFailureTest {
 
             @JvmStatic
             @Implementation
-            fun nCreateAsset(nativeLoader: Long, buffer: Buffer, remaining: Int): Long = ASSET
+            fun nCreateAsset(nativeLoader: Long, buffer: Buffer, remaining: Int): Long = assetHandle
 
             @JvmStatic
             @Implementation
@@ -333,7 +366,10 @@ class ModelLoaderResourceFailureTest {
         companion object {
             @JvmStatic
             @Implementation
-            fun nAsyncBeginLoad(nativeLoader: Long, nativeAsset: Long): Boolean = beginAccepted
+            fun nAsyncBeginLoad(nativeLoader: Long, nativeAsset: Long): Boolean {
+                begunAssets += nativeAsset
+                return beginAccepted
+            }
 
             @JvmStatic
             @Implementation
@@ -419,6 +455,8 @@ class ModelLoaderResourceFailureTest {
 
     private companion object {
         const val ASSET = 7L
+        const val DECODING_ASSET = 11L
+        const val REFUSED_ASSET = 12L
         const val BUFFER = "scene.bin"
         const val TEXTURE = "missing.png"
 
@@ -430,6 +468,11 @@ class ModelLoaderResourceFailureTest {
 
         @Volatile
         var loadProgress = 0f
+
+        @Volatile
+        var assetHandle = ASSET
+
+        val begunAssets: MutableList<Long> = Collections.synchronizedList(mutableListOf<Long>())
 
         val cancelLoadCalls = AtomicInteger()
         val evictCalls = AtomicInteger()
