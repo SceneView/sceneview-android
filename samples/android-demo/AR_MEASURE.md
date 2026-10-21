@@ -125,8 +125,7 @@ Each center-target candidate is resolved in a fixed preference order, which is a
 3. **The depth image directly**, via SceneView's `Frame.hitTestDepth(x, y)`. This is what
    makes a *cluttered* space measurable rather than just its flat floor: a sofa, a slope, the
    lip of a workbench, where no plane will ever appear. Used whenever the device supports
-   ARCore depth and skipped on the others; there is no switch for it, Settings holds only the
-   units.
+   ARCore depth and skipped on the others; no setting turns it off.
 4. **A raw feature point**, last resort and the noisiest of the four.
 
 Each aim keeps its source (`MeasureHitSource`), but the screen does not show it: the chip under the
