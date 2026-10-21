@@ -1,5 +1,6 @@
 package io.github.sceneview.demo.demos.internal
 
+import java.util.Locale
 import kotlin.math.max
 
 /*
@@ -75,6 +76,11 @@ class SurveyWording(
     val gaps: Map<SurveyGap, String>,
     /** The units its figures are written in: [SurveyFormat.units] of the phone's language. */
     val units: MeasureUnitSystem = MeasureUnitSystem.Metric,
+    /**
+     * The language whose decimal mark its figures take: `4.00` in English, `4,00` in French.
+     * English by default, as 3D Scan's screens are; Measure's plan passes the phone's.
+     */
+    val locale: Locale = Locale.US,
 )
 
 /** One line of the survey's table. [muted] ones say a figure is missing. */

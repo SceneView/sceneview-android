@@ -454,8 +454,7 @@ fun MeasureScreen(onBack: () -> Unit) {
     val planDate = remember(locale) { DateFormat.getDateInstance(DateFormat.MEDIUM, locale).format(Date()) }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Under the plan, TalkBack reads the page alone: the camera screen runs on beneath it, unread.
-        Box(modifier = Modifier.fillMaxSize().then(if (plan != null) Modifier.clearAndSetSemantics {} else Modifier)) {
+        MeasureCameraLayer(covered = plan != null) {
             DemoScaffold(
                 arSessionFailed = arSessionFailed,
                 arOverlaysEnabled = arCoreAvailability == null,
@@ -778,6 +777,17 @@ fun MeasureScreen(onBack: () -> Unit) {
     }
 }
 
+/**
+ * The camera screen, [covered] while the plan is open over it: it runs on beneath the page, so
+ * Back finds it as it was left, but TalkBack reads the page alone.
+ */
+@Composable
+internal fun MeasureCameraLayer(covered: Boolean, content: @Composable () -> Unit) {
+    Box(modifier = Modifier.fillMaxSize().then(if (covered) Modifier.clearAndSetSemantics {} else Modifier)) {
+        content()
+    }
+}
+
 /** A traced room's plan, frozen when Plan opens it: the plan, its doors and windows, its numbers. */
 internal class MeasurePlanPage(
     val survey: RoomSurvey,
@@ -826,6 +836,8 @@ internal fun MeasurePlanOverlay(
                             label = stringResource(R.string.demo_ar_measure_label_net_walls),
                             details = openings.joinToString(" · "),
                         ),
+                        modifier = Modifier.testTag(MEASURE_PLAN_CARD_TAG),
+                        overCamera = false,
                     )
                 }
             } else {
@@ -833,7 +845,7 @@ internal fun MeasurePlanOverlay(
             },
             bottomOverlayReservesScene = true,
         ) {
-            RerunPlanView(survey = page.survey, title = title, date = date, units = units)
+            RerunPlanView(survey = page.survey, title = title, date = date, units = units, locale = locale)
         }
     }
 }
@@ -1000,13 +1012,23 @@ private fun measureReadout(
     return readout.copy(label = prefix + readout.label)
 }
 
-/** `DESIGN.md` AR Overlay Card: scrim ground, hairline, `radius-lg`, `space-md` padding. */
+/** The openings card under Measure's plan, for tests to find. */
+internal const val MEASURE_PLAN_CARD_TAG = "measure_plan_card"
+
+/**
+ * `DESIGN.md` AR Overlay Card: scrim ground, hairline, `radius-lg`, `space-md` padding. Drawn
+ * [overCamera] by default; the plan's page sets it `false`.
+ */
 @Composable
-internal fun MeasureReadoutCard(readout: MeasureReadout) {
+internal fun MeasureReadoutCard(
+    readout: MeasureReadout,
+    modifier: Modifier = Modifier,
+    @Suppress("UnusedParameter") overCamera: Boolean = true,
+) {
     val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     val overlay = SceneViewTokens.ArOverlay
     Surface(
-        modifier = Modifier.widthIn(max = overlay.maxWidth).semantics(mergeDescendants = true) {},
+        modifier = modifier.widthIn(max = overlay.maxWidth).semantics(mergeDescendants = true) {},
         color = if (dark) overlay.scrimDark else overlay.scrimLight,
         contentColor = overlay.onScrim,
         shape = RoundedCornerShape(SceneViewTokens.Radius.lg),
