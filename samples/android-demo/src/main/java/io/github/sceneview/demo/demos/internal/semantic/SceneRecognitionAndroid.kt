@@ -67,7 +67,9 @@ private object SharedDetector {
             return@withLock null
         }
         val models = store ?: withContext(Dispatchers.IO) {
-            SceneModelStore(File(context.filesDir, SCENE_MODEL_DIR))
+            SceneModelStore(File(context.filesDir, SCENE_MODEL_DIR)) { failure ->
+                Log.w(TAG, "The scene detector could not be fetched: ${failure.message}")
+            }
         }.also { store = it }
         var ended: SceneModelState? = null
         // Ready is said once the session is built, not when the file is merely on the device.

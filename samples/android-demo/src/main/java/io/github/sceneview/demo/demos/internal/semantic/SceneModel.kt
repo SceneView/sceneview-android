@@ -70,12 +70,14 @@ sealed interface SceneModelState {
  * thread too.
  *
  * [client] and [baseUrl] are for tests; [asset] too, with a payload a fake server can serve.
+ * [onFailure] hears why a fetch ended without a file — the app logs it.
  */
 class SceneModelStore(
     dir: File,
     client: OkHttpClient? = null,
     baseUrl: String = SceneModel.BASE_URL,
     private val asset: HdAsset = SceneModel.ASSET,
+    private val onFailure: (IOException) -> Unit = {},
 ) {
     private val store = HdPackManifest(version = 1, assets = listOf(asset)).let { manifest ->
         if (client == null) {
@@ -118,9 +120,11 @@ class SceneModelStore(
             // A file that grew past its size stops mid-stream, before the store deletes its part
             // file: nothing that failed a check is kept, whichever check it failed.
             withContext(Dispatchers.IO) { part.delete() }
+            onFailure(corrupt)
             onState(SceneModelState.Unusable)
             null
         } catch (offline: IOException) {
+            onFailure(offline)
             onState(SceneModelState.Offline)
             null
         }
