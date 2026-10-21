@@ -217,6 +217,21 @@ ARSceneView(
 }
 ```
 
+### Session lifecycle
+
+`ARSceneView` follows `LocalLifecycleOwner` by default. Inside a `NavHost` that is the
+destination, which stops the camera as soon as the exit transition starts: the last camera image
+stays frozen on screen while the screen animates out. Opt in to the host activity's lifecycle
+for an AR destination with transitions:
+
+```kotlin
+ARSceneView(lifecycle = rememberHostLifecycle())   // camera live through enter/exit transitions
+```
+
+Keep the default where the AR screen stays composed but hidden (a `ViewPager2` page, a screen
+under a full-screen `dialog()`): with the host lifecycle the camera would stay on there. Two
+`ARSceneView`s resumed at once share the single camera: the last one to resume runs.
+
 ### Recording / playback
 
 ```kotlin

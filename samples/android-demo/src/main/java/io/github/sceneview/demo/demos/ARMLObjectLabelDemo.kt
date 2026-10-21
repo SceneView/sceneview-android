@@ -48,6 +48,7 @@ import io.github.sceneview.ar.arcore.cameraImage
 import io.github.sceneview.ar.arcore.position
 import io.github.sceneview.ar.camera.CameraImageSize
 import io.github.sceneview.ar.camera.cameraImageToViewMapping
+import io.github.sceneview.ar.rememberHostLifecycle
 import io.github.sceneview.demo.DemoScaffold
 import io.github.sceneview.demo.R
 import io.github.sceneview.demo.common.CameraImageRotation
@@ -273,6 +274,7 @@ fun ARMLObjectLabelDemo(onBack: () -> Unit) {
     ) {
         Box(modifier = Modifier.fillMaxSize().onSizeChanged { viewSize = it }) {
             ARSceneView(
+                lifecycle = rememberHostLifecycle(),
                 onSessionFailure = { arSessionFailed = true },
                 onARCoreAvailability = { arSessionUnavailable = it != null },
                 modifier = Modifier.fillMaxSize(),
