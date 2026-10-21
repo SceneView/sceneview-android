@@ -163,6 +163,9 @@ internal object WallLines {
      */
     private const val FAMILY_SQUARE_SHARE = 0.01f
     private const val FAMILY_MIN_SURFELS = 50
+
+    /** How far apart two shards of a wall may face: the normals of a wall's shards in a real scan were 19° apart. */
+    private const val SHARD_REACH_DEG = 25f
     private const val QUARTER = 90f
     private const val GAP_FILL_M = 0.15f
     private const val END_NEAR_M = 0.3f
@@ -220,7 +223,7 @@ internal object WallLines {
             candidates += linesOf(cloud, assigned[f].toArray(), f, nu, nv, column, minSupport, standing)
         }
         val merged = mergeLayers(cloud, candidates, column, standing)
-        return withoutFurniture(cloud, merged, column, standing)
+        return withoutFurniture(cloud, shardsJoined(cloud, merged, families, column, standing), column, standing)
     }
 
     /** What could stand behind a face seen low: surfels from [STANDING_FROM_M] to [STANDING_TO_M] above the floor. */
@@ -514,6 +517,107 @@ internal object WallLines {
             val members = group.flatMap { lines[it].members.asList() }.sorted().toIntArray()
             lineOf(cloud, members, first.family, first.nu, first.nv, column, null, standing)
         }
+    }
+
+    /**
+     * A wall the depth returned only in shards is one line: pieces each seen along too little to
+     * be a wall, their normals turned up to [SHARD_REACH_DEG] apart — so in two families, which
+     * [mergeLayers] never joins — and in layers up to [WALL_MERGE_M] out of line. Short lines are
+     * chained when two face within [SHARD_REACH_DEG] of each other and stand within [WALL_MERGE_M]
+     * along the normal they share. A chain is refitted on its pieces' mean normal, weighed by
+     * their surfels — squared when within [SNAP_DEG] of the room's square, the frame the walls
+     * together were squared to — when its pieces all stand within [WALL_MERGE_M] along it and no
+     * line facing its way stands behind it: what has something behind it is clutter, not the
+     * room's edge. The line keeps only the columns its pieces saw, and is kept when they make a
+     * wall's length together.
+     */
+    @Suppress("LongMethod", "CyclomaticComplexMethod", "NestedBlockDepth")
+    private fun shardsJoined(
+        cloud: FrameCloud,
+        lines: List<WallLine>,
+        families: List<Float>,
+        column: Float,
+        standing: IntArray,
+    ): List<WallLine> {
+        val minSeen = MIN_WALL_SEEN_M + column / 2
+        val short = lines.filter { it.seen.count { s -> s } * column <= minSeen }
+        if (short.size < 2) return lines
+        val reach = cos(SHARD_REACH_DEG * PI.toFloat() / HALF_TURN)
+        val parent = IntArray(short.size) { it }
+        fun root(i: Int): Int {
+            var r = i
+            while (parent[r] != r) r = parent[r]
+            return r
+        }
+        fun middleAlong(line: WallLine, nu: Float, nv: Float): Float {
+            val t = (line.from + line.to) / 2
+            return line.pointU(t) * nu + line.pointV(t) * nv
+        }
+        for (a in short.indices) {
+            for (b in a + 1 until short.size) {
+                val la = short[a]
+                val lb = short[b]
+                if (la.nu * lb.nu + la.nv * lb.nv < reach) continue
+                val len = hypot(la.nu + lb.nu, la.nv + lb.nv)
+                val nu = (la.nu + lb.nu) / len
+                val nv = (la.nv + lb.nv) / len
+                if (abs(middleAlong(la, nu, nv) - middleAlong(lb, nu, nv)) > WALL_MERGE_M) continue
+                parent[root(b)] = root(a)
+            }
+        }
+        val joined = ArrayList<WallLine>()
+        val used = HashSet<WallLine>()
+        for (group in short.indices.groupBy { root(it) }.values) {
+            if (group.size < 2) continue
+            val pieces = group.map { short[it] }
+            val members = IntArrayList()
+            var su = 0f
+            var sv = 0f
+            for (piece in pieces) {
+                for (i in piece.members) members.add(i)
+                su += piece.nu * piece.members.size
+                sv += piece.nv * piece.members.size
+            }
+            val mean = degreesOf(su, sv)
+            val square = round(mean / QUARTER) * QUARTER % DEGREES
+            val best = if (angleDiff(mean, square) <= SNAP_DEG) square else mean
+            val rad = best * PI.toFloat() / HALF_TURN
+            val nu = cos(rad).let { if (abs(it) < EPSILON) 0f else it }
+            val nv = sin(rad).let { if (abs(it) < EPSILON) 0f else it }
+            val along = pieces.map { middleAlong(it, nu, nv) }
+            if (along.max() - along.min() > WALL_MERGE_M) continue
+            if (pieces.any { angleDiff(degreesOf(it.nu, it.nv), best) > SHARD_REACH_DEG }) continue
+            var tMin = Float.POSITIVE_INFINITY
+            var offsetSum = 0.0
+            for (k in 0 until members.size) {
+                val i = members[k]
+                tMin = min(tMin, cloud.u[i] * -nv + cloud.v[i] * nu)
+                offsetSum += cloud.u[i] * nu + cloud.v[i] * nv
+            }
+            val offset = (offsetSum / members.size).toFloat()
+            val t0 = floor(tMin / column) * column
+            val inLine = { t: Float -> pieces.any { it.seenAt(it.tOf(offset * nu + t * -nv, offset * nv + t * nu)) } }
+            val ends = pieces.flatMap { p -> listOf(p.from, p.to).map { t -> p.pointU(t) * -nv + p.pointV(t) * nu } }
+            val behind = lines.any { other ->
+                other !in pieces && angleDiff(degreesOf(other.nu, other.nv), best) <= SHARD_REACH_DEG &&
+                    run {
+                        val t = (other.from + other.to) / 2
+                        val o = other.pointU(t) * nu + other.pointV(t) * nv
+                        val a = other.pointU(other.from) * -nv + other.pointV(other.from) * nu
+                        val b = other.pointU(other.to) * -nv + other.pointV(other.to) * nu
+                        o in (offset - STRIP_M)..(offset - BEHIND_MIN_M) && max(a, b) > ends.min() && min(a, b) < ends.max()
+                    }
+            }
+            if (behind) continue
+            val family = families.indices.minBy { angleDiff(families[it], best) }
+            val line = lineOf(cloud, members.toArray(), family, nu, nv, column, { k -> inLine(t0 + (k + HALF) * column) }, standing)
+                ?: continue
+            if (line.seen.count { it } * column <= minSeen) continue
+            joined += line
+            used += pieces
+        }
+        if (joined.isEmpty()) return lines
+        return lines.filter { it !in used } + joined
     }
 
     /**
