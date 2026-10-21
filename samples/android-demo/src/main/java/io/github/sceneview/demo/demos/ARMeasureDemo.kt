@@ -1240,6 +1240,7 @@ internal fun MeasureReticle(
             refusal == MeasureRefusal.AnchorFailed -> R.string.demo_ar_measure_refusal_anchor
             refusal == MeasureRefusal.OpeningOffWall -> R.string.demo_ar_measure_refusal_opening_off_wall
             refusal == MeasureRefusal.OpeningTooSmall -> R.string.demo_ar_measure_refusal_opening_small
+            refusal == MeasureRefusal.NoPlan -> R.string.demo_ar_measure_refusal_no_plan
             aim?.closes == true -> R.string.demo_ar_measure_snap_close
             kind == MeasureSnapKind.Point -> R.string.demo_ar_measure_snap_point
             kind == MeasureSnapKind.Corner -> R.string.demo_ar_measure_snap_corner

@@ -136,12 +136,15 @@ sealed interface MeasurePlanTap {
 /**
  * What a tap on Plan does with the board's [figures], each along its outline in [outlines]: opens
  * the plan ([measureRoomSurvey]) of the last room traced and raised ([measurePlanRoom]). `null`
- * with no such room: Plan is greyed out then.
+ * with no such room: Plan is greyed out then, and the screen says what to do next. When that room
+ * has no plan to draw (corners in a line, no floor between them), the tap is refused with
+ * [MeasureRefusal.NoPlan] and says so, rather than open an older room or do nothing.
  */
 fun measurePlanTap(figures: List<MeasureFigure<*>>, outlines: List<List<Position>>): MeasurePlanTap? {
     val room = measurePlanRoom(figures)
     if (room < 0) return null
-    val survey = measureRoomSurvey(outlines.getOrNull(room).orEmpty(), figures[room].height) ?: return null
+    val survey = measureRoomSurvey(outlines.getOrNull(room).orEmpty(), figures[room].height)
+        ?: return MeasurePlanTap.Refused(MeasureRefusal.NoPlan)
     return MeasurePlanTap.Open(room, survey)
 }
 

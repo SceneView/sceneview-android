@@ -65,6 +65,7 @@
     <string name="demo_ar_measure_refusal_anchor">Could not pin the point: try again</string>
     <string name="demo_ar_measure_refusal_opening_off_wall">Aim at the wall to mark a corner</string>
     <string name="demo_ar_measure_refusal_opening_small">Too close to the first corner: aim at the opposite one</string>
+    <string name="demo_ar_measure_refusal_no_plan">No floor between the corners: trace the room again</string>
 
     <string name="demo_ar_measure_action_add">Add point</string>
     <string name="demo_ar_measure_action_set_height">Set height</string>
