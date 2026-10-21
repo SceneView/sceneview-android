@@ -85,7 +85,7 @@ internal object PlaneFlattening {
      * pass of the same wall, drifted a few centimetres behind it, shows through the first one's
      * holes — every face of it within [maxDistance] (the snap's reach), and it lies within
      * [GATHER_MARGIN_M] of the plane's own extent. Past [FREE_MERGE_M] it must also lie where the
-     * plane's own faces are ([footprintShare] of at least [MIN_SHARE]): a second pass overlaps the
+     * plane's own faces are ([Footprint.share] of at least [MIN_SHARE]): a second pass overlaps the
      * first, while a TV or a door's leaf hides the wall behind it, so the plane has a hole exactly
      * where it stands. A curtain's pleats, a cushion, a shelf, a TV turn away or stand off: they
      * stay free. Returns whether any region joined.
@@ -126,7 +126,7 @@ internal object PlaneFlattening {
         val byPlane = Members(label, planes.size)
         val grids = Array(planes.size) { Grid(planes[it]) }
         val planeCells = Array(planes.size) {
-            grids[it].cells(faces, byPlane.members, byPlane.start[it], byPlane.start[it + 1])
+            grids[it].footprint(faces, byPlane.members, byPlane.start[it], byPlane.start[it + 1])
         }
         var joined = false
         for (r in 0 until regions) {
@@ -169,8 +169,8 @@ internal object PlaneFlattening {
                 val gap = abs(plane.distance(cx.toFloat(), cy.toFloat(), cz.toFloat()))
                 if (gap > MERGE_DISTANCE_M) continue
                 if (gap > FREE_MERGE_M) {
-                    val own = grids[p].cells(faces, members, start[r], start[r + 1])
-                    if (footprintShare(own, planeCells[p]) < MIN_SHARE) continue
+                    val own = grids[p].footprint(faces, members, start[r], start[r + 1])
+                    if (planeCells[p].share(own) < MIN_SHARE) continue
                 }
                 var worst = 0f
                 for (i in start[r] until start[r + 1]) {
@@ -397,9 +397,9 @@ internal object PlaneFlattening {
         val group = IntArray(planes.size) { -1 }
         val anchors = ArrayList<Int>()
         val grids = ArrayList<Grid>()
-        val covered = ArrayList<LongArray>()
-        fun cells(g: Int, plane: Int): LongArray =
-            grids[g].cells(faces, byPlane.members, byPlane.start[plane], byPlane.start[plane + 1])
+        val covered = ArrayList<Footprint>()
+        fun cells(g: Int, plane: Int): Footprint =
+            grids[g].footprint(faces, byPlane.members, byPlane.start[plane], byPlane.start[plane + 1])
         for (i in planes.indices.sortedByDescending { area[it] }) {
             val q = planes[i]
             var best = -1
@@ -410,7 +410,7 @@ internal object PlaneFlattening {
                 val gap = abs(p.distance(centre[i * 3], centre[i * 3 + 1], centre[i * 3 + 2]))
                 if (facing < minCos || gap > MERGE_DISTANCE_M) continue
                 if (best >= 0 && gap >= bestGap) continue
-                if (gap > FREE_MERGE_M && footprintShare(cells(g, i), covered[g]) < MIN_SHARE) continue
+                if (gap > FREE_MERGE_M && covered[g].share(cells(g, i)) < MIN_SHARE) continue
                 best = g
                 bestGap = gap
             }
@@ -420,7 +420,7 @@ internal object PlaneFlattening {
                 grids += Grid(q)
                 covered += cells(best, i)
             } else {
-                covered[best] = union(covered[best], cells(best, i))
+                covered[best] = covered[best] + cells(best, i)
             }
             group[i] = best
         }
@@ -436,32 +436,56 @@ internal object PlaneFlattening {
         return id to count
     }
 
-    /** The cells in [a] or [b]; both sorted, without repeats, as is the union. */
-    private fun union(a: LongArray, b: LongArray): LongArray {
-        val out = LongArray(a.size + b.size)
-        var i = 0
-        var j = 0
-        var n = 0
-        while (i < a.size || j < b.size) {
-            out[n++] = when {
-                j >= b.size || (i < a.size && a[i] < b[j]) -> a[i++]
-                i >= a.size || b[j] < a[i] -> b[j++]
-                else -> a[i++].also { j++ }
+    /**
+     * The cells of [FOOTPRINT_CELL_M] a set of faces lies in, sorted, without repeats, and how many
+     * face centroids each holds.
+     */
+    private class Footprint(val cells: LongArray, val counts: IntArray) {
+        /** This and [other] together: a cell both hold counts the centroids of both. */
+        operator fun plus(other: Footprint): Footprint {
+            val a = cells
+            val b = other.cells
+            val keys = LongArray(a.size + b.size)
+            val sums = IntArray(a.size + b.size)
+            var i = 0
+            var j = 0
+            var n = 0
+            while (i < a.size || j < b.size) {
+                when {
+                    j >= b.size || (i < a.size && a[i] < b[j]) -> {
+                        keys[n] = a[i]
+                        sums[n] = counts[i++]
+                    }
+                    i >= a.size || b[j] < a[i] -> {
+                        keys[n] = b[j]
+                        sums[n] = other.counts[j++]
+                    }
+                    else -> {
+                        keys[n] = a[i]
+                        sums[n] = counts[i++] + other.counts[j++]
+                    }
+                }
+                n++
             }
+            return Footprint(keys.copyOf(n), sums.copyOf(n))
         }
-        return out.copyOf(n)
-    }
 
-    /** The share of the cells [own] that [other] covers too; both sorted, without repeats. */
-    private fun footprintShare(own: LongArray, other: LongArray): Float {
-        if (own.isEmpty()) return 0f
-        var shared = 0
-        var j = 0
-        for (key in own) {
-            while (j < other.size && other[j] < key) j++
-            if (j < other.size && other[j] == key) shared++
+        /**
+         * The share of the cells of [own] this footprint covers. A cell is covered from
+         * [MIN_CELL_CENTROIDS] centroids: a wall that stops at a frame's edge still lies over part
+         * of each cell along it, and counted there it would cover a frame little wider than those
+         * cells.
+         */
+        fun share(own: Footprint): Float {
+            if (own.cells.isEmpty()) return 0f
+            var shared = 0
+            var j = 0
+            for (key in own.cells) {
+                while (j < cells.size && cells[j] < key) j++
+                if (j < cells.size && cells[j] == key && counts[j] >= MIN_CELL_CENTROIDS) shared++
+            }
+            return shared.toFloat() / own.cells.size
         }
-        return shared.toFloat() / own.size
     }
 
     /** The faces of each group — a region, a plane — contiguous: a counting sort on the group id, -1 left out. */
@@ -508,8 +532,8 @@ internal object PlaneFlattening {
             vz = plane.nx * y - plane.ny * x
         }
 
-        /** The cells the centroids of faces `members[from until to]` fall in, sorted, without repeats. */
-        fun cells(faces: FaceGeometry, members: IntArray, from: Int, to: Int): LongArray {
+        /** The cells the centroids of faces `members[from until to]` fall in, and how many fall in each. */
+        fun footprint(faces: FaceGeometry, members: IntArray, from: Int, to: Int): Footprint {
             val keys = LongArray(to - from)
             val c = faces.centroids
             for (i in from until to) {
@@ -519,9 +543,13 @@ internal object PlaneFlattening {
                 keys[i - from] = (u.toLong() shl Int.SIZE_BITS) or (v.toLong() and LOW_INT)
             }
             keys.sort()
-            var count = 0
-            for (i in keys.indices) if (i == 0 || keys[i] != keys[i - 1]) keys[count++] = keys[i]
-            return keys.copyOf(count)
+            val counts = IntArray(keys.size)
+            var cells = 0
+            for (i in keys.indices) {
+                if (i == 0 || keys[i] != keys[i - 1]) keys[cells++] = keys[i]
+                counts[cells - 1]++
+            }
+            return Footprint(keys.copyOf(cells), counts.copyOf(cells))
         }
     }
 
@@ -808,6 +836,14 @@ internal object PlaneFlattening {
 
     /** The footprint's cell: wider than the holes a scan leaves in a wall, much narrower than a TV. */
     private const val FOOTPRINT_CELL_M = 0.1f
+
+    /**
+     * The face centroids that make a cell covered ([Footprint.share]): about half of what a cell of
+     * wall holds at the TSDF's 2.5 cm voxel, so it scales with that voxel. Around a 40 x 30 cm
+     * frame set 4.5 to 5.5 cm into the cells, the wall holds 17 to 43 centroids in each cell along
+     * the frame's edges: from 24, the cells it covers fall to half of the frame's.
+     */
+    private const val MIN_CELL_CENTROIDS = 24
     private const val LEVEL_NORMAL_Y = 0.9f
     private const val MAX_PLANES_AT_VERTEX = 6
     private const val MIN_CREASE_SIN = 0.34f // planes meeting at under ~20° do not make a crease
