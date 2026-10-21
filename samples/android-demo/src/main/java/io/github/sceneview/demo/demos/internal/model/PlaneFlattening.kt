@@ -370,17 +370,29 @@ internal object PlaneFlattening {
     /**
      * Groups planes within [MERGE_ANGLE_DEG] and [MERGE_DISTANCE_M] of a group's largest: the new
      * id of each, and the count. Largest first, so each group is anchored on its widest sheet, and
-     * a plane joins the nearest group that takes it. Past [FREE_MERGE_M] from the anchor, the
-     * group's faces, all of them, must cover [MIN_SHARE] of the plane's footprint: a wall's second
-     * pass overlaps the wall, while a TV or a door's leaf stands where the wall has no faces at
-     * all. Against the group, not against one sheet of it: a door within a centimetre of a second
-     * pass beside it is no closer to the wall for that.
+     * a plane joins the nearest group that takes it, measured from where the plane's faces lie to
+     * the anchor's plane. Past [FREE_MERGE_M] from the anchor, the group's faces, all of them, must
+     * cover [MIN_SHARE] of the plane's footprint: a wall's second pass overlaps the wall, while a
+     * TV or a door's leaf stands where the wall has no faces at all. Against the group, not
+     * against one sheet of it: a door within a centimetre of a second pass beside it is no closer
+     * to the wall for that.
      */
     @Suppress("NestedBlockDepth")
     private fun mergeCoplanar(faces: FaceGeometry, label: IntArray, planes: List<Plane>): Pair<IntArray, Int> {
         val byPlane = Members(label, planes.size)
+        // Each plane's area, and where its faces lie on average: a gap is measured there, as
+        // [gather] measures it, not between offsets — two planes a degree apart can share an
+        // offset and stand 3.5 cm apart 2 m from the origin.
         val area = FloatArray(planes.size)
-        for (t in label.indices) if (label[t] >= 0) area[label[t]] += faces.areas[t]
+        val centre = FloatArray(planes.size * 3)
+        for (t in label.indices) {
+            val p = label[t]
+            if (p < 0) continue
+            val w = faces.areas[t]
+            area[p] += w
+            for (axis in 0 until 3) centre[p * 3 + axis] += faces.centroids[t * 3 + axis] * w
+        }
+        for (p in planes.indices) if (area[p] > 0f) for (axis in 0 until 3) centre[p * 3 + axis] /= area[p]
         val minCos = cos(Math.toRadians(MERGE_ANGLE_DEG)).toFloat()
         val group = IntArray(planes.size) { -1 }
         val anchors = ArrayList<Int>()
@@ -395,7 +407,7 @@ internal object PlaneFlattening {
             for (g in anchors.indices) {
                 val p = planes[anchors[g]]
                 val facing = p.nx * q.nx + p.ny * q.ny + p.nz * q.nz
-                val gap = abs(p.offset - q.offset)
+                val gap = abs(p.distance(centre[i * 3], centre[i * 3 + 1], centre[i * 3 + 2]))
                 if (facing < minCos || gap > MERGE_DISTANCE_M) continue
                 if (best >= 0 && gap >= bestGap) continue
                 if (gap > FREE_MERGE_M && footprintShare(cells(g, i), covered[g]) < MIN_SHARE) continue
