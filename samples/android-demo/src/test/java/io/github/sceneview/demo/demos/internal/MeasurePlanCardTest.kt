@@ -7,7 +7,8 @@ import java.util.Locale
 /**
  * One unit rule for Measure and its plan: feet and inches in US English, metres everywhere else
  * ([SurveyFormat.units]). The Measure screen starts there ([MeasureUnitSystem.forLocale]); a unit
- * picked in its settings goes to the plan's card as well: one page, one unit system.
+ * picked in its settings goes to the plan's card as well: one page, one unit system. In metres the
+ * card writes every length in metres, as the plan beside it does: `0.90 m`, never `90 cm`.
  */
 class MeasurePlanCardTest {
 
@@ -28,7 +29,7 @@ class MeasurePlanCardTest {
         val card = card(locale)
         assertEquals("31.9 m²", card.netWallArea)
         assertEquals(
-            listOf(MeasurePlanCardOpening("B", "90 cm", "2.10 m"), MeasurePlanCardOpening("C", "1.20 m", "1.00 m")),
+            listOf(MeasurePlanCardOpening("B", "0.90 m", "2.10 m"), MeasurePlanCardOpening("C", "1.20 m", "1.00 m")),
             card.openings,
         )
     }
@@ -39,7 +40,7 @@ class MeasurePlanCardTest {
         assertEquals(MeasureUnitSystem.Metric, MeasureUnitSystem.forLocale(locale))
         val card = card(locale)
         assertEquals("31.9 m²", card.netWallArea)
-        assertEquals(MeasurePlanCardOpening("B", "90 cm", "2.10 m"), card.openings.first())
+        assertEquals(MeasurePlanCardOpening("B", "0.90 m", "2.10 m"), card.openings.first())
     }
 
     @Test
@@ -57,7 +58,14 @@ class MeasurePlanCardTest {
     fun `French reads the card in metres with its own decimal mark`() {
         val card = card(Locale.FRANCE)
         assertEquals("31,9 m²", card.netWallArea)
-        assertEquals(MeasurePlanCardOpening("B", "90 cm", "2,10 m"), card.openings.first())
+        assertEquals(MeasurePlanCardOpening("B", "0,90 m", "2,10 m"), card.openings.first())
+    }
+
+    @Test
+    fun `French writes a door narrower than a metre in metres, as its height`() {
+        val door = MeasurePlanOpening("B", MeasureOpening(from = 0.5f, to = 1.43f, bottom = 0f, top = 2.04f, wall = 1))
+        val card = measurePlanCard(NET_WALL_AREA, listOf(door), MeasureUnitSystem.Metric, Locale.FRANCE)
+        assertEquals(listOf(MeasurePlanCardOpening("B", "0,93 m", "2,04 m")), card.openings)
     }
 
     @Test
@@ -71,7 +79,7 @@ class MeasurePlanCardTest {
     fun `US English with metric picked in the settings reads the card in metres`() {
         val card = card(Locale.US, MeasureUnitSystem.Metric)
         assertEquals("31.9 m²", card.netWallArea)
-        assertEquals(MeasurePlanCardOpening("B", "90 cm", "2.10 m"), card.openings.first())
+        assertEquals(MeasurePlanCardOpening("B", "0.90 m", "2.10 m"), card.openings.first())
     }
 
     @Test
