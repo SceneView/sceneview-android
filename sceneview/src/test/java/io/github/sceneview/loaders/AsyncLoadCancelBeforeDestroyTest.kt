@@ -31,7 +31,7 @@ class AsyncLoadCancelBeforeDestroyTest {
 
     private val log = Collections.synchronizedList(mutableListOf<String>())
     private val registry = Collections.synchronizedList(mutableListOf<String>())
-    private val asyncLoad = AsyncLoadSlot<String>(beginLoad = {}, cancelLoad = { log += "cancel" })
+    private val asyncLoad = AsyncLoadSlot<String>(beginLoad = { true }, cancelLoad = { log += "cancel" })
 
     private fun load(model: String) {
         registry += model
@@ -110,16 +110,29 @@ class AsyncLoadCancelBeforeDestroyTest {
         // fails midway must still see the model as in flight.
         var seenInFlight: String? = null
         lateinit var slot: AsyncLoadSlot<String>
-        slot = AsyncLoadSlot(beginLoad = { seenInFlight = slot.inFlight }, cancelLoad = {})
+        slot = AsyncLoadSlot(
+            beginLoad = {
+                seenInFlight = slot.inFlight
+                true
+            },
+            cancelLoad = {},
+        )
         slot.begin("a")
         assertEquals("a", seenInFlight)
+    }
+
+    @Test
+    fun `begin reports whether the native load accepted the item`() {
+        val refusing = AsyncLoadSlot<String>(beginLoad = { false }, cancelLoad = {})
+        assertEquals(false, refusing.begin("a"))
+        assertEquals("A refused begin still holds the item, so its destroy cancels it", "a", refusing.inFlight)
     }
 
     @Test
     fun `the cancel callback learns whether a load was in flight`() {
         // ModelLoader only swaps its ResourceLoader when a real load was interrupted.
         val seen = mutableListOf<String?>()
-        val slot = AsyncLoadSlot<String>(beginLoad = {}, cancelLoad = { seen += it })
+        val slot = AsyncLoadSlot<String>(beginLoad = { true }, cancelLoad = { seen += it })
         slot.cancel()
         slot.begin("a")
         slot.cancel()
