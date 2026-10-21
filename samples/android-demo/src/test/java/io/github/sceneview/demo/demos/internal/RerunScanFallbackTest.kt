@@ -85,6 +85,34 @@ class RerunScanFallbackTest {
     }
 
     @Test
+    fun `a big scan whose finish runs out of memory keeps its raw surface, read back as it is`() {
+        val shown = ArrayList<RerunScanModel>()
+        var outOfMemory = false
+        val model = assertNotNull(
+            buildScanModel(RerunModelSource.Synthetic(), onRaw = { shown += it }) {
+                // The finish's first step past the raw surface runs out of a phone's heap.
+                if (shown.isNotEmpty() && !outOfMemory) {
+                    outOfMemory = true
+                    throw OutOfMemoryError("finish")
+                }
+            },
+        )
+        val raw = shown.single()
+        assertTrue("the finish never started", outOfMemory)
+        assertEquals("the raw surface shown gave way to the ${model.kind}", RerunScanModel.Kind.Mesh, model.kind)
+        assertTrue("expected the raw surface shown, got another model", raw.glb.contentEquals(model.glb))
+        assertFalse("a raw surface passed off as finished", model.finished)
+
+        // Kept, so the next open shows it at once instead of failing the same finish again.
+        val store = RerunSessionStore(folder.newFolder("sessions"))
+        val saved = store.save(bundled(), "Kitchen", RerunSessionSource.Recorded, 1_000_000L)
+        store.saveModel(saved.id, model)
+        val reopened = assertNotNull(store.model(saved.id))
+        assertFalse("a raw surface read back as finished", reopened.finished)
+        assertTrue("expected the raw surface read back", raw.glb.contentEquals(reopened.glb))
+    }
+
+    @Test
     fun `a small scan goes straight to its finished model`() {
         val box = Box(0f, 0f, 0f, 1.2f, 0.9f, 1.0f)
         val tsdf = CleanScenes.fuse(Box(-0.2f, -0.2f, -0.2f, 1.4f, 1.1f, 1.2f), NOISE_M, NOISE_M) { x, y, z ->

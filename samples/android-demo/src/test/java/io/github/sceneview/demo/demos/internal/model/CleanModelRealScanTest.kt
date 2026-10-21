@@ -58,6 +58,39 @@ class CleanModelRealScanTest {
     }
 
     @Test
+    fun `a small scan whose atlas outweighs its raw surface never comes out heavier`() {
+        // A corner's few faces, under the size guard's floor, and an atlas as heavy as the surface.
+        val raw = crop(RealScanRoom.raw(furnished = false), SMALL_CORNER)
+        val rawGlb = RerunMeshGlb.write(raw)
+        val result = CleanModel.build(raw, RealScanRoom.modelPhotos(furnished = false), PaddedAtlasEncoder(rawGlb.size))
+        val stats = result.stats
+        val report = "small corner: raw ${raw.triangleCount} triangles, glb ${rawGlb.size / KB} KB -> " +
+            "${stats.simplifiedTriangles} simplified, ${stats.finalTriangles} triangles, glb ${result.glb.size / KB} KB" +
+            ", textured ${stats.texture?.let { percent(it.texturedShare) } ?: "none"}" +
+            ", dropped at ${stats.droppedTextureShare?.let { percent(it) } ?: "-"}, guarded ${stats.glbGuarded}"
+        println(report)
+        assertTrue("glb ${result.glb.size} > raw ${rawGlb.size} | $report", result.glb.size <= rawGlb.size)
+        assertTrue("glb: ${GlbCheck.problems(result.glb)} | $report", GlbCheck.problems(result.glb).isEmpty())
+    }
+
+    @Test
+    fun `the size guard reports its progress, so a finish left mid-guard stops there`() {
+        val raw = crop(RealScanRoom.raw(furnished = false), CORNER)
+        val padded = PaddedAtlasEncoder(RerunMeshGlb.write(raw).size)
+        var atlases = 0
+        val encoder = AtlasEncoder { argb, width, height -> atlases++; padded.jpeg(argb, width, height) }
+        // Each progress report, with the atlases written by then: a caller stops the finish there.
+        val reports = ArrayList<Pair<Float, Int>>()
+        val result = CleanModel.build(raw, RealScanRoom.modelPhotos(furnished = false), encoder) { reports += it to atlases }
+        val afterLastAtlas = reports.filter { it.second == atlases }.map { it.first }
+        val report = "corner: $atlases atlases, guarded ${result.stats.glbGuarded}, reports after the last: $afterLastAtlas"
+        println(report)
+        assertTrue("the atlas was never written | $report", atlases > 0)
+        assertTrue("the size guard never ran | $report", result.stats.glbGuarded)
+        assertTrue("expected a report before the end, within the guard | $report", afterLastAtlas.first() < 1f)
+    }
+
+    @Test
     fun `the furnished room finishes within a 192 MB heap`() {
         val log = folder.newFile("finish.log")
         val java = File(File(System.getProperty("java.home"), "bin"), "java").path
@@ -66,9 +99,10 @@ class CleanModelRealScanTest {
                 listOf(HeapCappedFinish::class.java, CleanModel::class.java, Unit::class.java, Json::class.java)
                     .mapNotNull { codeSource(it) }
             ).filter { it.isNotEmpty() }.distinct().joinToString(File.pathSeparator)
+        val gcLog = File(folder.root, "gc.log")
         val process = ProcessBuilder(
             java, "-Xmx${HeapCappedFinish.HEAP_MB}m", "-XX:+UseSerialGC", "-Djava.awt.headless=true",
-            "-cp", classpath, HeapCappedFinish::class.java.name,
+            "-Xlog:gc:file=${gcLog.path}", "-cp", classpath, HeapCappedFinish::class.java.name,
         ).redirectErrorStream(true).redirectOutput(log).start()
         val done = process.waitFor(CHILD_TIMEOUT_S, TimeUnit.SECONDS)
         if (!done) process.destroyForcibly().waitFor()
@@ -78,6 +112,30 @@ class CleanModelRealScanTest {
         assertTrue("timed out after $CHILD_TIMEOUT_S s: $tail", done)
         assertEquals(tail, 0, process.exitValue())
         assertTrue(tail, output.contains(HeapCappedFinish.FINISHED))
+
+        // What stays live, not what the sampler saw used: the heap after each collection, garbage
+        // gone. Plus the copy the screen hands the renderer to show the raw surface meanwhile: ART
+        // allocates a direct buffer in its Java heap, which the child does not hold.
+        val live = livePeakBytes(gcLog.readText())
+        val shown = Regex("${HeapCappedFinish.RAW_GLB}(\\d+)").find(output)?.groupValues?.get(1)?.toLong()
+        assertTrue("no raw GLB size reported: $tail", shown != null)
+        val peak = live + shown!!
+        val bar = HeapCappedFinish.HEAP_MB.toLong() * MB
+        println("live peak ${live / MB} MB + shown raw GLB ${shown / MB} MB = ${peak / MB} MB of ${bar / MB} MB")
+        assertTrue("live peak ${peak / MB} MB over ${bar / MB} MB: $tail", peak <= bar)
+    }
+
+    /** The most the heap held right after a collection, from a `-Xlog:gc` log (`120M->85M(184M)`). */
+    private fun livePeakBytes(gcLog: String): Long {
+        val after = Regex("""\d+[KMG]->(\d+)([KMG])\(""").findAll(gcLog).map {
+            it.groupValues[1].toLong() * when (it.groupValues[2]) {
+                "K" -> KB.toLong()
+                "M" -> MB
+                else -> MB * KB
+            }
+        }.toList()
+        assertTrue("no collection logged: ${gcLog.takeLast(LOG_TAIL)}", after.isNotEmpty())
+        return after.max()
     }
 
     private fun check(furnished: Boolean) {
@@ -377,9 +435,22 @@ class CleanModelRealScanTest {
         /** The sofa's corner of the room, about a metre and a half across. */
         val CORNER = Box(-2.6f, -0.1f, -3.6f, -1.0f, 1.4f, -2.0f)
 
+        /** The same corner, a metre across: a model under the size guard's 2 000 triangles. */
+        val SMALL_CORNER = Box(-2.6f, -0.1f, -3.6f, -1.6f, 0.9f, -2.6f)
+
+        const val MB = 1024L * 1024L
         const val CHILD_TIMEOUT_S = 300L
         const val LOG_TAIL = 4000
     }
+}
+
+/**
+ * The atlas as [JvmAtlasEncoder] writes it, [padding] bytes heavier: a texture that compresses as
+ * badly as a noisy photo's, whatever its size. The bytes past the JPEG's end are not decoded.
+ */
+private class PaddedAtlasEncoder(private val padding: Int) : AtlasEncoder {
+    override fun jpeg(argb: IntArray, width: Int, height: Int): ByteArray =
+        JvmAtlasEncoder.jpeg(argb, width, height) + ByteArray(padding)
 }
 
 /**
@@ -393,6 +464,7 @@ class CleanModelRealScanTest {
  */
 object HeapCappedFinish {
     const val FINISHED = "FINISHED"
+    const val RAW_GLB = "rawGlbBytes="
     const val HEAP_MB = 192
     private const val APP_BYTES = 32 * 1024 * 1024
     private const val CLOUD_POINTS_PER_TRIANGLE = 0.85f
@@ -423,7 +495,8 @@ object HeapCappedFinish {
             "$FINISHED $rawTriangles -> ${result.stats.finalTriangles} triangles, " +
                 "glb ${result.glb.size / MB.toFloat()} MB (raw ${rawGlb.size / MB.toFloat()} MB), " +
                 "peak used ${peak.get() / MB} MB of $HEAP_MB, $ms ms; held: app ${app.size / MB} MB, " +
-                "tsdf ${tsdfBytes / MB} MB ${if (tsdf != null) "held" else "let go"}, cloud ${cloud.count} points",
+                "tsdf ${tsdfBytes / MB} MB ${if (tsdf != null) "held" else "let go"}, cloud ${cloud.count} points; " +
+                "$RAW_GLB${rawGlb.size}",
         )
         System.out.flush()
         exitProcess(0)

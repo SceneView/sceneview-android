@@ -11,7 +11,7 @@ import kotlin.math.min
 /**
  * The clean-up on synthetic scans fused by the real TSDF and meshed by the real marching cubes:
  * a noisy box, a room with a doubled wall and a table, a room with floating debris. Each test
- * measures what the brief asks for — pieces, flatness (RMS distance to the true plane) and
+ * measures what a clean model must hold — pieces, flatness (RMS distance to the true plane) and
  * watertightness — before and after, and prints the figures.
  */
 class CleanGeometryTest {
