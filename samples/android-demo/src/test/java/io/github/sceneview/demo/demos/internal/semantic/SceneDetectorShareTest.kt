@@ -226,6 +226,35 @@ class SceneDetectorShareTest {
     }
 
     @Test
+    fun `a download cut on mobile data waits for the go before another replay resumes it`() = runBlocking {
+        MockWebServer().use { server ->
+            // Trickling, then the connection drops halfway through the body.
+            server.enqueue(slow(payload).newBuilder().onResponseBody(SocketEffect.CloseSocket()).build())
+            server.start()
+            val metered = AtomicBoolean(false)
+            val detectors = share(server, metered = metered::get)
+
+            val first = async(Dispatchers.Default) { detectors.share() }
+            until("the first replay's download") { part.length() > 0 }
+            metered.set(true)
+            val states = Collections.synchronizedList(ArrayList<SceneModelState>())
+            val second = async(Dispatchers.Default) { detectors.share { states += it } }
+            until("the second replay's progress") { states.any { it is SceneModelState.Downloading } }
+
+            // The download it followed is cut: on mobile data, resuming it is the user's call.
+            assertNull(first.await())
+            until("the second replay's question") { SceneModelState.Metered in states }
+            assertEquals(1, server.requestCount)
+            assertTrue(second.isActive)
+
+            server.enqueue(rest(part.length().toInt()))
+            detectors.allowMetered()
+            assertNotNull(second.await())
+            assertEquals(2, server.requestCount)
+        }
+    }
+
+    @Test
     fun `on a metered network nothing is fetched before the tap`() = runBlocking {
         MockWebServer().use { server ->
             server.enqueue(ok(payload))
