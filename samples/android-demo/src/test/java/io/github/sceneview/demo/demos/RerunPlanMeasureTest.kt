@@ -9,13 +9,18 @@ import io.github.sceneview.demo.demos.internal.ReplayLens
 import io.github.sceneview.demo.demos.internal.ReplayManifest
 import io.github.sceneview.demo.demos.internal.RoomSurvey
 import io.github.sceneview.demo.demos.internal.SurveyGap
+import io.github.sceneview.demo.demos.internal.planSurvey
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -24,11 +29,14 @@ import org.robolectric.annotation.Config
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.concurrent.thread
 
 /**
  * The export sheet's "Floor plan" row ends: on the plan or on why there is none, never on
- * "Measuring the room…" for good — even when the measure cannot run, as when every thread it
- * shares is busy building the scan's model.
+ * "Measuring the room…" for good — even when every thread of the app's pool is busy building
+ * the scan's model. A measure that takes long says it is still under way, then shows its plan;
+ * only one that fails says the room was not measured. Scans are measured one at a time, and a
+ * measure nobody waits for any more gives way to the next.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -70,16 +78,21 @@ class RerunPlanMeasureTest {
     }
 
     @Test
-    fun `the floor plan row leaves Measuring within a minute when the measure cannot run`() {
+    fun `the floor plan row ends on the room's survey even while every thread of the app's pool is busy`() {
         val release = occupyDefault()
         try {
             val media = scan()
             var offer: PlanOffer? = null
             composeRule.mainClock.autoAdvance = false
             composeRule.setContent { offer = PlanOffer.of(rememberRoomSurvey(media, wanted = true)) }
-            composeRule.mainClock.advanceTimeBy(BOUND_MS)
-            composeRule.mainClock.advanceTimeByFrame()
-            assertNotEquals("still measuring after ${BOUND_MS / 1000} s", PlanOffer.Measuring, offer)
+            // The measure runs on a thread of its own: it ends while the pool is still held.
+            val until = System.nanoTime() + TimeUnit.SECONDS.toNanos(ENDED_S)
+            while (offer != PlanOffer.NoDepth && System.nanoTime() < until) {
+                composeRule.mainClock.advanceTimeByFrame()
+                Thread.sleep(POLL_MS)
+            }
+            // One point is too little depth for a plan.
+            assertEquals(PlanOffer.NoDepth, offer)
         } finally {
             release.countDown()
         }
@@ -93,18 +106,126 @@ class RerunPlanMeasureTest {
     }
 
     @Test
-    fun `a measure that does not end in time ends on the same`() {
-        val held = CountDownLatch(1)
-        try {
-            val survey = runBlocking {
-                measureRoom(scan(), timeoutMs = SHORT_MS) {
-                    held.await(HOLD_S, TimeUnit.SECONDS)
-                    RoomSurvey.empty(SurveyGap.NoWalls)
+    fun `a measure past its time says it is still measuring, then shows the plan once it ends`() {
+        val media = scan()
+        val started = CountDownLatch(1)
+        val gate = CountDownLatch(1)
+        val room = planSurvey(0f, 0f, ROOM_M, 0f, ROOM_M, ROOM_M, 0f, ROOM_M)
+        // A first caller starts the measure: the sheet below waits on that same one.
+        val first = thread {
+            runBlocking {
+                measureRoom(media) {
+                    started.countDown()
+                    gate.await(HOLD_S, TimeUnit.SECONDS)
+                    room
                 }
             }
-            assertEquals(PlanOffer.Failed, PlanOffer.of(survey))
+        }
+        try {
+            assertTrue(started.await(HOLD_S, TimeUnit.SECONDS))
+            var offer: PlanOffer? = null
+            composeRule.mainClock.autoAdvance = false
+            composeRule.setContent { offer = PlanOffer.of(rememberRoomSurvey(media, wanted = true)) }
+            composeRule.mainClock.advanceTimeBy(PLAN_MEASURE_MS)
+            composeRule.mainClock.advanceTimeByFrame()
+            // Past its time the measure is still under way: the row says so, not that it failed.
+            assertEquals("StillMeasuring", offer?.name)
+            gate.countDown()
+            val until = System.nanoTime() + TimeUnit.SECONDS.toNanos(HOLD_S)
+            while (offer != PlanOffer.Ready && System.nanoTime() < until) {
+                composeRule.mainClock.advanceTimeByFrame()
+                Thread.sleep(POLL_MS)
+            }
+            assertEquals(PlanOffer.Ready, offer)
+        } finally {
+            gate.countDown()
+            first.join()
+        }
+    }
+
+    @Test
+    fun `a measure that runs out of memory ends on a plan that says the room was not measured`() {
+        val offer = runCatching { runBlocking { measureRoom(scan()) { throw OutOfMemoryError("grid") } } }
+            .getOrNull()
+            ?.let { PlanOffer.of(it) }
+        assertEquals(PlanOffer.Failed, offer)
+    }
+
+    @Test
+    fun `two scans are never measured at once, each measure holding a grid of its own`() {
+        val running = AtomicInteger(0)
+        val most = AtomicInteger(0)
+        val both = CountDownLatch(2)
+        val survey = { _: RerunReplayMedia ->
+            most.accumulateAndGet(running.incrementAndGet(), ::maxOf)
+            // Two measures at once meet here; one at a time, the first waits out SHORT_MS alone.
+            both.countDown()
+            both.await(SHORT_MS, TimeUnit.MILLISECONDS)
+            running.decrementAndGet()
+            RoomSurvey.empty(SurveyGap.NoWalls)
+        }
+        runBlocking {
+            val one = async(Dispatchers.IO) { measureRoom(scan(), survey = survey) }
+            val other = async(Dispatchers.IO) { measureRoom(scan(), survey = survey) }
+            awaitAll(one, other)
+        }
+        assertEquals(1, most.get())
+    }
+
+    @Test
+    fun `a measure nobody waits for is dropped once another scan is measured`() {
+        val started = CountDownLatch(1)
+        val held = CountDownLatch(1)
+        val ended = CountDownLatch(1)
+        try {
+            runBlocking {
+                val sheet = launch(Dispatchers.IO) {
+                    measureRoom(scan()) {
+                        started.countDown()
+                        try {
+                            held.await(HOLD_S, TimeUnit.SECONDS)
+                        } finally {
+                            ended.countDown()
+                        }
+                        RoomSurvey.empty(SurveyGap.NoWalls)
+                    }
+                }
+                assertTrue(started.await(HOLD_S, TimeUnit.SECONDS))
+                // The sheet closes, then another scan is opened and measured.
+                sheet.cancelAndJoin()
+                measureRoom(scan()) { RoomSurvey.empty(SurveyGap.NoWalls) }
+            }
+            assertTrue("the first scan is still being measured", ended.await(ENDED_S, TimeUnit.SECONDS))
         } finally {
             held.countDown()
+        }
+    }
+
+    @Test
+    fun `a measure still waited for is kept when another scan is measured`() {
+        val started = CountDownLatch(1)
+        val gate = CountDownLatch(1)
+        val measured = RoomSurvey.empty(SurveyGap.NoWalls)
+        try {
+            runBlocking {
+                val waited = async(Dispatchers.IO) {
+                    measureRoom(scan()) {
+                        started.countDown()
+                        gate.await(HOLD_S, TimeUnit.SECONDS)
+                        measured
+                    }
+                }
+                assertTrue(started.await(HOLD_S, TimeUnit.SECONDS))
+                // Asked before the first one ends: undispatched, it is asked by the time this returns.
+                val other = async(Dispatchers.IO, start = CoroutineStart.UNDISPATCHED) {
+                    measureRoom(scan()) { RoomSurvey.empty(SurveyGap.NoDepth) }
+                }
+                gate.countDown()
+                assertSame(measured, waited.await())
+                other.await()
+            }
+        } finally {
+            gate.countDown()
         }
     }
 
@@ -125,11 +246,17 @@ class RerunPlanMeasureTest {
     private companion object {
         const val VOXEL_M = 0.05f
 
-        /** The longest the row may say "Measuring the room…". */
-        const val BOUND_MS = 60_000L
-
-        /** A measure's timeout in the tests that wait on a real thread. */
+        /** How long a measure waits for a second one running beside it. */
         const val SHORT_MS = 200L
+
+        /** How long a dropped measure gets to end. */
+        const val ENDED_S = 5L
+
+        /** Between two frames while a measure ends on its own thread. */
+        const val POLL_MS = 10L
+
+        /** The side of the room the slow measure finds. */
+        const val ROOM_M = 4f
 
         /** How long a blocker gets to start before the pool counts as full. */
         const val START_MS = 500L

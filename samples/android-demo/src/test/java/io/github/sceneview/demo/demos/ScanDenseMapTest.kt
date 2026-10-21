@@ -124,7 +124,7 @@ class ScanDenseMapTest {
     }
 
     @Test
-    fun `the live view's points keep their size when the map makes room`() {
+    fun `the live view draws a point the map made coarser as wide as its level, leaving no holes`() {
         val dense = map(maxPoints = 2_000)
         var frame = 0
         while (dense.fusion.compactions < 2 && frame < FRAMES) {
@@ -132,7 +132,8 @@ class ScanDenseMapTest {
             dense.add(plane(frame++))
         }
         val live = dense.live!!
-        assertTrue("part of the map is coarser now", (0 until live.cloud.count).any { live.cloud.levelOf(it) > 0 })
+        val coarsest = (0 until live.cloud.count).maxOf { live.cloud.levelOf(it) }
+        assertTrue("part of the map is coarser now", coarsest > 0)
         // A quad's first two corners span one side of it (DenseSurfels.mesh).
         val p = live.mesh.positions
         var widest = 0f
@@ -143,8 +144,10 @@ class ScanDenseMapTest {
             val dz = p[a + 5] - p[a + 2]
             widest = maxOf(widest, sqrt(dx * dx + dy * dy + dz * dz))
         }
-        val fine = 2f * DenseFusion.VOXEL_M * DenseSurfels.HALF_SIDE_VOXELS
-        assertTrue("the widest point over the camera is $widest m, a fine one $fine m", widest <= fine + 1e-5f)
+        // A merged point stands for its whole cell: drawn at the finest size, the wall between
+        // it and its neighbours shows through. Its size on screen is capped by the shader.
+        val coarse = 2f * DenseFusion.VOXEL_M * DenseSurfels.HALF_SIDE_VOXELS * (1 shl coarsest)
+        assertEquals("the widest point over the camera", coarse, widest, 1e-5f)
     }
 
     private fun coaching(lost: Boolean, photos: Boolean, detail: ScanDetail, phase: ScanPhase = ScanPhase.Scanning) =
