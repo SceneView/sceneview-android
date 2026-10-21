@@ -9,6 +9,7 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
+import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -105,6 +106,7 @@ import java.io.File
 import java.io.OutputStream
 import java.util.Locale
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -272,6 +274,7 @@ internal fun RerunPlanView(survey: RoomSurvey?, title: String, date: String?, mo
     val words = rememberPlanWords()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val writing = remember { AtomicBoolean() }
     val failed = stringResource(R.string.demo_ar_rerun_plan_share_failed)
     BoxWithConstraints(
         modifier = modifier
@@ -295,10 +298,16 @@ internal fun RerunPlanView(survey: RoomSurvey?, title: String, date: String?, mo
             return@BoxWithConstraints
         }
         val wide = maxWidth > maxHeight
-        // A file share writes its file in the background, and says so when it could not.
+        // A file share writes its file in the background, and says so when it could not. A tap
+        // while one is being written is let go: two quick taps write one file, never half of two.
         fun shareFile(share: suspend () -> Boolean) {
+            if (!writing.compareAndSet(false, true)) return
             scope.launch {
-                if (!share()) Toast.makeText(context, failed, Toast.LENGTH_SHORT).show()
+                try {
+                    if (!share()) Toast.makeText(context, failed, Toast.LENGTH_SHORT).show()
+                } finally {
+                    writing.set(false)
+                }
             }
         }
         val sharePdf = { shareFile { sharePlanPdf(context, survey, words, title, date) } }
@@ -874,7 +883,7 @@ internal object RoomPlanPdf {
     }
 }
 
-/** The survey's PDF, written to the share cache and handed to the share sheet; `false` when it could not be written. */
+/** The survey's PDF, written to the share cache and handed to the share sheet; `false` when it could not be. */
 private suspend fun sharePlanPdf(
     context: Context,
     survey: RoomSurvey,
@@ -882,39 +891,51 @@ private suspend fun sharePlanPdf(
     title: String,
     date: String?,
 ): Boolean {
-    val file = withContext(Dispatchers.IO) {
-        runCatching {
-            planShareFile(context, words.pdfFile.format(title)).also { target ->
-                target.outputStream().use { RoomPlanPdf.write(it, survey, words, title, date) }
-            }
-        }.getOrNull()
-    } ?: return false
-    sharePlanFile(context, file, PDF_MIME_TYPE, title)
+    val uri = writePlanShare(context, words.pdfFile.format(title)) { RoomPlanPdf.write(it, survey, words, title, date) }
+        ?: return false
+    sharePlanFile(context, uri, PDF_MIME_TYPE, title)
     return true
 }
 
 /**
- * A fresh file named [name] in the plan's share cache. Only the latest shared plan file is kept:
- * the share sheet has read the last one by the next share.
+ * A plan file named [name], written by [write] to the share cache off the main thread, and the
+ * URI the share sheet reads it through; `null` when it could not be written or given a URI, for
+ * the caller to say so rather than crash.
+ */
+internal suspend fun writePlanShare(context: Context, name: String, write: (OutputStream) -> Unit): Uri? =
+    withContext(Dispatchers.IO) {
+        runCatching {
+            val file = planShareFile(context, name)
+            file.outputStream().use(write)
+            FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        }.getOrNull()
+    }
+
+/**
+ * A fresh file named [name] in the plan's share cache, in the folder of its kind, its extension:
+ * `plan/pdf/`, `plan/dxf/`. Each kind keeps its latest file only: a new PDF replaces the last
+ * one, which its share sheet has read by then, and leaves the DXF be, which an app may still be
+ * reading — so the cache never holds more than a file of each kind.
  */
 internal fun planShareFile(context: Context, name: String): File {
-    val shareRoot = rerunShareDirectory(context, RERUN_SHARE_PLAN)
-    shareRoot.deleteRecursively()
-    val dir = File(shareRoot, UUID.randomUUID().toString()).apply { mkdirs() }
-    return File(dir, name.replace(Regex("[\\\\/:*?\"<>|]"), "-"))
+    val safe = name.replace(Regex("[\\\\/:*?\"<>|]"), "-")
+    val kind = safe.substringAfterLast('.', missingDelimiterValue = "").lowercase(Locale.ROOT).ifEmpty { "file" }
+    val folder = File(rerunShareDirectory(context, RERUN_SHARE_PLAN), kind)
+    folder.deleteRecursively()
+    val dir = File(folder, UUID.randomUUID().toString()).apply { mkdirs() }
+    return File(dir, safe)
 }
 
 /**
- * [file] alone handed to the share sheet as [mimeType]: one [Intent.ACTION_SEND], readable by
- * the app it reaches, offered to every app that takes [mimeType].
+ * The file at [uri] alone handed to the share sheet as [mimeType]: one [Intent.ACTION_SEND],
+ * readable by the app it reaches, offered to every app that takes [mimeType].
  */
-internal fun sharePlanFile(context: Context, file: File, mimeType: String, title: String) {
-    val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+internal fun sharePlanFile(context: Context, uri: Uri, mimeType: String, title: String) {
     val send = Intent(Intent.ACTION_SEND).apply {
         type = mimeType
         putExtra(Intent.EXTRA_STREAM, uri)
         putExtra(Intent.EXTRA_SUBJECT, title)
-        clipData = ClipData.newRawUri(file.name, uri)
+        clipData = ClipData.newRawUri(uri.lastPathSegment, uri)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
     context.startActivity(Intent.createChooser(send, title).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))

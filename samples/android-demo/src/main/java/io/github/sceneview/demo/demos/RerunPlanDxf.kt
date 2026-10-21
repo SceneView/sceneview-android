@@ -5,8 +5,6 @@ import io.github.sceneview.demo.R
 import io.github.sceneview.demo.demos.internal.MeasureUnitSystem
 import io.github.sceneview.demo.demos.internal.RoomPlanDxf
 import io.github.sceneview.demo.demos.internal.RoomSurvey
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 /**
  * The survey's plan as a DXF drawing, for a CAD tool to take it up, written to the share cache and
@@ -16,14 +14,9 @@ import kotlinx.coroutines.withContext
 internal suspend fun sharePlanDxf(context: Context, survey: RoomSurvey, words: PlanWords, title: String): Boolean {
     if (!survey.hasPlan) return false
     val drawing = planDxfWords(context, survey, words, title)
-    val file = withContext(Dispatchers.IO) {
-        runCatching {
-            planShareFile(context, words.pdfFile.format(title).substringBeforeLast('.') + DXF_EXTENSION).also { target ->
-                target.outputStream().use { RoomPlanDxf.write(it, survey, words.survey, drawing) }
-            }
-        }.getOrNull()
-    } ?: return false
-    sharePlanFile(context, file, DXF_MIME_TYPE, title)
+    val name = words.pdfFile.format(title).substringBeforeLast('.') + DXF_EXTENSION
+    val uri = writePlanShare(context, name) { RoomPlanDxf.write(it, survey, words.survey, drawing) } ?: return false
+    sharePlanFile(context, uri, DXF_MIME_TYPE, title)
     return true
 }
 
