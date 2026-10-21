@@ -29,10 +29,9 @@ import kotlin.math.tan
  * - The ceiling is locked at 2.5 m ± 1 cm.
  *
  * The target is a median error of 3 % at most and a maximum of 5 %, on the floor area, the
- * perimeter, the wall (paint) area and the volume. One case misses it, and is held to what it
- * does instead: without wall planes, the 6° square snap — validated on device and left as it is —
- * squares the 95° room's 95° and 85° corners, and how far that moves the figures depends on where the
- * trace starts.
+ * perimeter, the wall (paint) area and the volume, for every case. The square snap takes 6° only
+ * when a tracked wall confirms the right angle, 3° otherwise: the 95° room's 95° and 85° corners
+ * stay as they are traced, with wall planes or without.
  *
  * The figures of each case are in its name, so they read in the test log.
  */
@@ -93,9 +92,6 @@ class MeasurePrecisionTest(private val name: String, private val case: Precision
 
         private val TARGET = Bounds(median = 3f, max = 5f)
 
-        /** The 95° room without wall planes: what the square snap does to it, measured, not the target. */
-        private val SQUARED = Bounds(median = 4f, max = 11f)
-
         private val ROOMS = listOf(
             Room("4 x 3 m rectangle", listOf(0f to 0f, 4f to 0f, 4f to 3f, 0f to 3f)),
             Room("5 x 4 m L", listOf(0f to 0f, 5f to 0f, 5f to 2f, 3f to 2f, 3f to 4f, 0f to 4f)),
@@ -135,7 +131,6 @@ class MeasurePrecisionTest(private val name: String, private val case: Precision
                 volume += trace[3]
                 planMismatch = maxOf(planMismatch, trace[4])
             }
-            val squared = !walls && room === ROOMS.last()
             val errors = linkedMapOf(
                 "floor area" to Errors(area),
                 "perimeter" to Errors(perimeter),
@@ -149,9 +144,8 @@ class MeasurePrecisionTest(private val name: String, private val case: Precision
                 append(room.label)
                 append(if (walls) " with wall planes: " else " without wall planes: ")
                 append(figures)
-                if (squared) append(" (squared by the 6 degree square snap, over the target)")
             }
-            return PrecisionCase(label, if (squared) SQUARED else TARGET, errors, unclosed, planMismatch)
+            return PrecisionCase(label, TARGET, errors, unclosed, planMismatch)
         }
 
         /**
