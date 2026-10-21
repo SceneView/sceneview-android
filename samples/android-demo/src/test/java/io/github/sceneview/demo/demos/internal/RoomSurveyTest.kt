@@ -329,6 +329,18 @@ class RoomSurveyTest {
     }
 
     @Test
+    fun `a plan its walls do not close gives no wall a guessed length`() {
+        val survey = Room().box(east = false, west = false).survey()
+        val labels = SurveyReport.planTexts(survey, RoomPlanLayoutTest.WORDING).walls
+        val rows = SurveyReport.wallRows(survey, RoomPlanLayoutTest.WORDING).map { it.value }
+
+        assertNull(survey.area)
+        assertEquals(survey.walls.size, rows.size)
+        assertTrue(labels.toString(), labels.none { it.contains(SurveyFormat.ESTIMATE) })
+        assertTrue(rows.toString(), rows.none { it.contains(SurveyFormat.ESTIMATE) })
+    }
+
+    @Test
     fun `no ceiling seen, no height`() {
         val survey = Room().box(ceiling = false).survey()
 
