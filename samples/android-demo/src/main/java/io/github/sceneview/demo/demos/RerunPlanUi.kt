@@ -9,7 +9,6 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
-import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -41,7 +40,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -98,19 +96,11 @@ import io.github.sceneview.demo.theme.SceneViewTokens.Radius
 import io.github.sceneview.demo.theme.SceneViewTokens.Space
 import io.github.sceneview.demo.theme.SceneViewTokens.Type
 import io.github.sceneview.demo.theme.StageChrome
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.async
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
 import java.io.OutputStream
-import java.lang.ref.WeakReference
 import java.util.Locale
 import java.util.UUID
 import kotlin.math.max
@@ -229,62 +219,6 @@ internal fun planHeading(title: String, epochSeconds: Long?, locale: Locale = Lo
     return if (title.contains(short)) PlanHeading(title.replace(short, full), null) else PlanHeading(title, full)
 }
 
-/**
- * [media]'s survey, measured off the main thread once [wanted]; `null` while it is being read.
- * A scan without a dense cloud has no walls to measure: its survey says so. The wait is bounded
- * ([measureRoom]): a measure that fails or does not end in time says so too.
- */
-@Composable
-internal fun rememberRoomSurvey(media: RerunReplayMedia?, wanted: Boolean): RoomSurvey? =
-    produceState<RoomSurvey?>(null, media, wanted) {
-    value = null
-    if (media == null || !wanted) return@produceState
-    value = measureRoom(media)
-}.value
-
-/** The longest the plan waits for a room's measure before it says the room was not measured. */
-internal const val PLAN_MEASURE_MS = 20_000L
-
-/**
- * [media]'s [survey] within [timeoutMs], else a survey that says the room was not measured
- * ([SurveyGap.Unmeasured]): the measure failed, or has not ended — it shares
- * [Dispatchers.Default] with the scan's model and pictures, and could wait on them for good.
- *
- * The measure runs apart from its caller: closing the export sheet does not throw it away, and
- * opening the sheet or the plan again for the same scan waits on the same measure, where both
- * started their own from zero. A failed one is started again.
- */
-internal suspend fun measureRoom(
-    media: RerunReplayMedia,
-    timeoutMs: Long = PLAN_MEASURE_MS,
-    survey: (RerunReplayMedia) -> RoomSurvey = ::surveyOf,
-): RoomSurvey {
-    val measure = RoomMeasures.of(media, survey)
-    val measured = try {
-        withTimeoutOrNull(timeoutMs) { measure.await() }
-    } catch (e: Exception) {
-        // The caller leaving cancels this wait, not the measure: that rethrows.
-        currentCoroutineContext().ensureActive()
-        Log.w(PLAN_LOG_TAG, "Room measure failed", e)
-        null
-    }
-    return measured ?: RoomSurvey.empty(SurveyGap.Unmeasured)
-}
-
-/** The last scan's measure, under way or ended. */
-private object RoomMeasures {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private var last: Pair<WeakReference<RerunReplayMedia>, Deferred<RoomSurvey>>? = null
-
-    @Synchronized
-    fun of(media: RerunReplayMedia, survey: (RerunReplayMedia) -> RoomSurvey): Deferred<RoomSurvey> {
-        last?.let { (scan, measure) -> if (scan.get() === media && !measure.isCancelled) return measure }
-        return scope.async { survey(media) }.also { last = WeakReference(media) to it }
-    }
-}
-
-private const val PLAN_LOG_TAG = "RerunPlan"
-
 /** [media]'s survey, measured on the calling thread: call it off the main one. */
 internal fun surveyOf(media: RerunReplayMedia): RoomSurvey {
     val cloud = media.dense?.cloud ?: return RoomSurvey.empty(SurveyGap.NoDepth)
@@ -300,7 +234,7 @@ internal fun surveyOf(media: RerunReplayMedia): RoomSurvey {
  */
 @Composable
 internal fun RerunPlanScreen(media: RerunReplayMedia?, title: String, date: String?, onBack: () -> Unit) {
-    val survey = rememberRoomSurvey(media, wanted = true)
+    val survey = rememberRoomSurvey(media, wanted = true).survey
     DemoScaffold(
         title = stringResource(R.string.demo_ar_rerun_plan_export_title),
         onBack = onBack,

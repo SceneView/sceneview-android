@@ -1,9 +1,13 @@
 package io.github.sceneview.demo.demos
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.createComposeRule
 import io.github.sceneview.demo.demos.internal.ArDebugTrace
 import io.github.sceneview.demo.demos.internal.DebugMesh
 import io.github.sceneview.demo.demos.internal.DenseCloud
+import io.github.sceneview.demo.demos.internal.PlanMeasure
 import io.github.sceneview.demo.demos.internal.PlanOffer
 import io.github.sceneview.demo.demos.internal.ReplayLens
 import io.github.sceneview.demo.demos.internal.ReplayManifest
@@ -36,7 +40,7 @@ import kotlin.concurrent.thread
  * "Measuring the room…" for good — even when every thread of the app's pool is busy building
  * the scan's model. A measure that takes long says it is still under way, then shows its plan;
  * only one that fails says the room was not measured. Scans are measured one at a time, and a
- * measure nobody waits for any more gives way to the next.
+ * measure nobody waits for any more gives way to the next, or to the demo closing.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -129,7 +133,7 @@ class RerunPlanMeasureTest {
             composeRule.mainClock.advanceTimeBy(PLAN_MEASURE_MS)
             composeRule.mainClock.advanceTimeByFrame()
             // Past its time the measure is still under way: the row says so, not that it failed.
-            assertEquals("StillMeasuring", offer?.name)
+            assertEquals(PlanOffer.StillMeasuring, offer)
             gate.countDown()
             val until = System.nanoTime() + TimeUnit.SECONDS.toNanos(HOLD_S)
             while (offer != PlanOffer.Ready && System.nanoTime() < until) {
@@ -141,6 +145,16 @@ class RerunPlanMeasureTest {
             gate.countDown()
             first.join()
         }
+    }
+
+    @Test
+    fun `a measure says it is still measuring past its time, until its survey comes`() {
+        assertEquals(PlanOffer.Measuring, PlanOffer.of(PlanMeasure(null, overdue = false)))
+        assertEquals(PlanOffer.StillMeasuring, PlanOffer.of(PlanMeasure(null, overdue = true)))
+        val late = RoomSurvey.empty(SurveyGap.NoWalls)
+        assertEquals(PlanOffer.NoWalls, PlanOffer.of(PlanMeasure(late, overdue = true)))
+        val failed = RoomSurvey.empty(SurveyGap.Unmeasured)
+        assertEquals(PlanOffer.Failed, PlanOffer.of(PlanMeasure(failed, overdue = true)))
     }
 
     @Test
@@ -226,6 +240,36 @@ class RerunPlanMeasureTest {
             }
         } finally {
             gate.countDown()
+        }
+    }
+
+    @Test
+    fun `closing the demo drops the measure under way`() {
+        val started = CountDownLatch(1)
+        val held = CountDownLatch(1)
+        val ended = CountDownLatch(1)
+        var open by mutableStateOf(true)
+        composeRule.setContent { if (open) ForgetRoomSurveysOnExit() }
+        try {
+            val waiting = CoroutineScope(Dispatchers.IO).async {
+                measureRoom(scan()) {
+                    started.countDown()
+                    try {
+                        held.await(HOLD_S, TimeUnit.SECONDS)
+                    } finally {
+                        ended.countDown()
+                    }
+                    RoomSurvey.empty(SurveyGap.NoWalls)
+                }
+            }
+            assertTrue(started.await(HOLD_S, TimeUnit.SECONDS))
+            composeRule.runOnIdle { open = false }
+            composeRule.waitForIdle()
+            assertTrue("the scan is still being measured", ended.await(ENDED_S, TimeUnit.SECONDS))
+            // Whoever still waited is told the room was not measured.
+            assertEquals(listOf(SurveyGap.Unmeasured), runBlocking { waiting.await() }.gaps)
+        } finally {
+            held.countDown()
         }
     }
 

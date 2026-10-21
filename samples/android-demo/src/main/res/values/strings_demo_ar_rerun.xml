@@ -30,6 +30,7 @@
     <string name="demo_ar_rerun_plan_about">The room measured from your scan: wall lengths, floor area, ceiling height and volume. Share it as a PDF to scale.</string>
     <string name="demo_ar_rerun_plan_survey_title">Room survey</string>
     <string name="demo_ar_rerun_plan_measuring">Measuring the room…</string>
+    <string name="demo_ar_rerun_plan_still_measuring">Still measuring the room…</string>
     <!-- %1$s the scan's title, %2$s its date. -->
     <string name="demo_ar_rerun_plan_heading">%1$s · %2$s</string>
     <string name="demo_ar_rerun_plan_area">Floor area</string>
