@@ -52,13 +52,15 @@ class RendererReleaseContractTest {
 
     @Test
     fun `SurfaceMirrorer releases its mirror renderer once the backend is idle`() {
-        val calls = calledMethods(SurfaceMirrorer::class.java)
+        val destroyCalls = calledMethods(SurfaceMirrorer::class.java)
+            .filter { (caller, _) -> caller.startsWith("destroy") }
         assertTrue(
-            "SurfaceMirrorer must still release the renderer it created for its mirror passes, " +
-                "through destroyRendererWhenBackendIdle — dropping the release would leak it " +
-                "until the engine goes. Calls seen: " +
-                calls.filter { it.contains("destroy", ignoreCase = true) },
-            calls.any { it.startsWith("$ENGINE_KT.destroyRendererWhenBackendIdle") },
+            "SurfaceMirrorer.destroy() must still release the renderer it created for its mirror " +
+                "passes, through destroyRendererWhenBackendIdle — dropping the release would " +
+                "leak it until the engine goes. Calls seen in destroy(): $destroyCalls",
+            destroyCalls.any { (_, call) ->
+                call.startsWith("$ENGINE_KT.destroyRendererWhenBackendIdle")
+            },
         )
     }
 
@@ -67,7 +69,8 @@ class RendererReleaseContractTest {
         /** The wrapper itself, or the backend-idle deferral (a lambda inside it, once compiled). */
         val isDeferred: Boolean
             get() = caller.startsWith("$ENGINE_KT.safeDestroyRenderer") ||
-                (caller.startsWith(ENGINE_KT) && "destroyRendererWhenBackendIdle" in caller)
+                caller.startsWith("$ENGINE_KT.destroyRendererWhenBackendIdle") ||
+                caller.startsWith("$ENGINE_KT\$destroyRendererWhenBackendIdle")
 
         override fun toString() = "$caller -> $callee"
     }
@@ -114,12 +117,12 @@ class RendererReleaseContractTest {
         sites
     }.toList()
 
-    /** Every method `type` calls, as `owner.name(descriptor)`. */
-    private fun calledMethods(type: Class<*>): List<String> {
+    /** Every call `type` makes, as (calling method name, `owner.name(descriptor)`). */
+    private fun calledMethods(type: Class<*>): List<Pair<String, String>> {
         val resource = "/" + type.name.replace('.', '/') + ".class"
         val bytes = checkNotNull(type.getResourceAsStream(resource)) { "no class file: $resource" }
             .use { it.readBytes() }
-        val calls = ArrayList<String>()
+        val calls = ArrayList<Pair<String, String>>()
         ClassReader(bytes).accept(object : ClassVisitor(Opcodes.ASM9) {
             override fun visitMethod(
                 access: Int,
@@ -127,15 +130,18 @@ class RendererReleaseContractTest {
                 descriptor: String,
                 signature: String?,
                 exceptions: Array<out String>?
-            ): MethodVisitor = object : MethodVisitor(Opcodes.ASM9) {
-                override fun visitMethodInsn(
-                    opcode: Int,
-                    owner: String,
-                    name: String,
-                    descriptor: String,
-                    isInterface: Boolean
-                ) {
-                    calls += "$owner.$name$descriptor"
+            ): MethodVisitor {
+                val caller = name
+                return object : MethodVisitor(Opcodes.ASM9) {
+                    override fun visitMethodInsn(
+                        opcode: Int,
+                        owner: String,
+                        name: String,
+                        descriptor: String,
+                        isInterface: Boolean
+                    ) {
+                        calls += caller to "$owner.$name$descriptor"
+                    }
                 }
             }
         }, ClassReader.SKIP_DEBUG or ClassReader.SKIP_FRAMES)
@@ -144,8 +150,10 @@ class RendererReleaseContractTest {
 
     /** The class files compiled from this module's main sources — a directory or a jar. */
     private fun libraryClasses(): Sequence<ByteArray> {
-        val location =
-            File(SurfaceMirrorer::class.java.protectionDomain.codeSource.location.toURI())
+        val codeLocation = checkNotNull(
+            SurfaceMirrorer::class.java.protectionDomain?.codeSource?.location
+        ) { "no code source for SurfaceMirrorer" }
+        val location = File(codeLocation.toURI())
         return if (location.isDirectory) {
             location.walk().filter { it.isFile && it.extension == "class" }.map { it.readBytes() }
         } else {

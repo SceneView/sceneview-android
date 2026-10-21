@@ -1,0 +1,2 @@
+<!-- category: Fixed -->
+- **Leaving a scene that was being recorded no longer blocks the main thread on the GPU ([#4778](https://github.com/sceneview/sceneview/pull/4778)).** The extra renderer that `SurfaceMirrorer` draws the recording with was destroyed on the spot when the scene left composition, and Filament makes that call wait for every command already queued on the GPU thread — seconds right after a scene appeared, enough for an ANR. It is now released once that queue is empty, on the main thread as before, like the scene's own renderer since #3854.
