@@ -312,12 +312,17 @@ internal class RerunModelBuild(
  * keep the user waiting: when [onRaw] is given, that raw surface goes to it first (not
  * [RerunModelBuild.finished]), and the finished model, in the same place, replaces it.
  *
+ * Finishing again a raw surface already on screen, [shown] is its `.glb`: the finish works in
+ * the surface's arrays as with one written first, and [onRaw] hears nothing — written a second
+ * time, a big scan's `.glb` would hold twice its size in the heap the finish needs.
+ *
  * The surface is held in its [RawSurface] only, never in a local: a finish that works in its
  * arrays lets them go once prepared, before the cleaning's peak.
  */
 internal fun buildRerunModel(
     source: RerunModelSource,
     onRaw: ((RerunModelBuild) -> Unit)? = null,
+    shown: ByteArray? = null,
     progress: (Float) -> Unit,
 ): RerunModelBuild {
     val started = System.nanoTime()
@@ -332,7 +337,9 @@ internal fun buildRerunModel(
     val rawTriangles = raw.triangleCount
     val rawVertices = raw.vertexCount
     val rawBounds = raw.mesh.bounds()
-    val rawGlb = if (onRaw != null && rawTriangles >= RAW_FIRST_TRIANGLES) {
+    val rawGlb = if (shown != null) {
+        shown
+    } else if (onRaw != null && rawTriangles >= RAW_FIRST_TRIANGLES) {
         RerunMeshGlb.write(raw.mesh).also { glb ->
             onRaw(
                 RerunModelBuild(
@@ -505,7 +512,8 @@ private object JpegAtlasEncoder : AtlasEncoder {
  * Only the finished model is [RerunScanModel.finished]: the raw surface a failed finish leaves,
  * or the points, are shown but not kept, and the next open tries again — except the raw surface
  * a finish ran out of memory on, kept as it is ([RerunScanModel.outOfMemoryInHeap]). [onRaw]
- * hears a big scan's raw surface while it finishes ([buildRerunModel]).
+ * hears a big scan's raw surface while it finishes; [shown] is the `.glb` of one already on
+ * screen, finished again ([buildRerunModel]).
  *
  * [progress] is also where a cancelled build stops: it may throw [CancellationException], which
  * goes through untouched — a screen left mid-build stops meshing instead of racing the next one.
@@ -513,6 +521,7 @@ private object JpegAtlasEncoder : AtlasEncoder {
 internal fun buildScanModel(
     source: RerunModelSource,
     onRaw: ((RerunScanModel) -> Unit)? = null,
+    shown: ByteArray? = null,
     progress: (Float) -> Unit,
 ): RerunScanModel? {
     val skipMesh = source is RerunModelSource.Synthetic && source.meshFails
@@ -520,7 +529,7 @@ internal fun buildScanModel(
         null
     } else {
         val raw = onRaw?.let { show -> { build: RerunModelBuild -> show(build.scanModel()) } }
-        runCatching { buildRerunModel(source, raw) { progress(it * MESH_PART) } }
+        runCatching { buildRerunModel(source, raw, shown) { progress(it * MESH_PART) } }
             .onFailure { if (it is CancellationException) throw it }
             .onFailure { Log.w(TAG, "meshing failed", it) }
             .getOrNull()
@@ -633,14 +642,15 @@ internal fun RerunModelScreen(
                 // share is only where a screen closed meanwhile stops the build.
                 val report = { _: Float -> job.ensureActive() }
                 // A big scan's raw surface is shown while it finishes; the model then takes its place.
-                // Finishing again, the kept one is already shown: a second would only take heap.
+                // Finishing again, the kept one is already shown, its .glb the finish's own: a
+                // second, written again, would hold as much heap once more.
                 val raw = { surface: RerunScanModel ->
                     if (shownFirst == null) {
                         shownFirst = surface
                         value = ModelState.Ready(surface, final = false)
                     }
                 }
-                runCatching { buildScanModel(from, raw, report) }
+                runCatching { buildScanModel(from, raw, retry?.glb, report) }
                     .onFailure { if (it is CancellationException) throw it }
                     .onFailure { Log.w(TAG, "model build failed", it) }
                     .getOrNull()
@@ -830,7 +840,8 @@ internal fun RerunModelScreen(
         val opening = remember(framedBy, orbit) { DollhouseOpening() }
         BoxWithConstraints(Modifier.fillMaxSize().background(chrome.ground)) {
             // What the chrome leaves of the view at rest — below the name, above the dock, between
-            // the window's safe sides — less a gutter: the model opens whole in there (#4492). Held
+            // the window's safe sides — less a gutter: the model opens centred on it, and whole in
+            // it when it fits there at its size (#4492, RerunResultView.area). Held
             // sideways there is no such band: the model takes the safe area, the glass over it.
             val direction = LocalLayoutDirection.current
             val safe = WindowInsets.safeDrawing.asPaddingValues()
@@ -853,8 +864,10 @@ internal fun RerunModelScreen(
             )
             // The view's shape from its constraints: the surface reports its size after composing.
             val aspect = constraints.maxWidth.toFloat() / constraints.maxHeight.coerceAtLeast(1)
+            // Most of the narrower side, between the chrome when the model fits there at that size.
+            val area = RerunResultView.area(aspect, insets)
             val home = rememberUpdatedState {
-                (if (plan) planFraming else framing)?.home(RerunResultView.AZIMUTH, aspect, insets)
+                (if (plan) planFraming else framing)?.home(RerunResultView.AZIMUTH, aspect, area)
             }
             SideEffect { home.value()?.let { opening.aim(orbit, it) } }
             SceneView(
@@ -962,6 +975,9 @@ private fun ScanNameCard(title: String, saved: Boolean, onRename: (() -> Unit)?)
 internal enum class ModelStatus(@StringRes val text: Int) {
     Creating(R.string.scan_result_creating),
     Finishing(R.string.scan_result_finishing),
+
+    /** The raw surface kept the last time ([RerunScanModel.retriesFinish]), finishing again behind it. */
+    FinishingAgain(R.string.scan_result_finishing_again),
     Failed(R.string.scan_result_failed),
     Partial(R.string.scan_result_partial),
 
@@ -980,11 +996,16 @@ internal enum class ModelStatus(@StringRes val text: Int) {
          * The lines a big scan's raw surface can have under it, from its finish to each way the
          * finish ends: the line keeps the room of the tallest, whichever it ends on.
          */
-        val RAW_LINES: List<ModelStatus> get() = listOf(Finishing, Finished, RawOutOfMemory, RawUnfinished)
+        val RAW_LINES: List<ModelStatus>
+            get() = listOf(Finishing, FinishingAgain, Finished, RawOutOfMemory, RawUnfinished)
 
         /** For [model] on screen, `null` while none is; [settled] once it is known for good. `null`: nothing to say. */
         fun of(model: RerunScanModel?, settled: Boolean): ModelStatus? = when {
-            !settled -> if (model != null) Finishing else Creating
+            !settled -> when {
+                model == null -> Creating
+                model.retriesFinish -> FinishingAgain
+                else -> Finishing
+            }
             model == null -> Failed
             model.kind == RerunScanModel.Kind.Points -> Partial
             model.finished -> null

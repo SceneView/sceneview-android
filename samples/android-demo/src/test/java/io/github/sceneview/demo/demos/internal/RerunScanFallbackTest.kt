@@ -10,6 +10,7 @@ import io.github.sceneview.demo.demos.internal.model.ModelPhotos
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -118,6 +119,40 @@ class RerunScanFallbackTest {
     }
 
     @Test
+    fun `a raw surface finished again hands the finish its own glb, never a second one`() {
+        // The raw surface a first finish ran out of memory on, kept, shown at once on the next open.
+        var ranOut = false
+        val kept = assertNotNull(
+            buildScanModel(RerunModelSource.Synthetic(), onRaw = {}) {
+                if (it > FINISHING_FROM && !ranOut) {
+                    ranOut = true
+                    throw OutOfMemoryError("finish")
+                }
+            },
+        )
+        assertTrue("kept to be finished again", kept.retriesFinish)
+
+        // Finished again behind it, out of memory once more.
+        var heard = 0
+        var ranOutAgain = false
+        val again = assertNotNull(
+            buildScanModel(RerunModelSource.Synthetic(), onRaw = { heard++ }, shown = kept.glb) {
+                if (it > FINISHING_FROM && !ranOutAgain) {
+                    ranOutAgain = true
+                    throw OutOfMemoryError("finish again")
+                }
+            },
+        )
+        assertTrue("the finish never started", ranOutAgain)
+        assertEquals("a second raw surface shown", 0, heard)
+        assertSame("a second raw .glb written beside the one shown", kept.glb, again.glb)
+        val next = kept.finishedAgain(again)
+        assertSame("the surface on screen gave way", kept.glb, next.glb)
+        assertEquals(2, next.outOfMemoryAttempts)
+        assertEquals(again.outOfMemoryInHeap, next.outOfMemoryInHeap)
+    }
+
+    @Test
     fun `a small scan goes straight to its finished model`() {
         val box = Box(0f, 0f, 0f, 1.2f, 0.9f, 1.0f)
         val tsdf = CleanScenes.fuse(Box(-0.2f, -0.2f, -0.2f, 1.4f, 1.1f, 1.2f), NOISE_M, NOISE_M) { x, y, z ->
@@ -151,6 +186,9 @@ class RerunScanFallbackTest {
 
         /** The raw surface is ready once meshed, well before the finish's share of the progress. */
         const val MESHED_BY = 0.5f
+
+        /** Past the meshing: the finish's own progress, as [buildScanModel] reports it. */
+        const val FINISHING_FROM = 0.41f
 
         /** The finished model's box against the raw one's: the cleaning trims specks, no more. */
         const val SAME_PLACE_M = 0.1f

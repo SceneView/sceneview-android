@@ -51,11 +51,18 @@ class RerunScanModel(
      * ([retriesFinish]).
      */
     val outOfMemoryAttempts: Int = 1,
+    /**
+     * Read from an earlier app's `model.json` ([parse]): the raw surface it kept as the model.
+     * Shown at once as it is, recording readable or not, and finished again from the recording
+     * when it reads ([retriesFinish]); not saved over as this app's ([keptWithScan]).
+     */
+    val earlierFormat: Boolean = false,
 ) {
     init {
         require(bounds.size == BOUNDS) { "six bounds" }
         require(outOfMemoryInHeap == null || !finished) { "a finished model ran out of memory" }
         require(outOfMemoryAttempts >= 1) { "at least one attempt" }
+        require(!earlierFormat || !finished) { "an earlier app's model is its raw surface" }
     }
 
     /** Kept with its scan ([RerunSessionStore.saveModel]): the finished model, or the raw surface left by [outOfMemoryInHeap]. */
@@ -68,27 +75,32 @@ class RerunScanModel(
      * instead of holding its TSDF — but not every time: past [OUT_OF_MEMORY_ATTEMPTS] the raw
      * surface is the scan's model for good.
      */
-    val retriesFinish: Boolean get() = outOfMemoryInHeap != null && outOfMemoryAttempts < OUT_OF_MEMORY_ATTEMPTS
+    val retriesFinish: Boolean
+        get() = earlierFormat || (outOfMemoryInHeap != null && outOfMemoryAttempts < OUT_OF_MEMORY_ATTEMPTS)
 
     /**
      * What a finish run again over this raw surface ([retriesFinish]) leaves: [built] when it
-     * finished; else the raw surface it ran out of memory on, or this one when it failed another
-     * way, one attempt more.
+     * finished; else this surface, one attempt more — with the heap [built] ran out of, when it
+     * did. The surface stays the one on screen: the finish was handed its `.glb`, and a surface
+     * meshed again need not hold the same triangles.
      */
-    fun finishedAgain(built: RerunScanModel?): RerunScanModel =
-        built?.takeIf { it.finished } ?: (built?.takeIf { it.outOfMemoryInHeap != null } ?: this).attempt(outOfMemoryAttempts + 1)
-
-    private fun attempt(attempts: Int) = RerunScanModel(
-        kind = kind,
-        glb = glb,
-        bounds = bounds,
-        triangles = triangles,
-        vertices = vertices,
-        budgetReached = budgetReached,
-        finished = finished,
-        outOfMemoryInHeap = outOfMemoryInHeap,
-        outOfMemoryAttempts = attempts,
-    )
+    fun finishedAgain(built: RerunScanModel?): RerunScanModel {
+        if (built != null && built.finished) return built
+        val heap = built?.outOfMemoryInHeap
+        return RerunScanModel(
+            kind = kind,
+            glb = glb,
+            bounds = bounds,
+            triangles = triangles,
+            vertices = vertices,
+            budgetReached = budgetReached,
+            finished = false,
+            outOfMemoryInHeap = heap ?: outOfMemoryInHeap,
+            outOfMemoryAttempts = outOfMemoryAttempts + 1,
+            // Out of memory, it is this app's raw surface kept for it.
+            earlierFormat = earlierFormat && heap == null,
+        )
+    }
 
     /**
      * [glb] in a native buffer, for the renderer to read; `null` when the heap has no room left
@@ -135,7 +147,8 @@ class RerunScanModel(
     companion object {
         /**
          * `model.json`'s format. 2: the finished model ([io.github.sceneview.demo.demos.internal.model.CleanModel]);
-         * a 1 is the raw surface an earlier app kept, read as none so the scan finishes it again.
+         * a 1 is the raw surface an earlier app kept, read as it is ([earlierFormat]) so the scan
+         * opens on it and finishes it again.
          */
         const val VERSION = 2
 
@@ -146,15 +159,18 @@ class RerunScanModel(
          * fourth would only cost the user another wait for the same raw surface.
          */
         const val OUT_OF_MEMORY_ATTEMPTS = 3
+
+        /** An earlier app's `model.json`: its raw surface, kept as the model ([earlierFormat]). */
+        private const val EARLIER_VERSION = 1
         private const val BOUNDS = 6
         private val pretty = Json { prettyPrint = true }
         private val lenient = Json { ignoreUnknownKeys = true; isLenient = true }
 
         /**
-         * `null` when [info] is not a whole `model.json`, was written in another format than this
-         * app's ([VERSION]: an earlier app's raw surface, or a newer app's), or [glb] is not a
-         * `.glb`, or is a raw surface kept for running out of a smaller [heap] than this one: the
-         * scan then builds its model again.
+         * `null` when [info] is not a whole `model.json`, was written by a newer app than this
+         * one ([VERSION]), or [glb] is not a `.glb`, or is a raw surface kept for running out of a
+         * smaller [heap] than this one: the scan then builds its model again. An earlier app's
+         * raw surface (format 1) reads as it is, to be finished again ([earlierFormat]).
          */
         @Suppress("ReturnCount") // one early return per required key
         fun parse(info: String, glb: ByteArray, heap: Long = Runtime.getRuntime().maxMemory()): RerunScanModel? {
@@ -162,7 +178,8 @@ class RerunScanModel(
             val root = runCatching { lenient.parseToJsonElement(info) as? JsonObject }.getOrNull() ?: return null
             fun number(key: String) = (root[key] as? JsonPrimitive)?.takeIf { !it.isString }
             val version = number("version")?.intOrNull ?: return null
-            if (version != VERSION) return null
+            val earlier = version == EARLIER_VERSION
+            if (version != VERSION && !earlier) return null
             val kind = Kind.of((root["kind"] as? JsonPrimitive)?.takeIf { it.isString }?.content) ?: return null
             val bounds = (root["bounds"] as? JsonArray)
                 ?.mapNotNull { (it as? JsonPrimitive)?.floatOrNull }
@@ -170,6 +187,7 @@ class RerunScanModel(
                 ?.toFloatArray() ?: return null
             val outOfMemoryInHeap = root["outOfMemoryInHeap"]?.let { number("outOfMemoryInHeap")?.longOrNull ?: return null }
             if (outOfMemoryInHeap != null && heap > outOfMemoryInHeap) return null
+            if (earlier && outOfMemoryInHeap != null) return null
             return RerunScanModel(
                 kind = kind,
                 glb = glb,
@@ -177,10 +195,11 @@ class RerunScanModel(
                 triangles = number("triangles")?.intOrNull?.takeIf { it > 0 } ?: return null,
                 vertices = number("vertices")?.intOrNull ?: return null,
                 budgetReached = number("budgetReached")?.booleanOrNull ?: false,
-                finished = outOfMemoryInHeap == null,
+                finished = outOfMemoryInHeap == null && !earlier,
                 outOfMemoryInHeap = outOfMemoryInHeap,
                 // Before attempts were counted, a model.json held one finish.
                 outOfMemoryAttempts = number("outOfMemoryAttempts")?.intOrNull?.takeIf { it >= 1 } ?: 1,
+                earlierFormat = earlier,
             )
         }
 
@@ -312,6 +331,7 @@ object RerunResultView {
     const val AZIMUTH = ArDebugFraming.HOME_AZIMUTH
     const val ELEVATION = 40f
 
+    /** The pose that opens [bounds] on a view of [aspect] whose chrome covers [insets]: in its [area]. */
     fun home(bounds: FloatArray, verticalFovDegrees: Double, aspect: Float, insets: FramingInsets): OrbitPose =
         ArDebugFraming.fit(
             bounds = bounds,
@@ -319,16 +339,57 @@ object RerunResultView {
             elevationDegrees = ELEVATION,
             verticalFovDegrees = verticalFovDegrees,
             aspect = aspect,
-            insets = insets,
+            insets = area(aspect, insets),
         )
+
+    /**
+     * Where a result opens on a view of [aspect] (width / height) whose chrome covers [insets]:
+     * [NARROW_FILL] of the view's narrower side, and as much of its longer side as [EDGE] leaves,
+     * both centred on what the chrome leaves free.
+     *
+     * Fitted between the chrome alone, a room opened at half the width of a phone held upright and
+     * a small scan at a sixth of it: the band between the bar and the sheet is short, and a box
+     * seen from above at an angle is about as tall as it is wide. Here the narrower side sets the
+     * size, and the longer side only stops a model too tall for it at the view's edge; one that
+     * fits between the chrome at that size stays there, centred.
+     */
+    fun area(aspect: Float, insets: FramingInsets): FramingInsets {
+        val free = insets.bounded()
+        val upright = aspect <= 1f
+        val (narrowLow, narrowHigh) = if (upright) free.left to free.right else free.top to free.bottom
+        val (longLow, longHigh) = if (upright) free.top to free.bottom else free.left to free.right
+        val narrowCentre = ((narrowLow + 1f - narrowHigh) / 2f).coerceIn(NARROW_FILL / 2f, 1f - NARROW_FILL / 2f)
+        val narrow = narrowCentre - NARROW_FILL / 2f to 1f - narrowCentre - NARROW_FILL / 2f
+        val longCentre = (longLow + 1f - longHigh) / 2f
+        val longHalf = maxOf(minOf(longCentre - EDGE, 1f - EDGE - longCentre), (1f - longLow - longHigh) / 2f)
+        val long = longCentre - longHalf to 1f - longCentre - longHalf
+        return if (upright) {
+            FramingInsets(left = narrow.first, top = long.first, right = narrow.second, bottom = long.second)
+        } else {
+            FramingInsets(left = long.first, top = narrow.first, right = long.second, bottom = narrow.second)
+        }
+    }
 
     /** [model] drawn square, [size] pixels a side, from the screen's view; `null` for an unreadable `.glb`. */
     fun thumbnail(model: RerunScanModel, size: Int, verticalFovDegrees: Double): IntArray? {
         val mesh = RerunGlbMesh.read(model.glb) ?: return null
         val margin = FramingInsets(THUMBNAIL_MARGIN, THUMBNAIL_MARGIN, THUMBNAIL_MARGIN, THUMBNAIL_MARGIN)
-        val pose = home(model.bounds, verticalFovDegrees, 1f, margin)
+        val pose = ArDebugFraming.fit(
+            bounds = model.bounds,
+            azimuthDegrees = AZIMUTH,
+            elevationDegrees = ELEVATION,
+            verticalFovDegrees = verticalFovDegrees,
+            aspect = 1f,
+            insets = margin,
+        )
         return RerunModelThumbnail.render(mesh, pose, verticalFovDegrees, size, size)
     }
+
+    /** The share of the view's narrower side a result opens across ([area]). */
+    const val NARROW_FILL = 0.8f
+
+    /** The least room [area] leaves at the ends of the view's longer side, a share of it. */
+    const val EDGE = 0.04f
 
     /** The thumbnail's breathing room on each side, a share of its width. */
     const val THUMBNAIL_MARGIN = 0.06f

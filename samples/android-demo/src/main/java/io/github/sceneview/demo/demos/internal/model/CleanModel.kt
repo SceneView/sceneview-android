@@ -175,8 +175,9 @@ internal object CleanModel {
         val ceiling = errorCeiling(geometry)
         val shape = simplify(clean, textured, targetTriangles, ceiling) { progress(BEFORE_SIMPLIFY + it * SIMPLIFY_SHARE) }
         reached.lap(Stage.Texture)
-        // A shape simplified for a texture keeps only coarse colours: worth it only if the photos
-        // cover most of it. Photos that failed to decode, wrong poses, a corner of the room seen —
+        // A shape simplified for a texture keeps only coarse colours where the photos did not
+        // reach: the photos texture what they saw, the vertex colours the rest. Photos that
+        // failed to decode, wrong poses, a corner of the room seen — under [MIN_TEXTURED_SHARE],
         // the colours are simplified again, edges kept, as without photos.
         val textures = if (textured) textures(shape, photos!!, progress) else null
         val covered = textures?.covering != null
@@ -252,8 +253,9 @@ internal object CleanModel {
     }
 
     /**
-     * The photos' texture of [shape] when it covers [MIN_TEXTURED_SHARE] of it, and the share it
-     * covered: one that covers less goes with this frame, before the colours are simplified again.
+     * The photos' texture of [shape] when it covers [MIN_TEXTURED_SHARE] of it, the rest left to
+     * its vertex colours, and the share it covered: one that covers less goes with this frame,
+     * before the colours are simplified again.
      */
     private class Textures(val covering: PhotoTexture?, val share: Float?)
 
@@ -504,8 +506,14 @@ internal object CleanModel {
     /** A heap smaller than any phone's still meshes a room: [RerunMarchingCubes.extractWhole]'s coarser cells take it. */
     private const val MIN_RAW_TRIANGLES = 100_000
 
-    /** Under this share textured, a texture is dropped for the vertex-coloured model. */
-    const val MIN_TEXTURED_SHARE = 0.5f
+    /**
+     * Under this share textured, a texture is dropped for the vertex-coloured model. Above it, the
+     * photos texture what they saw and the vertex colours the rest: a room photographed along two
+     * of its walls is a third textured, a big room walked once under half — both better for the
+     * photos where they reach. Under a fifth, they saw a corner, or their poses are off: the
+     * edges an untextured simplification keeps in its colours are worth more.
+     */
+    const val MIN_TEXTURED_SHARE = 0.2f
     private const val FLAT_COLOR = 0xFFB4AFA5.toInt()
     private const val CELL_M = 0.04f
     private const val KEY_BITS = 21

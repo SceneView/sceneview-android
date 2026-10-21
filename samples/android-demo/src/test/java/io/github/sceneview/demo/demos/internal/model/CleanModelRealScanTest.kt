@@ -309,6 +309,8 @@ class CleanModelRealScanTest {
         val rawFloor = FloorArea.of(raw.positions, raw.indices, RealScanRoom.ROOM.y0)
         val finalFloor = FloorArea.of(model.positions, model.texturedIndices + model.plainIndices, RealScanRoom.ROOM.y0)
         val floorRatio = finalFloor.area / rawFloor.area
+        val room = RealScanRoom.ROOM
+        val ofRoom = finalFloor.area / ((room.x1 - room.x0) * (room.z1 - room.z0))
 
         val report = StringBuilder()
         report.append(if (furnished) "furnished room" else "bare room").append(if (reliefs) " with a TV and a door" else "")
@@ -324,11 +326,13 @@ class CleanModelRealScanTest {
             .append(", texture ${stats.textureMs}, write ${stats.writeMs} = ${stats.totalMs} ms")
             .append("; walls rms ${mm(rawWalls.rms)} -> ${mm(finalWalls.rms)} mm (worst ${mm(finalWalls.worst)})")
             .append("; layers ${ratio(rawLayers)} -> ${ratio(finalLayers)}")
-            .append("; floor ${"%.3f".format(floorRatio)} of the raw one's area, holes ${rawFloor.innerLoops} -> ${finalFloor.innerLoops}")
+            .append("; floor ${"%.3f".format(floorRatio)} of the raw one's area (${"%.3f".format(ofRoom)} of the room's)")
+            .append(", holes ${rawFloor.innerLoops} -> ${finalFloor.innerLoops}")
 
         val problems = mutableListOf<String>()
         if (floorRatio !in MIN_FLOOR_KEPT..MAX_FLOOR_GROWN) problems += "floor ${"%.3f".format(floorRatio)} of the raw one's"
         if (finalFloor.innerLoops > rawFloor.innerLoops) problems += "floor holes ${rawFloor.innerLoops} -> ${finalFloor.innerLoops}"
+        if (ofRoom > MAX_FLOOR_OF_ROOM) problems += "floor counted twice: ${"%.3f".format(ofRoom)} of the room's"
         if (raw.triangleCount !in MIN_RAW_TRIANGLES..MAX_RAW_TRIANGLES) problems += "raw ${raw.triangleCount} triangles"
         if (stats.finalTriangles > MAX_FINAL_TRIANGLES) problems += "${stats.finalTriangles} triangles"
         // The file shared and kept: within the cap, seams and atlas counted, and textured.
@@ -624,6 +628,9 @@ class CleanModelRealScanTest {
          */
         const val MIN_FLOOR_KEPT = 0.97f
         const val MAX_FLOOR_GROWN = 1.25f
+
+        /** The finished floor over the room's: its holes filled, never a floor laid twice. */
+        const val MAX_FLOOR_OF_ROOM = 1.01f
         const val MIN_CURTAIN_KEPT = 0.7f
         const val MIN_SEAT_KEPT = 0.6f
 
@@ -780,9 +787,9 @@ object HeapCappedFinish {
             RerunScanModel.Kind.Mesh, shownGlb, FloatArray(BOUNDS), rawTriangles, raw.mesh.vertexCount, finished = false,
             outOfMemoryInHeap = runtime.maxMemory().takeIf { again },
         )
-        // The .glb the finish works beside, as the screen's build writes it: finishing again, the
-        // surface is meshed again from the scan and written a second time.
-        val rawGlb = if (again) RerunMeshGlb.write(raw.mesh) else shownGlb
+        // The .glb the finish works beside, as the screen's build hands it over: the one shown,
+        // first or finishing again (buildRerunModel's `shown`).
+        val rawGlb = shownGlb
         val rawGround = AtomicReference<Any?>()
         val decoding = groundSource(shownRaw, settled = false)?.let { model ->
             thread(isDaemon = true) { rawGround.set(groundOf(model.glb)) }

@@ -59,12 +59,14 @@ internal object PlaneFlattening {
         var planes = (0 until regions).map { fit(faces, label, it) }
         // One wall split in two by a cabinet is still one wall: merge regions on the same plane.
         val merged = mergeCoplanar(faces, label, planes)
-        if (merged.second < regions) {
-            for (t in 0 until n) if (label[t] >= 0) label[t] = merged.first[label[t]]
-            regions = merged.second
+        var anchors = planes
+        if (merged.count < regions) {
+            for (t in 0 until n) if (label[t] >= 0) label[t] = merged.id[label[t]]
+            regions = merged.count
+            anchors = merged.anchors
             planes = (0 until regions).map { fit(faces, label, it) }
         }
-        if (gather(faces, grown, keepId, label, planes, minCos, maxSnapM)) {
+        if (gather(faces, grown, keepId, label, planes, anchors, minCos, maxSnapM)) {
             planes = (0 until regions).map { fit(faces, label, it) }
         }
         absorb(topology, faces, label, planes)
@@ -84,11 +86,13 @@ internal object PlaneFlattening {
      * angle of the plane's, it lies on average within [MERGE_DISTANCE_M] of the plane — a second
      * pass of the same wall, drifted a few centimetres behind it, shows through the first one's
      * holes — every face of it within [maxDistance] (the snap's reach), and it lies within
-     * [GATHER_MARGIN_M] of the plane's own extent. Past [FREE_MERGE_M] it must also lie where the
-     * plane's own faces are ([Footprint.share] of at least [MIN_SHARE]): a second pass overlaps the
-     * first, while a TV or a door's leaf hides the wall behind it, so the plane has a hole exactly
-     * where it stands. A curtain's pleats, a cushion, a shelf, a TV turn away or stand off: they
-     * stay free. Returns whether any region joined.
+     * [GATHER_MARGIN_M] of the plane's own extent. Past [FREE_MERGE_M] from its [anchors] plane —
+     * the group's widest sheet as fitted before the merge, not the plane fitted after it, which a
+     * second pass merged in pulls towards whatever stands behind the wall — it must also lie where
+     * the plane's own faces are ([Footprint.share] of at least [MIN_SHARE]): a second pass overlaps
+     * the first, while a TV or a door's leaf hides the wall behind it, so the plane has a hole
+     * exactly where it stands. A curtain's pleats, a cushion, a shelf, a TV turn away or stand
+     * off: they stay free. Returns whether any region joined.
      */
     @Suppress("LongParameterList", "CyclomaticComplexMethod", "NestedBlockDepth")
     private fun gather(
@@ -97,6 +101,7 @@ internal object PlaneFlattening {
         keepId: IntArray,
         label: IntArray,
         planes: List<Plane>,
+        anchors: List<Plane>,
         minCos: Float,
         maxDistance: Float,
     ): Boolean {
@@ -168,7 +173,7 @@ internal object PlaneFlattening {
                 }
                 val gap = abs(plane.distance(cx.toFloat(), cy.toFloat(), cz.toFloat()))
                 if (gap > MERGE_DISTANCE_M) continue
-                if (gap > FREE_MERGE_M) {
+                if (abs(anchors[p].distance(cx.toFloat(), cy.toFloat(), cz.toFloat())) > FREE_MERGE_M) {
                     val own = grids[p].footprint(faces, members, start[r], start[r + 1])
                     if (planeCells[p].share(own) < MIN_SHARE) continue
                 }
@@ -369,7 +374,7 @@ internal object PlaneFlattening {
 
     /**
      * Groups planes within [MERGE_ANGLE_DEG] and [MERGE_DISTANCE_M] of a group's largest: the new
-     * id of each, and the count. Largest first, so each group is anchored on its widest sheet, and
+     * id of each, the count, and each group's anchor plane ([Merge]). Largest first, so each group is anchored on its widest sheet, and
      * a plane joins the nearest group that takes it, measured from where the plane's faces lie to
      * the anchor's plane. Past [FREE_MERGE_M] from the anchor, the group's faces, all of them, must
      * cover [MIN_SHARE] of the plane's faces ([Footprint.share]): a wall's second pass overlaps
@@ -378,7 +383,7 @@ internal object PlaneFlattening {
      * no closer to the wall for that.
      */
     @Suppress("NestedBlockDepth")
-    private fun mergeCoplanar(faces: FaceGeometry, label: IntArray, planes: List<Plane>): Pair<IntArray, Int> {
+    private fun mergeCoplanar(faces: FaceGeometry, label: IntArray, planes: List<Plane>): Merge {
         val byPlane = Members(label, planes.size)
         // Each plane's area, and where its faces lie on average: a gap is measured there, as
         // [gather] measures it, not between offsets — two planes a degree apart can share an
@@ -433,8 +438,13 @@ internal object PlaneFlattening {
             if (groupId[g] < 0) groupId[g] = count++
             id[i] = groupId[g]
         }
-        return id to count
+        val anchorOf = IntArray(count)
+        for (g in anchors.indices) anchorOf[groupId[g]] = anchors[g]
+        return Merge(id, count, List(count) { planes[anchorOf[it]] })
     }
+
+    /** [mergeCoplanar]'s groups: each plane's new [id], their [count], and each group's [anchors] plane. */
+    private class Merge(val id: IntArray, val count: Int, val anchors: List<Plane>)
 
     /**
      * The cells of [FOOTPRINT_CELL_M] a set of faces lies in, sorted, without repeats, and how many
@@ -471,24 +481,46 @@ internal object PlaneFlattening {
         }
 
         /**
-         * The share of [own]'s face centroids that lie in cells this footprint covers, a cell
-         * covered from [MIN_CELL_CENTROIDS] centroids. Weighed by [own]'s centroids, not by its
-         * cells: a wall that stops at a frame's edge still lies over each cell along it, but only
-         * the frame's rim lies in those cells, so the frame reads covered for that rim alone.
+         * The share of [own]'s face centroids this footprint covers. A centroid is covered when
+         * each of the four windows of 2×2 cells around its cell holds [MIN_CELL_CENTROIDS] of this
+         * footprint's: the wall lies all round it, within a window's width, whichever way a grid
+         * would fall. A hole a scan leaves in a wall, narrower than a window, is covered; a frame
+         * hung off the wall is covered along its rim alone, at most a window's width in. One grid
+         * of windows alone covered a postcard frame whole when its edges fell inside its cells.
+         *
+         * Weighed by [own]'s centroids, not by its cells: only the frame's rim lies where its wall
+         * does, so the frame reads covered for that rim alone.
          */
         fun share(own: Footprint): Float {
             var total = 0L
             var shared = 0L
-            var j = 0
             for (i in own.cells.indices) {
-                val key = own.cells[i]
                 total += own.counts[i]
-                while (j < cells.size && cells[j] < key) j++
-                if (j < cells.size && cells[j] == key && counts[j] >= MIN_CELL_CENTROIDS) shared += own.counts[i]
+                if (covers(own.cells[i])) shared += own.counts[i]
             }
             return if (total == 0L) 0f else shared.toFloat() / total
         }
+
+        private fun covers(cell: Long): Boolean {
+            val u = (cell shr Int.SIZE_BITS).toInt()
+            val v = cell.toInt()
+            for (du in 0..1) {
+                for (dv in 0..1) {
+                    var held = 0
+                    for (a in 0..1) for (b in 0..1) held += count(u - du + a, v - dv + b)
+                    if (held < MIN_CELL_CENTROIDS) return false
+                }
+            }
+            return true
+        }
+
+        private fun count(u: Int, v: Int): Int {
+            val i = cells.binarySearch(key(u, v))
+            return if (i >= 0) counts[i] else 0
+        }
     }
+
+    private fun key(u: Int, v: Int): Long = (u.toLong() shl Int.SIZE_BITS) or (v.toLong() and LOW_INT)
 
     /** The faces of each group — a region, a plane — contiguous: a counting sort on the group id, -1 left out. */
     private class Members(group: IntArray, count: Int) {
@@ -542,7 +574,7 @@ internal object PlaneFlattening {
                 val t = members[i] * 3
                 val u = floor((ux * c[t] + uy * c[t + 1] + uz * c[t + 2]) / FOOTPRINT_CELL_M).toInt()
                 val v = floor((vx * c[t] + vy * c[t + 1] + vz * c[t + 2]) / FOOTPRINT_CELL_M).toInt()
-                keys[i - from] = (u.toLong() shl Int.SIZE_BITS) or (v.toLong() and LOW_INT)
+                keys[i - from] = key(u, v)
             }
             keys.sort()
             val counts = IntArray(keys.size)
@@ -572,6 +604,14 @@ internal object PlaneFlattening {
         val slide = ByteArray(mesh.vertexCount)
         val slideA = IntArray(mesh.vertexCount)
         val slideB = IntArray(mesh.vertexCount)
+        // The rim of a scan's hole holds still: relaxed, a border vertex is pulled inwards by its
+        // neighbours, all on one side, and the lace opens a little more each round.
+        val border = BooleanArray(mesh.vertexCount)
+        for (c in topology.neighbours.indices) {
+            if (topology.neighbours[c] >= 0) continue
+            border[mesh.indices[c]] = true
+            border[mesh.indices[c - c % 3 + (c % 3 + 1) % 3]] = true
+        }
         var snapped = 0
         for (v in 0 until mesh.vertexCount) {
             var count = 0
@@ -618,10 +658,10 @@ internal object PlaneFlattening {
                 p[v * 3] = target[0]
                 p[v * 3 + 1] = target[1]
                 p[v * 3 + 2] = target[2]
-                if (!free && count == 1) {
+                if (!free && !border[v] && count == 1) {
                     slide[v] = 1
                     slideA[v] = ids[0]
-                } else if (!free && count == 2 && lineTarget != null) {
+                } else if (!free && !border[v] && count == 2 && lineTarget != null) {
                     slide[v] = 2
                     slideA[v] = ids[0]
                     slideB[v] = ids[1]
@@ -637,7 +677,8 @@ internal object PlaneFlattening {
      * Projected onto its plane, a noisy surface keeps its noise sideways: where the scan folded
      * over itself, a triangle now lies flipped in the plane — a dark speck, z-fighting its
      * neighbours. A few rounds of in-plane averaging (along the line, for a crease) spread the
-     * vertices evenly again and unfold them; corners and the rim of each region hold still.
+     * vertices evenly again and unfold them; corners, the rim of each region and the rim of each
+     * hole hold still.
      */
     @Suppress("LongParameterList")
     private fun relax(
@@ -836,10 +877,16 @@ internal object PlaneFlattening {
     /** Past [FREE_MERGE_M], how much of a sheet's faces its wall must cover for the two to be one. */
     private const val MIN_SHARE = 0.6f
 
-    /** The footprint's cell: wider than the holes a scan leaves in a wall, much narrower than a TV. */
-    private const val FOOTPRINT_CELL_M = 0.1f
+    /**
+     * The footprint's cell, half a window of [Footprint.share]: windows 10 cm wide, wider than the
+     * holes a scan leaves in a wall, much narrower than a TV, and four of them round each cell, so
+     * a frame of postcard or A4 size 3 cm off its wall reads covered along its rim alone,
+     * whichever way the grid falls on it. One 10 cm grid covered two of its four offsets whole;
+     * 5 cm cells alone uncovered a wall's second pass through its holes.
+     */
+    private const val FOOTPRINT_CELL_M = 0.05f
 
-    /** The face centroids that make a cell covered ([Footprint.share]): one may be a stray face. */
+    /** The face centroids that make a window covered ([Footprint.share]): one may be a stray face. */
     private const val MIN_CELL_CENTROIDS = 2
     private const val LEVEL_NORMAL_Y = 0.9f
     private const val MAX_PLANES_AT_VERTEX = 6
