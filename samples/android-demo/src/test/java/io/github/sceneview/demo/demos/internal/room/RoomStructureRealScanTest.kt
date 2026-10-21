@@ -10,14 +10,26 @@ import kotlin.math.floor
 /**
  * The room engine on synthetic scans shaped like the phone scans that defeated it: walls seen only
  * up to 0.9 m, floor seen only ahead of the camera, a doorway the floor runs on through, one wall
- * seen twice, two walls of four, an L and a T seen on three quarters of their length. When a
- * figure is given it is within [MAX_ERROR] of the room's; where the walls seen do not close the
- * room, none is, and the plan is still drawn.
+ * seen twice, two walls of four, an L and a T seen on three quarters of their length, corners
+ * hidden behind furniture, a headboard against a wall. When a figure is given it is within
+ * [MAX_ERROR] of the room's, or the case's own bound; where the walls seen do not close the room,
+ * none is, and the plan is still drawn — but two adjacent walls alone give an area marked as an
+ * estimate, the floor seen standing for the other two.
  */
 class RoomStructureRealScanTest {
 
-    /** A case: the room, the camera's walk through it, and whether its walls close it. */
-    private class Case(val name: String, val room: SyntheticRoom, val figures: Boolean, val walk: List<Vec3>? = null)
+    /**
+     * A case: the room, the camera's walk through it, whether its walls close it — or, [estimated],
+     * give an area only as an estimate — and how near its area has to be.
+     */
+    private class Case(
+        val name: String,
+        val room: SyntheticRoom,
+        val figures: Boolean,
+        val walk: List<Vec3>? = null,
+        val maxError: Float = MAX_ERROR,
+        val estimated: Boolean = false,
+    )
 
     private fun capture(case: Case): SyntheticCapture = synchronized(captures) {
         captures.getOrPut(case.name) {
@@ -44,7 +56,9 @@ class RoomStructureRealScanTest {
             !case.figures && (structure.perimeter != null || structure.length != null || structure.width != null) -> "a length"
             !case.figures && RoomGap.MissingWall !in structure.gaps -> "no missing wall"
             case.figures && area == null -> "no area"
-            case.figures && abs(area!!.value - case.room.area) / case.room.area >= MAX_ERROR -> "area off"
+            case.estimated && !area!!.estimate -> "an area not marked as an estimate"
+            case.estimated && (structure.length?.estimate == true || structure.width?.estimate == true) -> "an estimated length"
+            case.figures && abs(area!!.value - case.room.area) / case.room.area >= case.maxError -> "area off"
             else -> null
         }
     }
@@ -79,9 +93,23 @@ class RoomStructureRealScanTest {
     }
 
     @Test
-    fun `two walls of four give a plan and no figure`() {
+    fun `two adjacent walls of four give an area marked as an estimate and no estimated length`() {
         check(TWO_LOW)
         check(TWO)
+    }
+
+    @Test
+    fun `two facing walls of four give the width between them and no area`() {
+        val structure = RoomStructure.read(capture(FACING).scan())
+        val summary = summary(FACING, structure)
+        assertTrue("$summary: no plan", structure.walls.isNotEmpty())
+        assertNull(summary, structure.area)
+        assertNull(summary, structure.perimeter)
+        assertNull(summary, structure.volume)
+        assertTrue(summary, RoomGap.MissingWall in structure.gaps)
+        val between = listOfNotNull(structure.length, structure.width)
+        assertTrue("$summary: ${between.size} lengths", between.size == 1 && !between[0].estimate)
+        assertTrue("$summary: width ${between[0].value}", abs(between[0].value - FACING_APART_M) / FACING_APART_M < MAX_ERROR)
     }
 
     @Test
@@ -92,6 +120,27 @@ class RoomStructureRealScanTest {
     @Test
     fun `a T seen on three quarters of its walls is read between them`() {
         check(T_PART)
+    }
+
+    @Test
+    fun `corners hidden behind furniture against walls seen only low still close the room`() {
+        check(CORNERS)
+    }
+
+    @Test
+    fun `a headboard against a wall seen only low does not pull the wall in`() {
+        check(HEADBOARD)
+    }
+
+    @Test
+    fun `two passes on one wall 15 cm apart are one wall`() {
+        val structure = RoomStructure.read(capture(APART).scan())
+        val summary = summary(APART, structure)
+        assertTrue("$summary: no plan", structure.walls.isNotEmpty())
+        assertNull(summary, structure.area)
+        assertNull(summary, structure.perimeter)
+        assertNull(summary, structure.volume)
+        assertTrue(summary, RoomGap.MissingWall in structure.gaps)
     }
 
     @Test
@@ -224,9 +273,18 @@ class RoomStructureRealScanTest {
             figures = false,
         )
 
-        val TWO_LOW = Case("two walls", SyntheticRoom(RECTANGLE_X, RECTANGLE_Z, hidden = setOf(2, 3), seenUpTo = LOW_M), figures = false)
+        val TWO_LOW = Case(
+            "two walls",
+            SyntheticRoom(RECTANGLE_X, RECTANGLE_Z, hidden = setOf(2, 3), seenUpTo = LOW_M),
+            figures = true,
+            estimated = true,
+        )
 
-        val TWO = Case("two full walls", SyntheticRoom(RECTANGLE_X, RECTANGLE_Z, hidden = setOf(2, 3)), figures = false)
+        val TWO = Case("two full walls", SyntheticRoom(RECTANGLE_X, RECTANGLE_Z, hidden = setOf(2, 3)), figures = true, estimated = true)
+
+        /** The south and north walls alone, 4 m apart. */
+        val FACING = Case("two facing walls", SyntheticRoom(RECTANGLE_X, RECTANGLE_Z, hidden = setOf(1, 3)), figures = false)
+        const val FACING_APART_M = 4f
 
         /** The L's 5 m west wall never seen: 17 m of its 22. */
         val L_PART = Case(
@@ -247,7 +305,46 @@ class RoomStructureRealScanTest {
             figures = true,
         )
 
-        val CASES = listOf(LOW_WALLS, FLOOR_AHEAD, DOOR, TWICE, TWO_LOW, TWO, L_PART, T_PART)
+        /**
+         * Walls seen only low by a camera that kept to the south half, the floor given up on 1.5 m
+         * out: a wardrobe in the north-west corner and a dresser against the east wall hide the
+         * corner and the walls behind them.
+         */
+        val CORNERS_ROOM = SyntheticRoom(
+            RECTANGLE_X,
+            RECTANGLE_Z,
+            seenUpTo = LOW_M,
+            floorReach = 1.5f,
+            boxes = listOf(SyntheticBox(0f, 2.4f, 3.4f, 4f, 2.1f), SyntheticBox(4.4f, 5f, 1f, 3f, 1.9f)),
+        )
+        val CORNERS = Case(
+            "furniture in a corner",
+            CORNERS_ROOM,
+            figures = true,
+            walk = SyntheticScan.stops(CORNERS_ROOM).filter { it.z <= 2f },
+        )
+
+        /** A 4 × 3.5 m bedroom seen only up to 1 m: a double bed, its headboard 25 cm deep against the north wall. */
+        val HEADBOARD = Case(
+            "headboard",
+            SyntheticRoom(
+                floatArrayOf(0f, 4f, 4f, 0f),
+                floatArrayOf(0f, 0f, 3.5f, 3.5f),
+                seenUpTo = 1f,
+                boxes = listOf(SyntheticBox(1.2f, 2.8f, 3.25f, 3.5f, 1.2f), SyntheticBox(1.3f, 2.7f, 1.25f, 3.25f, 0.5f)),
+            ),
+            figures = true,
+            maxError = 0.01f,
+        )
+
+        val CASES = listOf(LOW_WALLS, FLOOR_AHEAD, DOOR, TWICE, TWO_LOW, TWO, L_PART, T_PART, CORNERS, HEADBOARD)
+
+        /** Two facing walls of four, one drawn in two passes 15 cm apart, each seeing half of it. */
+        val APART = Case(
+            "one wall in two passes",
+            SyntheticRoom(RECTANGLE_X, RECTANGLE_Z, hidden = setOf(1, 3), driftWall = 0, drift = 0.15f, driftHalves = true),
+            figures = false,
+        )
 
         /**
          * The scan stopped 2 m out from a camera that kept to the south of the room: the side

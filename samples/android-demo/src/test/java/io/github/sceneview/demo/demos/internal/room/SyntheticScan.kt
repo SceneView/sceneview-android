@@ -29,12 +29,15 @@ class SyntheticFloor(val x0: Float, val x1: Float, val z0: Float, val z1: Float)
  * on the left of each wall's walk), its walls floor to [height], the [openings] cut in them and
  * the [boxes] standing in it. [hidden] walls are never seen: a ray that reaches one returns no
  * depth. [drift] moves wall [driftWall] out by that much in every other frame: a scan that drew
- * the wall twice. [noise] is the depth's Gaussian spread, as a share of the depth. Walls and boxes
+ * the wall twice; with [driftHalves] it is only half drawn each time — its first half where it
+ * stands in the other frames, its second half moved out in these, each blind to the other half: two
+ * passes that each saw half of it. [noise] is the depth's Gaussian spread, as a share of the depth. Walls and boxes
  * are seen only up to [seenUpTo] — a phone held towards the floor sees their foot and nothing
  * higher — and the floor goes on outside the room over [nextDoor], for whatever a doorway lets the
  * camera see.
  * Nothing further than [reach] across the floor from the camera returns depth: a scan that stopped
- * before it went round the room.
+ * before it went round the room. The floor further than [floorReach] across from the camera returns
+ * none either: a floor the depth gives up on at a grazing angle, the walls still seen.
  */
 class SyntheticRoom(
     val x: FloatArray,
@@ -45,10 +48,12 @@ class SyntheticRoom(
     val hidden: Set<Int> = emptySet(),
     val driftWall: Int = -1,
     val drift: Float = 0f,
+    val driftHalves: Boolean = false,
     val noise: Float = 0f,
     val seenUpTo: Float = Float.POSITIVE_INFINITY,
     val nextDoor: List<SyntheticFloor> = emptyList(),
     val reach: Float = Float.POSITIVE_INFINITY,
+    val floorReach: Float = Float.POSITIVE_INFINITY,
 ) {
     val area: Float
         get() {
@@ -242,6 +247,7 @@ object SyntheticScan {
                 val dir = pose.rotate(lx / len, ly / len, -1f / len)
                 var best = Float.MAX_VALUE
                 var blind = false
+                var floorHit = false
                 // Walls.
                 for (i in 0 until n) {
                     val ex = wx1[i] - wx0[i]
@@ -261,7 +267,9 @@ object SyntheticScan {
                     }
                     if (inHole) continue
                     best = t
-                    blind = i in room.hidden || y > room.seenUpTo
+                    val otherHalf = room.driftHalves && i == room.driftWall && (along > room.wallLength(i) / 2f) != drifted
+                    blind = i in room.hidden || y > room.seenUpTo || otherHalf
+                    floorHit = false
                 }
                 // Floor and ceiling.
                 for (level in floatArrayOf(0f, room.height)) {
@@ -274,6 +282,7 @@ object SyntheticScan {
                     if (!room.inside(hx, hz) && !beyond) continue
                     best = t
                     blind = false
+                    floorHit = level == 0f
                 }
                 // Boxes.
                 for (box in room.boxes) {
@@ -281,9 +290,11 @@ object SyntheticScan {
                     if (t >= best) continue
                     best = t
                     blind = pose.y + dir.y * t > room.seenUpTo
+                    floorHit = false
                 }
                 if (best == Float.MAX_VALUE || blind) continue
                 if (hypot(dir.x, dir.z) * best > room.reach) continue
+                if (floorHit && hypot(dir.x, dir.z) * best > room.floorReach) continue
                 var metres = best / len
                 if (room.noise > 0f) metres += (random.nextGaussian() * room.noise * metres).toFloat()
                 val mm = (metres * MM).roundToInt()
