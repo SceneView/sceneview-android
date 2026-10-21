@@ -13,8 +13,8 @@ Three modes behind one mode pill, built against Apple Measure, Google Measure an
   aim, a translucent surface whose top follows the phone; **Set height** locks it and reads
   width, height and area. **Door or window** then marks an opening by two opposite corners on
   the wall, and the readout adds what the openings take off and the net area left to cover.
-- **Room** — trace the floor corner by corner (a corner within a few degrees of square snaps to
-  90°), close it on the first corner, and every wall rises together to the ceiling: floor area,
+- **Room** — trace the floor corner by corner (a corner within 3° of square snaps to 90°, within
+  6° when a tracked wall confirms the right angle), close it on the first corner, and every wall rises together to the ceiling: floor area,
   perimeter, ceiling height, wall area, volume. **Door or window** marks openings on any of its
   walls the same way, two opposite corners on one wall, and the readout adds the openings and
   the net wall area; the floor area and the volume do not change. **Plan** opens the room as

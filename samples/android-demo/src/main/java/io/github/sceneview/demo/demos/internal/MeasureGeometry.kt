@@ -310,7 +310,8 @@ fun measureOnLevel(p: Position, y: Float): Position = Position(p.x, y, p.z)
  * The snap of one aim at [raw], in the order the reticle applies it: the placed [points], the
  * planes' corners and edges ([measurePlaneSnapTargets]), the guides from the previous point of
  * a Distance chain, then — in Room, when none of those holds — the square corner on the last
- * two corners of [activeOutline].
+ * two corners of [activeOutline]: within 6° when a tracked wall confirms the right angle, within
+ * 3° otherwise, so a room that is not square stays as it is traced.
  */
 @Suppress("LongParameterList") // the reticle's whole input, one frame
 fun measureSnapAim(
@@ -328,8 +329,54 @@ fun measureSnapAim(
     )
     val snap = snapMeasureTarget(raw, context, tolerance)
     if (snap.kind != MeasureSnapKind.None || mode != MeasureMode.Room || activeOutline.size < 2) return snap
-    return snapSquareCorner(activeOutline[activeOutline.size - 2], activeOutline.last(), raw) ?: snap
+    val from = activeOutline[activeOutline.size - 2]
+    val corner = activeOutline.last()
+    val squareTolerance = if (squareConfirmed(from, corner, planes, level ?: corner.y)) {
+        SQUARE_TOLERANCE_DEGREES
+    } else {
+        SQUARE_UNCONFIRMED_TOLERANCE_DEGREES
+    }
+    return snapSquareCorner(from, corner, raw, squareTolerance) ?: snap
 }
+
+/**
+ * Whether a tracked wall confirms that the room turns square at [corner], after the wall
+ * [from]–[corner]: the foot of a vertical plane on [level], long enough to tell its direction,
+ * runs within [SQUARE_CONFIRM_DEGREES] of square to that wall, on a line passing within
+ * [SQUARE_CONFIRM_REACH_M] of the corner.
+ */
+private fun squareConfirmed(from: Position, corner: Position, planes: List<MeasurePlane>, level: Float): Boolean {
+    val px = corner.x - from.x
+    val pz = corner.z - from.z
+    val pl = sqrt(px * px + pz * pz)
+    if (pl < EPSILON) return false
+    return planes.any { plane ->
+        val foot = if (plane.kind == MeasurePlaneKind.Vertical) measureWallFootprint(plane.outline, level) else null
+        if (foot == null) return@any false
+        val (a, b) = foot
+        val fx = b.x - a.x
+        val fz = b.z - a.z
+        val fl = sqrt(fx * fx + fz * fz)
+        if (fl < SQUARE_CONFIRM_MIN_LENGTH_M) return@any false
+        val cos = abs(px * fx + pz * fz) / (pl * fl)
+        val offDegrees = Math.toDegrees(kotlin.math.asin(cos.coerceAtMost(1f).toDouble())).toFloat()
+        // How far the corner is from the line the foot runs on.
+        val reach = abs((corner.x - a.x) * fz - (corner.z - a.z) * fx) / fl
+        offDegrees <= SQUARE_CONFIRM_DEGREES && reach <= SQUARE_CONFIRM_REACH_M
+    }
+}
+
+/** Without a tracked wall confirming it, a corner is squared within this only. */
+private const val SQUARE_UNCONFIRMED_TOLERANCE_DEGREES = 3f
+
+/** How close to square to the last wall a tracked wall runs to confirm a right angle. */
+private const val SQUARE_CONFIRM_DEGREES = 3f
+
+/** How far from the corner the line of a confirming wall may pass. */
+private const val SQUARE_CONFIRM_REACH_M = 0.2f
+
+/** A tracked wall's foot shorter than this tells nothing of its direction. */
+private const val SQUARE_CONFIRM_MIN_LENGTH_M = 0.3f
 
 // ── Rising walls ────────────────────────────────────────────────────────────────────────────
 
