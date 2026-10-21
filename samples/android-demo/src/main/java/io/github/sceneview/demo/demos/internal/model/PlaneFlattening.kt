@@ -2,6 +2,7 @@ package io.github.sceneview.demo.demos.internal.model
 
 import kotlin.math.abs
 import kotlin.math.cos
+import kotlin.math.floor
 import kotlin.math.sqrt
 
 /** A plane `normal · p = offset`, unit [nx], [ny], [nz] (+Y up). */
@@ -57,7 +58,7 @@ internal object PlaneFlattening {
         var regions = kept
         var planes = (0 until regions).map { fit(faces, label, it) }
         // One wall split in two by a cabinet is still one wall: merge regions on the same plane.
-        val merged = mergeCoplanar(planes)
+        val merged = mergeCoplanar(faces, label, planes)
         if (merged.second < regions) {
             for (t in 0 until n) if (label[t] >= 0) label[t] = merged.first[label[t]]
             regions = merged.second
@@ -83,8 +84,11 @@ internal object PlaneFlattening {
      * angle of the plane's, it lies on average within [MERGE_DISTANCE_M] of the plane — a second
      * pass of the same wall, drifted a few centimetres behind it, shows through the first one's
      * holes — every face of it within [maxDistance] (the snap's reach), and it lies within
-     * [GATHER_MARGIN_M] of the plane's own extent. A curtain's pleats, a cushion, a shelf turn away
-     * or stand off: they stay free. Returns whether any region joined.
+     * [GATHER_MARGIN_M] of the plane's own extent. Past [FREE_MERGE_M] it must also lie where the
+     * plane's own faces are ([footprintShare] of at least [MIN_SHARE]): a second pass overlaps the
+     * first, while a TV or a door's leaf hides the wall behind it, so the plane has a hole exactly
+     * where it stands. A curtain's pleats, a cushion, a shelf, a TV turn away or stand off: they
+     * stay free. Returns whether any region joined.
      */
     @Suppress("LongParameterList", "CyclomaticComplexMethod", "NestedBlockDepth")
     private fun gather(
@@ -114,14 +118,16 @@ internal object PlaneFlattening {
                 if (c > extent[p * 6 + 3 + axis]) extent[p * 6 + 3 + axis] = c
             }
         }
-        // The faces of each region, contiguous: a counting sort on the region id.
+        // The faces of each region, and of each plane, contiguous; each plane's footprint.
         val regions = keepId.size
-        val start = IntArray(regions + 1)
-        for (t in 0 until n) start[grown[t] + 1]++
-        for (r in 0 until regions) start[r + 1] += start[r]
-        val members = IntArray(n)
-        val fill = start.copyOf(regions)
-        for (t in 0 until n) members[fill[grown[t]]++] = t
+        val byRegion = Members(grown, regions)
+        val start = byRegion.start
+        val members = byRegion.members
+        val byPlane = Members(label, planes.size)
+        val grids = Array(planes.size) { Grid(planes[it]) }
+        val planeCells = Array(planes.size) {
+            grids[it].cells(faces, byPlane.members, byPlane.start[it], byPlane.start[it + 1])
+        }
         var joined = false
         for (r in 0 until regions) {
             if (keepId[r] >= 0) continue
@@ -160,7 +166,12 @@ internal object PlaneFlattening {
                 ) {
                     continue
                 }
-                if (abs(plane.distance(cx.toFloat(), cy.toFloat(), cz.toFloat())) > MERGE_DISTANCE_M) continue
+                val gap = abs(plane.distance(cx.toFloat(), cy.toFloat(), cz.toFloat()))
+                if (gap > MERGE_DISTANCE_M) continue
+                if (gap > FREE_MERGE_M) {
+                    val own = grids[p].cells(faces, members, start[r], start[r + 1])
+                    if (footprintShare(own, planeCells[p]) < MIN_SHARE) continue
+                }
                 var worst = 0f
                 for (i in start[r] until start[r + 1]) {
                     val t = members[i]
@@ -356,8 +367,14 @@ internal object PlaneFlattening {
         }
     }
 
-    /** Groups planes within [MERGE_ANGLE_DEG] and [MERGE_DISTANCE_M]: the new id of each, and the count. */
-    private fun mergeCoplanar(planes: List<Plane>): Pair<IntArray, Int> {
+    /**
+     * Groups planes within [MERGE_ANGLE_DEG] and [MERGE_DISTANCE_M]: the new id of each, and the
+     * count. Past [FREE_MERGE_M] apart, the smaller must also lie where the larger's faces are
+     * ([MIN_SHARE] of its footprint): a wall's second pass overlaps the wall, while a TV or a
+     * door's leaf stands where the wall has no faces at all.
+     */
+    @Suppress("NestedBlockDepth")
+    private fun mergeCoplanar(faces: FaceGeometry, label: IntArray, planes: List<Plane>): Pair<IntArray, Int> {
         val parent = IntArray(planes.size) { it }
         fun root(i: Int): Int {
             var r = i
@@ -365,15 +382,24 @@ internal object PlaneFlattening {
             return r
         }
         val minCos = cos(Math.toRadians(MERGE_ANGLE_DEG)).toFloat()
+        val byPlane by lazy(LazyThreadSafetyMode.NONE) { Members(label, planes.size) }
         for (i in planes.indices) {
             for (j in i + 1 until planes.size) {
                 val p = planes[i]
                 val q = planes[j]
                 val facing = p.nx * q.nx + p.ny * q.ny + p.nz * q.nz
-                if (facing < minCos || abs(p.offset - q.offset) > MERGE_DISTANCE_M) continue
-                val a = root(i)
-                val b = root(j)
-                if (a != b) parent[a] = b
+                val gap = abs(p.offset - q.offset)
+                if (facing < minCos || gap > MERGE_DISTANCE_M) continue
+                if (gap > FREE_MERGE_M) {
+                    val grid = Grid(p)
+                    val a = grid.cells(faces, byPlane.members, byPlane.start[i], byPlane.start[i + 1])
+                    val b = grid.cells(faces, byPlane.members, byPlane.start[j], byPlane.start[j + 1])
+                    val share = if (a.size <= b.size) footprintShare(a, b) else footprintShare(b, a)
+                    if (share < MIN_SHARE) continue
+                }
+                val ra = root(i)
+                val rb = root(j)
+                if (ra != rb) parent[ra] = rb
             }
         }
         val id = IntArray(planes.size) { -1 }
@@ -385,6 +411,79 @@ internal object PlaneFlattening {
             id[i] = rootId[r]
         }
         return id to count
+    }
+
+    /** The share of the cells [own] that [other] covers too; both sorted, without repeats. */
+    private fun footprintShare(own: LongArray, other: LongArray): Float {
+        if (own.isEmpty()) return 0f
+        var shared = 0
+        var j = 0
+        for (key in own) {
+            while (j < other.size && other[j] < key) j++
+            if (j < other.size && other[j] == key) shared++
+        }
+        return shared.toFloat() / own.size
+    }
+
+    /** The faces of each group — a region, a plane — contiguous: a counting sort on the group id, -1 left out. */
+    private class Members(group: IntArray, count: Int) {
+        val start = IntArray(count + 1)
+        val members: IntArray
+
+        init {
+            for (g in group) if (g >= 0) start[g + 1]++
+            for (r in 0 until count) start[r + 1] += start[r]
+            members = IntArray(start[count])
+            val fill = start.copyOf(count)
+            for (t in group.indices) {
+                val g = group[t]
+                if (g >= 0) members[fill[g]++] = t
+            }
+        }
+    }
+
+    /** Cells of [FOOTPRINT_CELL_M] across [plane]: where on it a set of faces lies. */
+    private class Grid(plane: Plane) {
+        private val ux: Float
+        private val uy: Float
+        private val uz: Float
+        private val vx: Float
+        private val vy: Float
+        private val vz: Float
+
+        init {
+            // u across the normal, away from whichever world axis the normal is closest to; v = n × u.
+            val (ax, ay, az) = if (abs(plane.ny) < LEVEL_NORMAL_Y) Triple(0f, 1f, 0f) else Triple(1f, 0f, 0f)
+            var x = ay * plane.nz - az * plane.ny
+            var y = az * plane.nx - ax * plane.nz
+            var z = ax * plane.ny - ay * plane.nx
+            val length = sqrt(x * x + y * y + z * z)
+            x /= length
+            y /= length
+            z /= length
+            ux = x
+            uy = y
+            uz = z
+            vx = plane.ny * z - plane.nz * y
+            vy = plane.nz * x - plane.nx * z
+            vz = plane.nx * y - plane.ny * x
+        }
+
+        /** The cells the centroids of faces `members[from until to]` fall in, sorted, without repeats. */
+        fun cells(faces: FaceGeometry, members: IntArray, from: Int, to: Int): LongArray {
+            val keys = LongArray(to - from)
+            val c = faces.centroids
+            for (i in from until to) {
+                val t = members[i] * 3
+                val u = floor((ux * c[t] + uy * c[t + 1] + uz * c[t + 2]) / FOOTPRINT_CELL_M).toInt()
+                val v = floor((vx * c[t] + vy * c[t + 1] + vz * c[t + 2]) / FOOTPRINT_CELL_M).toInt()
+                keys[i - from] = (u.toLong() shl Int.SIZE_BITS) or (v.toLong() and LOW_INT)
+            }
+            keys.sort()
+            var count = 0
+            for (i in keys.indices) if (i == 0 || keys[i] != keys[i - 1]) keys[count++] = keys[i]
+            return keys.copyOf(count)
+        }
     }
 
     /** Moves each vertex of a flat region onto its plane, its two planes' line or three planes' corner. */
@@ -658,6 +757,19 @@ internal object PlaneFlattening {
      * TSDF can tell a real panel from its wall.
      */
     private const val MERGE_DISTANCE_M = 0.045f
+
+    /**
+     * Two sheets of one wall this close join on distance alone: a wall's patches, fitted apart,
+     * differ by under a centimetre; a TV stands 3 or more off its wall.
+     */
+    private const val FREE_MERGE_M = 0.02f
+
+    /** Past [FREE_MERGE_M], how much of a sheet's footprint its wall must cover for the two to be one. */
+    private const val MIN_SHARE = 0.6f
+
+    /** The footprint's cell: wider than the holes a scan leaves in a wall, much narrower than a TV. */
+    private const val FOOTPRINT_CELL_M = 0.1f
+    private const val LEVEL_NORMAL_Y = 0.9f
     private const val MAX_PLANES_AT_VERTEX = 6
     private const val MIN_CREASE_SIN = 0.34f // planes meeting at under ~20° do not make a crease
     private const val MIN_CORNER_DET = 0.2f
