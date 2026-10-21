@@ -116,6 +116,27 @@ class CameraArbiterTest {
     }
 
     @Test
+    fun `a session that could not wait for the close resumes once the close is done`() {
+        // #4771 review: the closing session outlives the resume's wait. The new session must stay
+        // entitled to the camera and start when the close reports, not stay black.
+        arbiter.resume(a)
+        var releaseCamera: (() -> Unit)? = null
+        arbiter.destroy(a) { onClosed ->
+            a.close()
+            releaseCamera = onClosed
+        }
+        b.waitsForCamera = true
+
+        arbiter.resume(b)
+        assertEquals(listOf("A start", "A close", "B waits"), calls)
+        assertTrue(!b.isRunning)
+
+        releaseCamera!!.invoke()
+        assertEquals(listOf("A start", "A close", "B waits", "B start"), calls)
+        assertTrue(b.isRunning)
+    }
+
+    @Test
     fun `closing the outgoing screen leaves the incoming one alone`() {
         arbiter.resume(a)
         arbiter.resume(b)
@@ -216,7 +237,15 @@ class CameraArbiterTest {
         override var canRun = true
         var failure: Exception? = null
 
+        /** Next [start] finds the camera still held by a closing session and returns idle. */
+        var waitsForCamera = false
+
         override fun start() {
+            if (waitsForCamera) {
+                waitsForCamera = false
+                calls += "$name waits"
+                return
+            }
             calls += "$name start"
             failure?.let { throw it }
             isRunning = true

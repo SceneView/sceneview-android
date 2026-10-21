@@ -14,7 +14,7 @@ import com.google.ar.core.Session
 import com.google.ar.core.exceptions.CameraNotAvailableException
 import com.google.ar.core.exceptions.MissingGlContextException
 import com.google.ar.core.exceptions.SessionPausedException
-import io.github.sceneview.ar.closeSessionInOrder
+import io.github.sceneview.ar.beginSessionClose
 import io.github.sceneview.ar.node.ARCameraNode
 
 class ARSession(
@@ -180,38 +180,34 @@ class ARSession(
      * Closes the session in two halves, so the main thread does not wait for ARCore (#4771).
      *
      * On a Pixel 4a, pausing a running session (the camera closing) and closing it take about
-     * 350 ms. Run on the main thread when an `ARSceneView` leaves the composition, that froze
-     * the screen being navigated to for twenty frames. This half runs on the main thread and
-     * returns at once: [onPaused] runs while the session is still valid, then [isClosed] turns
-     * `true`, so no reader on the main thread enters the session again. The returned block is
-     * the native half — `pause()` if the session was running, then `close()` — and may run on
-     * any thread, which ARCore's reference recommends for `close()`.
+     * 350 ms, 290 of them in the pause. Run on the main thread when an `ARSceneView` leaves the
+     * composition, that froze the screen being navigated to for twenty frames. This half runs on
+     * the main thread and returns at once: [onPaused] runs while the session is still valid,
+     * then [isClosed] turns `true`, so no reader on the main thread enters the session again.
+     * The order is [beginSessionClose].
+     *
+     * The returned block is the native half — `pause()` if the session was running, then
+     * `close()` — and `ARCore.destroy()` runs it off the main thread, pause included. ARCore's
+     * reference for `Session.close()` suggests "call pause() on the main thread, and then call
+     * close() on a background thread" to keep the main thread free; it does not require the
+     * pause there, and the pause is the cost this change removes. The pause makes no GL call
+     * that needs the app's context (the camera texture names stay alive: `ARCameraStream`
+     * imports them into Filament and nothing deletes them), and nothing else calls into this
+     * session once [isClosed] is set. A new session waits for both halves before it is created
+     * or resumed (`SessionTeardown.awaitIdle`).
+     * https://developers.google.com/ar/reference/java/com/google/ar/core/Session#close()
      *
      * @return the native teardown to run, or `null` when the session was already closed.
      */
-    internal fun beginClose(): (() -> Unit)? {
-        if (isClosed) return null
-        val wasResumed = isResumed
-        if (wasResumed) {
-            isResumed = false
-            try {
-                onPaused(this)
-            } catch (e: RuntimeException) {
-                // Like a pause that throws before a close (#4026): the session is torn down
-                // either way, and leaking it is worse than a callback that did not finish.
-                android.util.Log.w("ARCore", "onSessionPaused failed while closing the session", e)
-            }
-        }
-        if (!closeGate.tryClose()) return null
-        frame = null
-        return {
-            closeSessionInOrder(
-                isResumed = wasResumed,
-                pause = { super.pause() },
-                close = { super.close() },
-            )
-        }
-    }
+    internal fun beginClose(): (() -> Unit)? = beginSessionClose(
+        gate = closeGate,
+        isResumed = isResumed,
+        markPaused = { isResumed = false },
+        onPaused = { onPaused(this) },
+        dropFrame = { frame = null },
+        pause = { super.pause() },
+        close = { super.close() },
+    )
 
     /**
      * Updates the state of the ARCore system. This includes: receiving a new camera frame, updating

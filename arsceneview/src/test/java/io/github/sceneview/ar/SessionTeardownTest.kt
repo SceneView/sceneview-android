@@ -3,6 +3,7 @@ package io.github.sceneview.ar
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.After
 import org.junit.Test
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -17,6 +18,11 @@ class SessionTeardownTest {
     private val posted = ArrayDeque<() -> Unit>()
     private val executor = Executors.newSingleThreadExecutor()
     private val teardown = SessionTeardown(executor) { block -> synchronized(posted) { posted.addLast(block) } }
+
+    @After
+    fun shutDown() {
+        executor.shutdownNow()
+    }
 
     @Test
     fun `the teardown runs on its own thread and reports through the main thread`() {
@@ -51,6 +57,23 @@ class SessionTeardownTest {
 
         assertEquals(listOf("closed", "resumed"), order)
         assertEquals(0, teardown.pendingCount)
+    }
+
+    @Test
+    fun `awaitIdle gives up past its timeout and the late teardown still reports`() {
+        val release = CountDownLatch(1)
+        var done = false
+        teardown.run(teardown = { release.await(5, TimeUnit.SECONDS) }, onDone = { done = true })
+
+        val start = System.nanoTime()
+        assertFalse(teardown.awaitIdle(timeoutMs = 100))
+        assertTrue(System.nanoTime() - start >= TimeUnit.MILLISECONDS.toNanos(100))
+        assertEquals(1, teardown.pendingCount)
+
+        release.countDown()
+        assertTrue(teardown.awaitIdle(timeoutMs = 5_000))
+        runPosted()
+        assertTrue("the caller that gave up is still told when the camera is free", done)
     }
 
     @Test
