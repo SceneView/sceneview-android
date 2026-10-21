@@ -243,12 +243,15 @@ object ArDebugFormat {
         return String.format(Locale.US, "%d:%02d", total / 60, total % 60)
     }
 
-    /** `0.42` → `42 cm`, `14.236` → `14.2 m`. */
-    fun distance(metres: Float): String = when {
+    /**
+     * `0.42` → `42 cm`, `14.236` → `14.2 m`, with [locale]'s separators: the English ones unless
+     * a caller names the phone's ([scanPathLength]).
+     */
+    fun distance(metres: Float, locale: Locale = Locale.US): String = when {
         !metres.isFinite() || metres <= 0f -> "0 m"
         metres < 1f -> "${(metres * 100).toInt()} cm"
-        metres < 100f -> String.format(Locale.US, "%.1f m", metres)
-        else -> String.format(Locale.US, "%,d m", metres.toInt())
+        metres < 100f -> String.format(locale, "%.1f m", metres)
+        else -> String.format(locale, "%,d m", metres.toInt())
     }
 
     /** `0.42` → `0.4 m²`, `14.236` → `14 m²`: one decimal under ten, whole metres past it. */
