@@ -49,7 +49,8 @@ class SyntheticFloor(val x0: Float, val x1: Float, val z0: Float, val z1: Float)
  * none either: a floor the depth gives up on at a grazing angle, the walls still seen.
  * Every normal of the fused cloud is turned about +Y by a Gaussian of [normalSpread] degrees: a
  * phone's normals are not a renderer's. [clutter] stands in the room besides the [boxes]. A wall
- * in [seenAlong] is seen only along that stretch, in metres from its start: blind elsewhere.
+ * in [seenAlong] is seen only along that stretch, in metres from its start: blind elsewhere. The
+ * depth never returns on a wall in [planeOnly], and ARCore still finds its plane.
  */
 class SyntheticRoom(
     val x: FloatArray,
@@ -69,6 +70,7 @@ class SyntheticRoom(
     val normalSpread: Float = 0f,
     val clutter: List<SyntheticPost> = emptyList(),
     val seenAlong: Map<Int, ClosedFloatingPointRange<Float>> = emptyMap(),
+    val planeOnly: Set<Int> = emptySet(),
 ) {
     val area: Float
         get() {
@@ -135,6 +137,7 @@ object SyntheticScan {
     private const val MM = 1000f
     private const val GREY = 0xff808080.toInt()
     private const val PLANE_FROM_M = 0.3f
+    private const val REACH_STEP_M = 0.05f
 
     /** The clutter's surfels stand this far apart: the fusion's voxel. */
     private const val CLUTTER_STEP_M = DenseFusion.VOXEL_M
@@ -206,7 +209,7 @@ object SyntheticScan {
             trail[i * 3 + 1] = p.y
             trail[i * 3 + 2] = p.z
         }
-        return SyntheticCapture(cloud, trail, planesOf(room), poses)
+        return SyntheticCapture(cloud, trail, planesOf(room, poses), poses)
     }
 
     /** [cloud] with the [room]'s normals spread and its clutter added; [cloud] itself when it has neither. */
@@ -247,9 +250,9 @@ object SyntheticScan {
 
     /**
      * The planes ARCore would find: the floor, and each seen wall a little short of its corners,
-     * no higher than it was seen.
+     * no higher than it was seen, and only as far as the room's reach from the camera's [poses].
      */
-    fun planesOf(room: SyntheticRoom): List<RoomPlane> {
+    fun planesOf(room: SyntheticRoom, poses: List<DebugPose> = emptyList()): List<RoomPlane> {
         val planes = ArrayList<RoomPlane>()
         val n = room.x.size
         planes += RoomPlane(RoomPlaneKind.Floor, FloatArray(n * 3) { k -> if (k % 3 == 0) room.x[k / 3] else if (k % 3 == 1) 0f else room.z[k / 3] })
@@ -258,9 +261,11 @@ object SyntheticScan {
             if (i in room.hidden || top <= PLANE_FROM_M) continue
             val j = (i + 1) % n
             val length = room.wallLength(i)
-            val seen = room.seenAlong[i]
-            val from = (seen?.start ?: 0f) / length + 0.1f / length
-            val to = (seen?.endInclusive ?: length) / length - 0.1f / length
+            val seen = room.seenAlong[i] ?: 0f..length
+            val reached = reachedAlong(room, i, poses) ?: continue
+            val from = max(seen.start, reached.start) / length + 0.1f / length
+            val to = min(seen.endInclusive, reached.endInclusive) / length - 0.1f / length
+            if (to <= from) continue
             val ax = room.x[i] + (room.x[j] - room.x[i]) * from
             val az = room.z[i] + (room.z[j] - room.z[i]) * from
             val bx = room.x[i] + (room.x[j] - room.x[i]) * to
@@ -271,6 +276,25 @@ object SyntheticScan {
             )
         }
         return planes
+    }
+
+    /** The stretch of wall [i], in metres from its start, within the room's reach of one of [poses]; `null` for none. */
+    private fun reachedAlong(room: SyntheticRoom, i: Int, poses: List<DebugPose>): ClosedFloatingPointRange<Float>? {
+        val length = room.wallLength(i)
+        if (room.reach == Float.POSITIVE_INFINITY || poses.isEmpty()) return 0f..length
+        val j = (i + 1) % room.x.size
+        val steps = (length / REACH_STEP_M).roundToInt()
+        var lo = Float.POSITIVE_INFINITY
+        var hi = Float.NEGATIVE_INFINITY
+        for (k in 0..steps) {
+            val along = length * k / steps
+            val x = room.x[i] + (room.x[j] - room.x[i]) * k / steps
+            val z = room.z[i] + (room.z[j] - room.z[i]) * k / steps
+            if (poses.none { hypot(x - it.x, z - it.z) <= room.reach }) continue
+            lo = min(lo, along)
+            hi = max(hi, along)
+        }
+        return if (lo <= hi) lo..hi else null
     }
 
     @Suppress("CyclomaticComplexMethod", "NestedBlockDepth", "LongMethod")
@@ -326,7 +350,7 @@ object SyntheticScan {
                     best = t
                     val otherHalf = room.driftHalves && i == room.driftWall && (along > room.wallLength(i) / 2f) != drifted
                     val off = room.seenAlong[i]?.let { along !in it } == true
-                    blind = i in room.hidden || y > room.seenUpTo || otherHalf || off
+                    blind = i in room.hidden || i in room.planeOnly || y > room.seenUpTo || otherHalf || off
                     floorHit = false
                 }
                 // Floor and ceiling.

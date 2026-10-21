@@ -15,7 +15,8 @@ import kotlin.math.hypot
  * up to 0.9 m, floor seen only ahead of the camera, a doorway the floor runs on through, one wall
  * seen twice, two walls of four, an L and a T seen on three quarters of their length, corners
  * hidden behind furniture, a headboard against a wall, a bedroom whose clutter outweighs its walls,
- * one wall seen along a stretch of it, a garage's storage fronts. When a figure is given it is
+ * one wall seen along a stretch of it, a garage's storage fronts, walls the depth missed and ARCore
+ * found as planes. When a figure is given it is
  * within [MAX_ERROR] of the room's, or the case's own bound; where the walls seen do not close the
  * room, none is, and the plan is still drawn — but two adjacent walls alone give an area marked as
  * an estimate, the floor seen standing for the other two.
@@ -141,6 +142,7 @@ class RoomStructureRealScanTest {
         val scan = capture(CLUTTERED).scan()
         val shares = intArrayOf(0, 90, 180, 270).map { facingShare(scan, it) }
         val summary = shares.joinToString { "%.2f %%".format(it * 100) }
+        println("RoomStructure cluttered bedroom, walls' shares $summary")
         assertTrue("walls' shares $summary", shares.all { it < CLUTTERED_WALL_SHARE })
         check(CLUTTERED)
     }
@@ -156,6 +158,11 @@ class RoomStructureRealScanTest {
     @Test
     fun `storage fronts 2 m high before a garage's walls are furniture`() {
         check(GARAGE)
+    }
+
+    @Test
+    fun `walls the depth missed and ARCore found as planes close the room`() {
+        check(PLANES)
     }
 
     @Test
@@ -428,7 +435,7 @@ class RoomStructureRealScanTest {
                 floatArrayOf(0f, 0f, 3.5f, 3.5f),
                 seenUpTo = 1f,
                 normalSpread = 12f,
-                clutter = posts(0.6f, 3.4f, 0.6f, 2.9f, 0.3f, 0.12f, 1.2f),
+                clutter = posts(0.6f, 3.4f, 0.6f, 2.9f, 0.27f, 0.12f, 1.2f),
             ),
             figures = true,
         )
@@ -455,8 +462,19 @@ class RoomStructureRealScanTest {
             figures = true,
         )
 
+        /**
+         * The rectangle with two facing walls the depth never returned on, ARCore's planes found on
+         * them: from the depth alone, two facing walls and the width between them.
+         */
+        val PLANES = Case(
+            "two walls found only as planes",
+            SyntheticRoom(RECTANGLE_X, RECTANGLE_Z, planeOnly = setOf(1, 3)),
+            figures = true,
+        )
+
         val CASES = listOf(
             LOW_WALLS, FLOOR_AHEAD, DOOR, TWICE, TWO_LOW, TWO, L_PART, T_PART, CORNERS, HEADBOARD, CLUTTERED, STRETCH, GARAGE,
+            PLANES,
         )
 
         /** Two facing walls of four, one drawn in two passes 15 cm apart, each seeing half of it. */
