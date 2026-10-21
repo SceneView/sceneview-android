@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -34,7 +35,7 @@ class ScanTurnHoldTest {
         composeRule.mainClock.autoAdvance = false
         composeRule.setContent { Box(Modifier.fillMaxSize()) { ScanTurnArrow(turn) } }
         composeRule.mainClock.advanceTimeBy(SHOWN_MS)
-        composeRule.runOnUiThread { turn = ScanTurn.Right }
+        composeRule.runOnUiThread { turn = ScanTurn.Right; Snapshot.sendApplyNotifications() }
         composeRule.mainClock.advanceTimeBy(SHOWN_MS)
         composeRule.onNodeWithContentDescription(ScanCopy.turnHint(ScanTurn.Left)).assertExists()
         composeRule.onNodeWithContentDescription(ScanCopy.turnHint(ScanTurn.Right)).assertDoesNotExist()
