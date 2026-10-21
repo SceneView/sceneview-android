@@ -3,6 +3,7 @@ package io.github.sceneview.demo.demos.internal.model
 import io.github.sceneview.demo.demos.internal.BakePhoto
 import io.github.sceneview.demo.demos.internal.DenseCloud
 import io.github.sceneview.demo.demos.internal.DenseFusion
+import io.github.sceneview.demo.demos.internal.RerunMarchingCubes
 import io.github.sceneview.demo.demos.internal.RerunMesh
 import io.github.sceneview.demo.demos.internal.RerunMeshGlb
 import io.github.sceneview.demo.demos.internal.RerunMeshSimplifier
@@ -150,6 +151,16 @@ class CleanModelRealScanTest {
 
     @Test
     fun `a scan meshed to the most a 192 MB heap takes finishes within it`() = finishesWithinHeap(HEAP_RAW_TRIANGLES)
+
+    @Test
+    fun `the extraction cap stays within what a heap was seen to finish`() {
+        val phone = CleanModel.maxRawTriangles(HeapCappedFinish.HEAP_MB * MB)
+        assertTrue("192 MB meshes $phone, over the $HEAP_RAW_TRIANGLES finished in it", phone <= HEAP_RAW_TRIANGLES)
+        assertTrue("192 MB meshes $phone, under the longest recordings", phone >= LONGEST_RECORDING_TRIANGLES)
+        assertEquals(RerunMarchingCubes.MAX_TRIANGLES, CleanModel.maxRawTriangles(320 * MB))
+        val tiny = CleanModel.maxRawTriangles(16 * MB)
+        assertTrue("a tiny heap still meshes a room: $tiny", tiny in 1 until phone)
+    }
 
     /**
      * [HeapCappedFinish] of a raw surface of [triangles] in a JVM capped at a phone's heap. What
@@ -543,6 +554,9 @@ class CleanModelRealScanTest {
          */
         const val HEAP_RAW_TRIANGLES = 650_000
 
+        /** The raw triangles the longest recording seen so far meshed to. */
+        const val LONGEST_RECORDING_TRIANGLES = 533_000
+
         const val MB = 1024L * 1024L
         const val CHILD_TIMEOUT_S = 300L
         const val LOG_TAIL = 4000
@@ -566,7 +580,7 @@ private class PaddedAtlasEncoder(private val padding: Int) : AtlasEncoder {
  * [APP_BYTES] for the rest of the app, the recording's dense cloud ([CLOUD_POINTS_PER_TRIANGLE]
  * points per raw triangle, as the recordings have, within [DenseFusion.MAX_POINTS]), its TSDF
  * unless meshing let it go (half its budget or more, as the screen does), and the raw surface's
- * `.glb`, shown while the finish works in the surface's own arrays. Prints each
+ * `.glb`, shown while the finish works in the surface's own arrays and lets them go. Prints each
  * stage as it starts ([STAGE]), then [FINISHED] and its figures when it fits.
  */
 object HeapCappedFinish {
@@ -594,10 +608,10 @@ object HeapCappedFinish {
     fun main(args: Array<String>) {
         val app = ByteArray(APP_BYTES)
         val scanned = scanned(args.firstOrNull()?.toInt() ?: ROOM)
-        val raw = scanned.mesh
+        val raw = scanned.surface
         val rawTriangles = raw.triangleCount
-        val cloud = cloudOf(raw, minOf((rawTriangles * CLOUD_POINTS_PER_TRIANGLE).toInt(), DenseFusion.MAX_POINTS))
-        val rawGlb = RerunMeshGlb.write(raw)
+        val cloud = cloudOf(raw.mesh, minOf((rawTriangles * CLOUD_POINTS_PER_TRIANGLE).toInt(), DenseFusion.MAX_POINTS))
+        val rawGlb = RerunMeshGlb.write(raw.mesh)
         val runtime = Runtime.getRuntime()
         val peak = AtomicLong()
         thread(isDaemon = true) {
@@ -610,7 +624,7 @@ object HeapCappedFinish {
         var stage = 0
         println("$STAGE${STAGES[stage].first} ${System.currentTimeMillis()}")
         val start = System.nanoTime()
-        val result = CleanModel.build(raw, scanned.photos, JvmAtlasEncoder, consume = true, rawGlb = rawGlb) { done ->
+        val result = CleanModel.build(raw, rawGlb, scanned.photos, JvmAtlasEncoder) { done ->
             while (stage + 1 < STAGES.size && done >= STAGES[stage + 1].second) {
                 stage++
                 println("$STAGE${STAGES[stage].first} ${System.currentTimeMillis()}")
@@ -630,7 +644,7 @@ object HeapCappedFinish {
     }
 
     /** A raw surface, its photos, and its TSDF if the screen keeps it, with its size. */
-    private class Scanned(val mesh: RerunMesh, val photos: ModelPhotos, val tsdf: RerunTsdf?, val tsdfBytes: Long)
+    private class Scanned(val surface: RawSurface, val photos: ModelPhotos, val tsdf: RerunTsdf?, val tsdfBytes: Long)
 
     /**
      * The furnished room, tiled up to [triangles] if it has fewer, with its TSDF unless the
@@ -645,8 +659,8 @@ object HeapCappedFinish {
         val copies = if (triangles > room) (triangles + room - 1) / room else 1
         val tsdfBytes = scan.tsdf.bytes * copies
         val tsdf = scan.tsdf.takeIf { tsdfBytes < RerunTsdf.MAX_BYTES / 2 }
-        if (copies == 1) return Scanned(scan.mesh, photos, tsdf, tsdfBytes)
-        return Scanned(tiled(scan.mesh, triangles), tiled(photos, copies), tsdf, tsdfBytes)
+        if (copies == 1) return Scanned(RawSurface(scan.mesh), photos, tsdf, tsdfBytes)
+        return Scanned(RawSurface(tiled(scan.mesh, triangles)), tiled(photos, copies), tsdf, tsdfBytes)
     }
 
     /** The first [triangles] of copies of [mesh] side by side, [PITCH_M] apart along x. */

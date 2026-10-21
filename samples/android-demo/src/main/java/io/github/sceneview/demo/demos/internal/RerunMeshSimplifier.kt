@@ -27,9 +27,11 @@ import kotlin.math.sqrt
  * every edge again for a handful of triangles.
  * Target is best effort: boundaries, topology and colour take priority over the triangle budget.
  * Storage: [workspaceBytes] of primitive working arrays, plus input/output and array headers.
- * Typical 400k-T / 200k-V scan: ~53 MiB workspace; the extraction's cap
- * ([RerunMarchingCubes.MAX_TRIANGLES], ~0.5 M vertices) would take ~137 MiB, more than a phone's
- * heap gives — ask [workspaceBytes] before calling.
+ * Typical 400k-T / 200k-V scan: ~43 MiB workspace; the extraction's cap
+ * ([RerunMarchingCubes.MAX_TRIANGLES], ~0.5 M vertices) would take ~108 MiB, more than a phone's
+ * heap gives — ask [workspaceBytes] before calling. A vertex's corners are singly linked (a
+ * detach walks its few corners), and the sweep order holds the edges counted on the way in,
+ * about half the corners: a collapse only ever merges edges.
  * Time: O(S * (T log T + T d²)), S <= 64, d local vertex valence (normally ~6).
  */
 internal object RerunMeshSimplifier {
@@ -98,8 +100,8 @@ internal object RerunMeshSimplifier {
     // positions 12, colours 4, quadric 80, corner list head 4, marks 4, three flags.
     private const val BYTES_PER_VERTEX = 107L
 
-    // indices 12, corner links 24, edge keys 24, sweep order 24.
-    private const val BYTES_PER_TRIANGLE = 84L
+    // indices 12, corner links 12, edge keys 24, sweep order 12 (each edge but a border's has two faces).
+    private const val BYTES_PER_TRIANGLE = 60L
 
     /** Collapses between two progress reports: a few milliseconds of work. */
     private const val REPORT_EVERY = 2048
@@ -126,12 +128,13 @@ internal object RerunMeshSimplifier {
         val q = DoubleArray(vertices * 10)
         val head = IntArray(vertices) { -1 }
         val next = IntArray(triangles.size) { -1 }
-        val previous = IntArray(triangles.size) { -1 }
         val locked = BooleanArray(vertices)
         val border = BooleanArray(vertices)
         val alive = BooleanArray(vertices) { true }
         val edges = LongArray(triangles.size)
-        val order = LongArray(triangles.size)
+
+        /** The sweep's edges by cost: as many as the first sweep finds, no collapse adds one. */
+        var order = LongArray(0)
         val marks = IntArray(vertices)
         var stamp = 0
         var count = input.triangleCount
@@ -203,9 +206,11 @@ internal object RerunMeshSimplifier {
             }
             collectEdges()
             var at = 0
+            var unique = 0
             while (at < triangles.size && edges[at] != Long.MAX_VALUE) {
                 var end = at + 1
                 while (end < triangles.size && edges[end] == edges[at]) end++
+                unique++
                 val a = (edges[at] ushr 32).toInt()
                 val b = edges[at].toInt()
                 val faces = end - at
@@ -219,6 +224,7 @@ internal object RerunMeshSimplifier {
                 }
                 at = end
             }
+            order = LongArray(unique)
             // Remove any duplicate input faces before doing topology checks.
             for (t in triangles.indices step 3) {
                 if (triangles[t] < 0) continue
@@ -284,6 +290,7 @@ internal object RerunMeshSimplifier {
                     last = edge
                 }
                 edgeCount = unique
+                if (order.size < edgeCount) order = LongArray(edgeCount)
                 for (i in 0 until edgeCount) {
                     val a = (edges[i] ushr 32).toInt()
                     val b = edges[i].toInt()
@@ -498,16 +505,19 @@ internal object RerunMeshSimplifier {
 
         fun attach(corner: Int, v: Int) {
             next[corner] = head[v]
-            previous[corner] = -1
-            if (head[v] >= 0) previous[head[v]] = corner
             head[v] = corner
         }
 
+        /** Unlinks [corner] from its vertex's list: the head when a collapse moves it, else a few steps in. */
         fun detach(corner: Int) {
-            val before = previous[corner]
-            val after = next[corner]
-            if (before < 0) head[triangles[corner]] = after else next[before] = after
-            if (after >= 0) previous[after] = before
+            val v = triangles[corner]
+            if (head[v] == corner) {
+                head[v] = next[corner]
+                return
+            }
+            var before = head[v]
+            while (next[before] != corner) before = next[before]
+            next[before] = next[corner]
         }
 
         fun remove(t: Int) {

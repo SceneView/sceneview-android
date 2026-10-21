@@ -7,7 +7,6 @@ import io.github.sceneview.demo.demos.internal.DenseCloud
 import io.github.sceneview.demo.demos.internal.OpenedCapture
 import io.github.sceneview.demo.demos.internal.RerunCapturePack
 import io.github.sceneview.demo.demos.internal.RerunMarchingCubes
-import io.github.sceneview.demo.demos.internal.RerunMesh
 import io.github.sceneview.demo.demos.internal.RerunMeshGlb
 import io.github.sceneview.demo.demos.internal.RerunResultView
 import io.github.sceneview.demo.demos.internal.RerunRrdReader
@@ -63,21 +62,25 @@ internal object CleanModelCorpus {
                 put("photos", capture.trace.imageCount)
             }
         }
-        val (raw, fuseMs, meshMs) = mesh(cloud)
+        val meshed = mesh(cloud)
+        val raw = meshed.surface
         check(raw.triangleCount > 0) { "the surfels mesh to no surface" }
         val beforeStart = System.nanoTime()
-        val before = RerunMeshGlb.write(raw)
+        val before = RerunMeshGlb.write(raw.mesh)
         val beforeWriteMs = since(beforeStart)
-        val rawBounds = raw.bounds()
+        val rawBounds = raw.mesh.bounds()
         val rawTriangles = raw.triangleCount
         val rawVertices = raw.vertexCount
         File(out, "before.glb").writeBytes(before)
         thumbnail(before, rawBounds, rawTriangles, rawVertices)?.let { File(out, "before.png").writeBytes(it) }
 
-        // As the result screen finishes it: a big scan in its own arrays, its .glb written first.
+        // As the result screen finishes it: a big scan handed over and let go, its .glb written first.
         val photos = ModelPhotos.of(capture.trace, capture.manifest.lens) { path -> decode(capture, path) }
-        val consume = rawTriangles >= RAW_FIRST_TRIANGLES
-        val result = CleanModel.build(raw, photos, JvmAtlasEncoder, consume = consume, rawGlb = before, progress = progress)
+        val result = if (rawTriangles >= RAW_FIRST_TRIANGLES) {
+            CleanModel.build(raw, before, photos, JvmAtlasEncoder, progress = progress)
+        } else {
+            CleanModel.build(raw.mesh, photos, JvmAtlasEncoder, rawGlb = before, progress = progress)
+        }
         val s = result.stats
         File(out, "after.glb").writeBytes(result.glb)
         val after = result.model?.asRerunMesh()
@@ -92,8 +95,8 @@ internal object CleanModelCorpus {
             put("file", file.name)
             put("dense_points", cloud.count)
             put("photos", capture.trace.imageCount)
-            put("fuse_ms", fuseMs)
-            put("mesh_ms", meshMs)
+            put("fuse_ms", meshed.fuseMs)
+            put("mesh_ms", meshed.meshMs)
             put(
                 "before",
                 buildJsonObject {
@@ -101,8 +104,11 @@ internal object CleanModelCorpus {
                     put("vertices", rawVertices)
                     put("glb_bytes", before.size)
                     put("components", s.geometry.piecesIn)
+                    put("extracted_triangles", meshed.extractedTriangles)
+                    put("max_triangles", meshed.maxTriangles)
+                    put("capped", meshed.capped)
                     put("write_ms", beforeWriteMs)
-                    put("ms", fuseMs + meshMs + beforeWriteMs)
+                    put("ms", meshed.fuseMs + meshed.meshMs + beforeWriteMs)
                 },
             )
             put(
@@ -127,7 +133,7 @@ internal object CleanModelCorpus {
                     put("texture_ms", s.textureMs)
                     put("write_ms", s.writeMs)
                     put("pipeline_ms", s.totalMs)
-                    put("ms", fuseMs + meshMs + s.totalMs)
+                    put("ms", meshed.fuseMs + meshed.meshMs + s.totalMs)
                     put("glb_problems", problems.joinToString("; "))
                 },
             )
@@ -160,17 +166,36 @@ internal object CleanModelCorpus {
         }
     }
 
+    /** A scan's raw surface, how many triangles its extraction gave and could give, and each step's time. */
+    private class Meshed(
+        val surface: RawSurface,
+        val extractedTriangles: Int,
+        val maxTriangles: Int,
+        val capped: Boolean,
+        val fuseMs: Long,
+        val meshMs: Long,
+    )
+
     /**
-     * [cloud] fused into a TSDF and meshed, with each step's time. In a function of its own, as
-     * the result screen's: nothing holds the TSDF past it, so the finish has its heap.
+     * [cloud] fused into a TSDF and meshed, as many triangles as this heap finishes
+     * ([CleanModel.maxRawTriangles]). In a function of its own, as the result screen's: nothing
+     * holds the TSDF past it, so the finish has its heap.
      */
-    private fun mesh(cloud: DenseCloud): Triple<RerunMesh, Long, Long> {
+    private fun mesh(cloud: DenseCloud): Meshed {
         val fuseStart = System.nanoTime()
         val tsdf = RerunTsdf().apply { integrateSurfels(cloud) }
         val fuseMs = since(fuseStart)
         val meshStart = System.nanoTime()
-        val raw = RerunMarchingCubes.extractWhole(tsdf, RerunMarchingCubes.DEFAULT_MIN_WEIGHT).mesh
-        return Triple(raw, fuseMs, since(meshStart))
+        val maxTriangles = CleanModel.maxRawTriangles(Runtime.getRuntime().maxMemory())
+        val extraction = RerunMarchingCubes.extractWhole(tsdf, RerunMarchingCubes.DEFAULT_MIN_WEIGHT, maxTriangles)
+        return Meshed(
+            RawSurface(extraction.mesh),
+            extraction.rawTriangles,
+            maxTriangles,
+            extraction.capped,
+            fuseMs,
+            since(meshStart),
+        )
     }
 
     private fun read(file: File): RerunCapturePack {

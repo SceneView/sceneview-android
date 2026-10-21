@@ -87,11 +87,9 @@ import io.github.sceneview.demo.demos.internal.DepthFrame
 import io.github.sceneview.demo.demos.internal.DollhouseFraming
 import io.github.sceneview.demo.demos.internal.DollhouseOpening
 import io.github.sceneview.demo.demos.internal.FramingInsets
-import io.github.sceneview.demo.demos.internal.MeshExtraction
 import io.github.sceneview.demo.demos.internal.RerunCapturePack
 import io.github.sceneview.demo.demos.internal.RerunGlbMesh
 import io.github.sceneview.demo.demos.internal.RerunMarchingCubes
-import io.github.sceneview.demo.demos.internal.RerunMesh
 import io.github.sceneview.demo.demos.internal.RerunMeshGlb
 import io.github.sceneview.demo.demos.internal.RerunPointsMesh
 import io.github.sceneview.demo.demos.internal.RerunResultView
@@ -109,6 +107,7 @@ import io.github.sceneview.demo.demos.internal.model.CleanModel
 import io.github.sceneview.demo.demos.internal.model.CleanModelResult
 import io.github.sceneview.demo.demos.internal.model.ModelPhoto
 import io.github.sceneview.demo.demos.internal.model.ModelPhotos
+import io.github.sceneview.demo.demos.internal.model.RawSurface
 import io.github.sceneview.demo.demos.internal.model.TexturedSyntheticRoom
 import io.github.sceneview.demo.isDemoCompactHeight
 import io.github.sceneview.demo.theme.LocalStageChrome
@@ -308,6 +307,9 @@ internal class RerunModelBuild(
  * A surface of [RAW_FIRST_TRIANGLES] or more takes a phone longer to finish than a result should
  * keep the user waiting: when [onRaw] is given, that raw surface goes to it first (not
  * [RerunModelBuild.finished]), and the finished model, in the same place, replaces it.
+ *
+ * The surface is held in its [RawSurface] only, never in a local: a finish that works in its
+ * arrays lets them go once prepared, before the cleaning's peak.
  */
 internal fun buildRerunModel(
     source: RerunModelSource,
@@ -316,22 +318,24 @@ internal fun buildRerunModel(
 ): RerunModelBuild {
     val started = System.nanoTime()
     val meshed = mesh(source, progress)
-    val extraction = meshed.extraction
-    val mesh = extraction.mesh
+    val raw = meshed.surface
     val meshedAt = System.nanoTime()
     val photos = when (source) {
         is RerunModelSource.Live -> source.photos
         is RerunModelSource.Surfels -> source.photos
         is RerunModelSource.Synthetic -> syntheticPhotos()
     }
-    val rawGlb = if (onRaw != null && mesh.triangleCount >= RAW_FIRST_TRIANGLES) {
-        RerunMeshGlb.write(mesh).also { glb ->
+    val rawTriangles = raw.triangleCount
+    val rawVertices = raw.vertexCount
+    val rawBounds = raw.mesh.bounds()
+    val rawGlb = if (onRaw != null && rawTriangles >= RAW_FIRST_TRIANGLES) {
+        RerunMeshGlb.write(raw.mesh).also { glb ->
             onRaw(
                 RerunModelBuild(
                     glb = glb,
-                    bounds = mesh.bounds(),
-                    triangles = mesh.triangleCount,
-                    vertices = mesh.vertexCount,
+                    bounds = rawBounds,
+                    triangles = rawTriangles,
+                    vertices = rawVertices,
                     buildMs = (meshedAt - started) / NS_PER_MS,
                     voxelBytes = meshed.bytes,
                     budgetReached = meshed.droppedBlocks > 0,
@@ -344,11 +348,8 @@ internal fun buildRerunModel(
     }
     // Once its .glb is written, the raw surface's own arrays are what the finish works in: a
     // copy of a big scan is the heap a mid-range phone does not have (a Pixel 4a's 192 MB).
-    val rawTriangles = mesh.triangleCount
-    val rawVertices = mesh.vertexCount
-    val rawBounds = mesh.bounds()
     val finish = if (rawTriangles > 0) {
-        finish(mesh, photos, rawGlb) { progress(MESH_SHARE + (1f - MESH_SHARE) * it) }
+        finish(raw, photos, rawGlb) { progress(MESH_SHARE + (1f - MESH_SHARE) * it) }
     } else {
         null
     }
@@ -356,9 +357,10 @@ internal fun buildRerunModel(
     // Out of memory, the finish gives the raw surface back itself; one that throws it is left the same.
     val outOfMemory = finished?.stats?.rawKept == true || finish?.exceptionOrNull() is OutOfMemoryError
     val outOfMemoryInHeap = Runtime.getRuntime().maxMemory().takeIf { outOfMemory }
+    // Without a .glb written first, the finish copied the surface: it is still held.
     val glb = when {
         finished != null -> finished.glb
-        rawTriangles > 0 -> rawGlb ?: RerunMeshGlb.write(mesh)
+        rawTriangles > 0 -> rawGlb ?: RerunMeshGlb.write(raw.mesh)
         else -> ByteArray(0)
     }
     progress(1f)
@@ -368,8 +370,8 @@ internal fun buildRerunModel(
     Log.i(
         TAG,
         "model (${source::class.simpleName}): $rawTriangles triangles, $rawVertices vertices " +
-            "(${extraction.rawTriangles} raw, ${extraction.droppedComponents} pieces dropped, " +
-            "capped ${extraction.capped}); " +
+            "(${meshed.extractedTriangles} raw, ${meshed.droppedComponents} pieces dropped, " +
+            "capped ${meshed.capped} at ${meshed.maxTriangles}); " +
             "fused ${meshed.fuseMs} ms, meshed ${(meshedAt - started) / NS_PER_MS - meshed.fuseMs} ms, " +
             "finished ${(done - meshedAt) / NS_PER_MS} ms (${finished?.stats ?: "raw surface"}" +
             "${outOfMemoryInHeap?.let { ", out of a ${it / MB} MB heap" } ?: ""}); " +
@@ -390,9 +392,18 @@ internal fun buildRerunModel(
     )
 }
 
-/** [source]'s surface, and what its TSDF held — the TSDF itself is not kept past meshing. */
+/**
+ * [source]'s surface, the extraction's figures, and what its TSDF held — the TSDF itself is not
+ * kept past meshing, nor the extraction, which would hold the surface past its holder.
+ */
 private class Meshed(
-    val extraction: MeshExtraction,
+    val surface: RawSurface,
+    /** Triangles marching cubes emitted, before the small pieces went, and the pieces dropped. */
+    val extractedTriangles: Int,
+    val droppedComponents: Int,
+    /** The most triangles the heap's finish takes ([CleanModel.maxRawTriangles]), and whether it cut the extraction. */
+    val maxTriangles: Int,
+    val capped: Boolean,
     val fuseMs: Long,
     val frames: Int,
     val blocks: Int,
@@ -406,6 +417,9 @@ private class Meshed(
  * finish's peak — the cleaning and the photos — never sits on top of its up to
  * [RerunTsdf.MAX_BYTES]. A recording's TSDF that big is also let go from its slot: reopened
  * without a model kept, the scan meshes its surfels instead.
+ *
+ * The surface is meshed within what the heap's finish takes ([CleanModel.maxRawTriangles]): on a
+ * Pixel 4a's 192 MB, a scan past it meshes with cells twice as coarse, and finishes.
  */
 private fun mesh(source: RerunModelSource, progress: (Float) -> Unit): Meshed {
     val started = System.nanoTime()
@@ -427,22 +441,39 @@ private fun mesh(source: RerunModelSource, progress: (Float) -> Unit): Meshed {
     // the default keeps the lateral fade between two surfel columns. Depth frames count views.
     val minWeight = if (source is RerunModelSource.Surfels) RerunMarchingCubes.DEFAULT_MIN_WEIGHT else FRAMES_MIN_WEIGHT
     val base = if (source is RerunModelSource.Live) 0f else FUSE_SHARE
-    val extraction = RerunMarchingCubes.extractWhole(tsdf, minWeight) { progress(base + (MESH_SHARE - base) * it) }
+    val maxTriangles = CleanModel.maxRawTriangles(Runtime.getRuntime().maxMemory())
+    val extraction = RerunMarchingCubes.extractWhole(tsdf, minWeight, maxTriangles) { progress(base + (MESH_SHARE - base) * it) }
     val release = source is RerunModelSource.Live && tsdf.bytes >= tsdf.maxBytes / 2
     if (release && source is RerunModelSource.Live) source.release()
-    return Meshed(extraction, fuseMs, tsdf.frames, tsdf.blockCount, tsdf.bytes, tsdf.droppedBlocks, release)
+    return Meshed(
+        surface = RawSurface(extraction.mesh),
+        extractedTriangles = extraction.rawTriangles,
+        droppedComponents = extraction.droppedComponents,
+        maxTriangles = maxTriangles,
+        capped = extraction.capped,
+        fuseMs = fuseMs,
+        frames = tsdf.frames,
+        blocks = tsdf.blockCount,
+        bytes = tsdf.bytes,
+        droppedBlocks = tsdf.droppedBlocks,
+        released = release,
+    )
 }
 
 /**
- * [mesh] finished by [CleanModel] — the raw surface's `.glb` when it ran out of memory
+ * [raw] finished by [CleanModel] — the raw surface's `.glb` when it ran out of memory
  * ([CleanModelStats.rawKept]) — or why it failed (logged), out of memory again included: the
  * finish's garbage is gone with it, and the raw surface is left. Cancellation goes through.
- * With [rawGlb], [mesh]'s arrays are worked in, not copied: its `.glb` is already written, and
- * [mesh] is not read again.
+ * With [rawGlb], [raw]'s arrays are worked in and let go, not copied: its `.glb` is already
+ * written, and [raw] is not read again. Without, [raw] keeps its surface.
  */
-private fun finish(mesh: RerunMesh, photos: ModelPhotos?, rawGlb: ByteArray?, progress: (Float) -> Unit): Result<CleanModelResult> =
+private fun finish(raw: RawSurface, photos: ModelPhotos?, rawGlb: ByteArray?, progress: (Float) -> Unit): Result<CleanModelResult> =
     runCatching {
-        CleanModel.build(mesh, photos, JpegAtlasEncoder, consume = rawGlb != null, rawGlb = rawGlb, progress = progress)
+        if (rawGlb != null) {
+            CleanModel.build(raw, rawGlb, photos, JpegAtlasEncoder, progress = progress)
+        } else {
+            CleanModel.build(raw.mesh, photos, JpegAtlasEncoder, progress = progress)
+        }
     }
         .onFailure { if (it is CancellationException) throw it }
         .onFailure { Log.w(TAG, "finishing the model failed: the raw surface is left", it) }
