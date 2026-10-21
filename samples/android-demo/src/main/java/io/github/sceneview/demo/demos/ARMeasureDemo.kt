@@ -331,6 +331,8 @@ fun MeasureScreen(onBack: () -> Unit) {
         board = next
         positions = next.allPoints.distinct().associateWith { positions[it] ?: it.pose.toPosition() }
         aimControl.update(null)
+        // The board ends a door or window when its wall goes: the wall aim goes with it.
+        if (!next.markingOpening) wallAim = null
     }
 
     var trackingFailureReason by remember { mutableStateOf<TrackingFailureReason?>(null) }
@@ -391,10 +393,7 @@ fun MeasureScreen(onBack: () -> Unit) {
         tapRefusalAt = System.nanoTime()
         haptic.play(MeasureHapticEvent.Refused)
     }
-    fun stopMarking() {
-        commit(board.stopOpening())
-        wallAim = null
-    }
+    fun stopMarking() = commit(board.stopOpening())
     // The opening's two corners: kept on the wall, either way round, once they are apart.
     fun markOpeningCorner() {
         val point = wallAim ?: return

@@ -88,8 +88,11 @@ data class MeasureBoard<P>(
 
     val isEmpty: Boolean get() = figures.all { it.points.isEmpty() }
 
-    /** Switches mode. A half-drawn figure of the old mode is kept on screen as it is. */
-    fun withMode(next: MeasureMode): MeasureBoard<P> = copy(mode = next)
+    /**
+     * Switches mode. A half-drawn figure of the old mode is kept on screen as it is; a door or
+     * window being marked ends.
+     */
+    fun withMode(next: MeasureMode): MeasureBoard<P> = keepingOpening(copy(mode = next))
 
     /**
      * The tap of the accent button with the reticle on [point].
@@ -102,7 +105,7 @@ data class MeasureBoard<P>(
         if (figure == null) {
             if (point == null) return this
             val started = MeasureFigure<P>(mode = mode, points = listOf(point))
-            return copy(figures = figures + started)
+            return keepingOpening(copy(figures = figures + started))
         }
         val next = when {
             figure.raising -> figure // Locking needs the height: see lockHeight.
@@ -115,7 +118,7 @@ data class MeasureBoard<P>(
                 if (mode == MeasureMode.Wall && grown.points.size == 2) grown.copy(raising = true) else grown
             }
         }
-        return replaceActive(next)
+        return keepingOpening(replaceActive(next))
     }
 
     /** A Distance chain with a segment can be ended with Done; walls and rooms end themselves. */
@@ -128,14 +131,14 @@ data class MeasureBoard<P>(
      */
     fun finish(): MeasureBoard<P> {
         val figure = active?.takeIf { canFinish } ?: return this
-        return replaceActive(figure.copy(ended = true))
+        return keepingOpening(replaceActive(figure.copy(ended = true)))
     }
 
     /** Locks the rising walls of the active figure at [height] metres. */
     fun lockHeight(height: Float): MeasureBoard<P> {
         val figure = active?.takeIf { it.raising } ?: return this
-        return replaceActive(
-            figure.copy(raising = false, height = height.coerceIn(WALL_MIN_HEIGHT, WALL_MAX_HEIGHT)),
+        return keepingOpening(
+            replaceActive(figure.copy(raising = false, height = height.coerceIn(WALL_MIN_HEIGHT, WALL_MAX_HEIGHT))),
         )
     }
 
@@ -182,13 +185,26 @@ data class MeasureBoard<P>(
             else -> null
         }
         val rest = figures.dropLast(1)
-        return copy(
-            mode = stepped?.mode ?: mode,
-            figures = if (stepped == null) rest else rest + stepped,
+        return keepingOpening(
+            copy(
+                mode = stepped?.mode ?: mode,
+                figures = if (stepped == null) rest else rest + stepped,
+            ),
         )
     }
 
-    fun clear(): MeasureBoard<P> = copy(figures = emptyList())
+    fun clear(): MeasureBoard<P> = keepingOpening(copy(figures = emptyList()))
+
+    /**
+     * [next], still marking a door or window only while it stays on this board's [openingWall]:
+     * a mode change, a new figure, an unlocked height or a clear ends the marking, first corner
+     * and all, so a corner placed on one wall never resumes on another.
+     */
+    private fun keepingOpening(next: MeasureBoard<P>): MeasureBoard<P> {
+        val wall = openingWall
+        val sameWall = wall != null && next.mode == mode && next.openingWall?.points == wall.points
+        return if (sameWall) next else next.copy(markingOpening = false, openingCorner = null)
+    }
 
     private fun replaceActive(figure: MeasureFigure<P>): MeasureBoard<P> =
         copy(figures = figures.dropLast(1) + figure)
