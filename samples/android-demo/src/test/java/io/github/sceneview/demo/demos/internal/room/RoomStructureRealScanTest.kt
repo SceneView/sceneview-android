@@ -1,5 +1,8 @@
 package io.github.sceneview.demo.demos.internal.room
 
+import io.github.sceneview.demo.demos.internal.RoomPlanLayoutTest.Companion.WORDING
+import io.github.sceneview.demo.demos.internal.RoomSurveyor
+import io.github.sceneview.demo.demos.internal.SurveyReport
 import io.github.sceneview.demo.demos.internal.Vec3
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -11,6 +14,7 @@ import kotlin.math.atan2
 import kotlin.math.floor
 import kotlin.math.hypot
 import kotlin.math.max
+import kotlin.math.min
 
 /**
  * The room engine on synthetic scans shaped like the phone scans that defeated it: walls seen only
@@ -18,8 +22,9 @@ import kotlin.math.max
  * seen twice, two walls of four, an L and a T seen on three quarters of their length, corners
  * hidden behind furniture, a headboard against a wall, a bedroom whose clutter outweighs its walls,
  * one wall seen along a stretch of it, a garage's storage fronts, walls the depth missed and ARCore
- * found as planes, a side open onto the next room, a wall returned only in shards out of line.
- * When a figure is given it is
+ * found as planes, a side open onto the next room, a wall returned only in shards out of line, a far
+ * wall never seen, two walls not followed to their far corners, cupboard fronts out of line before
+ * a wall never seen. When a figure is given it is
  * within [MAX_ERROR] of the room's, or the case's own bound; where the walls seen do not close the
  * room, none is, and the plan is still drawn — but two adjacent walls alone give an area marked as
  * an estimate, the floor seen standing for the other two.
@@ -27,8 +32,9 @@ import kotlin.math.max
 class RoomStructureRealScanTest {
 
     /**
-     * A case: the room, the camera's walk through it, whether its walls close it — or, [estimated],
-     * give an area only as an estimate — and how near its area has to be.
+     * A case: the room, the camera's walk through it and the [share] of that walk's frames scanned,
+     * whether its walls close it — or, [estimated], give an area only as an estimate — and how near
+     * its area has to be.
      */
     private class Case(
         val name: String,
@@ -37,11 +43,16 @@ class RoomStructureRealScanTest {
         val walk: List<Vec3>? = null,
         val maxError: Float = MAX_ERROR,
         val estimated: Boolean = false,
+        val share: Float = 1f,
     )
 
     private fun capture(case: Case): SyntheticCapture = synchronized(captures) {
         captures.getOrPut(case.name) {
-            if (case.walk == null) SyntheticScan.capture(case.room) else SyntheticScan.capture(case.room, walk = case.walk)
+            if (case.walk == null) {
+                SyntheticScan.capture(case.room, share = case.share)
+            } else {
+                SyntheticScan.capture(case.room, share = case.share, walk = case.walk)
+            }
         }
     }
 
@@ -236,6 +247,81 @@ class RoomStructureRealScanTest {
         assertTrue("$summary: the wardrobe's front is a wall", front.isEmpty())
     }
 
+    @Test
+    fun `a far wall never seen, the floor read 1,5 to 2 m out, is one side deduced from the floor's edge`() {
+        for (case in listOf(FAR_SHORT, FAR)) {
+            val structure = RoomStructure.read(capture(case).scan())
+            val summary = summary(case, structure)
+            assertEquals(summary, RECTANGLE_X.size, structure.walls.size)
+            assertEquals(summary, 1, structure.walls.count { it.deduced })
+            val area = structure.area
+            assertTrue("$summary: no area", area != null)
+            assertTrue("$summary: an area not marked as an estimate", area!!.estimate)
+            assertTrue("$summary: area off", abs(area.value - case.room.area) / case.room.area < MAX_ERROR)
+        }
+    }
+
+    @Test
+    fun `an L's two walls never seen at the end of its stem are deduced as two sides`() {
+        val structure = RoomStructure.read(capture(L_STEM).scan())
+        val summary = summary(L_STEM, structure)
+        assertTrue("$summary: ${structure.walls.size} sides", structure.walls.size <= L_STEM.room.x.size)
+        assertTrue(summary, structure.walls.count { it.deduced } <= 2)
+    }
+
+    @Test
+    fun `an L's corner never seen gives its area as an estimate and its corners where they stand`() {
+        check(L_CORNER)
+        val structure = RoomStructure.read(capture(L_CORNER).scan())
+        val summary = summary(L_CORNER, structure)
+        val room = L_CORNER.room
+        for (i in room.x.indices) {
+            val off = structure.walls.minOf { hypot(it.ax - room.x[i], it.az - room.z[i]) }
+            assertTrue("$summary: corner $i ${"%.2f".format(off)} m off", off < CORNER_NEAR_M)
+        }
+    }
+
+    @Test
+    fun `two walls not followed to their far corners give no area and say to walk on to the corner`() {
+        val structure = RoomStructure.read(capture(QUARTER).scan())
+        val summary = summary(QUARTER, structure)
+        assertTrue("$summary: no plan", structure.walls.isNotEmpty())
+        assertNull(summary, structure.area)
+        assertEquals(summary, "WallEnd", structure.gaps.firstOrNull()?.name)
+        val survey = RoomSurveyor.of(structure)
+        assertNull(summary, survey.area)
+        assertEquals(summary, "Walk along the wall to the corner.", SurveyReport.areaHint(survey, WORDING))
+    }
+
+    @Test
+    fun `walls seen partway give no area, or one within 10 %`() {
+        for (case in listOf(QUARTER_REACH, HALF_WALK)) {
+            val structure = RoomStructure.read(capture(case).scan())
+            val area = structure.area?.value
+            assertTrue(summary(case, structure), area == null || abs(area - case.room.area) / case.room.area < PARTWAY_ERROR)
+        }
+    }
+
+    @Test
+    fun `the live area of two adjacent walls is marked as an estimate`() {
+        val live = RoomStructure.live(capture(TWO_LOW).scan())
+        val area: Any? = live.area
+        assertTrue("live area $area", (area as? RoomFigure)?.estimate == true)
+    }
+
+    @Test
+    fun `cupboard fronts far apart before a wall never seen do not stand for it`() {
+        val structure = RoomStructure.read(capture(CUPBOARDS).scan())
+        val summary = summary(CUPBOARDS, structure)
+        val north = RECTANGLE_Z.max()
+        val fronts = structure.walls.filter {
+            abs(it.az - it.bz) < FRONT_NEAR_M && max(it.az, it.bz) < north - FRONT_NEAR_M && min(it.az, it.bz) > north - 1f
+        }
+        assertTrue("$summary: ${fronts.size} walls along the cupboards' fronts", fronts.isEmpty())
+        val area = structure.area?.value
+        assertTrue("$summary: area off", area == null || abs(area - CUPBOARDS.room.area) / CUPBOARDS.room.area < MAX_ERROR)
+    }
+
     /** A case's full reading's median and live reading's best run. */
     private fun timings(case: Case): String {
         val scan = capture(case).scan()
@@ -383,11 +469,85 @@ class RoomStructureRealScanTest {
 
         val TWO = Case("two full walls", SyntheticRoom(RECTANGLE_X, RECTANGLE_Z, hidden = setOf(2, 3)), figures = true, estimated = true)
 
-        /** The L's north and west walls never seen: the corner they make is deduced from the floor. */
+        /**
+         * The L's north and west walls never seen: the corner they make is deduced from the floor,
+         * the area given as an estimate.
+         */
         val L_CORNER = Case(
             "L corner unseen",
             SyntheticRoom(floatArrayOf(0f, 6f, 6f, 3f, 3f, 0f), floatArrayOf(0f, 0f, 3f, 3f, 5f, 5f), hidden = setOf(4, 5), seenUpTo = LOW_M),
+            figures = true,
+            estimated = true,
+        )
+
+        /** The L's stem's east and north walls never seen: the corner they make is deduced from the floor. */
+        val L_STEM = Case(
+            "L stem unseen",
+            SyntheticRoom(floatArrayOf(0f, 6f, 6f, 3f, 3f, 0f), floatArrayOf(0f, 0f, 3f, 3f, 5f, 5f), hidden = setOf(3, 4), seenUpTo = LOW_M),
+            figures = true,
+            estimated = true,
+        )
+
+        /** A corner the reading draws stands this near the room's own. */
+        const val CORNER_NEAR_M = 0.1f
+
+        /** The rectangle's north wall never seen by a camera kept to the south half, the floor read [floorReach] out. */
+        fun far(name: String, floorReach: Float): Case {
+            val room = SyntheticRoom(RECTANGLE_X, RECTANGLE_Z, hidden = setOf(2), floorReach = floorReach)
+            return Case(name, room, figures = true, walk = SyntheticScan.stops(room).filter { it.z <= SOUTH_HALF_M }, estimated = true)
+        }
+
+        const val SOUTH_HALF_M = 2f
+        val FAR_SHORT = far("far wall, floor read 1.5 m out", 1.5f)
+        val FAR = far("far wall, floor read 2 m out", 2f)
+
+        /**
+         * The rectangle seen on its south and east walls only, from a camera kept to their corner's
+         * quarter, the floor read 1.5 m out: neither wall followed to its far end, the floor seen
+         * covering a little over half the room.
+         */
+        val QUARTER_ROOM = SyntheticRoom(RECTANGLE_X, RECTANGLE_Z, hidden = setOf(2, 3), seenUpTo = LOW_M, floorReach = 1.5f)
+        val QUARTER = Case(
+            "quarter walk",
+            QUARTER_ROOM,
             figures = false,
+            walk = SyntheticScan.stops(QUARTER_ROOM).filter { it.x >= RECTANGLE_X.max() / 2 && it.z <= SOUTH_HALF_M },
+        )
+
+        /** [QUARTER], the depth read only 1.5 m out. */
+        val QUARTER_REACH_ROOM = SyntheticRoom(RECTANGLE_X, RECTANGLE_Z, hidden = setOf(2, 3), seenUpTo = LOW_M, reach = 1.5f)
+        val QUARTER_REACH = Case(
+            "quarter walk, depth read 1.5 m out",
+            QUARTER_REACH_ROOM,
+            figures = false,
+            walk = SyntheticScan.stops(QUARTER_REACH_ROOM).filter { it.x >= RECTANGLE_X.max() / 2 && it.z <= SOUTH_HALF_M },
+        )
+
+        /** An 8 × 6 m room seen on two adjacent walls, the floor read 2.5 m out, the scan stopped halfway through its walk. */
+        val HALF_WALK = Case(
+            "8 × 6 m, half the walk",
+            SyntheticRoom(floatArrayOf(0f, 8f, 8f, 0f), floatArrayOf(0f, 0f, 6f, 6f), hidden = setOf(2, 3), floorReach = 2.5f),
+            figures = false,
+            share = 0.5f,
+        )
+
+        /** No area is given where the walls were seen only partway, or one this near. */
+        const val PARTWAY_ERROR = 0.1f
+
+        /**
+         * The rectangle's north wall never seen, two cupboards 2 m high standing against it, their
+         * fronts 20 cm out of line and 3.2 m apart: no wall stands along them.
+         */
+        val CUPBOARDS = Case(
+            "cupboards before a wall unseen",
+            SyntheticRoom(
+                RECTANGLE_X,
+                RECTANGLE_Z,
+                hidden = setOf(2),
+                boxes = listOf(SyntheticBox(0.3f, 0.9f, 3.5f, 4f, 2f), SyntheticBox(4.1f, 4.7f, 3.3f, 4f, 2f)),
+            ),
+            figures = true,
+            estimated = true,
         )
 
         /** The south and north walls alone, 4 m apart. */
