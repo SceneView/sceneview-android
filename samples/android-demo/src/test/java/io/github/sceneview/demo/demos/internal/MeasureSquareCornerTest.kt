@@ -12,7 +12,7 @@ import kotlin.math.sin
  * not square stays as it is traced.
  *
  * A tracked wall is a vertical plane standing on the floor (its bottom within 30 cm of it), at
- * least 1.5 m tall, whose foot runs at least 1 m within 3° of square to the last wall and comes
+ * least 1.5 m tall, whose foot runs at least 1.2 m within 3° of square to the last wall and comes
  * within 20 cm of the corner. An open door, a cupboard's side, a wall cupboard or a wall further
  * along the same line stand square by a corner too, and confirm nothing.
  */
@@ -31,7 +31,7 @@ class MeasureSquareCornerTest {
     }
 
     /** A tracked wall whose foot runs [start]..[end] metres from the corner, [degrees] off square. */
-    private fun wallFromCorner(degrees: Float, start: Float = 0.1f, end: Float = 1.3f): MeasurePlane =
+    private fun wallFromCorner(degrees: Float, start: Float = 0.1f, end: Float = 1.5f): MeasurePlane =
         wall(aim(degrees, start), aim(degrees, end))
 
     /** A vertical plane on the floor line [a]–[b], [bottom] to [top] metres up: a wall by default. */
@@ -70,6 +70,8 @@ class MeasureSquareCornerTest {
     fun `without a tracked wall a corner is squared within three degrees only`() {
         assertSquared(aim(2.5f))
         assertSquared(aim(-2.5f))
+        assertAsAimed(aim(3.5f))
+        assertAsAimed(aim(-3.5f))
         assertAsAimed(aim(4.5f))
         assertAsAimed(aim(-5.5f))
     }
@@ -80,6 +82,10 @@ class MeasureSquareCornerTest {
         assertSquared(aim(5.5f), square)
         assertSquared(aim(-4.5f), square)
         // Six degrees stays the limit.
+        assertSquared(aim(5.9f), square)
+        assertSquared(aim(-5.9f), square)
+        assertAsAimed(aim(6.1f), square)
+        assertAsAimed(aim(-6.1f), square)
         assertAsAimed(aim(6.5f), square)
         // A tracked wall a little off square, as ARCore sees one, still confirms it.
         assertSquared(aim(5.5f), listOf(wallFromCorner(1.5f)))
@@ -111,15 +117,27 @@ class MeasureSquareCornerTest {
     }
 
     @Test
+    fun `an open door 93 cm wide at the corner confirms nothing`() {
+        // Hinged 2 cm from the corner and opened square, 2.04 m high.
+        val door = square(start = 0.02f, end = 0.95f, bottom = 0f, top = 2.04f)
+        assertAsAimed(aim(5f), listOf(door))
+        assertAsAimed(aim(-5f), listOf(door))
+        // The same door as ARCore may see it, its plane 5 cm over at each end: 1.03 m of foot.
+        val seen = square(start = -0.03f, end = 1f, bottom = 0f, top = 2.04f)
+        assertAsAimed(aim(5f), listOf(seen))
+        assertAsAimed(aim(-5f), listOf(seen))
+    }
+
+    @Test
     fun `a wall cupboard by the corner confirms nothing`() {
         // 0.6 m high, hung 1.4 m up, square to the last wall from the corner.
-        assertAsAimed(aim(5f), listOf(square(start = 0.1f, end = 1.3f, bottom = 1.4f, top = 2f)))
+        assertAsAimed(aim(5f), listOf(square(start = 0.1f, end = 1.5f, bottom = 1.4f, top = 2f)))
     }
 
     @Test
     fun `a wall further along the corner's line confirms nothing`() {
         // Square, on the line through the corner, but its foot starts 2.5 m away.
-        assertAsAimed(aim(5f), listOf(square(start = 2.5f, end = 3.7f)))
+        assertAsAimed(aim(5f), listOf(square(start = 2.5f, end = 4f)))
     }
 
     @Test
@@ -127,7 +145,7 @@ class MeasureSquareCornerTest {
         // A strip of floor along the square from the corner, as long as a wall's foot.
         val floor = MeasurePlane(
             MeasurePlaneKind.Upward,
-            listOf(p(3.98f, 0.1f), p(4.02f, 0.1f), p(4.02f, 1.3f), p(3.98f, 1.3f)),
+            listOf(p(3.98f, 0.1f), p(4.02f, 0.1f), p(4.02f, 1.5f), p(3.98f, 1.5f)),
         )
         assertAsAimed(aim(5f), listOf(floor))
     }
@@ -144,17 +162,17 @@ class MeasureSquareCornerTest {
     @Test
     fun `the wall's foot comes within 20 cm of the corner`() {
         // A gap at the corner, along the square.
-        assertSquared(aim(5.5f), listOf(square(start = 0.15f, end = 1.35f)))
-        assertAsAimed(aim(5.5f), listOf(square(start = 0.25f, end = 1.45f)))
+        assertSquared(aim(5.5f), listOf(square(start = 0.15f, end = 1.55f)))
+        assertAsAimed(aim(5.5f), listOf(square(start = 0.25f, end = 1.65f)))
         // Beside the corner, towards the room's inside.
-        assertSquared(aim(5.5f), listOf(square(start = 0f, end = 1.2f, across = 0.15f)))
-        assertAsAimed(aim(5.5f), listOf(square(start = 0f, end = 1.2f, across = 0.25f)))
+        assertSquared(aim(5.5f), listOf(square(start = 0f, end = 1.4f, across = 0.15f)))
+        assertAsAimed(aim(5.5f), listOf(square(start = 0f, end = 1.4f, across = 0.25f)))
     }
 
     @Test
-    fun `the wall's foot runs at least 1 m`() {
-        assertSquared(aim(5.5f), listOf(square(start = 0.05f, end = 1.1f)))
-        assertAsAimed(aim(5.5f), listOf(square(start = 0.05f, end = 1f)))
+    fun `the wall's foot runs at least 120 cm`() {
+        assertSquared(aim(5.5f), listOf(square(start = 0.05f, end = 1.3f)))
+        assertAsAimed(aim(5.5f), listOf(square(start = 0.05f, end = 1.2f)))
     }
 
     @Test
@@ -165,14 +183,14 @@ class MeasureSquareCornerTest {
 
     @Test
     fun `the wall stands on the floor`() {
-        assertSquared(aim(5.5f), listOf(square(start = 0.1f, end = 1.3f, bottom = 0.25f, top = 2f)))
-        assertAsAimed(aim(5.5f), listOf(square(start = 0.1f, end = 1.3f, bottom = 0.35f, top = 2f)))
+        assertSquared(aim(5.5f), listOf(square(start = 0.1f, end = 1.5f, bottom = 0.25f, top = 2f)))
+        assertAsAimed(aim(5.5f), listOf(square(start = 0.1f, end = 1.5f, bottom = 0.35f, top = 2f)))
     }
 
     @Test
     fun `the wall rises at least a metre and a half`() {
-        assertSquared(aim(5.5f), listOf(square(start = 0.1f, end = 1.3f, bottom = 0.05f, top = 1.6f)))
-        assertAsAimed(aim(5.5f), listOf(square(start = 0.1f, end = 1.3f, bottom = 0.05f, top = 1.5f)))
+        assertSquared(aim(5.5f), listOf(square(start = 0.1f, end = 1.5f, bottom = 0.05f, top = 1.6f)))
+        assertAsAimed(aim(5.5f), listOf(square(start = 0.1f, end = 1.5f, bottom = 0.05f, top = 1.5f)))
     }
 
     private companion object {
