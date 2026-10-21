@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.core.view.WindowCompat
 import io.github.sceneview.demo.DemoScaffold
 import io.github.sceneview.demo.common.LocalStatusBarIcons
@@ -32,7 +33,8 @@ import java.util.Locale
  * The status bar over Measure's plan. The camera screen asks for light icons over its dark scrim;
  * the plan's page, on the themed stage's light ground, keeps the theme's dark ones. The camera
  * screen runs on under the page, so its request must not outlive the opening of the page — the
- * icons were white on a light ground — and must come back when the page closes.
+ * icons were white on a light ground — and must come back when the page closes. TalkBack, likewise,
+ * reads the page alone while it is open, and the camera screen again once it closes.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = "w411dp-h891dp-xhdpi")
@@ -91,6 +93,10 @@ class MeasurePlanStatusBarTest {
         composeRule.waitForIdle()
     }
 
+    /** How many nodes TalkBack can reach that read the camera screen's title. */
+    private val cameraTitles: Int
+        get() = composeRule.onAllNodesWithText("Measure").fetchSemanticsNodes().size
+
     /** `true` when the window draws dark status-bar icons, for a light bar. */
     private val darkIcons: Boolean
         get() = composeRule.activity.window.let { WindowCompat.getInsetsController(it, it.decorView).isAppearanceLightStatusBars }
@@ -121,5 +127,23 @@ class MeasurePlanStatusBarTest {
         composeRule.waitForIdle()
         assertEquals(1, icons!!.lightIconRequests)
         assertFalse("light icons again over the camera's scrim", darkIcons)
+    }
+
+    @Test
+    fun `TalkBack reads the plan's page alone, and the camera screen again once the page closes`() {
+        setMeasure()
+        assertTrue("the camera screen's title is read", cameraTitles > 0)
+
+        planOpen.value = true
+        composeRule.waitForIdle()
+        assertEquals("the camera screen's title under the open plan", 0, cameraTitles)
+        assertTrue(
+            "the plan's own title is read",
+            composeRule.onAllNodesWithText("Plan").fetchSemanticsNodes().isNotEmpty(),
+        )
+
+        planOpen.value = false
+        composeRule.waitForIdle()
+        assertTrue("the camera screen's title is read again", cameraTitles > 0)
     }
 }
