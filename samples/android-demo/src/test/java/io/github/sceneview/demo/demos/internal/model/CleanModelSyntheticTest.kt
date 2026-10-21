@@ -63,6 +63,11 @@ class CleanModelSyntheticTest {
             }
         }
 
+        // The floor the eye reads, rug included: as much of it as the scan saw, and no hole opened.
+        val rawFloor = FloorArea.of(raw.positions, raw.indices)
+        val finalFloor = FloorArea.of(model.positions, allIndices, rawFloor.height)
+        val floorRatio = finalFloor.area / rawFloor.area
+
         val report = (
             "clean model, synthetic room (${shots.size} photos ${TexturedSyntheticRoom.PHOTO_WIDTH}x" +
                 "${TexturedSyntheticRoom.PHOTO_HEIGHT}):\n" +
@@ -80,7 +85,8 @@ class CleanModelSyntheticTest {
                 "textured ${"%.1f".format(texture.texturedShare * 100f)}%, gains ${"%.2f".format(texture.gainMin)}.." +
                 "${"%.2f".format(texture.gainMax)}, seams ${"%.1f".format(texture.seamRaw)} -> " +
                 "${"%.1f".format(texture.seamExposed)} -> ${"%.1f".format(texture.seamFinal)}, " +
-                "${"%.0f".format(texture.texelsPerMetre)} texels/m (${"%.2f".format(CM_PER_M / texture.texelsPerMetre)} cm/texel)"
+                "${"%.0f".format(texture.texelsPerMetre)} texels/m (${"%.2f".format(CM_PER_M / texture.texelsPerMetre)} cm/texel)\n" +
+                "  floor: ${"%.3f".format(floorRatio)} of the raw one's area, holes ${rawFloor.innerLoops} -> ${finalFloor.innerLoops}"
         )
         println(report)
 
@@ -98,6 +104,8 @@ class CleanModelSyntheticTest {
         // The photos' exposures differ by up to ±12 %, the depth's colours not at all: levelled,
         // what is left on the plain walls stays within a couple of percent of the paint.
         assertTrue("overall $afterError", afterError.matched < MAX_MATCHED_ERROR)
+        assertTrue("floor ${"%.3f".format(floorRatio)} of the raw one's", floorRatio >= MIN_FLOOR_KEPT)
+        assertTrue("floor holes ${rawFloor.innerLoops} -> ${finalFloor.innerLoops}", finalFloor.innerLoops <= rawFloor.innerLoops)
         assertTrue("${stats.totalMs} ms", stats.totalMs < DEV_JVM_BUDGET_MS)
 
         assertEquals(emptyList<String>(), GlbCheck.problems(result.glb))
@@ -299,6 +307,9 @@ class CleanModelSyntheticTest {
         const val CM_PER_M = 100f
         const val NANOS_PER_MS = 1_000_000L
         const val MIN_TEXTURED_SHARE = 0.9f
+
+        /** The finished floor over the raw one's: none of what the scan saw lost. */
+        const val MIN_FLOOR_KEPT = 0.97f
         const val DETAIL_GAIN = 0.5
         const val MAX_MATCHED_ERROR = 8.0
 
