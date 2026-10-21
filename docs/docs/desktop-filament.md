@@ -48,7 +48,7 @@ still stands; the *binding supply* decision does not.
 ## Current state: `SceneViewer` on desktop
 
 `samples/desktop-demo` consumes `sceneview-compose` `SceneViewer`. Filament is
-filament-kmp 0.7.3 on Maven (JNI binding, offscreen readback → Skia). **JDK 21+**
+filament-kmp 0.8.0 on Maven (JNI binding, offscreen readback → Skia). **JDK 21+**
 (kotlin-math's bytecode sets it; filament-kmp alone needs 17), no JVM flag.
 
 ---
@@ -80,7 +80,7 @@ distribution — so the real supply question is *where the desktop bindings come
 
 [Erkko68/filament-kmp](https://github.com/Erkko68/filament-kmp) — unofficial,
 Apache-2.0, actively maintained KMP wrapper around Filament, published on Maven
-Central (re-verified against `repo1.maven.org` at `0.7.3`, 2026-10-16; first written
+Central (re-verified against `repo1.maven.org` at `0.8.0`, 2026-10-21; first written
 against `0.3.0`, 2026-08-03):
 
 - **Desktop/JVM via JNI (JDK 17+) since 0.7.0** over one generated `Fila*` C API,
@@ -88,8 +88,8 @@ against `0.3.0`, 2026-08-03):
   `filament-jni-runtime-{macos-arm64, linux-x64, linux-arm64, windows-x64, windows-arm64}`.
   Up to 0.6.0 it was Project Panama (FFM, JDK 22+) from
   `io.github.erkko68.filament-ffm:filament-ffm`.
-  **No macos-x64 (Intel Mac) natives** — re-confirmed 2026-10-16 (404 on Maven Central).
-- Wraps **Filament 1.77.3** at 0.7.3; modules mirror upstream
+  **No macos-x64 (Intel Mac) natives** — re-confirmed 2026-10-21 at 0.8.0 (404 on Maven Central).
+- Wraps **Filament 1.78.0** at 0.8.0; modules mirror upstream
   (`filament`, `gltfio`, `filamat`, `filament-utils`).
 - It does **not** build Filament from source: it takes Google's official C++ prebuilts
   and generates a C API from Filament's C++ headers, which every platform calls (JNI on
