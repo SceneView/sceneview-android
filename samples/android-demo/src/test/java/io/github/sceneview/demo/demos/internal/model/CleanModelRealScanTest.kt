@@ -113,9 +113,9 @@ class CleanModelRealScanTest {
         assertEquals(tail, 0, process.exitValue())
         assertTrue(tail, output.contains(HeapCappedFinish.FINISHED))
 
-        // What stays live, not what the sampler saw used: the heap after each collection, garbage
-        // gone. Plus the copy the screen hands the renderer to show the raw surface meanwhile: ART
-        // allocates a direct buffer in its Java heap, which the child does not hold.
+        // What stays live, not what the sampler saw used: the heap after each full collection,
+        // garbage gone. Plus the copy the screen hands the renderer to show the raw surface
+        // meanwhile: ART allocates a direct buffer in its Java heap, which the child does not hold.
         val live = livePeakBytes(gcLog.readText())
         val shown = Regex("${HeapCappedFinish.RAW_GLB}(\\d+)").find(output)?.groupValues?.get(1)?.toLong()
         assertTrue("no raw GLB size reported: $tail", shown != null)
@@ -125,16 +125,21 @@ class CleanModelRealScanTest {
         assertTrue("live peak ${peak / MB} MB over ${bar / MB} MB: $tail", peak <= bar)
     }
 
-    /** The most the heap held right after a collection, from a `-Xlog:gc` log (`120M->85M(184M)`). */
+    /**
+     * The most the heap held right after a full collection, from a `-Xlog:gc` log
+     * (`Pause Full (Allocation Failure) 172M->135M(185M)`). A young collection is no live figure:
+     * the old objects it skips may be garbage, and one that cannot promote collects nothing
+     * (`172M->172M`) before the full one that follows.
+     */
     private fun livePeakBytes(gcLog: String): Long {
-        val after = Regex("""\d+[KMG]->(\d+)([KMG])\(""").findAll(gcLog).map {
+        val after = Regex("""Pause Full .*?\d+[KMG]->(\d+)([KMG])\(""").findAll(gcLog).map {
             it.groupValues[1].toLong() * when (it.groupValues[2]) {
                 "K" -> KB.toLong()
                 "M" -> MB
                 else -> MB * KB
             }
         }.toList()
-        assertTrue("no collection logged: ${gcLog.takeLast(LOG_TAIL)}", after.isNotEmpty())
+        assertTrue("no full collection logged: ${gcLog.takeLast(LOG_TAIL)}", after.isNotEmpty())
         return after.max()
     }
 
