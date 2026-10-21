@@ -19,12 +19,6 @@ import kotlin.math.roundToInt
  * as a tape reads them. How far a figure can be trusted is what its "±" says, in either.
  */
 object SurveyFormat {
-    /**
-     * The metric system the replay's floor labels and its room line are written in. The plan, its
-     * PDF and its shared text follow the phone's language instead: see [units].
-     */
-    val UNITS = MeasureUnitSystem.Metric
-
     /** Lengths are given to the nearest 5 cm. */
     const val LENGTH_STEP_M = 0.05f
 
@@ -40,7 +34,8 @@ object SurveyFormat {
 
     /**
      * The plan's units under [locale]: feet and inches in US English, metres in every other
-     * language. The screen, the PDF and the shared text all read it.
+     * language. The plan's screen, its PDF, its shared text and the replay's floor labels and room
+     * line all read it.
      */
     fun units(locale: Locale): MeasureUnitSystem =
         if (locale.language == "en" && locale.country == "US") MeasureUnitSystem.Imperial else MeasureUnitSystem.Metric
