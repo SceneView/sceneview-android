@@ -18,6 +18,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -33,6 +34,7 @@ import org.robolectric.shadows.ShadowLog
 import java.io.File
 import java.nio.Buffer
 import java.util.Collections
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * What a load does with the external resources of a `.gltf` (its `.bin` buffers, its textures),
@@ -41,7 +43,8 @@ import java.util.Collections
  * A real [ModelLoader] over a Filament whose natives return zero (Robolectric instruments
  * `com.google.android.filament`), except where the shadows below say otherwise: every parse
  * "succeeds" with asset handle [ASSET], which names the external resources [resourceUris], and
- * gltfio's `asyncBeginLoad` answers [beginAccepted].
+ * gltfio's `asyncBeginLoad` answers [beginAccepted], `asyncGetLoadProgress` answers [loadProgress],
+ * and `asyncCancelLoad` / `evictResourceData` calls are counted.
  */
 @RunWith(RobolectricTestRunner::class)
 @LooperMode(LooperMode.Mode.PAUSED)
@@ -62,6 +65,11 @@ class ModelLoaderResourceFailureTest {
         destroyedAssets.clear()
         resourceUris = arrayOf(TEXTURE)
         beginAccepted = true
+        loadProgress = 0f
+        assetHandle = ASSET
+        begunAssets.clear()
+        cancelLoadCalls.set(0)
+        evictCalls.set(0)
         ShadowLog.clear()
         loader = ModelLoader(FilamentWithoutJni.engine(), RuntimeEnvironment.getApplication())
     }
@@ -118,14 +126,15 @@ class ModelLoaderResourceFailureTest {
     @Test
     fun `a begin gltfio refuses fails the load and destroys the model`() {
         resourceUris = emptyArray()
-        beginAccepted = false
+        refuseBeginBeforeQueuingTextures()
 
         val result = await { loader.loadModelAsync(modelFileUri(), onResult = it) }
 
         assertTrue("onResult must be called", result.called)
         assertNull(result.value)
         assertEquals(listOf(ASSET), destroyedAssets.toList())
-        assertWarned("refused", "model.gltf")
+        assertWarned("refused", "model.gltf", "meshopt")
+        assertNoBlockingCancel()
     }
 
     @Test
@@ -153,13 +162,85 @@ class ModelLoaderResourceFailureTest {
     @Test
     fun `createModel throws when gltfio refuses the begin`() {
         resourceUris = emptyArray()
-        beginAccepted = false
+        refuseBeginBeforeQueuingTextures()
 
         val failure = runCatching { loader.createModel(File(java.net.URI(modelFileUri()))) }.exceptionOrNull()
 
         assertTrue("Expected IllegalArgumentException, got $failure", failure is IllegalArgumentException)
         assertEquals(listOf(ASSET), destroyedAssets.toList())
-        assertWarned("refused")
+        assertWarned("refused", "meshopt")
+        assertNoBlockingCancel()
+    }
+
+    @Test
+    fun `a refused begin leaves the load still decoding in flight, so its destroy waits`() {
+        resourceUris = emptyArray()
+        // Model A begins its load and still has textures decoding.
+        assetHandle = DECODING_ASSET
+        loadProgress = 0.5f
+        val decoding = await { loader.loadModelAsync(modelFileUri(), onResult = it) }.value
+        assertNotNull(decoding)
+
+        // Model B is refused: gltfio returned before draining A's decoders.
+        assetHandle = REFUSED_ASSET
+        beginAccepted = false
+        val refused = await { loader.loadModelAsync(modelFileUri(), onResult = it) }
+
+        assertNull(refused.value)
+        assertEquals("The refused model is freed at once", listOf(REFUSED_ASSET), destroyedAssets.toList())
+        assertEquals(
+            "The native load must be pointed back at A",
+            listOf(DECODING_ASSET, REFUSED_ASSET, DECODING_ASSET),
+            begunAssets.toList(),
+        )
+        assertEquals("A's decoding must not be cancelled by B's refusal", 0, cancelLoadCalls.get())
+
+        loader.destroyModel(decoding!!)
+
+        assertTrue(
+            "A must not be freed while its textures are decoding (#3868): deferred or cancelled first",
+            DECODING_ASSET !in destroyedAssets || cancelLoadCalls.get() > 0,
+        )
+    }
+
+    @Test
+    fun `createModel chains the resolver's IOException of a missing buffer, logged once`() {
+        resourceUris = arrayOf(BUFFER, TEXTURE)
+        val unreadable = java.io.IOException("disk gone")
+
+        val failure = runCatching {
+            loader.createModel(File(java.net.URI(modelFileUri()))) { uri ->
+                if (uri == BUFFER) throw unreadable else null
+            }
+        }.exceptionOrNull()
+
+        assertTrue("Expected IllegalArgumentException, got $failure", failure is IllegalArgumentException)
+        assertSame("The resolver's IOException must be the cause", unreadable, failure?.cause)
+        assertEquals(listOf(ASSET), destroyedAssets.toList())
+        assertEquals(
+            "The buffer miss must be logged exactly once",
+            1,
+            warnings().count { BUFFER in it.msg },
+        )
+        assertEquals(
+            "The texture miss must be logged exactly once",
+            1,
+            warnings().count { TEXTURE in it.msg },
+        )
+    }
+
+    @Test
+    fun `createModel logs a texture IOException once, with the error`() {
+        resourceUris = arrayOf(TEXTURE)
+        val unreadable = java.io.IOException("disk gone")
+
+        val model = loader.createModel(File(java.net.URI(modelFileUri()))) { throw unreadable }
+
+        assertNotNull(model)
+        val textureWarnings = warnings().filter { TEXTURE in it.msg }
+        assertEquals(1, textureWarnings.size)
+        assertSame(unreadable, textureWarnings.single().throwable)
+        assertTrue(textureWarnings.single().msg.contains("loading the model without it"))
     }
 
     @Test
@@ -246,7 +327,7 @@ class ModelLoaderResourceFailureTest {
 
             @JvmStatic
             @Implementation
-            fun nCreateAsset(nativeLoader: Long, buffer: Buffer, remaining: Int): Long = ASSET
+            fun nCreateAsset(nativeLoader: Long, buffer: Buffer, remaining: Int): Long = assetHandle
 
             @JvmStatic
             @Implementation
@@ -285,13 +366,49 @@ class ModelLoaderResourceFailureTest {
         companion object {
             @JvmStatic
             @Implementation
-            fun nAsyncBeginLoad(nativeLoader: Long, nativeAsset: Long): Boolean = beginAccepted
+            fun nAsyncBeginLoad(nativeLoader: Long, nativeAsset: Long): Boolean {
+                begunAssets += nativeAsset
+                return beginAccepted
+            }
+
+            @JvmStatic
+            @Implementation
+            fun nAsyncGetLoadProgress(nativeLoader: Long): Float = loadProgress
+
+            @JvmStatic
+            @Implementation
+            fun nAsyncCancelLoad(nativeLoader: Long) {
+                cancelLoadCalls.incrementAndGet()
+            }
+
+            @JvmStatic
+            @Implementation
+            fun nEvictResourceData(nativeLoader: Long) {
+                evictCalls.incrementAndGet()
+            }
         }
     }
 
+    /**
+     * gltfio refusing a fresh asset (its meshopt data fails to decode) before it queues any
+     * texture: with nothing pending, it reports a progress of 1 (`ResourceLoader.cpp`).
+     */
+    private fun refuseBeginBeforeQueuingTextures() {
+        beginAccepted = false
+        loadProgress = 1f
+    }
+
+    /** The refused load was detached without `asyncCancelLoad` (a `flushAndWait`), its data evicted. */
+    private fun assertNoBlockingCancel() {
+        assertEquals("asyncCancelLoad flushes the engine on the main thread", 0, cancelLoadCalls.get())
+        assertTrue("The resources fed to the refused load must be evicted", evictCalls.get() > 0)
+    }
+
+    private fun warnings() = ShadowLog.getLogsForTag("ModelLoader").filter { it.type == Log.WARN }
+
     /** Some `Log.w` under the `ModelLoader` tag mentions every one of [fragments]. */
     private fun assertWarned(vararg fragments: String) {
-        val warnings = ShadowLog.getLogsForTag("ModelLoader").filter { it.type == Log.WARN }
+        val warnings = warnings()
         assertTrue(
             "Expected a ModelLoader warning naming ${fragments.toList()}, got ${warnings.map { it.msg }}",
             warnings.any { log -> fragments.all { it in log.msg } },
@@ -338,6 +455,8 @@ class ModelLoaderResourceFailureTest {
 
     private companion object {
         const val ASSET = 7L
+        const val DECODING_ASSET = 11L
+        const val REFUSED_ASSET = 12L
         const val BUFFER = "scene.bin"
         const val TEXTURE = "missing.png"
 
@@ -346,6 +465,17 @@ class ModelLoaderResourceFailureTest {
 
         @Volatile
         var beginAccepted = true
+
+        @Volatile
+        var loadProgress = 0f
+
+        @Volatile
+        var assetHandle = ASSET
+
+        val begunAssets: MutableList<Long> = Collections.synchronizedList(mutableListOf<Long>())
+
+        val cancelLoadCalls = AtomicInteger()
+        val evictCalls = AtomicInteger()
 
         val destroyedAssets: MutableList<Long> = Collections.synchronizedList(mutableListOf<Long>())
     }

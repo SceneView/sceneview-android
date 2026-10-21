@@ -12,8 +12,9 @@ import java.nio.ByteOrder
  * gltfio does not tell them apart, nor fail on a missing buffer. In Filament 1.72.1 its Android
  * `cgltf` read callback answers a buffer absent from the URI cache with *success* and no data
  * (`libs/gltfio/src/Utility.cpp`, `loadCgltfBuffers`), `asyncBeginLoad` still returns `true` (it
- * returns `false` only for an asset whose resources were already loaded), and `uploadBuffers`
- * skips every vertex and index upload from the null data: the model comes back with no geometry.
+ * returns `false` only for an asset whose resources were already loaded or whose meshopt
+ * compressed data fails to decode), and `uploadBuffers` skips every vertex and index upload from
+ * the null data: the model comes back with no geometry.
  * So a load has to know which of `FilamentAsset.resourceUris` are buffers before it begins.
  *
  * `data:` URIs are left out: cgltf decodes them itself. A payload whose JSON cannot be read falls
