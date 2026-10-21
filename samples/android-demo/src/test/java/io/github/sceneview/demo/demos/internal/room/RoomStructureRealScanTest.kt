@@ -107,6 +107,18 @@ class RoomStructureRealScanTest {
     }
 
     @Test
+    fun `two adjacent walls trace the room's own sides, not the floor's edge`() {
+        for (case in listOf(TWO_LOW, TWO, L_CORNER)) {
+            val structure = RoomStructure.read(capture(case).scan())
+            val reading = structure.reading
+            val summary = "${summary(case, structure)}, traced ${reading?.traced}, missed ${reading?.miss}"
+            assertTrue(summary, reading?.traced == true)
+            assertEquals(summary, case.room.x.size, structure.walls.size)
+            assertEquals(summary, 2, structure.walls.count { it.deduced })
+        }
+    }
+
+    @Test
     fun `two facing walls of four give the width between them and no area`() {
         val structure = RoomStructure.read(capture(FACING).scan())
         val summary = summary(FACING, structure)
@@ -370,6 +382,13 @@ class RoomStructureRealScanTest {
         )
 
         val TWO = Case("two full walls", SyntheticRoom(RECTANGLE_X, RECTANGLE_Z, hidden = setOf(2, 3)), figures = true, estimated = true)
+
+        /** The L's north and west walls never seen: the corner they make is deduced from the floor. */
+        val L_CORNER = Case(
+            "L corner unseen",
+            SyntheticRoom(floatArrayOf(0f, 6f, 6f, 3f, 3f, 0f), floatArrayOf(0f, 0f, 3f, 3f, 5f, 5f), hidden = setOf(4, 5), seenUpTo = LOW_M),
+            figures = false,
+        )
 
         /** The south and north walls alone, 4 m apart. */
         val FACING = Case("two facing walls", SyntheticRoom(RECTANGLE_X, RECTANGLE_Z, hidden = setOf(1, 3)), figures = false)
