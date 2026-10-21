@@ -52,6 +52,12 @@ class LiveWallsSurveyRulesTest {
         ),
     )
 
+    /** A horizontal plane facing up, [height] metres above the floor, over x0..x1 by z0..z1: a seat, a top. */
+    private fun upward(id: Int, x0: Float, z0: Float, x1: Float, z1: Float, height: Float): LivePlane {
+        val y = floorY + height
+        return LivePlane(id, LivePlane.Kind.Floor, floatArrayOf(x0, y, z0, x1, y, z0, x1, y, z1, x0, y, z1))
+    }
+
     // The room: a front wall 4 m long and a left wall 3.6 m long, both seen up to 2.3 m.
     private val front = plane(1, -2f, -2.6f, 2f, -2.6f, top = 2.3f)
     private val left = plane(2, -2f, -2.6f, -2f, 1f, top = 2.3f)
@@ -88,6 +94,26 @@ class LiveWallsSurveyRulesTest {
     fun `a plane that starts well above the floor is not a wall`() {
         // A cupboard's upper half, or a picture: it does not stand on the floor.
         assertWalls(listOf(front, left, plane(14, 0f, -1f, 1.5f, -1f, bottom = 0.6f, top = 2f)), before = 3, after = 2)
+    }
+
+    @Test
+    fun `a plane reaching no higher than 1,25 m is not a wall, as in the survey`() {
+        // The survey's wall rises past 1.30 m: a plane short of it is furniture there and here alike.
+        assertWalls(listOf(front, left, plane(25, 0f, -1f, 1.5f, -1f, top = 1.25f)), before = 3, after = 2)
+    }
+
+    @Test
+    fun `a wall seen only above a sofa before it is a wall, as in the survey`() {
+        // The back wall shows from 0.9 m up, over a sofa 0.9 m tall standing 0.8 m before it.
+        val back = plane(26, -2f, 1f, 1f, 1f, bottom = 0.9f, top = 2.4f)
+        val sofa = plane(27, -1.5f, 0.2f, 0.5f, 0.2f, bottom = 0.05f, top = 0.9f)
+        assertWalls(listOf(front, left, back, sofa), before = 4, after = 3)
+        // ARCore found the sofa's top rather than its front: the same.
+        val top = upward(28, -1.5f, 0.2f, 0.5f, 1f, height = 0.9f)
+        assertEquals("over the sofa's top", 3, after(listOf(front, left, back, top)))
+        // Seen only from higher than the sofa hides, it stands on nothing: a cupboard's upper half.
+        val high = plane(26, -2f, 1f, 1f, 1f, bottom = 1.4f, top = 2.4f)
+        assertEquals("over a gap above the sofa", 2, after(listOf(front, left, high, sofa)))
     }
 
     @Test
@@ -162,6 +188,14 @@ class LiveWallsSurveyRulesTest {
         val seen = PlaneWallSource().update(low + ceiling(3, 2.6f), floorY, 1f)
         assertEquals(2.6f, seen.height, 0.01f)
         assertTrue(seen.ceilingSeen)
+    }
+
+    @Test
+    fun `a ceiling lower than the survey looks for is not the room's`() {
+        // Under 2 m over the floor the survey looks for no ceiling: a shelf seen from below.
+        val shelf = PlaneWallSource().update(listOf(front, left, ceiling(3, 1.9f)), floorY, 1f)
+        assertEquals(2.5f, shelf.height, 0.01f)
+        assertTrue(!shelf.ceilingSeen)
     }
 
     @Test
