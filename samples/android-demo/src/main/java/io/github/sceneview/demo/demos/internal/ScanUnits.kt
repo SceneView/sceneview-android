@@ -16,3 +16,14 @@ fun RoomMeasure.scanLabels(locale: Locale): Pair<String, String> {
     val units = SurveyFormat.units(locale)
     return formatMeasureLength(width, units, locale) to formatMeasureLength(depth, units, locale)
 }
+
+/**
+ * The floor a scan covered, as its result names it: `6.8 m²`, rounded as the live map rounds it
+ * ([ScanAreaCopy.area]).
+ */
+@Suppress("UnusedParameter")
+fun scanFloorArea(squareMetres: Float, locale: Locale): String = ScanAreaCopy.area(squareMetres)
+
+/** How far the phone went, as the replay's settings name it: `14.2 m`, `42 cm`. */
+@Suppress("UnusedParameter")
+fun scanPathLength(metres: Float, locale: Locale): String = ArDebugFormat.distance(metres)
