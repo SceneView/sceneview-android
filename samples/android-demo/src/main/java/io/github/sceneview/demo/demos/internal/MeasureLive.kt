@@ -92,7 +92,7 @@ fun measureLabelQuaternion(label: Position, eye: Position, cameraUp: Float3): Qu
     ).toQuaternion()
 }
 
-/** Why the add button would do nothing right now — said on screen instead of a silent refusal. */
+/** Why a tap on the add button, or on Plan, would do nothing right now — said on screen instead of a silent refusal. */
 enum class MeasureRefusal {
     /** The camera lost its place: no point can be anchored. */
     NotTracking,
@@ -111,6 +111,9 @@ enum class MeasureRefusal {
 
     /** The opening's second corner is too close to its first: no door or window there. */
     OpeningTooSmall,
+
+    /** Plan, on a raised room whose corners enclose no floor: there is no plan to draw. */
+    NoPlan,
 }
 
 /** The [MeasureRefusal] for this frame, `null` when the add button would act. */

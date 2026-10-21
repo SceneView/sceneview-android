@@ -101,22 +101,48 @@ data class MeasurePlanCard(val netWallArea: String, val openings: List<MeasurePl
 
 /**
  * The card Plan shows under a traced room's plan when it has doors or windows: [netWallArea]
- * (m²) and each of [openings], written under [locale] in the plan's own units
- * ([SurveyFormat.units]), so one page never says feet on the card and metres on the plan. The
- * Measure screen's unit setting stays on the Measure screen.
+ * (m²) and each of [openings], written under [locale] in [units], the plan's own, so one page
+ * never says feet on the card and metres on the plan.
  */
-fun measurePlanCard(netWallArea: Float, openings: List<MeasurePlanOpening>, locale: Locale): MeasurePlanCard {
-    val units = SurveyFormat.units(locale)
-    return MeasurePlanCard(
-        netWallArea = formatMeasureArea(netWallArea, units, locale),
-        openings = openings.map {
-            MeasurePlanCardOpening(
-                wall = it.wall,
-                width = formatMeasureLength(it.opening.width, units, locale),
-                height = formatMeasureLength(it.opening.height, units, locale),
-            )
-        },
-    )
+fun measurePlanCard(
+    netWallArea: Float,
+    openings: List<MeasurePlanOpening>,
+    units: MeasureUnitSystem,
+    locale: Locale,
+): MeasurePlanCard = MeasurePlanCard(
+    netWallArea = formatMeasureArea(netWallArea, units, locale),
+    openings = openings.map {
+        MeasurePlanCardOpening(
+            wall = it.wall,
+            width = formatMeasureLength(it.opening.width, units, locale),
+            height = formatMeasureLength(it.opening.height, units, locale),
+        )
+    },
+)
+
+/** The last room traced and raised among [figures], the one Plan draws: its index, `-1` with none. */
+fun measurePlanRoom(figures: List<MeasureFigure<*>>): Int =
+    figures.indexOfLast { it.mode == MeasureMode.Room && it.closed && it.height != null }
+
+/** What a tap on Plan does. */
+sealed interface MeasurePlanTap {
+    /** Opens [survey], the plan of the figure at [room] on the board. */
+    data class Open(val room: Int, val survey: RoomSurvey) : MeasurePlanTap
+
+    /** Opens nothing, for [reason]: said under the reticle, as any refused tap. */
+    data class Refused(val reason: MeasureRefusal) : MeasurePlanTap
+}
+
+/**
+ * What a tap on Plan does with the board's [figures], each along its outline in [outlines]: opens
+ * the plan ([measureRoomSurvey]) of the last room traced and raised ([measurePlanRoom]). `null`
+ * with no such room: Plan is greyed out then.
+ */
+fun measurePlanTap(figures: List<MeasureFigure<*>>, outlines: List<List<Position>>): MeasurePlanTap? {
+    val room = measurePlanRoom(figures)
+    if (room < 0) return null
+    val survey = measureRoomSurvey(outlines.getOrNull(room).orEmpty(), figures[room].height) ?: return null
+    return MeasurePlanTap.Open(room, survey)
 }
 
 /**

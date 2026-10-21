@@ -139,6 +139,9 @@ import io.github.sceneview.demo.demos.internal.MeasurePlaneKind
 import io.github.sceneview.demo.demos.internal.MeasurePlanOpening
 import io.github.sceneview.demo.demos.internal.measurePlanCard
 import io.github.sceneview.demo.demos.internal.measurePlanOpenings
+import io.github.sceneview.demo.demos.internal.measurePlanRoom
+import io.github.sceneview.demo.demos.internal.MeasurePlanTap
+import io.github.sceneview.demo.demos.internal.measurePlanTap
 import io.github.sceneview.demo.demos.internal.measurePointHapticEvent
 import io.github.sceneview.demo.demos.internal.measurePointsMoved
 import io.github.sceneview.demo.demos.internal.measureRaisingHeight
@@ -146,7 +149,6 @@ import io.github.sceneview.demo.demos.internal.measureRayFloorHit
 import io.github.sceneview.demo.demos.internal.MeasureRefusal
 import io.github.sceneview.demo.demos.internal.measureRefusal
 import io.github.sceneview.demo.demos.internal.measureRoomHeightFromRay
-import io.github.sceneview.demo.demos.internal.measureRoomSurvey
 import io.github.sceneview.demo.demos.internal.measureShareText
 import io.github.sceneview.demo.demos.internal.MeasureSnap
 import io.github.sceneview.demo.demos.internal.measureSnapAim
@@ -161,6 +163,7 @@ import io.github.sceneview.demo.demos.internal.MeasureWallPoint
 import io.github.sceneview.demo.demos.internal.measureWallVertices
 import io.github.sceneview.demo.demos.internal.PlaneWallSource
 import io.github.sceneview.demo.demos.internal.RoomSurvey
+import io.github.sceneview.demo.demos.internal.SurveyFormat
 import io.github.sceneview.demo.demos.internal.WALL_MAX_HEIGHT
 import io.github.sceneview.demo.demos.internal.WALL_MIN_HEIGHT
 import io.github.sceneview.demo.DemoScaffold
@@ -447,7 +450,7 @@ fun MeasureScreen(onBack: () -> Unit) {
     }
 
     // The last room traced and raised: the one Plan draws.
-    val planRoom = board.figures.indexOfLast { it.mode == MeasureMode.Room && it.closed && it.height != null }
+    val planRoom = measurePlanRoom(board.figures)
     val planDate = remember(locale) { DateFormat.getDateInstance(DateFormat.MEDIUM, locale).format(Date()) }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -525,14 +528,14 @@ fun MeasureScreen(onBack: () -> Unit) {
                     icon = Icons.Rounded.Map,
                     label = stringResource(R.string.demo_ar_measure_action_plan),
                     onClick = {
-                        val figure = board.figures.getOrNull(planRoom)
-                        val outline = figureOutlines.getOrNull(planRoom).orEmpty()
-                        plan = figure?.let { measureRoomSurvey(outline, it.height) }?.let { survey ->
-                            MeasurePlanPage(
-                                survey = survey,
-                                openings = measurePlanOpenings(outline, figure.openings),
-                                numbers = figureNumbers[planRoom],
+                        when (val tap = measurePlanTap(board.figures, figureOutlines)) {
+                            is MeasurePlanTap.Open -> plan = MeasurePlanPage(
+                                survey = tap.survey,
+                                openings = measurePlanOpenings(figureOutlines[tap.room], board.figures[tap.room].openings),
+                                numbers = figureNumbers[tap.room],
                             )
+                            is MeasurePlanTap.Refused -> refuse(tap.reason)
+                            null -> Unit
                         }
                     },
                     enabled = planRoom >= 0,
@@ -763,6 +766,7 @@ fun MeasureScreen(onBack: () -> Unit) {
                 title = stringResource(R.string.demo_ar_measure_plan_room),
                 date = planDate,
                 locale = locale,
+                units = units,
                 onClose = { plan = null },
             )
         }
@@ -770,7 +774,7 @@ fun MeasureScreen(onBack: () -> Unit) {
 }
 
 /** A traced room's plan, frozen when Plan opens it: the plan, its doors and windows, its numbers. */
-private class MeasurePlanPage(
+internal class MeasurePlanPage(
     val survey: RoomSurvey,
     val openings: List<MeasurePlanOpening>,
     val numbers: MeasureFigureNumbers,
@@ -784,12 +788,14 @@ private class MeasurePlanPage(
  * With doors or windows marked, a card under the plan names each one by the wall the plan
  * letters it on, and reads the walls' net area, in the plan's units ([measurePlanCard]).
  */
+@Suppress("UnusedParameter")
 @Composable
-private fun MeasurePlanOverlay(
+internal fun MeasurePlanOverlay(
     page: MeasurePlanPage,
     title: String,
     date: String,
     locale: Locale,
+    units: MeasureUnitSystem,
     onClose: () -> Unit,
 ) {
     BackHandler(onBack = onClose)
@@ -805,7 +811,7 @@ private fun MeasurePlanOverlay(
             modeSwitch = null,
             bottomOverlay = if (net != null) {
                 {
-                    val card = measurePlanCard(net, page.openings, locale)
+                    val card = measurePlanCard(net, page.openings, SurveyFormat.units(locale), locale)
                     val openings = card.openings.map {
                         stringResource(R.string.demo_ar_measure_plan_opening, it.wall, it.width, it.height)
                     }
