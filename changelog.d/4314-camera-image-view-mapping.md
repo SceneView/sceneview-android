@@ -1,0 +1,5 @@
+<!-- category: Fixed -->
+- **Demo app: ML Object Label boxes and labels stay aligned with the camera image in portrait and landscape.** The demo maps detector boxes with ARCore's exact image-to-view transform, real sensor orientation and center crop included, and tracks objects by ML Kit `trackingId`. A label is now placed by casting a world ray from the camera pose and intrinsics captured with the analysed image, onto the depth map when the device has one, so it lands on the object instead of the surface behind it and no longer depends on how far the phone moved during detection.
+
+<!-- category: Added -->
+- **Android AR camera-image coordinate mapping.** `Frame.cameraImageToViewMapping(imageSize, inputRotationDegrees)` snapshots ARCore display geometry into a `CameraImageToViewMapping` that maps rotated detector pixels (`mapPixel`, `mapNormalized`) or points of the unrotated image (`mapImagePixel`, `mapImageNormalized`) into view pixels with the correct center crop; `detectorPixelToImagePixel` returns the pixel the camera intrinsics describe.
