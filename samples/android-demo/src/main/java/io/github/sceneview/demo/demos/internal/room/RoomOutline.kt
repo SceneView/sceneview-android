@@ -186,7 +186,17 @@ internal object RoomOutline {
                 return Outline(cu, cv, sides, raster, region, traced = true)
             }
         }
-        // The sides did not close into a polygon that holds the room: its own edge, simplified, deduced.
+        // The sides did not close into a polygon that holds the room: its own edge.
+        val (su, sv, sides) = alongRegion(loop, lines) ?: return null
+        return Outline(su, sv, sides, raster, region, traced = false)
+    }
+
+    /**
+     * The outline along the region's edge [loop] (`u, v` pairs, closed, counter-clockwise),
+     * simplified, each side deduced but one that runs along one of [lines]: that wall's, even
+     * where the walls did not close. `null` under three corners.
+     */
+    fun alongRegion(loop: FloatArray, lines: List<WallLine>): Triple<FloatArray, FloatArray, List<Side>>? {
         val simplified = simplify(loop, SIMPLIFY_M)
         val m = simplified.size / 2
         if (m < 3) return null
@@ -195,13 +205,12 @@ internal object RoomOutline {
         val sides = (0 until m).map { i ->
             val next = (i + 1) % m
             val side = sideThrough(su[i], sv[i], su[next], sv[next])
-            // A side that runs along a wall is that wall's, even where the walls did not close.
             val line = lines.firstOrNull {
                 it.nu * side.nu + it.nv * side.nv >= SAME_FACING && abs(it.offset - side.offset) <= SAME_SIDE_M
             }
             if (line == null) side else Side(line, side.nu, side.nv, side.offset)
         }
-        return Outline(su, sv, sides, raster, region, traced = false)
+        return Triple(su, sv, sides)
     }
 
     @Suppress("LongParameterList", "ReturnCount")
