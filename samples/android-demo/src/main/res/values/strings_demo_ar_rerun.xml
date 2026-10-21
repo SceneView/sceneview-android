@@ -54,6 +54,7 @@
     <string name="demo_ar_rerun_plan_made_with">Made with SceneView.</string>
     <!-- %1$s the scale bar's length in metres. -->
     <string name="demo_ar_rerun_plan_scale_bar">%1$s m</string>
+    <string name="demo_ar_rerun_plan_scale_bar_feet">%1$s ft</string>
     <string name="demo_ar_rerun_plan_empty_title">No plan for this scan yet</string>
     <string name="demo_ar_rerun_plan_gap_no_depth">This scan has no depth: scan the room again on a phone with a depth sensor.</string>
     <string name="demo_ar_rerun_plan_gap_no_walls">Scan the walls from the floor up to above your head.</string>

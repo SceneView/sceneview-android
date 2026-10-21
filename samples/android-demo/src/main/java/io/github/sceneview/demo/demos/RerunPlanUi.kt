@@ -170,7 +170,12 @@ private fun planWords(units: MeasureUnitSystem): PlanWords = PlanWords(
         spreadNote = stringResource(R.string.demo_ar_rerun_plan_spread_note),
         notice = stringResource(R.string.demo_ar_rerun_plan_notice),
         madeWith = stringResource(R.string.demo_ar_rerun_plan_made_with),
-        scaleBar = stringResource(R.string.demo_ar_rerun_plan_scale_bar),
+        scaleBar = stringResource(
+            when (units) {
+                MeasureUnitSystem.Metric -> R.string.demo_ar_rerun_plan_scale_bar
+                MeasureUnitSystem.Imperial -> R.string.demo_ar_rerun_plan_scale_bar_feet
+            },
+        ),
         gaps = mapOf(
             SurveyGap.NoDepth to stringResource(R.string.demo_ar_rerun_plan_gap_no_depth),
             SurveyGap.NoWalls to stringResource(R.string.demo_ar_rerun_plan_gap_no_walls),
@@ -638,7 +643,7 @@ internal object RoomPlanPdf {
     private const val ROW = 16f
     private const val VALUE_X = 150f
     private const val ROOM_VALUE_X = 60f
-    private const val WALLS_X = 320f
+    private const val WALLS_X = 350f
     private const val WALL_VALUE_X = 60f
     private const val FOLLOWING_COLUMNS = 3
     private const val FOOT_Y = 806f

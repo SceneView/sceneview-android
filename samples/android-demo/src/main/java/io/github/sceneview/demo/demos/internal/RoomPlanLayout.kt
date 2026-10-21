@@ -15,8 +15,8 @@ import kotlin.math.roundToInt
  */
 
 /**
- * How a survey's figures are written: in metres, or in feet and inches, rounded to what a phone's
- * scan can stand behind.
+ * How a survey's figures are written: in metres to the 5 cm, or in feet and inches to the inch,
+ * as a tape reads them. How far a figure can be trusted is what its "±" says, in either.
  */
 object SurveyFormat {
     /**

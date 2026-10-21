@@ -69,7 +69,7 @@ class SurveyWording(
     val spreadNote: String,
     val notice: String,
     val madeWith: String,
-    /** `%1$s` the bar's length in metres. */
+    /** `%1$s` the bar's length, a round number of [units]: metres, or feet. */
     val scaleBar: String,
     /** What to scan for each thing a survey can lack. */
     val gaps: Map<SurveyGap, String>,
@@ -87,7 +87,6 @@ object SurveyReport {
     private const val CUBIC_METRES = " m³"
     private const val INCHES = " in"
     private const val SQUARE_FEET = " ft²"
-    private const val FEET = " ft"
     private const val ROOM_SEPARATOR = "; "
     private const val PLUS_MINUS = " ± "
 
@@ -293,11 +292,12 @@ object SurveyReport {
                 }
             },
             scale = { metres ->
-                when (units) {
-                    MeasureUnitSystem.Metric ->
-                        wording.scaleBar.format(if (metres < 1f) "0.5" else metres.toInt().toString())
-                    MeasureUnitSystem.Imperial -> SurveyFormat.feet(metres).toString() + FEET
-                }
+                wording.scaleBar.format(
+                    when (units) {
+                        MeasureUnitSystem.Metric -> if (metres < 1f) "0.5" else metres.toInt().toString()
+                        MeasureUnitSystem.Imperial -> SurveyFormat.feet(metres).toString()
+                    },
+                )
             },
             scaleBars = SurveyFormat.scaleBars(units),
         )
