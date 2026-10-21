@@ -329,6 +329,34 @@ class RoomSurveyTest {
     }
 
     @Test
+    fun `two adjacent walls, in feet and inches, give an area and wall lengths marked as estimates`() {
+        // The west and south walls of a 5 × 4 m room, seen up to the corner they make; the floor seen to its far corner.
+        val survey = Room()
+            .slab(0f, 5f, 0f, 4f, 0f)
+            .slab(0f, 5f, 0f, 4f, HEIGHT, up = false)
+            .wallAcross(0f, 0f, 4f, 1f)
+            .wallAlong(0f, 0f, 5f, 1f)
+            .camera(2.5f, 2f)
+            .survey()
+        val wording = imperialWording()
+        val rows = SurveyReport.rows(survey, wording).map { it.value }
+        val walls = SurveyReport.wallRows(survey, wording).map { it.value }
+        val plan = SurveyReport.planTexts(survey, wording)
+        val metric = Regex("""\d m\b|m²|m³""")
+
+        assertTrue(survey.area!!.estimate)
+        assertNear(20f, survey.area?.value, 20f * 0.03f)
+        assertTrue(rows[0], rows[0].startsWith(SurveyFormat.ESTIMATE) && rows[0].endsWith("ft²"))
+        assertTrue(plan.area.toString(), plan.area!!.startsWith(SurveyFormat.ESTIMATE) && plan.area!!.endsWith("ft²"))
+        assertEquals(survey.walls.size, walls.size)
+        // The walls bound an estimated area, so each length is given, as an estimate, in feet and inches.
+        assertTrue(survey.walls.toString(), survey.walls.all { it.sized && it.length.estimate })
+        assertTrue(walls.toString(), walls.all { it.startsWith(SurveyFormat.ESTIMATE) && " ft " in it })
+        assertTrue(plan.walls.toString(), plan.walls.all { it.startsWith(SurveyFormat.ESTIMATE) && " ft " in it })
+        assertTrue((rows + walls + plan.walls).toString(), (rows + walls + plan.walls).none { metric.containsMatchIn(it) })
+    }
+
+    @Test
     fun `a plan its walls do not close gives no wall a guessed length`() {
         val survey = Room().box(east = false, west = false).survey()
         val labels = SurveyReport.planTexts(survey, RoomPlanLayoutTest.WORDING).walls
