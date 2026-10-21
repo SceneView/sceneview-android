@@ -14,12 +14,14 @@ import kotlin.math.roundToInt
  * screen and the PDF page paint the same marks, each with its own ink.
  */
 
-/** How a survey's figures are written: metric, rounded to what a phone's scan can stand behind. */
+/**
+ * How a survey's figures are written: in metres to the 5 cm, or in feet and inches to the inch,
+ * as a tape reads them. How far a figure can be trusted is what its "±" says, in either.
+ */
 object SurveyFormat {
     /**
-     * The plan's one unit system: a floor plan is drawn to scale in metres, whatever the locale.
-     * Every 3D Scan dimension reads it, so the replay's figures and the plan's never mix feet
-     * with metres.
+     * The metric system the replay's floor labels and its room line are written in. The plan, its
+     * PDF and its shared text follow the phone's language instead: see [units].
      */
     val UNITS = MeasureUnitSystem.Metric
 
@@ -35,6 +37,67 @@ object SurveyFormat {
 
     /** The mark in front of a figure that was not measured end to end. */
     const val ESTIMATE = "≈ "
+
+    /**
+     * The plan's units under [locale]: feet and inches in US English, metres in every other
+     * language. The screen, the PDF and the shared text all read it.
+     */
+    fun units(locale: Locale): MeasureUnitSystem =
+        if (locale.language == "en" && locale.country == "US") MeasureUnitSystem.Imperial else MeasureUnitSystem.Metric
+
+    /** A length in feet and inches to the inch, as a tape reads it: `13 ft 1 in`, `11 in`, `44 ft`. */
+    fun feetAndInches(metres: Float): String = formatMeasureLength(metres, MeasureUnitSystem.Imperial, Locale.US)
+
+    /** A length as a dimension line writes it in feet and inches: `13' 1"`, `6' 0"`. */
+    fun feetAndInchesMark(metres: Float): String {
+        val inches = (metres.coerceAtLeast(0f) / METRES_PER_INCH).roundToInt()
+        return "${inches / INCHES_PER_FOOT}' ${inches % INCHES_PER_FOOT}\""
+    }
+
+    /** An area in square feet: whole ones from 10 up, `124 ft²`, tenths below. */
+    fun squareFeet(squareMetres: Float): String = formatMeasureArea(squareMetres, MeasureUnitSystem.Imperial, Locale.US)
+
+    /** A volume in whole cubic feet, `1015 ft³`: the square feet it stands on are whole too. */
+    fun cubicFeet(cubicMetres: Float): String =
+        "${(cubicMetres.coerceAtLeast(0f) * CUBIC_FEET_PER_M3).roundToInt()} ft³"
+
+    /** A length's spread in inches, rounded up: never tighter than the inch its figure is given to. */
+    fun inchSpread(metres: Float): String = max(1, ceil(metres / METRES_PER_INCH - EPSILON).toInt()).toString()
+
+    /** An area's spread in square feet, rounded up: never tighter than a square foot. */
+    fun squareFeetSpread(squareMetres: Float): String =
+        max(1, ceil(squareMetres * SQUARE_FEET_PER_M2 - EPSILON).toInt()).toString()
+
+    /** A volume's spread in cubic feet, rounded up: never tighter than a cubic foot. */
+    fun cubicFeetSpread(cubicMetres: Float): String =
+        max(1, ceil(cubicMetres * CUBIC_FEET_PER_M3 - EPSILON).toInt()).toString()
+
+    /**
+     * The round lengths, in metres, a scale bar in [units] may be drawn at: whole feet in feet,
+     * `null` for the plan's own round metres.
+     */
+    fun scaleBars(units: MeasureUnitSystem): FloatArray? =
+        if (units == MeasureUnitSystem.Imperial) FOOT_BARS.map { it * METRES_PER_FOOT }.toFloatArray() else null
+
+    /** A feet scale bar's [metres] in feet: a whole number of them. */
+    fun feet(metres: Float): Int = (metres / METRES_PER_FOOT).roundToInt()
+
+    /**
+     * A wall's length as the plan labels it in [units]: [wall] in metres, `≈ 13' 1"` in feet and
+     * inches. A wall the plan leaves unlabelled in metres stays unlabelled in feet.
+     */
+    fun wall(wall: SurveyWall, units: MeasureUnitSystem): String {
+        val metric = wall(wall)
+        if (units == MeasureUnitSystem.Metric || metric.isEmpty()) return metric
+        return (if (wall.length.estimate) ESTIMATE else "") + feetAndInchesMark(wall.length.value)
+    }
+
+    private const val METRES_PER_INCH = 0.0254f
+    private const val METRES_PER_FOOT = 0.3048f
+    private const val INCHES_PER_FOOT = 12
+    private const val SQUARE_FEET_PER_M2 = 10.76391f
+    private const val CUBIC_FEET_PER_M3 = 35.314667f
+    private val FOOT_BARS = floatArrayOf(1f, 2f, 5f, 10f, 20f, 50f)
 
     fun length(metres: Float): String = "%.2f".format(Locale.US, (metres / LENGTH_STEP_M).roundToInt() * LENGTH_STEP_M)
 
@@ -96,6 +159,8 @@ class PlanTexts(
     val area: String?,
     val areaNote: String?,
     val scale: (metres: Float) -> String,
+    /** The round lengths, in metres, its scale bar may be drawn at; `null` for round metres. */
+    val scaleBars: FloatArray? = null,
 )
 
 /** A plan laid out in a [width] × [height] box, at [pxPerMetre]. [floor] is the outline, x then y. */
@@ -230,6 +295,8 @@ object RoomPlanLayout {
                         rowHeight * (1 + rows[side])
                 }
             }
+            val aside = obliqueMargins(rowHeight)
+            for (side in 0 until SIDES) margins[side] = max(margins[side], aside[side])
             margins[BOTTOM] += SCALE_BAND * u
             val roomW = width - margins[LEFT] - margins[RIGHT]
             val roomH = height - margins[TOP] - margins[BOTTOM]
@@ -475,7 +542,8 @@ object RoomPlanLayout {
 
         /** A bar of a round length under the plan's left corner, its length written at its end. */
         private fun scaleBar(height: Float) {
-            val metres = SCALE_BARS.firstOrNull { it * scale >= SCALE_MIN * u } ?: SCALE_BARS.last()
+            val bars = texts.scaleBars ?: SCALE_BARS
+            val metres = bars.firstOrNull { it * scale >= SCALE_MIN * u } ?: bars.last()
             val from = min(x(0f), drawingLeft())
             val to = from + metres * scale
             val at = height - PADDING * u - TICK * u
@@ -487,6 +555,32 @@ object RoomPlanLayout {
             val length = metrics.measure(text, DIMENSION_TEXT * u)
             val labelX = to + LABEL_GAP * 2 * u + length / 2
             placed += PlanText(text, labelX, at - TICK * u / 2, DIMENSION_TEXT * u, length, PlanTextRole.Scale)
+        }
+
+        /**
+         * What the oblique walls' dimensions need around the room, side by side. A side whose only
+         * wall leans has no chain of its own and would keep [BARE_SIDE], too narrow for a dimension
+         * set [CHAIN_OFFSET] off the wall: each one is taken as starting on the room's outer edge,
+         * and the margins its line, its ticks and its label then reach are kept.
+         */
+        private fun obliqueMargins(rowHeight: Float): FloatArray {
+            val margins = FloatArray(SIDES)
+            survey.walls.forEachIndexed { i, wall ->
+                if (!oblique(wall)) return@forEachIndexed
+                val (ox, oy) = outward(wall)
+                val length = metrics.measure(texts.walls.getOrElse(i) { "" }, DIMENSION_TEXT * u)
+                val tick = (abs(ox) + abs(oy)) * TICK * u
+                val line = (CHAIN_OFFSET + EXTENSION_OVER) * u
+                val half = abs(ox) * length / 2 + abs(oy) * rowHeight / 2
+                val reach = (CHAIN_OFFSET + LABEL_GAP) * u + half + rows[sideOf(wall)] * rowHeight
+                val across = max(abs(ox) * line + tick, abs(ox) * reach + length / 2) + PADDING * u
+                val along = max(abs(oy) * line + tick, abs(oy) * reach + rowHeight / 2) + PADDING * u
+                val h = if (ox > 0f) RIGHT else LEFT
+                val v = if (oy > 0f) BOTTOM else TOP
+                margins[h] = max(margins[h], across)
+                margins[v] = max(margins[v], along)
+            }
+            return margins
         }
 
         private fun drawingLeft() = x(0f)
