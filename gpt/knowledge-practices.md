@@ -1,6 +1,6 @@
 <!--
   GENERATED FILE — DO NOT EDIT.
-  Source of truth: /llms.txt  (SceneView 4.56.0)
+  Source of truth: /llms.txt  (SceneView 4.60.0)
   Regenerate:      node tools/generate-gpt-knowledge.js
   Drift is caught in CI (ci.yml -> repo-hygiene). Edit llms.txt instead.
   See issue #2724.
@@ -9,7 +9,7 @@
 # SceneView — Best Practices & Troubleshooting
 
 > Threading, performance, error handling, debugging, recording, and media.
-> Auto-generated from `llms.txt` (SceneView 4.56.0). This is a slice of the machine-readable API reference — the same content an AI reads to generate SceneView code.
+> Auto-generated from `llms.txt` (SceneView 4.60.0). This is a slice of the machine-readable API reference — the same content an AI reads to generate SceneView code.
 
 ## Render Quality
 
@@ -262,7 +262,7 @@ Stream an ARCore or ARKit session to the [Rerun](https://rerun.io) viewer for sc
 - **Live (default)** — sidecar spawns the Rerun viewer, you debug interactively.
 - **Save & share** — sidecar writes a `.rrd` file. Drop it onto https://sceneview.github.io/rerun/ to view in-place, or host it at an https address that allows cross-origin requests (CORS) and open `https://sceneview.github.io/rerun/?url=<encoded>` to share with remote teammates — step 4 of *Save & share flow* below says which hosts do. Lets you attach a fully-replayable session to a bug report.
 
-The Android demo's Rerun Debug screen also draws the session **on the phone, with no computer**: a second `SceneView` on the same `Engine` (`SurfaceType.TextureSurface`, `isOpaque = true`, a custom `CameraGestureDetector.CameraManipulator`) shows the camera trail, the live frustum, the feature-point map, the planes and the anchors from a free orbit camera, with a timeline to scrub the session. It is demo code, not SDK API — `samples/android-demo/.../demos/ArDebugView.kt` is the pattern to copy for a second 3D view over an `ARSceneView`.
+The Android demo's 3D Scan screen (`ar-rerun`) also draws the session **on the phone, with no computer**: a second `SceneView` on the same `Engine` (`SurfaceType.TextureSurface`, `isOpaque = true`, a custom `CameraGestureDetector.CameraManipulator`) shows the camera trail, the live frustum, the feature-point map, the planes and the anchors from a free orbit camera, with a timeline to scrub the session. It is demo code, not SDK API — `samples/android-demo/.../demos/ArDebugView.kt` is the pattern to copy for a second 3D view over an `ARSceneView`.
 
 Its export sheet also writes a recorded session to a `.rrd` with no sidecar and no Rerun SDK (`RerunRrdWriter`, pure Kotlin, Rerun 0.38.1 format). On Android the file opens on a default layout, written as a Rerun blueprint next to the recording: the room in 3D beside the camera's photos (2 : 1), the side panels collapsed, the time panel open. It is a *default* blueprint, so a layout the viewer's user saved for the app still wins, and "Reset to default blueprint" brings this one back. The iOS demo's writer does not write the layout yet.
 
@@ -285,7 +285,7 @@ Same wire format on Android and iOS. A single sidecar handles both platforms.
 
 1. Run sidecar in save mode: `python rerun-bridge.py --save`
 2. In the app, tap **Save & Share** while streaming. The bridge sends a `{"type":"control","cmd":"save_now"}` line; the sidecar flushes a `.rrd` and replies with `{"type":"control","ack":"saved","path":"…","viewerUrl":"…","events":N}`.
-3. Open https://sceneview.github.io/rerun/ — when no session is loaded the page shows a drop-zone (drag the `.rrd` onto it to render in-place) and a QR code that opens the AR Rerun demo on a phone for users who don't have one to start from.
+3. Open https://sceneview.github.io/rerun/ — when no session is loaded the page shows a drop-zone (drag the `.rrd` onto it to render in-place) and a QR code that opens the 3D Scan demo (`ar-rerun`) on a phone for users who don't have one to start from.
 4. To share with a remote teammate, host the `.rrd` at a public https address and send them `https://sceneview.github.io/rerun/?url=<encoded-public-url>`. The page downloads the file from the visitor's browser, so the link has to end in `.rrd` and its host has to allow cross-origin requests (CORS). A file in a public GitHub repository does, through its `raw.githubusercontent.com` link, and so does GitHub Pages; a GitHub release asset does not: GitHub sends no CORS header for it (checked 2026-10-13). A Cloudflare R2 or S3 bucket does once it has a CORS rule that allows `https://sceneview.github.io`. When the page cannot read the file, it says so on screen, with the likely causes.
 
 The Kotlin API surface for step 2:
@@ -492,7 +492,7 @@ Sample: `SceneRecorderState` (`samples/android-demo/.../recording/SceneRecorderS
 
 ## AR Recording & Playback — debug without a phone
 
-ARCore captures the **entire** AR session (camera frames, IMU, planes, depth, anchors, light estimation) into an MP4. SceneView wraps this with [`ARRecorder`](arsceneview/src/main/java/io/github/sceneview/ar/recording/ARRecorder.kt) for recording and a `playbackDataset` parameter on `ARSceneView` for replay. The replayed session re-runs as if you were there: hit-tests return the same results, planes appear at the same moment, anchors track at the same poses.
+ARCore captures the **entire** AR session (camera frames, IMU, planes, depth, anchors, light estimation) into an MP4. SceneView wraps this with [`ARRecorder`](https://github.com/sceneview/sceneview/blob/main/arsceneview/src/main/java/io/github/sceneview/ar/recording/ARRecorder.kt) for recording and a `playbackDataset` parameter on `ARSceneView` for replay. The replayed session re-runs as if you were there: hit-tests return the same results, planes appear at the same moment, anchors track at the same poses.
 
 ### Why this matters
 
@@ -645,7 +645,7 @@ ARSceneView(playbackDatasetUri = pickedUri) { /* … */ }
 //    IllegalArgumentException at session creation.
 ```
 
-See [`ARRecorder.kt`](arsceneview/src/main/java/io/github/sceneview/ar/recording/ARRecorder.kt).
+See [`ARRecorder.kt`](https://github.com/sceneview/sceneview/blob/main/arsceneview/src/main/java/io/github/sceneview/ar/recording/ARRecorder.kt).
 
 ### AR Record interpretation — quantify a replayed session (#1441)
 
@@ -684,7 +684,7 @@ val report = interpreter.interpretation
 - Call `interpreter.reset()` to interpret another dataset with the same instance.
 - The pure folding core (`ARRecordInterpreterCore`, ARCore-free) is JVM-unit-tested directly.
 
-See [`ARRecordInterpreter.kt`](arsceneview/src/main/java/io/github/sceneview/ar/recording/ARRecordInterpreter.kt).
+See [`ARRecordInterpreter.kt`](https://github.com/sceneview/sceneview/blob/main/arsceneview/src/main/java/io/github/sceneview/ar/recording/ARRecordInterpreter.kt).
 
 ### iOS — `ARRecorder` (record-only via ReplayKit, v4.3.0+)
 
@@ -753,7 +753,7 @@ ARSceneView(
 - **Not all devices support EIS.** Always gate with `session.isImageStabilizationModeSupported(Config.ImageStabilizationMode.EIS)` — calling `setImageStabilizationMode(EIS)` on an unsupported device throws.
 - **Back-camera only.** EIS is not supported with `Session.Feature.FRONT_CAMERA`. The `isImageStabilizationModeSupported` check returns `false` for front-camera sessions, so the gate above already covers selfie configurations — but be aware that toggling EIS in a front-camera demo will be a no-op.
 - **Toggling at runtime works** via `session.configure {}`, but the camera background can briefly stutter while the stabilization buffers re-prime. If you expose an in-app toggle, prefer remounting via `key(eisEnabled) { ARSceneView(...) }` for a clean swap.
-- **Interactive demo** at [`samples/android-demo/src/main/java/io/github/sceneview/demo/demos/ARImageStabilizationDemo.kt`](samples/android-demo/src/main/java/io/github/sceneview/demo/demos/ARImageStabilizationDemo.kt).
+- **Interactive demo** at [`samples/android-demo/src/main/java/io/github/sceneview/demo/demos/ARImageStabilizationDemo.kt`](https://github.com/sceneview/sceneview/blob/main/samples/android-demo/src/main/java/io/github/sceneview/demo/demos/ARImageStabilizationDemo.kt).
 
 ---
 
@@ -1016,6 +1016,6 @@ setSpatialAudioListenerPose(cameraPos, cameraForward, cameraUp)  // call as the 
 
 **Phases.** Phase 1 (this release) ships positional playback with inverse / linear falloff. The listener is **caller-driven** in phase 1 — call `setSpatialAudioListenerPose` from your render loop. Automatic camera-tracked listening and anchor-attached listeners are phase 2. Occlusion and reverb zones are phase 3. See [#1900](https://github.com/sceneview/sceneview/issues/1900).
 
-**Interactive demos** — Android [`SpatialAudioDemo.kt`](samples/android-demo/src/main/java/io/github/sceneview/demo/demos/SpatialAudioDemo.kt), iOS [`SpatialAudioDemo.swift`](samples/ios-demo/SceneViewDemo/Views/Demos/SpatialAudioDemo.swift), and the **Spatial Audio** tab of the Web demo.
+**Interactive demos** — Android [`SpatialAudioDemo.kt`](https://github.com/sceneview/sceneview/blob/main/samples/android-demo/src/main/java/io/github/sceneview/demo/demos/SpatialAudioDemo.kt), iOS [`SpatialAudioDemo.swift`](https://github.com/sceneview/sceneview/blob/main/samples/ios-demo/SceneViewDemo/Views/Demos/SpatialAudioDemo.swift), and the **Spatial Audio** tab of the Web demo.
 
 ---

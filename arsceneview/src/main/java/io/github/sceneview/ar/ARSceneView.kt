@@ -92,7 +92,6 @@ import io.github.sceneview.ar.node.PoseNode
 import io.github.sceneview.ar.node.TrackableNode
 import io.github.sceneview.ar.scene.PlaneRenderer
 import io.github.sceneview.ar.scene.PlaneRendererBase
-import io.github.sceneview.ar.scene.PlaneRendererV2
 import io.github.sceneview.ar.scene.SceneUnderstanding
 import io.github.sceneview.collision.CollisionSystem
 import io.github.sceneview.collision.HitResult
@@ -222,15 +221,15 @@ import java.util.concurrent.atomic.AtomicReference
  *                                 is replaced by ARCore's real-environment estimate once stable.
  *                                 Front-camera sessions still force `DISABLED` regardless. Override
  *                                 inside this callback to choose a different mode if needed (#1063).
- * @param planeRenderer            Whether to render the AR plane grid overlay.
- * @param planeRendererVersion     Selects which plane-renderer implementation backs the AR
- *                                 session — see [PlaneRendererBase.Version]. **Default is
- *                                 [PlaneRendererBase.Version.V1]** as of v4.16.1. V2 ships
- *                                 in this release as an experimental opt-in: on-device QA
- *                                 in v4.16.0 showed its output not matching the design
- *                                 intent, so the default was reverted while V2 is polished.
- *                                 Opt in via `Version.V2`. See
- *                                 [#2203](https://github.com/sceneview/sceneview/issues/2203).
+ * @param planeRenderer            Whether to draw the surfaces ARCore detects, with
+ *                                 [PlaneRenderer]: round dots on floors, upright dashes on
+ *                                 walls, hollow rings on ceilings. Turning it off fades the
+ *                                 surfaces out; plane detection, hit tests and gestures on
+ *                                 placed nodes keep working.
+ * @param planeRendererVersion     **Deprecated, ignored since 4.57.0.** There is one plane
+ *                                 renderer, [PlaneRenderer]; `V1` and `V2` both draw with it.
+ *                                 Kept so that existing calls compile and existing binaries
+ *                                 link. Delete the argument.
  * @param cameraStream             [ARCameraStream] for camera texture rendering and occlusion.
  * @param view                     Filament [View] for this scene. Use [rememberARView] (default),
  *                                 which is tuned so the live camera background round-trips back to
@@ -286,6 +285,10 @@ import java.util.concurrent.atomic.AtomicReference
  *                                 and released when this view leaves composition (#4467).
  *                                 Pass `null` to skip permission checks.
  * @param lifecycle                Lifecycle that binds the AR session resume/pause cycle.
+ *                                 Defaults to `LocalLifecycleOwner`. For an AR screen inside a
+ *                                 `NavHost` with transitions, pass [rememberHostLifecycle] so the
+ *                                 camera stays live while the screen animates out instead of
+ *                                 freezing on its last image.
  * @param content                  Declare AR scene content using the [ARSceneScope] composable DSL.
  */
 /**
@@ -341,6 +344,8 @@ internal class ChangeGate<T>(initial: T) {
     }
 }
 
+// `planeRendererVersion` is deprecated and ignored; it only keeps old calls compiling.
+@Suppress("DEPRECATION", "UNUSED_PARAMETER", "UnusedParameter")
 @Composable
 fun ARSceneView(
     modifier: Modifier = Modifier,
@@ -564,28 +569,16 @@ fun ARSceneView(
      */
     sessionConfiguration: ((session: Session, Config) -> Unit)? = null,
     /**
-     * Enable the plane renderer.
+     * Draw the surfaces ARCore detects, with [PlaneRenderer]. Turning it off fades them out;
+     * plane detection, hit tests and gestures on placed nodes keep working.
      */
     planeRenderer: Boolean = true,
     /**
-     * Selects which plane-renderer implementation backs the AR session — see
-     * [PlaneRendererBase.Version].
-     *
-     * **Default is [PlaneRendererBase.Version.V1]** as of v4.16.1. V2 (depth-driven PBR mesh
-     * lit by ARCore's HDR estimate, type-aware shading, 800 ms scan-in ring) ships in this
-     * release as an **opt-in experimental** renderer — on-device QA on a Pixel 9 in v4.16.0
-     * showed the V2 visual output not matching the design intent, so the default was reverted
-     * to V1 in v4.16.1 while V2 is polished. See
-     * [#2203](https://github.com/sceneview/sceneview/issues/2203) for the umbrella.
-     *
-     * To opt in to V2 (and feed back on the polish work):
-     * `ARScene(planeRendererVersion = PlaneRendererBase.Version.V2)`.
-     *
-     * Changing this value triggers a renderer rebuild (it is wired into the surrounding
-     * `remember(...)` keys), so toggling is safe but **not free** — pick once at the
-     * composition root.
+     * **Deprecated, ignored since 4.57.0** (#4307): there is one plane renderer,
+     * [PlaneRenderer], and both values draw with it. The parameter stays so that existing
+     * calls compile and binaries built against an earlier 4.x link. Delete the argument.
      */
-    planeRendererVersion: PlaneRendererBase.Version = PlaneRendererBase.Version.V1,
+    planeRendererVersion: PlaneRendererBase.Version = PlaneRendererBase.Version.V2,
     /**
      * Grouped scene-understanding flags (#1767) — mirrors RealityKit's
      * `ARView.environment.sceneUnderstanding.options`. When non-null, the four
@@ -857,13 +850,8 @@ fun ARSceneView(
 
     // ── AR subsystems ─────────────────────────────────────────────────────────────────────────────
 
-    // V1 is the default plane renderer again as of v4.16.1 (#2203). V2 stays as an
-    // opt-in experimental renderer pending visual polish.
-    val arPlaneRenderer: PlaneRendererBase = remember(engine, materialLoader, scene, planeRendererVersion) {
-        when (planeRendererVersion) {
-            PlaneRendererBase.Version.V1 -> PlaneRenderer(engine, materialLoader, scene)
-            PlaneRendererBase.Version.V2 -> PlaneRendererV2(engine, materialLoader, scene)
-        }
+    val arPlaneRenderer = remember(engine, materialLoader, scene) {
+        PlaneRenderer(engine, materialLoader, scene)
     }
     val lightEstimator = remember(engine, environmentLoader) {
         LightEstimator(engine, environmentLoader.iblPrefilter)
@@ -1366,12 +1354,23 @@ fun ARSceneView(
     // frame in demos that surface `latestFrame` / `isTracking` to UI state) and
     // collapse the scene back to the neutral baseline — which on KTX1-loaded IBLs
     // is reflections-mostly with limited diffuse SH, producing visible-but-dim
-    // metals at best and flat-black models at worst. `LaunchedEffect(environment)`
+    // metals at best and flat-black models at worst. Keying the effect on `environment`
     // restores the baseline only when the env instance actually changes (initial
     // composition, environment swap by the caller).
-    LaunchedEffect(environment, scene) {
+    //
+    // A `DisposableEffect`, not a `LaunchedEffect` (#4330): the scene lets go of an
+    // environment before its owner destroys it. `rememberEnvironment(key = …)` destroys the
+    // previous environment in the same pass that hands over the next one, and Filament's
+    // `Scene.setSkybox` reads the skybox it replaces. This effect is remembered after the
+    // caller's, so its `onDispose` runs first. A light-estimation IBL built since is not this
+    // effect's to clear — `builtIndirectLightRef` owns that one.
+    DisposableEffect(environment, scene) {
         scene.indirectLight = environment.indirectLight
         scene.skybox = environment.skybox
+        onDispose {
+            if (scene.skybox === environment.skybox) scene.skybox = null
+            if (scene.indirectLight === environment.indirectLight) scene.indirectLight = null
+        }
     }
 
     SideEffect {
@@ -1619,6 +1618,7 @@ fun ARSceneView(
         sceneRenderer.onSurfaceResized = { width, height ->
             cameraNode.updateProjection()
             arCore.session?.setDisplayGeometry(display.rotation, width, height)
+            @Suppress("DEPRECATION")
             arPlaneRenderer.viewSize = Size(width, height)
             // New swap chain, no pixels in it — owe it a frame even if ARCore has nothing new to
             // say (see `arFramesOwed` below).
@@ -1643,11 +1643,29 @@ fun ARSceneView(
         onDispose { sceneRenderer.destroy() }
     }
 
+    // Clear the swap chain every frame (#4499), as [io.github.sceneview.SceneView] does (#2400).
+    // Filament defaults to `clear = false` and counts on a skybox to repaint the background; an AR
+    // view has none, and its camera quad stays hidden until the first camera image (#3373). The
+    // frames owed to a new swap chain (`arFramesOwed`) were therefore presented over an uncleared
+    // colour buffer — undefined memory, which a tile-based GPU (the Pixel 4a's Adreno) fills with
+    // whatever it last drew: pieces of the previous screen, flashed as a mauve rectangle and a white
+    // frame where the camera was about to appear. Opaque black — the camera's own "no image yet" —
+    // or transparent on a translucent surface, so what is composed beneath shows through.
+    LaunchedEffect(renderer, isOpaque) {
+        renderer.clearOptions = Renderer.ClearOptions().apply {
+            clear = true
+            clearColor = doubleArrayOf(0.0, 0.0, 0.0, if (isOpaque) 1.0 else 0.0)
+        }
+    }
+
     // ── Render loop ───────────────────────────────────────────────────────────────────────────────
 
     LaunchedEffect(engine, renderer, view, scene) {
+        // Previous frame time for the node-edit coast's time step; 0 = none yet (or paused).
+        var lastFrameTimeNanos = 0L
         while (true) {
             if (!isResumed.get()) {
+                lastFrameTimeNanos = 0L
                 delay(16)
                 continue
             }
@@ -1717,11 +1735,23 @@ fun ARSceneView(
                     modelLoader.updateLoad()
                     frameDispatch.dispatch(childNodes, frameTimeNanos)
 
+                    // A drag / twist / pinch of an AR object still coasting after release: one
+                    // step, capped like SceneView's so a stalled frame never jumps the object.
+                    val inertiaDelta = if (lastFrameTimeNanos == 0L) {
+                        NOMINAL_INERTIA_FRAME_SECONDS
+                    } else {
+                        ((frameTimeNanos - lastFrameTimeNanos) / 1_000_000_000f)
+                            .coerceIn(0f, MAX_INERTIA_FRAME_SECONDS)
+                    }
+                    lastFrameTimeNanos = frameTimeNanos
+                    gestureDetector.advanceInertia(inertiaDelta)
+
                     // Last, so the node ticks above are already accounted for: a glTF animation
                     // advanced this tick reports `isFrameActive` and keeps the budget topped up.
                     sceneChanged = frameRateGate.shouldRender(
                         frameTimeNanos = frameTimeNanos,
                         active = frameActivity.hasActiveNode ||
+                                gestureDetector.isCoasting ||
                                 // Not `progress < 1f`: a loader that was never asked for an async
                                 // load reports 0, which reads as "loading" forever — see
                                 // [io.github.sceneview.loaders.ModelLoader.isLoading].
@@ -1746,7 +1776,12 @@ fun ARSceneView(
 
     // The caller's `modifier` sizes this Box; the surface fills it exactly as it used to fill
     // the bare AndroidView, and the permission overlay (#3308) can sit on top of it.
-    Box(modifier = modifier) {
+    //
+    // An opaque view stands on black (#4499): a SurfaceView draws nothing in the window until its
+    // surface exists, so for the first frames the window background showed through instead — a
+    // white screen in light theme on the 3D Scan live view. Once the surface is up, the SurfaceView
+    // punches its hole through this ground; a translucent view keeps whatever is composed beneath.
+    Box(modifier = if (isOpaque) modifier.background(Color.Black) else modifier) {
         when (surfaceType) {
             SurfaceType.Surface -> AndroidView(
                 modifier = Modifier.fillMaxSize(),
@@ -1806,6 +1841,12 @@ fun ARSceneView(
 
 // ── AR frame update helpers ───────────────────────────────────────────────────────────────────────
 
+/** Time step of the first node-edit coast frame after a start or a resume (one 60 Hz frame). */
+private const val NOMINAL_INERTIA_FRAME_SECONDS = 1f / 60f
+
+/** Largest step one frame advances a node-edit coast by — a stall resumes, it never jumps. */
+private const val MAX_INERTIA_FRAME_SECONDS = 0.05f
+
 private fun onARFrame(
     engine: Engine,
     scene: Scene,
@@ -1815,7 +1856,7 @@ private fun onARFrame(
     lightEstimator: LightEstimator?,
     mainLightNode: LightNode?,
     environment: Environment,
-    arPlaneRenderer: PlaneRendererBase,
+    arPlaneRenderer: PlaneRenderer,
     childNodes: List<Node>,
     baselineMainLightColorRef: AtomicReference<io.github.sceneview.math.Color?>,
     baselineMainLightIntensityRef: AtomicReference<Float?>,
@@ -2339,7 +2380,8 @@ private fun ARScenePreview(modifier: Modifier) {
  * @deprecated Use [ARSceneView] instead. This function is a direct alias provided for backward
  * compatibility with code written against earlier SceneView versions.
  */
-@Deprecated("Use ARSceneView instead", ReplaceWith("ARSceneView(modifier, surfaceType, engine, modelLoader, materialLoader, environmentLoader, sessionFeatures, playbackDataset, sessionCameraConfig, flashMode, sessionConfiguration, planeRenderer, planeRendererVersion, cameraStream, view, isOpaque, renderer, scene, environment, mainLightNode, fillLightNode, cameraNode, cameraExposure, collisionSystem, viewNodeWindowManager, onSessionCreated, onSessionResumed, onSessionPaused, onSessionFailed, onPlaybackFailed, onSessionUpdated, onTrackingFailureChanged, onGestureListener, onTouchEvent, permissionHandler, lifecycle, content)"))
+@Deprecated("Use ARSceneView instead", ReplaceWith("ARSceneView(modifier, surfaceType, engine, modelLoader, materialLoader, environmentLoader, sessionFeatures, playbackDataset, sessionCameraConfig, flashMode, sessionConfiguration, planeRenderer, cameraStream, view, isOpaque, renderer, scene, environment, mainLightNode, fillLightNode, cameraNode, cameraExposure, collisionSystem, viewNodeWindowManager, onSessionCreated, onSessionResumed, onSessionPaused, onSessionFailed, onPlaybackFailed, onSessionUpdated, onTrackingFailureChanged, onGestureListener, onTouchEvent, permissionHandler, lifecycle, content)"))
+@Suppress("DEPRECATION")
 @Composable
 fun ARScene(
     modifier: Modifier = Modifier,
@@ -2354,7 +2396,7 @@ fun ARScene(
     flashMode: Config.FlashMode = Config.FlashMode.OFF,
     sessionConfiguration: ((session: Session, Config) -> Unit)? = null,
     planeRenderer: Boolean = true,
-    planeRendererVersion: PlaneRendererBase.Version = PlaneRendererBase.Version.V1,
+    planeRendererVersion: PlaneRendererBase.Version = PlaneRendererBase.Version.V2,
     cameraStream: ARCameraStream? = rememberARCameraStream(materialLoader),
     view: View = rememberARView(engine),
     isOpaque: Boolean = true,
@@ -2429,7 +2471,7 @@ fun ARScene(
     "Binary-compatibility overload. Use the ARSceneView overload that takes `onCameraPermissionStateChanged`.",
     level = DeprecationLevel.HIDDEN,
 )
-@Suppress("LongParameterList")
+@Suppress("LongParameterList", "DEPRECATION")
 @Composable
 fun ARSceneView(
     modifier: Modifier = Modifier,

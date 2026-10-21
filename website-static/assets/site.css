@@ -68,23 +68,36 @@ code, pre, kbd { font-family: var(--font-mono); font-size: .875em; }
   transition: background-color var(--d-slow) var(--ease-out), border-color var(--d-slow) var(--ease-out), color var(--d-slow) var(--ease-out);
 }
 .nav.is-scrolled { background: var(--header-glass); -webkit-backdrop-filter: saturate(160%) blur(16px); backdrop-filter: saturate(160%) blur(16px); border-bottom-color: var(--hairline); }
-/* Over the stage the header takes the stage's colours, whatever the theme. */
-.nav.is-over-stage { color: var(--stage-fg); background: linear-gradient(to bottom, color-mix(in srgb, var(--stage-bg) 72%, transparent), transparent); border-bottom-color: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; }
-.nav.is-over-stage.is-scrolled { background: color-mix(in srgb, var(--stage-bg) 78%, transparent); -webkit-backdrop-filter: saturate(160%) blur(16px); backdrop-filter: saturate(160%) blur(16px); border-bottom-color: color-mix(in srgb, var(--stage-fg) 10%, transparent); }
+/* Over the stage the header takes the stage's colours, whatever the theme. The gradient is
+   sized to the border box: sized to the padding box, it tiled again into the 1px border
+   and drew a dark line across the picture. */
+.nav.is-over-stage { color: var(--stage-fg); background: linear-gradient(to bottom, color-mix(in srgb, var(--stage-bg) 72%, transparent), transparent) border-box; border-bottom-color: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; }
+/* Scrolled over the film: a solid night bar, no backdrop blur. A blur there re-ran on
+   every frame of the live canvas, and where the picture ends under the header it smeared
+   the dark picture and the light page into a grey band. */
+.nav.is-over-stage.is-scrolled { background: var(--stage-bg); border-bottom-color: color-mix(in srgb, var(--stage-fg) 10%, transparent); }
+/* The film's last strip still under the header: the page's bar, solid, so that strip
+   cannot show through. No fade into it either: an anchor jump from the top faded the bar
+   in from transparent, and halfway through it was the same two-tone band. */
+.nav.is-stage-edge { background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none; transition: none; }
 .nav__inner { height: 100%; display: flex; align-items: center; gap: var(--s-5); }
 .brand { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; font-weight: 650; font-size: 1.0625rem; letter-spacing: -0.02em; }
 .brand__mark { width: 26px; height: 26px; }
-.nav__links { display: none; gap: 4px; margin-left: var(--s-4); }
-.nav__links a { display: inline-flex; align-items: center; min-height: 40px; padding: 0 12px; border-radius: var(--r-full); font-size: .9375rem; opacity: .82; transition: opacity var(--d-fast), background-color var(--d-fast); }
-.nav__links a:hover, .nav__links a[aria-current] { opacity: 1; background: color-mix(in srgb, currentColor 8%, transparent); }
-.nav__end { margin-left: auto; display: flex; align-items: center; gap: 8px; }
-.nav__gh { display: none; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border-radius: var(--r-full); font: 500 .8125rem/1 var(--font-mono); opacity: .88; }
+.nav__links { display: none; gap: 2px; margin-left: var(--s-5); }
+/* Quiet links that brighten on hover, product-site style: one weight, one size, no underline. */
+.nav__links a { display: inline-flex; align-items: center; min-height: 40px; padding: 0 var(--s-3); border-radius: var(--r-full); font-size: var(--fs-small); font-weight: 500; letter-spacing: -0.005em; opacity: .74; transition: opacity var(--d-fast), background-color var(--d-fast); }
+.nav__links a:hover, .nav__links a[aria-current] { opacity: 1; }
+.nav__links a:hover { background: color-mix(in srgb, currentColor 7%, transparent); }
+.nav__end { margin-left: auto; display: flex; align-items: center; gap: var(--s-1); }
+.nav__gh { display: none; align-items: center; gap: var(--s-2); height: 40px; padding: 0 var(--s-3); border-radius: var(--r-full); font: 500 var(--fs-micro)/1 var(--font-mono); opacity: .74; transition: opacity var(--d-fast), background-color var(--d-fast); }
 .nav__gh:hover { opacity: 1; background: color-mix(in srgb, currentColor 8%, transparent); }
 .nav__gh svg { width: 18px; height: 18px; }
 .icon-btn { width: 44px; height: 44px; display: inline-grid; place-items: center; border-radius: var(--r-full); }
 .icon-btn:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
 .icon-btn svg { width: 20px; height: 20px; }
-.nav .btn--primary { display: none; }
+.nav .theme-toggle { opacity: .74; transition: opacity var(--d-fast), background-color var(--d-fast); }
+.nav .theme-toggle:hover { opacity: 1; }
+.nav .btn--primary { display: none; margin-left: var(--s-2); }
 .theme-toggle .i-sun { display: none; }
 :root[data-theme="light"] .theme-toggle .i-sun { display: block; }
 :root[data-theme="light"] .theme-toggle .i-moon { display: none; }
@@ -111,7 +124,9 @@ code, pre, kbd { font-family: var(--font-mono); font-size: .875em; }
   transform: translateY(100%); transition: transform var(--d-slow) var(--ease-out);
 }
 .sheet.is-open .sheet__panel { transform: none; }
-.sheet__grip { width: 40px; height: 4px; border-radius: 4px; background: var(--outline); margin: 6px auto 12px; }
+/* A visible close button rather than a grip: the sheet has no drag gesture to promise. */
+.sheet__head { display: flex; align-items: center; justify-content: space-between; min-height: 56px; margin-right: calc(var(--s-3) * -1); }
+.sheet__title { font: 500 var(--fs-micro)/1 var(--font-mono); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--text-3); }
 .sheet__links { list-style: none; margin: 0 0 var(--s-5); padding: 0; }
 .sheet__links a { display: flex; align-items: center; justify-content: space-between; min-height: 56px; font-size: 1.25rem; font-weight: 600; letter-spacing: -0.02em; border-bottom: 1px solid var(--hairline); }
 .sheet__links a span { color: var(--text-3); font: 400 var(--fs-small)/1 var(--font-mono); }
@@ -256,6 +271,14 @@ code, pre, kbd { font-family: var(--font-mono); font-size: .875em; }
   .cmd .cmd__call .arg { white-space: nowrap; }
 }
 @container install (max-width: 439px) { .cmd .cmd__call wbr { display: none; } }
+/* The two web tags fold only where a <wbr> sits, right after a slash of the URL:
+   never inside a host name or at the hyphen of website-static, never before a
+   slash, and "<script src=" stays on the line where its URL starts. The longest
+   piece, sceneview/sceneview@vX.Y.Z/, holds no break (sync-versions.sh rewrites
+   it): it needs 28 columns, so the narrowest phones take the 12 px size. */
+.cmd .cmd__tags { white-space: nowrap; overflow-wrap: normal; }
+@container install (max-width: 299px) { .cmd .cmd__tags { font-size: var(--fs-micro); } }
+@container install (max-width: 277px) { .cmd .cmd__tags { white-space: pre-wrap; overflow-wrap: anywhere; } }
 @media (min-width: 960px) and (min-height: 600px) {
   .hero {
     --L: max(var(--gutter), calc((100vw - 1280px) / 2));
@@ -325,7 +348,9 @@ code, pre, kbd { font-family: var(--font-mono); font-size: .875em; }
   .hero--scene .hero__stage { inset: 0; width: auto; }
   .hero.hero--scene .hero__stage .stage__box { height: 100%; aspect-ratio: auto; transform: none; }
   .hero--scene .stage__box::after { top: 0; height: auto; background: linear-gradient(90deg, var(--media-veil) 0%, var(--media-veil) 16%, color-mix(in srgb, var(--media-veil) 74%, transparent) 35%, color-mix(in srgb, var(--media-veil) 34%, transparent) 48%, var(--media-veil-0) 62%); }
-  .hero--scene .stage__controls { top: calc(var(--header-h) + 12px); left: auto; right: var(--R); }
+  /* The controls sit at the foot of the picture, above the credit, like a player's: the
+     top-right corner belongs to the header and its "Get started" button. */
+  .hero--scene .stage__controls { top: auto; bottom: calc(28px + var(--s-7)); left: auto; right: var(--R); }
   /* On the full-screen picture the credit can lie on a bright patch: it takes the controls' glass chip. */
   .hero--scene .hero__stage .stage__credit { left: auto; bottom: 28px; right: var(--R); padding: 6px 12px; border-radius: var(--r-full); background: var(--stage-chip); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
   .hero--scene .hero__copy { width: min(560px, 44vw); padding-top: 0; }
@@ -344,8 +369,24 @@ code, pre, kbd { font-family: var(--font-mono); font-size: .875em; }
 .cs { display: grid; gap: var(--s-4); }
 .codecard { display: flex; flex-direction: column; background: var(--code-bg); color: var(--code-fg); border: 1px solid var(--code-border); border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--shadow-2); min-width: 0; }
 .codecard [role="tabpanel"] { flex: 1; min-width: 0; }
-.tabs { display: flex; flex-wrap: wrap; gap: 2px 4px; padding: 6px 8px 0; border-bottom: 1px solid var(--code-line); }
-.tab { min-height: 44px; padding: 0 12px; border-radius: var(--r-xs) var(--r-xs) 0 0; font-size: .8125rem; font-weight: 600; color: var(--code-muted); white-space: nowrap; }
+/* One row at every width. Where the five tabs do not fit (a phone), the strip
+   scrolls sideways instead of sending "React Native" onto a row of its own:
+   site.js keeps the selected tab clear of the edges and sets data-more on the
+   side that hides more tabs, which fades there. The rule under the strip stays
+   whole (second mask layer). A mask reads alpha only: any opaque token works. */
+.tabs { display: flex; gap: var(--s-1); padding: 6px 8px 0; border-bottom: 1px solid var(--code-line); overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; scroll-padding-inline: var(--s-6); }
+.tabs::-webkit-scrollbar { display: none; }
+.tabs[data-more] {
+  -webkit-mask-image: linear-gradient(90deg, transparent, var(--code-bg) var(--fade-start, 0px), var(--code-bg) calc(100% - var(--fade-end, 0px)), transparent), linear-gradient(var(--code-bg), var(--code-bg));
+  mask-image: linear-gradient(90deg, transparent, var(--code-bg) var(--fade-start, 0px), var(--code-bg) calc(100% - var(--fade-end, 0px)), transparent), linear-gradient(var(--code-bg), var(--code-bg));
+  -webkit-mask-size: 100% 100%, 100% 1px; mask-size: 100% 100%, 100% 1px;
+  -webkit-mask-position: 0 0, 0 100%; mask-position: 0 0, 0 100%;
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+}
+.tabs[data-more~="start"] { --fade-start: var(--s-6); }
+.tabs[data-more~="end"] { --fade-end: var(--s-6); }
+.tab { flex: none; min-height: 44px; padding: 0 12px; border-radius: var(--r-xs) var(--r-xs) 0 0; font-size: .8125rem; font-weight: 600; color: var(--code-muted); white-space: nowrap; }
+.tabs .tab:focus-visible { outline-offset: -2px; }   /* the strip clips what lies outside it */
 .tab:hover { color: var(--code-fg); background: var(--code-hover); }
 .tab[aria-selected="true"] { color: var(--code-strong); box-shadow: inset 0 -2px 0 var(--code-accent); }
 .codecard pre, .cmd code, code, pre { font-variant-ligatures: none; font-feature-settings: "calt" 0, "liga" 0; }
@@ -435,6 +476,9 @@ code, pre, kbd { font-family: var(--font-mono); font-size: .875em; }
 .wire { position: absolute; right: -40px; top: -30px; width: 260px; opacity: .55; color: var(--outline); }
 .cosmos { position: absolute; inset: 0; background: var(--media-void) url(home/cosmos-galaxy.webp) 50% 38% / cover no-repeat; transform: scale(1.08); transition: transform 6s var(--ease-out); }
 .tile:hover .cosmos { transform: scale(1.14) rotate(-4deg); }
+/* Below the fold: the photograph waits for the page's load event (site.js), so it never
+   competes with the hero poster for the first paint. */
+.js-ready:not(.is-loaded) .cosmos { background-image: none; }
 .uiscene { position: absolute; inset: 0; display: grid; place-items: center; perspective: 900px; background: radial-gradient(70% 70% at 70% 30%, var(--glow-a), transparent 70%); }
 .uiscene__card { width: min(80%, 340px); padding: 16px; border-radius: 18px; background: var(--surface-2); border: 1px solid var(--hairline); box-shadow: var(--shadow-2); transform: rotateY(-24deg) rotateX(10deg) translateY(-26px); transition: transform var(--d-reveal) var(--ease-out); }
 .tile:hover .uiscene__card { transform: rotateY(-12deg) rotateX(6deg) translateY(-26px); }
@@ -494,7 +538,16 @@ code, pre, kbd { font-family: var(--font-mono); font-size: .875em; }
 .assistants button { min-height: 52px; padding: 0 14px; border-radius: var(--r-md); border: 1px solid var(--outline); background: var(--surface-1); color: var(--text); font-size: .9375rem; font-weight: 600; letter-spacing: -0.01em; text-align: left; transition: border-color var(--d-base), background-color var(--d-base); }
 .assistants button:hover { border-color: var(--text-2); }
 .assistants button[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--surface-1)); }
-.mcp { container: mcp / inline-size; margin-top: 12px; }
+/* site.js lays every setup out in the same grid cell, all but the shown one out
+   of sight and out of the accessibility tree: the box keeps the height of the
+   tallest, so nothing under it moves when the assistant changes — the install
+   box reserves its height the same way. The command fills that height and reads
+   from the top, the copy button level with its first line. */
+.mcp { container: mcp / inline-size; margin-top: 12px; display: grid; }
+.mcp__setup { grid-area: 1 / 1; min-width: 0; display: flex; flex-direction: column; }
+.mcp__setup[aria-hidden="true"] { visibility: hidden; }
+.mcp__setup .cmd { flex: 1; align-items: flex-start; }
+.mcp__setup .cmd code { padding-block: calc((44px - 1.5em) / 2); }
 /* A JSON config reads as three lines — opening, keys, closing — and as one key
    per line once the box is too narrow for the keys to share a line. */
 .cmd .json__in { display: block; padding-left: 2ch; }

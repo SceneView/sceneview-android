@@ -72,22 +72,6 @@ class DemoRenderingScreenshotTest {
     private val softwareRenderer: Boolean
         get() = InstrumentationRegistry.getArguments().getString("softwareRenderer") == "true"
 
-    /**
-     * Which golden set to compare against: `render-goldens` (default, recorded on the
-     * `Pixel_7a` AVD with a hardware GPU) or `render-goldens-swangle` (recorded on the CI
-     * emulator profile, `-gpu swangle_indirect`, #3554). Set with
-     * `-Pandroid.testInstrumentationRunnerArguments.goldenSet=<dir>`. The two rasterisers
-     * do not agree pixel for pixel, so each profile is held to its own baselines.
-     */
-    private val goldenDir: String
-        get() {
-            val requested = InstrumentationRegistry.getArguments().getString("goldenSet") ?: DEFAULT_GOLDEN_DIR
-            require(requested in BASELINED_BY_SET) {
-                "Unknown goldenSet '$requested': expected one of ${BASELINED_BY_SET.keys}."
-            }
-            return requested
-        }
-
     @Before
     fun setUp() {
         device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
@@ -162,9 +146,9 @@ class DemoRenderingScreenshotTest {
 
     @Test
     fun twoDInThreeDDemo_default_state() {
-        // The demo opens on Inspect: a procedural rocket on the themed stage, no card until a
-        // part is tapped, so the golden is the rocket alone under the "Tap a part" hint. The
-        // helmet-and-cards golden of #3424 went with the scene it depicted.
+        // One scene since #4624: a procedural rocket on the themed stage, no card until a part
+        // is tapped, and behind it the media wall (picture, video, badge, captions). QA holds
+        // the video paused on its one-second frame, so the golden stays still.
         //
         // 14 s settle, the budget of every demo that loads the studio HDR: its light lands
         // after the first frame, and a rocket caught before it is not the scene.
@@ -201,35 +185,11 @@ class DemoRenderingScreenshotTest {
             pixelDiffTolerancePercent = 8.0f, maxChannelDiff = 16)
     }
 
-    @Test
-    fun fogDemo_default_state() {
-        captureAndCompare(demoSlug = "fog", goldenName = "fog_default", settleSeconds = 14,
-            pixelDiffTolerancePercent = 8.0f, maxChannelDiff = 16)
-    }
-
-    @Test
-    fun lightingLabDemo_default_state() {
-        // #2239 Batch 2 folded `dynamic-sky`, `environment`, `reflection-probes` and
-        // `post-processing` into `lighting-lab`; #3539 then rebuilt the screen and the
-        // tabs are gone. There is one frame now — the shared `LightingStage` (helmet on
-        // a lit floor between a chrome and a matte probe ball) under a studio IBL and a
-        // single shadow-casting key — with every knob live in the sheet. `DynamicSkyNode`
-        // moved to the `lighting` showcase's Sun rig, so there is no procedural sky on
-        // this screen any more.
-        //
-        // The tolerance is inherited from the scene that DID have a procedural sky and
-        // has not been re-measured against the rebuilt frame, because this case has never
-        // completed a CI run (#3554). The IBL prefilter still has cold/warm cache variance
-        // and the chrome probe magnifies it, so 15 % is kept as the conservative value
-        // until a green run gives a real number to tighten it to.
-        //
-        // #3554: this case killed the emulator process at capture. The screen was the only
-        // demo building two 2 048² HDR environments at once, and it built the probe's one
-        // eagerly although the probe starts off — see `LightingLabDemo.probeEnvironment`.
-        // That allocation is now deferred, which is the fix under test here.
-        captureAndCompare(demoSlug = "lighting-lab", goldenName = "lightinglab_default", settleSeconds = 14,
-            pixelDiffTolerancePercent = 15.0f, maxChannelDiff = 24)
-    }
+    // #4603 folded `lighting-lab` into `lighting`, and the `fog` and `lighting-lab` slugs
+    // now open the Lighting screen, which `lightingDemo_default_state` above covers. Their
+    // cases (`fog_default`, `lightinglab_default`) went with the screen they pictured. The
+    // lab's #3554 guard — the reflection probe's HDR built only once the probe is on —
+    // moved with the probe into `LightingDemo`.
 
     @Test
     fun materialsDemo_default_state() {
@@ -244,9 +204,8 @@ class DemoRenderingScreenshotTest {
             pixelDiffTolerancePercent = 15.0f, maxChannelDiff = 24)
     }
 
-    // #2239 Batch 1 — `billboard` consolidated into `two-d-in-three-d`, where it is now the
-    // Media mode (`?tab=media`). `twoDInThreeDDemo_default_state` above covers the mode the demo
-    // opens on, Inspect; Media plays a video, which a pixel golden cannot hold still.
+    // #2239 Batch 1 — `billboard` consolidated into `two-d-in-three-d`; since #4624 its media
+    // wall shares the rocket's scene, so `twoDInThreeDDemo_default_state` above covers it.
 
     // #2239 Batch 1 — `view-node` consolidated into `picking-collision` (covered by
     // `pickingCollisionDemo_default_state` above). The View Node sub-mode is reachable
@@ -264,10 +223,9 @@ class DemoRenderingScreenshotTest {
     // no sub-modes: object gestures are the dock's Move toggle inside the same scene.
 
     // #2239 Batch 2 — `dynamic-sky`, `environment`, `reflection-probes`, and
-    // `post-processing` consolidated into `lighting-lab` (covered by
-    // `lightingLabDemo_default_state` above). The Environment / Reflections / Post-FX
-    // sub-modes are reachable via segmented-button taps; dedicated sub-mode captures
-    // would need a tab-aware deep-link parameter (follow-up).
+    // `post-processing` consolidated into `lighting-lab`, itself folded into `lighting` by
+    // #4603 (covered by `lightingDemo_default_state` above). Their options are switches in
+    // the Lighting sheet, driven by `DemoInteractionTest.lighting_reflectionsAndFrame`.
 
     // #2239 Batch 4 — `texture-streaming` and `occlusion-material` consolidated into
     // `materials` (covered by `materialsDemo_default_state` above). The Inspect /
@@ -553,7 +511,7 @@ class DemoRenderingScreenshotTest {
 
         // Try to load the golden. If absent, this is first-run setup: save the capture as
         // the new golden and skip the test (re-run to verify).
-        val goldenAsset = "$goldenDir/$goldenName.png"
+        val goldenAsset = "$GOLDEN_DIR/$goldenName.png"
         val golden = runCatching {
             testContext.assets.open(goldenAsset).use { BitmapFactory.decodeStream(it) }
         }.getOrNull()
@@ -580,7 +538,7 @@ class DemoRenderingScreenshotTest {
             // protection (#2323): a missing golden there means the asset was
             // deleted/renamed — FAIL loudly instead of assume-skipping. Genuinely
             // new slugs keep the quiet first-run capture flow.
-            if (goldenName in BASELINED_BY_SET.getValue(goldenDir)) {
+            if (goldenName in BASELINED_GOLDENS) {
                 throw AssertionError(
                     "Golden $goldenAsset is EXPECTED (slug is in BASELINED_GOLDENS) but " +
                         "missing from the test assets — was it deleted or renamed? " +
@@ -759,10 +717,6 @@ class DemoRenderingScreenshotTest {
          * for these a missing golden is a hard FAILURE, not a first-run skip (#2323).
          * Add a slug here in the SAME commit that adds its golden PNG.
          */
-        val BASELINED_BY_SET: Map<String, Set<String>> by lazy {
-            mapOf(DEFAULT_GOLDEN_DIR to BASELINED_GOLDENS, SWANGLE_GOLDEN_DIR to SWANGLE_BASELINED_GOLDENS)
-        }
-
         val BASELINED_GOLDENS = setOf(
             "animationphysics_default",
             // Re-baselined after the #3500 rebuild (three-subject stage on a floor).
@@ -770,10 +724,8 @@ class DemoRenderingScreenshotTest {
             // Re-baselined after the #3423 rebuild (runtime-generated torus knot).
             "customgeometry_default",
             "debugoverlay_default",
-            "fog_default",
             "geometry_default",
             "lighting_default",
-            "lightinglab_default",
             // Re-baselined after the #3425 rebuild (tube-extruded splines with sphere
             // control points, replacing the 1-px `LINES` scene the old golden pictured).
             "linespaths_default",
@@ -847,47 +799,7 @@ class DemoRenderingScreenshotTest {
         /** Wait between the ready signal and the capture: cover cross-fade plus intro tail. */
         const val READY_TAIL_MS = 3_000L
 
-        const val DEFAULT_GOLDEN_DIR = "render-goldens"
-        const val SWANGLE_GOLDEN_DIR = "render-goldens-swangle"
-
-        /**
-         * Goldens recorded on the CI emulator profile (`-gpu swangle_indirect`, 1080x2400 @
-         * 420 dpi, API 30, light) and reviewed one by one before commit. Same contract as
-         * [BASELINED_GOLDENS]. A case absent here has no reference on that profile and takes
-         * the first-run skip; see `render-goldens-swangle/README.md` for why each one is out.
-         */
-        val SWANGLE_BASELINED_GOLDENS: Set<String> = setOf(
-            "animationphysics_default",
-            // Six cases re-baselined for #4448 from the captures of run 38073545804, each one
-            // the screen with all of its content in it and each matched by at least one other
-            // run of the same day: camera-gestures (Camera | PiP switch, #4282), debug-overlay
-            // and secondary-camera (floor and light stage, #4111), fog and lighting (stage
-            // fading into the sky, #4156), model-viewer (navy stage, #4179).
-            "cameragestures_default",
-            "customgeometry_default",
-            "debugoverlay_default",
-            "fog_default",
-            // Re-baselined after the #4335 rebuild (seven primitives on the stage), from the
-            // first-run capture of run 37154919481.
-            "geometry_default",
-            "lighting_default",
-            // First baselined for #4448, from the first-run capture of run 38073545804: the
-            // helmet is in it, and run 38065275881 gave the same picture.
-            "lightinglab_default",
-            "linespaths_default",
-            "materials_default",
-            "modelviewer_default",
-            "pickingcollision_default",
-            "secondarycamera_default",
-            // First baselined for #4459, once the scan opens framed and sorted in one step:
-            // runs 38090189401, 38090195575 and 38090201359 gave the same picture (51 px of
-            // 2 488 320 apart at most). It was out until then: 54.7 % of pixels moved between
-            // runs when the sort order chased a camera glide.
-            "splatpreview_default",
-            // Re-baselined after the Inspect and Media rewrite (the rocket replaces the helmet
-            // and its cards), from the first-run capture of run 37677981378.
-            "twodinthreed_default",
-        )
+        const val GOLDEN_DIR = "render-goldens"
 
         // How long we allow the demo screen to compose after `am start` — covers a cold
         // app start (splash + dexopt) on the QA emulator, measured at ~3 s warm and up to

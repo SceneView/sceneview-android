@@ -32,6 +32,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import io.github.sceneview.demo.common.ArDemoPermissionGate
 import io.github.sceneview.demo.common.ProvideStatusBarIcons
 import io.github.sceneview.demo.fragments.GeneratedDemos
+import io.github.sceneview.demo.labs.Labs
+import io.github.sceneview.demo.labs.LabsGateBody
+import io.github.sceneview.demo.labs.openLabsSupportLink
 import io.github.sceneview.demo.theme.SceneViewDemoTheme
 import io.github.sceneview.demo.theme.SceneViewTokens
 import io.github.sceneview.demo.theme.LocalMotionEnabled
@@ -65,6 +68,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.ui.platform.LocalContext
+import io.github.sceneview.demo.feedback.ArTrackingHistory
 import io.github.sceneview.demo.feedback.BugReportSheet
 import io.github.sceneview.demo.feedback.CurrentRootScreen
 import io.github.sceneview.demo.feedback.FeedbackOpenRequest
@@ -141,6 +145,8 @@ class MainActivity : ComponentActivity() {
         Telemetry.ensureInit(this)
         // Clean up any feedback recording stranded in the cache by a prior run.
         sweepStaleFeedbackMedia(this)
+        // Keep the AR tracking lines for the bug report past the log buffer (#4529).
+        ArTrackingHistory.start()
         // HD pack: queue the Wi-Fi-only download of the demo's full-resolution models. A no-op
         // once they are on the device or after the user removed them in About. Off the main
         // thread: it reads the bundled manifest and checks the files on disk.
@@ -358,7 +364,7 @@ class MainActivity : ComponentActivity() {
                 io.github.sceneview.demo.demos.RerunInbox.accepts(this@MainActivity, uri)
             }
             if (isScan) {
-                DemoSettings.rerunInbox = uri
+                io.github.sceneview.demo.demos.RerunInbox.post(this@MainActivity, uri)
                 pendingDemoId.value = DeepLinkRouter.validate(io.github.sceneview.demo.demos.RerunInbox.DEMO_ID)
                 return@launch
             }
@@ -761,6 +767,12 @@ internal fun PendingDemoNavigation(
 @Composable
 fun DemoRouter(id: String, onBack: () -> Unit) {
     val entry = ALL_DEMOS.find { it.id == id }
+    // A Labs demo with Labs off for this install (a shared deep link, an old shortcut) opens
+    // the Labs explainer instead; joining or switching Labs on there opens the demo in place.
+    if (entry?.isLabs == true && !Labs.enabled) {
+        LabsGateScreen(title = stringResource(entry.titleRes), onBack = onBack)
+        return
+    }
     if (entry?.opensCameraOnEntry == true) {
         ArDemoPermissionGate(
             title = stringResource(entry.titleRes),
@@ -771,6 +783,21 @@ fun DemoRouter(id: String, onBack: () -> Unit) {
         return
     }
     RoutedDemo(id = id, onBack = onBack)
+}
+
+/** The Labs explainer standing in for a Labs demo: no scene, no dock, the page background. */
+@Composable
+private fun LabsGateScreen(title: String, onBack: () -> Unit) {
+    val context = LocalContext.current
+    DemoScaffold(title = title, onBack = onBack, dockHidden = true, themedStage = true, hasScene = false) {
+        LabsGateBody(
+            access = Labs.access,
+            labsDemos = rememberLabsDemos(),
+            onJoinClick = { FeedbackOpenRequest.request() },
+            onEnabledChange = Labs::setEnabled,
+            onOpenCollectiveClick = { openLabsSupportLink(context) },
+        )
+    }
 }
 
 @Composable

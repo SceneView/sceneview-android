@@ -182,8 +182,13 @@ fun ArViewTabContent(
             onSessionActiveChange(false)
         }
     }
+    // Starts from the last verdict this process saw (#4461). The launcher is disposed while a
+    // demo is open and composed again on Back, on the first frame of the transition back to
+    // it: starting from `null` there drew "Checking…" during the transition, ran the ARCore
+    // lookup on the main thread in its first frames, and recomposed the whole header when
+    // the answer came.
     var arCoreAvailability by remember {
-        mutableStateOf<ArCoreApk.Availability?>(null)
+        mutableStateOf(ArCoreAvailabilityMemory.lastVerdict)
     }
     val activity = remember(context) { context as? Activity }
 
@@ -191,6 +196,11 @@ fun ArViewTabContent(
         if (activity == null) {
             arCoreAvailability = ArCoreApk.Availability.UNKNOWN_ERROR
             return@LaunchedEffect
+        }
+        // A verdict is already on screen: check again (ARCore can have been installed or
+        // updated meanwhile), but after the screen's enter transition, not inside it.
+        if (ArCoreAvailabilityMemory.isSettled(arCoreAvailability)) {
+            delay(ArCoreAvailabilityMemory.RECHECK_DELAY_MILLIS)
         }
         // ArCoreApk.checkAvailability is async on first call — it returns
         // UNKNOWN_CHECKING until the Play Services lookup resolves. Poll until
@@ -212,6 +222,7 @@ fun ArViewTabContent(
                 attempts++
             }
             arCoreAvailability = availability
+            ArCoreAvailabilityMemory.keep(availability)
         }.onFailure {
             arCoreAvailability = ArCoreApk.Availability.UNKNOWN_ERROR
         }
@@ -730,9 +741,9 @@ private val FEATURED_AR_DEMOS = listOf(
     // filters on the listed demos minus the featured ids, so a retired id here would show
     // the same demo twice under two different names.
     FeaturedArDemo(
-        id = "ar-scene-mesh",
-        titleRes = R.string.featured_ar_scene_geometry_title,
-        subtitleRes = R.string.featured_ar_scene_geometry_subtitle,
+        id = "ar-geospatial-anchors",
+        titleRes = R.string.featured_ar_geospatial_title,
+        subtitleRes = R.string.featured_ar_geospatial_subtitle,
     ),
     FeaturedArDemo(
         id = "ar-depth-occlusion",
@@ -742,3 +753,33 @@ private val FEATURED_AR_DEMOS = listOf(
 )
 // Samples step 0 dropped the `ar-pose` tile: Free pose is a mode of `ar-placement`, which
 // the grid below already lists.
+
+/**
+ * The ARCore availability verdict, kept for the life of the process (#4461) so the AR launcher
+ * is drawn in its final state when the user comes back to it from a demo.
+ */
+internal object ArCoreAvailabilityMemory {
+    /**
+     * How long a re-check waits when a verdict is already shown: the length of the navigation
+     * transition (`duration-medium`), so the lookup never runs inside it.
+     */
+    const val RECHECK_DELAY_MILLIS: Long = SceneViewTokens.Duration.mediumMillis.toLong()
+
+    @Volatile
+    var lastVerdict: ArCoreApk.Availability? = null
+        private set
+
+    /** A verdict worth drawing again: an answer, not "still checking". */
+    fun isSettled(availability: ArCoreApk.Availability?): Boolean =
+        availability != null && availability != ArCoreApk.Availability.UNKNOWN_CHECKING
+
+    /** Keeps [availability] if it is an answer; "still checking" never replaces one. */
+    fun keep(availability: ArCoreApk.Availability) {
+        if (isSettled(availability)) lastVerdict = availability
+    }
+
+    /** Test hook: forget the verdict, as a new process would. */
+    internal fun reset() {
+        lastVerdict = null
+    }
+}

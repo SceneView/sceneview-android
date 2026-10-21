@@ -5,6 +5,7 @@ import android.os.Build
 import android.os.Process
 import io.github.sceneview.demo.BuildConfig
 import io.github.sceneview.demo.common.MotionSensorReport
+import io.github.sceneview.demo.labs.Labs
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,7 +25,8 @@ import java.util.Locale
  *   app version, device, OS, ABI, display),
  * - the app's own logcat tail ([collectAppLogcat] — readable without any
  *   permission for the app's own pid), and the AR tracking lines found further
- *   back in it ([collectArTrackingLog]),
+ *   back in it ([collectArTrackingLog]), both with paths, URIs, e-mail addresses
+ *   and user-chosen names masked ([LogRedaction], #4526),
  * - an optional screenshot captured via `PixelCopy` (see `CapturedScreenshot.kt`).
  *
  * Nothing ever leaves the device by itself: the user explicitly shares the
@@ -55,10 +57,30 @@ data class BugReportInfo(
 internal const val LOGCAT_TAIL_LINES = 1200
 
 /**
- * Max logcat lines carried by the share text. The share path has no URL
- * budget, so the whole captured tail rides along.
+ * Max logcat lines carried by the report file the share path attaches. The
+ * file has no URL or Binder budget, so the whole captured tail rides along.
  */
 internal const val SHARE_LOGCAT_MAX_LINES = LOGCAT_TAIL_LINES
+
+/**
+ * Hard cap, in characters, for the share intent's `EXTRA_TEXT` (#4528).
+ *
+ * An intent crosses Binder, whose transaction buffer is about 1 MB shared by the
+ * whole process: the 1200-line log used to ride in this extra (~600 KB) and the
+ * chooser was refused with `TransactionTooLargeException` on the first tap. The
+ * log now travels as an attached file and the text keeps the summary; this cap
+ * holds whatever the note or a future metadata row weighs.
+ */
+internal const val SHARE_TEXT_MAX_CHARS = 16_000
+
+/**
+ * Most characters of the note carried by the share text. The whole note is in
+ * the attached report file.
+ */
+internal const val SHARE_TEXT_NOTE_MAX_CHARS = 4_000
+
+/** Name of the report file attached by the share path (#4528). */
+internal const val REPORT_FILE_NAME = "sceneview-bug-report.txt"
 
 /**
  * Ceiling for the log block in a GitHub-issue body. The real count is decided
@@ -151,6 +173,8 @@ fun captureBugReportMetadata(context: Context, screen: ReportScreen): Map<String
         put("ABI", Build.SUPPORTED_ABIS.firstOrNull() ?: "unknown")
         put("Display", "${dm.widthPixels}x${dm.heightPixels} @ ${dm.densityDpi}dpi")
         put("Locale", Locale.getDefault().toLanguageTag())
+        // Which early-access features the tester could see (SceneView Labs).
+        put("Labs", Labs.reportLine())
         // #4522: only when an AR session stalled and the motion sensors were listened to.
         MotionSensorReport.line()?.let { put(MotionSensorReport.KEY, it) }
     }
@@ -210,7 +234,7 @@ internal fun arTrackingLines(
  * it too, with a path the user picked, and this block goes into a public issue.
  * Past the prefix, only enum names and a number of seconds can match.
  */
-private val AR_TRACKING_LINE = Regex(
+internal val AR_TRACKING_LINE = Regex(
     """^\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}\s+\d+\s+\d+\s+I\s+SceneView\s*: """ +
         Regex.escape(AR_TRACKING_LOG_PREFIX) +
         """ state=[A-Z_]+ reason=[A-Z_]+( for=\d+s)?$"""
@@ -230,15 +254,34 @@ private fun readOwnLogcat(arguments: List<String>): List<String> = runCatching {
 }.getOrDefault(emptyList())
 
 /**
- * Assemble the full report snapshot. Runs `logcat` twice and waits for both:
- * call it off the main thread.
+ * Assemble the full report snapshot. Runs `logcat` and waits for it (twice when
+ * the AR tracking history is empty): call it off the main thread.
  */
-fun captureBugReportInfo(context: Context, screen: ReportScreen): BugReportInfo =
-    BugReportInfo(
+fun captureBugReportInfo(context: Context, screen: ReportScreen): BugReportInfo {
+    // Masked here, once, before anything can read them (#4526): the sheet's preview,
+    // the attached file, the share text and the public issue all see the same lines.
+    val userNames = UserChosenNames.snapshot()
+    return BugReportInfo(
         metadata = captureBugReportMetadata(context, screen),
-        logcat = collectAppLogcat(),
-        arTracking = collectArTrackingLog(),
+        logcat = LogRedaction.redactLines(collectAppLogcat(), userNames),
+        // The in-memory history first (#4529): the log buffer drops these lines within a
+        // minute of an AR session, the history keeps them for the whole process.
+        arTracking = LogRedaction.redactLines(
+            reportArTracking(ArTrackingHistory.snapshot(), ::collectArTrackingLog),
+            userNames,
+        ),
     )
+}
+
+/**
+ * The AR tracking lines a report carries: [history] when it holds any, else what
+ * [fromLogcat] still finds in the log buffer. The history is empty only before the
+ * first AR frame, or when its reader could not start (#4529).
+ */
+internal fun reportArTracking(
+    history: List<String>,
+    fromLogcat: () -> List<String>,
+): List<String> = history.takeLast(AR_TRACKING_MAX_LINES).ifEmpty { fromLogcat() }
 
 /** Issue / share subject line — includes the demo id when there is one. */
 fun formatReportTitle(info: BugReportInfo, note: String): String {
@@ -252,10 +295,10 @@ fun formatReportTitle(info: BugReportInfo, note: String): String {
 }
 
 /**
- * Plain-text report used as the share-sheet `EXTRA_TEXT` (the screenshot, when
- * included, rides along as an `EXTRA_STREAM` attachment).
+ * The whole plain-text report, written to [REPORT_FILE_NAME] and attached by
+ * the share path: note, metadata, the AR tracking lines and the full log tail.
  */
-fun formatShareText(info: BugReportInfo, note: String): String = buildString {
+fun formatReportFile(info: BugReportInfo, note: String): String = buildString {
     appendLine("SceneView demo — bug report")
     appendLine()
     val text = note.trim()
@@ -279,6 +322,51 @@ fun formatShareText(info: BugReportInfo, note: String): String = buildString {
         logcat.forEach { appendLine(it) }
     }
 }.trimEnd()
+
+/**
+ * The share-sheet `EXTRA_TEXT` (#4528): the summary a reader needs before
+ * opening anything — note, metadata, the AR tracking block — and a pointer to
+ * the attached [REPORT_FILE_NAME] for the log. Never the log itself, and never
+ * longer than [SHARE_TEXT_MAX_CHARS], whatever the log or the note weighs.
+ *
+ * @param logAttached whether the report file rides along. When it could not be
+ *   written, the text says the log is missing instead of pointing at nothing.
+ */
+fun formatShareText(
+    info: BugReportInfo,
+    note: String,
+    logAttached: Boolean = true,
+): String = buildString {
+    appendLine("SceneView demo — bug report")
+    appendLine()
+    val text = note.trim()
+    if (text.isNotEmpty()) {
+        if (text.length > SHARE_TEXT_NOTE_MAX_CHARS) {
+            appendLine(text.take(SHARE_TEXT_NOTE_MAX_CHARS).trimEnd() + " […]")
+        } else {
+            appendLine(text)
+        }
+        appendLine()
+    }
+    info.metadata.forEach { (key, value) -> appendLine("$key: $value") }
+    val arTracking = info.arTracking.takeLast(AR_TRACKING_MAX_LINES)
+    if (arTracking.isNotEmpty()) {
+        appendLine()
+        appendLine("AR tracking (last ${arTracking.size} lines):")
+        arTracking.forEach { appendLine(it) }
+    }
+    val logLines = info.logcat.takeLast(SHARE_LOGCAT_MAX_LINES).size
+    if (logLines > 0) {
+        appendLine()
+        if (logAttached) {
+            appendLine("Full report with the app log ($logLines lines) attached: $REPORT_FILE_NAME")
+        } else {
+            appendLine("The app log ($logLines lines) could not be attached.")
+        }
+    }
+}.trimEnd().let { whole ->
+    if (whole.length <= SHARE_TEXT_MAX_CHARS) whole else whole.take(SHARE_TEXT_MAX_CHARS - 4) + "\n[…]"
+}
 
 /**
  * Markdown body for a pre-filled GitHub issue: the note, a metadata table,
@@ -410,6 +498,20 @@ private fun urlEncode(value: String): String = URLEncoder.encode(value, "UTF-8")
  */
 fun feedbackCacheDir(context: Context): File =
     File(context.cacheDir, "feedback").apply { mkdirs() }
+
+/**
+ * Write the whole report ([formatReportFile]) to [REPORT_FILE_NAME] in
+ * [feedbackCacheDir], for the share path to attach (#4528). Overwritten on every
+ * share; swept with the screenshots on the next app start.
+ *
+ * @return the file, or `null` when it could not be written — the share then goes
+ *   out as text only, and says so.
+ */
+fun writeReportFile(context: Context, info: BugReportInfo, note: String): File? = runCatching {
+    File(feedbackCacheDir(context), REPORT_FILE_NAME).apply {
+        writeText(formatReportFile(info, note))
+    }
+}.getOrNull()
 
 /**
  * Delete report screenshots left behind by a previous run — call on app start

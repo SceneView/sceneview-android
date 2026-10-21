@@ -13,6 +13,7 @@ import androidx.annotation.ColorInt
 import com.google.android.filament.ColorGrading
 import com.google.android.filament.Engine
 import com.google.android.filament.EntityManager
+import com.google.android.filament.Material
 import com.google.android.filament.MaterialInstance
 import com.google.android.filament.Skybox
 import com.google.android.filament.SwapChainFlags
@@ -20,16 +21,19 @@ import com.google.android.filament.Texture
 import com.google.android.filament.TextureSampler
 import com.google.android.filament.ToneMapper
 import com.google.android.filament.Viewport
+import io.github.sceneview.EngineDestroyQueue
 import io.github.sceneview.demo.demos.internal.ArDebugEvent
 import io.github.sceneview.demo.demos.internal.ArDebugFrame
 import io.github.sceneview.demo.demos.internal.ArDebugStyle
 import io.github.sceneview.demo.demos.internal.ArDebugTrace
+import io.github.sceneview.demo.demos.internal.CoverageGrid
 import io.github.sceneview.demo.demos.internal.DebugMesh
 import io.github.sceneview.demo.demos.internal.DebugPlane
 import io.github.sceneview.demo.demos.internal.DebugPose
 import io.github.sceneview.demo.demos.internal.DenseCloud
 import io.github.sceneview.demo.demos.internal.DenseSurfels
 import io.github.sceneview.demo.demos.internal.MeasureDrawing
+import io.github.sceneview.demo.demos.internal.MeasureSize
 import io.github.sceneview.demo.demos.internal.PlaneLayering
 import io.github.sceneview.demo.demos.internal.PointColorAtlas
 import io.github.sceneview.demo.demos.internal.ReplayGeometry
@@ -38,13 +42,14 @@ import io.github.sceneview.demo.demos.internal.RerunCapturePack
 import io.github.sceneview.demo.demos.internal.RerunReplayAssets
 import io.github.sceneview.demo.demos.internal.RoomMeasure
 import io.github.sceneview.demo.demos.internal.ScanPhotoPolicy
+import io.github.sceneview.demo.demos.internal.scanLabels
+import io.github.sceneview.demo.demos.internal.SteadyRoomMeasure
 import io.github.sceneview.demo.demos.internal.SvpcCodec
 import io.github.sceneview.demo.demos.internal.Vec3
 import io.github.sceneview.demo.demos.internal.of
 import io.github.sceneview.demo.demos.internal.parseArDebugLog
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.material.setTexture
-import io.github.sceneview.safeDestroyTexture
 import io.github.sceneview.texture.ImageTexture
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -52,6 +57,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import java.nio.ByteBuffer
+import java.util.Locale
 
 /*
  * The Rerun demo's bundled replay, on Android: loading it from the assets (IO), and drawing its
@@ -86,6 +92,10 @@ internal class RerunReplayMedia(
      */
     val liveDense: (() -> ReplayDenseLayer?)? = null,
 ) {
+    /** The same scan, its live dense cloud read from [liveDense] instead. */
+    fun withLiveDense(liveDense: () -> ReplayDenseLayer?) =
+        RerunReplayMedia(trace, manifest, planeBitmaps, thumbnails, archive, growing, dense, liveDense)
+
     /** The thumbnail of the camera image in force at [time], `null` before the first one. */
     fun thumbnailAt(time: Float): Bitmap? {
         val index = trace.imageIndexAt(time)
@@ -118,7 +128,16 @@ internal class RerunReplayMedia(
  * [mesh] one square surfel per point in the plane of its normal, [atlas] its colours
  * ([DenseSurfels.ATLAS_SIZE]² RGBA), both built off the main thread.
  */
-internal class ReplayDenseLayer(val cloud: DenseCloud, val voxelM: Float, val mesh: DebugMesh, val atlas: ByteArray) {
+internal class ReplayDenseLayer(
+    val cloud: DenseCloud,
+    val voxelM: Float,
+    val mesh: DebugMesh,
+    val atlas: ByteArray,
+    /** [mesh]'s corners minus their surfel's centre ([DenseSurfels.cornerOffsets]), built with it. */
+    val offsets: FloatArray = DenseSurfels.cornerOffsets(mesh),
+    /** A live scan's floor cells [cloud] covers ([CoverageGrid.coveredKeys]), found with it off the main thread. */
+    val coveredCells: LongArray = LongArray(0),
+) {
     companion object {
         /** The dense cloud [manifest] indexes in [archive], built for drawing; `null` without one. */
         fun of(manifest: ReplayManifest, archive: ByteArray): ReplayDenseLayer? {
@@ -129,12 +148,16 @@ internal class ReplayDenseLayer(val cloud: DenseCloud, val voxelM: Float, val me
             return of(cloud, dense.voxelM)
         }
 
-        /** [cloud] of [voxelM] surfels, meshed and coloured for drawing. Off the main thread. */
-        fun of(cloud: DenseCloud, voxelM: Float) = ReplayDenseLayer(
+        /**
+         * [cloud] of [voxelM] surfels, meshed and coloured for drawing, with the floor cells it
+         * covers when [withCells] (a live scan's coverage). Off the main thread.
+         */
+        fun of(cloud: DenseCloud, voxelM: Float, withCells: Boolean = false) = ReplayDenseLayer(
             cloud = cloud,
             voxelM = voxelM,
             mesh = DenseSurfels.mesh(cloud, voxelM),
             atlas = DenseSurfels.atlas(cloud, fallback = DENSE_FALLBACK_COLOR),
+            coveredCells = if (withCells) CoverageGrid.coveredKeys(cloud.positions, cloud.count) else LongArray(0),
         )
 
         /** A surfel the camera never coloured: the sparse points' own neutral. */
@@ -168,7 +191,8 @@ private suspend fun openReplay(
     events: List<ArDebugEvent>,
     archive: ByteArray,
 ): RerunReplayMedia = coroutineScope {
-    val trace = ArDebugTrace.of(events).apply { keyframeSpacing = ReplayGeometry.KEYFRAME_SPACING_M }
+    val availableEvents = events.filter { it !is ArDebugEvent.Image || it.path in manifest.media }
+    val trace = ArDebugTrace.of(availableEvents).apply { keyframeSpacing = ReplayGeometry.KEYFRAME_SPACING_M }
     val shell = RerunReplayMedia(trace, manifest, emptyMap(), emptyMap(), archive)
     // Decoded side by side: the cover stays up until they are, so their time is the wait.
     val planes = manifest.textures.map { texture ->
@@ -227,13 +251,21 @@ internal fun warmUpReplay(engine: Engine, materialLoader: MaterialLoader) {
         .sampler(Texture.Sampler.SAMPLER_2D)
         .format(Texture.InternalFormat.SRGB8_A8)
         .build(engine)
+    val surfelMaterial = materialLoader.createMaterial(SURFEL_MATERIAL)
     val instances = listOf(
         materialLoader.createUnlitColorInstance(Color.WHITE),
         materialLoader.createUnlitColorInstance(Color.TRANSPARENT),
         materialLoader.createImageInstance(texture),
+        materialLoader.createInstance(surfelMaterial).apply {
+            setParameter("texture", texture, TextureSampler())
+            setParameter("maxSide", DenseSurfels.MAX_SCREEN_SIDE)
+            setParameter("nearFade", DenseSurfels.NEAR_FADE_M)
+        },
     )
     // Each draws one degenerate triangle: enough to bind, and so compile, its program.
-    val nodes = instances.mapIndexed { i, instance -> DebugLayerNode(engine, instance, i, textured = true) }
+    val nodes = instances.mapIndexed { i, instance ->
+        DebugLayerNode(engine, instance, i, textured = true, surfels = i == instances.lastIndex)
+    }
     val skybox = Skybox.Builder().color(0f, 0f, 0f, 1f).build(engine)
     val colorGrading = ColorGrading.Builder().toneMapper(ToneMapper.Linear()).build(engine)
     val scene = engine.createScene().also { scene ->
@@ -264,11 +296,15 @@ internal fun warmUpReplay(engine: Engine, materialLoader: MaterialLoader) {
     engine.destroySkybox(skybox)
     engine.destroyColorGrading(colorGrading)
     instances.forEach(materialLoader::destroyMaterialInstance)
-    engine.safeDestroyTexture(texture)
+    materialLoader.destroyMaterial(surfelMaterial)
+    EngineDestroyQueue.of(engine).enqueueTexture(texture)
 }
 
 /** The off-screen warm-up's size: past bloom's seven halvings, nothing more. */
 private const val WARM_UP_SIZE = 128
+
+/** The dense layer's surfels, size clamped on screen (#4742): `scan_surfel.mat`. */
+private const val SURFEL_MATERIAL = "materials/scan_surfel.filamat"
 
 /**
  * The replay's textured layers, kept in step with an [ArDebugFrame] like `ArDebugLayers`: each
@@ -280,9 +316,9 @@ internal class ReplayLayers(
     private val materialLoader: MaterialLoader,
     private val media: RerunReplayMedia,
     /** The dimensions' ink, ARGB: the floor outline's colour, so they read as part of the plan. */
-    @ColorInt private val measureInk: Int = FALLBACK_POINT_COLOR,
+    @ColorInt private var measureInk: Int = FALLBACK_POINT_COLOR,
     /** The halo around the dimensions' figures, ARGB: the stage's ground, so they stay legible. */
-    @ColorInt private val measureHalo: Int = android.graphics.Color.TRANSPARENT,
+    @ColorInt private var measureHalo: Int = android.graphics.Color.TRANSPARENT,
     /**
      * The dense cloud drawn here: the scan's own, or a cut of it — the dollhouse's, without its
      * ceiling ([io.github.sceneview.demo.demos.internal.RoomDollhouse.cropDense]) — drawn whole.
@@ -348,8 +384,21 @@ internal class ReplayLayers(
             .build(engine)
             .also(textures::add)
     }
+    /**
+     * The dense layer's material: the image material's look, a surfel nearer than
+     * [DenseSurfels.NEAR_FADE_M] shrunk towards a dot and any capped at
+     * [DenseSurfels.MAX_SCREEN_SIDE] (#4742), so one the camera passes close to never fills it.
+     */
+    private val surfelMaterial: Material? = denseAtlas?.let { materialLoader.createMaterial(SURFEL_MATERIAL) }
     private val denseNode: DebugLayerNode? = denseAtlas?.let { atlas ->
-        DebugLayerNode(engine, material(atlas, nearest), POINTS_PRIORITY, textured = true)
+        val instance = materialLoader.createInstance(surfelMaterial!!).also {
+            it.setParameter("texture", atlas, nearest)
+            it.setParameter("maxSide", DenseSurfels.MAX_SCREEN_SIDE)
+            it.setParameter("nearFade", DenseSurfels.NEAR_FADE_M)
+            it.setDepthWrite(true)
+            materials += it
+        }
+        DebugLayerNode(engine, instance, POINTS_PRIORITY, textured = true, surfels = true)
             .also { node -> dense?.let { uploadDense(atlas, node, it) } }
     }
 
@@ -378,8 +427,16 @@ internal class ReplayLayers(
     private val measureMaterial = material(atlas, solid = false)
     private val measureNode = DebugLayerNode(engine, measureMaterial, MEASURE_PRIORITY, textured = true)
     private var measurePlanes: List<DebugPlane>? = null
-    private var measure: RoomMeasure? = null
+    private var foundMeasure: RoomMeasure? = null
+
+    /** A scan still recording steadies its figure; a recording played back is exact at every frame. */
+    private val steadyMeasure = if (media.growing) SteadyRoomMeasure() else null
+
+    /** The room at the last [sync]: the one the dimensions draw, and the one the HUD names. */
+    var measure: RoomMeasure? = null
+        private set
     private var measureLabels: Pair<String, String>? = null
+    private var measureOnTop = false
     private var measureLabelWidths = FloatArray(2)
 
     val nodes: List<DebugLayerNode> =
@@ -408,13 +465,14 @@ internal class ReplayLayers(
     ) {
         syncPlanes(frame, floorY, show.planes)
         syncMeasure(frame, pointStyle, floorY, show.measure && show.planes, eye)
+        setMeasureOnTop(show.measureOnTop)
         // A dense cloud stands in for the sparse one, under the same toggle — a scan still
         // recording shows its feature points until the first dense snapshot.
         syncDense(frame, show.points)
         val denseDrawn = denseNode != null && (media.liveDense == null || liveDenseShown != null)
         syncPoints(frame, pointStyle, show.points && !denseDrawn)
         syncShadows(frame, show.anchors)
-        syncPhotos(frame, show.trail)
+        syncPhotos(frame, show.cameras)
     }
 
     /**
@@ -445,12 +503,14 @@ internal class ReplayLayers(
     private fun syncMeasure(frame: ArDebugFrame, style: ArDebugStyle, floorY: Float, shown: Boolean, eye: Vec3?) {
         if (frame.planes !== measurePlanes) {
             measurePlanes = frame.planes
-            measure = RoomMeasure.of(frame.planes, floorY)
+            foundMeasure = RoomMeasure.of(frame.planes, floorY)
         }
-        val room = measure
+        val room = if (steadyMeasure != null) steadyMeasure.update(foundMeasure, frame.time) else foundMeasure
+        measure = room
         measureNode.isVisible = shown && room != null
         if (!measureNode.isVisible || room == null) return
-        val labels = RoomMeasure.metres(room.width) to RoomMeasure.metres(room.depth)
+        // The floor plan's units (#4599): the plan this scan opens is in metres, so its replay is too.
+        val labels = room.scanLabels(Locale.getDefault())
         if (labels != measureLabels) {
             measureLabels = labels
             drawMeasureLabels(labels)
@@ -458,19 +518,40 @@ internal class ReplayLayers(
         val sides = if (eye == null) intArrayOf(0, 1) else MeasureDrawing.sidesFacing(room, eye.x, eye.z)
         // Sized in pixels, and rebuilt only past a 5 % zoom step, not on every frame of a pinch.
         val step = kotlin.math.round(kotlin.math.ln(style.metresPerPixel.coerceAtLeast(1e-6f)) / MEASURE_ZOOM_STEP)
-        if (!changed(measureNode, listOf(room.summary, room.yaw, floorY, sides.toList(), step, labels))) return
-        val mpp = kotlin.math.exp(step * MEASURE_ZOOM_STEP)
-        val textHeight = (MEASURE_TEXT_PX * mpp).coerceIn(MEASURE_TEXT_MIN_M, MEASURE_TEXT_MAX_M)
-        val offset = (MEASURE_OFFSET_PX * mpp).coerceIn(MEASURE_OFFSET_MIN_M, MEASURE_OFFSET_MAX_M)
+        if (!changed(measureNode, listOf(room.yaw, floorY, sides.toList(), step, labels))) return
+        val size = MeasureSize.at(kotlin.math.exp(step * MEASURE_ZOOM_STEP))
         mesh.clear()
         for (side in sides) {
-            val row = side % 2
-            val textWidth = textHeight * measureLabelWidths[row] / MeasureDrawing.ROW_HEIGHT
             MeasureDrawing.addDimension(
-                mesh, room, side, floorY + MEASURE_LIFT_M, offset, style.outlineHalfWidth, textHeight, textWidth,
+                mesh, room, side, floorY + MEASURE_LIFT_M, size, style.outlineHalfWidth, measureLabelWidths[side % 2],
             )
         }
         measureNode.upload(mesh)
+    }
+
+    /**
+     * Whether the dimensions are drawn over everything else, whatever stands in front of them.
+     * They lie on the floor outside the walls, and seen from above everything taller than the
+     * floor leans outwards over that strip: a wall's photo, the cloud, the camera's path. On a
+     * phone the map hid one of a room's two figures under a wall and wrote the other on the path.
+     */
+    private fun setMeasureOnTop(onTop: Boolean) {
+        if (onTop == measureOnTop) return
+        measureOnTop = onTop
+        measureMaterial.setDepthCulling(!onTop)
+        measureNode.setPriority(if (onTop) MEASURE_TOP_PRIORITY else MEASURE_PRIORITY)
+    }
+
+    /**
+     * The dimensions take another [ink] and [halo] — the theme changed. Their atlas is redrawn at
+     * the next [sync], by the swap that already follows a change of figures: the layers, their
+     * nodes and every other texture stay as they are (#4330).
+     */
+    fun setMeasureColors(@ColorInt ink: Int, @ColorInt halo: Int) {
+        if (ink == measureInk && halo == measureHalo) return
+        measureInk = ink
+        measureHalo = halo
+        measureLabels = null
     }
 
     /**
@@ -485,7 +566,7 @@ internal class ReplayLayers(
         val canvas = Canvas(bitmap)
         val ink = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = measureInk
-            textSize = MEASURE_FONT_PX
+            textSize = MeasureDrawing.FONT_PX
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
         }
         val halo = Paint(ink).apply {
@@ -496,9 +577,10 @@ internal class ReplayLayers(
         }
         listOf(labels.first, labels.second).forEachIndexed { index, text ->
             val baseline = index * row + (row - ink.ascent() - ink.descent()) / 2f
-            canvas.drawText(text, MEASURE_PAD_PX, baseline, halo)
-            canvas.drawText(text, MEASURE_PAD_PX, baseline, ink)
-            measureLabelWidths[index] = (ink.measureText(text) + 2 * MEASURE_PAD_PX).coerceAtMost(width.toFloat())
+            canvas.drawText(text, MeasureDrawing.PAD_PX, baseline, halo)
+            canvas.drawText(text, MeasureDrawing.PAD_PX, baseline, ink)
+            val padded = ink.measureText(text) + 2 * MeasureDrawing.PAD_PX
+            measureLabelWidths[index] = padded.coerceAtMost(width.toFloat())
         }
         val solid = MeasureDrawing.ATLAS_HEIGHT - MeasureDrawing.SOLID_HEIGHT
         canvas.drawRect(0f, solid.toFloat(), width.toFloat(), height.toFloat(), Paint().apply { color = measureInk })
@@ -506,7 +588,7 @@ internal class ReplayLayers(
         measureMaterial.setTexture(texture, clamp)
         if (measureTexture !== atlas) {
             textures -= measureTexture
-            engine.safeDestroyTexture(measureTexture)
+            retire(measureTexture)
         }
         measureTexture = texture
     }
@@ -554,7 +636,7 @@ internal class ReplayLayers(
             engine, 0,
             Texture.PixelBufferDescriptor(ByteBuffer.wrap(dense.atlas), Texture.Format.RGBA, Texture.Type.UBYTE),
         )
-        node.upload(dense.mesh)
+        node.upload(dense.mesh, dense.offsets)
     }
 
     private fun syncShadows(frame: ArDebugFrame, shown: Boolean) {
@@ -615,7 +697,7 @@ internal class ReplayLayers(
         while (iterator.hasNext() && frameTextures.size > FRAME_TEXTURE_CACHE) {
             val texture = iterator.next()
             if (texture in bound) continue
-            engine.safeDestroyTexture(texture)
+            retire(texture)
             iterator.remove()
         }
     }
@@ -629,12 +711,20 @@ internal class ReplayLayers(
     /** Material instances and textures, once the nodes are gone. */
     fun destroy() {
         materials.forEach { materialLoader.destroyMaterialInstance(it) }
-        textures.forEach { engine.safeDestroyTexture(it) }
-        frameTextures.values.forEach { engine.safeDestroyTexture(it) }
+        surfelMaterial?.let(materialLoader::destroyMaterial)
+        textures.forEach(::retire)
+        frameTextures.values.forEach(::retire)
         materials.clear()
         textures.clear()
         frameTextures.clear()
     }
+
+    /**
+     * Frees [texture] a few rendered frames from now, through the library's [EngineDestroyQueue],
+     * as `ImageNode` frees its own: these layers destroy no texture in the call that rebinds or
+     * destroys the material instance that read it.
+     */
+    private fun retire(texture: Texture) = EngineDestroyQueue.of(engine).enqueueTexture(texture)
 
     private class PhotoSlot(val node: DebugLayerNode, val material: MaterialInstance) {
         var texture: Texture? = null
@@ -650,26 +740,17 @@ internal class ReplayLayers(
         /** Over the grid and the outlines, under the frustums' photos. */
         const val MEASURE_PRIORITY = 4
 
+        /** Filament's last: after the path, the frustums and the live points ([ReplayLayers.setMeasureOnTop]). */
+        const val MEASURE_TOP_PRIORITY = 7
+
         /** A millimetre over the grid: the dimensions are drawn on the floor, not in it. */
         const val MEASURE_LIFT_M = 0.003f
-        /**
-         * The label's box, in pixels: its figures' capitals are ~40 % of it, and the floor seen
-         * at a slant shortens it further.
-         */
-        const val MEASURE_TEXT_PX = 72f
-        const val MEASURE_TEXT_MIN_M = 0.04f
-        const val MEASURE_TEXT_MAX_M = 0.9f
-        const val MEASURE_OFFSET_PX = 28f
-        const val MEASURE_OFFSET_MIN_M = 0.06f
-        const val MEASURE_OFFSET_MAX_M = 0.9f
 
         /** The dimensions are rebuilt at every 5 % of zoom. */
-        const val MEASURE_ZOOM_STEP = 0.05f
+        const val MEASURE_ZOOM_STEP = MeasureSize.ZOOM_STEP
 
-        /** The atlas's figures: 76 px bold in a 128 px row, a 14 px halo, 10 px of margin. */
-        const val MEASURE_FONT_PX = 76f
+        /** The halo round the atlas's figures ([MeasureDrawing.FONT_PX] bold in a 128 px row). */
         const val MEASURE_HALO_PX = 14f
-        const val MEASURE_PAD_PX = 10f
 
         /** Two triangles per surfel ([DenseSurfels.mesh]). */
         const val INDICES_PER_SURFEL = 6
@@ -713,6 +794,10 @@ internal data class ReplayVisibility(
     val points: Boolean,
     val anchors: Boolean,
     val trail: Boolean,
+    /** The photos in the frusta the phone looked from ([DebugGroup.Cameras]). */
+    val cameras: Boolean = trail,
     /** The room's floor-plan dimensions ([RoomMeasure]), drawn with the planes. */
     val measure: Boolean = false,
+    /** The dimensions over everything else: the map, where the room is read as a plan. */
+    val measureOnTop: Boolean = false,
 )

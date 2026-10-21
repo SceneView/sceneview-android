@@ -2,6 +2,10 @@ package io.github.sceneview.ar
 
 import android.content.Context
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
+import androidx.annotation.MainThread
 import com.google.ar.core.ArCoreApk.Availability
 import com.google.ar.core.Config
 import com.google.ar.core.Session
@@ -28,7 +32,9 @@ const val kDefaultHitTestInstantDistance = 2.0f
  * @param onSessionCreated     Called once when the [Session] is created.
  * @param onSessionResumed     Called each time the session resumes.
  * @param onSessionPaused      Called each time the session pauses.
- * @param onArSessionFailed    Called when session creation or resume fails.
+ * @param onArSessionFailed    Called when session creation or resume fails, once per failed
+ *                             attempt: every host resume, permission grant or [retrySession]
+ *                             that cannot resume the session reports again.
  * @param onSessionConfigChanged Called when the session configuration changes.
  */
 class ARCore(
@@ -102,12 +108,12 @@ class ARCore(
     private var isHostDetached = false
 
     /**
-     * Creates and resumes the session outside a host resume. A seam for JVM tests, which
-     * cannot create an ARCore session.
+     * Creates and resumes the session outside a host resume, through the camera arbiter like
+     * every other resume. A seam for JVM tests, which cannot create an ARCore session.
      */
     internal var startSession: (Context) -> Unit = { context ->
         createSession(context)
-        session?.resume()
+        resumeSession()
     }
 
     /** Monotonic clock, in nanoseconds. Replaced in tests. */
@@ -187,6 +193,7 @@ class ARCore(
      * @param context Android context for session creation.
      * @param handler Permission handler, or `null` to skip permission checks.
      */
+    @MainThread
     fun resume(context: Context, handler: ARPermissionHandler?) {
         isHostResumed = true
         resumeContext = context
@@ -195,14 +202,71 @@ class ARCore(
                 createSession(context)
             }
         }
-        session?.resume()
+        resumeSession()
     }
 
-    /** Pauses the current ARCore session. */
+    /**
+     * Pauses the current ARCore session.
+     *
+     * The session also gives up its turn for the camera. Another session it had taken the
+     * camera from, and that is still resumed, runs again right after the current main-thread
+     * dispatch (see [CameraArbiter.pause]).
+     */
+    @MainThread
     fun pause() {
         isHostResumed = false
         cameraRequest?.hostPausedSince = true
-        session?.pause()
+        cameraArbiter.pause(cameraClient)
+    }
+
+    /**
+     * Resumes the session after the one that was running has paused.
+     *
+     * Two `ARSceneView`s are composed together while one AR screen animates into another, and
+     * both follow a resumed activity. The device has a single camera for ARCore, so the session
+     * that resumes last takes it and the other one keeps its last frame for the rest of its
+     * transition.
+     *
+     * A resume that throws (`CameraNotAvailableException` when another app holds the camera) is
+     * reported through [onArSessionFailed] instead of escaping into the lifecycle observer, and
+     * the camera goes back to the session it was taken from.
+     */
+    private fun resumeSession() {
+        hostCallbackFailure = null
+        cameraArbiter.resume(cameraClient)
+        hostCallbackFailure?.let {
+            hostCallbackFailure = null
+            throw it
+        }
+    }
+
+    /**
+     * What the host's own [onSessionResumed] threw once ARCore did resume. It is not a resume
+     * failure, so it is not reported through [onArSessionFailed]: [resumeSession] rethrows it to
+     * the host unchanged.
+     */
+    private var hostCallbackFailure: Exception? = null
+
+    /** This session as [CameraArbiter] sees it. */
+    private val cameraClient = object : CameraClient {
+        override val isRunning: Boolean get() = session?.isResumed == true
+        override val canRun: Boolean get() = session?.isClosed == false
+        override fun start() {
+            val session = session ?: return
+            try {
+                session.resume()
+            } catch (exception: Exception) {
+                // The session counts as resumed from the moment ARCore resumed it: whatever threw
+                // after that (the host's callback) is not a resume failure.
+                if (!session.isResumed) throw exception
+                hostCallbackFailure = exception
+            }
+        }
+        override fun stop() { session?.takeIf { it.isResumed }?.pause() }
+        override fun onStartFailed(exception: Exception) {
+            Log.w("ARCore", "Could not resume the ARCore session; the next resume tries again", exception)
+            onException(exception)
+        }
     }
 
     /**
@@ -492,7 +556,7 @@ class ARCore(
         publishAvailability(null)
         destroy()
         createSession(target)
-        session?.resume()
+        resumeSession()
     }
 
     /**
@@ -535,13 +599,19 @@ class ARCore(
      *
      * Review the API reference for important considerations before calling close() in apps with
      * more complicated lifecycle requirements: [Session.close]
+     *
+     * Closing the session that runs the camera hands the camera back to the session it had
+     * taken it from, when that one is still resumed (see [CameraHandover]).
      */
+    @MainThread
     fun destroy() {
-        session?.let {
-            synchronized(it) {
-                if (session == null) return@synchronized
-                closeSessionInOrder(isResumed = it.isResumed, pause = it::pause, close = it::close)
-                session = null
+        cameraArbiter.destroy(cameraClient) {
+            session?.let {
+                synchronized(it) {
+                    if (session == null) return@synchronized
+                    closeSessionInOrder(isResumed = it.isResumed, pause = it::pause, close = it::close)
+                    session = null
+                }
             }
         }
     }
@@ -637,6 +707,16 @@ internal fun isCameraPromptBlocked(
         elapsedMs < CAMERA_PROMPT_INSTANT_RETURN_MS ||
         earlierUnexplainedRefusals >= 1
     )
+
+/**
+ * One camera per device, so one arbitration per process.
+ *
+ * It holds a session from its resume to its pause or its destroy, whichever comes first, so a
+ * host that drops an `ARCore` without either keeps it alive; `ARSceneView` always destroys on
+ * disposal. [ARCore.resume], [ARCore.pause] and [ARCore.destroy] are main-thread calls, like
+ * the ARCore session calls they make.
+ */
+private val cameraArbiter = CameraArbiter { block -> Handler(Looper.getMainLooper()).post(block) }
 
 /**
  * Pause-then-close for an ARCore session (#4026), split out so the order is a JVM test.

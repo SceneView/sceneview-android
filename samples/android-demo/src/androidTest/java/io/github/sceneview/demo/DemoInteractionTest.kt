@@ -572,52 +572,49 @@ class DemoInteractionTest {
     }
 
     // ── 8. Post Processing — 4 toggle rows ────────────────────────────────────
-    // #2239 Batch 2 folded `post-processing` into `lighting-lab`; since #3496 the
-    // lab has no tabs and its SSAO / MSAA / FXAA / dithering switches are driven by
-    // `lightingLab_benchControls` below.
+    // #2239 Batch 2 folded `post-processing` into `lighting-lab`, and #4603 folded the
+    // lab into `lighting`: its SSAO / MSAA / FXAA / dithering switches are driven by
+    // `lighting_reflectionsAndFrame` below.
 
-    // ── 8. Lighting Lab — every knob on one bench ─────────────────────────────
+    // ── 8. Lighting — reflections and frame options (the former Lighting Lab) ──
 
     @Test
-    fun lightingLab_benchControls() {
-        // #3496 — the lab's five modes (Sky, Environment, Reflections, Post-FX, Fog)
-        // are gone: one fixed key over a studio HDR, and every knob live at once on
-        // the same frame. `dynamic-sky` moved to `lighting`'s Sun rig, which
-        // `lighting_allThreeRigs` covers.
-        openDemo("lighting-lab")
+    fun lighting_reflectionsAndFrame() {
+        // #4603 — Lighting Lab's bench now sits under every rig of `lighting`: the
+        // Image rig gains its environment intensity, and the Reflections and Frame
+        // sections apply to whichever rig is up. Screenshot ids keep the `lab` stem so
+        // a run still compares with the ones before the merge.
+        openDemo("lighting")
         screenshot("31_lab_default")
 
-        // ── Camera ────────────────────────────────────────────────────────────
-        dragSlider("Exposure", fraction = 1.0f); screenshot("31a_lab_exposure_max")
-        dragSlider("Exposure", fraction = 0.0f); screenshot("31b_lab_exposure_min")
-        dragSlider("Exposure", fraction = 0.3f)
-
-        // ── Environment — intensity, sky, rotation, local reflection probe ────
+        // ── Image rig — environment intensity, sky switch ─────────────────────
         dragSlider("Environment intensity", fraction = 1.0f)
         screenshot("32_lab_ibl_max")
         dragSlider("Environment intensity", fraction = 0.1f)
         screenshot("32a_lab_ibl_min")
+        tap("Draw the sky"); screenshot("32c_lab_sky_off")
         dragSlider("Environment rotation", fraction = 0.5f)
         screenshot("32b_lab_ibl_rotated")
-        tap("Draw the sky"); screenshot("32c_lab_sky_on")
         tap("Draw the sky")
-        tap("Local reflection probe"); screenshot("32d_lab_probe_on")
-        dragSlider("Probe radius", fraction = 1.0f); screenshot("32e_lab_probe_wide")
-        tap("Local reflection probe")
 
-        // ── Frame — SSAO, fog and its presets, then the AA switches ───────────
-        tap("Ambient occlusion"); screenshot("33_lab_ssao_off")
-        tap("Ambient occlusion")
+        // ── Reflections — local probe and its area ────────────────────────────
+        tap("Local reflections"); screenshot("32d_lab_probe_on")
+        dragSlider("Reflection area", fraction = 1.0f); screenshot("32e_lab_probe_wide")
+        tap("Local reflections")
+
+        // ── Frame — contact shading, fog and its presets, then the AA switches ─
+        tap("Contact shading"); screenshot("33_lab_ssao_off")
+        tap("Contact shading")
         tap("Fog"); screenshot("33a_lab_fog_on")
         dragSlider("Fog density", fraction = 1.0f); screenshot("33b_lab_fog_dense")
         tap("Warm haze"); screenshot("33c_lab_fog_warm")
         tap("Smoke"); screenshot("33d_lab_fog_smoke")
         tap("Mist")
         tap("Fog")
-        tap("MSAA 4×"); screenshot("34_lab_msaa_on")
-        tap("MSAA 4×")
-        tap("FXAA"); screenshot("34a_lab_fxaa_off")
-        tap("FXAA")
+        tap("Smooth edges · geometry"); screenshot("34_lab_msaa_off")
+        tap("Smooth edges · geometry")
+        tap("Smooth edges · image"); screenshot("34a_lab_fxaa_off")
+        tap("Smooth edges · image")
         screenshot("35_lab_back_to_defaults")
     }
 
@@ -716,7 +713,7 @@ class DemoInteractionTest {
     // lands. Covered by `lighting_allThreeRigs`, which cycles the environment
     // swatches.
 
-    // ── 12. 2D in 3D — Inspect picking and Media playback ─────────────────────
+    // ── 12. 2D in 3D — picking and media playback, one scene ─────────────────────
 
     @Test
     fun twoDInThreeD_inspectMaterialsAndDepth() {
@@ -730,12 +727,12 @@ class DemoInteractionTest {
 
         // Swatches live on a texture, outside the accessibility tree: tap their projected screen
         // positions, never invoke a semantics click on the view. Both points are measured on the
-        // shared Pixel_7a AVD (1280 x 2856, portrait): the middle of the body, then the Gold
-        // swatch, bottom right of the card that stands to the body's right.
-        device.click((device.displayWidth * 0.5f).toInt(), (device.displayHeight * 0.525f).toInt())
+        // shared Pixel_7a AVD (1280 x 2856, portrait), with the media wall above the rocket since
+        // #4624: the window, then the Gold swatch, bottom right of the card at the rocket's right.
+        device.click((device.displayWidth * 0.5f).toInt(), (device.displayHeight * 0.63f).toInt())
         Thread.sleep(800)
         screenshot("50_twoDInThreeD_part_selected")
-        device.click((device.displayWidth * 0.857f).toInt(), (device.displayHeight * 0.468f).toInt())
+        device.click((device.displayWidth * 0.89f).toInt(), (device.displayHeight * 0.677f).toInt())
         Thread.sleep(800)
         check(resetEnabled()) { "Swatch tap must change a part" }
         screenshot("51_twoDInThreeD_restyled")
@@ -755,17 +752,21 @@ class DemoInteractionTest {
 
     @Test
     fun twoDInThreeD_mediaPlaybackAndFacing() {
-        // Same tab token as sceneview://demo/two-d-in-three-d?tab=media.
+        // The media nodes share the rocket's scene (#4624); the old `?tab=media` token still
+        // lands on the same screen.
         openDemo("two-d-in-three-d", tab = "media")
         tapByDesc(context.getString(R.string.demo_two_d_in_three_d_pause))
         screenshot("52c_twoDInThreeD_media_paused")
         tapByDesc(context.getString(R.string.demo_two_d_in_three_d_play))
-        tapByDesc(context.getString(R.string.demo_two_d_in_three_d_face_camera))
+        // Face camera is a settings switch: flip it, close the sheet, walk around.
+        tap(context.getString(R.string.demo_two_d_in_three_d_face_camera))
+        device.pressBack()
         device.swipe((device.displayWidth * 0.75f).toInt(), (device.displayHeight * 0.4f).toInt(),
             (device.displayWidth * 0.25f).toInt(), (device.displayHeight * 0.4f).toInt(), 30)
         Thread.sleep(800)
         screenshot("52d_twoDInThreeD_media_fixed")
-        tapByDesc(context.getString(R.string.demo_two_d_in_three_d_face_camera))
+        tap(context.getString(R.string.demo_two_d_in_three_d_face_camera))
+        device.pressBack()
         screenshot("52e_twoDInThreeD_media_facing")
     }
 
@@ -875,8 +876,8 @@ class DemoInteractionTest {
 
     // ── 19. Reflection Probes ─────────────────────────────────────────────────
     // #2239 Batch 2 — `reflection-probes` consolidated into `lighting-lab`; since
-    // #3496 the probe is a switch plus a radius slider on the lab's one bench.
-    // Covered by `lightingLab_benchControls` above.
+    // #3496 the probe is a switch plus a radius slider, which #4603 moved into
+    // `lighting`'s Reflections section. Covered by `lighting_reflectionsAndFrame` above.
 
     // ── 20/21. Image + Text Labels ─────────────────────────────
     // Retired image/text links open the Media gallery, covered in section 12.

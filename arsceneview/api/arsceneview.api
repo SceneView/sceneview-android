@@ -736,6 +736,9 @@ public final class io/github/sceneview/ar/AutoPlacementState {
 	public final fun deselectPlacement ()V
 	public final fun dismiss ()V
 	public final fun endAdjustment ()V
+	public final fun getAllowsScaling ()Z
+	public final fun getCameraHeight ()Ljava/lang/Float;
+	public final fun getFloorHeight ()Ljava/lang/Float;
 	public final fun getHasCameraFrame ()Z
 	public final fun getHasPlacement ()Z
 	public final fun getPhase ()Lio/github/sceneview/ar/PlacementPhase;
@@ -743,6 +746,7 @@ public final class io/github/sceneview/ar/AutoPlacementState {
 	public final fun getPlacementRequested ()Z
 	public final fun getPlacementsCreated ()I
 	public final fun getScaleFactor ()F
+	public final fun getScaleRange ()Lkotlin/ranges/ClosedFloatingPointRange;
 	public final fun getSelectionGeneration ()I
 	public final fun getSessionGeneration ()I
 	public final fun getShowsSelectionRing ()Z
@@ -761,6 +765,8 @@ public final class io/github/sceneview/ar/AutoPlacementState {
 	public final fun scaleTo (F)V
 	public final fun selectModel ()Lio/github/sceneview/ar/AssetTicket;
 	public final fun selectPlacement ()V
+	public final fun setAllowsScaling (Z)V
+	public final fun setScaleRange (Lkotlin/ranges/ClosedFloatingPointRange;)V
 	public final fun setShowsSelectionRing (Z)V
 	public final fun toggleBaseScale ()V
 	public final fun withdrawRequest ()V
@@ -889,6 +895,10 @@ public final class io/github/sceneview/ar/FrameInput {
 	public final fun getTracking ()Z
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/sceneview/ar/HostLifecycleKt {
+	public static final fun rememberHostLifecycle (Landroidx/compose/runtime/Composer;I)Landroidx/lifecycle/Lifecycle;
 }
 
 public final class io/github/sceneview/ar/Ndc {
@@ -1052,6 +1062,7 @@ public final class io/github/sceneview/ar/PlaneDiscoveryPhase : java/lang/Enum {
 public final class io/github/sceneview/ar/PlaneVisualizer : io/github/sceneview/collision/TransformProvider {
 	public static final field $stable I
 	public static final field Companion Lio/github/sceneview/ar/PlaneVisualizer$Companion;
+	public static final field SCAN_IN_DURATION_MS J
 	public fun <init> (Lcom/google/android/filament/Engine;Lcom/google/android/filament/Scene;Lcom/google/ar/core/Plane;)V
 	public final fun destroy ()V
 	public fun getTransformationMatrix ()Lio/github/sceneview/collision/Matrix;
@@ -1533,6 +1544,7 @@ public class io/github/sceneview/ar/camera/ARCameraStream : io/github/sceneview/
 	public static final field CAMERA_PRIORITY_BACKGROUND I
 	public static final field CAMERA_PRIORITY_DEPTH_PRIME I
 	public static final field Companion Lio/github/sceneview/ar/camera/ARCameraStream$Companion;
+	public static final field OCCLUDER_PRIORITY I
 	public fun <init> (Lio/github/sceneview/loaders/MaterialLoader;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
 	public synthetic fun <init> (Lio/github/sceneview/loaders/MaterialLoader;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun destroy ()V
@@ -1558,6 +1570,7 @@ public class io/github/sceneview/ar/camera/ARCameraStream : io/github/sceneview/
 	public fun getRenderableManager ()Lcom/google/android/filament/RenderableManager;
 	public final fun getStandardMaterial ()Lcom/google/android/filament/Material;
 	public final fun isDepthOcclusionEnabled ()Z
+	public final fun isOccluderMeshEnabled ()Z
 	public final fun isPersonOcclusionEnabled ()Z
 	public fun isShadowCaster ()Z
 	public fun isShadowReceiver ()Z
@@ -1586,6 +1599,7 @@ public class io/github/sceneview/ar/camera/ARCameraStream : io/github/sceneview/
 	public fun setMaterialInstances (Lcom/google/android/filament/MaterialInstance;)V
 	public fun setMaterialInstances (Ljava/util/List;)V
 	public fun setMorphWeights ([FI)V
+	public final fun setOccluderMeshEnabled (Z)V
 	public final fun setPersonOcclusionEnabled (Z)V
 	public final fun setPersonOcclusionMaterial (Lcom/google/android/filament/Material;)V
 	public fun setPriority (I)V
@@ -2786,6 +2800,15 @@ public final class io/github/sceneview/ar/scene/PlaneRenderer : io/github/scenev
 	public static final field $stable I
 	public static final field Companion Lio/github/sceneview/ar/scene/PlaneRenderer$Companion;
 	public static final field MATERIAL_COLOR Ljava/lang/String;
+	public static final field MATERIAL_CONTRAST Ljava/lang/String;
+	public static final field MATERIAL_FOCUS Ljava/lang/String;
+	public static final field MATERIAL_GRID_ALPHA Ljava/lang/String;
+	public static final field MATERIAL_GRID_TINT Ljava/lang/String;
+	public static final field MATERIAL_OPACITY Ljava/lang/String;
+	public static final field MATERIAL_SCAN_PLANE_RADIUS Ljava/lang/String;
+	public static final field MATERIAL_SCAN_PROGRESS Ljava/lang/String;
+	public static final field MATERIAL_SURFACE_ALPHA Ljava/lang/String;
+	public static final field MATERIAL_SURFACE_KIND Ljava/lang/String;
 	public static final field MATERIAL_TEXTURE Ljava/lang/String;
 	public static final field MATERIAL_UV_SCALE Ljava/lang/String;
 	public field viewSize Landroid/util/Size;
@@ -2793,6 +2816,7 @@ public final class io/github/sceneview/ar/scene/PlaneRenderer : io/github/scenev
 	public fun destroy ()V
 	public final fun getEngine ()Lcom/google/android/filament/Engine;
 	public final fun getMaxHitTestPerSecond ()I
+	public final fun getMaxUpdatesPerSecond ()I
 	public final fun getPlaneMaterial ()Lcom/google/android/filament/Material;
 	public final fun getPlaneRendererMode ()Lio/github/sceneview/ar/scene/PlaneRenderer$PlaneRendererMode;
 	public final fun getPlaneTexture ()Lcom/google/android/filament/Texture;
@@ -2802,6 +2826,7 @@ public final class io/github/sceneview/ar/scene/PlaneRenderer : io/github/scenev
 	public fun isVisible ()Z
 	public fun setEnabled (Z)V
 	public final fun setMaxHitTestPerSecond (I)V
+	public final fun setMaxUpdatesPerSecond (I)V
 	public final fun setPlaneRendererMode (Lio/github/sceneview/ar/scene/PlaneRenderer$PlaneRendererMode;)V
 	public fun setShadowReceiver (Z)V
 	public fun setViewSize (Landroid/util/Size;)V

@@ -131,7 +131,7 @@ import kotlin.math.roundToInt
  */
 @Composable
 fun CameraAndGesturesDemo(onBack: () -> Unit) {
-    // Inspection mode (Android Studio @Preview, Roborazzi): bail out BEFORE rememberEngine(),
+    // Inspection mode (Android Studio @Preview, Robolectric tests): bail out BEFORE rememberEngine(),
     // which needs Filament .so files LayoutLib does not load.
     if (LocalInspectionMode.current) {
         DemoPreviewPlaceholder(

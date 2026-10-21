@@ -10,8 +10,8 @@ private typealias Column = RerunComponentColumn
 /**
  * Writes a [RerunExportScene] as a Rerun `.rrd` recording (`rerun space.rrd` opens it), in pure
  * Kotlin: no Rerun SDK, no protobuf or Arrow library. The iOS demo's `RerunRRDWriter` writes the
- * same recording chunk for chunk (the store source aside), but not yet the default layout
- * ([RerunRrdBlueprint]) this writer puts before it.
+ * same file byte for byte, default layout ([RerunRrdBlueprint]) and footer included, the store
+ * source label aside (`RerunRrdCrossPlatformFixtureTest` holds the two to one shared file).
  *
  * Targets the `.rrd` format of Rerun **0.38.1** (`RRF2` framing, sorbet `0.1.3` chunks),
  * uncompressed, closed by the footer `rerun rrd verify` asks for ([RerunRrdFooter]): an index of

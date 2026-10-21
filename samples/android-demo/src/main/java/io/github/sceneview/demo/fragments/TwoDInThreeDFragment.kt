@@ -8,12 +8,14 @@ import io.github.sceneview.demo.DemoEntry
 import io.github.sceneview.demo.DemoMode
 import io.github.sceneview.demo.DemoModeHost
 import io.github.sceneview.demo.R
-import io.github.sceneview.demo.demos.TwoDInThreeDInspectDemo
-import io.github.sceneview.demo.demos.TwoDInThreeDMediaDemo
+import io.github.sceneview.demo.demos.TwoDInThreeDDemo
 
 /**
- * Inspect a procedural rocket with live Compose controls, or explore flat content in Media.
- * Retired text/image/video/billboard links open Media through DeepLinkRouter.ALIAS_INITIAL_TAB.
+ * One showcase: a procedural rocket restyled from live Compose UI, in front of a wall of image,
+ * video, billboard and text nodes (#4624). It was two tabs, Inspect and Media, and the second
+ * went unnoticed: both are now one scene. The two mode keys stay — `?tab=inspect`, `?tab=media`
+ * and the retired text/image/video/billboard links still resolve, and telemetry keeps its
+ * history — but no switch is drawn and every mode opens the same screen.
  */
 object TwoDInThreeDFragment : DemoFragment {
     val modes = listOf(
@@ -37,11 +39,8 @@ object TwoDInThreeDFragment : DemoFragment {
 
     @Composable
     override fun Screen(onBack: () -> Unit) {
-        DemoModeHost(modes = modes, tabToMode = mapOf(0 to 0, 1 to 1)) { mode ->
-            when (mode) {
-                1 -> TwoDInThreeDMediaDemo(onBack)
-                else -> TwoDInThreeDInspectDemo(onBack)
-            }
+        DemoModeHost(modes = modes, tabToMode = mapOf(0 to 0, 1 to 1), showSwitch = false) {
+            TwoDInThreeDDemo(onBack)
         }
     }
 }

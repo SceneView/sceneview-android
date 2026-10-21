@@ -1,5 +1,6 @@
 package io.github.sceneview.demo.demos
 
+import android.app.Activity
 import android.content.ClipData
 import android.content.Context
 import android.content.Intent
@@ -7,13 +8,16 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.text.format.DateFormat
+import android.util.Log
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.content.FileProvider
+import io.github.sceneview.demo.DemoSettings
 import io.github.sceneview.demo.OpenedModelIntent
 import io.github.sceneview.demo.demos.internal.ArDebugEvent
 import io.github.sceneview.demo.demos.internal.ArDebugLogWriter
 import io.github.sceneview.demo.demos.internal.ArDebugTrace
+import io.github.sceneview.demo.demos.internal.BakeOcclusion
 import io.github.sceneview.demo.demos.internal.BakePhoto
 import io.github.sceneview.demo.demos.internal.DebugPlane
 import io.github.sceneview.demo.demos.internal.DebugPlaneKind
@@ -30,17 +34,25 @@ import io.github.sceneview.demo.demos.internal.RerunCapturePack
 import io.github.sceneview.demo.demos.internal.RerunFileKind
 import io.github.sceneview.demo.demos.internal.RerunImportFailure
 import io.github.sceneview.demo.demos.internal.RerunRrdReader
-import io.github.sceneview.demo.demos.internal.RerunScanFile
 import io.github.sceneview.demo.demos.internal.RerunSessionStore
+import io.github.sceneview.demo.demos.internal.RerunShareCopy
 import io.github.sceneview.demo.demos.internal.RerunStoredSession
+import io.github.sceneview.demo.demos.internal.ScanScope
+import io.github.sceneview.demo.demos.internal.ScanScopeCopy
 import io.github.sceneview.demo.demos.internal.ScanArchive
 import io.github.sceneview.demo.demos.internal.ScanDevice
+import io.github.sceneview.demo.demos.internal.ScanFootprint
 import io.github.sceneview.demo.demos.internal.ScanPhotoPolicy
 import io.github.sceneview.demo.demos.internal.SvpcCodec
 import io.github.sceneview.demo.demos.internal.Vec3
 import io.github.sceneview.demo.demos.internal.of
 import io.github.sceneview.demo.demos.internal.toJson
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -48,7 +60,7 @@ import java.io.InputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.util.UUID
+import java.util.concurrent.atomic.AtomicInteger
 
 /*
  * The Rerun demo's sessions, on Android: a finished scan built into the recorder's three files —
@@ -85,7 +97,18 @@ internal object RerunCaptureBuilder {
         fun photo(index: Int): BakePhoto? = decoded.getOrPut(index) { decodePhoto(photos[index]) }
 
         val viewpoint = centroid(whole.trail)
-        val baked = trace.lastPlanes().mapNotNull { plane -> bakePlane(plane, viewpoint, photos, lens, ::photo) }
+        val planes = trace.lastPlanes()
+        // What stands in front of a plane hides it from a photo: its own dense cloud and the other planes.
+        val bakeStart = System.nanoTime()
+        val occlusion = BakeOcclusion.of(dense, planes)
+        val baked = planes.mapNotNull { plane -> bakePlane(plane, viewpoint, photos, lens, occlusion, ::photo) }
+        // `adb logcat -s RerunCaptureBuilder`: what the visibility test costs on a real phone (#4697).
+        // The JVM tests build scans too, and their android.util.Log is a stub that throws.
+        val bakeMs = (System.nanoTime() - bakeStart) / NANOS_PER_MS
+        runCatching {
+            Log.i(BAKE_LOG_TAG, "planes baked: ${baked.size} of ${planes.size}, ${photos.size} photos, " +
+                "${dense?.count ?: 0} dense points, $bakeMs ms")
+        }
         val denseCloud = dense?.takeIf { device != null && it.count > 0 }
         val denseBlob = denseCloud?.let { listOf(ReplayDense.PATH to SvpcCodec.encode(it)) }.orEmpty()
         val (archive, spans) = ScanArchive.pack(
@@ -118,16 +141,19 @@ internal object RerunCaptureBuilder {
         viewpoint: Vec3?,
         photos: List<ScanPhoto>,
         lens: ReplayLens,
+        occlusion: BakeOcclusion?,
         photo: (Int) -> BakePhoto?,
     ): Pair<ReplayPlaneTexture, ByteArray>? {
         val rect = PlaneBake.rectOf(plane, viewpoint) ?: return null
         val (width, height) = PlaneBake.sizeOf(rect)
         val picked = PlaneBake.pickPhotos(rect, photos.map { it.pose }, lens).mapNotNull(photo)
-        val texels = PlaneBake.bake(rect, width, height, picked, lens) ?: return null
-        val bitmap = Bitmap.createBitmap(texels, width, height, Bitmap.Config.ARGB_8888)
+        val baked = PlaneBake.bake(rect, width, height, picked, lens, occlusion, plane.id) ?: return null
+        val bitmap = Bitmap.createBitmap(baked.argb, baked.width, baked.height, Bitmap.Config.ARGB_8888)
         val jpeg = ByteArrayOutputStream().also { bitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, it) }
         bitmap.recycle()
-        val texture = ReplayPlaneTexture(plane.id, "planes/plane-${plane.id}.jpg", rect.origin, rect.u, rect.v)
+        // Cropped to what the photos saw: the texture's own rectangle, not the polygon's.
+        val area = baked.rect
+        val texture = ReplayPlaneTexture(plane.id, "planes/plane-${plane.id}.jpg", area.origin, area.u, area.v)
         return texture to jpeg.toByteArray()
     }
 
@@ -157,18 +183,28 @@ internal object RerunCaptureBuilder {
         (0 until plane.polygon.size / 3).minOf { plane.polygon[it * 3 + 1] }
 
     private const val JPEG_QUALITY = 85
+    private const val BAKE_LOG_TAG = "RerunCaptureBuilder"
+    private const val NANOS_PER_MS = 1_000_000L
 }
 
 /** The sessions kept on this phone: `filesDir/rerun/sessions/<id>/`. */
 internal fun rerunSessionStore(context: Context) = RerunSessionStore(File(context.filesDir, "rerun/sessions"))
 
-/** A kept session as the landing shows it: its `session.json` and its first photo. */
-internal class LandingSession(val info: RerunStoredSession, val thumbnail: ImageBitmap?) {
+/**
+ * A kept session as the landing shows it: its `session.json` and its first photo — or, for a scan
+ * kept without photos, its [footprint] seen from above (#4680).
+ */
+internal class LandingSession(
+    val info: RerunStoredSession,
+    val thumbnail: ImageBitmap?,
+    val footprint: ScanFootprint? = null,
+) {
     val id: String get() = info.id
 }
 
 /** Every kept session with its thumbnail, newest first. IO. */
 internal suspend fun RerunSessionStore.landingSessions(): List<LandingSession> = withContext(Dispatchers.IO) {
+    runCatching { sweepOrphans() }
     list().map { info ->
         val thumbnail = thumbnail(info.id)?.let { file ->
             runCatching {
@@ -181,39 +217,117 @@ internal suspend fun RerunSessionStore.landingSessions(): List<LandingSession> =
                 BitmapFactory.decodeFile(file.path, options)?.asImageBitmap()
             }.getOrNull()
         }
-        LandingSession(info, thumbnail)
+        val footprint = if (thumbnail != null) null else footprintOf(info.id)
+        LandingSession(info, thumbnail, footprint)
     }
 }
 
 /**
- * "Room · Sep 28, 2:32 PM": in English like the rest of the demo, whatever the phone's language —
- * a French phone wrote "Room · 30 sept., 13:56" into an English screen.
+ * Session [id] from above, read once per process: a capture never changes once kept, and reading
+ * one back (its log, its dense cloud) is too slow to repeat on every visit to the list.
  */
-internal fun recordingTitle(nowMillis: Long, locale: Locale = Locale.US): String {
-    val pattern = DateFormat.getBestDateTimePattern(locale, "MMMd jmm")
-    return RerunStoredSession.recordingTitle(SimpleDateFormat(pattern, locale).format(Date(nowMillis)))
+private fun RerunSessionStore.footprintOf(id: String): ScanFootprint? =
+    footprints.getOrPut(File(root, id).path) {
+        Optional(runCatching { capture(id)?.open()?.let { ScanFootprint.of(it) } }.getOrNull())
+    }.value
+
+private class Optional(val value: ScanFootprint?)
+private val footprints = java.util.concurrent.ConcurrentHashMap<String, Optional>()
+
+/**
+ * A scan's date and time as every 3D Scan screen writes it (#4720): `Sep 28, 2:32 PM`. One
+ * format, the locale's own pattern for it — [Locale.US], because the demo is in English whatever
+ * the phone's language: a French phone wrote "Room · 30 sept., 13:56" into an English screen.
+ */
+internal fun scanDate(millis: Long, locale: Locale = Locale.US): String =
+    SimpleDateFormat(DateFormat.getBestDateTimePattern(locale, SCAN_DATE_SKELETON), locale).format(Date(millis))
+
+/**
+ * [scanDate] with its year, for a document that outlives the day — the floor plan's PDF:
+ * `Sep 28, 2026, 2:32 PM`.
+ */
+internal fun scanDateWithYear(millis: Long, locale: Locale = Locale.US): String =
+    SimpleDateFormat(DateFormat.getBestDateTimePattern(locale, "y$SCAN_DATE_SKELETON"), locale).format(Date(millis))
+
+private const val SCAN_DATE_SKELETON = "MMMd jmm"
+
+/**
+ * "Room · Sep 28, 2:32 PM" ([scanDate]). Named after what was scanned (#4647): "Object · …",
+ * "Room 2 · …" for the second room of a home.
+ */
+internal fun recordingTitle(
+    nowMillis: Long,
+    scope: ScanScope = ScanScope.Room,
+    roomNumber: Int = 1,
+    locale: Locale = Locale.US,
+): String = ScanScopeCopy.sessionTitle(scope, roomNumber, scanDate(nowMillis, locale))
+
+/**
+ * "Sep 28, 2:32 PM · Recorded" ([scanDate]); "Recorded" alone when the title already says when
+ * ("Room · Sep 28, 2:32 PM"), so a card never writes the same date twice (#4720).
+ */
+internal fun sessionOrigin(session: RerunStoredSession, locale: Locale = Locale.US): String {
+    val date = scanDate(session.createdAt * MILLIS, locale)
+    return if (session.title.contains(date)) session.source.label else "$date · ${session.source.label}"
 }
 
-/** "Sep 28, 2:32 PM · Recorded", in English like [recordingTitle]. */
-internal fun sessionOrigin(session: RerunStoredSession, locale: Locale = Locale.US): String {
-    val pattern = DateFormat.getBestDateTimePattern(locale, "MMMd jmm")
-    val date = SimpleDateFormat(pattern, locale).format(Date(session.createdAt * MILLIS))
-    return "$date · ${session.source.label}"
+/** A scan file ready to share: the [file] in the cache and its weight, read off the main thread. */
+internal class PreparedScan(val includePhotos: Boolean, val file: File, val bytes: Long)
+
+/**
+ * Session [session] as the scan file the share sheet is about to send — with its photos, or
+ * without them ([RerunShareCopy]) — in a fresh cache directory, named after its title. The size
+ * the sheet shows is this very file's. `null` when the session's capture is gone.
+ *
+ * One copy at a time: each call replaces the previous one, and a call made while another is still
+ * writing waits for it, so a switch flipped twice in a row never deletes a file being written.
+ * The copy lives in its own directory of the share root ([RERUN_SHARE_SCAN]): the exports and the
+ * plan are written next to it, never over it.
+ */
+internal suspend fun prepareSharedScan(
+    context: Context,
+    store: RerunSessionStore,
+    session: RerunStoredSession,
+    includePhotos: Boolean,
+): PreparedScan? {
+    // Counted before the copy starts: a clean-up asked earlier never removes this copy.
+    shareCopyRequests.incrementAndGet()
+    return withContext(Dispatchers.IO) {
+        shareCopyLock.withLock {
+            val capture = store.capture(session.id) ?: return@withContext null
+            val root = rerunShareDirectory(context, RERUN_SHARE_SCAN)
+            val file = RerunShareCopy.write(capture, session.title, root, includePhotos, session.scope)
+            PreparedScan(includePhotos, file, file.length())
+        }
+    }
 }
 
 /**
- * Session [session] as a scan file in a fresh cache directory, named after its title, handed to the
- * system's share sheet. `false` when its capture is gone.
+ * Removes the scan copy written for the share sheet: a sheet closed without sending, or a deleted
+ * scan, leaves no photo of the room behind in the cache. It waits for a copy still being written,
+ * outlives the screen that asked for it, and leaves alone a copy asked for after it.
  */
-internal suspend fun shareScanFile(context: Context, store: RerunSessionStore, session: RerunStoredSession): Boolean {
-    val file = withContext(Dispatchers.IO) {
-        val capture = store.capture(session.id) ?: return@withContext null
-        val shareRoot = File(context.cacheDir, RERUN_SHARE_DIR)
-        // Only the latest shared file is kept: the share sheet has read it by the next share.
-        shareRoot.deleteRecursively()
-        val dir = File(shareRoot, UUID.randomUUID().toString()).apply { mkdirs() }
-        File(dir, RerunScanFile.fileName(session.title)).apply { writeBytes(RerunScanFile.write(capture)) }
-    } ?: return false
+internal fun discardSharedScan(context: Context) {
+    val root = rerunShareDirectory(context, RERUN_SHARE_SCAN)
+    val asked = shareCopyRequests.get()
+    shareCleanup.launch {
+        shareCopyLock.withLock {
+            // A copy sent to this very app ("Open in SceneView") is kept until it is read (#4680).
+            if (shareCopyRequests.get() == asked && !RerunInbox.reading) root.deleteRecursively()
+        }
+    }
+}
+
+/** The directory of the share root one writer owns: a writer only ever empties its own. */
+internal fun rerunShareDirectory(context: Context, use: String): File =
+    File(File(context.cacheDir, RERUN_SHARE_DIR), use)
+
+private val shareCopyLock = Mutex()
+private val shareCopyRequests = AtomicInteger()
+private val shareCleanup = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+/** Hands the prepared [file] to the system's share sheet: the bytes sent are the bytes weighed. */
+internal fun sharePreparedScan(context: Context, file: File, title: String) {
     val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
     val send = Intent(Intent.ACTION_SEND).apply {
         type = SCAN_MIME_TYPE
@@ -222,9 +336,8 @@ internal suspend fun shareScanFile(context: Context, store: RerunSessionStore, s
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
     context.startActivity(
-        Intent.createChooser(send, session.title).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        Intent.createChooser(send, title).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
     )
-    return true
 }
 
 /**
@@ -258,7 +371,51 @@ internal object RerunInbox {
         // Both kinds: a scan file, and a Rerun recording (this demo's export, or one from Rerun).
         return RerunFileKind.of(name, head) != null
     }
+
+    /**
+     * Hands [uri] to the 3D Scan of [activity] — the activity the intent reached — and to no
+     * other. The process can hold more than one MainActivity: "Open in SceneView" picked from the
+     * demo's own share sheet starts a second one in its own task, the first one still showing
+     * 3D Scan behind it. Both compose 3D Scan; with a process-wide inbox both read the file in the
+     * same frame and it was imported twice (#4680).
+     */
+    fun post(activity: Activity, uri: Uri) {
+        val delivery = RerunInboxDelivery(uri, System.identityHashCode(activity))
+        // One file waits at a time: the one it replaces will never be read.
+        DemoSettings.rerunInbox?.let { unread.remove(it) }
+        unread += delivery
+        DemoSettings.rerunInbox = delivery
+    }
+
+    /**
+     * [delivery]'s file is read (or failed to read). Until then the scan copy this app shared
+     * stays in the cache: the 3D Scan landing that opens to import it would otherwise clear the
+     * share cache ([discardSharedScan]) under the import's feet.
+     */
+    fun read(delivery: RerunInboxDelivery) {
+        unread.remove(delivery)
+    }
+
+    /** Whether a file handed over is still waiting to be read. */
+    val reading: Boolean get() = unread.isNotEmpty()
+
+    private val unread: MutableSet<RerunInboxDelivery> =
+        java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap())
+
+    /**
+     * `true` once, for the 3D Scan of the activity [delivery] was posted to: it clears the inbox
+     * and imports. Any other caller, or a second call, gets `false`. Main thread.
+     */
+    fun claim(delivery: RerunInboxDelivery, activity: Activity?): Boolean {
+        if (activity == null || delivery.owner != System.identityHashCode(activity)) return false
+        if (DemoSettings.rerunInbox !== delivery) return false
+        DemoSettings.rerunInbox = null
+        return true
+    }
 }
+
+/** A scan file waiting for the 3D Scan of one activity ([RerunInbox.post]). */
+class RerunInboxDelivery(val uri: Uri, val owner: Int)
 
 private fun InputStream.readNBytesCompat(count: Int): ByteArray {
     val out = ByteArray(count)
@@ -290,6 +447,10 @@ private fun InputStream.readBounded(): ByteArray {
 private const val SCAN_MIME_TYPE = "application/octet-stream"
 /** Scan files and exports handed to the share sheet; the FileProvider exposes only this. */
 internal const val RERUN_SHARE_DIR = "rerun-share"
+/** One directory per writer under [RERUN_SHARE_DIR]: the scan copy, the exports, the plan. */
+internal const val RERUN_SHARE_SCAN = "scan"
+internal const val RERUN_SHARE_EXPORT = "export"
+internal const val RERUN_SHARE_PLAN = "plan"
 private const val MILLIS = 1000L
 private const val HEAD_BYTES = 64
 private const val BUFFER_BYTES = 64 * 1024

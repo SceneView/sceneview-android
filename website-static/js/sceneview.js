@@ -24,7 +24,7 @@
  * Powered by Filament.js v1.72.1 (Google's PBR renderer, WASM).
  * https://sceneview.github.io
  *
- * @version 4.56.0
+ * @version 4.60.0
  * @license MIT
  */
 (function(global) {
@@ -450,6 +450,13 @@
   /** What a load rejects with when dispose() overtook it: an `AbortError`, as fetch does. */
   function _disposedError() {
     var e = new Error('SceneView: the viewer was disposed');
+    e.name = 'AbortError';
+    return e;
+  }
+
+  /** The rejection of a loadModel() call that a later call replaced before it was shown. */
+  function _supersededError(url) {
+    var e = new Error('SceneView: loadModel(' + url + ') was replaced by a later loadModel() call');
     e.name = 'AbortError';
     return e;
   }
@@ -1002,6 +1009,435 @@
     return out;
   }
 
+  // ---- Load-time rewrites of a glTF that Filament.js would not draw (#4566) ----
+
+  var _COMPONENT_BYTES = { 5120: 1, 5121: 1, 5122: 2, 5123: 2, 5125: 4, 5126: 4 };
+  var _TYPE_COMPONENTS = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4, MAT4: 16 };
+
+  /**
+   * A GLB's JSON chunk as text and its BIN chunk (a view, not a copy), or null when the
+   * bytes are not a GLB. Nothing is parsed, so a gate can look at the text first.
+   */
+  function _glbParts(bytes) {
+    if (!bytes || bytes.byteLength < 20) return null;
+    var dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    if (dv.getUint32(0, true) !== 0x46546C67 || dv.getUint32(16, true) !== 0x4E4F534A) return null;
+    var len = dv.getUint32(12, true);
+    if (20 + len > bytes.byteLength) return null;
+    var text = new TextDecoder().decode(bytes.subarray(20, 20 + len)), bin = null, o = 20 + len;
+    if (o + 8 <= bytes.byteLength && dv.getUint32(o + 4, true) === 0x004E4942) {
+      var binLen = dv.getUint32(o, true);
+      if (o + 8 + binLen <= bytes.byteLength) bin = bytes.subarray(o + 8, o + 8 + binLen);
+    }
+    return { text: text, bin: bin };
+  }
+
+  /** GLB bytes from a glTF JSON object and a BIN chunk: JSON padded with spaces, BIN with zeros. */
+  function _buildGlb(json, bin) {
+    var text = new TextEncoder().encode(JSON.stringify(json));
+    var jsonPad = (4 - text.length % 4) % 4;
+    var binLen = bin ? bin.length : 0, binPad = (4 - binLen % 4) % 4;
+    var total = 20 + text.length + jsonPad + (binLen ? 8 + binLen + binPad : 0);
+    var out = new Uint8Array(total), dv = new DataView(out.buffer);
+    dv.setUint32(0, 0x46546C67, true);
+    dv.setUint32(4, 2, true);
+    dv.setUint32(8, total, true);
+    dv.setUint32(12, text.length + jsonPad, true);
+    dv.setUint32(16, 0x4E4F534A, true);
+    out.set(text, 20);
+    out.fill(0x20, 20 + text.length, 20 + text.length + jsonPad);
+    if (binLen) {
+      var o = 20 + text.length + jsonPad;
+      dv.setUint32(o, binLen + binPad, true);
+      dv.setUint32(o + 4, 0x004E4942, true);
+      out.set(bin, o + 8);
+    }
+    return out;
+  }
+
+  /** A growing BIN chunk, seeded with the original one so every existing offset holds. */
+  function _binSink(seed) {
+    var parts = [], size = 0;
+    function write(b) { if (b && b.length) { parts.push(b); size += b.length; } }
+    write(seed);
+    return {
+      /** Append `bytes` under a new, 4-byte-aligned view of buffer 0; returns its index. */
+      appendView: function(json, bytes, extra) {
+        var pad = (4 - size % 4) % 4;
+        if (pad) write(new Uint8Array(pad));
+        var view = { buffer: 0, byteOffset: size, byteLength: bytes.length };
+        for (var k in extra || {}) view[k] = extra[k];
+        json.bufferViews = json.bufferViews || [];
+        json.bufferViews.push(view);
+        write(bytes);
+        return json.bufferViews.length - 1;
+      },
+      bytes: function() {
+        var out = new Uint8Array(size), o = 0;
+        parts.forEach(function(p) { out.set(p, o); o += p.length; });
+        return out;
+      }
+    };
+  }
+
+  /** An accessor's raw component values (not normalized), or null when they cannot be read in place. */
+  function _readAccessor(json, bin, ai) {
+    var acc = json.accessors && json.accessors[ai];
+    var bv = _glbPlainView(json, acc);
+    var size = acc && _COMPONENT_BYTES[acc.componentType], comps = acc && _TYPE_COMPONENTS[acc.type];
+    if (!bv || !bin || !size || !comps) return null;
+    var n = acc.count, elem = size * comps, stride = bv.byteStride || elem;
+    var base = (bv.byteOffset || 0) + (acc.byteOffset || 0);
+    if (!(n > 0) || base + (n - 1) * stride + elem > bin.byteLength) return null;
+    var dv = new DataView(bin.buffer, bin.byteOffset, bin.byteLength), out = new Float32Array(n * comps);
+    var ct = acc.componentType;
+    for (var i = 0; i < n; i++) {
+      for (var c = 0, o = base + i * stride; c < comps; c++, o += size) {
+        out[i * comps + c] = ct === 5126 ? dv.getFloat32(o, true) : ct === 5123 ? dv.getUint16(o, true)
+          : ct === 5121 ? dv.getUint8(o) : ct === 5125 ? dv.getUint32(o, true)
+            : ct === 5122 ? dv.getInt16(o, true) : dv.getInt8(o);
+      }
+    }
+    return { count: n, comps: comps, data: out };
+  }
+
+  function _fromDataUri(uri) {
+    try {
+      var bin = atob(uri.slice(uri.indexOf('base64,') + 7)), out = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+      return out;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function _toBase64(bytes) {
+    var s = '';
+    // fromCharCode.apply overflows the argument limit on a whole image: 32 KB at a time.
+    for (var o = 0; o < bytes.length; o += 0x8000) {
+      s += String.fromCharCode.apply(null, bytes.subarray(o, Math.min(o + 0x8000, bytes.length)));
+    }
+    return btoa(s);
+  }
+
+  /** Largest WebP edge decoded: 8192 is where WebGL textures commonly stop anyway. */
+  var _WEBP_MAX_EDGE = 8192;
+  /** Most WebP images decoded per model: bounds what a few KB of crafted JSON can ask for. */
+  var _WEBP_MAX_IMAGES = 256;
+
+  /** PNG bytes of a WebP image, or null when the browser cannot decode it or it is too big. */
+  function _webpToPng(webp) {
+    if (typeof createImageBitmap !== 'function') return Promise.resolve(null);
+    // No colour management: a texture holds data (normals, roughness), not a photo.
+    return createImageBitmap(new Blob([webp], { type: 'image/webp' }), { colorSpaceConversion: 'none' })
+      .then(function(bitmap) {
+        var w = bitmap.width, h = bitmap.height;
+        if (!(w >= 1 && h >= 1 && w <= _WEBP_MAX_EDGE && h <= _WEBP_MAX_EDGE)) { bitmap.close(); return null; }
+        var canvas;
+        if (typeof OffscreenCanvas === 'function') canvas = new OffscreenCanvas(w, h);
+        else { canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h; }
+        var ctx = canvas.getContext('2d');
+        if (!ctx) { bitmap.close(); return null; }
+        ctx.drawImage(bitmap, 0, 0);
+        bitmap.close();
+        var blob = canvas.convertToBlob ? canvas.convertToBlob({ type: 'image/png' })
+          : new Promise(function(resolve) { canvas.toBlob(resolve, 'image/png'); });
+        return blob.then(function(b) { return b ? b.arrayBuffer() : null; })
+          .then(function(ab) { return ab ? new Uint8Array(ab) : null; });
+      })
+      .catch(function() { return null; });
+  }
+
+  function _webpSource(texture) {
+    var ext = texture && texture.extensions && texture.extensions.EXT_texture_webp;
+    return ext && Number.isInteger(ext.source) ? ext.source : -1;
+  }
+
+  /**
+   * The bytes of a glTF/GLB with every embedded WebP texture re-encoded to PNG.
+   * Filament.js registers no image/webp decoder, so an EXT_texture_webp model drew
+   * untextured, grey or black, with only "Missing texture provider for image/webp" on
+   * the console (#4566). This is sceneview-web's WebPTextureTranscoder (#3133) for the
+   * viewer pages: the images stored in the BIN chunk or in a data: URI are decoded by
+   * the browser, re-encoded to PNG and appended to the BIN chunk (data: URIs stay data:
+   * URIs), and EXT_texture_webp is dropped once nothing needs it. External image files
+   * are left alone. A model with no WebP comes back as the same bytes, after a look at
+   * its JSON text only. Never rejects: what cannot be rewritten goes to gltfio as it came.
+   * PNG keeps alpha, but a 2D canvas premultiplies it: partly transparent texels round.
+   * `stale()`, when given, is asked before each decode: once it returns an error (the
+   * load was replaced or the viewer disposed), no further image is decoded and the
+   * bytes come back as they came, for the caller to drop.
+   */
+  function _transcodeWebP(bytes, stale) {
+    var parts, text, json;
+    try {
+      parts = _glbParts(bytes);
+      // A .gltf is JSON text; a large binary that is not a GLB is not looked at.
+      text = parts ? parts.text : (bytes.length < 64e6 ? new TextDecoder().decode(bytes) : '');
+      if (!/webp/i.test(text)) return Promise.resolve(bytes);
+      json = JSON.parse(text);
+    } catch (e) {
+      return Promise.resolve(bytes);
+    }
+    var images = json.images || [], textures = json.textures || [];
+    var bin = parts ? parts.bin : null, buffer0 = json.buffers && json.buffers[0];
+    // PNGs go into the BIN chunk only when buffer 0 is that chunk.
+    var binBacked = !!(bin && bin.length && buffer0 && buffer0.uri === undefined);
+    var wanted = {};
+    textures.forEach(function(t) {
+      var s = _webpSource(t);
+      // A texture that keeps a non-WebP `source` already has its fallback.
+      if (s >= 0 && t.source === undefined) wanted[s] = true;
+    });
+    images.forEach(function(im, i) { if (im && im.mimeType === 'image/webp') wanted[i] = true; });
+    var list = Object.keys(wanted).map(Number).sort(function(a, b) { return a - b; });
+    var budget = list.slice(0, _WEBP_MAX_IMAGES), failed = list.length - budget.length;
+
+    function embedded(im) {
+      var v = im && Number.isInteger(im.bufferView) && json.bufferViews && json.bufferViews[im.bufferView];
+      if (v && bin && (v.buffer || 0) === 0 && buffer0 && buffer0.uri === undefined) {
+        var o = v.byteOffset || 0, n = v.byteLength || 0;
+        if (o >= 0 && n > 0 && o + n <= bin.length) return bin.subarray(o, o + n);
+      }
+      return im && typeof im.uri === 'string' && im.uri.indexOf('data:') === 0 ? _fromDataUri(im.uri) : null;
+    }
+
+    // Four decodes at a time; the PNGs are appended in image order, so the layout is fixed.
+    var pngs = new Array(budget.length), next = 0;
+    function dropped() { return !!(stale && stale()); }
+    function worker() {
+      // A replaced load stops decoding: a 30-texture model no longer runs to its end.
+      if (next >= budget.length || dropped()) return Promise.resolve();
+      var k = next++, src = embedded(images[budget[k]]);
+      return (src ? _webpToPng(src) : Promise.resolve(null))
+        .then(function(png) { pngs[k] = png; return worker(); });
+    }
+    var workers = [];
+    for (var w = 0; w < Math.min(4, budget.length); w++) workers.push(worker());
+
+    return Promise.all(workers).then(function() {
+      if (dropped()) return bytes;
+      var sink = binBacked ? _binSink(bin) : null, converted = {}, count = 0;
+      budget.forEach(function(ii, k) {
+        var im = images[ii], png = pngs[k];
+        if (!png) { failed++; return; }
+        if (sink) {
+          im.bufferView = sink.appendView(json, png);
+          delete im.uri;
+        } else {
+          im.uri = 'data:image/png;base64,' + _toBase64(png);
+          delete im.bufferView;
+        }
+        im.mimeType = 'image/png';
+        converted[ii] = true;
+        count++;
+      });
+      textures.forEach(function(t) {
+        var s = _webpSource(t);
+        if (s >= 0 && (converted[s] || t.source !== undefined)) {
+          if (t.source === undefined) t.source = s;
+          delete t.extensions.EXT_texture_webp;
+          if (!Object.keys(t.extensions).length) delete t.extensions;
+        }
+      });
+      if (!failed) {
+        ['extensionsUsed', 'extensionsRequired'].forEach(function(key) {
+          if (!Array.isArray(json[key])) return;
+          json[key] = json[key].filter(function(x) { return x !== 'EXT_texture_webp'; });
+          if (!json[key].length) delete json[key];
+        });
+      } else {
+        console.error('SceneView: ' + failed + ' WebP texture(s) of this model could not be decoded, so ' +
+          'they render untextured. Only WebP images embedded in the file (GLB buffer view or data: URI) ' +
+          'are converted at load time; re-encode the others to PNG or JPEG.');
+      }
+      if (!count) return bytes;
+      if (!parts) return new TextEncoder().encode(JSON.stringify(json));
+      var newBin = sink ? sink.bytes() : bin;
+      // Buffer 0 now spans the old chunk (padding included) plus the PNGs.
+      if (sink) buffer0.byteLength = newBin.length;
+      return _buildGlb(json, newBin);
+    }).catch(function(e) {
+      console.warn('SceneView: WebP texture transcoding skipped', e);
+      return bytes;
+    });
+  }
+
+  /** Filament's bone limit per renderable (CONFIG_MAX_BONE_COUNT). */
+  var _MAX_BONES = 256;
+
+  /**
+   * The bytes of a GLB whose skins all fit Filament's 256 bones. gltfio rejects a bigger
+   * skin outright, with a bare number for an error (KindredLol's 1,523 joints, #4566),
+   * though each mesh of such a model is often weighted to far fewer. A skin over the
+   * limit is split into one skin per mesh it deforms, holding only the joints that mesh
+   * is weighted to, and the mesh's JOINTS_n are rewritten to index it; the subsets keep
+   * the original joint order and inverse bind matrices, so the pose is unchanged. The
+   * same bytes when no skin is too big, or when the split cannot be made (a mesh
+   * weighted to more than 256 joints, compressed or sparse skin data): gltfio then
+   * rejects the model and _showModel says why.
+   */
+  function _splitOversizedSkins(bytes) {
+    var parts = _glbParts(bytes);
+    if (!parts || !parts.bin || parts.text.indexOf('"skins"') < 0) return bytes;
+    var json = JSON.parse(parts.text), skins = json.skins || [], nodes = json.nodes || [];
+    var big = skins.map(function(s) { return !!(s && s.joints && s.joints.length > _MAX_BONES); });
+    if (big.indexOf(true) < 0) return bytes;
+    var bin = parts.bin, buffer0 = json.buffers && json.buffers[0];
+    function cannot(why) {
+      console.warn('SceneView: a skin has more than ' + _MAX_BONES + ' joints and could not be split (' + why + ')');
+      return bytes;
+    }
+    if (!buffer0 || buffer0.uri !== undefined) return cannot('its data is outside the GLB');
+
+    // The meshes an oversized skin deforms, and the joints each one is weighted to.
+    var meshes = {};
+    nodes.forEach(function(n) {
+      if (n && Number.isInteger(n.skin) && big[n.skin] && Number.isInteger(n.mesh)) meshes[n.mesh] = null;
+    });
+    var meshIds = Object.keys(meshes).map(Number);
+    for (var m = 0; m < meshIds.length; m++) {
+      var mesh = json.meshes && json.meshes[meshIds[m]], used = {};
+      if (!mesh) return cannot('a node names a missing mesh');
+      for (var p = 0; p < (mesh.primitives || []).length; p++) {
+        var prim = mesh.primitives[p], attrs = prim.attributes || {};
+        if (prim.extensions && prim.extensions.KHR_draco_mesh_compression) return cannot('Draco-compressed mesh');
+        for (var key in attrs) {
+          var set = /^JOINTS_(\d+)$/.exec(key);
+          if (!set) continue;
+          var J = _readAccessor(json, bin, attrs[key]), W = _readAccessor(json, bin, attrs['WEIGHTS_' + set[1]]);
+          if (!J || !W || J.comps !== 4 || W.comps !== 4 || J.count !== W.count) return cannot('unreadable joints or weights');
+          for (var i = 0; i < J.data.length; i++) if (W.data[i] > 0) used[J.data[i]] = true;
+        }
+      }
+      var list = Object.keys(used).map(Number).sort(function(a, b) { return a - b; });
+      if (list.length > _MAX_BONES) return cannot('mesh ' + meshIds[m] + ' is weighted to ' + list.length + ' joints');
+      var map = {};
+      list.forEach(function(j, k) { map[j] = k; });
+      meshes[meshIds[m]] = { used: list, map: map };
+    }
+    // Every skin a remapped mesh is drawn with must hold the joints it indexes, and its
+    // inverse bind matrices must be readable: a subset skin without them would draw the
+    // mesh in its bind-space coordinates, so the split is given up instead.
+    var ibms = {};
+    for (var ni = 0; ni < nodes.length; ni++) {
+      var nd = nodes[ni], r = nd && Number.isInteger(nd.mesh) ? meshes[nd.mesh] : null;
+      if (r && Number.isInteger(nd.skin)) {
+        var sk = skins[nd.skin];
+        if (!sk || !sk.joints || (r.used.length && r.used[r.used.length - 1] >= sk.joints.length)) {
+          return cannot('a joint index is past the end of its skin');
+        }
+        var ia = sk.inverseBindMatrices;
+        if (ia !== undefined && ibms[ia] === undefined) {
+          var M = Number.isInteger(ia) ? _readAccessor(json, bin, ia) : null;
+          if (!M || M.comps !== 16 || M.count < sk.joints.length) return cannot('unreadable inverse bind matrices');
+          ibms[ia] = M;
+        }
+      }
+    }
+
+    var sink = _binSink(bin);
+    // JOINTS_n rewritten per mesh, as unsigned shorts; a joint the mesh never weights reads 0.
+    meshIds.forEach(function(mi) {
+      var r = meshes[mi], done = {};
+      json.meshes[mi].primitives.forEach(function(prim) {
+        Object.keys(prim.attributes).forEach(function(key) {
+          if (!/^JOINTS_\d+$/.test(key)) return;
+          var ai = prim.attributes[key];
+          if (done[ai] === undefined) {
+            var J = _readAccessor(json, bin, ai), out = new Uint16Array(J.data.length);
+            for (var i = 0; i < J.data.length; i++) out[i] = r.map[J.data[i]] || 0;
+            var view = sink.appendView(json, new Uint8Array(out.buffer), { byteStride: 8, target: 34962 });
+            json.accessors.push({ bufferView: view, componentType: 5123, count: J.count, type: 'VEC4' });
+            done[ai] = json.accessors.length - 1;
+          }
+          prim.attributes[key] = done[ai];
+        });
+      });
+    });
+    // The skins that fit stay; each (mesh, oversized skin) pair gets its subset.
+    var out = [], kept = {}, made = {};
+    skins.forEach(function(s, i) { if (!big[i]) { kept[i] = out.length; out.push(s); } });
+    nodes.forEach(function(n) {
+      if (!n || !Number.isInteger(n.skin)) return;
+      var r = Number.isInteger(n.mesh) ? meshes[n.mesh] : null;
+      if (!r) {
+        // An oversized skin on a node with no mesh deforms nothing.
+        if (big[n.skin]) delete n.skin;
+        else n.skin = kept[n.skin];
+        return;
+      }
+      var id = n.mesh + ':' + n.skin;
+      if (made[id] === undefined) {
+        var s = skins[n.skin], skin = { joints: r.used.map(function(j) { return s.joints[j]; }) };
+        if (s.skeleton !== undefined) skin.skeleton = s.skeleton;
+        if (s.name) skin.name = s.name + '_mesh' + n.mesh;
+        if (s.inverseBindMatrices !== undefined) {
+          // Read and checked above: a skin whose matrices could not be read was never split.
+          var M = ibms[s.inverseBindMatrices];
+          var sub = new Float32Array(r.used.length * 16);
+          r.used.forEach(function(j, k) { sub.set(M.data.subarray(j * 16, j * 16 + 16), k * 16); });
+          var view = sink.appendView(json, new Uint8Array(sub.buffer));
+          json.accessors.push({ bufferView: view, componentType: 5126, count: r.used.length, type: 'MAT4' });
+          skin.inverseBindMatrices = json.accessors.length - 1;
+        }
+        made[id] = out.length;
+        out.push(skin);
+      }
+      n.skin = made[id];
+    });
+    json.skins = out;
+    var newBin = sink.bytes();
+    buffer0.byteLength = newBin.length;
+    return _buildGlb(json, newBin);
+  }
+
+  /**
+   * What gltfio would choke on in these bytes, for an error a person can act on: gltfio
+   * throws a bare number (a C++ exception pointer from the WASM), not a message.
+   */
+  function _gltfioRejectionHint(bytes) {
+    try {
+      var parts = _glbParts(bytes), text = parts ? parts.text : '';
+      if (text.indexOf('"skins"') < 0) return '';
+      var most = 0;
+      (JSON.parse(text).skins || []).forEach(function(s) { most = Math.max(most, (s.joints || []).length); });
+      return most > _MAX_BONES ? ': a skin has ' + most + ' joints, and a mesh can be moved by at most ' + _MAX_BONES : '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  /** gltfio's divisor for a normalized component type (KHR_mesh_quantization). */
+  var _NORMALIZED_DIVISOR = { 5120: 127, 5121: 255, 5122: 32767, 5123: 65535 };
+
+  /**
+   * For each mesh with a normalized POSITION accessor: the box gltfio gives its renderable
+   * (accessor min/max as stored, every primitive) and its real box. [] when none.
+   */
+  function _quantizedMeshBoxes(json) {
+    var accessors = json.accessors || [], out = [];
+    (json.meshes || []).forEach(function(mesh) {
+      var raw = { min: [Infinity, Infinity, Infinity], max: [-Infinity, -Infinity, -Infinity] };
+      var real = { min: raw.min.slice(), max: raw.max.slice() }, quantized = false, ok = true;
+      (mesh.primitives || []).forEach(function(prim) {
+        var a = prim.attributes && accessors[prim.attributes.POSITION];
+        if (!a || !Array.isArray(a.min) || !Array.isArray(a.max) || a.min.length < 3 || a.max.length < 3) { ok = false; return; }
+        var d = (a.normalized && _NORMALIZED_DIVISOR[a.componentType]) || 0;
+        if (d) quantized = true;
+        for (var k = 0; k < 3; k++) {
+          raw.min[k] = Math.min(raw.min[k], a.min[k]);
+          raw.max[k] = Math.max(raw.max[k], a.max[k]);
+          // A signed normalized value is max(c / divisor, -1) (glTF 2.0, 3.11).
+          real.min[k] = Math.min(real.min[k], d ? Math.max(a.min[k] / d, -1) : a.min[k]);
+          real.max[k] = Math.max(real.max[k], d ? Math.max(a.max[k] / d, -1) : a.max[k]);
+        }
+      });
+      if (quantized && ok) out.push({ raw: raw, real: real });
+    });
+    return out;
+  }
+
   /**
    * The floor texel grid of a model's shadow: about 256 texels along its long side, and
    * at least `margin` (the reflection's reach) around the footprint.
@@ -1413,7 +1849,9 @@
 
     /**
      * Load a glTF/GLB model from URL. The model it replaces is destroyed.
-     * Rejects with an `AbortError` when the viewer is disposed before the model arrives.
+     * Rejects with an `AbortError` when the viewer is disposed before the model arrives,
+     * or when a later `loadModel()` call starts before this one is shown: the newest
+     * call always wins, whichever file finishes downloading first.
      *
      * `options.frontYaw`: where the model's front faces, in degrees about the vertical
      * axis from glTF's +Z (0, the default). A file modelled facing -Z takes 180. The
@@ -1422,6 +1860,15 @@
     loadModel(url, options) {
       var self = this;
       var frontYaw = options && Number.isFinite(options.frontYaw) ? options.frontYaw * Math.PI / 180 : null;
+      // Each call takes a ticket; only the newest may touch the scene. Without it, a
+      // slow file (the WebP pass adds seconds) landed after a newer, faster one and
+      // replaced it: the playground's `?model=` showed the toy car it opened on (#4566).
+      var ticket = self._loadTicket = (self._loadTicket || 0) + 1;
+      function stale() {
+        if (self._disposed) return _disposedError();
+        if (ticket !== self._loadTicket) return _supersededError(url);
+        return null;
+      }
       return new Promise(function(resolve, reject) {
         // On any failure (network/404, fetch error, GLB parse/decode failure),
         // paint a graceful in-canvas fallback before rejecting (#2509). The
@@ -1429,9 +1876,11 @@
         // playground.html, web.html) keep their current behaviour — but bare
         // callers (the two showcase pages) no longer get a dead blank canvas.
         function fail(e) {
-          // A disposed viewer has no canvas to paint on: just report the abort.
-          if (!self._disposed) self._showLoadFallback(url);
-          reject(e);
+          // A disposed viewer has no canvas to paint on, and a superseded load must
+          // not paint over the model that replaced it: just report the abort.
+          var abort = stale();
+          if (!abort) self._showLoadFallback(url);
+          reject(abort || e);
         }
         self._fetch(url)
           .then(function(resp) {
@@ -1439,10 +1888,27 @@
             return resp.arrayBuffer();
           })
           .then(function(buffer) {
-            // Disposed while the bytes were on their way: drop them (#4366).
-            if (self._disposed) throw _disposedError();
+            // Disposed or superseded while the bytes were on their way: drop them (#4366).
+            var abort = stale();
+            if (abort) throw abort;
+            // What Filament.js cannot draw as shipped is rewritten first (#4566): WebP
+            // textures to PNG, skins over 256 joints split per mesh.
+            return _transcodeWebP(new Uint8Array(buffer), stale).then(function(bytes) {
+              var abort = stale();
+              if (abort) throw abort;
+              try {
+                return _splitOversizedSkins(bytes);
+              } catch (e) {
+                console.warn('SceneView: oversized skin not split', e);
+                return bytes;
+              }
+            });
+          })
+          .then(function(bytes) {
+            var abort = stale();
+            if (abort) throw abort;
             try {
-              self._showModel(url, new Uint8Array(buffer), frontYaw);
+              self._showModel(url, bytes, frontYaw);
               self._hideLoadFallback();  // clear any prior-failure placeholder
               resolve(self);
             } catch (e) {
@@ -1508,14 +1974,28 @@
       // (a black silhouette). Redraw once they have all landed, so a viewer
       // parked off-screen does not keep that frame (#3690).
       // The running load keeps an 'onDemand' loop awake until the decode finishes.
-      var asset = this._createAsset(data, () => {
-        if (this._asset === asset) this.requestRender();
-      });
+      var asset;
+      try {
+        asset = this._createAsset(data, () => {
+          if (this._asset === asset) this.requestRender();
+        });
+      } catch (e) {
+        // gltfio throws a bare number (a C++ exception pointer), which read as "103971288".
+        if (e instanceof Error) throw e;
+        throw new Error('Failed to parse model: ' + url + _gltfioRejectionHint(data));
+      }
       if (!asset) throw new Error('Failed to parse model: ' + url);
 
       this._scene.addEntity(asset.getRoot());
       this._scene.addEntities(asset.getRenderableEntities());
       this._asset = asset;
+      this._quantizedBox = null;
+      try {
+        var realBox = this._fixQuantizedBounds(asset, data);
+        if (realBox) this._quantizedBox = { asset: asset, box: realBox };
+      } catch (e) {
+        console.warn('SceneView: quantized model bounds not corrected', e);
+      }
 
       // Cache animator for animation playback — reset any previous animation state.
       // In Filament.js gltfio, the Animator lives on the FilamentInstance,
@@ -1525,6 +2005,13 @@
         this._animator = (inst && inst.getAnimator) ? inst.getAnimator() : null;
       } catch (e) {
         this._animator = null;
+      }
+      // gltfio leaves every bone at identity until the animator runs, so a skinned model
+      // shown still was drawn in its unskinned mesh pose: a head thrown back, a character
+      // lying flat on its back (#4566). Pose the skin once from the rest
+      // transforms, as Android's ModelNode does on every frame.
+      if (this._animator && this._animator.updateBoneMatrices) {
+        try { this._animator.updateBoneMatrices(); } catch (e) { /* no skin to pose */ }
       }
       this._animationIndex = -1;
       this._animationPauseTime = -1;
@@ -1563,7 +2050,7 @@
      */
     _frameAsset(asset, fill) {
       try {
-        const bbox = asset.getBoundingBox();
+        const bbox = this._assetBox(asset);
         const cx = (bbox.min[0] + bbox.max[0]) / 2;
         const cy = (bbox.min[1] + bbox.max[1]) / 2;
         const cz = (bbox.min[2] + bbox.max[2]) / 2;
@@ -1602,6 +2089,77 @@
       } catch (_e) {
         return false; // keep the current camera
       }
+    }
+
+    /**
+     * The model's bounding box as { min, max }: gltfio's, or for a quantized model the
+     * one _fixQuantizedBounds measured, gltfio's being 32767 times too big there.
+     * @private
+     */
+    _assetBox(asset) {
+      var q = this._quantizedBox;
+      return q && q.asset === asset ? q.box : asset.getBoundingBox();
+    }
+
+    /**
+     * Give the renderables of a KHR_mesh_quantization model their real boxes, and return
+     * the model's box (null when it has no normalized POSITION). gltfio sizes a renderable
+     * from its POSITION accessor's min/max as stored and ignores `normalized`: an int16
+     * mesh came out 32767 times too big, so a 4 cm watch was framed from ~240 km away and
+     * drew nothing, and its culling and shadow boxes were as far off (#4566). Each
+     * renderable is matched to its mesh by the wrong box it was given; the model's box is
+     * the union of the corrected ones through their world transforms.
+     * @private
+     */
+    _fixQuantizedBounds(asset, data) {
+      var parts = _glbParts(data), text = parts ? parts.text : '';
+      if (text.indexOf('"normalized"') < 0) return null;
+      var fixes = _quantizedMeshBoxes(JSON.parse(text));
+      if (!fixes.length) return null;
+      var rm = this._engine.getRenderableManager(), tm = this._engine.getTransformManager();
+      var min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity], fixed = 0;
+      var matched = fixes.map(function() { return false; });
+      function close(a, b) { return Math.abs(a - b) <= 1e-3 * Math.max(1, Math.abs(a), Math.abs(b)); }
+      asset.getRenderableEntities().forEach(function(e) {
+        var ri = rm.getInstance(e), box = rm.getAxisAlignedBoundingBox(ri);
+        var c = [box.center[0], box.center[1], box.center[2]], h = [box.halfExtent[0], box.halfExtent[1], box.halfExtent[2]];
+        // Meshes stored with the same raw box (to the tolerance) are told apart by nothing
+        // gltfio keeps: this renderable takes the first one's real box and accounts for all
+        // of them, or each one after the first would be counted as missed.
+        var hit = null;
+        for (var f = 0; f < fixes.length; f++) {
+          var raw = fixes[f].raw, same = true;
+          for (var k = 0; k < 3; k++) same = same && close(c[k] - h[k], raw.min[k]) && close(c[k] + h[k], raw.max[k]);
+          if (!same) continue;
+          matched[f] = true;
+          if (!hit) hit = fixes[f].real;
+        }
+        if (hit) {
+          for (k = 0; k < 3; k++) {
+            c[k] = (hit.min[k] + hit.max[k]) / 2;
+            h[k] = (hit.max[k] - hit.min[k]) / 2;
+          }
+          rm.setAxisAlignedBoundingBox(ri, { center: c, halfExtent: h });
+          fixed++;
+        }
+        var M = tm.getWorldTransform(tm.getInstance(e));
+        for (var corner = 0; corner < 8; corner++) {
+          var x = c[0] + (corner & 1 ? h[0] : -h[0]), y = c[1] + (corner & 2 ? h[1] : -h[1]), z = c[2] + (corner & 4 ? h[2] : -h[2]);
+          for (var a = 0; a < 3; a++) {
+            var v = M[a] * x + M[4 + a] * y + M[8 + a] * z + M[12 + a];
+            if (v < min[a]) min[a] = v;
+            if (v > max[a]) max[a] = v;
+          }
+        }
+      });
+      // A quantized mesh no renderable was matched to keeps gltfio's raw box: its part of
+      // the model can be culled, shadowed and framed as if it were 32767 times its size.
+      var missed = matched.filter(function(m) { return !m; }).length;
+      if (missed) {
+        console.warn('SceneView: ' + missed + ' of ' + fixes.length + ' quantized meshes kept a wrong bounding box; '
+          + 'framing and culling may be off for this model');
+      }
+      return fixed && min[0] <= max[0] ? { min: min, max: max } : null;
     }
 
     /**
@@ -2047,7 +2605,7 @@
      * @private
      */
     _studioBounds(asset) {
-      var bb = asset.getBoundingBox(), sb = this._studioBox;
+      var bb = this._assetBox(asset), sb = this._studioBox;
       if (!sb || sb.asset !== asset) {
         var bytes = this._modelBytes && this._modelBytes.deref ? this._modelBytes.deref() : null, box = null;
         try {
@@ -4651,7 +5209,7 @@
      *
      * @param {number[]} center - [x, y, z] position
      * @param {number[]} size - [w, h, d] dimensions
-     * @param {number[]} color - [r, g, b, a] color (0-1)
+     * @param {number[]} color - [r, g, b, a] linear color (0-1) — glTF baseColorFactor; convert an sRGB hex first or it renders pastel
      * @returns {Object|null} The glTF asset, or null on failure
      */
     createBox(center, size, color) {
@@ -4695,7 +5253,7 @@
      *
      * @param {number[]} center - [x, y, z] position
      * @param {number} radius - sphere radius
-     * @param {number[]} color - [r, g, b, a] color (0-1)
+     * @param {number[]} color - [r, g, b, a] linear color (0-1) — glTF baseColorFactor; convert an sRGB hex first or it renders pastel
      * @returns {Object|null} The glTF asset, or null on failure
      */
     createSphere(center, radius, color) {
@@ -4733,7 +5291,7 @@
      * @param {number[]} center - [x, y, z] position
      * @param {number} radius - cylinder radius
      * @param {number} height - cylinder height
-     * @param {number[]} color - [r, g, b, a] color (0-1)
+     * @param {number[]} color - [r, g, b, a] linear color (0-1) — glTF baseColorFactor; convert an sRGB hex first or it renders pastel
      * @returns {Object|null} The glTF asset, or null on failure
      */
     createCylinder(center, radius, height, color) {
@@ -5201,7 +5759,7 @@
   }
 
   global.SceneView = {
-    version: '4.56.0',
+    version: '4.60.0',
     create: create,
     modelViewer: modelViewer
   };

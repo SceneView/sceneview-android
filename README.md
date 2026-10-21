@@ -40,7 +40,14 @@ API or the doc gets fixed.
 The demo apps are built from [`samples/`](samples/). Any demo opens straight from a link:
 `https://sceneview.github.io/open?demo=<id>`. Start with
 [Cosmos](https://sceneview.github.io/open?demo=cosmos), the galaxy the catalogue opens on, or
-[Rerun AR Replay](https://sceneview.github.io/open?demo=ar-rerun), a real AR session rebuilt in 3D.
+[3D Scan](https://sceneview.github.io/open?demo=ar-rerun), a space scanned with ARCore and rebuilt in 3D.
+
+### Help test the demos
+
+Install the Android demo, record your screen while you use a demo, and tell us what breaks or
+confuses you: [open an issue](https://github.com/sceneview/sceneview/issues/new?labels=user-feedback)
+with the recording attached, or send it from the app (any demo, Settings, then Send feedback).
+Your first report unlocks **SceneView Labs**, early access to the experimental demos, straight away.
 
 ---
 
@@ -53,8 +60,13 @@ One minimal, working example per platform. The full reference for each is in
 
 ```kotlin
 // build.gradle.kts
-implementation("io.github.sceneview:sceneview:4.56.0")
+implementation("io.github.sceneview:sceneview:4.60.0")
 ```
+
+The app module needs `compileSdk = 37`, `minSdk` 24 or higher, AGP 9.4.0+, Kotlin 2.4 and JVM
+target 21 for both Java and Kotlin: SceneView ships Java 21 bytecode with public `inline`
+functions. The [quickstart requirements](docs/docs/quickstart.md#requirements) give the Gradle
+snippet and the reason for each.
 
 ```kotlin
 @Composable
@@ -75,7 +87,7 @@ coroutine: Filament calls must run on the main thread, and `rememberModelInstanc
 
 ```kotlin
 // build.gradle.kts
-implementation("io.github.sceneview:arsceneview:4.56.0")   // includes the 3D module
+implementation("io.github.sceneview:arsceneview:4.60.0")   // includes the 3D module
 ```
 
 ```kotlin
@@ -90,7 +102,7 @@ fun ARScreen() {
             if (anchor == null) {
                 anchor = frame.getUpdatedPlanes()
                     .firstOrNull { it.type == Plane.Type.HORIZONTAL_UPWARD_FACING }
-                    ?.let { frame.createAnchorOrNull(it.centerPose) }
+                    ?.let { it.createAnchorOrNull(it.centerPose) }
             }
         }
     ) {
@@ -108,9 +120,15 @@ Plane detected → `anchor` set → Compose recomposes → the model appears. **
 state.** For placement without a tap, grounded and gesture-ready, start from
 `AutoPlacementScene` (see [`llms.txt`](./llms.txt)).
 
+`arsceneview` already declares the `CAMERA` permission and marks ARCore as optional. An AR
+Optional app declares `android.hardware.camera.ar` and `android.hardware.camera` as
+`<uses-feature … android:required="false" />`; an AR Required app overrides the ARCore value
+with `tools:replace="android:value"`. Both snippets are in the
+[AR manifest](docs/docs/quickstart.md#ar-manifest) section.
+
 ### iOS / macOS / visionOS (SwiftUI)
 
-Swift Package Manager: `https://github.com/sceneview/sceneview.git`, from `4.39.0`.
+Swift Package Manager: `https://github.com/sceneview/sceneview.git`, from `4.60.0`.
 
 ```swift
 import SwiftUI
@@ -138,8 +156,8 @@ that finishes loading after the scene appears is never added.
 
 ```html
 <canvas id="viewer" style="width: 100%; height: 480px"></canvas>
-<script src="https://cdn.jsdelivr.net/gh/sceneview/sceneview@v4.56.0/website-static/js/filament/filament.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/sceneview/sceneview@v4.56.0/website-static/js/sceneview.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/sceneview/sceneview@v4.60.0/website-static/js/filament/filament.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/sceneview/sceneview@v4.60.0/website-static/js/sceneview.js"></script>
 <script> SceneView.modelViewer("viewer", "model.glb") </script>
 ```
 
@@ -147,7 +165,7 @@ that finishes loading after the scene appears is never added.
 
 ```kotlin
 // commonMain dependencies
-implementation("io.github.sceneview:sceneview-compose:4.56.0")
+implementation("io.github.sceneview:sceneview-compose:4.60.0")
 ```
 
 ```kotlin
@@ -160,7 +178,7 @@ A viewer by design — load, orbit, light, tap; no AR. Scope and the one-time iO
 ### Flutter
 
 ```dart
-// pubspec.yaml → flutter_sceneview: ^4.56.0
+// pubspec.yaml → flutter_sceneview: ^4.60.0
 final controller = SceneViewController();
 
 SceneView(
@@ -234,11 +252,11 @@ The other platforms in the table below join this section once a capture backs th
 
 | Platform | Coordinate |
 |---|---|
-| Android 3D | `io.github.sceneview:sceneview:4.56.0` |
-| Android AR | `io.github.sceneview:arsceneview:4.56.0` |
-| Compose Multiplatform | `io.github.sceneview:sceneview-compose:4.56.0` |
-| KMP core only (math, collision, physics) | `io.github.sceneview:sceneview-core:4.56.0` |
-| Apple (SPM) | `https://github.com/sceneview/sceneview.git`, from `4.39.0` |
+| Android 3D | `io.github.sceneview:sceneview:4.60.0` |
+| Android AR | `io.github.sceneview:arsceneview:4.60.0` |
+| Compose Multiplatform | `io.github.sceneview:sceneview-compose:4.60.0` |
+| KMP core only (math, collision, physics) | `io.github.sceneview:sceneview-core:4.60.0` |
+| Apple (SPM) | `https://github.com/sceneview/sceneview.git`, from `4.60.0` |
 | Web, script tag | the two `<script>` tags in [Web](#web) |
 | Web, bundler (Kotlin/JS) | `npm install sceneview-web` — see [SceneView Web](#sceneview-web) |
 | Flutter | [`flutter_sceneview`](https://pub.dev/packages/flutter_sceneview) on pub.dev |
@@ -258,7 +276,7 @@ Everything an assistant needs to write SceneView code ships with the SDK:
   others), `CLAUDE.md` (Claude Code), `.github/copilot-instructions.md`, and `.cursorrules` for
   older Cursor versions.
 - **The [MCP server](./mcp/)** — free, no API key. The tools assistants reach for most:
-  `validate_code` (checks a snippet against the real public API before you run it),
+  `validate_code` (checks a snippet for known pitfalls and unknown symbols before you run it; it does not check argument names),
   `get_node_reference` (the exact node signature, not an invented one), `list_samples` /
   `get_sample` (38 samples to start from), and `get_setup` / `get_ar_setup` (project wiring).
 
@@ -339,7 +357,7 @@ SceneView(
 
     // Nesting — same as Column { Row { } }
     Node(position = Position(y = 1.0f)) {
-        LightNode(apply = { type(LightManager.Type.POINT); intensity(50_000f) })
+        LightNode(type = LightManager.Type.POINT, apply = { intensity(50_000f) })
         CubeNode(size = Size(0.05f))
     }
 }
@@ -389,7 +407,7 @@ SceneView(
 | **Cloud Anchors** | `CloudAnchorNode.host(ttlDays = N)` + `.resolve(id)` |
 | **Augmented Faces & Images** | `AugmentedFaceNode`, `AugmentedImageDatabase`, runtime image add |
 | **Image Stabilization (EIS)** | `ARSceneView(imageStabilizationMode = ImageStabilizationMode.EIS)` |
-| **Camera exposure & focus** | `ARSceneView(cameraConfig = …)`, `ARSceneScope.exposureCompensation` |
+| **Camera exposure & focus** | `ARSceneView(sessionCameraConfig = …, focusMode = …, cameraExposure = …)` |
 | **Record & Replay** | `rememberARRecorder()` to capture, `ARSceneView(playbackDataset = file)` to replay 1:1 — see [AR debugging](#ar-debugging) |
 | **Rerun.io live debug** | `rememberRerunBridge()` streams poses, planes and point clouds to the Rerun viewer |
 | **Permission flow** | `ARPermissionHandler` — auto-detected from `ComponentActivity` |
@@ -497,7 +515,7 @@ npm install sceneview-web
 The package expects a `Filament` global and does not include the `SceneView.modelViewer` script
 helpers. A Kotlin Multiplatform project that only needs the shared core (collision, math,
 geometry, animation, physics — no renderer) uses
-`implementation("io.github.sceneview:sceneview-core-js:4.56.0")`.
+`implementation("io.github.sceneview:sceneview-core-js:4.60.0")`.
 
 [Landing page](https://sceneview.github.io/) · [Playground](https://sceneview.github.io/playground.html) · [npm](https://www.npmjs.com/package/sceneview-web)
 
@@ -522,7 +540,7 @@ concept by concept (`ArFragment` → `ARSceneView { }`, `ModelRenderable` →
   at your desk with `ARSceneView(playbackDataset = file)`. See
   [`docs/docs/ar-recording.md`](docs/docs/ar-recording.md) and the
   [Record & Playback demo](samples/android-demo/RECORDING_PLAYBACK.md).
-- **Hosted Rerun viewer** — tap **Save & Share** in the AR Rerun demo, host the `.rrd` file at
+- **Hosted Rerun viewer** — export a scan's **Rerun recording** from the 3D Scan demo, host the `.rrd` file at
   an https address that ends in `.rrd`, and open
   `https://sceneview.github.io/rerun/?url=<encoded-url>` to scrub the session frame by frame in a
   browser, with no local install. The host has to allow cross-origin requests (CORS): a public
@@ -557,8 +575,8 @@ sceneview-core (Kotlin Multiplatform)
 | `samples/android-demo` | Android — 3D & AR | `./gradlew :samples:android-demo:assembleDebug` |
 | `samples/android-tv-demo` | Android TV | `./gradlew :samples:android-tv-demo:assembleDebug` |
 | `samples/ios-demo` | iOS — 3D & AR | Open in Xcode |
-| `samples/web-demo` | Web | `./gradlew :samples:web-demo:jsBrowserRun` |
-| `samples/desktop-demo` | Desktop (JDK 22+) | `./gradlew :samples:desktop-demo:run` |
+| `samples/web-demo` | Web | `cd samples/web-demo && cp ../../website-static/js/sceneview.js site/js/sceneview.js && npx http-server site -p 8080` |
+| `samples/desktop-demo` | Desktop (JDK 21+) | `./gradlew :samples:desktop-demo:run` |
 | `samples/flutter-demo` | Flutter | `cd samples/flutter-demo && flutter run` |
 | `samples/react-native-demo` | React Native | See its README |
 

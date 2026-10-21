@@ -161,9 +161,13 @@
   }
 
   function park(entry) {
+    // The context-loss listener goes first: it holds the viewer, and the canvas it sits
+    // on is swapped out below, so left on it, every pass kept a detached canvas and its
+    // engine alive. Removed before dispose(), it never sees the loss dispose() causes.
+    if (entry.off) entry.off();
     if (entry.stage._scene) { entry.stage._scene.dispose(); entry.stage._scene = null; }
     try { entry.sv.dispose(); } catch (e) {}
-    clearTimeout(entry.stage._idle);
+    stopIdle(entry.stage);
     entry.stage.classList.remove('is-live', 'is-loading');
     var old = $('canvas', entry.stage), fresh = old.cloneNode(false);
     old.replaceWith(fresh);             // a disposed canvas cannot be re-initialised
@@ -171,12 +175,55 @@
     setScale(entry.stage, entry.stage._scale || 1);
   }
 
+  function contextLost(sv) {
+    for (var i = live.length; i--;) {
+      if (live[i].sv !== sv) continue;
+      console.warn('[site] WebGL context lost, back to the poster');
+      park(live.splice(i, 1)[0]);
+    }
+  }
+
+  // sceneview.js rejects a loadModel() that a later call replaced, or that its viewer's
+  // dispose() cut short (a lost context, a park), with an AbortError (#4566). Whatever
+  // replaced or disposed it owns the stage now, so the older load has nothing to undo.
+  function superseded(e) { return !!e && e.name === 'AbortError'; }
+
+  // Motion stops by itself after 20 s on screen (WCAG 2.2.2); the pause button stops it
+  // sooner. Off screen the countdown waits, as the hero's film does: on wall time, a
+  // visitor who scrolled away 2 s into the film and came back 20 s later found it frozen
+  // where they had left it, on a Play button.
+  var MOTION_MS = 20000;
+  function startIdle(stage) {
+    stopIdle(stage);
+    if (caps.reduced) return;
+    stage._idleLeft = MOTION_MS;
+    if (stage._inView !== false) armIdle(stage);
+  }
+  function armIdle(stage) {
+    if (stage._idle || !(stage._idleLeft > 0)) return;
+    stage._idleAt = Date.now();
+    stage._idle = setTimeout(function () { stage._idle = 0; stage._idleLeft = 0; setPlaying(stage, false); }, stage._idleLeft);
+  }
+  function holdIdle(stage) {
+    if (!stage._idle) return;
+    clearTimeout(stage._idle); stage._idle = 0;
+    stage._idleLeft -= Date.now() - stage._idleAt;
+  }
+  function stopIdle(stage) { clearTimeout(stage._idle); stage._idle = 0; stage._idleLeft = 0; }
+
+  // The canvas takes over from the poster once the model is in, and the motion starts.
+  function showModel(stage, sv) {
+    setTimeout(function () { if (stage._sv !== sv) return; stage.classList.remove('is-loading'); stage.classList.add('is-live'); }, 400);
+    setPlaying(stage, !caps.reduced);
+    startIdle(stage);
+  }
+
   function goLive(stage) {
     if (stage._sv || stage.classList.contains('is-loading')) return Promise.resolve();
     if (!hasWebGL2()) { stage.classList.add('no-webgl'); return Promise.resolve(); }
     while (live.length >= caps.maxLive) park(live.shift());
     stage.classList.add('is-loading');
-    var canvas = $('canvas', stage), signal = ac.signal, def = null;
+    var canvas = $('canvas', stage), signal = ac.signal, def = null, mine = null;
     return loadRuntime().then(function () {
       return stage.dataset.scene ? loadScene(stage.dataset.scene) : null;
     }).then(function (d) {
@@ -194,12 +241,24 @@
       });
     }).then(function (sv) {
       if (signal.aborted) { sv.dispose(); return; }
-      stage._sv = sv; live.push({ stage: stage, sv: sv });
+      mine = sv;
+      // A GPU reset (a driver hang, Chrome restarting its GPU process) takes the page's
+      // WebGL contexts with it, and the engine on one cannot come back. The stage stayed
+      // "Live" on an empty canvas: it goes back to its poster and its load button instead.
+      // park() removes this listener (entry.off) before it disposes the viewer, unmount()
+      // included, so it is not tied to the page's mount signal: that signal is never
+      // aborted while the page lives, and would keep the canvas and the viewer reachable.
+      var entry = { stage: stage, sv: sv };
+      var lost = function () { if (stage._sv === sv) contextLost(sv); };
+      canvas.addEventListener('webglcontextlost', lost);
+      entry.off = function () { canvas.removeEventListener('webglcontextlost', lost); };
+      stage._sv = sv; live.push(entry);
       if (def) return sv.loadModel(def.model).then(function () {
+        if (stage._sv !== sv) return;     // lost and parked while it loaded
         var scene = stage._scene = def.setup(sv, {
           canvas: canvas, mobile: caps.mobile,
           // A hand on the picture ends the camera move: the button shows it can resume.
-          onGrab: function () { clearTimeout(stage._idle); setPlaying(stage, false); }
+          onGrab: function () { stopIdle(stage); setPlaying(stage, false); }
         });
         frameScene(stage);
         scene.setTurn(stage._turn || 0);
@@ -212,22 +271,23 @@
           if (stage._sv !== sv) return;
           stage.classList.remove('is-loading'); stage.classList.add('is-live');
           setPlaying(stage, !caps.reduced);
-          // Motion stops by itself after 20 s (WCAG 2.2.2); the pause button stops it sooner.
-          if (!caps.reduced) stage._idle = setTimeout(function () { setPlaying(stage, false); }, 20000);
+          startIdle(stage);
         }, 400);
       });
       return sv.loadModel(stage.dataset.src).then(function () {
+        if (stage._sv !== sv) return;     // lost and parked while it loaded
         applyFit(stage, sv);
         if (stage.dataset.anim && stage._animate !== false) sv.playAnimation(parseInt(stage.dataset.anim, 10), true);
-        setTimeout(function () { if (stage._sv !== sv) return; stage.classList.remove('is-loading'); stage.classList.add('is-live'); }, 400);
-        setPlaying(stage, !caps.reduced);
-        // Motion stops by itself after 20 s (WCAG 2.2.2); the pause button stops it sooner.
-        if (!caps.reduced) stage._idle = setTimeout(function () { setPlaying(stage, false); }, 20000);
+        showModel(stage, sv);
       });
     }).catch(function (e) {
+      // A model chip tapped during this first load replaced it (swapModel() shows that
+      // one), or a lost context parked its viewer: the stage is not this load's any more.
+      if (superseded(e)) return;
+      if (mine && stage._sv !== mine) return;   // parked, or relaunched by the visitor since
       console.warn('[site] live 3D unavailable, keeping the poster:', e && e.message);
       // A viewer whose model never arrived is torn down: the poster stays and the next tap starts clean.
-      for (var i = live.length; i--;) if (live[i].stage === stage) park(live.splice(i, 1)[0]);
+      for (var i = live.length; i--;) if (live[i].sv === mine) park(live.splice(i, 1)[0]);
       stage.classList.remove('is-loading');
     });
   }
@@ -246,11 +306,20 @@
       stage.classList.add('is-loading');
       var sv = stage._sv;
       sv.loadModel(stage.dataset.src).then(function () {
+        if (stage._sv !== sv) return;
         applyFit(stage, sv);
         if (stage.dataset.anim && stage._animate !== false) sv.playAnimation(parseInt(stage.dataset.anim, 10), true);
-        stage.classList.remove('is-loading');
+        // Tapped before the first model was shown: this model is the stage's first.
+        if (stage.classList.contains('is-live')) stage.classList.remove('is-loading');
+        else showModel(stage, sv);
       }).catch(function (e) {
+        // A later tap replaced this one, or the viewer was parked: someone else owns the stage.
+        if (superseded(e) || stage._sv !== sv) return;
         console.warn('[site] model swap failed:', e && e.message);
+        // No model was ever shown: tear the viewer down, as a failed first load does.
+        if (!stage.classList.contains('is-live')) {
+          for (var i = live.length; i--;) if (live[i].sv === sv) park(live.splice(i, 1)[0]);
+        }
         stage.classList.remove('is-loading');
       });
     }
@@ -260,6 +329,8 @@
   function mount() {
     ac = new AbortController();
     doc.classList.add('js-ready');
+    if (document.readyState === 'complete') doc.classList.add('is-loaded');
+    else on(window, 'load', function () { doc.classList.add('is-loaded'); });
 
     /* Theme */
     var mqLight = matchMedia('(prefers-color-scheme: light)');
@@ -293,6 +364,29 @@
       else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
     });
 
+    /* A tab strip too narrow for its tabs scrolls sideways (the code card on a
+       phone). The selected tab is brought clear of the faded edges — the strip
+       scrolls, never the page — and data-more names the side(s) still hiding tabs. */
+    function stripEdges(list) {
+      var max = list.scrollWidth - list.clientWidth, x = list.scrollLeft;
+      var more = max > 1 ? ((x > 1 ? 'start ' : '') + (x < max - 1 ? 'end' : '')).trim() : '';
+      if (more) list.setAttribute('data-more', more); else list.removeAttribute('data-more');
+    }
+    function revealTab(list, tab, instant) {
+      if (list.scrollWidth - list.clientWidth <= 1) return;
+      var lr = list.getBoundingClientRect(), tr = tab.getBoundingClientRect();
+      var pad = parseFloat(getComputedStyle(list).scrollPaddingLeft) || 0;
+      var d = tr.left < lr.left + pad ? tr.left - lr.left - pad : tr.right > lr.right - pad ? tr.right - lr.right + pad : 0;
+      if (d) list.scrollTo({ left: list.scrollLeft + d, behavior: instant || caps.reduced ? 'auto' : 'smooth' });
+    }
+    function fitStrips() {
+      $$('[role="tablist"]').forEach(function (list) {
+        var sel = $('[role="tab"][aria-selected="true"]', list);
+        if (sel) revealTab(list, sel, true);
+        stripEdges(list);
+      });
+    }
+
     /* Tabs (ARIA tabs; data-sync keeps groups on the same platform) */
     function selectTab(tab, sync) {
       var list = tab.closest('[role="tablist"]');
@@ -302,6 +396,7 @@
         var p = document.getElementById(t.getAttribute('aria-controls'));
         if (p) p.hidden = !sel;
       });
+      revealTab(list, tab);
       var key = tab.dataset.key, group = list.dataset.sync;
       if (sync !== false && group && key) {
         store('sv-tab-' + group, key);
@@ -334,7 +429,11 @@
       var saved = list.dataset.sync && store('sv-tab-' + list.dataset.sync);
       var pick = saved && $('[role="tab"][data-key="' + saved + '"]', list);
       if (pick) selectTab(pick, false);
+      on(list, 'scroll', function () { stripEdges(list); }, { passive: true });
     });
+    fitStrips();
+    on(window, 'resize', fitStrips, { passive: true });
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitStrips);
 
     /* Install: six platforms, each a real tab panel in the HTML. "Get started"
        and the quickstart link follow the selected platform. */
@@ -375,18 +474,31 @@
       });
     });
 
-    /* AI assistants: eight equal buttons, none selected by default. */
+    /* AI assistants: eight equal buttons, none selected by default. Every setup
+       is also laid out, hidden and aria-hidden, in the cell of the one shown
+       (site.css): the box takes the height of the tallest, so the page under it
+       does not jump. Only the shown setup changes, so the live region reads it. */
     $$('[data-assistants]').forEach(function (group) {
       var out = document.getElementById(group.dataset.assistants);
+      var shown = out && $('.mcp__setup', out);
+      if (!shown) return;
+      $$('template[id^="mcp-"]').forEach(function (tpl) {
+        var ghost = document.createElement('div');
+        ghost.className = 'mcp__setup';
+        ghost.setAttribute('aria-hidden', 'true');
+        ghost.inert = true;
+        ghost.innerHTML = tpl.innerHTML;
+        out.appendChild(ghost);
+      });
       $$('button', group).forEach(function (b) {
         on(b, 'click', function () {
           var was = b.getAttribute('aria-pressed') === 'true';
           $$('button', group).forEach(function (x) { x.setAttribute('aria-pressed', 'false'); });
           var tpl = document.getElementById(was ? 'mcp-any' : 'mcp-' + b.dataset.id);
           if (!was) b.setAttribute('aria-pressed', 'true');
-          if (tpl && out) {
-            out.innerHTML = tpl.innerHTML;
-            $$('.copy', out).forEach(function (c) {
+          if (tpl) {
+            shown.innerHTML = tpl.innerHTML;
+            $$('.copy', shown).forEach(function (c) {
               on(c, 'click', function () { copy(c, c.dataset.copyText || $('code', c.parentElement).textContent); });
             });
           }
@@ -405,22 +517,46 @@
       ac.signal.addEventListener('abort', function () { io.disconnect(); });
     }
 
-    /* Stages */
+    /* Stages. Starting an engine (WASM compile, a GLB, an environment) costs main-thread
+       time in 100 ms slices: an automatic start waits until the page has stopped scrolling,
+       so it never lands in the middle of a scroll. A tap on "View in 3D" starts at once. */
+    var lastScroll = 0;
+    on(window, 'scroll', function () { lastScroll = performance.now(); }, { passive: true });
+    function whenStill(fn) {
+      (function wait() {
+        if (ac.signal.aborted) return;
+        var quiet = performance.now() - lastScroll;
+        if (quiet < 300) { setTimeout(wait, 300 - quiet); return; }
+        (window.requestIdleCallback || setTimeout)(function () {
+          if (ac.signal.aborted) return;
+          if (performance.now() - lastScroll < 300) wait(); else fn();
+        }, { timeout: 1500 });
+      })();
+    }
     $$('[data-stage]').forEach(function (stage) {
       var wrap = stage.closest('[data-stage-wrap]') || stage;
       var btn = $('.stage__load', wrap), pause = $('.stage__pause', wrap);
       attach(stage);
       on(btn, 'click', function () { goLive(stage); });
-      on(pause, 'click', function () { clearTimeout(stage._idle); setPlaying(stage, pause.getAttribute('aria-pressed') === 'true'); });
+      on(pause, 'click', function () { stopIdle(stage); setPlaying(stage, pause.getAttribute('aria-pressed') === 'true'); });
+      // The 20 s motion countdown (startIdle) runs only while the stage is on screen.
+      if ('IntersectionObserver' in window) {
+        var so = new IntersectionObserver(function (es) {
+          stage._inView = es[es.length - 1].isIntersecting;
+          if (stage._inView) armIdle(stage); else holdIdle(stage);
+        });
+        so.observe(stage);
+        ac.signal.addEventListener('abort', function () { so.disconnect(); });
+      }
       var mode = stage.dataset.autoload || 'tap';
       if (caps.mobile && stage.dataset.mobile) mode = stage.dataset.mobile;
       if (!caps.auto || mode === 'tap') return;
       if (mode === 'idle') {
-        var go = function () { (window.requestIdleCallback || setTimeout)(function () { if (!ac.signal.aborted) goLive(stage); }, { timeout: 1500 }); };
+        var go = function () { whenStill(function () { goLive(stage); }); };
         if (document.readyState === 'complete') go(); else on(window, 'load', go);
       } else if (mode === 'visible' && 'IntersectionObserver' in window) {
         var vo = new IntersectionObserver(function (es) {
-          if (es[0].isIntersecting) { vo.disconnect(); goLive(stage); }
+          if (es[0].isIntersecting) { vo.disconnect(); whenStill(function () { goLive(stage); }); }
         }, { rootMargin: '200px 0px' });
         vo.observe(stage);
         ac.signal.addEventListener('abort', function () { vo.disconnect(); });
@@ -496,35 +632,46 @@
     var scrollFx = !!hero && mqFx.matches;
     if (hero) hero.classList.toggle('has-scroll-fx', scrollFx);
     var specs = hero ? $$('.hero__specs li', hero) : [];
-    var lastP = 0, ticking = false;
+    // --p goes on the two blocks that read it, not on .hero: a custom property set on the
+    // hero restyled its whole subtree (canvas, chips, specs) on every scroll frame.
+    var pTargets = hero ? $$('.hero__copy, .hero__stage', hero) : [];
+    var lastP = -1, ticking = false;
     function frame() {
       ticking = false;
+      // Every read before any write: one layout per frame, never a forced one.
+      var y = scrollY, r = hero && hero.getBoundingClientRect(), navH = nav ? nav.offsetHeight : 0, p = 0;
       if (nav) {
-        var h = nav.offsetHeight;
-        nav.classList.toggle('is-scrolled', scrollY > 8);
-        var over = !!hero && hero.getBoundingClientRect().bottom > h;
-        if (hero) nav.classList.toggle('is-over-stage', over);
+        nav.classList.toggle('is-scrolled', y > 8);
+        // Night set while the picture still shows below the header. Once only its last
+        // strip is left under the header, the bar takes the page's set at once, but solid
+        // (is-stage-edge): a translucent bar there let that strip through as a two-tone band.
+        var over = !!r && r.bottom > navH;
+        if (hero) {
+          nav.classList.toggle('is-over-stage', over);
+          nav.classList.toggle('is-stage-edge', !over && r.bottom > 0);
+        }
         // Over a night picture the header takes the dark set, whatever the theme.
         nav.classList.toggle('night', over && hero.classList.contains('night'));
       }
       if (!hero) return;
-      var r = hero.getBoundingClientRect(), p;
       if (scrollFx) p = clamp(-r.top / Math.max(1, r.height - innerHeight), 0, 1);
       else p = clamp(-r.top / Math.max(1, r.height), 0, 1);
-      hero.style.setProperty('--p', p.toFixed(4));
+      if (p === lastP) return;            // past the hero: nothing left to move
+      var pv = p.toFixed(4);
+      pTargets.forEach(function (el) { el.style.setProperty('--p', pv); });
       hero.classList.toggle('is-copy-out', scrollFx && p >= 0.25);
       specs.forEach(function (li, i) { li.classList.toggle('is-on', p > 0.28 + i * 0.16); });
       // Live: the scroll turns the model (about 1.6 rad over the pin); a scene turns its camera.
       if (heroStage && heroStage.dataset.scene) {
         var turn = scrollFx ? p * 1.2 : 0;
         if (turn !== heroStage._turn) { heroStage._turn = turn; if (heroStage._scene) heroStage._scene.setTurn(turn); }
-      } else if (scrollFx && heroStage && heroStage._sv && p !== lastP) { var hsv = heroStage._sv; hsv.setCameraOrbit({ angle: hsv.getCameraOrbit().angle + (p - lastP) * 1.6 }); }
+      } else if (scrollFx && heroStage && heroStage._sv && lastP >= 0) { var hsv = heroStage._sv; hsv.setCameraOrbit({ angle: hsv.getCameraOrbit().angle + (p - lastP) * 1.6 }); }
       lastP = p;
     }
     on(window, 'scroll', function () { if (!ticking) { ticking = true; requestAnimationFrame(frame); } }, { passive: true });
     on(window, 'resize', function () {
       var want = !!hero && mqFx.matches;
-      if (hero && want !== scrollFx) { scrollFx = want; hero.classList.toggle('has-scroll-fx', want); }
+      if (hero && want !== scrollFx) { scrollFx = want; hero.classList.toggle('has-scroll-fx', want); lastP = -1; }
       $$('[data-scene]').forEach(frameScene);
       frame();
     });
