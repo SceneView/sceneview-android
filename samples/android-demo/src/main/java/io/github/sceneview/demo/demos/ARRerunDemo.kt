@@ -1893,7 +1893,8 @@ private fun RerunLiveScreen(
                                 ),
                                 nextRoom = roomNumber.takeIf { betweenRooms },
                                 walls = scanWalls?.wallCount,
-                                turn = scanWalls?.turn,
+                                // Held as the arrow is, so the line does not flip either.
+                                turn = rememberHeld(scanWalls?.turn),
                                 done = scanWalls?.done == true,
                                 facingWall = scanCoverage.facingWall,
                             ),

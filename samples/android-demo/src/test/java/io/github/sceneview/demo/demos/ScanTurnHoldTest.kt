@@ -41,6 +41,31 @@ class ScanTurnHoldTest {
         composeRule.onNodeWithContentDescription(ScanCopy.turnHint(ScanTurn.Right)).assertDoesNotExist()
     }
 
+    @Test
+    fun `the other side shows once the turn has held its time`() {
+        var turn by mutableStateOf<ScanTurn?>(ScanTurn.Left)
+        composeRule.mainClock.autoAdvance = false
+        composeRule.setContent { Box(Modifier.fillMaxSize()) { ScanTurnArrow(turn) } }
+        composeRule.mainClock.advanceTimeBy(SHOWN_MS)
+        composeRule.runOnUiThread { turn = ScanTurn.Right; Snapshot.sendApplyNotifications() }
+        composeRule.mainClock.advanceTimeBy(SCAN_HINT_HOLD_MS)
+        composeRule.onNodeWithContentDescription(ScanCopy.turnHint(ScanTurn.Right)).assertExists()
+    }
+
+    @Test
+    fun `a side that comes and goes within the hold is never shown`() {
+        var turn by mutableStateOf<ScanTurn?>(ScanTurn.Left)
+        composeRule.mainClock.autoAdvance = false
+        composeRule.setContent { Box(Modifier.fillMaxSize()) { ScanTurnArrow(turn) } }
+        composeRule.mainClock.advanceTimeBy(SHOWN_MS)
+        composeRule.runOnUiThread { turn = ScanTurn.Right; Snapshot.sendApplyNotifications() }
+        composeRule.mainClock.advanceTimeBy(SHOWN_MS)
+        composeRule.runOnUiThread { turn = ScanTurn.Left; Snapshot.sendApplyNotifications() }
+        composeRule.mainClock.advanceTimeBy(SCAN_HINT_HOLD_MS)
+        composeRule.onNodeWithContentDescription(ScanCopy.turnHint(ScanTurn.Left)).assertExists()
+        composeRule.onNodeWithContentDescription(ScanCopy.turnHint(ScanTurn.Right)).assertDoesNotExist()
+    }
+
     private companion object {
         /** Well under the hold: the time a sway of the phone takes. */
         const val SHOWN_MS = 1_000L

@@ -205,11 +205,11 @@ internal fun ScanRoomGauge(room: ScanWallsState) {
  * The turn to the next gap of a room's scan (#4540, "arrows to say turn this way"): a glass disc at
  * the screen's edge on that side, an arrow in `accent-guidance`, the colour of the dashed gap in
  * the room. Behind the phone, it sits in the middle with a turning arrow; ahead, the gap is in
- * view and the dashes speak for it.
+ * view and the dashes speak for it. Each turn holds [SCAN_HINT_HOLD_MS] before it changes.
  */
 @Composable
 internal fun BoxScope.ScanTurnArrow(turn: ScanTurn?) {
-    val shown = turn?.takeIf { it != ScanTurn.Ahead }
+    val shown = rememberHeld(turn)?.takeIf { it != ScanTurn.Ahead }
     // Kept through the fade-out, so the arrow leaves from where it was.
     var last by remember { mutableStateOf(ScanTurn.Left) }
     if (shown != null) last = shown
