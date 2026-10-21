@@ -93,7 +93,11 @@ object SurveyReport {
     private const val CUBIC_METRES = " m³"
     private const val INCHES = " in"
     private const val SQUARE_FEET = " ft²"
-    private const val ROOM_SEPARATOR = "; "
+    /**
+     * Between the rooms, and between the walls, of the shared text: a comma there reads as one
+     * more decimal where the comma is the decimal mark, `A 4,00 m, B 3,00 m`.
+     */
+    private const val LIST_SEPARATOR = "; "
     private const val PLUS_MINUS = " ± "
 
     /** A half-metre scale bar's length: `0.5`, `0,5` in French. */
@@ -329,12 +333,12 @@ object SurveyReport {
         lines += room.joinToString(SEPARATOR) { it.label + ": " + it.value }
         if (survey.hasPlan) {
             lines += wording.rooms + ": " +
-                roomRows(areas(survey, wording), wording).joinToString(ROOM_SEPARATOR) { it.label + " " + it.value }
+                roomRows(areas(survey, wording), wording).joinToString(LIST_SEPARATOR) { it.label + " " + it.value }
         }
         if (survey.walls.isNotEmpty()) {
             val walls = wallRows(survey, wording)
             lines += wording.walls + ": " +
-                survey.walls.indices.joinToString(", ") { survey.walls[it].tag + " " + walls[it].value }
+                survey.walls.indices.joinToString(LIST_SEPARATOR) { survey.walls[it].tag + " " + walls[it].value }
         }
         hints(survey, wording).takeIf { it.isNotEmpty() }?.let { lines += it.joinToString(" ") }
         lines += notes(survey, wording)
