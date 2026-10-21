@@ -37,9 +37,6 @@ object YoloxCodec {
     private const val BOX_VALUES = 5
     private const val CHANNELS = 3
 
-    /** The input side of YOLOX-Tiny and Nano, for a model whose tensors do not say it. */
-    private const val DEFAULT_SIZE = 416
-
     /** The input side of a model and the width of its output rows, read from its tensors. */
     data class TensorLayout(val size: Int, val columns: Int)
 
@@ -166,13 +163,24 @@ object YoloxCodec {
     }
 
     /**
-     * The layout a channels-last conversion's tensors give — [input] and [output] are their
-     * shapes: the input's side, `[1, size, size, 3]`, and the output's last dimension.
+     * The layout of a channels-last conversion whose tensors have the shapes [input] and [output],
+     * once checked against what [channelsLast] writes and [decode] reads: `[1, size, size, 3]` in,
+     * `[1, rowsFor(size), 85]` out. Anything else — the channels first, the output transposed,
+     * another class list — throws [IllegalArgumentException]: such a model runs without an error
+     * and finds nothing but noise.
      */
-    fun channelsLastLayout(input: IntArray, output: IntArray): TensorLayout = TensorLayout(
-        size = input.getOrElse(1) { 0 }.takeIf { it > 0 } ?: DEFAULT_SIZE,
-        columns = output.last(),
-    )
+    fun channelsLastLayout(input: IntArray, output: IntArray): TensorLayout {
+        val size = input.getOrElse(1) { 0 }
+        val square = input.contentEquals(intArrayOf(1, size, size, CHANNELS))
+        require(square && size > 0 && size % STRIDES.last() == 0) {
+            "input ${input.contentToString()}: not [1, side, side, 3]"
+        }
+        val layout = TensorLayout(size, BOX_VALUES + COCO.size)
+        require(output.contentEquals(intArrayOf(1, rowsFor(size), layout.columns))) {
+            "output ${output.contentToString()}: not [1, ${rowsFor(size)}, ${layout.columns}]"
+        }
+        return layout
+    }
 
     /** How many rows a [size]² input gives: one per cell of the three grids. */
     fun rowsFor(size: Int): Int = STRIDES.sumOf { (size / it) * (size / it) }

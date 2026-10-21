@@ -97,9 +97,12 @@ private object ProcessDetector {
  * a metered network —, and given up on if the new copy fails too. That second copy is kept and
  * marked ([SceneModelStore.markRefetched]): a later launch tries it again, never a third download.
  * A copy that loads clears the mark ([SceneModelStore.clearRefetched]), so a file refused after
- * that is fetched once more. The interpreter lives as long as the process, whose end frees it; the
- * shares handed out close nothing ([Share]), so a replay that closes its detector cannot pull the
- * interpreter from under another one.
+ * that is fetched once more. A device LiteRT ships no library for (32-bit x86) is no fault of the
+ * file: its copy is kept, no other is fetched, and each launch runs without a detector.
+ *
+ * The interpreter lives as long as the process, whose end frees it; the shares handed out close
+ * nothing ([Share]), so a replay that closes its detector cannot pull the interpreter from under
+ * another one.
  */
 internal class SceneDetectorShare(
     private val storeOf: suspend () -> SceneModelStore,
@@ -187,7 +190,13 @@ internal class SceneDetectorShare(
             awaitGo(models, onState)
             val file = fetch(models, onState) ?: return null
             if (attempt > 0) models.markRefetched()
-            open(file)?.let { built ->
+            val opened = try {
+                open(file)
+            } catch (missing: UnsatisfiedLinkError) {
+                Log.w(TAG, "No LiteRT for this device's ABI: the scan is recognised without a detector", missing)
+                break
+            }
+            opened?.let { built ->
                 models.clearRefetched()
                 detector = built
                 onState(SceneModelState.Ready)
@@ -234,8 +243,10 @@ internal class SceneDetectorShare(
 
 /**
  * [file] mapped in place — LiteRT reads a direct buffer without copying it onto the heap — and its
- * interpreter built: the mapping on [Dispatchers.IO], the interpreter on [Dispatchers.Default]. A
- * device LiteRT has no native library for (32-bit x86) gets no detector, never a crash.
+ * interpreter built: the mapping on [Dispatchers.IO], the interpreter on [Dispatchers.Default].
+ * `null` when LiteRT refuses the file. On a device LiteRT has no native library for (32-bit x86)
+ * the [UnsatisfiedLinkError] goes through: the file is not at fault, and [SceneDetectorShare]
+ * keeps it rather than fetch another.
  */
 @VisibleForTesting
 internal suspend fun openSceneDetector(file: File): SceneDetector? = try {
@@ -247,9 +258,6 @@ internal suspend fun openSceneDetector(file: File): SceneDetector? = try {
     throw e
 } catch (@Suppress("TooGenericExceptionCaught") failure: Exception) {
     Log.w(TAG, "The scene detector could not be loaded: ${failure.message}")
-    null
-} catch (missing: UnsatisfiedLinkError) {
-    Log.w(TAG, "No LiteRT for this device's ABI: the scan is recognised without a detector (${missing.message})")
     null
 }
 

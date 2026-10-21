@@ -12,8 +12,9 @@ import java.nio.ByteOrder
  *
  * The conversion takes the same input as the export — BGR, 0 to 255, letterboxed by
  * [YoloxCodec.input] — with the channels last (`[1, size, size, 3]`) where the export has them
- * first, and gives the same output, `[1, boxes, 85]`. One [detect] at a time: an interpreter is not
- * safe to share between threads.
+ * first, and gives the same output, `[1, boxes, 85]`. A model whose tensors read otherwise is
+ * refused as it opens ([YoloxCodec.channelsLastLayout]). One [detect] or [close] at a time: an
+ * interpreter is not safe to share between threads.
  */
 class LiteRtSceneDetector(
     model: ByteBuffer,
@@ -56,6 +57,7 @@ class LiteRtSceneDetector(
         )
     }
 
+    @Synchronized
     override fun close() = interpreter.close()
 
     companion object {
