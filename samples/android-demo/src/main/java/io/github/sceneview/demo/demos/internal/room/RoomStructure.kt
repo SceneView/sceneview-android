@@ -108,10 +108,38 @@ enum class RoomGap {
 
 /**
  * How a room's outline was read: whether its sides were [traced] off the walls (`false`: it is the
- * floor's own edge), whether its walls [closed] it — each side seen, or held between two seen
- * ones — and on how many [distinctWalls], one wall seen twice counting once.
+ * floor's own edge, [miss] saying why), whether its walls [closed] it — each side seen, or held
+ * between two seen ones — and on how many [distinctWalls], one wall seen twice counting once.
+ * [floorArea] is the area of the floor the outline was read around, [tracedArea] the area the
+ * traced sides held when they closed but were not kept.
  */
-class RoomReading(val traced: Boolean, val closed: Boolean, val distinctWalls: Int)
+@Suppress("LongParameterList")
+class RoomReading(
+    val traced: Boolean,
+    val closed: Boolean,
+    val distinctWalls: Int,
+    val miss: TraceMiss? = null,
+    val floorArea: Float = 0f,
+    val tracedArea: Float? = null,
+)
+
+/** Why a room's sides could not be traced off its walls, its outline then being the floor's own edge. */
+enum class TraceMiss {
+    /** No stretch of the floor's edge runs along a wall. */
+    NoWallAlong,
+
+    /** The floor's edge reads as fewer than three sides. */
+    TooFewSides,
+
+    /** Two neighbouring sides are parallel, so never meet. */
+    SidesApart,
+
+    /** The sides cross each other. */
+    Crossing,
+
+    /** The sides close around an area too far from the floor's. */
+    AreaApart,
+}
 
 /**
  * The structure of one room. [walls] is its outline in order, the room on each wall's normal

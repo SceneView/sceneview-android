@@ -32,9 +32,11 @@ internal class Side(val line: WallLine?, val nu: Float, val nv: Float, val offse
 
 /**
  * The room's outline: corner `i` at ([u]`[i]`, [v]`[i]`) starts side `i`, counter-clockwise in
- * the room's frame. [region] is the room's floor on [raster]; [traced] is `false` when the
- * sides could not be read off the walls and the outline is the region's own edge.
+ * the room's frame. [region] is the room's floor on [raster], [regionArea] its area; [traced] is
+ * `false` when the sides could not be read off the walls and the outline is the region's own
+ * edge, [miss] then saying why, and [tracedArea] the area the sides held when they closed.
  */
+@Suppress("LongParameterList")
 internal class Outline(
     val u: FloatArray,
     val v: FloatArray,
@@ -42,7 +44,16 @@ internal class Outline(
     val raster: Raster,
     val region: BooleanArray,
     val traced: Boolean,
+    val regionArea: Float = 0f,
+    val miss: TraceMiss? = null,
+    val tracedArea: Float? = null,
 )
+
+/** The sides read off the floor's edge, or why none could be. */
+private sealed interface Trace {
+    class Sides(val u: FloatArray, val v: FloatArray, val sides: List<Side>) : Trace
+    class Missed(val why: TraceMiss) : Trace
+}
 
 /**
  * Where the room is, and the polygon that bounds it. The walls are drawn as barriers on a raster
@@ -222,17 +233,23 @@ internal object RoomOutline {
                 floorAt += cloud.v[i]
             }
         }
-        val traced = sidesOf(loop, raster, lines, cloud, floorAt.toFloatArray(), open)
-        if (traced != null) {
-            val (cu, cv, sides) = traced
-            val area = signedArea(cu, cv)
-            if (area > 0f && simple(cu, cv) && abs(area - regionArea) <= max(AREA_AGREE * regionArea, AREA_AGREE_M2)) {
-                return Outline(cu, cv, sides, raster, region, traced = true)
+        val miss: TraceMiss
+        var tracedArea: Float? = null
+        when (val trace = sidesOf(loop, raster, lines, cloud, floorAt.toFloatArray(), open)) {
+            is Trace.Missed -> miss = trace.why
+            is Trace.Sides -> {
+                val area = signedArea(trace.u, trace.v)
+                tracedArea = area
+                miss = when {
+                    area <= 0f || !simple(trace.u, trace.v) -> TraceMiss.Crossing
+                    abs(area - regionArea) > max(AREA_AGREE * regionArea, AREA_AGREE_M2) -> TraceMiss.AreaApart
+                    else -> return Outline(trace.u, trace.v, trace.sides, raster, region, traced = true, regionArea)
+                }
             }
         }
         // The sides did not close into a polygon that holds the room: its own edge.
         val (su, sv, sides) = alongRegion(loop, lines) ?: return null
-        return Outline(su, sv, sides, raster, region, traced = false)
+        return Outline(su, sv, sides, raster, region, traced = false, regionArea, miss, tracedArea)
     }
 
     /**
@@ -629,7 +646,7 @@ internal object RoomOutline {
     /**
      * The outline's sides read off the [loop]: each step labelled with the wall it runs along,
      * labels smoothed, then each stretch no wall runs along either cut off (a corner the raster
-     * rounded) or deduced. `null` when fewer than three sides are left.
+     * rounded) or deduced. [TraceMiss.TooFewSides] when fewer than three sides are left.
      */
     @Suppress("LongMethod", "CyclomaticComplexMethod", "ReturnCount", "NestedBlockDepth")
     private fun sidesOf(
@@ -639,9 +656,9 @@ internal object RoomOutline {
         cloud: FrameCloud,
         floorAt: FloatArray,
         open: List<FloatArray>,
-    ): Triple<FloatArray, FloatArray, List<Side>>? {
+    ): Trace {
         val m = loop.size / 2
-        if (m < 4) return null
+        if (m < 4) return Trace.Missed(TraceMiss.TooFewSides)
         val labels = IntArray(m)
         for (e in 0 until m) {
             val next = (e + 1) % m
@@ -674,9 +691,10 @@ internal object RoomOutline {
             }
             labels[e] = best
         }
-        if (labels.all { it == UNLABELED }) return null
+        if (labels.all { it == UNLABELED }) return Trace.Missed(TraceMiss.NoWallAlong)
         // Runs: start where the label changes, so no run wraps around the loop's start.
-        val shift = (0 until m).firstOrNull { labels[it] != labels[(it + m - 1) % m] } ?: return null
+        val shift = (0 until m).firstOrNull { labels[it] != labels[(it + m - 1) % m] }
+            ?: return Trace.Missed(TraceMiss.TooFewSides)
         val runLabel = ArrayList<Int>()
         val runStart = ArrayList<Int>()
         val runCount = ArrayList<Int>()
@@ -712,7 +730,7 @@ internal object RoomOutline {
             runCount.removeAt(shortest)
             mergeEqual(runLabel, runStart, runCount)
         }
-        if (runLabel.size < 3) return null
+        if (runLabel.size < 3) return Trace.Missed(TraceMiss.TooFewSides)
         // Each run as a side: a wall's own line, or a deduced one.
         data class Run(val label: Int, val start: Int, val count: Int)
         val runs = runLabel.indices.map { Run(runLabel[it], runStart[it], runCount[it]) }
@@ -784,12 +802,12 @@ internal object RoomOutline {
             }
         }
         dropDegenerate(merged)
-        if (merged.size < 3) return null
+        if (merged.size < 3) return Trace.Missed(TraceMiss.TooFewSides)
         val n = merged.size
         var cu = FloatArray(n)
         var cv = FloatArray(n)
         for (i in 0 until n) {
-            val corner = meet(merged[(i + n - 1) % n], merged[i]) ?: return null
+            val corner = meet(merged[(i + n - 1) % n], merged[i]) ?: return Trace.Missed(TraceMiss.SidesApart)
             cu[i] = corner[0]
             cv[i] = corner[1]
         }
@@ -824,7 +842,7 @@ internal object RoomOutline {
                 merged += refined
             }
         }
-        return Triple(cu, cv, merged)
+        return Trace.Sides(cu, cv, merged)
     }
 
     /**
