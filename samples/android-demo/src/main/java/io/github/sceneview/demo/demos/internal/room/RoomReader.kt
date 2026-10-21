@@ -47,6 +47,9 @@ internal object RoomReader {
     /** A wall seen this near a corner reaches it: a side deduced there is held by it. */
     private const val CORNER_REACH_M = 0.3f
 
+    /** A wall seen along this much of the outline draws the plan, however long the side it stands on. */
+    private const val DRAWS_PLAN_M = 1f
+
     /**
      * Nothing is read farther than this from the scan's origin: a stray value — a fusion's
      * overflow, a pose gone wild — would otherwise size a histogram or a raster.
@@ -357,12 +360,15 @@ internal object RoomReader {
         }
         val seen = BooleanArray(n) { outline.sides[it].line != null && reads[it].share >= RoomStructure.MIN_SEEN_SHARE }
         val drawn = (0 until n).any {
-            seen[it] && reads[it].length * reads[it].share >= RoomStructure.MIN_SEEN_SHARE * runOf(outline.u, outline.v, it)
+            val along = reads[it].length * reads[it].share
+            val half = seen[it] && along >= RoomStructure.MIN_SEEN_SHARE * runOf(outline.u, outline.v, it)
+            outline.sides[it].line != null && (along >= DRAWS_PLAN_M || half)
         }
         if (!drawn) {
             // An outline no wall was seen along is only the floor's extent: not drawn. One wall
-            // seen along half the straight run of outline it stands on draws the plan — a stub of
-            // wall on a floor's edge does not; the figures wait for [RoomStructure.MIN_SEEN_WALLS].
+            // seen along [DRAWS_PLAN_M], or along half the straight run of outline it stands on,
+            // draws the plan — a shorter stub of wall on a floor's edge does not; the figures wait
+            // for [RoomStructure.MIN_SEEN_WALLS].
             return RoomStructure.empty(RoomGap.NoWalls, floor.y, floor.thickness, height)
         }
         // No figure is given tighter than the thinnest layer a cloud is read to.
