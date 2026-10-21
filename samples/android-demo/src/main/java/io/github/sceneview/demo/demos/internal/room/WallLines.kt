@@ -464,7 +464,11 @@ internal object WallLines {
         return WallLine(family, nu, nv, mean.toFloat(), spread, t0, column, seen, tops, top, kept.toArray())
     }
 
-    /** Two layers of one wall, close and side by side and as high as each other, are one line. */
+    /**
+     * Two layers of one wall, close and side by side and as high as each other, are one line —
+     * but a face standing against a wall seen only low, the wall seen beside it and hardly behind
+     * it, is furniture before the wall however near: a headboard is not a layer of its wall.
+     */
     @Suppress("NestedBlockDepth")
     private fun mergeLayers(cloud: FrameCloud, lines: List<WallLine>, column: Float, standing: IntArray): List<WallLine> {
         val parent = IntArray(lines.size) { it }
@@ -481,6 +485,10 @@ internal object WallLines {
                 val overlap = min(la.to, lb.to) - max(la.from, lb.from)
                 if (overlap < OVERLAP_SHARE * min(la.to - la.from, lb.to - lb.from)) continue
                 if (abs(la.top - lb.top) > FURNITURE_UNDER_M) continue
+                val front = if (la.offset > lb.offset) la else lb
+                val back = if (front === la) lb else la
+                val standsAgainst = back.top < WALL_MIN_TOP_M && front.offset - back.offset >= BEHIND_MIN_M && against(front, back)
+                if (standsAgainst) continue
                 parent[root(b)] = root(a)
             }
         }
