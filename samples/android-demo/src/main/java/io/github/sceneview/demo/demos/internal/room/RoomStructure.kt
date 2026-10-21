@@ -3,7 +3,7 @@ package io.github.sceneview.demo.demos.internal.room
 /*
  * A room's structure, read from a scan (#4540): its floor and ceiling, the walls that bound it —
  * each a straight line in plan, whatever its angle — the doors and windows cut in them, and the
- * figures a floor plan sells: area, perimeter, height, volume and each wall's length, each with
+ * figures a floor plan gives: area, perimeter, height, volume and each wall's length, each with
  * how far it can be trusted.
  *
  * Pure Kotlin, on purpose: no Android type and no renderer, so the engine can leave this demo as
@@ -133,7 +133,7 @@ class RoomStructure(
     /** How many walls of the outline were seen. */
     val seenWalls: Int get() = walls.count { it.seen }
 
-    /** The figures a room is sold on are given: its walls close it, on at least [MIN_SEEN_WALLS] distinct walls. */
+    /** The room's figures are given: its walls close it, on at least [MIN_SEEN_WALLS] distinct walls. */
     val measured: Boolean get() = area != null
 
     /** The doors and windows of every wall. */
