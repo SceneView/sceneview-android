@@ -41,6 +41,9 @@ internal object RoomReader {
     private const val SAME_WALL_M = 0.1f
     private const val SAME_WALL_FACING = 0.94f
 
+    /** A wall seen this near a corner reaches it: a side deduced there is held by it. */
+    private const val CORNER_REACH_M = 0.3f
+
     /**
      * Nothing is read farther than this from the scan's origin: a stray value — a fusion's
      * overflow, a pose gone wild — would otherwise size a histogram or a raster.
@@ -386,10 +389,19 @@ internal object RoomReader {
             )
         }
         val rough = seen.any { !it }
-        // The figures need the room closed by walls: each side seen, or deduced between two seen
+        // A side no wall was seen along stands where the floor seen ended: it holds the room only
+        // where the walls beside it were seen up to it, each within [CORNER_REACH_M] of the corner
+        // it makes with it. A scan that stopped short leaves them short of it.
+        val held = BooleanArray(n) { i ->
+            val next = (i + 1) % n
+            outline.sides[i].line != null ||
+                reaches(outline.sides[(i + n - 1) % n].line, outline.u[i], outline.v[i]) &&
+                reaches(outline.sides[next].line, outline.u[next], outline.v[next])
+        }
+        // The figures need the room closed by walls: each side seen, or held between two seen
         // ones — and at least [RoomStructure.MIN_SEEN_WALLS] distinct walls, one wall seen twice
         // counting once.
-        val closed = (0 until n).all { seen[it] || seen[(it + n - 1) % n] && seen[(it + 1) % n] }
+        val closed = (0 until n).all { seen[it] || seen[(it + n - 1) % n] && seen[(it + 1) % n] && held[it] }
         val measured = closed && distinctWalls(outline.sides, seen) >= RoomStructure.MIN_SEEN_WALLS
         val area = abs(RoomOutline.signedArea(outline.u, outline.v))
         var areaSpread = 0f
@@ -424,6 +436,18 @@ internal object RoomReader {
                 RoomGap.Ceiling.takeIf { height == null },
             ),
         )
+    }
+
+    /** Whether [line] was seen within [CORNER_REACH_M] of the corner at ([u], [v]). */
+    private fun reaches(line: WallLine?, u: Float, v: Float): Boolean {
+        if (line == null) return false
+        val t = line.tOf(u, v)
+        var at = t - CORNER_REACH_M
+        while (at <= t + CORNER_REACH_M) {
+            if (line.seenAt(at)) return true
+            at += line.column * HALF
+        }
+        return false
     }
 
     /** How many distinct walls the [seen] sides stand on: two sides on one line, or on parallel lines closer than [SAME_WALL_M], are one. */
