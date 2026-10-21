@@ -483,13 +483,19 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
             val capture = withContext(Dispatchers.IO) { store.capture(id) }
             val opened = capture?.let { runCatching { loadRerunSession(it) }.getOrNull() }
             when {
-                capture != null && opened != null -> if (screen == RerunScreen.Model && kept) {
-                    // Already on the model: the recording only completes the scan behind it.
-                    scanMedia = opened
-                    scanPack = capture
-                    openCount++
-                } else {
-                    openResult(opened, title, capture, id, kept, kind)
+                capture != null && opened != null -> {
+                    if (screen == RerunScreen.Model && kept) {
+                        // Already on the model: the recording only completes the scan behind it.
+                        scanMedia = opened
+                        scanPack = capture
+                        openCount++
+                    } else {
+                        openResult(opened, title, capture, id, kept, kind)
+                    }
+                    // A raw surface kept for running out of memory, with attempts left, is finished
+                    // again from the recording, behind the surface already shown
+                    // ([io.github.sceneview.demo.demos.internal.RerunScanModel.retriesFinish]).
+                    if (keptModel?.retriesFinish == true) modelSource = RerunModelSource.of(capture, opened)
                 }
                 kept -> Unit
                 else -> {

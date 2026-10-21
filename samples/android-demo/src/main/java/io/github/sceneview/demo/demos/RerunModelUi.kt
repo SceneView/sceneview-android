@@ -105,6 +105,7 @@ import io.github.sceneview.demo.demos.internal.ScanGround
 import io.github.sceneview.demo.demos.internal.ScanGroundMeshes
 import io.github.sceneview.demo.demos.internal.ScanPreset
 import io.github.sceneview.demo.demos.internal.ScanResultCinematics
+import io.github.sceneview.demo.demos.internal.groundSource
 import io.github.sceneview.demo.demos.internal.model.AtlasEncoder
 import io.github.sceneview.demo.demos.internal.model.CleanModel
 import io.github.sceneview.demo.demos.internal.model.CleanModelResult
@@ -138,8 +139,6 @@ import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import java.util.concurrent.atomic.AtomicBoolean
 
 /*
@@ -616,13 +615,18 @@ internal fun RerunModelScreen(
 ) {
     var progress by remember(source, id) { mutableFloatStateOf(0f) }
     val state by produceState<ModelState>(ModelState.Loading, source, id) {
-        val kept = opened ?: if (store != null && id != null) {
+        val stored = opened ?: if (store != null && id != null) {
             withContext(Dispatchers.IO) { runCatching { store.model(id) }.getOrNull() }
         } else {
             null
         }
-        var shownFirst: RerunScanModel? = null
-        val model = kept ?: source?.let { from ->
+        // A raw surface kept for running out of memory, with attempts left, is finished again from
+        // [source], shown meanwhile as a big scan's raw surface is shown while it finishes.
+        val retry = stored?.takeIf { it.retriesFinish && source != null }
+        val kept = stored?.takeIf { retry == null }
+        var shownFirst: RerunScanModel? = retry
+        if (retry != null) value = ModelState.Ready(retry, final = false)
+        val built = kept ?: source?.let { from ->
             withContext(Dispatchers.Default) {
                 val job = coroutineContext.job
                 val report = { share: Float ->
@@ -630,9 +634,12 @@ internal fun RerunModelScreen(
                     job.ensureActive()
                 }
                 // A big scan's raw surface is shown while it finishes; the model then takes its place.
+                // Finishing again, the kept one is already shown: a second would only take heap.
                 val raw = { surface: RerunScanModel ->
-                    shownFirst = surface
-                    value = ModelState.Ready(surface, final = false)
+                    if (shownFirst == null) {
+                        shownFirst = surface
+                        value = ModelState.Ready(surface, final = false)
+                    }
                 }
                 runCatching { buildScanModel(from, raw, report) }
                     .onFailure { if (it is CancellationException) throw it }
@@ -640,11 +647,14 @@ internal fun RerunModelScreen(
                     .getOrNull()
             }
         }
+        val model = retry?.finishedAgain(built) ?: built
         // A model finished now is kept with its scan, so the next open reads it instead of meshing
-        // again; so is the raw surface a finish ran out of memory on, which the same heap would
-        // only fail again. Another fallback is not: the next open tries again — from the TSDF
-        // while its slot holds it, from the scan's surfels once a big one was let go at meshing
-        // to give the finish its heap (mesh()). Only a model kept here lets go a TSDF still held.
+        // again; so is the raw surface a finish ran out of memory on, shown at once on the next
+        // opens and finished again behind it while attempts are left, their count kept with it
+        // ([RerunScanModel.retriesFinish]). Another fallback is not: the next open tries again —
+        // from the TSDF while its slot holds it, from the scan's surfels once a big one was let go
+        // at meshing to give the finish its heap (mesh()). Only a model kept here lets go a TSDF
+        // still held.
         val keepAs = id?.takeIf { kept == null && store != null && model?.keptWithScan == true }
         if (keepAs != null && model != null) {
             val saved = withContext(Dispatchers.IO) {
@@ -662,20 +672,21 @@ internal fun RerunModelScreen(
     val framedBy = (state as? ModelState.Ready)?.framedBy
     // Created before the SceneView, so released after its node (Compose forgets in reverse).
     // On the main thread, as every Filament call (CLAUDE.md).
+    // Left unshown, not thrown, when the heap has no room for the renderer's copy.
     val instance = remember(model) {
-        model?.let { built ->
-            val buffer = ByteBuffer.allocateDirect(built.glb.size).order(ByteOrder.nativeOrder()).put(built.glb)
-            buffer.rewind()
-            runCatching { modelLoader.createModelInstance(buffer) }.getOrNull()
-        }
+        model?.glbBuffer()?.let { buffer -> runCatching { modelLoader.createModelInstance(buffer) }.getOrNull() }
     }
     DisposableEffect(instance) { onDispose { instance?.let { modelLoader.destroyModel(it.model) } } }
-    // The ground it stands on and the floor it missed (#4719), read off the model's own vertices.
-    val ground by produceState<GroundBuild?>(null, model) {
-        value = model?.let { built -> withContext(Dispatchers.Default) { groundOf(built) } }
+    // The ground it stands on and the floor it missed (#4719), read off the model's own vertices
+    // once the model is settled, never beside a big scan's finish ([groundSource]). Until the next
+    // settles, the last one stays.
+    val groundModel = groundSource(model, settled)
+    val ground by produceState<GroundBuild?>(null, groundModel) {
+        groundModel?.let { built -> value = withContext(Dispatchers.Default) { groundOf(built) } }
     }
-    // No drift: the camera holds still once the reveal has landed, until the user moves it.
-    val orbit = remember(source, id) { ArDebugOrbitCamera(drift = false) }
+    // No drift: the camera holds still once the reveal has landed, until the user moves it. Kept
+    // across a source that arrives for a scan already shown, whose finish is run again.
+    val orbit = remember(id ?: source) { ArDebugOrbitCamera(drift = false) }
     // The reveal, the 3D ↔ Plan crane and the tour (#4631), every one cut short by a touch.
     val cinematics = remember(orbit) { ScanResultCinematics(orbit) }
     SideEffect {

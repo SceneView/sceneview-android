@@ -40,11 +40,16 @@ class RerunScanModel(
     val finished: Boolean = true,
     /**
      * The heap (`Runtime.maxMemory()`, bytes) the finish ran out of, the raw surface shown in its
-     * place: kept with its scan anyway, so the next open in a heap that size shows it at once
-     * instead of failing the same finish again. A bigger heap finishes it again ([parse]).
+     * place: kept with its scan anyway, so the next open in a heap that size shows it at once,
+     * and finishes it again behind it only while attempts are left ([retriesFinish]). A bigger
+     * heap finishes it again from the start ([parse]).
      */
     val outOfMemoryInHeap: Long? = null,
-    /** The finishes that ran out of [outOfMemoryInHeap], this one included. */
+    /**
+     * The finishes that ran out of memory on this scan, this one included: until there are
+     * [OUT_OF_MEMORY_ATTEMPTS], the scan reopens on the raw surface and finishes it again
+     * ([retriesFinish]).
+     */
     val outOfMemoryAttempts: Int = 1,
 ) {
     init {
@@ -56,15 +61,45 @@ class RerunScanModel(
     /** Kept with its scan ([RerunSessionStore.saveModel]): the finished model, or the raw surface left by [outOfMemoryInHeap]. */
     val keptWithScan: Boolean get() = finished || outOfMemoryInHeap != null
 
-    /** Stub: never finished again. */
-    val retriesFinish: Boolean get() = false
+    /**
+     * The raw surface a finish ran out of memory on, with attempts left: shown at once when its
+     * scan reopens, and finished again behind it ([finishedAgain]). A heap that ran out once can
+     * fit the finish the next time — other apps let go of theirs, a recording reads its surfels
+     * instead of holding its TSDF — but not every time: past [OUT_OF_MEMORY_ATTEMPTS] the raw
+     * surface is the scan's model for good.
+     */
+    val retriesFinish: Boolean get() = outOfMemoryInHeap != null && outOfMemoryAttempts < OUT_OF_MEMORY_ATTEMPTS
 
-    /** Stub: [built] as it is. */
-    fun finishedAgain(built: RerunScanModel?): RerunScanModel = built ?: this
+    /**
+     * What a finish run again over this raw surface ([retriesFinish]) leaves: [built] when it
+     * finished; else the raw surface it ran out of memory on, or this one when it failed another
+     * way, one attempt more.
+     */
+    fun finishedAgain(built: RerunScanModel?): RerunScanModel =
+        built?.takeIf { it.finished } ?: (built?.takeIf { it.outOfMemoryInHeap != null } ?: this).attempt(outOfMemoryAttempts + 1)
 
-    /** Stub: [glb] copied for the renderer, unguarded. */
-    fun glbBuffer(allocate: (Int) -> ByteBuffer = ByteBuffer::allocateDirect): ByteBuffer? =
+    private fun attempt(attempts: Int) = RerunScanModel(
+        kind = kind,
+        glb = glb,
+        bounds = bounds,
+        triangles = triangles,
+        vertices = vertices,
+        budgetReached = budgetReached,
+        finished = finished,
+        outOfMemoryInHeap = outOfMemoryInHeap,
+        outOfMemoryAttempts = attempts,
+    )
+
+    /**
+     * [glb] in a native buffer, for the renderer to read; `null` when the heap has no room left
+     * for the copy — a big scan's 12 MB, beside its finish — so the model is left unshown instead
+     * of taking the app down. [allocate] is the allocation, for a test.
+     */
+    fun glbBuffer(allocate: (Int) -> ByteBuffer = ByteBuffer::allocateDirect): ByteBuffer? = try {
         allocate(glb.size).order(ByteOrder.nativeOrder()).put(glb).also { it.rewind() }
+    } catch (_: OutOfMemoryError) {
+        null
+    }
 
     /** What the model is made of. */
     enum class Kind(val wireName: String) {
@@ -90,7 +125,10 @@ class RerunScanModel(
             put("triangles", triangles)
             put("vertices", vertices)
             put("budgetReached", budgetReached)
-            outOfMemoryInHeap?.let { put("outOfMemoryInHeap", it) }
+            outOfMemoryInHeap?.let {
+                put("outOfMemoryInHeap", it)
+                put("outOfMemoryAttempts", outOfMemoryAttempts)
+            }
         },
     )
 
@@ -101,7 +139,12 @@ class RerunScanModel(
          */
         const val VERSION = 2
 
-        /** Stub: finishes run before running out of memory is final. */
+        /**
+         * The finishes a scan runs before running out of memory is final: the first, and two
+         * more over the raw surface shown. One more is the cheap test of a heap that was only
+         * crowded; a third that still fails says the scan is too big for this phone, and a
+         * fourth would only cost the user another wait for the same raw surface.
+         */
         const val OUT_OF_MEMORY_ATTEMPTS = 3
         private const val BOUNDS = 6
         private val pretty = Json { prettyPrint = true }
@@ -136,6 +179,8 @@ class RerunScanModel(
                 budgetReached = number("budgetReached")?.booleanOrNull ?: false,
                 finished = outOfMemoryInHeap == null,
                 outOfMemoryInHeap = outOfMemoryInHeap,
+                // Before attempts were counted, a model.json held one finish.
+                outOfMemoryAttempts = number("outOfMemoryAttempts")?.intOrNull?.takeIf { it >= 1 } ?: 1,
             )
         }
 
@@ -147,8 +192,12 @@ class RerunScanModel(
     }
 }
 
-/** Stub: the model the result screen reads its ground off. */
-internal fun groundSource(model: RerunScanModel?, @Suppress("UnusedParameter") settled: Boolean): RerunScanModel? = model
+/**
+ * The model the result screen reads its ground off: [model] once [settled], else none yet. A
+ * big scan's raw surface is shown while it finishes; decoding its ground then would hold a
+ * second copy of its vertices beside the finish, in the heap the finish needs.
+ */
+internal fun groundSource(model: RerunScanModel?, settled: Boolean): RerunScanModel? = model?.takeIf { settled }
 
 /**
  * The fallback model when meshing fails: the scan's coloured points, each one a small square
