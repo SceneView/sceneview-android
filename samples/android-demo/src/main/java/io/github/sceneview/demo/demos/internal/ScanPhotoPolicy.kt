@@ -23,6 +23,17 @@ internal object ScanPhotoPolicy {
     const val SHARP_LONG_SIDE = 960
     const val REPLAY_LONG_SIDE = 320
     const val THUMBNAIL_LONG_SIDE = 160
+
+    /**
+     * The long side the plane bake reads a photo at. [PlaneBake] lays a texel every
+     * [PlaneBake.TEXEL_M] (1 cm); on a plane d metres away, seen square-on, a photo's pixels sit
+     * 2 x halfHeightPerDepth x d / side apart, so 480 px at the default lens (0.60) still puts a
+     * pixel on every texel out to 4 m, past where a room is scanned from (2 m at a 60° slant). On
+     * the bundled room recording, 98% of the bake's weight comes from views 480 px resolves that
+     * finely, against 64% at the ordinary photos' 320 px and 99.8% at 640 px. Read whole, a
+     * 540 x 960 sharp photo holds 2.07 MB of pixels for the whole build; at 270 x 480, 0.52 MB.
+     */
+    const val BAKE_LONG_SIDE = 480
     const val JPEG_QUALITY = 85
     const val MIN_JPEG_QUALITY = 65
     const val QUALITY_STEP = 10
@@ -65,6 +76,12 @@ internal object ScanPhotoPolicy {
         return sample
     }
 
+    /**
+     * Decode sample of a photo the plane bake reads: [BAKE_LONG_SIDE] or more on the long side, so a
+     * 540x960 or 720x960 sharp photo decodes at half, a 480x640 one and an ordinary photo whole.
+     */
+    fun bakeSample(width: Int, height: Int): Int = sampleFor(width, height, BAKE_LONG_SIDE)
+
     /** Decode sample of a replay thumbnail: 240x320 photos still decode at 2, as before. */
     fun thumbnailSample(width: Int, height: Int): Int = sampleFor(width, height, THUMBNAIL_LONG_SIDE)
 
@@ -81,6 +98,14 @@ internal object ScanPhotoPolicy {
         val scale = THUMBNAIL_LONG_SIDE.toFloat() / long
         return (width * scale).roundToInt().coerceAtLeast(1) to (height * scale).roundToInt().coerceAtLeast(1)
     }
+
+    /**
+     * The events a finished scan saves from its [journal]: every one, less the photos with no
+     * media ([hasMedia] false: the photo failed to encode), so the log never points at a missing
+     * file. Pure: a save that failed keeps the journal and calls this again, with the same result.
+     */
+    fun savedEvents(journal: List<ArDebugEvent>, hasMedia: (path: String) -> Boolean): List<ArDebugEvent> =
+        journal.filterNot { it is ArDebugEvent.Image && !hasMedia(it.path) }
 }
 
 /**

@@ -157,8 +157,20 @@ internal object RerunCaptureBuilder {
         return texture to jpeg.toByteArray()
     }
 
-    private fun decodePhoto(photo: ScanPhoto): BakePhoto? {
-        val bitmap = BitmapFactory.decodeByteArray(photo.jpeg, 0, photo.jpeg.size) ?: return null
+    /**
+     * [photo]'s pixels for the plane bake, read at [ScanPhotoPolicy.BAKE_LONG_SIDE] on the long side
+     * rather than whole: the build keeps every photo it painted from until it ends, and a sharp
+     * photo read whole holds four times the pixels the texture can use. The bake samples a photo by
+     * its normalized position, so a reduced one still lands where the full one would.
+     */
+    internal fun decodePhoto(photo: ScanPhoto): BakePhoto? {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(photo.jpeg, 0, photo.jpeg.size, bounds)
+        val options = BitmapFactory.Options().apply {
+            inSampleSize = ScanPhotoPolicy.bakeSample(bounds.outWidth, bounds.outHeight)
+            inPreferredConfig = Bitmap.Config.ARGB_8888
+        }
+        val bitmap = BitmapFactory.decodeByteArray(photo.jpeg, 0, photo.jpeg.size, options) ?: return null
         val argb = IntArray(bitmap.width * bitmap.height)
         bitmap.getPixels(argb, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
         return BakePhoto(photo.pose, bitmap.width, bitmap.height, argb).also { bitmap.recycle() }

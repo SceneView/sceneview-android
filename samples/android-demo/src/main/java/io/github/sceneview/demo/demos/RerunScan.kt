@@ -428,7 +428,7 @@ internal class ScanCapture private constructor(
         jobs.toList().joinAll()
         if (trace.isEmpty) return null
         // A photo whose encoding failed has no media: its image event does not reach the saved scan.
-        val events = journal.filterNot { it is ArDebugEvent.Image && jpegs[it.path] == null }
+        val events = ScanPhotoPolicy.savedEvents(journal) { jpegs[it] != null }
         val photos = events.filterIsInstance<ArDebugEvent.Image>().mapNotNull { image ->
             val jpeg = jpegs[image.path] ?: return@mapNotNull null
             val pose = poses[image.path] ?: return@mapNotNull null
