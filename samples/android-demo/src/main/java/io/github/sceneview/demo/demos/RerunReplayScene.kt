@@ -31,6 +31,7 @@ import io.github.sceneview.demo.demos.internal.DebugMesh
 import io.github.sceneview.demo.demos.internal.DebugPlane
 import io.github.sceneview.demo.demos.internal.DebugPose
 import io.github.sceneview.demo.demos.internal.DenseCloud
+import io.github.sceneview.demo.demos.internal.DenseFusion
 import io.github.sceneview.demo.demos.internal.DenseSurfels
 import io.github.sceneview.demo.demos.internal.MeasureDrawing
 import io.github.sceneview.demo.demos.internal.MeasureSize
@@ -150,12 +151,18 @@ internal class ReplayDenseLayer(
 
         /**
          * [cloud] of [voxelM] surfels, meshed and coloured for drawing, with the floor cells it
-         * covers when [withCells] (a live scan's coverage). Off the main thread.
+         * covers when [withCells] (a live scan's coverage), no surfel wider than one of
+         * [maxLevel] ([DenseSurfels.mesh]). Off the main thread.
          */
-        fun of(cloud: DenseCloud, voxelM: Float, withCells: Boolean = false) = ReplayDenseLayer(
+        fun of(
+            cloud: DenseCloud,
+            voxelM: Float,
+            withCells: Boolean = false,
+            maxLevel: Int = DenseFusion.LEVEL_LIMIT,
+        ) = ReplayDenseLayer(
             cloud = cloud,
             voxelM = voxelM,
-            mesh = DenseSurfels.mesh(cloud, voxelM),
+            mesh = DenseSurfels.mesh(cloud, voxelM, maxLevel),
             atlas = DenseSurfels.atlas(cloud, fallback = DENSE_FALLBACK_COLOR),
             coveredCells = if (withCells) CoverageGrid.coveredKeys(cloud.positions, cloud.count) else LongArray(0),
         )

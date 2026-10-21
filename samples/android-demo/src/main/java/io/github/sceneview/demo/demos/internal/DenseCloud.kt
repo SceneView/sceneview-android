@@ -456,13 +456,14 @@ object DenseSurfels {
     /**
      * Two triangles and four vertices per surfel, surfel `i` at indices `6i until 6i + 6`; a
      * surfel of level L ([DenseCloud.levelOf]) 2^L times as wide, so a coarsened wall stays whole.
+     * No surfel is drawn wider than one of level [maxLevel].
      */
-    fun mesh(cloud: DenseCloud, voxelM: Float): DebugMesh {
+    fun mesh(cloud: DenseCloud, voxelM: Float, maxLevel: Int = DenseFusion.LEVEL_LIMIT): DebugMesh {
         val n = minOf(cloud.count, MAX_SURFELS)
         val mesh = DebugMesh(maxOf(n * 4, 1))
         val normals = cloud.normals
         for (i in 0 until n) {
-            val half = voxelM * HALF_SIDE_VOXELS * (1 shl cloud.levelOf(i).coerceAtMost(DenseFusion.LEVEL_LIMIT))
+            val half = voxelM * HALF_SIDE_VOXELS * (1 shl cloud.levelOf(i).coerceAtMost(maxLevel))
             val x = cloud.positions[i * 3]
             val y = cloud.positions[i * 3 + 1]
             val z = cloud.positions[i * 3 + 2]

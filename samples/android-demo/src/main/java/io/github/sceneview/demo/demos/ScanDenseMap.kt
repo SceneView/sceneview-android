@@ -150,10 +150,18 @@ internal class ScanDenseMap(
         val cloud = fusion.cloud(minViews = DenseFusion.MIN_VIEWS, maxPoints = LIVE_MAX_SURFELS)
         if (cloud.count == 0) return
         // The floor cells it covers are found here too, on the worker: the live map reads them.
-        live = ReplayDenseLayer.of(cloud, fusion.voxelM, withCells = true)
+        live = ReplayDenseLayer.of(cloud, fusion.voxelM, withCells = true, maxLevel = LIVE_MAX_LEVEL)
     }
 
     companion object {
+        /**
+         * The live view draws every surfel at its finest size. A region the map coarsened to make
+         * room holds surfels up to 2^[DenseFusion.MAX_LEVEL] times as wide: whole walls in the saved
+         * scan, but squares over the camera a phone's length away. Only the live view: the saving
+         * orbit, the replay and the export keep their whole walls.
+         */
+        const val LIVE_MAX_LEVEL = 0
+
         /** A second between two snapshots of the dense map for the live 3D card. */
         const val LIVE_INTERVAL_NS = 1_000_000_000L
 
