@@ -6,6 +6,7 @@ import com.google.android.filament.Renderer
 import com.google.android.filament.SwapChain
 import com.google.android.filament.View
 import com.google.android.filament.Viewport
+import io.github.sceneview.destroyRendererWhenBackendIdle
 
 /**
  * Mirrors the rendered Filament frame to additional [Surface]s — the primitive behind clean
@@ -223,13 +224,16 @@ class SurfaceMirrorer {
     }
 
     /**
-     * Destroys every mirror's swap chain and clears the mirror list.
+     * Destroys every mirror's swap chain, clears the mirror list and releases the mirror renderer
+     * once the backend has executed everything queued so far, without waiting for that queue on
+     * the calling (main) thread.
      *
      * Called by [io.github.sceneview.SceneRenderer.destroy] when the scene is disposed — a
      * mirrored recording ends with the view that feeds it.
      */
     internal fun destroy() {
-        synchronized(surfaceMirrors) {
+        val engine = engine
+        val renderer = synchronized(surfaceMirrors) {
             surfaceMirrors.forEach { mirror ->
                 mirror.swapChain?.let { swapChain ->
                     engine?.let { runCatching { it.destroySwapChain(swapChain) } }
@@ -237,12 +241,20 @@ class SurfaceMirrorer {
                 mirror.swapChain = null
             }
             surfaceMirrors.clear()
-            mirrorRenderer?.let { renderer ->
-                engine?.let { runCatching { it.destroyRenderer(renderer) } }
-            }
-            mirrorRenderer = null
+            mirrorRenderer.also { mirrorRenderer = null }
         }
         this.engine = null
+        // Not `destroyRenderer` on the spot: Filament's renderer teardown first waits, with no
+        // bound, for every command already queued on the backend — the scene's last mirror passes
+        // and, right after it appeared, its shader links. A recorded scene disposed then parked the
+        // main thread on that whole queue (#3799). The release now runs on the main thread once
+        // everything queued before the teardown has executed — right away if it already has,
+        // otherwise on a later main-thread message — and the engine outlives it (its own destroy
+        // runs pending releases first). `FRenderer::terminate` still creates and waits on its own
+        // fence then, so it waits for whatever was queued since the teardown (the next scene's
+        // shader links, say): a wait bounded by that work, not the whole backlog — the same limit
+        // as the scene's own renderer (#3854).
+        if (renderer != null) engine?.destroyRendererWhenBackendIdle(renderer)
     }
 
     private fun getLetterboxViewport(srcViewport: Viewport, destViewport: Viewport): Viewport {

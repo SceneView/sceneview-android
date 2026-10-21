@@ -53,6 +53,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -98,7 +99,7 @@ import io.github.sceneview.demo.demos.internal.RerunScanModel
 import io.github.sceneview.demo.demos.internal.RerunSessionStore
 import io.github.sceneview.demo.demos.internal.RerunSyntheticRoom
 import io.github.sceneview.demo.demos.internal.RerunTsdf
-import io.github.sceneview.demo.demos.internal.ScanAreaCopy
+import io.github.sceneview.demo.demos.internal.scanFloorArea
 import io.github.sceneview.demo.demos.internal.ScanGround
 import io.github.sceneview.demo.demos.internal.ScanGroundMeshes
 import io.github.sceneview.demo.demos.internal.ScanPreset
@@ -740,8 +741,9 @@ internal fun RerunModelScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 val floor = ground?.ground?.takeIf { tourReady && it.seen + it.missing > 0 }
+                val locale = LocalLocale.current.platformLocale
                 // Without a readable recording there is no figure, but the hatching still needs its key.
-                if (floor != null) FloorLegend(floorCovered?.takeIf { it > 0f }?.let { ScanAreaCopy.area(it) })
+                if (floor != null) FloorLegend(floorCovered?.takeIf { it > 0f }?.let { scanFloorArea(it, locale) })
                 ScanTourPill(
                     touring = touring,
                     enabled = tourReady,
