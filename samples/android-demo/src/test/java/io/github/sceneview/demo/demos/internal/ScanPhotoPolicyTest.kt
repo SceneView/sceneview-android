@@ -30,6 +30,61 @@ class ScanPhotoPolicyTest {
     }
 
     @Test
+    fun `no scan preset asks for more photos than the budget is sized for`() {
+        // PHOTO_BUDGET_BYTES covers MAX_SHARP sharp photos and the rest ordinary, out of
+        // KeyframeGate.MAX_PHOTOS. A preset allowed more would let a scan outgrow it.
+        val presets = listOf(ScanPreset.OBJECT, ScanPreset.ROOM) + ScanScope.entries.map { it.preset }
+        for (preset in presets) {
+            assertTrue("maxPhotos ${preset.maxPhotos}", preset.maxPhotos <= KeyframeGate.MAX_PHOTOS)
+        }
+    }
+
+    @Test
+    fun `the plane bake decodes a sharp photo at the useful side, never under it`() {
+        // A 1920 x 1080 camera's 540 x 960 sharp photo halves to 270 x 480; a 640 x 480 camera's
+        // 480 x 640 one cannot halve without going under, and an ordinary photo already is.
+        assertEquals(2, ScanPhotoPolicy.bakeSample(540, 960))
+        assertEquals(2, ScanPhotoPolicy.bakeSample(960, 540))
+        assertEquals(2, ScanPhotoPolicy.bakeSample(720, 960))
+        assertEquals(4, ScanPhotoPolicy.bakeSample(1080, 1920))
+        assertEquals(1, ScanPhotoPolicy.bakeSample(480, 640))
+        assertEquals(1, ScanPhotoPolicy.bakeSample(240, 320))
+        for ((w, h) in listOf(540 to 960, 960 to 720, 1080 to 1920, 480 to 640, 240 to 320, 160 to 120)) {
+            val side = maxOf(w, h) / ScanPhotoPolicy.bakeSample(w, h)
+            assertTrue("$w x $h", side >= minOf(maxOf(w, h), ScanPhotoPolicy.BAKE_LONG_SIDE))
+            assertTrue("$w x $h", side < 2 * ScanPhotoPolicy.BAKE_LONG_SIDE)
+        }
+    }
+
+    @Test
+    fun `the useful side keeps a photo pixel per texel out to four metres`() {
+        // On a plane d metres away, seen square-on, photo pixels sit 2 * halfHeightPerDepth * d / side
+        // apart along the long side: at the default lens and 4 m, exactly the bake's texel.
+        val pixelAtFourMetres = 2f * ReplayLens.Default.halfHeightPerDepth * 4f / ScanPhotoPolicy.BAKE_LONG_SIDE
+        assertEquals(PlaneBake.TEXEL_M, pixelAtFourMetres, 1e-4f)
+    }
+
+    @Test
+    fun `a photo that failed to encode leaves the saved journal, depth and floor events stay`() {
+        val journal = listOf(
+            ArDebugEvent.CameraPose(1L, DebugPose(0f, 0f, 0f)),
+            ArDebugEvent.Image(1L, ScanArchive.photoPath(0)),
+            ArDebugEvent.CameraPose(2L, DebugPose(0.2f, 0f, 0f)),
+            ArDebugEvent.Image(2L, ScanArchive.photoPath(1)),
+            ArDebugEvent.DepthStats(3L, added = 4, kept = 5, total = 6),
+            ArDebugEvent.FloorCells(3L, longArrayOf(7L, 8L)),
+        )
+        val encoded = setOf(ScanArchive.photoPath(0))
+
+        val saved = ScanPhotoPolicy.savedEvents(journal) { it in encoded }
+
+        assertEquals(listOf(journal[0], journal[1], journal[2], journal[4], journal[5]), saved)
+        // A save that failed keeps the journal and tries again: the second pass writes the same.
+        assertEquals(saved, ScanPhotoPolicy.savedEvents(journal) { it in encoded })
+        assertEquals(6, journal.size)
+    }
+
+    @Test
     fun `every prefix of 300 photos fits the scan budget even for noisy encodings`() {
         val picker = ScanSharpPicker()
         var bytes = 0
