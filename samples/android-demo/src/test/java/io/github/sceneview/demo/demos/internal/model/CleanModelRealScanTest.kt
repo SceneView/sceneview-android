@@ -3,9 +3,12 @@ package io.github.sceneview.demo.demos.internal.model
 import io.github.sceneview.demo.demos.internal.DenseCloud
 import io.github.sceneview.demo.demos.internal.RerunMesh
 import io.github.sceneview.demo.demos.internal.RerunMeshGlb
+import io.github.sceneview.demo.demos.internal.RerunMeshSimplifier
 import io.github.sceneview.demo.demos.internal.RerunTsdf
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -17,15 +20,14 @@ import kotlin.concurrent.thread
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.sqrt
-import kotlin.random.Random
 import kotlin.system.exitProcess
 
 /**
  * The clean model on a room as a phone really scans it ([RealScanRoom]): walls swelling by ±2 cm,
  * two walls scanned twice 3 cm apart, small key photos taken close and at an angle, then the same
  * room with a pleated curtain and a sofa. The finished model must come out light — about the
- * simplifier's budget, and never a heavier file than the raw surface — with its walls flat and
- * single, its furniture still in relief, and within a phone's heap.
+ * simplifier's budget, textured, and a file within [CleanModel]'s fixed cap — with its walls flat
+ * and single, its furniture still in relief, and within a phone's heap; out of it, the raw surface.
  *
  * Each case gathers every figure and fails once, with all of them: CI prints only a failure.
  */
@@ -44,55 +46,88 @@ class CleanModelRealScanTest {
     }
 
     @Test
-    fun `a corner scanned alone never comes out heavier than its raw surface`() {
-        // A small scan, as the recordings of a corner are: the atlas outweighs the triangles saved.
-        val raw = crop(RealScanRoom.raw(furnished = true), CORNER)
+    fun `a small room keeps its photo texture, however light its raw surface`() {
+        // A small room's raw surface weighs less than its textured model: the atlas alone is a few
+        // hundred kilobytes. The texture is what the finish is for, so only a fixed cap bounds it.
+        val raw = RerunMeshSimplifier.simplify(RealScanRoom.raw(furnished = true), SMALL_ROOM_TRIANGLES)
         val rawGlb = RerunMeshGlb.write(raw)
         val result = CleanModel.build(raw, RealScanRoom.modelPhotos(furnished = true), JvmAtlasEncoder)
         val stats = result.stats
-        val report = "corner: raw ${raw.triangleCount} triangles, glb ${rawGlb.size / KB} KB -> " +
+        val report = "small room: raw ${raw.triangleCount} triangles, glb ${rawGlb.size / KB} KB -> " +
             "${stats.finalTriangles} triangles, glb ${result.glb.size / KB} KB, atlas ${stats.atlasWidth}x${stats.atlasHeight}" +
-            ", textured ${stats.texture?.let { percent(it.texturedShare) } ?: "none"}"
+            ", halved ${stats.atlasHalvings}, guarded ${stats.glbGuarded}" +
+            ", textured ${stats.texture?.let { percent(it.texturedShare) } ?: "none"}" +
+            ", dropped at ${stats.droppedTextureShare?.let { percent(it) } ?: "-"}"
         println(report)
-        assertTrue("glb ${result.glb.size} > raw ${rawGlb.size} | $report", result.glb.size <= rawGlb.size)
+        assertTrue("the texture was dropped | $report", stats.texture != null)
+        assertEquals("the atlas was halved | $report", 0, stats.atlasHalvings)
+        assertFalse("the size guard ran | $report", stats.glbGuarded)
+        assertTrue("expected the textured model heavier than the raw surface | $report", result.glb.size > rawGlb.size)
+        assertTrue("glb ${result.glb.size} over the cap | $report", result.glb.size <= MAX_GLB_BYTES)
         assertTrue("glb: ${GlbCheck.problems(result.glb)} | $report", GlbCheck.problems(result.glb).isEmpty())
     }
 
     @Test
-    fun `a small scan whose atlas outweighs its raw surface never comes out heavier`() {
-        // A corner's few faces, under the size guard's floor, and an atlas as heavy as the surface.
-        val raw = crop(RealScanRoom.raw(furnished = false), SMALL_CORNER)
+    fun `a model over the cap comes within it, however heavy its raw surface`() {
+        // An atlas that compresses as badly as a noisy photo's: a room's raw surface weighs more
+        // than the textured model, and the file must still stay within the cap.
+        val raw = RealScanRoom.raw(furnished = false)
         val rawGlb = RerunMeshGlb.write(raw)
-        val result = CleanModel.build(raw, RealScanRoom.modelPhotos(furnished = false), PaddedAtlasEncoder(rawGlb.size))
+        val result = CleanModel.build(raw, RealScanRoom.modelPhotos(furnished = false), PaddedAtlasEncoder(HEAVY_ATLAS_BYTES))
         val stats = result.stats
-        val report = "small corner: raw ${raw.triangleCount} triangles, glb ${rawGlb.size / KB} KB -> " +
+        val report = "heavy atlas: raw ${raw.triangleCount} triangles, glb ${rawGlb.size / KB} KB -> " +
+            "${stats.finalTriangles} triangles, glb ${result.glb.size / KB} KB, halved ${stats.atlasHalvings}" +
+            ", guarded ${stats.glbGuarded}, textured ${stats.texture?.let { percent(it.texturedShare) } ?: "none"}"
+        println(report)
+        assertTrue("glb ${result.glb.size} over the cap | $report", result.glb.size <= MAX_GLB_BYTES)
+        assertTrue("glb: ${GlbCheck.problems(result.glb)} | $report", GlbCheck.problems(result.glb).isEmpty())
+    }
+
+    @Test
+    fun `a small scan whose atlas alone outweighs the cap comes within it`() {
+        // A corner's few faces, under the size guard's floor, and an atlas heavier than the cap.
+        val raw = crop(RealScanRoom.raw(furnished = false), SMALL_CORNER)
+        val result = CleanModel.build(raw, RealScanRoom.modelPhotos(furnished = false), PaddedAtlasEncoder(MAX_GLB_BYTES))
+        val stats = result.stats
+        val report = "small corner: raw ${raw.triangleCount} triangles -> " +
             "${stats.simplifiedTriangles} simplified, ${stats.finalTriangles} triangles, glb ${result.glb.size / KB} KB" +
             ", textured ${stats.texture?.let { percent(it.texturedShare) } ?: "none"}" +
             ", dropped at ${stats.droppedTextureShare?.let { percent(it) } ?: "-"}, guarded ${stats.glbGuarded}"
         println(report)
-        assertTrue("glb ${result.glb.size} > raw ${rawGlb.size} | $report", result.glb.size <= rawGlb.size)
+        assertTrue("glb ${result.glb.size} over the cap | $report", result.glb.size <= MAX_GLB_BYTES)
         assertTrue("glb: ${GlbCheck.problems(result.glb)} | $report", GlbCheck.problems(result.glb).isEmpty())
     }
 
     @Test
-    fun `a scan no finish makes lighter comes back as its raw surface`() {
-        // Every vertex its own colour: nothing to collapse, and the finished layout weighs more.
-        val raw = speckledFloor(SPECKLED_SIDE)
+    fun `a finish that runs out of memory gives back the raw surface`() {
+        val photos = RealScanRoom.modelPhotos(furnished = false)
+        val raw = crop(RealScanRoom.raw(furnished = false), CORNER)
         val rawGlb = RerunMeshGlb.write(raw)
-        val result = CleanModel.build(raw, null, null)
-        assertTrue("the finished model kept: ${result.glb.size} B, raw ${rawGlb.size} B", result.stats.rawKept)
+        // The heap runs out once the shape is simplified, as the photos are decoded.
+        val result = CleanModel.build(raw, photos, JvmAtlasEncoder, progress = outOfMemoryFrom(TEXTURING))
+        assertTrue("the raw surface was not kept", result.stats.rawKept)
         assertTrue("expected the raw surface's own .glb", result.glb.contentEquals(rawGlb))
         assertEquals(raw.triangleCount, result.stats.finalTriangles)
+        assertNull("a finished model with the raw surface's .glb", result.model)
 
-        // Worked in place, the raw surface comes back as the .glb written before.
-        val consumed = CleanModel.build(speckledFloor(SPECKLED_SIDE), null, null, consume = true, rawGlb = rawGlb)
+        // Worked in place, out of memory while cleaning: the .glb written before comes back.
+        val consumed = CleanModel.build(
+            crop(RealScanRoom.raw(furnished = false), CORNER),
+            photos,
+            JvmAtlasEncoder,
+            consume = true,
+            rawGlb = rawGlb,
+            progress = outOfMemoryFrom(CLEANING),
+        )
+        assertTrue("the raw surface was not kept", consumed.stats.rawKept)
         assertTrue("expected the .glb written before", consumed.glb === rawGlb)
+        assertNull("a finished model with the raw surface's .glb", consumed.model)
     }
 
     @Test
     fun `the size guard reports its progress, so a finish left mid-guard stops there`() {
         val raw = crop(RealScanRoom.raw(furnished = false), CORNER)
-        val padded = PaddedAtlasEncoder(RerunMeshGlb.write(raw).size)
+        val padded = PaddedAtlasEncoder(MAX_GLB_BYTES)
         var atlases = 0
         val encoder = AtlasEncoder { argb, width, height -> atlases++; padded.jpeg(argb, width, height) }
         // Each progress report, with the atlases written by then: a caller stops the finish there.
@@ -159,26 +194,9 @@ class CleanModelRealScanTest {
         return after.max()
     }
 
-    /** A flat metre of floor, [side] vertices a side, every one a colour of its own. */
-    private fun speckledFloor(side: Int): RerunMesh {
-        val random = Random(SPECKLE_SEED)
-        val positions = FloatArray(side * side * 3)
-        val normals = FloatArray(side * side * 3)
-        val colors = IntArray(side * side) { OPAQUE or random.nextInt(RGB) }
-        for (v in 0 until side * side) {
-            positions[v * 3] = (v / side).toFloat() / (side - 1)
-            positions[v * 3 + 2] = (v % side).toFloat() / (side - 1)
-            normals[v * 3 + 1] = 1f
-        }
-        val indices = IntArray((side - 1) * (side - 1) * 6)
-        var t = 0
-        for (i in 0 until side - 1) {
-            for (j in 0 until side - 1) {
-                val a = i * side + j
-                for (v in intArrayOf(a, a + 1, a + side, a + 1, a + side + 1, a + side)) indices[t++] = v
-            }
-        }
-        return RerunMesh(positions, normals, colors, indices)
+    /** Throws [OutOfMemoryError] once the finish reports [share] done, as a phone's heap would run out there. */
+    private fun outOfMemoryFrom(share: Float): (Float) -> Unit = { done ->
+        if (done >= share) throw OutOfMemoryError("finish at $done")
     }
 
     private fun check(furnished: Boolean) {
@@ -214,8 +232,9 @@ class CleanModelRealScanTest {
         val problems = mutableListOf<String>()
         if (raw.triangleCount !in MIN_RAW_TRIANGLES..MAX_RAW_TRIANGLES) problems += "raw ${raw.triangleCount} triangles"
         if (stats.finalTriangles > MAX_FINAL_TRIANGLES) problems += "${stats.finalTriangles} triangles"
-        // The file shared and kept: never heavier than the raw surface, seams and atlas counted.
-        if (result.glb.size > rawGlb.size) problems += "glb ${result.glb.size} > raw ${rawGlb.size}"
+        // The file shared and kept: within the cap, seams and atlas counted, and textured.
+        if (result.glb.size > MAX_GLB_BYTES) problems += "glb ${result.glb.size} over the cap"
+        if (texture == null) problems += "texture dropped"
         val minFlat = if (furnished) MIN_FLAT_FURNISHED else MIN_FLAT_BARE
         if (stats.geometry.flatShare < minFlat) problems += "flat ${percent(stats.geometry.flatShare)}"
         if (finalWalls.rms > MAX_WALL_RMS_M || finalWalls.worst > MAX_WALL_WORST_M) problems += "walls not flat"
@@ -481,10 +500,18 @@ class CleanModelRealScanTest {
         /** The same corner, a metre across: a model under the size guard's 2 000 triangles. */
         val SMALL_CORNER = Box(-2.6f, -0.1f, -3.6f, -1.6f, 0.9f, -2.6f)
 
-        const val SPECKLED_SIDE = 12
-        const val SPECKLE_SEED = 7
-        const val OPAQUE = 0xFF shl 24
-        const val RGB = 0x1000000
+        /** The most a finished `.glb` weighs. */
+        const val MAX_GLB_BYTES = 8 * 1024 * 1024
+
+        /** A small room's raw surface: about 0.6 MB as a `.glb`, under its textured model's weight. */
+        const val SMALL_ROOM_TRIANGLES = 20_000
+
+        /** An atlas this much heavier takes a room's textured model past [MAX_GLB_BYTES], not past its raw surface. */
+        const val HEAVY_ATLAS_BYTES = 7 * 1024 * 1024
+
+        /** The finish's progress once the shape is simplified, and while cleaning. */
+        const val TEXTURING = 0.6f
+        const val CLEANING = 0.2f
 
         const val MB = 1024L * 1024L
         const val CHILD_TIMEOUT_S = 300L

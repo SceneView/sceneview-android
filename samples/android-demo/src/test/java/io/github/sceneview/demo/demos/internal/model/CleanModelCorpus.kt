@@ -36,10 +36,10 @@ internal object CleanModelCorpus {
         file.isFile && file.extension.lowercase() in EXTENSIONS
     }
 
-    /** What [file] gave: its figures, as written to `stats.json`. */
-    fun run(file: File, out: File): JsonObject {
+    /** What [file] gave: its figures, as written to `stats.json`. [progress] gets the finish's. */
+    fun run(file: File, out: File, progress: (Float) -> Unit = {}): JsonObject {
         out.mkdirs()
-        val stats = runCatching { measure(file, out) }.getOrElse { failure ->
+        val stats = runCatching { measure(file, out, progress) }.getOrElse { failure ->
             buildJsonObject {
                 put("file", file.name)
                 put("error", "${failure::class.simpleName}: ${failure.message}")
@@ -49,7 +49,7 @@ internal object CleanModelCorpus {
         return stats
     }
 
-    private fun measure(file: File, out: File): JsonObject {
+    private fun measure(file: File, out: File, progress: (Float) -> Unit): JsonObject {
         val pack = read(file)
         val capture = checkNotNull(pack.open()) { "unreadable manifest" }
         val cloud = denseCloud(capture)
@@ -74,7 +74,7 @@ internal object CleanModelCorpus {
         val beforeWriteMs = since(beforeStart)
 
         val photos = ModelPhotos.of(capture.trace, capture.manifest.lens) { path -> decode(capture, path) }
-        val result = CleanModel.build(raw, photos, JvmAtlasEncoder)
+        val result = CleanModel.build(raw, photos, JvmAtlasEncoder, progress = progress)
         val s = result.stats
         File(out, "before.glb").writeBytes(before)
         File(out, "after.glb").writeBytes(result.glb)

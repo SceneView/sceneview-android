@@ -74,13 +74,37 @@ class CleanModelCorpusTest {
         assertEquals("", after["glb_problems"]!!.jsonPrimitive.content)
         assertTrue("the photos texture it: $after", after["atlas"]!!.jsonPrimitive.content != "none")
         assertTrue(after["triangles"]!!.jsonPrimitive.int < before["triangles"]!!.jsonPrimitive.int)
-        assertTrue(after["glb_bytes"]!!.jsonPrimitive.int < before["glb_bytes"]!!.jsonPrimitive.int)
+        for (key in listOf("glb_limit_bytes", "glb_guarded", "atlas_halvings", "raw_kept", "out_of_memory_in")) {
+            assertTrue("$key missing: $after", key in after)
+        }
+        assertTrue(after["glb_bytes"]!!.jsonPrimitive.int <= after["glb_limit_bytes"]!!.jsonPrimitive.int)
+        assertEquals("false", after["raw_kept"]!!.jsonPrimitive.content)
         assertEquals(
             Json.parseToJsonElement(File(scanOut, "stats.json").readText()),
             stats,
         )
         assertTrue(File(out, "summary.json").length() > 0)
         assertTrue(JvmImages.decode(File(scanOut, "after.png").readBytes()) != null)
+    }
+
+    @Test
+    fun `a scan whose finish runs out of memory is written as its raw surface`() {
+        val scan = File(folder.newFolder("corpus"), "synthetic-room.${RerunScanFile.EXTENSION}")
+        scan.writeBytes(RerunScanFile.write(syntheticRecording()))
+        val out = File(folder.newFolder("out"), "synthetic-room")
+
+        // The heap runs out while cleaning, as on a phone's too small for the scan.
+        val stats = CleanModelCorpus.run(scan, out) { done -> if (done >= CLEANING) throw OutOfMemoryError("finish at $done") }
+
+        println("corpus run, out of memory: $stats")
+        assertTrue("$stats", "error" !in stats && "skipped" !in stats)
+        val after = stats["after"]!!.jsonObject
+        assertEquals("true", after["raw_kept"]?.jsonPrimitive?.content)
+        assertTrue(
+            "after.glb is not the raw surface's",
+            File(out, "after.glb").readBytes().contentEquals(File(out, "before.glb").readBytes()),
+        )
+        assertTrue(JvmImages.decode(File(out, "after.png").readBytes()) != null)
     }
 
     private fun runAll(scans: List<File>, out: File): List<JsonObject> {
@@ -119,5 +143,8 @@ class CleanModelCorpusTest {
         const val CORPUS = "SCENEVIEW_SCAN_CORPUS"
         const val OUT = "SCENEVIEW_SCAN_OUT"
         const val FRAME_NANOS = 100_000_000L
+
+        /** The finish's progress while it cleans the surface. */
+        const val CLEANING = 0.2f
     }
 }
