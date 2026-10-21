@@ -405,7 +405,19 @@ internal object RoomReader {
         // ones — and at least [RoomStructure.MIN_SEEN_WALLS] distinct walls, one wall seen twice
         // counting once.
         val closed = (0 until n).all { seen[it] || seen[(it + n - 1) % n] && seen[(it + 1) % n] && held[it] }
-        val measured = closed && distinctWalls(outline.sides, seen) >= RoomStructure.MIN_SEEN_WALLS
+        val distinct = distinctWalls(outline.sides, seen)
+        val measured = closed && distinct >= RoomStructure.MIN_SEEN_WALLS
+        // Two adjacent walls alone, each seen up to the corner they make, give the area, the
+        // perimeter and the volume as estimates — the floor seen standing for the other two; two
+        // facing ones give none, only the width between them.
+        val cornered = !measured && distinct == 2 && (0 until n).any { i ->
+            val a = outline.sides[(i + n - 1) % n].line
+            val b = outline.sides[i].line
+            seen[(i + n - 1) % n] && seen[i] && a != null && b != null &&
+                abs(a.nu * b.nu + a.nv * b.nv) < SAME_WALL_FACING &&
+                reaches(a, outline.u[i], outline.v[i]) && reaches(b, outline.u[i], outline.v[i])
+        }
+        val figured = measured || cornered
         val area = abs(RoomOutline.signedArea(outline.u, outline.v))
         var areaSpread = 0f
         for (i in 0 until n) areaSpread += reads[i].length * spread[i]
@@ -427,9 +439,9 @@ internal object RoomReader {
             floorThickness = floor.thickness,
             yaw = yaw,
             ceilingHeight = height,
-            area = areaFigure.takeIf { measured },
-            perimeter = perimeter.takeIf { measured },
-            volume = volumeOf(areaFigure, height).takeIf { measured },
+            area = areaFigure.takeIf { figured },
+            perimeter = perimeter.takeIf { figured },
+            volume = volumeOf(areaFigure, height).takeIf { figured },
             // Between two seen walls a length is measured, closed room or not; an estimate is not given.
             length = (if (turned) alongV else alongU).takeIf { measured || !it.estimate },
             width = (if (turned) alongU else alongV).takeIf { measured || !it.estimate },

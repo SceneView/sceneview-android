@@ -13,7 +13,9 @@ package io.github.sceneview.demo.demos.internal.room
  * is closed along where the floor was seen to end, the wall marked as such, and every figure it
  * bounds an estimate. A figure is given only when the walls close the room — each side seen, or
  * deduced between two seen ones — on at least [RoomStructure.MIN_SEEN_WALLS] distinct walls (one
- * wall seen twice counts once); otherwise what is left is an indicative plan.
+ * wall seen twice counts once). Two adjacent walls seen up to their corner give the area, the
+ * perimeter and the volume as estimates, the floor seen standing for the other two; otherwise
+ * what is left is an indicative plan.
  */
 
 /** A scan as the engine reads it: the dense cloud's surfels (a normal per point), the camera's path, ARCore's planes. */
@@ -108,7 +110,8 @@ enum class RoomGap {
  * The structure of one room. [walls] is its outline in order, the room on each wall's normal
  * side — empty when no wall was seen. Every figure is `null` unless the walls close the room —
  * each side seen, or deduced between two seen ones — on at least [MIN_SEEN_WALLS] distinct walls
- * ([gaps] says what is missing), but a [length] or [width] measured between two seen walls;
+ * ([gaps] says what is missing), but a [length] or [width] measured between two seen walls, and
+ * the [area], [perimeter] and [volume] of two adjacent walls seen up to their corner, as estimates;
  * [ceilingHeight] is `null` when the ceiling was not seen.
  *
  * @property floorY the floor's height in the scan's frame, [floorThickness] how thick its layer of surfels is.
@@ -133,7 +136,7 @@ class RoomStructure(
     /** How many walls of the outline were seen. */
     val seenWalls: Int get() = walls.count { it.seen }
 
-    /** The room's figures are given: its walls close it, on at least [MIN_SEEN_WALLS] distinct walls. */
+    /** The room's area is given: its walls close it, or two adjacent walls bound it (an estimate). */
     val measured: Boolean get() = area != null
 
     /** The doors and windows of every wall. */
@@ -144,8 +147,9 @@ class RoomStructure(
 
     companion object {
         /**
-         * Under this many distinct seen walls, no figure is given: the outline is an indicative
-         * plan. Two walls never close a room — two facing ones leave its length to the floor's edge.
+         * Under this many distinct seen walls, the walls do not close the room: two adjacent ones
+         * give its figures only as estimates, two facing ones only the width between them — they
+         * leave its length to the floor's edge.
          */
         const val MIN_SEEN_WALLS = 3
 
