@@ -2057,6 +2057,7 @@ private fun RerunLiveScreen(
                     livePose = scanLivePose,
                     saving = phase == ScanPhase.Saving,
                     walls = scanWalls,
+                    reviewing = phase == ScanPhase.Reviewing,
                 )
             }
 

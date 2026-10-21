@@ -91,6 +91,10 @@ internal class RerunReplayMedia(
      */
     val liveDense: (() -> ReplayDenseLayer?)? = null,
 ) {
+    /** The same scan, its live dense cloud read from [liveDense] instead. */
+    fun withLiveDense(liveDense: () -> ReplayDenseLayer?) =
+        RerunReplayMedia(trace, manifest, planeBitmaps, thumbnails, archive, growing, dense, liveDense)
+
     /** The thumbnail of the camera image in force at [time], `null` before the first one. */
     fun thumbnailAt(time: Float): Bitmap? {
         val index = trace.imageIndexAt(time)
