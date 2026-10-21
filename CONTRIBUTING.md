@@ -21,7 +21,9 @@ Thanks for your interest in contributing! This guide covers everything you need 
 - **Android Studio** with an Android Gradle Plugin 9.4 release (the build uses AGP 9.4.1,
   `gradle/libs.versions.toml`)
 - **Xcode 16+** (for SceneViewSwift / iOS work only — Swift 6 and the iOS 18 floor).
-  CI builds with Xcode 26 (`.github/workflows/ios.yml:145-148`); no job tests Xcode 16.
+  CI builds with Xcode 26, falling back to the runner's default `Xcode.app`
+  (`.github/workflows/ios.yml:145-149`), plus a non-blocking Xcode 27 canary job; no job
+  tests Xcode 16.
 - **bash, python3 and curl** on the `PATH` for `tools/fetch-assets.sh`, which the Android,
   TV and Auto demo builds and the iOS demo build run (see [Assets](#assets)). On macOS
   they come with the Command Line Tools (`xcode-select --install`); on Windows, build
@@ -69,8 +71,12 @@ git. They live in the `assets-v1` GitHub Release, listed with their sha256 in
 bash tools/fetch-assets.sh --scope android
 ```
 
-`--scope android` fetches what the Android demo uses, about 55 MiB. Without `--scope`, the
-script fetches every platform's assets, about 780 MiB (iOS and web models included).
+`--scope android` fetches what the Android demo uses, about 55 MiB. `--scope ios` and
+`--scope tv` also pull the `android` scope (`needs` in the manifest): about 285 MiB and
+85 MiB. The Auto demo adds the `web` scope, about 465 MiB, so a root
+`./gradlew assembleDebug`, which builds every demo, downloads about 550 MiB. Without
+`--scope`, the script fetches every platform's assets, about 780 MiB (iOS and web models
+included).
 
 Some builds run the script themselves, so a plain build of them also works:
 
@@ -83,9 +89,10 @@ Some builds run the script themselves, so a plain build of them also works:
 - **CI**: workflows call it through `.github/actions/fetch-assets`, the website deploy
   (`docs.yml`) included, with `--scope web`.
 
-Nothing runs it locally for the website (`--scope web`, `website-static/models/platforms`)
-or the web demo's splat test page (`--scope web-test`): run it by hand before serving
-them. The Flutter and React Native demos use no file from the manifest.
+The Auto demo's build is the only local run that fetches `--scope web`
+(`website-static/models/platforms`, where its Car Concept lives). Nothing runs it locally
+for the website itself or for the web demo's splat test page (`--scope web-test`): run it
+by hand before serving them. The Flutter and React Native demos use no file from the manifest.
 
 Files are downloaded once into `~/.cache/sceneview-assets/` (shared by every clone and
 worktree, override with `SCENEVIEW_ASSETS_CACHE`), verified, then cloned (APFS / reflink)
