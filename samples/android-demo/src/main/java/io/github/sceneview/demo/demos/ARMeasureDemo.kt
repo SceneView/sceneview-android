@@ -163,7 +163,6 @@ import io.github.sceneview.demo.demos.internal.MeasureWallPoint
 import io.github.sceneview.demo.demos.internal.measureWallVertices
 import io.github.sceneview.demo.demos.internal.PlaneWallSource
 import io.github.sceneview.demo.demos.internal.RoomSurvey
-import io.github.sceneview.demo.demos.internal.SurveyFormat
 import io.github.sceneview.demo.demos.internal.WALL_MAX_HEIGHT
 import io.github.sceneview.demo.demos.internal.WALL_MIN_HEIGHT
 import io.github.sceneview.demo.DemoScaffold
@@ -787,10 +786,10 @@ internal class MeasurePlanPage(
  * PDF and text shares, under a header of its own. Back, or the header's arrow, returns to the
  * camera.
  *
- * With doors or windows marked, a card under the plan names each one by the wall the plan
- * letters it on, and reads the walls' net area, in the plan's units ([measurePlanCard]).
+ * The whole page reads in [units], the Measure screen's: the plan, its PDF and text shares, and,
+ * with doors or windows marked, the card under the plan that names each one by the wall the plan
+ * letters it on and reads the walls' net area ([measurePlanCard]). One page, one unit system.
  */
-@Suppress("UnusedParameter")
 @Composable
 internal fun MeasurePlanOverlay(
     page: MeasurePlanPage,
@@ -813,7 +812,7 @@ internal fun MeasurePlanOverlay(
             modeSwitch = null,
             bottomOverlay = if (net != null) {
                 {
-                    val card = measurePlanCard(net, page.openings, SurveyFormat.units(locale), locale)
+                    val card = measurePlanCard(net, page.openings, units, locale)
                     val openings = card.openings.map {
                         stringResource(R.string.demo_ar_measure_plan_opening, it.wall, it.width, it.height)
                     }
@@ -830,7 +829,7 @@ internal fun MeasurePlanOverlay(
             },
             bottomOverlayReservesScene = true,
         ) {
-            RerunPlanView(survey = page.survey, title = title, date = date)
+            RerunPlanView(survey = page.survey, title = title, date = date, units = units)
         }
     }
 }
@@ -1141,7 +1140,10 @@ private val AddButtonSize = SceneViewTokens.Space.x3l + SceneViewTokens.Space.sm
 private val AddDiscSize = SceneViewTokens.Space.x2l + SceneViewTokens.Space.sm // 56 dp
 private val AddRingWidth = SceneViewTokens.Space.xs - SceneViewTokens.Space.xs / 4 // 3 dp
 
-/** The settings sheet: what the screen does, and the units — metric or imperial, by locale at first. */
+/**
+ * The settings sheet: what the screen does, and the units. They start in the plan's, feet and
+ * inches in US English and metres everywhere else; the other one picked here goes to the plan too.
+ */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun MeasureSettings(units: MeasureUnitSystem, onUnits: (MeasureUnitSystem) -> Unit) {

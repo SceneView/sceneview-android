@@ -31,8 +31,8 @@ Three modes behind one mode pill, built against Apple Measure, Google Measure an
 **Add point** commits the displayed candidate without a second raycast; tapping the camera never
 adds a point. Undo steps back one action at a time (an opening's first corner, the last opening,
 a locked height, then the raised walls, then the closure, then a point). Share sends every figure
-as plain text. Units follow the locale (imperial in the US, Liberia, Myanmar) and can be switched
-in Settings.
+as plain text. Units follow the language, as the room plan's do: feet and inches in US English,
+metres everywhere else. Settings switches them for the screen and its plan alike.
 
 In Wall and Room every point after the first is the camera ray's hit on the **floor plane of the
 first point**, not the raw hit test: aimed at the foot of a wall, the hit test lands on the wall a

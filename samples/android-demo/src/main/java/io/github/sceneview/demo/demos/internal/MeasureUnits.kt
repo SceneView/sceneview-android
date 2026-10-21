@@ -6,9 +6,9 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
- * Length and area units of the `ar-measure` demo, picked from the locale like the system
- * Measure apps do: the three countries that still measure in feet get feet and inches,
- * everyone else gets metres. The settings sheet lets the user override it.
+ * Length and area units of the `ar-measure` demo. One rule with its plan ([SurveyFormat.units]):
+ * feet and inches in US English, metres in every other language. The settings sheet picks the
+ * other one, for the screen and its plan alike.
  */
 enum class MeasureUnitSystem {
     Metric,
@@ -16,10 +16,8 @@ enum class MeasureUnitSystem {
     ;
 
     companion object {
-        private val IMPERIAL_COUNTRIES = setOf("US", "LR", "MM")
-
-        fun forLocale(locale: Locale): MeasureUnitSystem =
-            if (locale.country.uppercase(Locale.ROOT) in IMPERIAL_COUNTRIES) Imperial else Metric
+        /** The units Measure starts in under [locale]: the plan's ([SurveyFormat.units]). */
+        fun forLocale(locale: Locale): MeasureUnitSystem = SurveyFormat.units(locale)
     }
 }
 
