@@ -31,7 +31,6 @@ import io.github.sceneview.demo.demos.internal.DebugMesh
 import io.github.sceneview.demo.demos.internal.DebugPlane
 import io.github.sceneview.demo.demos.internal.DebugPose
 import io.github.sceneview.demo.demos.internal.DenseCloud
-import io.github.sceneview.demo.demos.internal.DenseFusion
 import io.github.sceneview.demo.demos.internal.DenseSurfels
 import io.github.sceneview.demo.demos.internal.MeasureDrawing
 import io.github.sceneview.demo.demos.internal.MeasureSize
@@ -151,18 +150,12 @@ internal class ReplayDenseLayer(
 
         /**
          * [cloud] of [voxelM] surfels, meshed and coloured for drawing, with the floor cells it
-         * covers when [withCells] (a live scan's coverage), no surfel wider than one of
-         * [maxLevel] ([DenseSurfels.mesh]). Off the main thread.
+         * covers when [withCells] (a live scan's coverage). Off the main thread.
          */
-        fun of(
-            cloud: DenseCloud,
-            voxelM: Float,
-            withCells: Boolean = false,
-            maxLevel: Int = DenseFusion.LEVEL_LIMIT,
-        ) = ReplayDenseLayer(
+        fun of(cloud: DenseCloud, voxelM: Float, withCells: Boolean = false) = ReplayDenseLayer(
             cloud = cloud,
             voxelM = voxelM,
-            mesh = DenseSurfels.mesh(cloud, voxelM, maxLevel),
+            mesh = DenseSurfels.mesh(cloud, voxelM),
             atlas = DenseSurfels.atlas(cloud, fallback = DENSE_FALLBACK_COLOR),
             coveredCells = if (withCells) CoverageGrid.coveredKeys(cloud.positions, cloud.count) else LongArray(0),
         )
@@ -394,13 +387,14 @@ internal class ReplayLayers(
     /**
      * The dense layer's material: the image material's look, a surfel nearer than
      * [DenseSurfels.NEAR_FADE_M] shrunk towards a dot and any capped at
-     * [DenseSurfels.MAX_SCREEN_SIDE] (#4742), so one the camera passes close to never fills it.
+     * [DenseSurfels.MAX_SCREEN_SIDE] (#4742), so one the camera passes close to never fills it;
+     * over the camera, at the size of the largest fine one ([DenseSurfels.maxScreenSide]).
      */
     private val surfelMaterial: Material? = denseAtlas?.let { materialLoader.createMaterial(SURFEL_MATERIAL) }
     private val denseNode: DebugLayerNode? = denseAtlas?.let { atlas ->
         val instance = materialLoader.createInstance(surfelMaterial!!).also {
             it.setParameter("texture", atlas, nearest)
-            it.setParameter("maxSide", DenseSurfels.MAX_SCREEN_SIDE)
+            it.setParameter("maxSide", DenseSurfels.maxScreenSide(live = media.liveDense != null))
             it.setParameter("nearFade", DenseSurfels.NEAR_FADE_M)
             it.setDepthWrite(true)
             materials += it
