@@ -1,5 +1,6 @@
 package io.github.sceneview.demo.demos.internal
 
+import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.acos
 import kotlin.math.roundToInt
@@ -28,10 +29,13 @@ internal object ScanPhotoPolicy {
      * The long side the plane bake reads a photo at. [PlaneBake] lays a texel every
      * [PlaneBake.TEXEL_M] (1 cm); on a plane d metres away, seen square-on, a photo's pixels sit
      * 2 x halfHeightPerDepth x d / side apart, so 480 px at the default lens (0.60) still puts a
-     * pixel on every texel out to 4 m, past where a room is scanned from (2 m at a 60° slant). On
-     * the bundled room recording, 98% of the bake's weight comes from views 480 px resolves that
-     * finely, against 64% at the ordinary photos' 320 px and 99.8% at 640 px. Read whole, a
-     * 540 x 960 sharp photo holds 2.07 MB of pixels for the whole build; at 270 x 480, 0.52 MB.
+     * pixel on every texel out to 4 m, past where a room is scanned from (2 m at a 60° slant). That
+     * assumes the default lens: with a wider one (about 0.75), a pixel per texel holds out to about
+     * 3.2 m only. On the bundled room recording, 98% of the bake's weight comes from views 480 px
+     * resolves that finely, against 64% at the ordinary photos' 320 px and 99.8% at 640 px. Read
+     * whole, a 540 x 960 sharp photo holds 2.07 MB of pixels for the whole build; at 270 x 480,
+     * 0.52 MB. A 480 x 640 one cannot halve without going under and is read whole, on purpose: it
+     * holds about 1.2 MB, and a second decode to shrink it would cost more time than it saves memory.
      */
     const val BAKE_LONG_SIDE = 480
     const val JPEG_QUALITY = 85
@@ -44,6 +48,7 @@ internal object ScanPhotoPolicy {
     const val MAX_SPEED_MPS = 0.5f
     const val MAX_TURN_DEGREES_PER_SECOND = 45f
     const val MAX_POSE_GAP_NS = 250_000_000L
+    private const val ARGB_BYTES = 4
 
     fun byteLimit(sharp: Boolean): Int = if (sharp) SHARP_BYTES else REPLAY_BYTES
 
@@ -81,6 +86,29 @@ internal object ScanPhotoPolicy {
      * 540x960 or 720x960 sharp photo decodes at half, a 480x640 one and an ordinary photo whole.
      */
     fun bakeSample(width: Int, height: Int): Int = sampleFor(width, height, BAKE_LONG_SIDE)
+
+    /** A photo the plane bake read: its stored size, the [sample] it was decoded at, the size it came out at. */
+    data class BakeRead(val sourceWidth: Int, val sourceHeight: Int, val sample: Int, val width: Int, val height: Int)
+
+    /**
+     * The bake's log line for the photos it read: each decoded size, largest first, with its count,
+     * its decode sample and, when reduced, its stored size; then the ARGB pixels the build holds.
+     */
+    fun bakeReadsLog(reads: List<BakeRead>): String {
+        if (reads.isEmpty()) return "photos decoded: none"
+        val sizes = reads.groupingBy { it }.eachCount().entries
+            .sortedWith(
+                compareByDescending<Map.Entry<BakeRead, Int>> { it.key.width * it.key.height }
+                    .thenByDescending { it.key.sourceWidth * it.key.sourceHeight },
+            )
+            .joinToString(", ") { (read, count) ->
+                val reduced = read.width != read.sourceWidth || read.height != read.sourceHeight
+                val source = if (reduced) "${read.sourceWidth}x${read.sourceHeight}, " else ""
+                "$count at ${read.width}x${read.height} (${source}sample ${read.sample})"
+            }
+        val bytes = reads.sumOf { it.width.toLong() * it.height * ARGB_BYTES }
+        return "photos decoded: $sizes; ${String.format(Locale.ROOT, "%.1f", bytes / 1e6)} MB of pixels"
+    }
 
     /** Decode sample of a replay thumbnail: 240x320 photos still decode at 2, as before. */
     fun thumbnailSample(width: Int, height: Int): Int = sampleFor(width, height, THUMBNAIL_LONG_SIDE)

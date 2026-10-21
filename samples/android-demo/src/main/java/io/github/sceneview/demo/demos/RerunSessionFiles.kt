@@ -9,6 +9,7 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.text.format.DateFormat
 import android.util.Log
+import androidx.annotation.VisibleForTesting
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.content.FileProvider
@@ -94,7 +95,8 @@ internal object RerunCaptureBuilder {
         val trace = ArDebugTrace.of(events).apply { keyframeSpacing = ReplayGeometry.KEYFRAME_SPACING_M }
         val whole = trace.frameAt(trace.duration)
         val decoded = HashMap<Int, BakePhoto?>()
-        fun photo(index: Int): BakePhoto? = decoded.getOrPut(index) { decodePhoto(photos[index]) }
+        val reads = ArrayList<ScanPhotoPolicy.BakeRead>()
+        fun photo(index: Int): BakePhoto? = decoded.getOrPut(index) { decodePhoto(photos[index], reads::add) }
 
         val viewpoint = centroid(whole.trail)
         val planes = trace.lastPlanes()
@@ -102,12 +104,13 @@ internal object RerunCaptureBuilder {
         val bakeStart = System.nanoTime()
         val occlusion = BakeOcclusion.of(dense, planes)
         val baked = planes.mapNotNull { plane -> bakePlane(plane, viewpoint, photos, lens, occlusion, ::photo) }
-        // `adb logcat -s RerunCaptureBuilder`: what the visibility test costs on a real phone (#4697).
+        // `adb logcat -s RerunCaptureBuilder`: what the visibility test costs on a real phone (#4697),
+        // and at what size the bake read the photos it painted from.
         // The JVM tests build scans too, and their android.util.Log is a stub that throws.
         val bakeMs = (System.nanoTime() - bakeStart) / NANOS_PER_MS
         runCatching {
             Log.i(BAKE_LOG_TAG, "planes baked: ${baked.size} of ${planes.size}, ${photos.size} photos, " +
-                "${dense?.count ?: 0} dense points, $bakeMs ms")
+                "${dense?.count ?: 0} dense points, $bakeMs ms; ${ScanPhotoPolicy.bakeReadsLog(reads)}")
         }
         val denseCloud = dense?.takeIf { device != null && it.count > 0 }
         val denseBlob = denseCloud?.let { listOf(ReplayDense.PATH to SvpcCodec.encode(it)) }.orEmpty()
@@ -161,16 +164,20 @@ internal object RerunCaptureBuilder {
      * [photo]'s pixels for the plane bake, read at [ScanPhotoPolicy.BAKE_LONG_SIDE] on the long side
      * rather than whole: the build keeps every photo it painted from until it ends, and a sharp
      * photo read whole holds four times the pixels the texture can use. The bake samples a photo by
-     * its normalized position, so a reduced one still lands where the full one would.
+     * its normalized position, so a reduced one still lands where the full one would. [onRead] hears
+     * each photo read, for the build's log line.
      */
-    internal fun decodePhoto(photo: ScanPhoto): BakePhoto? {
+    @VisibleForTesting
+    internal fun decodePhoto(photo: ScanPhoto, onRead: (ScanPhotoPolicy.BakeRead) -> Unit = {}): BakePhoto? {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeByteArray(photo.jpeg, 0, photo.jpeg.size, bounds)
+        val sample = ScanPhotoPolicy.bakeSample(bounds.outWidth, bounds.outHeight)
         val options = BitmapFactory.Options().apply {
-            inSampleSize = ScanPhotoPolicy.bakeSample(bounds.outWidth, bounds.outHeight)
+            inSampleSize = sample
             inPreferredConfig = Bitmap.Config.ARGB_8888
         }
         val bitmap = BitmapFactory.decodeByteArray(photo.jpeg, 0, photo.jpeg.size, options) ?: return null
+        onRead(ScanPhotoPolicy.BakeRead(bounds.outWidth, bounds.outHeight, sample, bitmap.width, bitmap.height))
         val argb = IntArray(bitmap.width * bitmap.height)
         bitmap.getPixels(argb, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
         return BakePhoto(photo.pose, bitmap.width, bitmap.height, argb).also { bitmap.recycle() }
