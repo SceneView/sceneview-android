@@ -32,6 +32,8 @@ class SyntheticFloor(val x0: Float, val x1: Float, val z0: Float, val z1: Float)
  * the wall twice. [noise] is the depth's Gaussian spread, as a share of the depth. Walls are seen
  * only up to [seenUpTo] — a phone held towards the floor sees their foot and nothing higher — and
  * the floor goes on outside the room over [nextDoor], for whatever a doorway lets the camera see.
+ * Nothing further than [reach] across the floor from the camera returns depth: a scan that stopped
+ * before it went round the room.
  */
 class SyntheticRoom(
     val x: FloatArray,
@@ -45,6 +47,7 @@ class SyntheticRoom(
     val noise: Float = 0f,
     val seenUpTo: Float = Float.POSITIVE_INFINITY,
     val nextDoor: List<SyntheticFloor> = emptyList(),
+    val reach: Float = Float.POSITIVE_INFINITY,
 ) {
     val area: Float
         get() {
@@ -279,6 +282,7 @@ object SyntheticScan {
                     blind = false
                 }
                 if (best == Float.MAX_VALUE || blind) continue
+                if (hypot(dir.x, dir.z) * best > room.reach) continue
                 var metres = best / len
                 if (room.noise > 0f) metres += (random.nextGaussian() * room.noise * metres).toFloat()
                 val mm = (metres * MM).roundToInt()

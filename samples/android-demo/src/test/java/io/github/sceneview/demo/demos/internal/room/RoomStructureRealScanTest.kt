@@ -95,6 +95,29 @@ class RoomStructureRealScanTest {
     }
 
     @Test
+    fun `a scan that stopped short of the fourth wall gives a plan and no figure`() {
+        val structure = RoomStructure.read(capture(STOPPED).scan())
+        val summary = summary(STOPPED, structure)
+        println("RoomStructure real-scan-like $summary, ${timings(STOPPED)}")
+        assertTrue("$summary: no plan", structure.walls.isNotEmpty())
+        assertNull(summary, structure.area)
+        assertNull(summary, structure.perimeter)
+        assertNull(summary, structure.volume)
+        assertNull(summary, structure.width)
+        assertTrue(summary, RoomGap.MissingWall in structure.gaps)
+    }
+
+    /** A case's full reading's median and live reading's best run. */
+    private fun timings(case: Case): String {
+        val scan = capture(case).scan()
+        repeat(WARMUP) { RoomStructure.read(scan) }
+        val full = (0 until RUNS).map { timed { RoomStructure.read(scan) } }.sorted()
+        repeat(WARMUP) { RoomStructure.live(scan) }
+        val live = (0 until RUNS).map { timed { RoomStructure.live(scan) } }.sorted()
+        return "full ${"%.1f".format(full[RUNS / 2])} ms, live ${"%.2f".format(live.first())} ms"
+    }
+
+    @Test
     fun `every case at once, with its timings`() {
         val lines = ArrayList<String>()
         var failed = false
@@ -214,6 +237,17 @@ class RoomStructureRealScanTest {
         )
 
         val CASES = listOf(LOW_WALLS, FLOOR_AHEAD, DOOR, TWICE, TWO_LOW, TWO, L_PART, T_PART)
+
+        /**
+         * The scan stopped 2 m out from a camera that kept to the south of the room: the side
+         * walls seen halfway, the floor seen a little further, the north wall never reached.
+         */
+        val STOPPED = Case(
+            "stopped short",
+            SyntheticRoom(RECTANGLE_X, RECTANGLE_Z, hidden = setOf(2), reach = 2f),
+            figures = false,
+            walk = listOf(Vec3(1.5f, 1.4f, 0.8f), Vec3(2.5f, 1.4f, 0.8f), Vec3(3.5f, 1.4f, 0.8f)),
+        )
 
         val captures = HashMap<String, SyntheticCapture>()
     }
