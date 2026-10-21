@@ -146,11 +146,20 @@ LaunchedEffect(Unit) {
 ### 4. Basic AR Scene
 
 \`\`\`kotlin
+import com.google.ar.core.Anchor
+import com.google.ar.core.Config
+import com.google.ar.core.Frame
+import com.google.ar.core.Plane
+import io.github.sceneview.ar.arcore.createAnchorOrNull
+import io.github.sceneview.rememberOnGestureListener
+// …plus androidx.compose.runtime.* and the io.github.sceneview entry points (ARSceneView, rememberEngine, …)
+
 @Composable
 fun MyARScreen() {
     val engine = rememberEngine()
     val modelLoader = rememberModelLoader(engine)
     var anchor by remember { mutableStateOf<Anchor?>(null) }
+    var latestFrame by remember { mutableStateOf<Frame?>(null) }
 
     val modelInstance = rememberModelInstance(modelLoader, "models/robot.glb")
 
@@ -166,12 +175,20 @@ fun MyARScreen() {
             config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
             config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
         },
-        onTouchEvent = { event, hitResult ->
-            if (event.action == MotionEvent.ACTION_UP && hitResult != null) {
-                anchor = hitResult.createAnchor()
+        onSessionUpdated = { _, frame -> latestFrame = frame },
+        // A confirmed single tap, never a raw ACTION_UP: the end of a drag or a pinch on the
+        // placed model must not move it. Leaving onTouchEvent unset keeps the model's gestures.
+        onGestureListener = rememberOnGestureListener(
+            onSingleTapConfirmed = { event, node ->
+                if (node == null) { // empty space, not the placed model
+                    latestFrame?.hitTest(event)
+                        ?.firstOrNull { (it.trackable as? Plane)?.isPoseInPolygon(it.hitPose) == true }
+                        ?.createAnchorOrNull()
+                        // Replacing the state key disposes the old AnchorNode, which detaches its anchor.
+                        ?.let { anchor = it }
+                }
             }
-            true
-        }
+        )
     ) {
         anchor?.let { a ->
             AnchorNode(anchor = a) {

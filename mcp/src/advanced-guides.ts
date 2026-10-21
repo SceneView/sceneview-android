@@ -226,30 +226,39 @@ fun SmoothFollowDemo() {
 ## 5. AR Animation — Animated Model on Anchor
 
 \`\`\`kotlin
+import com.google.ar.core.Anchor
+import com.google.ar.core.Frame
+import com.google.ar.core.Plane
+import io.github.sceneview.ar.arcore.createAnchorOrNull
+import io.github.sceneview.rememberOnGestureListener
+// …plus androidx.compose.runtime.* and the io.github.sceneview entry points (ARSceneView, rememberEngine, …)
+
 @Composable
 fun ARAnimatedModel() {
     val engine = rememberEngine()
     val modelLoader = rememberModelLoader(engine)
     val modelInstance = rememberModelInstance(modelLoader, "models/dancing_character.glb")
     var anchor by remember { mutableStateOf<Anchor?>(null) }
-    val latestFrame = remember { arrayOfNulls<Frame>(1) } // plain holder, not state: no recomposition per frame
+    var latestFrame by remember { mutableStateOf<Frame?>(null) }
 
     ARSceneView(
         engine = engine,
         modelLoader = modelLoader,
         planeRenderer = true,
-        onSessionUpdated = { _, frame -> latestFrame[0] = frame },
-        onTouchEvent = { event, _ ->
-            // The callback's hitResult is a scene-node hit (io.github.sceneview.collision.HitResult),
-            // null on an empty plane and without createAnchor(): hit-test the latest ARCore Frame.
-            if (event.action == MotionEvent.ACTION_UP) {
-                latestFrame[0]?.hitTest(event)
-                    ?.firstOrNull { (it.trackable as? Plane)?.isPoseInPolygon(it.hitPose) == true }
-                    ?.createAnchorOrNull()
-                    ?.let { anchor = it }
+        onSessionUpdated = { _, frame -> latestFrame = frame },
+        // A confirmed single tap, never a raw ACTION_UP: the end of a drag or a pinch on the
+        // placed model must not move it. Leaving onTouchEvent unset keeps the model's gestures.
+        onGestureListener = rememberOnGestureListener(
+            onSingleTapConfirmed = { event, node ->
+                if (node == null) { // empty space, not the placed model
+                    latestFrame?.hitTest(event)
+                        ?.firstOrNull { (it.trackable as? Plane)?.isPoseInPolygon(it.hitPose) == true }
+                        ?.createAnchorOrNull()
+                        // Replacing the state key disposes the old AnchorNode, which detaches its anchor.
+                        ?.let { anchor = it }
+                }
             }
-            true
-        }
+        )
     ) {
         anchor?.let { a ->
             AnchorNode(anchor = a) {
@@ -363,30 +372,39 @@ fun CustomGestureScreen() {
 The most common AR gesture — tap a detected plane to place a model.
 
 \`\`\`kotlin
+import com.google.ar.core.Anchor
+import com.google.ar.core.Frame
+import com.google.ar.core.Plane
+import io.github.sceneview.ar.arcore.createAnchorOrNull
+import io.github.sceneview.rememberOnGestureListener
+// …plus androidx.compose.runtime.* and the io.github.sceneview entry points (ARSceneView, rememberEngine, …)
+
 @Composable
 fun TapToPlaceAR() {
     val engine = rememberEngine()
     val modelLoader = rememberModelLoader(engine)
     val modelInstance = rememberModelInstance(modelLoader, "models/furniture.glb")
     var anchor by remember { mutableStateOf<Anchor?>(null) }
-    val latestFrame = remember { arrayOfNulls<Frame>(1) } // plain holder, not state: no recomposition per frame
+    var latestFrame by remember { mutableStateOf<Frame?>(null) }
 
     ARSceneView(
         engine = engine,
         modelLoader = modelLoader,
         planeRenderer = true,
-        onSessionUpdated = { _, frame -> latestFrame[0] = frame },
-        onTouchEvent = { event, _ ->
-            // The callback's hitResult is a scene-node hit (io.github.sceneview.collision.HitResult),
-            // null on an empty plane and without createAnchor(): hit-test the latest ARCore Frame.
-            if (event.action == MotionEvent.ACTION_UP) {
-                latestFrame[0]?.hitTest(event)
-                    ?.firstOrNull { (it.trackable as? Plane)?.isPoseInPolygon(it.hitPose) == true }
-                    ?.createAnchorOrNull()
-                    ?.let { anchor = it }
+        onSessionUpdated = { _, frame -> latestFrame = frame },
+        // A confirmed single tap, never a raw ACTION_UP: the end of a drag or a pinch on the
+        // placed model must not move it. Leaving onTouchEvent unset keeps the model's gestures.
+        onGestureListener = rememberOnGestureListener(
+            onSingleTapConfirmed = { event, node ->
+                if (node == null) { // empty space, not the placed model
+                    latestFrame?.hitTest(event)
+                        ?.firstOrNull { (it.trackable as? Plane)?.isPoseInPolygon(it.hitPose) == true }
+                        ?.createAnchorOrNull()
+                        // Replacing the state key disposes the old AnchorNode, which detaches its anchor.
+                        ?.let { anchor = it }
+                }
             }
-            true
-        }
+        )
     ) {
         anchor?.let { a ->
             AnchorNode(anchor = a) {
@@ -547,7 +565,7 @@ fun SurfaceCursorAR() {
 
 1. **\`isEditable = true\`** — one-liner for pinch/drag/tap on any ModelNode.
 2. **\`onTouchEvent\`** — full MotionEvent access for custom gesture logic.
-3. **AR tap-to-place** — on \`ACTION_UP\` in \`onTouchEvent\`, hit-test the latest ARCore \`Frame\` (from \`onSessionUpdated\`) and call \`createAnchorOrNull()\` on the plane hit. The callback's own \`hitResult\` is a scene-node hit with no \`createAnchor()\`.
+3. **AR tap-to-place** — in \`onGestureListener = rememberOnGestureListener(onSingleTapConfirmed = { event, node -> if (node == null) … })\`, hit-test the latest ARCore \`Frame\` (from \`onSessionUpdated\`) and call \`createAnchorOrNull()\` on the in-polygon plane hit. Never place on a raw \`ACTION_UP\` in \`onTouchEvent\`: it also fires at the end of every drag and pinch, and returning \`true\` there swallows the editable model's gestures. Swapping the \`anchor\` state disposes the old \`AnchorNode\`, which detaches its anchor.
 4. **Custom rotation/scale** — track touch deltas or use \`ScaleGestureDetector\`.
 5. **HitResultNode** — AR surface cursor that follows the center of the screen.
 6. **Multi-model** — set \`onSingleTapConfirmed\` per ModelNode (in \`apply\`) for selection, or use \`rememberOnGestureListener(onSingleTapConfirmed = { e, node -> })\` on the scene.
@@ -755,7 +773,11 @@ LightNode(
 )
 
 // Use small HDR environments
-val environment = rememberEnvironment(engine, "environments/sky_2k.hdr")
+val environmentLoader = rememberEnvironmentLoader(engine)
+val environment = rememberEnvironment(environmentLoader) {
+    environmentLoader.createHDREnvironment("environments/sky_2k.hdr")
+        ?: createEnvironment(environmentLoader)
+}
 // NOT: sky_4k.hdr or sky_8k.hdr (wastes GPU memory on mobile)
 \`\`\`
 

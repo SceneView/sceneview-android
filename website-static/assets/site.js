@@ -364,6 +364,29 @@
       else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
     });
 
+    /* A tab strip too narrow for its tabs scrolls sideways (the code card on a
+       phone). The selected tab is brought clear of the faded edges — the strip
+       scrolls, never the page — and data-more names the side(s) still hiding tabs. */
+    function stripEdges(list) {
+      var max = list.scrollWidth - list.clientWidth, x = list.scrollLeft;
+      var more = max > 1 ? ((x > 1 ? 'start ' : '') + (x < max - 1 ? 'end' : '')).trim() : '';
+      if (more) list.setAttribute('data-more', more); else list.removeAttribute('data-more');
+    }
+    function revealTab(list, tab, instant) {
+      if (list.scrollWidth - list.clientWidth <= 1) return;
+      var lr = list.getBoundingClientRect(), tr = tab.getBoundingClientRect();
+      var pad = parseFloat(getComputedStyle(list).scrollPaddingLeft) || 0;
+      var d = tr.left < lr.left + pad ? tr.left - lr.left - pad : tr.right > lr.right - pad ? tr.right - lr.right + pad : 0;
+      if (d) list.scrollTo({ left: list.scrollLeft + d, behavior: instant || caps.reduced ? 'auto' : 'smooth' });
+    }
+    function fitStrips() {
+      $$('[role="tablist"]').forEach(function (list) {
+        var sel = $('[role="tab"][aria-selected="true"]', list);
+        if (sel) revealTab(list, sel, true);
+        stripEdges(list);
+      });
+    }
+
     /* Tabs (ARIA tabs; data-sync keeps groups on the same platform) */
     function selectTab(tab, sync) {
       var list = tab.closest('[role="tablist"]');
@@ -373,6 +396,7 @@
         var p = document.getElementById(t.getAttribute('aria-controls'));
         if (p) p.hidden = !sel;
       });
+      revealTab(list, tab);
       var key = tab.dataset.key, group = list.dataset.sync;
       if (sync !== false && group && key) {
         store('sv-tab-' + group, key);
@@ -405,7 +429,11 @@
       var saved = list.dataset.sync && store('sv-tab-' + list.dataset.sync);
       var pick = saved && $('[role="tab"][data-key="' + saved + '"]', list);
       if (pick) selectTab(pick, false);
+      on(list, 'scroll', function () { stripEdges(list); }, { passive: true });
     });
+    fitStrips();
+    on(window, 'resize', fitStrips, { passive: true });
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitStrips);
 
     /* Install: six platforms, each a real tab panel in the HTML. "Get started"
        and the quickstart link follow the selected platform. */
@@ -446,18 +474,31 @@
       });
     });
 
-    /* AI assistants: eight equal buttons, none selected by default. */
+    /* AI assistants: eight equal buttons, none selected by default. Every setup
+       is also laid out, hidden and aria-hidden, in the cell of the one shown
+       (site.css): the box takes the height of the tallest, so the page under it
+       does not jump. Only the shown setup changes, so the live region reads it. */
     $$('[data-assistants]').forEach(function (group) {
       var out = document.getElementById(group.dataset.assistants);
+      var shown = out && $('.mcp__setup', out);
+      if (!shown) return;
+      $$('template[id^="mcp-"]').forEach(function (tpl) {
+        var ghost = document.createElement('div');
+        ghost.className = 'mcp__setup';
+        ghost.setAttribute('aria-hidden', 'true');
+        ghost.inert = true;
+        ghost.innerHTML = tpl.innerHTML;
+        out.appendChild(ghost);
+      });
       $$('button', group).forEach(function (b) {
         on(b, 'click', function () {
           var was = b.getAttribute('aria-pressed') === 'true';
           $$('button', group).forEach(function (x) { x.setAttribute('aria-pressed', 'false'); });
           var tpl = document.getElementById(was ? 'mcp-any' : 'mcp-' + b.dataset.id);
           if (!was) b.setAttribute('aria-pressed', 'true');
-          if (tpl && out) {
-            out.innerHTML = tpl.innerHTML;
-            $$('.copy', out).forEach(function (c) {
+          if (tpl) {
+            shown.innerHTML = tpl.innerHTML;
+            $$('.copy', shown).forEach(function (c) {
               on(c, 'click', function () { copy(c, c.dataset.copyText || $('code', c.parentElement).textContent); });
             });
           }

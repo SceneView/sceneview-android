@@ -168,9 +168,9 @@ fun DebugModelViewer() {
    - Ensure good lighting — ARCore struggles in dim conditions.
 
 5. **Objects not appearing on tap?**
-   - Is \`onTouchEvent\` wired up?
-   - Does the ARCore hit-test find a surface? On \`ACTION_UP\`, log the size of \`frame.hitTest(event)\` for the latest \`Frame\` kept from \`onSessionUpdated\`. Do not use the callback's \`hitResult\`: it is a scene-node hit, null over an empty plane.
-   - Are you creating an anchor? The \`hitResult\` passed to \`onTouchEvent\` is a scene-node hit with no \`createAnchor()\`: hit-test the latest ARCore \`Frame\` (\`frame.hitTest(event)\`) and call \`createAnchorOrNull()\` on the plane hit.
+   - Is the tap wired up? Use \`onGestureListener = rememberOnGestureListener(onSingleTapConfirmed = { event, node -> if (node == null) … })\` on \`ARSceneView\`, not a raw \`ACTION_UP\` in \`onTouchEvent\` (that also fires when a drag or a pinch ends, and returning \`true\` swallows the model's gestures).
+   - Is \`latestFrame\` set? Keep it from \`onSessionUpdated = { _, frame -> latestFrame = frame }\`.
+   - Are you creating an anchor? Hit-test that ARCore \`Frame\` (\`latestFrame?.hitTest(event)\`), keep the first in-polygon \`com.google.ar.core.Plane\` hit and call \`createAnchorOrNull()\` on it (\`import io.github.sceneview.ar.arcore.createAnchorOrNull\`). The scene-level \`hitResult\` of \`onTouchEvent\` is a scene-node hit with no \`createAnchor()\`.
    - Is the model loaded? Check \`rememberModelInstance\` is not null.
 
 6. **Anchor drift / objects moving?**
@@ -223,7 +223,7 @@ fun DebugModelViewer() {
 ### NullPointerException
 
 - \`rememberModelInstance\` returns null while loading — always null-check.
-- The \`hitResult\` passed to \`onTouchEvent\` is null whenever no scene node is under the finger (it is not an ARCore surface hit); \`frame.hitTest(event)\` returns an empty list when no surface is hit, so use \`firstOrNull { … }\`.
+- \`latestFrame?.hitTest(event)\` returns an empty list when no surface is hit — chain \`?.firstOrNull { … }?.createAnchorOrNull()\` instead of indexing \`[0]\`.
 
 ### Out of Memory
 
@@ -502,10 +502,11 @@ SceneView(
 
 ### Tap-to-Place Not Working in AR
 
-1. Check the ARCore hit-test finds a surface: log \`frame.hitTest(event)\` on \`ACTION_UP\` for the latest \`Frame\` kept from \`onSessionUpdated\` (the \`onTouchEvent\` \`hitResult\` is a scene-node hit, null over an empty plane).
+1. Place from \`onGestureListener = rememberOnGestureListener(onSingleTapConfirmed = { event, node -> if (node == null) … })\`, never from a raw \`ACTION_UP\` in \`onTouchEvent\`: that also fires at the end of every drag and pinch, and returning \`true\` there blocks the gesture detector.
 2. Ensure plane detection is enabled: \`planeFindingMode = HORIZONTAL_AND_VERTICAL\`.
 3. Plane renderer helps user see where planes are: \`planeRenderer = true\`.
-4. Create the anchor from a plane hit inside its polygon: \`frame.hitTest(event).firstOrNull { (it.trackable as? Plane)?.isPoseInPolygon(it.hitPose) == true }?.createAnchorOrNull()\` (the first hit may be a feature point or outside the plane polygon).
+4. Create the anchor from an in-polygon ARCore plane hit: \`latestFrame?.hitTest(event)?.firstOrNull { (it.trackable as? Plane)?.isPoseInPolygon(it.hitPose) == true }?.createAnchorOrNull()\` (\`latestFrame\` from \`onSessionUpdated\`; \`Plane\` is \`com.google.ar.core.Plane\`).
+5. A reticle or other decoration under the finger makes \`node\` non-null: set \`isTouchable = false\` on it.
 
 ### Camera Orbit Not Working
 
@@ -669,10 +670,14 @@ For smooth node transforms (not skeletal animation):
 // ModelNode has no smoothing parameter: keep a reference to the node and ask it to
 // interpolate. Don't also pass \`position\` — the composable assigns it directly.
 var shipNode by remember { mutableStateOf<io.github.sceneview.node.Node?>(null) }
+val createdShipNode = remember {
+    java.util.concurrent.atomic.AtomicReference<io.github.sceneview.node.Node?>(null)
+}
 ModelNode(
     modelInstance = instance,
-    apply = { shipNode = this }
+    apply = { createdShipNode.set(this) }
 )
+SideEffect { shipNode = createdShipNode.get() }
 LaunchedEffect(shipNode, targetPosition) {
     shipNode?.transform(position = targetPosition, smooth = true, smoothSpeed = 5.0f)
 }
