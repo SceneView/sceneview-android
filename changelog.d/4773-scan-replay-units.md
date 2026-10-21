@@ -1,0 +1,2 @@
+<!-- category: Changed -->
+- **Demo app: the 3D Scan replay names the room in the plan's units — feet and inches in US English, metres everywhere else.** The room line under the replay's timeline and the width and depth drawn on its floor now follow the phone's language like the plan they open ([#4768](https://github.com/sceneview/sceneview/pull/4768)), so under US English (`en-US`) the replay no longer says metres while the plan says feet. Every other language, other English ones included, keeps metres.
