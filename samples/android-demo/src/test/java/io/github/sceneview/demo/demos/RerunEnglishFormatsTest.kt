@@ -16,7 +16,9 @@ import java.util.TimeZone
 
 /**
  * The Rerun screens are in English: a French Pixel 9 showed "Room · 30 sept., 13:56" and
- * "4,7 Mo" in them. Dates and sizes stay English whatever the phone's language.
+ * "4,7 Mo" in them. Dates, words and units stay English whatever the phone's language; the
+ * numbers take the phone's decimal separator, as every figure of the app does: "4,7 MB" on a
+ * French phone, "4.7 MB" on an English one.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -60,37 +62,49 @@ class RerunEnglishFormatsTest {
     }
 
     @Test
-    fun `an export's size reads in English on a French phone`() {
-        assertEquals("4.7 MB", formatFileSize(4_700_000))
+    fun `an export's size keeps English units with the French decimal comma`() {
+        assertEquals("4,7 MB", formatFileSize(4_700_000))
     }
 
-    /** The debug figures (distances, counts, the clock) keep the English point on a French phone. */
+    /** The debug figures (distances, counts) take the phone's separators; the clock has none. */
     @Test
-    fun `the debug figures keep the decimal point on a French phone`() {
-        assertEquals("3.2 m", ArDebugFormat.distance(3.2f))
-        assertEquals("1,204 m", ArDebugFormat.distance(1204f))
-        assertEquals("25,300", ArDebugFormat.count(25_300))
-        assertEquals("4.8k", ArDebugFormat.compactCount(4_812))
+    fun `the debug figures take the French separators`() {
+        assertEquals("3,2 m", ArDebugFormat.distance(3.2f))
+        assertEquals("1 204 m", ArDebugFormat.distance(1204f).plainSpaces())
+        assertEquals("25 300", ArDebugFormat.count(25_300).plainSpaces())
+        assertEquals("4,8k", ArDebugFormat.compactCount(4_812))
+        assertEquals("1 204 m²", ArDebugFormat.area(1204f).plainSpaces())
         assertEquals("0:18", ArDebugFormat.clock(18.4f))
     }
 
     @Test
-    fun `share sizes stay English across unit boundaries`() {
+    fun `German writes the comma, British and US English the point`() {
+        Locale.setDefault(Locale.GERMANY)
+        assertEquals("4,7 MB" to "1.204 m", formatFileSize(4_700_000) to ArDebugFormat.distance(1204f))
+        assertEquals("3,2 m" to "4,8k", ArDebugFormat.distance(3.2f) to ArDebugFormat.compactCount(4_812))
+        Locale.setDefault(Locale.UK)
+        assertEquals("4.7 MB" to "1,204 m", formatFileSize(4_700_000) to ArDebugFormat.distance(1204f))
+        Locale.setDefault(Locale.US)
+        assertEquals("3.2 m" to "4.8k", ArDebugFormat.distance(3.2f) to ArDebugFormat.compactCount(4_812))
+    }
+
+    @Test
+    fun `share sizes keep English units across unit boundaries`() {
         assertEquals("0 B", formatFileSize(0))
         assertEquals("999 B", formatFileSize(999))
         assertEquals("1 kB", formatFileSize(1_000))
-        assertEquals("1.0 MB", formatFileSize(1_000_000))
-        assertEquals("12.4 MB", formatFileSize(12_400_000))
-        assertEquals("1.0 GB", formatFileSize(1_000_000_000))
+        assertEquals("1,0 MB", formatFileSize(1_000_000))
+        assertEquals("12,4 MB", formatFileSize(12_400_000))
+        assertEquals("1,0 GB", formatFileSize(1_000_000_000))
     }
 
     @Test
     fun `a size rounds before it picks its unit`() {
         assertEquals("999 kB", formatFileSize(999_499))
-        assertEquals("1.0 MB", formatFileSize(999_500))
-        assertEquals("1.0 MB", formatFileSize(999_999))
-        assertEquals("999.9 MB", formatFileSize(999_949_999))
-        assertEquals("1.0 GB", formatFileSize(999_950_000))
+        assertEquals("1,0 MB", formatFileSize(999_500))
+        assertEquals("1,0 MB", formatFileSize(999_999))
+        assertEquals("999,9 MB", formatFileSize(999_949_999))
+        assertEquals("1,0 GB", formatFileSize(999_950_000))
     }
 
     @Test
