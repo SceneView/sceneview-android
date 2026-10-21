@@ -296,10 +296,8 @@ fun MeasureScreen(onBack: () -> Unit) {
     val qaBackdrop = rememberQaCameraBackdropActive(cameraReady)
     var depthSupported by remember { mutableStateOf(false) }
 
-    // Door or window on the wall just measured: the first corner, then the opposite one,
-    // read where the camera ray meets the wall.
-    var markingOpening by remember { mutableStateOf(false) }
-    var openingCorner by remember { mutableStateOf<MeasureWallPoint?>(null) }
+    // Door or window on the wall just measured: the first corner, then the opposite one, read
+    // where the camera ray meets the wall. The marking itself lives on the board.
     var wallAim by remember { mutableStateOf<MeasureWallPoint?>(null) }
     // The room's plan, frozen when it opens, shown over the camera.
     var plan by remember { mutableStateOf<RoomSurvey?>(null) }
@@ -355,7 +353,7 @@ fun MeasureScreen(onBack: () -> Unit) {
     val phase = board.phase
     val active = board.active
     val openingWall = board.openingWall
-    val marking = markingOpening && openingWall != null
+    val marking = board.markingOpening && openingWall != null
 
     // Numbers of every figure, from the anchors' current positions.
     val figureOutlines: List<List<Position>> = board.figures.map { figure ->
@@ -394,16 +392,15 @@ fun MeasureScreen(onBack: () -> Unit) {
         haptic.play(MeasureHapticEvent.Refused)
     }
     fun stopMarking() {
-        markingOpening = false
-        openingCorner = null
+        commit(board.stopOpening())
         wallAim = null
     }
     // The opening's two corners: kept on the wall, either way round, once they are apart.
     fun markOpeningCorner() {
         val point = wallAim ?: return
-        val first = openingCorner
+        val first = board.openingCorner
         if (first == null) {
-            openingCorner = point
+            commit(board.withOpeningCorner(point))
             tapRefusal = null
             haptic.play(MeasureHapticEvent.OpeningCorner)
             return
@@ -459,7 +456,7 @@ fun MeasureScreen(onBack: () -> Unit) {
             onBack = onBack,
             peekHeader = when {
                 marking -> stringResource(
-                    if (openingCorner == null) {
+                    if (board.openingCorner == null) {
                         R.string.demo_ar_measure_hint_opening_first
                     } else {
                         R.string.demo_ar_measure_hint_opening_second
@@ -489,8 +486,8 @@ fun MeasureScreen(onBack: () -> Unit) {
                     icon = Icons.AutoMirrored.Rounded.Undo,
                     label = stringResource(R.string.demo_ar_measure_action_undo),
                     onClick = {
-                        // A first corner goes before anything on the board.
-                        if (openingCorner != null) openingCorner = null else commit(board.undo())
+                        // An opening's first corner goes before anything measured.
+                        commit(board.undo())
                     },
                     enabled = !board.isEmpty,
                 ),
@@ -511,8 +508,7 @@ fun MeasureScreen(onBack: () -> Unit) {
                         if (marking) {
                             stopMarking()
                         } else {
-                            markingOpening = true
-                            openingCorner = null
+                            commit(board.startOpening())
                             aimControl.update(null)
                             aim = null
                         }
@@ -636,7 +632,7 @@ fun MeasureScreen(onBack: () -> Unit) {
                         if (wallsShown && walls.walls.size != liveWallCount) liveWallCount = walls.walls.size
                         wallLayer.sync(liveWalls.motion, walls, liveWalls.dt, shown = wallsShown)
 
-                        val wall = board.openingWall?.takeIf { markingOpening }
+                        val wall = board.openingWall?.takeIf { board.markingOpening }
                         if (wall != null) {
                             // Marking an opening: the aim reads the wall, nothing else snaps.
                             aimControl.update(null)
@@ -697,7 +693,7 @@ fun MeasureScreen(onBack: () -> Unit) {
                             )
                         }
                     }
-                    val pending = openingCorner?.let { first -> wallAim?.let { measureOpening(first, it) } }
+                    val pending = board.openingCorner?.let { first -> wallAim?.let { measureOpening(first, it) } }
                     val wallOutline = figureOutlines.lastOrNull()
                     if (marking && pending != null && wallOutline != null && wallOutline.size >= 2) {
                         MeasureOpeningNode(pending, wallOutline[0], wallOutline[1], accent = true)

@@ -59,10 +59,15 @@ data class MeasureFigure<P>(
  * Every figure measured so far, the last one possibly in progress. Immutable: each user
  * action returns a new board, which makes undo a pure function and the whole flow testable
  * without a camera.
+ *
+ * @property markingOpening Door or window is on: the next taps mark an opening on the [openingWall].
+ * @property openingCorner the opening's first corner once placed; the next tap places the opposite one.
  */
 data class MeasureBoard<P>(
     val mode: MeasureMode = MeasureMode.Distance,
     val figures: List<MeasureFigure<P>> = emptyList(),
+    val markingOpening: Boolean = false,
+    val openingCorner: MeasureWallPoint? = null,
 ) {
     /** The figure the next tap edits, or `null` when the next tap starts a new one. */
     val active: MeasureFigure<P>?
@@ -143,6 +148,15 @@ data class MeasureBoard<P>(
             mode == MeasureMode.Wall && it.mode == MeasureMode.Wall && it.height != null && it.points.size == 2
         }
 
+    /** Marking a door or a window: on, with no corner placed yet. */
+    fun startOpening(): MeasureBoard<P> = copy(markingOpening = true, openingCorner = null)
+
+    /** Marking off, its first corner dropped. */
+    fun stopOpening(): MeasureBoard<P> = copy(markingOpening = false, openingCorner = null)
+
+    /** The opening's first corner, placed at [corner] on the wall. */
+    fun withOpeningCorner(corner: MeasureWallPoint): MeasureBoard<P> = copy(openingCorner = corner)
+
     /** Adds [opening] to the [openingWall]; the board as it is without one. */
     fun addOpening(opening: MeasureOpening): MeasureBoard<P> {
         val wall = openingWall ?: return this
@@ -150,10 +164,11 @@ data class MeasureBoard<P>(
     }
 
     /**
-     * Steps back one action: drop the last opening, unlock a height, lower the walls, reopen,
-     * resume a chain, or drop a point.
+     * Steps back one action: drop an opening's first corner, the last opening, unlock a height,
+     * lower the walls, reopen, resume a chain, or drop a point.
      */
     fun undo(): MeasureBoard<P> {
+        if (openingCorner != null) return copy(openingCorner = null)
         val figure = figures.lastOrNull() ?: return this
         val stepped: MeasureFigure<P>? = when {
             figure.openings.isNotEmpty() -> figure.copy(openings = figure.openings.dropLast(1))
