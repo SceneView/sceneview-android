@@ -263,7 +263,7 @@ class MeasureRoomOpeningsTest {
         assertOnPlan("A", MeasureOpening(2.6f, 3.5f, 0f, 2.1f), onPlan[0])
         assertOnPlan("C", MeasureOpening(2f, 3f, 1f, 2f), onPlan[1])
         // The plan itself does not change for it.
-        assertEquals(12f, measureRoomSurvey(other, 2.5f)!!.area.value, 1e-4f)
+        assertEquals(12f, measureRoomSurvey(other, 2.5f)!!.area!!.value, 1e-4f)
     }
 
     @Test
