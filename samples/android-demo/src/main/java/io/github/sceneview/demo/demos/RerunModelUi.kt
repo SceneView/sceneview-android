@@ -57,9 +57,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import com.google.android.filament.ColorGrading
 import com.google.android.filament.Engine
@@ -113,6 +116,7 @@ import io.github.sceneview.demo.isDemoCompactHeight
 import io.github.sceneview.demo.theme.LocalStageChrome
 import io.github.sceneview.demo.theme.SceneViewTokens
 import io.github.sceneview.demo.theme.SceneViewTokens.Space
+import io.github.sceneview.demo.theme.motionFade
 import io.github.sceneview.demo.ui.overMediaEdge
 import io.github.sceneview.environment.Environment
 import io.github.sceneview.loaders.MaterialLoader
@@ -703,8 +707,18 @@ internal fun RerunModelScreen(
         themedStage = true,
         topOverlay = { ScanNameCard(title = title, saved = id != null, onRename = rename) },
         bottomOverlay = {
-            ModelStatus.of(model, settled)?.let { status ->
-                ModelStatusCard(text = stringResource(status.text), progress = { progress }.takeIf { status.showsProgress })
+            // The finished model in a big scan's raw surface's place: framed by the raw one.
+            val rawShownFirst = (state as? ModelState.Ready)?.let { it.framedBy !== it.model } == true
+            ModelStatus.slot(model, settled, rawShownFirst)?.let { slot ->
+                // Faded, not removed, on the swap: the model is framed above this slot (as the hint).
+                val statusAlpha by animateFloatAsState(if (slot.visible) 1f else 0f, motionFade(), label = "status")
+                ModelStatusCard(
+                    text = stringResource(slot.status.text),
+                    progress = { progress }.takeIf { slot.status.showsProgress },
+                    modifier = Modifier
+                        .alpha(statusAlpha)
+                        .then(if (slot.visible) Modifier else Modifier.clearAndSetSemantics { }),
+                )
             }
             // Laid out from the start and only faded: the model is framed above this slot, and a
             // hint that came and went would move the model when it goes.
@@ -959,15 +973,36 @@ internal enum class ModelStatus(@StringRes val text: Int, val showsProgress: Boo
             model.outOfMemoryInHeap != null -> RawOutOfMemory
             else -> RawUnfinished
         }
+
+        /**
+         * The line's slot under [model]: [of]'s status, shown; or, once a finished model has taken
+         * the place of the raw surface shown first ([rawShownFirst]), [Finishing] laid out and
+         * faded — the model is framed above this slot, and a line that went would move it on the
+         * swap. `null`: no line was ever under this model.
+         */
+        fun slot(model: RerunScanModel?, settled: Boolean, rawShownFirst: Boolean): ModelStatusSlot? =
+            of(model, settled)?.let { ModelStatusSlot(it, visible = true) }
+                ?: ModelStatusSlot(Finishing, visible = false).takeIf { rawShownFirst }
     }
 }
 
-/** What the model screen is doing, or why it shows less than a surface. */
+/** [status] laid out under the model, seen while [visible]. */
+internal class ModelStatusSlot(val status: ModelStatus, val visible: Boolean)
+
+/**
+ * What the model screen is doing, or why it shows less than a surface. The line is announced as it
+ * changes (a raw surface shown, then finished); its progress bar is not, or it would drown the line.
+ */
 @Composable
-private fun ModelStatusCard(text: String, progress: (() -> Float)? = null) {
+internal fun ModelStatusCard(text: String, progress: (() -> Float)? = null, modifier: Modifier = Modifier) {
     val chrome = LocalStageChrome.current
-    OverlayCard(testTag = RERUN_MODEL_CARD_TAG) {
-        Text(text, style = SceneViewTokens.Type.card, color = chrome.onCard)
+    OverlayCard(testTag = RERUN_MODEL_CARD_TAG, modifier = modifier) {
+        Text(
+            text,
+            style = SceneViewTokens.Type.card,
+            color = chrome.onCard,
+            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+        )
         if (progress != null) {
             LinearProgressIndicator(
                 progress = progress,
