@@ -16,13 +16,12 @@ import kotlin.math.min
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-/*
- * The room survey as it read scans before [RoomStructure] (frozen verbatim from the engine it
- * replaced): kept in the tests only, so [RoomStructureCorpusTest] can put the old figures beside
- * the new ones on real scans. Not used by the app. Delete once the corpus comparison is no
- * longer wanted.
+/**
+ * A frozen reference: the room survey as it read scans before [RoomStructure], copied verbatim
+ * from the engine it replaced. Kept in the tests only, so [RoomStructureCorpusTest] can put the
+ * old figures beside the new ones on real scans; not used by the app. Not to be fixed or changed:
+ * any change moves the baseline the corpus is compared with.
  */
-
 @Suppress("all")
 internal object LegacyRoomSurveyor {
     /** The grid the cloud is read on. */

@@ -282,6 +282,7 @@ class RoomPlanLayoutTest {
             gaps = mapOf(
                 SurveyGap.NoDepth to "This scan has no depth.",
                 SurveyGap.NoWalls to "Scan the walls.",
+                SurveyGap.WallEnd to "Walk along the wall to the corner.",
                 SurveyGap.MissingWall to "Scan the missing wall.",
                 SurveyGap.ObliqueWall to "This wall is not square to the others.",
                 SurveyGap.Ceiling to "Raise the phone to the ceiling.",

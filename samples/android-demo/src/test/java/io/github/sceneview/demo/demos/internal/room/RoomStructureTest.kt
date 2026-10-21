@@ -191,7 +191,7 @@ class RoomStructureTest {
             val wantLive = RoomStructure.live(base)
             val gotLive = RoomStructure.live(dirty)
             assertEquals("$what: live walls", wantLive.walls.size, gotLive.walls.size)
-            assertEquals("$what: live area", wantLive.area!!, gotLive.area!!, wantLive.area!! * MAX_ERROR)
+            assertEquals("$what: live area", wantLive.area!!.value, gotLive.area!!.value, wantLive.area!!.value * MAX_ERROR)
         }
     }
 
@@ -273,7 +273,7 @@ class RoomStructureTest {
 
     /** A live area, when given, is within [LIVE_AREA_ERROR] of the room's: an estimate, not a measure. */
     private fun liveArea(name: String, live: LiveRoom, room: SyntheticRoom) {
-        val area = live.area
+        val area = live.area?.value
         println("RoomStructure live $name: area $area for ${room.area}, ${live.walls.size} walls")
         assertNotNull("$name: an area", area)
         val error = abs(area!! - room.area) / room.area

@@ -51,7 +51,8 @@ internal class Outline(
 
 /** The sides read off the floor's edge, or why none could be. */
 private sealed interface Trace {
-    class Sides(val u: FloatArray, val v: FloatArray, val sides: List<Side>) : Trace
+    /** [pushed]: the floor area the deduced sides add, moved out past the floor seen to the walls' ends. */
+    class Sides(val u: FloatArray, val v: FloatArray, val sides: List<Side>, val pushed: Float) : Trace
     class Missed(val why: TraceMiss) : Trace
 }
 
@@ -86,6 +87,9 @@ internal object RoomOutline {
 
     /** A stretch no wall was seen along turns a corner where it strays this far off its chord. */
     private const val TURN_M = 0.5f
+
+    /** Corners a stretch no wall was seen along turns at most, run from one wall line back to itself. */
+    private const val SAME_LINE_CUTS = 2
     private const val ENDS_NEAR_M = 1f
     private const val SAME_SIDE_M = 0.15f
     private const val SAME_FACING = 0.94f
@@ -245,7 +249,8 @@ internal object RoomOutline {
                 tracedArea = area
                 miss = when {
                     area <= 0f || !simple(trace.u, trace.v) -> TraceMiss.Crossing
-                    abs(area - regionArea) > max(AREA_AGREE * regionArea, AREA_AGREE_M2) -> TraceMiss.AreaApart
+                    // What the walls' ends add past the floor seen is the sides' own, not a disagreement.
+                    abs(area - regionArea - trace.pushed) > max(AREA_AGREE * regionArea, AREA_AGREE_M2) -> TraceMiss.AreaApart
                     else -> return Outline(trace.u, trace.v, trace.sides, raster, region, traced = true, regionArea)
                 }
             }
@@ -740,6 +745,7 @@ internal object RoomOutline {
         fun point(e: Int) = floatArrayOf(loop[(e % m) * 2], loop[(e % m) * 2 + 1])
         val sides = ArrayList<Side>()
         val junctions = ArrayList<FloatArray>()
+        var pushed = 0f
         for ((r, run) in runs.withIndex()) {
             val first = point(run.start)
             val last = point(run.start + run.count)
@@ -762,8 +768,10 @@ internal object RoomOutline {
                     if (corner != null && hypot(corner[0] - mu, corner[1] - mv) <= CORNER_NEAR_M) continue
                 }
             }
-            // A stretch that turns a corner — two walls unseen side by side — is one side per straight piece.
-            val pieces = straightPieces(loop, run.start, run.count, m)
+            // A stretch that turns a corner — two walls unseen side by side — is one side per straight
+            // piece, as many as the walls on either end need: none between parallel ones, the floor's
+            // edge bulging out of line on its own being no corner.
+            val pieces = straightPieces(loop, run.start, run.count, m, cutsBetween(prev.label, next.label, lines))
             for ((p, piece) in pieces.withIndex()) {
                 val from = point(piece[0])
                 val to = point(piece[0] + piece[1])
@@ -771,7 +779,9 @@ internal object RoomOutline {
                 if (p == 0 && prev.label != UNLABELED) nearestEnd(lines[prev.label], from)?.let { ends += it }
                 if (p == pieces.lastIndex && next.label != UNLABELED) nearestEnd(lines[next.label], to)?.let { ends += it }
                 val side = deduced(loop, piece[0], piece[1], m, lines, ends)
-                sides += acrossOpening(side, from, to, open, raster.cell) ?: side
+                val across = acrossOpening(side, from, to, open, raster.cell)
+                if (across == null) pushed += beyond(loop, piece[0], piece[1], m, side)
+                sides += across ?: side
                 junctions += from
             }
         }
@@ -851,7 +861,7 @@ internal object RoomOutline {
                 merged += refined
             }
         }
-        return Trace.Sides(cu, cv, merged)
+        return Trace.Sides(cu, cv, merged, pushed)
     }
 
     /**
@@ -1035,48 +1045,95 @@ internal object RoomOutline {
                 }
             }
         }
-        var offset = Float.POSITIVE_INFINITY
-        for (k in 0..count) {
-            val e = (start + k) % m
-            offset = min(offset, loop[e * 2] * nu + loop[e * 2 + 1] * nv)
-        }
+        var offset = outermost(loop, start, count, m, nu, nv)
         for (end in ends) offset = min(offset, end[0] * nu + end[1] * nv)
         return Side(null, nu, nv, offset, floorEdge = true)
     }
 
     /**
-     * The stretch of [loop] [count] steps long from [start], cut where it turns a corner: at its
-     * point furthest from the chord when that is more than [TURN_M] off it, then each piece again.
-     * As `[start, count]` pairs, in order along the loop.
+     * The area between the [loop]'s [count] steps from [start] and the deduced [side] standing
+     * outside them: floor the side holds that was not seen, up to the walls' ends it reached.
      */
-    private fun straightPieces(loop: FloatArray, start: Int, count: Int, m: Int): List<IntArray> {
-        val pieces = ArrayList<IntArray>()
-        fun cut(from: Int, steps: Int) {
-            val au = loop[(from % m) * 2]
-            val av = loop[(from % m) * 2 + 1]
-            val du = loop[((from + steps) % m) * 2] - au
-            val dv = loop[((from + steps) % m) * 2 + 1] - av
-            val len = hypot(du, dv)
-            var far = -1
+    private fun beyond(loop: FloatArray, start: Int, count: Int, m: Int, side: Side): Float {
+        var twice = 0f
+        var pu = 0f
+        var pv = 0f
+        fun to(u: Float, v: Float, k: Int) {
+            if (k > 0) twice += pu * v - u * pv
+            pu = u
+            pv = v
+        }
+        for (k in 0..count) {
+            val e = (start + k) % m
+            to(loop[e * 2], loop[e * 2 + 1], k)
+        }
+        // Back along the side, from the stretch's last point's foot on it to its first point's.
+        for (e in intArrayOf((start + count) % m, start % m)) {
+            val d = loop[e * 2] * side.nu + loop[e * 2 + 1] * side.nv - side.offset
+            to(loop[e * 2] - d * side.nu, loop[e * 2 + 1] - d * side.nv, 1)
+        }
+        to(loop[(start % m) * 2], loop[(start % m) * 2 + 1], 1)
+        return abs(twice) / 2
+    }
+
+    /** The outermost of the [loop]'s points [count] steps on from [start] along the inward normal ([nu], [nv]). */
+    private fun outermost(loop: FloatArray, start: Int, count: Int, m: Int, nu: Float, nv: Float): Float {
+        var offset = Float.POSITIVE_INFINITY
+        for (k in 0..count) {
+            val e = (start + k) % m
+            offset = min(offset, loop[e * 2] * nu + loop[e * 2 + 1] * nv)
+        }
+        return offset
+    }
+
+    /**
+     * How many corners a stretch no wall was seen along turns between the walls [before] and
+     * [after] it: none between parallel walls — one side bridges them, facing or stepped — one
+     * between two that meet, [SAME_LINE_CUTS] back round to the same wall.
+     */
+    private fun cutsBetween(before: Int, after: Int, lines: List<WallLine>): Int {
+        if (before == UNLABELED || after == UNLABELED || before == after) return SAME_LINE_CUTS
+        return if (lines[before].parallel(lines[after])) 0 else 1
+    }
+
+    /**
+     * The stretch of [loop] [count] steps long from [start], cut where it turns a corner: at most
+     * [cuts] times, each at the point furthest from its piece's chord when that is more than
+     * [TURN_M] off it and leaves both pieces [CORNER_RUN_M] long at least. As `[start, count]`
+     * pairs, in order along the loop.
+     */
+    private fun straightPieces(loop: FloatArray, start: Int, count: Int, m: Int, cuts: Int): List<IntArray> {
+        val pieces = arrayListOf(intArrayOf(start, count))
+        fun u(e: Int) = loop[(e % m) * 2]
+        fun v(e: Int) = loop[(e % m) * 2 + 1]
+        var left = cuts
+        while (left-- > 0) {
+            var best = -1
+            var bestK = -1
             var farD = TURN_M
-            for (k in 1 until steps) {
-                val e = (from + k) % m
-                val pu = loop[e * 2] - au
-                val pv = loop[e * 2 + 1] - av
-                val d = if (len > 1e-6f) abs(pu * dv - pv * du) / len else hypot(pu, pv)
-                if (d > farD) {
+            for ((p, piece) in pieces.withIndex()) {
+                val from = piece[0]
+                val steps = piece[1]
+                val du = u(from + steps) - u(from)
+                val dv = v(from + steps) - v(from)
+                val len = hypot(du, dv)
+                for (k in 1 until steps) {
+                    val pu = u(from + k) - u(from)
+                    val pv = v(from + k) - v(from)
+                    val d = if (len > 1e-6f) abs(pu * dv - pv * du) / len else hypot(pu, pv)
+                    if (d <= farD) continue
+                    if (hypot(pu, pv) < CORNER_RUN_M) continue
+                    if (hypot(u(from + steps) - u(from + k), v(from + steps) - v(from + k)) < CORNER_RUN_M) continue
                     farD = d
-                    far = k
+                    best = p
+                    bestK = k
                 }
             }
-            if (far < 0) {
-                pieces += intArrayOf(from, steps)
-            } else {
-                cut(from, far)
-                cut(from + far, steps - far)
-            }
+            if (best < 0) break
+            val piece = pieces[best]
+            pieces[best] = intArrayOf(piece[0], bestK)
+            pieces.add(best + 1, intArrayOf(piece[0] + bestK, piece[1] - bestK))
         }
-        cut(start, count)
         return pieces
     }
 

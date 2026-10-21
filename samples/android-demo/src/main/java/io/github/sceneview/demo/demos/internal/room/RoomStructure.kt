@@ -99,6 +99,12 @@ enum class RoomGap {
     /** Not one wall was seen high enough to be told from furniture, or the outline could not be closed. */
     NoWalls,
 
+    /**
+     * A wall seen was not followed to its end: the floor seen stops short of where it ends, or it
+     * of where the floor does. No area is given until it is.
+     */
+    WallEnd,
+
     /** A wall of the outline was not seen: the figures it bounds are estimates, or none is given. */
     MissingWall,
 
@@ -224,12 +230,13 @@ class LiveRoomWall(
 /**
  * What [RoomStructure.live] reads: the walls seen so far and the outline they suggest
  * ([outline], `x, z` per corner in the scan's frame; empty while there is none), with its area
- * once the walls seen close the room, as [RoomStructure.area]. [millis] is how long the reading took.
+ * once the walls seen close the room, as [RoomStructure.area] — marked as an estimate where the
+ * floor seen stands for walls not seen. [millis] is how long the reading took.
  */
 class LiveRoom(
     val walls: List<LiveRoomWall>,
     val outline: FloatArray,
-    val area: Float?,
+    val area: RoomFigure?,
     val floorY: Float?,
     val millis: Float,
 )

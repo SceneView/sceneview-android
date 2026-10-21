@@ -70,6 +70,9 @@ enum class SurveyGap {
     /** Not one wall was seen high enough to be told from furniture. */
     NoWalls,
 
+    /** A wall seen was not followed to its end: no area until it is. */
+    WallEnd,
+
     /** A wall was not seen: it is deduced from its neighbours and the figures that hang on it are estimates. */
     MissingWall,
 
@@ -228,6 +231,7 @@ object RoomSurveyor {
     private fun gapOf(gap: RoomGap): SurveyGap = when (gap) {
         RoomGap.NoDepth -> SurveyGap.NoDepth
         RoomGap.NoWalls -> SurveyGap.NoWalls
+        RoomGap.WallEnd -> SurveyGap.WallEnd
         RoomGap.MissingWall -> SurveyGap.MissingWall
         RoomGap.Ceiling -> SurveyGap.Ceiling
     }

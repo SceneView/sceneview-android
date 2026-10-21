@@ -166,6 +166,12 @@ internal object WallLines {
 
     /** How far apart two shards of a wall may face: the normals of a wall's shards in a real scan were 19° apart. */
     private const val SHARD_REACH_DEG = 25f
+
+    /**
+     * How far apart along the wall two shards of it may stand: further apart, they are the faces
+     * of two things standing before a wall never seen, not one wall.
+     */
+    private const val SHARD_GAP_M = 1f
     private const val QUARTER = 90f
     private const val GAP_FILL_M = 0.15f
     private const val END_NEAR_M = 0.3f
@@ -524,7 +530,7 @@ internal object WallLines {
      * be a wall, their normals turned up to [SHARD_REACH_DEG] apart — so in two families, which
      * [mergeLayers] never joins — and in layers up to [WALL_MERGE_M] out of line. Short lines are
      * chained when two face within [SHARD_REACH_DEG] of each other and stand within [WALL_MERGE_M]
-     * along the normal they share. A chain is refitted on its pieces' mean normal, weighed by
+     * along the normal they share, with at most [SHARD_GAP_M] between them along it. A chain is refitted on its pieces' mean normal, weighed by
      * their surfels — squared when within [SNAP_DEG] of the room's square, the frame the walls
      * together were squared to — when its pieces all stand within [WALL_MERGE_M] along it and no
      * line facing its way stands behind it: what has something behind it is clutter, not the
@@ -562,6 +568,7 @@ internal object WallLines {
                 val nu = (la.nu + lb.nu) / len
                 val nv = (la.nv + lb.nv) / len
                 if (abs(middleAlong(la, nu, nv) - middleAlong(lb, nu, nv)) > WALL_MERGE_M) continue
+                if (gapAlong(la, lb, nu, nv) > SHARD_GAP_M) continue
                 parent[root(b)] = root(a)
             }
         }
@@ -618,6 +625,16 @@ internal object WallLines {
         }
         if (joined.isEmpty()) return lines
         return lines.filter { it !in used } + joined
+    }
+
+    /** How far apart [a] and [b] stand along the wall of normal ([nu], [nv]): 0 when they overlap. */
+    private fun gapAlong(a: WallLine, b: WallLine, nu: Float, nv: Float): Float {
+        fun along(line: WallLine, t: Float) = line.pointU(t) * -nv + line.pointV(t) * nu
+        val a0 = along(a, a.from)
+        val a1 = along(a, a.to)
+        val b0 = along(b, b.from)
+        val b1 = along(b, b.to)
+        return max(0f, max(min(a0, a1), min(b0, b1)) - min(max(a0, a1), max(b0, b1)))
     }
 
     /**

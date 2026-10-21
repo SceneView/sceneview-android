@@ -208,7 +208,7 @@ internal object RoomReader {
         }
         val floorY = read?.floorY
         val millis = (System.nanoTime() - started) / NANOS_PER_MILLI
-        return LiveRoom(walls, outline, structure.area?.value, floorY, millis)
+        return LiveRoom(walls, outline, structure.area, floorY, millis)
     }
 
     /** ARCore's wall and floor planes as surfels on a [PLANE_STEP_M] grid, walls facing the camera's path. */
@@ -478,16 +478,30 @@ internal object RoomReader {
                 reaches(outline.sides[(i + n - 1) % n].line, outline.u[i], outline.v[i]) &&
                 reaches(outline.sides[next].line, outline.u[next], outline.v[next])
         }
-        // The figures need the room closed by walls: each side seen, or held between two seen
-        // ones — and at least [RoomStructure.MIN_SEEN_WALLS] distinct walls, one wall seen twice
-        // counting once.
-        val closed = (0 until n).all { seen[it] || seen[(it + n - 1) % n] && seen[(it + 1) % n] && held[it] }
+        // A side the floor's edge stands for is the room's only where each seen wall beside it
+        // ends there too: seen up to the corner and not on past it. A wall seen on past the corner
+        // was cut short by a floor seen short of it: the room goes on, and an area read there is
+        // wrong, not estimated — the scan has to follow the wall to its end.
+        val ended = BooleanArray(n) { i ->
+            val side = outline.sides[i]
+            val before = (i + n - 1) % n
+            val next = (i + 1) % n
+            val after = (i + 2) % n
+            side.line != null || !side.floorEdge ||
+                (!seen[before] || endsAt(outline.sides[before].line, i, before, outline)) &&
+                (!seen[next] || endsAt(outline.sides[next].line, next, after, outline))
+        }
+        // The figures need the room closed by walls: each side seen, or a run of unseen ones
+        // between two seen — one side held by both, or two the floor's edge stands for meeting at
+        // a corner deduced between them, each wall ending where its run starts — and at least
+        // [RoomStructure.MIN_SEEN_WALLS] distinct walls, one wall seen twice counting once.
+        val closed = closedBy(outline, seen, held, ended)
         val distinct = distinctWalls(outline.sides, seen)
         val measured = closed && distinct >= RoomStructure.MIN_SEEN_WALLS
-        // Two adjacent walls alone, each seen up to the corner they make, give the area, the
-        // perimeter and the volume as estimates — the floor seen standing for the other two; two
-        // facing ones give none, only the width between them.
-        val cornered = !measured && distinct == 2 && (0 until n).any { i ->
+        // Two adjacent walls alone, each seen from the corner they make to its other end, give the
+        // area, the perimeter and the volume as estimates — the floor seen standing for the other
+        // two; two facing ones give none, only the width between them.
+        val cornered = !measured && closed && distinct == 2 && (0 until n).any { i ->
             val a = outline.sides[(i + n - 1) % n].line
             val b = outline.sides[i].line
             seen[(i + n - 1) % n] && seen[i] && a != null && b != null &&
@@ -524,11 +538,59 @@ internal object RoomReader {
             width = (if (turned) alongU else alongV).takeIf { measured || !it.estimate },
             confidence = if (total > 0f) seenLength / total else 0f,
             gaps = listOfNotNull(
+                RoomGap.WallEnd.takeIf { !ended.all { it } },
                 RoomGap.MissingWall.takeIf { rough },
                 RoomGap.Ceiling.takeIf { height == null },
             ),
             reading = RoomReading(outline.traced, closed, distinct, outline.miss, outline.regionArea, outline.tracedArea),
         )
+    }
+
+    /**
+     * Whether the runs of sides no wall was seen along each lie between two seen sides: a run of
+     * one [held] by both, or of two the floor's edge stands for, not parallel, both [ended].
+     */
+    private fun closedBy(outline: Outline, seen: BooleanArray, held: BooleanArray, ended: BooleanArray): Boolean {
+        val n = outline.sides.size
+        val first = (0 until n).firstOrNull { seen[it] } ?: return false
+        var k = 1
+        while (k <= n) {
+            val i = (first + k) % n
+            if (seen[i]) {
+                k++
+                continue
+            }
+            var count = 0
+            while (!seen[(i + count) % n]) count++
+            val a = outline.sides[i]
+            val b = outline.sides[(i + 1) % n]
+            val shut = when (count) {
+                1 -> held[i] && ended[i]
+                2 -> a.floorEdge && b.floorEdge && ended[i] && ended[(i + 1) % n] &&
+                    abs(a.nu * b.nu + a.nv * b.nv) < SAME_WALL_FACING
+                else -> false
+            }
+            if (!shut) return false
+            k += count
+        }
+        return true
+    }
+
+    /**
+     * Whether the wall [line] of side [along] ends at the corner [corner] it makes with an unseen
+     * side: seen within [CORNER_REACH_M] of it, and not seen on past it, between [CORNER_REACH_M]
+     * and twice that beyond it — away from the side's other corner, [other].
+     */
+    private fun endsAt(line: WallLine?, corner: Int, other: Int, outline: Outline): Boolean {
+        if (line == null || !reaches(line, outline.u[corner], outline.v[corner])) return false
+        val t = line.tOf(outline.u[corner], outline.v[corner])
+        val away = if (t >= line.tOf(outline.u[other], outline.v[other])) 1f else -1f
+        var at = CORNER_REACH_M + line.column * HALF
+        while (at <= 2 * CORNER_REACH_M) {
+            if (line.seenAt(t + away * at)) return false
+            at += line.column * HALF
+        }
+        return true
     }
 
     /** Whether [line] was seen within [CORNER_REACH_M] of the corner at ([u], [v]). */
