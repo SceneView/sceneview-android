@@ -62,18 +62,23 @@ object RoomPlanDxf {
         val sill: String,
     )
 
-    /** Writes [survey] with its [openings] to [out] as a DXF drawing, its figures worded by [wording]. */
+    /**
+     * Writes [survey] with its [openings] to [out] as a DXF drawing, its figures worded by [wording].
+     *
+     * @param labels each wall's dimension, in the order of [RoomSurvey.walls]: the plan's own.
+     */
     fun write(
         out: OutputStream,
         survey: RoomSurvey,
         wording: SurveyWording,
         words: Words,
         openings: List<Opening> = emptyList(),
+        labels: List<String> = SurveyReport.planTexts(survey, wording).walls,
     ) {
         val drawing = Drawing(survey.planWidth)
         if (survey.hasPlan) {
             drawing.outline(survey)
-            drawing.dimensions(survey, SurveyReport.planTexts(survey, wording).walls)
+            drawing.dimensions(survey, labels)
             for (opening in openings) drawing.opening(survey, opening, label(opening, words, wording.units))
             drawing.room(survey, wording)
         }
