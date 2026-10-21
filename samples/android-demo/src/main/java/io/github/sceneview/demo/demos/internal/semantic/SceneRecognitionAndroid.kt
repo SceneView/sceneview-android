@@ -3,6 +3,7 @@ package io.github.sceneview.demo.demos.internal.semantic
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.os.Build
 import android.util.Log
 import androidx.annotation.StringRes
 import androidx.annotation.VisibleForTesting
@@ -79,6 +80,7 @@ private object ProcessDetector {
                 },
                 metered = { isOnMeteredNetwork(app) },
                 open = ::openSceneDetector,
+                abis = Build.SUPPORTED_ABIS.toList(),
             )
         }.also { share = it }
     }
@@ -98,7 +100,8 @@ private object ProcessDetector {
  * marked ([SceneModelStore.markRefetched]): a later launch tries it again, never a third download.
  * A copy that loads clears the mark ([SceneModelStore.clearRefetched]), so a file refused after
  * that is fetched once more. A device LiteRT ships no library for (32-bit x86) is no fault of the
- * file: its copy is kept, no other is fetched, and each launch runs without a detector.
+ * file: its copy is kept, no other is fetched, and each launch runs without a detector. [abis] are
+ * the device's ABIs, the one the app runs as first, as `Build.SUPPORTED_ABIS` lists them.
  *
  * The interpreter lives as long as the process, whose end frees it; the shares handed out close
  * nothing ([Share]), so a replay that closes its detector cannot pull the interpreter from under
@@ -108,6 +111,7 @@ internal class SceneDetectorShare(
     private val storeOf: suspend () -> SceneModelStore,
     private val metered: () -> Boolean,
     private val open: suspend (File) -> SceneDetector?,
+    private val abis: List<String>,
 ) {
     private val lock = Mutex()
     private val storeLock = Mutex()
@@ -193,7 +197,7 @@ internal class SceneDetectorShare(
             val opened = try {
                 open(file)
             } catch (missing: UnsatisfiedLinkError) {
-                Log.w(TAG, "No LiteRT for this device's ABI: the scan is recognised without a detector", missing)
+                Log.w(TAG, "No LiteRT for ${abis.firstOrNull()}: the scan is recognised without a detector", missing)
                 break
             }
             opened?.let { built ->

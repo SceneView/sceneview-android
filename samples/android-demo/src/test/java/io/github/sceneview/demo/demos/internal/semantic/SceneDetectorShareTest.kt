@@ -398,10 +398,12 @@ class SceneDetectorShareTest {
         server: MockWebServer,
         metered: () -> Boolean = { false },
         opens: (File) -> SceneDetector? = { FakeDetector },
+        abis: List<String> = listOf("arm64-v8a"),
     ) = SceneDetectorShare(
         storeOf = { store(server) },
         metered = metered,
         open = { file -> opens(file) },
+        abis = abis,
     )
 
     /** The detector's store on the app's storage, as a launch of the app builds it. */
