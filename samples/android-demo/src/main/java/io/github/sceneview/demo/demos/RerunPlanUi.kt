@@ -54,6 +54,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -70,6 +71,7 @@ import io.github.sceneview.demo.demos.internal.DenseCloud
 import io.github.sceneview.demo.demos.internal.DebugPose
 import io.github.sceneview.demo.demos.internal.DenseFusion
 import io.github.sceneview.demo.demos.internal.DepthBackProjection
+import io.github.sceneview.demo.demos.internal.MeasureUnitSystem
 import io.github.sceneview.demo.demos.internal.PlanLine
 import io.github.sceneview.demo.demos.internal.PlanMetrics
 import io.github.sceneview.demo.demos.internal.PlanStroke
@@ -84,6 +86,7 @@ import io.github.sceneview.demo.demos.internal.RoomSurvey
 import io.github.sceneview.demo.demos.internal.RoomSurveyInput
 import io.github.sceneview.demo.demos.internal.RoomSurveyor
 import io.github.sceneview.demo.demos.internal.ScanDevice
+import io.github.sceneview.demo.demos.internal.SurveyFormat
 import io.github.sceneview.demo.demos.internal.SurveyGap
 import io.github.sceneview.demo.demos.internal.SurveyReport
 import io.github.sceneview.demo.demos.internal.SurveyRow
@@ -135,8 +138,18 @@ internal class PlanWords(
     val pdfFile: String,
 )
 
+/**
+ * The Plan view's words under the phone's language, its figures in that language's units: feet
+ * and inches in US English, metres everywhere else ([SurveyFormat.units]).
+ */
 @Composable
-internal fun rememberPlanWords(): PlanWords = PlanWords(
+internal fun rememberPlanWords(): PlanWords {
+    val units = SurveyFormat.units(LocalLocale.current.platformLocale)
+    return planWords(units)
+}
+
+@Composable
+private fun planWords(units: MeasureUnitSystem): PlanWords = PlanWords(
     survey = SurveyWording(
         heading = stringResource(R.string.demo_ar_rerun_plan_heading),
         area = stringResource(R.string.demo_ar_rerun_plan_area),
@@ -157,7 +170,12 @@ internal fun rememberPlanWords(): PlanWords = PlanWords(
         spreadNote = stringResource(R.string.demo_ar_rerun_plan_spread_note),
         notice = stringResource(R.string.demo_ar_rerun_plan_notice),
         madeWith = stringResource(R.string.demo_ar_rerun_plan_made_with),
-        scaleBar = stringResource(R.string.demo_ar_rerun_plan_scale_bar),
+        scaleBar = stringResource(
+            when (units) {
+                MeasureUnitSystem.Metric -> R.string.demo_ar_rerun_plan_scale_bar
+                MeasureUnitSystem.Imperial -> R.string.demo_ar_rerun_plan_scale_bar_feet
+            },
+        ),
         gaps = mapOf(
             SurveyGap.NoDepth to stringResource(R.string.demo_ar_rerun_plan_gap_no_depth),
             SurveyGap.NoWalls to stringResource(R.string.demo_ar_rerun_plan_gap_no_walls),
@@ -165,6 +183,7 @@ internal fun rememberPlanWords(): PlanWords = PlanWords(
             SurveyGap.ObliqueWall to stringResource(R.string.demo_ar_rerun_plan_gap_oblique_wall),
             SurveyGap.Ceiling to stringResource(R.string.demo_ar_rerun_plan_gap_ceiling),
         ),
+        units = units,
     ),
     surveyTitle = stringResource(R.string.demo_ar_rerun_plan_survey_title),
     emptyTitle = stringResource(R.string.demo_ar_rerun_plan_empty_title),
@@ -172,7 +191,12 @@ internal fun rememberPlanWords(): PlanWords = PlanWords(
     legendUnseen = stringResource(R.string.demo_ar_rerun_plan_legend_unseen),
     scrollHint = stringResource(R.string.demo_ar_rerun_plan_scroll_hint),
     pdfTitle = stringResource(R.string.demo_ar_rerun_plan_pdf_title),
-    pdfScale = stringResource(R.string.demo_ar_rerun_plan_pdf_scale),
+    pdfScale = stringResource(
+        when (units) {
+            MeasureUnitSystem.Metric -> R.string.demo_ar_rerun_plan_pdf_scale
+            MeasureUnitSystem.Imperial -> R.string.demo_ar_rerun_plan_pdf_scale_feet
+        },
+    ),
     pdfPage = stringResource(R.string.demo_ar_rerun_plan_pdf_page),
     pdfWallsContinued = stringResource(R.string.demo_ar_rerun_plan_pdf_walls_continued),
     pdfFile = stringResource(R.string.demo_ar_rerun_plan_pdf_file),
@@ -619,7 +643,7 @@ internal object RoomPlanPdf {
     private const val ROW = 16f
     private const val VALUE_X = 150f
     private const val ROOM_VALUE_X = 60f
-    private const val WALLS_X = 320f
+    private const val WALLS_X = 350f
     private const val WALL_VALUE_X = 60f
     private const val FOLLOWING_COLUMNS = 3
     private const val FOOT_Y = 806f
