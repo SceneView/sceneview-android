@@ -25,7 +25,11 @@ internal object ModelGlb {
         val texture = model.texture
         val uv = model.uv
         val jpeg = if (texture != null && uv != null) {
-            runCatching { encoder?.jpeg(texture.atlas, texture.width, texture.height) }.getOrNull()
+            // An atlas the encoder refuses leaves the vertex colours; one the heap cannot encode is
+            // the finish's to answer (CleanModel), not a texture silently gone.
+            runCatching { encoder?.jpeg(texture.atlas, texture.width, texture.height) }
+                .onFailure { if (it is OutOfMemoryError) throw it }
+                .getOrNull()
         } else {
             null
         }

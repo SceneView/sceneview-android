@@ -17,13 +17,6 @@ object RerunMeshGlb {
     fun write(mesh: RerunMesh, generator: String = "SceneView Rerun"): ByteArray =
         writeShared(mesh, generator, fullResolution = true, floorOrigin = false)
 
-    /** The size of [write]'s binary chunk for [mesh]: its `.glb` is this and a small JSON header. */
-    fun binaryBytes(mesh: RerunMesh): Int {
-        val n = mesh.vertexCount
-        val indexBytes = mesh.indices.size * if (n <= MAX_SHORT_VERTICES) 2 else 4
-        return n * (12 + 12 + 4) + pad(indexBytes)
-    }
-
     /**
      * The model a share sends: [mesh] simplified to [targetTriangles] ([RerunMeshSimplifier]) unless
      * [fullResolution], and with [floorOrigin] resting on Y=0 and centred in X/Z — what a viewer

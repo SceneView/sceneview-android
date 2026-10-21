@@ -2,6 +2,7 @@ package io.github.sceneview.demo.demos
 
 import android.graphics.Bitmap
 import android.util.Log
+import androidx.annotation.StringRes
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -352,7 +353,9 @@ internal fun buildRerunModel(
         null
     }
     val finished = finish?.getOrNull()
-    val outOfMemoryInHeap = Runtime.getRuntime().maxMemory().takeIf { finish?.exceptionOrNull() is OutOfMemoryError }
+    // Out of memory, the finish gives the raw surface back itself; one that throws it is left the same.
+    val outOfMemory = finished?.stats?.rawKept == true || finish?.exceptionOrNull() is OutOfMemoryError
+    val outOfMemoryInHeap = Runtime.getRuntime().maxMemory().takeIf { outOfMemory }
     val glb = when {
         finished != null -> finished.glb
         rawTriangles > 0 -> rawGlb ?: RerunMeshGlb.write(mesh)
@@ -360,8 +363,8 @@ internal fun buildRerunModel(
     }
     progress(1f)
     val done = System.nanoTime()
-    // A finish that kept the raw surface's .glb, lighter than its own, has the raw surface's figures.
-    val finishedMesh = finished?.takeUnless { it.stats.rawKept }?.model?.asRerunMesh()
+    // A finish that ran out of memory has no model of its own: the raw surface's figures are its.
+    val finishedMesh = finished?.model?.asRerunMesh()
     Log.i(
         TAG,
         "model (${source::class.simpleName}): $rawTriangles triangles, $rawVertices vertices " +
@@ -382,7 +385,7 @@ internal fun buildRerunModel(
         buildMs = (done - started) / NS_PER_MS,
         voxelBytes = meshed.bytes,
         budgetReached = meshed.droppedBlocks > 0,
-        finished = finished != null,
+        finished = finishedMesh != null,
         outOfMemoryInHeap = outOfMemoryInHeap,
     )
 }
@@ -431,8 +434,9 @@ private fun mesh(source: RerunModelSource, progress: (Float) -> Unit): Meshed {
 }
 
 /**
- * [mesh] finished by [CleanModel], or why it failed (logged) — running out of memory included:
- * the finish's garbage is gone with it, and the raw surface is left. Cancellation goes through.
+ * [mesh] finished by [CleanModel] — the raw surface's `.glb` when it ran out of memory
+ * ([CleanModelStats.rawKept]) — or why it failed (logged), out of memory again included: the
+ * finish's garbage is gone with it, and the raw surface is left. Cancellation goes through.
  * With [rawGlb], [mesh]'s arrays are worked in, not copied: its `.glb` is already written, and
  * [mesh] is not read again.
  */
@@ -668,15 +672,8 @@ internal fun RerunModelScreen(
         themedStage = true,
         topOverlay = { ScanNameCard(title = title, saved = id != null, onRename = rename) },
         bottomOverlay = {
-            when {
-                !settled -> ModelStatusCard(
-                    text = stringResource(R.string.scan_result_creating),
-                    progress = { progress },
-                )
-                state == ModelState.Failed -> ModelStatusCard(text = stringResource(R.string.scan_result_failed))
-                model?.kind == RerunScanModel.Kind.Points ->
-                    ModelStatusCard(text = stringResource(R.string.scan_result_partial))
-                else -> Unit
+            ModelStatus.of(model, settled)?.let { status ->
+                ModelStatusCard(text = stringResource(status.text), progress = { progress }.takeIf { status.showsProgress })
             }
             // Laid out from the start and only faded: the model is framed above this slot, and a
             // hint that came and went would move the model when it goes.
@@ -899,6 +896,37 @@ private fun ScanNameCard(title: String, saved: Boolean, onRename: (() -> Unit)?)
                     modifier = Modifier.size(Space.lg),
                 )
             }
+        }
+    }
+}
+
+/**
+ * What the model screen says under the model: that it is building it, finishing the raw surface
+ * shown meanwhile (a big scan, [RAW_FIRST_TRIANGLES] or more), or why what it shows is less than
+ * a finished model — so the raw surface is never left in its place without a word.
+ */
+internal enum class ModelStatus(@StringRes val text: Int, val showsProgress: Boolean = false) {
+    Creating(R.string.scan_result_creating, showsProgress = true),
+    Finishing(R.string.scan_result_finishing, showsProgress = true),
+    Failed(R.string.scan_result_failed),
+    Partial(R.string.scan_result_partial),
+
+    /** Kept as scanned: the finish needs more heap than this phone's ([RerunScanModel.outOfMemoryInHeap]). */
+    RawOutOfMemory(R.string.scan_result_raw_memory),
+
+    /** Shown as scanned, not kept: the next open tries the finish again. */
+    RawUnfinished(R.string.scan_result_raw_unfinished),
+    ;
+
+    companion object {
+        /** For [model] on screen, `null` while none is; [settled] once it is known for good. `null`: nothing to say. */
+        fun of(model: RerunScanModel?, settled: Boolean): ModelStatus? = when {
+            !settled -> if (model != null) Finishing else Creating
+            model == null -> Failed
+            model.kind == RerunScanModel.Kind.Points -> Partial
+            model.finished -> null
+            model.outOfMemoryInHeap != null -> RawOutOfMemory
+            else -> RawUnfinished
         }
     }
 }

@@ -43,7 +43,7 @@ class CleanModelSyntheticTest {
         val texture = checkNotNull(stats.texture) { "the room's photos should texture it" }
 
         val rawError = colorError(raw.positions, raw.indices) { f, _ -> meanColor(raw.colors, raw.indices, f) }
-        val model = result.model
+        val model = checkNotNull(result.model)
         val atlas = checkNotNull(model.texture).let { BakePhoto(ORIGIN, it.width, it.height, it.atlas) }
         val allIndices = model.texturedIndices + model.plainIndices
         val texturedFaces = model.texturedIndices.size / 3
@@ -136,7 +136,7 @@ class CleanModelSyntheticTest {
         val raw = RerunMarchingCubes.extractWhole(tsdf, RerunMarchingCubes.DEFAULT_MIN_WEIGHT).mesh
         val result = CleanModel.build(raw, photos = null, encoder = null)
         assertEquals(null, result.stats.texture)
-        assertEquals(null, result.model.uv)
+        assertEquals(null, checkNotNull(result.model).uv)
         val json = String(result.glb, 20, result.glb.size - 20, Charsets.ISO_8859_1)
         assertTrue("no texture in the file", "\"images\"" !in json.substringBefore("BIN"))
         assertEquals(emptyList<String>(), GlbCheck.problems(result.glb))

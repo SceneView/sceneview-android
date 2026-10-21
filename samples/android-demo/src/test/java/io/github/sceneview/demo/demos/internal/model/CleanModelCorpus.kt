@@ -1,5 +1,6 @@
 package io.github.sceneview.demo.demos.internal.model
 
+import io.github.sceneview.demo.demos.RAW_FIRST_TRIANGLES
 import io.github.sceneview.demo.demos.internal.BakePhoto
 import io.github.sceneview.demo.demos.internal.DebugPose
 import io.github.sceneview.demo.demos.internal.DenseCloud
@@ -24,7 +25,8 @@ import java.io.File
  * One recording through the finished-model pipeline, as the result screen builds a kept scan's
  * model — its dense surfels fused into a TSDF, meshed, then cleaned and textured from its key
  * photos — next to the raw model the app showed before. Writes, in [out]:
- * `before.glb`, `after.glb`, `before.png`, `after.png` and `stats.json`.
+ * `before.glb`, `after.glb`, `before.png`, `after.png` and `stats.json`. A finish that runs out
+ * of memory writes the raw surface as `after.glb`, as the app keeps it (`raw_kept`).
  */
 internal object CleanModelCorpus {
     val EXTENSIONS = setOf(RerunScanFile.EXTENSION, "rrd")
@@ -61,25 +63,30 @@ internal object CleanModelCorpus {
                 put("photos", capture.trace.imageCount)
             }
         }
-        val fuseStart = System.nanoTime()
-        val tsdf = RerunTsdf().apply { integrateSurfels(cloud) }
-        val fuseMs = since(fuseStart)
-        val meshStart = System.nanoTime()
-        val extraction = RerunMarchingCubes.extractWhole(tsdf, RerunMarchingCubes.DEFAULT_MIN_WEIGHT)
-        val raw = extraction.mesh
-        val meshMs = since(meshStart)
+        val (raw, fuseMs, meshMs) = mesh(cloud)
         check(raw.triangleCount > 0) { "the surfels mesh to no surface" }
         val beforeStart = System.nanoTime()
         val before = RerunMeshGlb.write(raw)
         val beforeWriteMs = since(beforeStart)
-
-        val photos = ModelPhotos.of(capture.trace, capture.manifest.lens) { path -> decode(capture, path) }
-        val result = CleanModel.build(raw, photos, JvmAtlasEncoder, progress = progress)
-        val s = result.stats
+        val rawBounds = raw.bounds()
+        val rawTriangles = raw.triangleCount
+        val rawVertices = raw.vertexCount
         File(out, "before.glb").writeBytes(before)
+        thumbnail(before, rawBounds, rawTriangles, rawVertices)?.let { File(out, "before.png").writeBytes(it) }
+
+        // As the result screen finishes it: a big scan in its own arrays, its .glb written first.
+        val photos = ModelPhotos.of(capture.trace, capture.manifest.lens) { path -> decode(capture, path) }
+        val consume = rawTriangles >= RAW_FIRST_TRIANGLES
+        val result = CleanModel.build(raw, photos, JvmAtlasEncoder, consume = consume, rawGlb = before, progress = progress)
+        val s = result.stats
         File(out, "after.glb").writeBytes(result.glb)
-        thumbnail(before, raw)?.let { File(out, "before.png").writeBytes(it) }
-        thumbnail(result.glb, result.model.asRerunMesh())?.let { File(out, "after.png").writeBytes(it) }
+        val after = result.model?.asRerunMesh()
+        val afterThumbnail = if (after != null) {
+            thumbnail(result.glb, after.bounds(), after.triangleCount, after.vertexCount)
+        } else {
+            thumbnail(result.glb, rawBounds, rawTriangles, rawVertices)
+        }
+        afterThumbnail?.let { File(out, "after.png").writeBytes(it) }
         val problems = GlbCheck.problems(result.glb)
         return buildJsonObject {
             put("file", file.name)
@@ -90,8 +97,8 @@ internal object CleanModelCorpus {
             put(
                 "before",
                 buildJsonObject {
-                    put("triangles", raw.triangleCount)
-                    put("vertices", raw.vertexCount)
+                    put("triangles", rawTriangles)
+                    put("vertices", rawVertices)
                     put("glb_bytes", before.size)
                     put("components", s.geometry.piecesIn)
                     put("write_ms", beforeWriteMs)
@@ -104,6 +111,11 @@ internal object CleanModelCorpus {
                     put("triangles", s.finalTriangles)
                     put("vertices", s.finalVertices)
                     put("glb_bytes", s.glbBytes)
+                    put("glb_limit_bytes", s.glbLimitBytes)
+                    put("glb_guarded", s.glbGuarded)
+                    put("atlas_halvings", s.atlasHalvings)
+                    put("raw_kept", s.rawKept)
+                    put("out_of_memory_in", s.outOfMemoryIn?.name?.lowercase())
                     put("components", s.geometry.piecesOut)
                     put("atlas", if (s.atlasWidth > 0) "${s.atlasWidth}x${s.atlasHeight}" else "none")
                     put("clean_input_triangles", s.cleanInputTriangles)
@@ -148,6 +160,19 @@ internal object CleanModelCorpus {
         }
     }
 
+    /**
+     * [cloud] fused into a TSDF and meshed, with each step's time. In a function of its own, as
+     * the result screen's: nothing holds the TSDF past it, so the finish has its heap.
+     */
+    private fun mesh(cloud: DenseCloud): Triple<RerunMesh, Long, Long> {
+        val fuseStart = System.nanoTime()
+        val tsdf = RerunTsdf().apply { integrateSurfels(cloud) }
+        val fuseMs = since(fuseStart)
+        val meshStart = System.nanoTime()
+        val raw = RerunMarchingCubes.extractWhole(tsdf, RerunMarchingCubes.DEFAULT_MIN_WEIGHT).mesh
+        return Triple(raw, fuseMs, since(meshStart))
+    }
+
     private fun read(file: File): RerunCapturePack {
         if (file.isDirectory) {
             // A session folder as the app keeps it (`files/rerun/sessions/<id>/`), read as the app reads it.
@@ -172,8 +197,8 @@ internal object CleanModelCorpus {
     }
 
     /** The model as the export thumbnail draws it (vertex colours, the result screen's view). */
-    private fun thumbnail(glb: ByteArray, mesh: RerunMesh): ByteArray? {
-        val model = RerunScanModel(RerunScanModel.Kind.Mesh, glb, mesh.bounds(), mesh.triangleCount, mesh.vertexCount)
+    private fun thumbnail(glb: ByteArray, bounds: FloatArray, triangles: Int, vertices: Int): ByteArray? {
+        val model = RerunScanModel(RerunScanModel.Kind.Mesh, glb, bounds, triangles, vertices)
         val argb = RerunResultView.thumbnail(model, THUMBNAIL_PX, THUMBNAIL_FOV_DEGREES) ?: return null
         return JvmImages.png(argb, THUMBNAIL_PX, THUMBNAIL_PX)
     }

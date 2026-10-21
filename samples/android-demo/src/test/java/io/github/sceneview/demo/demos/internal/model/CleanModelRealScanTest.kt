@@ -204,7 +204,7 @@ class CleanModelRealScanTest {
         val rawGlb = RerunMeshGlb.write(raw)
         val result = CleanModel.build(raw, RealScanRoom.modelPhotos(furnished), JvmAtlasEncoder)
         val stats = result.stats
-        val model = result.model
+        val model = checkNotNull(result.model) { "out of memory in ${stats.outOfMemoryIn}" }
         val finalSurface = Surface(model.positions, model.texturedIndices + model.plainIndices)
         val rawSurface = Surface(raw.positions, raw.indices)
         val excluded: (Float, Float, Float) -> Boolean = if (furnished) ::nearFurniture else { _, _, _ -> false }
@@ -566,8 +566,9 @@ object HeapCappedFinish {
         val start = System.nanoTime()
         val result = CleanModel.build(raw, RealScanRoom.modelPhotos(furnished = true), JvmAtlasEncoder, consume = true, rawGlb = rawGlb)
         val ms = (System.nanoTime() - start) / NANOS_PER_MS
+        // Out of memory, the finish gives the raw surface back: that is no finish within the heap.
         println(
-            "$FINISHED $rawTriangles -> ${result.stats.finalTriangles} triangles, " +
+            "${if (result.stats.rawKept) "RAW SURFACE KEPT, out of memory in ${result.stats.outOfMemoryIn}:" else FINISHED} $rawTriangles -> ${result.stats.finalTriangles} triangles, " +
                 "glb ${result.glb.size / MB.toFloat()} MB (raw ${rawGlb.size / MB.toFloat()} MB), " +
                 "peak used ${peak.get() / MB} MB of $HEAP_MB, $ms ms; held: app ${app.size / MB} MB, " +
                 "tsdf ${tsdfBytes / MB} MB ${if (tsdf != null) "held" else "let go"}, cloud ${cloud.count} points; " +

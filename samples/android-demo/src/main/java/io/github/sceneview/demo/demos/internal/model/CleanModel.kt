@@ -22,17 +22,17 @@ internal data class CleanModelStats(
     val atlasWidth: Int,
     val atlasHeight: Int,
     val glbBytes: Int,
-    /** The raw surface's own `.glb` binary: the finished model's [glbBytes] never pass it. */
+    /** The most the finished `.glb` weighs, [CleanModel.MAX_GLB_BYTES]. */
     val glbLimitBytes: Int,
     /** How many times the atlas was halved to keep the `.glb` within [glbLimitBytes]. */
     val atlasHalvings: Int,
     /** Whether the texture was dropped, then the budget lowered, to keep within [glbLimitBytes]. */
     val glbGuarded: Boolean,
     /**
-     * The finished model still outweighed the raw surface once the budget was down to
-     * [CleanModel.MIN_GUARD_TRIANGLES]: the raw surface's own `.glb` is the result instead.
+     * The stage the heap ran out in, `null` if none did: the result is then the raw surface's own
+     * `.glb` ([rawKept]), and the stats stop at that stage.
      */
-    val rawKept: Boolean,
+    val outOfMemoryIn: CleanModel.Stage?,
     val prepareMs: Long,
     val cleanMs: Long,
     val simplifyMs: Long,
@@ -40,13 +40,16 @@ internal data class CleanModelStats(
     val writeMs: Long,
 ) {
     val totalMs: Long get() = prepareMs + cleanMs + simplifyMs + textureMs + writeMs
+
+    /** The finish ran out of memory ([outOfMemoryIn]): the raw surface's `.glb` is the result. */
+    val rawKept: Boolean get() = outOfMemoryIn != null
 }
 
 /**
- * The finished model's [glb], and the [model] it was written from — unless [CleanModelStats.rawKept]:
- * [glb] is then the raw surface's own, lighter than anything the finish made.
+ * The finished model's [glb], and the [model] it was written from — `null` when the finish ran
+ * out of memory ([CleanModelStats.rawKept]): [glb] is then the raw surface's own.
  */
-internal class CleanModelResult(val glb: ByteArray, val model: ModelMesh, val stats: CleanModelStats)
+internal class CleanModelResult(val glb: ByteArray, val model: ModelMesh?, val stats: CleanModelStats)
 
 /**
  * The finished model of a scan, from the marching cubes' raw surface: brought within what
@@ -55,14 +58,18 @@ internal class CleanModelResult(val glb: ByteArray, val model: ModelMesh, val st
  * ([PhotoTexturing]), its normals split at creases ([ModelAssembly]), and written as a GLB
  * ([ModelGlb]). Blocking CPU work, for a worker thread; [progress] (0–1) may throw to stop it.
  *
- * The finished `.glb` never weighs more than the raw surface's own: over it, the atlas is halved,
- * then the texture dropped, then the budget halved down to [MIN_GUARD_TRIANGLES]; a model still
- * heavier gives way to the raw surface's `.glb` ([CleanModelStats.rawKept]). With `consume`, the
- * raw surface's arrays are worked in instead of copied — for a caller that already wrote its
- * `.glb`, passed as `rawGlb`, and is done with them.
+ * The finished `.glb` weighs at most [MAX_GLB_BYTES]: over it, the atlas is halved, then the
+ * texture dropped, then the budget halved down to [MIN_GUARD_TRIANGLES]. A finish the heap cannot
+ * hold gives the raw surface back — its own `.glb`, no [CleanModelResult.model] — and says in
+ * which [Stage] it ran out ([CleanModelStats.outOfMemoryIn]): a phone too small for the scan still
+ * keeps it as scanned. With `consume`, the raw surface's arrays are worked in instead of copied —
+ * for a caller that already wrote its `.glb`, passed as `rawGlb`, and is done with them.
  */
 internal object CleanModel {
-    @Suppress("LongMethod", "LongParameterList")
+    /** The finish's stages, in order: what [CleanModelStats.outOfMemoryIn] names. */
+    enum class Stage { Prepare, Clean, Simplify, Texture, Write }
+
+    @Suppress("LongParameterList")
     fun build(
         raw: RerunMesh,
         photos: ModelPhotos?,
@@ -74,46 +81,63 @@ internal object CleanModel {
     ): CleanModelResult {
         require(raw.triangleCount > 0) { "a model needs triangles" }
         require(!consume || rawGlb != null) { "a consumed raw surface needs its .glb written first" }
-        var mark = System.nanoTime()
-        fun lap(): Long = ((System.nanoTime() - mark) / NANOS_PER_MS).also { mark = System.nanoTime() }
         val rawTriangles = raw.triangleCount
         val rawVertices = raw.vertexCount
-        val glbLimit = RerunMeshGlb.binaryBytes(raw)
+        val reached = Reached()
+        // Out of memory, what the finish held goes with its frame: the raw surface's .glb fits again.
+        val finished = runCatching { finish(raw, photos, encoder, targetTriangles, consume, reached, progress) }
+        val failure = finished.exceptionOrNull()
+        if (failure != null && failure !is OutOfMemoryError) throw failure
+        return finished.getOrNull() ?: rawSurface(rawGlb ?: RerunMeshGlb.write(raw), rawTriangles, rawVertices, reached)
+    }
+
+    @Suppress("LongMethod", "LongParameterList")
+    private fun finish(
+        raw: RerunMesh,
+        photos: ModelPhotos?,
+        encoder: AtlasEncoder?,
+        targetTriangles: Int,
+        consume: Boolean,
+        reached: Reached,
+        progress: (Float) -> Unit,
+    ): CleanModelResult {
+        val rawTriangles = raw.triangleCount
         val input = prepare(raw, consume) { progress(it * PREPARE_SHARE) }
-        val cleanInputTriangles = input.triangleCount
-        val prepareMs = lap()
+        reached.cleanInputTriangles = input.triangleCount
+        reached.lap(Stage.Clean)
         val (clean, geometry) = CleanGeometry.clean(input) { progress(PREPARE_SHARE + it * CLEAN_SHARE) }
-        val cleanMs = lap()
+        reached.geometry = geometry
+        reached.lap(Stage.Simplify)
         val textured = photos != null && photos.photos.isNotEmpty() && encoder != null
         val simplifyTarget = if (textured) minOf(targetTriangles, TEXTURED_TARGET_TRIANGLES) else targetTriangles
         val ceiling = errorCeiling(geometry)
         val shape = simplify(clean, textured, targetTriangles, ceiling) { progress(BEFORE_SIMPLIFY + it * SIMPLIFY_SHARE) }
-        var simplifyMs = lap()
+        reached.lap(Stage.Texture)
         val tried = if (textured) {
             PhotoTexturing.texture(shape, photos!!) { progress(BEFORE_TEXTURE + it * TEXTURE_SHARE) }
         } else {
             null
         }
-        var textureMs = lap()
         // A shape simplified for a texture keeps only coarse colours: worth it only if the photos
         // cover most of it. Photos that failed to decode, wrong poses, a corner of the room seen —
         // the colours are simplified again, edges kept, as without photos.
         val covered = tried != null && tried.stats.texturedShare >= MIN_TEXTURED_SHARE
         var texture = tried.takeIf { covered }
         var simplified = if (textured && !covered) {
+            reached.lap(Stage.Simplify)
             simplify(clean, textured = false, targetTriangles, ceiling) { progress(BEFORE_TEXTURE + it * TEXTURE_SHARE) }
-                .also { simplifyMs += lap() }
+                .also { reached.lap(Stage.Texture) }
         } else {
             shape
         }
         var model = ModelAssembly.assemble(simplified, texture)
-        textureMs += lap()
+        reached.lap(Stage.Write)
         var glb = ModelGlb.write(model, encoder)
-        // Never heavier than the raw surface: the seams' duplicated vertices and the atlas are
-        // paid for by a coarser atlas first, then by the vertex colours alone, then by fewer faces.
-        // Each step reports, so a finish left meanwhile stops there.
+        // Within the cap: an atlas that compresses badly is paid for by a coarser atlas first,
+        // then by the vertex colours alone, then by fewer faces. Each step reports, so a finish
+        // left meanwhile stops there.
         var halvings = 0
-        while (glb.size > glbLimit && texture != null && halvings < MAX_ATLAS_HALVINGS) {
+        while (glb.size > MAX_GLB_BYTES && texture != null && halvings < MAX_ATLAS_HALVINGS) {
             progress(BEFORE_WRITE)
             texture = texture.halved()
             model = model.withTexture(texture)
@@ -121,8 +145,8 @@ internal object CleanModel {
             halvings++
         }
         var guardTarget = minOf(targetTriangles, simplified.triangleCount)
-        val guarded = glb.size > glbLimit
-        while (glb.size > glbLimit && (texture != null || guardTarget >= MIN_GUARD_TRIANGLES)) {
+        val guarded = glb.size > MAX_GLB_BYTES
+        while (glb.size > MAX_GLB_BYTES && (texture != null || guardTarget >= MIN_GUARD_TRIANGLES)) {
             progress(BEFORE_WRITE)
             if (texture == null) guardTarget /= 2
             texture = null
@@ -130,44 +154,88 @@ internal object CleanModel {
             model = ModelAssembly.assemble(simplified, null)
             glb = ModelGlb.write(model, encoder)
         }
-        // A few faces left and still over: the vertex layout outweighs the raw one's. The raw
-        // surface is the lighter model then — its own .glb, compared whole.
-        val own = if (glb.size > glbLimit) {
-            progress(BEFORE_WRITE)
-            (rawGlb ?: RerunMeshGlb.write(raw)).takeIf { it.size < glb.size }
-        } else {
-            null
-        }
-        if (own != null) glb = own
-        val writeMs = lap()
+        reached.lap(Stage.Write)
         progress(1f)
         return CleanModelResult(
             glb,
             model,
             CleanModelStats(
                 rawTriangles = rawTriangles,
-                cleanInputTriangles = cleanInputTriangles,
+                cleanInputTriangles = reached.cleanInputTriangles,
                 geometry = geometry,
                 simplifyTarget = if (texture != null) simplifyTarget else targetTriangles,
                 simplifiedTriangles = simplified.triangleCount,
-                finalTriangles = if (own != null) rawTriangles else model.triangleCount,
-                finalVertices = if (own != null) rawVertices else model.vertexCount,
+                finalTriangles = model.triangleCount,
+                finalVertices = model.vertexCount,
                 texture = texture?.stats,
                 droppedTextureShare = tried?.stats?.texturedShare?.takeIf { texture == null },
                 atlasWidth = model.texture?.width ?: 0,
                 atlasHeight = model.texture?.height ?: 0,
                 glbBytes = glb.size,
-                glbLimitBytes = glbLimit,
+                glbLimitBytes = MAX_GLB_BYTES,
                 atlasHalvings = halvings,
                 glbGuarded = guarded,
-                rawKept = own != null,
-                prepareMs = prepareMs,
-                cleanMs = cleanMs,
-                simplifyMs = simplifyMs,
-                textureMs = textureMs,
-                writeMs = writeMs,
+                outOfMemoryIn = null,
+                prepareMs = reached.ms(Stage.Prepare),
+                cleanMs = reached.ms(Stage.Clean),
+                simplifyMs = reached.ms(Stage.Simplify),
+                textureMs = reached.ms(Stage.Texture),
+                writeMs = reached.ms(Stage.Write),
             ),
         )
+    }
+
+    /** The raw surface as the result, its [glb] written before the finish ran out of memory. */
+    private fun rawSurface(glb: ByteArray, triangles: Int, vertices: Int, reached: Reached): CleanModelResult {
+        val stage = reached.stage
+        reached.lap(stage)
+        return CleanModelResult(
+            glb,
+            null,
+            CleanModelStats(
+                rawTriangles = triangles,
+                cleanInputTriangles = reached.cleanInputTriangles,
+                geometry = reached.geometry ?: CleanGeometryStats(0, 0, 0, 0, 0, 0, 0, 0f, 0),
+                simplifyTarget = 0,
+                simplifiedTriangles = 0,
+                finalTriangles = triangles,
+                finalVertices = vertices,
+                texture = null,
+                droppedTextureShare = null,
+                atlasWidth = 0,
+                atlasHeight = 0,
+                glbBytes = glb.size,
+                glbLimitBytes = MAX_GLB_BYTES,
+                atlasHalvings = 0,
+                glbGuarded = false,
+                outOfMemoryIn = stage,
+                prepareMs = reached.ms(Stage.Prepare),
+                cleanMs = reached.ms(Stage.Clean),
+                simplifyMs = reached.ms(Stage.Simplify),
+                textureMs = reached.ms(Stage.Texture),
+                writeMs = reached.ms(Stage.Write),
+            ),
+        )
+    }
+
+    /** How far a finish got — its stage, what it measured so far, each stage's time — for when it runs out of memory. */
+    private class Reached {
+        var stage = Stage.Prepare
+            private set
+        var cleanInputTriangles = 0
+        var geometry: CleanGeometryStats? = null
+        private val times = LongArray(Stage.entries.size)
+        private var mark = System.nanoTime()
+
+        /** Counts the time since the last lap to the current stage's, then moves on to [next]. */
+        fun lap(next: Stage) {
+            val now = System.nanoTime()
+            times[stage.ordinal] += (now - mark) / NANOS_PER_MS
+            mark = now
+            stage = next
+        }
+
+        fun ms(stage: Stage): Long = times[stage.ordinal]
     }
 
     /**
@@ -312,8 +380,18 @@ internal object CleanModel {
     /** An atlas halved twice is a quarter as fine: past that, the vertex colours are the lighter model. */
     private const val MAX_ATLAS_HALVINGS = 2
 
-    /** The fewest triangles the size guard brings a model down to. */
+    /** The fewest triangles the size guard brings a model down to: well under [MAX_GLB_BYTES] untextured. */
     const val MIN_GUARD_TRIANGLES = 2_000
+
+    /**
+     * The most a finished `.glb` weighs: 8 MB. A room textured as the finish makes it — a
+     * 2048-texel atlas, [TEXTURED_TARGET_TRIANGLES] faces — weighs about 2.5 MB, so the cap leaves
+     * an atlas that compresses badly three times that room before it is halved. It bounds what a
+     * share sends and a kept scan stores, and the renderer's copy stays small next to a phone's
+     * heap. Not the raw surface's own weight: a small room's raw surface weighs less than its
+     * atlas alone, and the texture is what the finish is for.
+     */
+    const val MAX_GLB_BYTES = 8 * 1024 * 1024
 
     /**
      * A textured room needs fewer faces than a vertex-coloured one: the photos carry the detail,
