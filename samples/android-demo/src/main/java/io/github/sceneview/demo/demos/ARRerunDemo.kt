@@ -241,6 +241,7 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
     LaunchedEffect(engine, materialLoader) { warmUpReplay(engine, materialLoader) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    ForgetRoomSurveysOnExit()
     // Replay a recorded ARCore dataset when the device-QA harness deep-links this demo
     // with `--es ar_playback_file <path>` (#1576): that harness drives the live path.
     val arPlaybackDataset = rememberArPlaybackDataset()
@@ -564,14 +565,15 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
             }
         }
     }
-    // A room of the home just saved: kept in the summary, then measured off the main thread.
+    // A room of the home just saved: kept in the summary, then measured off the main thread, by
+    // the same measure the export sheet and the plan wait on for this scan.
     val onRoomSaved = { scan: RerunReplayMedia, title: String, id: String? ->
         sessionsVersion++
         val number = home.nextNumber
         home = home.add(id, title)
         val measuring = home.id
         scope.launch {
-            val survey = withContext(Dispatchers.Default) { surveyOf(scan) }
+            val survey = measureRoom(scan)
             // A new home started meanwhile: this survey is the old one's, never the new Room's.
             home = home.measuredIn(measuring, number, survey)
         }
