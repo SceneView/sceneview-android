@@ -74,6 +74,9 @@ internal object CleanModelCorpus {
         File(out, "before.glb").writeBytes(before)
         thumbnail(before, rawBounds, rawTriangles, rawVertices)?.let { File(out, "before.png").writeBytes(it) }
 
+        // The floor as scanned, measured before a big scan's finish takes its raw surface over.
+        val rawFloor = FloorArea.of(raw.mesh.positions, raw.mesh.indices)
+
         // As the result screen finishes it: a big scan handed over and let go, its .glb written first.
         val photos = ModelPhotos.of(capture.trace, capture.manifest.lens) { path -> decode(capture, path) }
         val result = if (rawTriangles >= RAW_FIRST_TRIANGLES) {
@@ -91,6 +94,9 @@ internal object CleanModelCorpus {
         }
         afterThumbnail?.let { File(out, "after.png").writeBytes(it) }
         val problems = GlbCheck.problems(result.glb)
+        val finalFloor = result.model?.takeIf { rawFloor.area > 0f }?.let {
+            FloorArea.of(it.positions, it.texturedIndices + it.plainIndices, rawFloor.height)
+        }
         return buildJsonObject {
             put("file", file.name)
             put("dense_points", cloud.count)
@@ -127,6 +133,13 @@ internal object CleanModelCorpus {
                     put("clean_input_triangles", s.cleanInputTriangles)
                     put("simplify_target", s.simplifyTarget)
                     s.droppedTextureShare?.let { put("dropped_texture_share", it) }
+                    // The share of the model the photos texture, none when its texture was dropped.
+                    put("textured_share", s.texture?.texturedShare ?: 0f)
+                    // The finished floor's area over the raw one's, and the holes it has more.
+                    finalFloor?.let { floor ->
+                        put("floor_area_ratio", floor.area / rawFloor.area)
+                        put("floor_holes_added", floor.innerLoops - rawFloor.innerLoops)
+                    }
                     put("prepare_ms", s.prepareMs)
                     put("clean_ms", s.cleanMs)
                     put("simplify_ms", s.simplifyMs)

@@ -16,6 +16,21 @@ class RerunModelStatusTest {
     }
 
     @Test
+    fun `a raw surface finished again as its scan reopens says so, not the first finish's line`() {
+        // Kept for running out of memory, with attempts left: finished again behind it.
+        val again = mesh(finished = false, outOfMemoryInHeap = HEAP)
+        assertTrue(again.retriesFinish)
+        val status = ModelStatus.of(again, settled = false)
+        assertTrue("says $status", status != null && status != ModelStatus.Finishing && status != ModelStatus.Creating)
+        assertTrue("$status keeps the raw lines' room", status in ModelStatus.RAW_LINES)
+        val slot = checkNotNull(ModelStatus.slot(again, settled = false, rawShownFirst = true))
+        assertEquals(status, slot.status)
+        assertTrue(slot.visible)
+        val ends = listOf(ModelStatus.Finished, ModelStatus.RawOutOfMemory, ModelStatus.RawUnfinished)
+        assertTrue("reserved: ${slot.reserve}", slot.reserve.containsAll(ends))
+    }
+
+    @Test
     fun `the raw surface left in the finished model's place never goes without a word`() {
         val outOfMemory = mesh(finished = false, outOfMemoryInHeap = HEAP)
         assertEquals(ModelStatus.RawOutOfMemory, ModelStatus.of(outOfMemory, settled = true))

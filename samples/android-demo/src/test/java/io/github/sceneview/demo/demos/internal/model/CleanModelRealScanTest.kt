@@ -85,6 +85,30 @@ class CleanModelRealScanTest {
     }
 
     @Test
+    fun `a room photographed along two of its walls keeps its texture where the photos saw it`() {
+        // The long walls' photos only: under half the room seen, as the largest real room was.
+        // What they saw is textured; the rest keeps its vertex colours.
+        val all = RealScanRoom.modelPhotos(furnished = false)
+        val photos = ModelPhotos(all.lens, all.photos.filterIndexed { i, _ -> i in LONG_WALL_PHOTOS })
+        val result = CleanModel.build(RealScanRoom.raw(furnished = false), photos, JvmAtlasEncoder)
+        val stats = result.stats
+        val model = checkNotNull(result.model) { "out of memory in ${stats.outOfMemoryIn}" }
+        val share = stats.texture?.texturedShare ?: stats.droppedTextureShare
+        val report = "long walls photographed: ${photos.photos.size}/${all.photos.size} photos" +
+            ", textured ${stats.texture?.let { percent(it.texturedShare) } ?: "none"}" +
+            ", dropped at ${stats.droppedTextureShare?.let { percent(it) } ?: "-"}" +
+            ", ${model.texturedIndices.size / 3} textured and ${model.plainIndices.size / 3} plain triangles" +
+            ", glb ${result.glb.size / KB} KB"
+        println(report)
+        assertTrue("the photos saw most of the room: no partial case | $report", share != null && share < PARTLY_SEEN)
+        assertTrue("the texture was dropped | $report", stats.texture != null)
+        assertTrue("nothing textured | $report", model.texturedIndices.isNotEmpty())
+        assertTrue("nothing left to its vertex colours | $report", model.plainIndices.isNotEmpty())
+        assertTrue("glb ${result.glb.size} over the cap | $report", result.glb.size <= MAX_GLB_BYTES)
+        assertTrue("glb: ${GlbCheck.problems(result.glb)} | $report", GlbCheck.problems(result.glb).isEmpty())
+    }
+
+    @Test
     fun `a model over the cap comes within it, however heavy its raw surface`() {
         // An atlas that compresses as badly as a noisy photo's: a room's raw surface weighs more
         // than the textured model, and the file must still stay within the cap.
@@ -165,6 +189,10 @@ class CleanModelRealScanTest {
     fun `a scan meshed to the most a 192 MB heap takes finishes within it`() = finishesWithinHeap(HEAP_RAW_TRIANGLES)
 
     @Test
+    fun `a scan meshed to the most a 192 MB heap takes finishes again within it`() =
+        finishesWithinHeap(HEAP_RAW_TRIANGLES, again = true)
+
+    @Test
     fun `the extraction cap stays within what a heap was seen to finish`() {
         val phone = CleanModel.maxRawTriangles(HeapCappedFinish.HEAP_MB * MB)
         assertTrue("192 MB meshes $phone, over the $HEAP_RAW_TRIANGLES finished in it", phone <= HEAP_RAW_TRIANGLES)
@@ -180,8 +208,10 @@ class CleanModelRealScanTest {
      * plus, while it finishes, the copy the screen hands the renderer to show the raw surface
      * meanwhile — ART allocates a direct buffer in its Java heap, which the child does not hold
      * then. At the swap the child holds it all: both models, the finished one's copy and its ground.
+     * [again]: the raw surface a finish ran out of memory on, read back with its scan and shown
+     * while it finishes again — no second `.glb` of it beside the one shown.
      */
-    private fun finishesWithinHeap(triangles: Int) {
+    private fun finishesWithinHeap(triangles: Int, again: Boolean = false) {
         val log = folder.newFile("finish.log")
         val java = File(File(System.getProperty("java.home"), "bin"), "java").path
         val classpath = (
@@ -193,6 +223,7 @@ class CleanModelRealScanTest {
         val process = ProcessBuilder(
             java, "-Xmx${HeapCappedFinish.HEAP_MB}m", "-XX:+UseSerialGC", "-Djava.awt.headless=true",
             "-Xlog:gc:file=${gcLog.path}:timemillis", "-cp", classpath, HeapCappedFinish::class.java.name, "$triangles",
+            if (again) HeapCappedFinish.AGAIN else HeapCappedFinish.FIRST,
         ).redirectErrorStream(true).redirectOutput(log).start()
         val done = process.waitFor(CHILD_TIMEOUT_S, TimeUnit.SECONDS)
         if (!done) process.destroyForcibly().waitFor()
@@ -225,6 +256,8 @@ class CleanModelRealScanTest {
                 "${peak / MB} MB of ${bar / MB} MB",
         )
         assertTrue("live peak ${peak / MB} MB over ${bar / MB} MB: $tail", peak <= bar)
+        val second = Regex("${HeapCappedFinish.SECOND_GLB}(\\d+)").find(output)?.groupValues?.get(1)?.toLong()
+        assertEquals("a second raw .glb beside the one shown, of ${shown / MB} MB: $tail", 0L, second)
     }
 
     /** A full collection: when it ended, and what the heap held after it. */
@@ -272,6 +305,10 @@ class CleanModelRealScanTest {
         val rawLayers = layers(rawSurface)
         val finalLayers = layers(finalSurface)
         val texture = stats.texture
+        // The floor the eye reads: as much of it as the scan saw, and no hole the finish opened.
+        val rawFloor = FloorArea.of(raw.positions, raw.indices, RealScanRoom.ROOM.y0)
+        val finalFloor = FloorArea.of(model.positions, model.texturedIndices + model.plainIndices, RealScanRoom.ROOM.y0)
+        val floorRatio = finalFloor.area / rawFloor.area
 
         val report = StringBuilder()
         report.append(if (furnished) "furnished room" else "bare room").append(if (reliefs) " with a TV and a door" else "")
@@ -287,8 +324,11 @@ class CleanModelRealScanTest {
             .append(", texture ${stats.textureMs}, write ${stats.writeMs} = ${stats.totalMs} ms")
             .append("; walls rms ${mm(rawWalls.rms)} -> ${mm(finalWalls.rms)} mm (worst ${mm(finalWalls.worst)})")
             .append("; layers ${ratio(rawLayers)} -> ${ratio(finalLayers)}")
+            .append("; floor ${"%.3f".format(floorRatio)} of the raw one's area, holes ${rawFloor.innerLoops} -> ${finalFloor.innerLoops}")
 
         val problems = mutableListOf<String>()
+        if (floorRatio !in MIN_FLOOR_KEPT..MAX_FLOOR_GROWN) problems += "floor ${"%.3f".format(floorRatio)} of the raw one's"
+        if (finalFloor.innerLoops > rawFloor.innerLoops) problems += "floor holes ${rawFloor.innerLoops} -> ${finalFloor.innerLoops}"
         if (raw.triangleCount !in MIN_RAW_TRIANGLES..MAX_RAW_TRIANGLES) problems += "raw ${raw.triangleCount} triangles"
         if (stats.finalTriangles > MAX_FINAL_TRIANGLES) problems += "${stats.finalTriangles} triangles"
         // The file shared and kept: within the cap, seams and atlas counted, and textured.
@@ -577,6 +617,13 @@ class CleanModelRealScanTest {
         const val MAX_WALL_RMS_M = 0.003f
         const val MAX_WALL_WORST_M = 0.005f
         const val MAX_LAYERS = 1.3f
+
+        /**
+         * The finished floor's area over the raw one's: none of what the scan saw lost, and no more
+         * gained than the small holes of its lace filled.
+         */
+        const val MIN_FLOOR_KEPT = 0.97f
+        const val MAX_FLOOR_GROWN = 1.25f
         const val MIN_CURTAIN_KEPT = 0.7f
         const val MIN_SEAT_KEPT = 0.6f
 
@@ -632,6 +679,12 @@ class CleanModelRealScanTest {
         /** The most a finished `.glb` weighs. */
         const val MAX_GLB_BYTES = 8 * 1024 * 1024
 
+        /** [RealScanRoom.poses]' photos of the walls x = ±2.5, the room's long walls. */
+        val LONG_WALL_PHOTOS = 20..47
+
+        /** Under this share of the room photographed, a model is only partly seen. */
+        const val PARTLY_SEEN = 0.5f
+
         /** A small room's raw surface: about 0.6 MB as a `.glb`, under its textured model's weight. */
         const val SMALL_ROOM_TRIANGLES = 20_000
 
@@ -686,7 +739,14 @@ object HeapCappedFinish {
     const val RAW_GLB = "rawGlbBytes="
     const val STAGE = "STAGE "
     const val SWAP = "swap"
+    const val SECOND_GLB = "secondRawGlbBytes="
     const val HEAP_MB = 192
+
+    /** The finish's first run, the raw surface written as it is meshed; or [AGAIN]. */
+    const val FIRST = "first"
+
+    /** The finish run again on the raw surface a finish ran out of memory on, read back and shown. */
+    const val AGAIN = "again"
 
     /** The furnished room as it is, not tiled. */
     const val ROOM = 0
@@ -703,24 +763,30 @@ object HeapCappedFinish {
     /** The copies of the room stand side by side along x, further apart than it is wide. */
     private const val PITCH_M = 5.6f
 
-    /** [args]: the raw surface's triangles, [ROOM] for the furnished room's own. */
+    /** [args]: the raw surface's triangles, [ROOM] for the furnished room's own; then [FIRST] or [AGAIN]. */
     @JvmStatic
     fun main(args: Array<String>) {
         val app = ByteArray(APP_BYTES)
         val scanned = scanned(args.firstOrNull()?.toInt() ?: ROOM)
+        val again = args.getOrNull(1) == AGAIN
         val raw = scanned.surface
         val rawTriangles = raw.triangleCount
+        val runtime = Runtime.getRuntime()
         val cloud = cloudOf(raw.mesh, minOf((rawTriangles * CLOUD_POINTS_PER_TRIANGLE).toInt(), DenseFusion.MAX_POINTS))
-        val rawGlb = RerunMeshGlb.write(raw.mesh)
-        // The raw surface on screen, and its ground if the screen reads one off it meanwhile.
+        // The raw surface on screen, and its ground if the screen reads one off it meanwhile: the
+        // one meshed now, or, finishing again, the one kept with the scan, read back.
+        val shownGlb = RerunMeshGlb.write(raw.mesh)
         val shownRaw = RerunScanModel(
-            RerunScanModel.Kind.Mesh, rawGlb, FloatArray(BOUNDS), rawTriangles, raw.mesh.vertexCount, finished = false,
+            RerunScanModel.Kind.Mesh, shownGlb, FloatArray(BOUNDS), rawTriangles, raw.mesh.vertexCount, finished = false,
+            outOfMemoryInHeap = runtime.maxMemory().takeIf { again },
         )
+        // The .glb the finish works beside, as the screen's build writes it: finishing again, the
+        // surface is meshed again from the scan and written a second time.
+        val rawGlb = if (again) RerunMeshGlb.write(raw.mesh) else shownGlb
         val rawGround = AtomicReference<Any?>()
         val decoding = groundSource(shownRaw, settled = false)?.let { model ->
             thread(isDaemon = true) { rawGround.set(groundOf(model.glb)) }
         }
-        val runtime = Runtime.getRuntime()
         val peak = AtomicLong()
         thread(isDaemon = true) {
             while (true) {
@@ -759,7 +825,7 @@ object HeapCappedFinish {
                 "textured ${result.stats.texture != null}, glb ${result.glb.size / MB.toFloat()} MB (raw ${rawGlb.size / MB.toFloat()} MB), " +
                 "peak used ${peak.get() / MB} MB of $HEAP_MB, $ms ms; held: app ${app.size / MB} MB, " +
                 "tsdf ${scanned.tsdfBytes / MB} MB ${if (scanned.tsdf != null) "held" else "let go"}, cloud ${cloud.count} points; " +
-                "$RAW_GLB${rawGlb.size}",
+                "$RAW_GLB${shownGlb.size} $SECOND_GLB${if (rawGlb === shownGlb) 0 else rawGlb.size}",
         )
         System.out.flush()
         exitProcess(0)

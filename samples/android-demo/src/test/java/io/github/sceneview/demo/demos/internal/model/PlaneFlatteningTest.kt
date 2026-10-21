@@ -17,11 +17,12 @@ import kotlin.math.sqrt
 /**
  * Which planes [PlaneFlattening] merges, and what it leaves standing off a wall.
  *
- * The first three build the mesh by hand, flat sheets of 2.5 cm quads with no noise, so a test
- * sees the merge alone: a door set back into a wall that was meshed twice, a door beside a wall
- * meshed in two offset pieces, a panel tilted by a degree far from the origin. The last two fuse a
- * room through the real TSDF: a picture frame 3 cm off a wall, across the footprint grid, keeps
- * its relief; a wall bulging by as much is flattened all the same.
+ * The first four build the mesh by hand, flat sheets of 2.5 cm quads with no noise, so a test
+ * sees the merge alone: a door set back into a wall that was meshed twice, the same door in pieces
+ * beside a wall whose second pass pulls its fitted plane towards it, a door beside a wall meshed
+ * in two offset pieces, a panel tilted by a degree far from the origin. The others fuse rooms
+ * through the real TSDF: picture frames 3 cm off a wall — 40 × 30 cm, 30 × 20 cm and A4, across
+ * the footprint grid — keep their relief; a wall bulging by as much is flattened all the same.
  */
 class PlaneFlatteningTest {
     @Test
@@ -41,6 +42,42 @@ class PlaneFlatteningTest {
         val doorPlane = onePlane(result, sheets.range(door), "door")
         assertNotEquals("the door, 3.5 cm back, has a plane of its own: ${describe(result)}", wallPlane, doorPlane)
         val drift = worstDrift(mesh, sheets.range(door)) { _, _ -> DOOR_Z }
+        assertTrue("the door moved ${cm(drift)} cm off its place", drift < FLAT_M)
+    }
+
+    @Test
+    fun `a door in pieces set back into a wall meshed twice stays off it`() {
+        // The second passes, 4 cm behind, pull the wall's fitted plane 2 cm towards the door: the
+        // door's pieces, each under a region's size, stand 3.5 cm off the wall itself.
+        val sheets = Sheets()
+        val wall = sheets.add(0f, 0f, 5f, 2.6f, hole = Rect(3f, 0f, 3.9f, DOOR_TOP)) { _, _ -> 0f }
+        val passes = listOf(
+            sheets.add(0.2f, 0f, 2.9f, 2.6f) { _, _ -> SECOND_PASS_Z },
+            sheets.add(4f, 0f, 4.9f, 2.6f) { _, _ -> SECOND_PASS_Z },
+        )
+        val pieces = (0 until DOOR_PIECES).flatMap { i ->
+            (0 until DOOR_PIECES).map { j ->
+                val x0 = 3f + i * DOOR_PIECE_W
+                val y0 = j * DOOR_PIECE_H
+                sheets.add(x0, y0, x0 + DOOR_PIECE_W, y0 + DOOR_PIECE_H) { _, _ -> DOOR_Z }
+            }
+        }
+        val mesh = sheets.mesh()
+        val result = PlaneFlattening.flatten(mesh)
+        val wallPlane = onePlane(result, sheets.range(wall), "wall")
+        for (pass in passes) {
+            assertEquals(
+                "the second pass, 4 cm behind, is the same wall: ${describe(result)}",
+                setOf(wallPlane),
+                planesOf(result, sheets.range(pass)),
+            )
+        }
+        val pressed = pieces.filter { wallPlane in planesOf(result, sheets.range(it)) }
+        assertTrue(
+            "${pressed.size} of the door's ${pieces.size} pieces, 3.5 cm back, pressed onto the wall: ${describe(result)}",
+            pressed.isEmpty(),
+        )
+        val drift = pieces.maxOf { piece -> worstDrift(mesh, sheets.range(piece)) { _, _ -> DOOR_Z } }
         assertTrue("the door moved ${cm(drift)} cm off its place", drift < FLAT_M)
     }
 
@@ -82,16 +119,39 @@ class PlaneFlatteningTest {
 
     @Test
     fun `a frame 3 cm off a wall, across the footprint grid, keeps its relief`() {
-        val before = frameRelief(scene)
+        val before = frameRelief(scene, FRAME, RING_M)
         assertTrue("the raw frame stands ${cm(before)} cm off the wall", before >= MIN_RELIEF_M)
         val mesh = prepared(scene)
         val coverage = frameCoverage(mesh)
         PlaneFlattening.flatten(mesh)
-        val after = frameRelief(mesh)
+        val after = frameRelief(mesh, FRAME, RING_M)
         assertTrue(
             "frame relief ${cm(before)} -> ${cm(after)} cm; $coverage",
             after >= MIN_RELIEF_KEPT * before,
         )
+    }
+
+    @Test
+    fun `a 30 x 20 cm frame 3 cm off a wall keeps its relief wherever it falls on the footprint grid`() =
+        smallFramesKeepTheirRelief(POSTCARD_FRAMES)
+
+    @Test
+    fun `an A4 frame 3 cm off a wall keeps its relief wherever it falls on the footprint grid`() =
+        smallFramesKeepTheirRelief(A4_FRAMES)
+
+    /** [frames], on [smallFrames]' wall at each of [OFFSETS]: each keeps its relief once flattened. */
+    private fun smallFramesKeepTheirRelief(frames: List<Box>) {
+        val mesh = prepared(smallFrames)
+        val before = frames.map { frameRelief(smallFrames, it, SMALL_RING_M) }
+        PlaneFlattening.flatten(mesh)
+        val after = frames.map { frameRelief(mesh, it, SMALL_RING_M) }
+        val figures = OFFSETS.indices.joinToString { i ->
+            "offset ${cm(OFFSETS[i])} cm: ${cm(before[i])} -> ${cm(after[i])} cm"
+        }
+        val flat = OFFSETS.indices.filter { before[it] < MIN_RELIEF_M }
+        assertTrue("raw frames under ${cm(MIN_RELIEF_M)} cm at ${flat.map { cm(OFFSETS[it]) }}: $figures", flat.isEmpty())
+        val flattened = OFFSETS.indices.filter { after[it] < MIN_RELIEF_KEPT * before[it] }
+        assertTrue("flattened at offsets ${flattened.map { cm(OFFSETS[it]) }} cm: $figures", flattened.isEmpty())
     }
 
     @Test
@@ -209,14 +269,14 @@ class PlaneFlatteningTest {
         return if (area == 0.0) Float.NaN else (sum / area).toFloat()
     }
 
-    /** How far the frame's face, [INSET_M] in from its edges, stands off the wall around it. */
-    private fun frameRelief(mesh: WorkMesh): Float {
+    /** How far [frame]'s face, [INSET_M] in from its edges, stands off the wall in a [ringM] ring around it. */
+    private fun frameRelief(mesh: WorkMesh, frame: Box, ringM: Float): Float {
         val face = meanDepth(mesh, Z) { x, y, _ ->
-            x in FRAME.x0 + INSET_M..FRAME.x1 - INSET_M && y in FRAME.y0 + INSET_M..FRAME.y1 - INSET_M
+            x in frame.x0 + INSET_M..frame.x1 - INSET_M && y in frame.y0 + INSET_M..frame.y1 - INSET_M
         }
         val around = meanDepth(mesh, Z) { x, y, _ ->
-            x in FRAME.x0 - RING_M..FRAME.x1 + RING_M && y in FRAME.y0 - RING_M..FRAME.y1 + RING_M &&
-                !(x in FRAME.x0 - INSET_M..FRAME.x1 + INSET_M && y in FRAME.y0 - INSET_M..FRAME.y1 + INSET_M)
+            x in frame.x0 - ringM..frame.x1 + ringM && y in frame.y0 - ringM..frame.y1 + ringM &&
+                !(x in frame.x0 - INSET_M..frame.x1 + INSET_M && y in frame.y0 - INSET_M..frame.y1 + INSET_M)
         }
         return face - around
     }
@@ -285,6 +345,13 @@ class PlaneFlatteningTest {
     private companion object {
         const val STEP = 0.025f
         const val DOOR_Z = -0.035f
+        const val DOOR_TOP = 2.025f
+        const val SECOND_PASS_Z = -0.04f
+
+        /** The door in 3 × 3 pieces, each 0.2 m², under a region's 0.25 m². */
+        const val DOOR_PIECES = 3
+        const val DOOR_PIECE_W = 0.3f
+        const val DOOR_PIECE_H = 0.675f
 
         /** tan 1°. */
         const val TILT = 0.0175f
@@ -298,6 +365,9 @@ class PlaneFlatteningTest {
         const val NEAR_M = 0.06f
         const val INSET_M = 0.05f
         const val RING_M = 0.25f
+
+        /** A small frame's ring of wall: clear of its neighbours, 20 cm apart and more. */
+        const val SMALL_RING_M = 0.15f
         const val MIN_RELIEF_M = 0.02f
 
         /** As much of the relief as the TV and the door of the real-scan room must keep. */
@@ -334,6 +404,34 @@ class PlaneFlatteningTest {
         fun bulge(y: Float, z: Float): Float {
             val r = bulgeRadius(y, z)
             return if (r >= 1f) 0f else BULGE_M * 0.5f * (1f + cos(PI.toFloat() * r))
+        }
+
+        /** How far each small frame's corner sits from a footprint cell's corner, along x and y. */
+        val OFFSETS = floatArrayOf(0f, 0.025f, 0.05f, 0.075f)
+
+        /** 30 × 20 cm frames, 3 cm deep, one per offset, half a metre apart. */
+        val POSTCARD_FRAMES = OFFSETS.mapIndexed { k, off ->
+            val x0 = 0.3f + 0.5f * k + off
+            val y0 = 0.8f + off
+            Box(x0, y0, -0.05f, x0 + 0.3f, y0 + 0.2f, 0.03f)
+        }
+
+        /** A4 frames, 21 × 29.7 cm and 3 cm deep, one per offset, above the others. */
+        val A4_FRAMES = OFFSETS.mapIndexed { k, off ->
+            val x0 = 0.3f + 0.5f * k + off
+            val y0 = 1.5f + off
+            Box(x0, y0, -0.05f, x0 + 0.21f, y0 + 0.297f, 0.03f)
+        }
+
+        /** The room with the small frames on its z = 0 wall, as the real TSDF meshes it. */
+        val smallFrames: WorkMesh by lazy {
+            val bounds = Box(-0.2f, -0.2f, -0.2f, 2.8f, 2.7f, 2.4f)
+            val frames = POSTCARD_FRAMES + A4_FRAMES
+            CleanScenes.mesh(
+                CleanScenes.fuse(bounds, rippleM = 0.004f, noiseM = 0.006f) { x, y, z ->
+                    frames.fold(-ROOM.sdf(x, y, z)) { d, frame -> min(d, frame.sdf(x, y, z)) }
+                },
+            )
         }
 
         /** A room whose x = 0 wall bulges and whose z = 0 wall holds the frame, as the real TSDF meshes it. */

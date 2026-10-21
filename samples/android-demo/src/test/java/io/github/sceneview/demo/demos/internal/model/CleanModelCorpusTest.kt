@@ -74,7 +74,11 @@ class CleanModelCorpusTest {
         assertEquals("", after["glb_problems"]!!.jsonPrimitive.content)
         assertTrue("the photos texture it: $after", after["atlas"]!!.jsonPrimitive.content != "none")
         assertTrue(after["triangles"]!!.jsonPrimitive.int < before["triangles"]!!.jsonPrimitive.int)
-        for (key in listOf("glb_limit_bytes", "glb_guarded", "atlas_halvings", "raw_kept", "out_of_memory_in")) {
+        val keys = listOf(
+            "glb_limit_bytes", "glb_guarded", "atlas_halvings", "raw_kept", "out_of_memory_in",
+            "textured_share", "floor_area_ratio", "floor_holes_added",
+        )
+        for (key in keys) {
             assertTrue("$key missing: $after", key in after)
         }
         assertTrue(after["glb_bytes"]!!.jsonPrimitive.int <= after["glb_limit_bytes"]!!.jsonPrimitive.int)
