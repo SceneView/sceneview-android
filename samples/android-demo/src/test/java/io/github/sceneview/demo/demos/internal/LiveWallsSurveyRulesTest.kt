@@ -163,4 +163,20 @@ class LiveWallsSurveyRulesTest {
         assertEquals(2.6f, seen.height, 0.01f)
         assertTrue(seen.ceilingSeen)
     }
+
+    @Test
+    fun `with no ceiling seen, the walls are drawn to the height measured in the session`() {
+        val low = listOf(plane(1, -2f, -2.6f, 2f, -2.6f, top = 1.6f), plane(2, -2f, -2.6f, -2f, 1f, top = 1.6f))
+        val source = PlaneWallSource()
+        source.measuredHeight = 2.7f
+        assertEquals(2.7f, source.update(low, floorY, 1f).height, 0.01f)
+        // A ceiling seen wins over one measured.
+        assertEquals(2.6f, source.update(low + ceiling(3, 2.6f), floorY, 2f).height, 0.01f)
+        // A new capture in the same session keeps what was measured.
+        source.reset()
+        assertEquals(2.7f, source.update(low, floorY, 3f).height, 0.01f)
+        // Cleared, with the same planes: the default.
+        source.measuredHeight = null
+        assertEquals(2.5f, source.update(low, floorY, 4f).height, 0.01f)
+    }
 }

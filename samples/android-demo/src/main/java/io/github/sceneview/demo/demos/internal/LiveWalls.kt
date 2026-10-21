@@ -13,7 +13,8 @@ import kotlin.math.sqrt
 /*
  * The walls 3D Scan shows while it scans (Room and Home): each wall it recognises stands on the
  * floor as a clean translucent quad, the way RoomPlan outlines a room as it is scanned. One wall
- * seen twice is one wall; a wall grows as more of it is seen, and never shrinks or leaves.
+ * seen twice is one wall; a wall grows as more of it is seen and never shrinks, and it goes once
+ * no plane holds it up any more. What counts as a wall is the room survey's rule ([WallRules]).
  */
 
 /**
@@ -35,8 +36,8 @@ data class LiveWall(
 
 /**
  * What the scan recognised of the room at one instant: its [walls], standing on the floor at
- * [floorY], [height] metres tall — the ceiling's height when it was seen ([ceilingSeen]), the top
- * of the highest wall seen otherwise.
+ * [floorY], [height] metres tall — the ceiling's height when it was seen ([ceilingSeen]), else the
+ * one measured in the same session, else [WallRules.DEFAULT_HEIGHT_M]; never the top of a plane.
  */
 data class LiveWallSnapshot(
     val walls: List<LiveWall>,
@@ -77,10 +78,13 @@ interface LiveWallSource {
 }
 
 /**
- * Walls from ARCore's vertical planes. ARCore cuts one wall into several planes (a picture, a door
- * frame, a wall seen from two places) and keeps planes of furniture: pieces on one line are joined
- * into one wall, pieces shorter than [MIN_WALL_M] are not walls, and the walls are squared to the
- * room's main axis and joined at the corners they nearly meet at.
+ * Walls from ARCore's vertical planes, by the room survey's rules ([WallRules]). ARCore cuts one
+ * wall into several planes (a picture, a door frame, a wall seen from two places, a piece fitted
+ * askew) and keeps planes of furniture: only a plane standing on the floor and rising past
+ * standing height can be a wall; pieces on one line, and fits of one wall a little apart, are
+ * joined into one wall; a wall is shown once seen long enough along one of the room's directions
+ * and when it is not furniture before another wall; and the walls are squared to the room's
+ * directions and joined at the corners they nearly meet at. A wall no plane holds up any more goes.
  */
 class PlaneWallSource : LiveWallSource {
     private val tracks = ArrayList<Track>()
@@ -88,21 +92,35 @@ class PlaneWallSource : LiveWallSource {
     private var key = LongArray(0)
     private var last = LiveWallSnapshot.Empty
 
+    /** The snapshot must be worked out again, whatever the planes: new, reset, or the height changed. */
+    private var stale = true
+
+    /**
+     * The room's height, floor to ceiling in metres, measured some other way in the same session
+     * (Measure's Room mode): the walls are drawn to it when no ceiling plane was seen; a ceiling
+     * seen wins. `null` when nothing was measured. It belongs to the session, so [reset] keeps it.
+     */
+    var measuredHeight: Float? = null
+        set(value) {
+            if (value != field) stale = true
+            field = value
+        }
+
     override fun update(planes: List<LivePlane>, floorY: Float, time: Float): LiveWallSnapshot {
         // A plane is the same while its id and outline are: ARCore hands new objects every frame.
         val newKey = LongArray(planes.size) { i ->
             (planes[i].id.toLong() shl Int.SIZE_BITS) or (planes[i].polygon.contentHashCode().toLong() and MASK)
         }
-        if (newKey.contentEquals(key) && last !== LiveWallSnapshot.Empty) return last
+        if (newKey.contentEquals(key) && !stale) return last
         key = newKey
-        merge(clusters(pieces(planes, floorY)), time)
+        stale = false
+        merge(clusters(laidOnHosts(pieces(planes, floorY))), time)
         val ceiling = ceilingOf(planes, floorY)
-        val top = tracks.maxOfOrNull { it.top } ?: (floorY + DEFAULT_HEIGHT_M)
-        val height = (ceiling ?: top) - floorY
+        val height = WallRules.height(ceiling?.minus(floorY), measuredHeight).coerceIn(MIN_HEIGHT_M, MAX_HEIGHT_M)
         val next = LiveWallSnapshot(
-            walls = shaped(tracks.filter { it.length >= MIN_WALL_M }),
+            walls = shaped(shown(floorY + height)),
             floorY = floorY,
-            height = height.coerceIn(MIN_HEIGHT_M, MAX_HEIGHT_M),
+            height = height,
             ceilingSeen = ceiling != null,
         )
         // A plane refit that moves no wall keeps the snapshot: whoever draws it has nothing to redo.
@@ -115,19 +133,27 @@ class PlaneWallSource : LiveWallSource {
         nextId = 0
         key = LongArray(0)
         last = LiveWallSnapshot.Empty
+        stale = true
     }
 
     /**
      * Folds this update's [found] walls into the walls already known. Where a wall stands and which
      * way it runs is what ARCore's planes say now — a refit corrects its first rough fit — and what
-     * was seen of it before keeps only its ends, so it never shrinks.
+     * was seen of it before keeps only its ends, so it never shrinks. A wall none of [found] holds
+     * up any more goes: its plane was refit to the furniture it was, or dropped.
      */
     private fun merge(found: List<Segment>, time: Float) {
-        val taken = HashSet<Track>()
+        val held = HashSet<Track>()
         for (segment in found.sortedByDescending { it.length }) {
-            val matches = tracks.filter { it !in taken && sameWall(it.segment, segment) }
+            // A second fit of a wall already held up, a little apart or askew: that wall, seen again.
+            val twin = tracks.firstOrNull { it in held && (sameWall(it.segment, segment) || WallRules.duplicates(it.segment, segment)) }
+            if (twin != null) {
+                twin.segment = twin.segment.spanning(segment)
+                continue
+            }
+            val matches = tracks.filter { it !in held && sameWall(it.segment, segment) }
             if (matches.isEmpty()) {
-                tracks += Track(nextId++, time, segment).also { taken += it }
+                tracks += Track(nextId++, time, segment).also { held += it }
                 continue
             }
             // The oldest keeps its name; the others were the same wall seen in pieces.
@@ -135,36 +161,54 @@ class PlaneWallSource : LiveWallSource {
             var grown = segment
             matches.forEach { grown = grown.spanning(it.segment) }
             keep.segment = grown
-            keep.top = max(grown.top, matches.maxOf { it.top })
             tracks.removeAll { it in matches && it !== keep }
-            taken += keep
+            held += keep
+        }
+        tracks.retainAll(held)
+    }
+
+    /**
+     * The walls shown, each with the room's direction it runs along: seen long enough along one of
+     * the room's directions, and neither furniture before another wall nor the side of such
+     * furniture. [ceilingY] is the ceiling's height, which only a wall reaches.
+     */
+    private fun shown(ceilingY: Float): List<Pair<Track, WallFamily>> {
+        val candidates = tracks.filter { it.length >= WallRules.MIN_SEEN_M - WallRules.TOLERANCE_M }
+        val families = WallRules.families(
+            FloatArray(candidates.size) { candidates[it].segment.angle },
+            FloatArray(candidates.size) { candidates[it].length },
+        )
+        val fronts = candidates.mapNotNull { front ->
+            candidates.firstOrNull { it !== front && WallRules.standsBefore(front.segment, it.segment, ceilingY) }
+                ?.let { front to it }
+        }
+        return candidates.mapNotNull { track ->
+            val family = WallRules.familyOf(track.segment.angle, families) ?: return@mapNotNull null
+            val hidden = fronts.any { (front, behind) ->
+                front === track || (track !== behind && WallRules.isSideOf(track.segment, front.segment, behind.segment))
+            }
+            (track to family).takeIf { !hidden && WallRules.seenEnough(track.length, family.square) }
         }
     }
 
-    /** The walls as drawn: squared to the room's main axis, and joined at their corners. */
-    private fun shaped(kept: List<Track>): List<LiveWall> {
-        if (kept.isEmpty()) return emptyList()
-        val axis = kept.maxBy { it.length }.segment.angle
-        val squared = kept.map { it.segment.rotatedTo(WallMesh.square(it.segment.angle, axis)) }
+    /** The walls as drawn: squared to the room's direction each runs along, and joined at their corners. */
+    private fun shaped(shown: List<Pair<Track, WallFamily>>): List<LiveWall> {
+        val squared = shown.map { (track, family) -> track.segment.rotatedTo(family.direction) }
         val ends = squared.map { floatArrayOf(it.ax, it.az, it.bx, it.bz) }
         for (i in squared.indices) {
             for (j in i + 1 until squared.size) joinCorner(squared[i], squared[j], ends[i], ends[j])
         }
-        return kept.mapIndexed { i, track ->
+        return shown.mapIndexed { i, (track, _) ->
             val e = ends[i]
             LiveWall(track.id, e[0], e[1], e[2], e[3], track.bornAt, (track.length / CONFIDENT_M).coerceAtMost(1f))
         }
     }
 
     private class Track(val id: Int, val bornAt: Float, var segment: Segment) {
-        var top: Float = segment.top
         val length: Float get() = segment.length
     }
 
     companion object {
-        /** Shorter than this, a vertical plane is furniture, a door frame, a box: not a wall. */
-        const val MIN_WALL_M = 0.5f
-
         /** A wall seen along this much, in metres, is sure: [LiveWall.confidence] is 1. */
         const val CONFIDENT_M = 1.5f
 
@@ -186,7 +230,6 @@ class PlaneWallSource : LiveWallSource {
         /** How far from square two walls may be and still be joined at a corner. */
         const val CORNER_DEGREES = 20f
 
-        const val DEFAULT_HEIGHT_M = 2.4f
         const val MIN_HEIGHT_M = 0.6f
         const val MAX_HEIGHT_M = 4f
 
@@ -199,12 +242,30 @@ class PlaneWallSource : LiveWallSource {
          * its source's snapshot instead, the count the HUD shows.
          */
         fun wallCount(planes: List<LivePlane>, floorY: Float): Int =
-            clusters(pieces(planes, floorY)).count { it.length >= MIN_WALL_M }
+            PlaneWallSource().update(planes, floorY, time = 0f).walls.size
 
-        /** Each vertical plane as a floor segment: its line, its extent along it, its top. */
+        /**
+         * Each vertical plane that stands as a wall ([WallRules.standsAsWall]) as a floor segment:
+         * its line, its extent along it, its top.
+         */
         internal fun pieces(planes: List<LivePlane>, floorY: Float): List<Segment> = planes.mapNotNull { plane ->
             if (plane.kind != LivePlane.Kind.Wall || plane.vertexCount < 3) return@mapNotNull null
-            Segment.ofPolygon(plane.polygon)?.takeIf { it.length >= MIN_PIECE_M && it.top > floorY }
+            var bottom = Float.MAX_VALUE
+            var top = -Float.MAX_VALUE
+            for (i in 0 until plane.vertexCount) {
+                bottom = min(bottom, plane.polygon[i * 3 + 1])
+                top = max(top, plane.polygon[i * 3 + 1])
+            }
+            if (!WallRules.standsAsWall(bottom, top, floorY)) return@mapNotNull null
+            Segment.ofPolygon(plane.polygon)?.takeIf { it.length >= MIN_PIECE_M }
+        }
+
+        /** Each piece fitted askew along a longer one ([WallRules.shardOf]) laid onto that one's line. */
+        internal fun laidOnHosts(pieces: List<Segment>): List<Segment> = pieces.map { piece ->
+            pieces.filter { it !== piece && WallRules.shardOf(piece, it) }
+                .maxByOrNull { it.length }
+                ?.let { piece.projectedOn(it) }
+                ?: piece
         }
 
         /** Pieces on one line joined into walls (single linkage: A–B and B–C make one wall). */
@@ -309,7 +370,15 @@ class Segment(
     /** How far ([x], [z]) lies from this line, across it. */
     fun distanceAcross(x: Float, z: Float): Float = abs(-dz * (x - midX) + dx * (z - midZ))
 
-    private fun along(x: Float, z: Float): Float = dx * (x - midX) + dz * (z - midZ)
+    /** Where ([x], [z]) projects on this line, in metres along it from ([midX], [midZ]). */
+    fun along(x: Float, z: Float): Float = dx * (x - midX) + dz * (z - midZ)
+
+    /** This span projected onto [line]: on its line and direction, with this one's top and weight. */
+    fun projectedOn(line: Segment): Segment {
+        val s0 = line.along(ax, az)
+        val s1 = line.along(bx, bz)
+        return Segment(line.angle, line.midX, line.midZ, min(s0, s1), max(s0, s1), top, weight)
+    }
 
     /** The gap between this and [other] along this line, `0` or less where they overlap. */
     fun gapAlong(other: Segment): Float {
