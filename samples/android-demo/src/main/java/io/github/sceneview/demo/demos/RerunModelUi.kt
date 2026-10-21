@@ -34,7 +34,6 @@ import androidx.compose.material.icons.rounded.ViewInAr
 import androidx.compose.material.icons.rounded._3dRotation
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -43,7 +42,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -118,6 +116,8 @@ import io.github.sceneview.demo.theme.LocalStageChrome
 import io.github.sceneview.demo.theme.SceneViewTokens
 import io.github.sceneview.demo.theme.SceneViewTokens.Space
 import io.github.sceneview.demo.theme.motionFade
+import io.github.sceneview.demo.ui.NarrationText
+import io.github.sceneview.demo.ui.narrationBase
 import io.github.sceneview.demo.ui.overMediaEdge
 import io.github.sceneview.environment.Environment
 import io.github.sceneview.loaders.MaterialLoader
@@ -613,7 +613,6 @@ internal fun RerunModelScreen(
     opened: RerunScanModel? = null,
     floorCovered: Float? = null,
 ) {
-    var progress by remember(source, id) { mutableFloatStateOf(0f) }
     val state by produceState<ModelState>(ModelState.Loading, source, id) {
         val stored = opened ?: if (store != null && id != null) {
             withContext(Dispatchers.IO) { runCatching { store.model(id) }.getOrNull() }
@@ -629,10 +628,9 @@ internal fun RerunModelScreen(
         val built = kept ?: source?.let { from ->
             withContext(Dispatchers.Default) {
                 val job = coroutineContext.job
-                val report = { share: Float ->
-                    progress = share
-                    job.ensureActive()
-                }
+                // The line narrates the step without a share (one indicator, `DESIGN.md`): the
+                // share is only where a screen closed meanwhile stops the build.
+                val report = { _: Float -> job.ensureActive() }
                 // A big scan's raw surface is shown while it finishes; the model then takes its place.
                 // Finishing again, the kept one is already shown: a second would only take heap.
                 val raw = { surface: RerunScanModel ->
@@ -703,6 +701,16 @@ internal fun RerunModelScreen(
             hintVisible = false
         }
     }
+    // The finished model in a big scan's raw surface's place: framed by the raw one. The line
+    // says so once, heard as it changes, then fades as the hint does.
+    val rawShownFirst = (state as? ModelState.Ready)?.let { it.framedBy !== it.model } == true
+    var finishedSaid by remember(framedBy) { mutableStateOf(false) }
+    LaunchedEffect(framedBy, rawShownFirst && settled) {
+        if (rawShownFirst && settled) {
+            delay(HINT_MS)
+            finishedSaid = true
+        }
+    }
     var renaming by remember { mutableStateOf(false) }
     val rename = onRename?.let { { renaming = true } }
 
@@ -718,9 +726,7 @@ internal fun RerunModelScreen(
         themedStage = true,
         topOverlay = { ScanNameCard(title = title, saved = id != null, onRename = rename) },
         bottomOverlay = {
-            // The finished model in a big scan's raw surface's place: framed by the raw one.
-            val rawShownFirst = (state as? ModelState.Ready)?.let { it.framedBy !== it.model } == true
-            ModelStatus.slot(model, settled, rawShownFirst)?.let { slot -> ModelStatusLine(slot, progress = { progress }) }
+            ModelStatus.slot(model, settled, rawShownFirst, finishedSaid)?.let { slot -> ModelStatusLine(slot) }
             // Laid out from the start and only faded: the model is framed above this slot, and a
             // hint that came and went would move the model when it goes.
             val hintShown = shown && hintVisible
@@ -951,9 +957,9 @@ private fun ScanNameCard(title: String, saved: Boolean, onRename: (() -> Unit)?)
  * shown meanwhile (a big scan, [RAW_FIRST_TRIANGLES] or more), or why what it shows is less than
  * a finished model — so the raw surface is never left in its place without a word.
  */
-internal enum class ModelStatus(@StringRes val text: Int, val showsProgress: Boolean = false) {
-    Creating(R.string.scan_result_creating, showsProgress = true),
-    Finishing(R.string.scan_result_finishing, showsProgress = true),
+internal enum class ModelStatus(@StringRes val text: Int) {
+    Creating(R.string.scan_result_creating),
+    Finishing(R.string.scan_result_finishing),
     Failed(R.string.scan_result_failed),
     Partial(R.string.scan_result_partial),
 
@@ -963,11 +969,17 @@ internal enum class ModelStatus(@StringRes val text: Int, val showsProgress: Boo
     /** Shown as scanned, not kept: the next open tries the finish again. */
     RawUnfinished(R.string.scan_result_raw_unfinished),
 
-    /** Stub: the finished model in the raw surface's place. */
+    /** The finished model in the raw surface's place: said once, then faded ([slot]). */
     Finished(R.string.scan_result_finished),
     ;
 
     companion object {
+        /**
+         * The lines a big scan's raw surface can have under it, from its finish to each way the
+         * finish ends: the line keeps the room of the tallest, whichever it ends on.
+         */
+        val RAW_LINES: List<ModelStatus> get() = listOf(Finishing, Finished, RawOutOfMemory, RawUnfinished)
+
         /** For [model] on screen, `null` while none is; [settled] once it is known for good. `null`: nothing to say. */
         fun of(model: RerunScanModel?, settled: Boolean): ModelStatus? = when {
             !settled -> if (model != null) Finishing else Creating
@@ -980,35 +992,35 @@ internal enum class ModelStatus(@StringRes val text: Int, val showsProgress: Boo
 
         /**
          * The line's slot under [model]: [of]'s status, shown; or, once a finished model has taken
-         * the place of the raw surface shown first ([rawShownFirst]), [Finishing] laid out and
-         * faded — the model is framed above this slot, and a line that went would move it on the
-         * swap. `null`: no line was ever under this model.
+         * the place of the raw surface shown first ([rawShownFirst]), [Finished] — shown until
+         * [finishedSaid], then laid out and faded: the model is framed above this slot, and a line
+         * that went would move it just after the swap. `null`: no line was ever under this model.
          */
         fun slot(
             model: RerunScanModel?,
             settled: Boolean,
             rawShownFirst: Boolean,
-            @Suppress("UnusedParameter") finishedSaid: Boolean = false,
+            finishedSaid: Boolean = false,
         ): ModelStatusSlot? =
             of(model, settled)?.let { ModelStatusSlot(it, visible = true) }
-                ?: ModelStatusSlot(Finishing, visible = false).takeIf { rawShownFirst }
+                ?: ModelStatusSlot(Finished, visible = !finishedSaid).takeIf { rawShownFirst }
     }
 }
 
 /** [status] laid out under the model, seen while [visible]. */
 internal class ModelStatusSlot(val status: ModelStatus, val visible: Boolean) {
-    /** Stub: no other line reserved. */
-    val reserve: List<ModelStatus> get() = emptyList()
+    /** The lines whose room [status] holds: a big scan's ([ModelStatus.RAW_LINES]), else none. */
+    val reserve: List<ModelStatus> get() = if (status in ModelStatus.RAW_LINES) ModelStatus.RAW_LINES else emptyList()
 }
 
 /** [slot] as the model screen lays it out under the model: faded, and not heard, once it is not [ModelStatusSlot.visible]. */
 @Composable
-internal fun ModelStatusLine(slot: ModelStatusSlot, modifier: Modifier = Modifier, progress: () -> Float = { 0f }) {
-    // Faded, not removed, on the swap: the model is framed above this slot (as the hint).
+internal fun ModelStatusLine(slot: ModelStatusSlot, modifier: Modifier = Modifier) {
+    // Faded, not removed, once said: the model is framed above this slot (as the hint).
     val statusAlpha by animateFloatAsState(if (slot.visible) 1f else 0f, motionFade(), label = "status")
     ModelStatusCard(
         text = stringResource(slot.status.text),
-        progress = progress.takeIf { slot.status.showsProgress },
+        reserve = slot.reserve.map { stringResource(it.text) },
         modifier = modifier
             .alpha(statusAlpha)
             .then(if (slot.visible) Modifier else Modifier.clearAndSetSemantics { }),
@@ -1016,27 +1028,27 @@ internal fun ModelStatusLine(slot: ModelStatusSlot, modifier: Modifier = Modifie
 }
 
 /**
- * What the model screen is doing, or why it shows less than a surface. The line is announced as it
- * changes (a raw surface shown, then finished); its progress bar is not, or it would drown the line.
+ * What the model screen is doing, or why it shows less than a surface: one line, the one
+ * indicator, its ellipsis breathing while a step is in flight (`DESIGN.md` → `motion-narration`),
+ * announced as it changes. Laid out as tall as the tallest of [reserve] — drawn, never seen nor
+ * heard — so the card keeps its room whichever of them it ends on.
  */
 @Composable
-internal fun ModelStatusCard(text: String, progress: (() -> Float)? = null, modifier: Modifier = Modifier) {
+internal fun ModelStatusCard(text: String, modifier: Modifier = Modifier, reserve: List<String> = emptyList()) {
     val chrome = LocalStageChrome.current
     OverlayCard(testTag = RERUN_MODEL_CARD_TAG, modifier = modifier) {
-        Text(
-            text,
-            style = SceneViewTokens.Type.card,
-            color = chrome.onCard,
-            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-        )
-        if (progress != null) {
-            LinearProgressIndicator(
-                progress = progress,
-                modifier = Modifier.fillMaxWidth(),
-                color = chrome.accent,
-                trackColor = chrome.track,
-                drawStopIndicator = {},
+        Box {
+            // First in the box, so the line keeps its node as it changes, and is heard changing.
+            NarrationText(
+                text,
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                color = chrome.onCard,
+                style = SceneViewTokens.Type.card,
             )
+            // A narrated line in both its forms: as written, and drawn with its three dots.
+            reserve.flatMap { line -> listOfNotNull(line, narrationBase(line)?.let { "$it..." }) }.forEach { line ->
+                Text(line, style = SceneViewTokens.Type.card, modifier = Modifier.alpha(0f).clearAndSetSemantics { })
+            }
         }
     }
 }
