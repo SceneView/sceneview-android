@@ -35,7 +35,7 @@ enum class MeasurePhase {
  * @property raising the walls follow the aim (wall or room still open for a height).
  * @property height the locked wall height, metres; `null` until locked.
  * @property openings the doors and windows marked on a measured wall or a measured room's walls,
- *   left out of their net area; on a room, along its walls unrolled ([MeasureOpening]).
+ *   left out of their net area; on a room, each on the wall it was marked on ([MeasureOpening]).
  */
 data class MeasureFigure<P>(
     val mode: MeasureMode,

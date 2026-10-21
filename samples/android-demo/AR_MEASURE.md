@@ -13,13 +13,18 @@ Three modes behind one mode pill, built against Apple Measure, Google Measure an
   aim, a translucent surface whose top follows the phone; **Set height** locks it and reads
   width, height and area. **Door or window** then marks an opening by two opposite corners on
   the wall, and the readout adds what the openings take off and the net area left to cover.
-- **Room** — trace the floor corner by corner (a corner within 3° of square snaps to 90°, within
-  6° when a tracked wall confirms the right angle), close it on the first corner, and every wall rises together to the ceiling: floor area,
-  perimeter, ceiling height, wall area, volume. **Door or window** marks openings on any of its
-  walls the same way, two opposite corners on one wall, and the readout adds the openings and
-  the net wall area; the floor area and the volume do not change. **Plan** opens the room as
-  3D Scan's dimensioned plan, with its PDF and text shares; with openings marked, a card under
-  the plan names each one by the plan's wall letter and reads the net wall area.
+- **Room** — trace the floor corner by corner and close it on the first corner; every wall then
+  rises together to the ceiling: floor area, perimeter, ceiling height, wall area, volume. A
+  corner within 3° of square snaps to 90°, within 6° when ARCore tracks the next wall: a
+  vertical plane standing on the floor (its bottom within 30 cm), at least 1.5 m tall and 1 m
+  long, within 3° of square to the last wall, its foot within 20 cm of the corner. An open door,
+  a cupboard's side or a wall cupboard does not count. After a short wall (1 m or less) the few
+  centimetres of noise on its corners eat that 3° margin, so the corner often stays at 3°.
+  **Door or window** marks openings on any of its walls the same way, two opposite corners on
+  one wall, and the readout adds the openings and the net wall area; the floor area and the
+  volume do not change. **Plan** opens the room as 3D Scan's dimensioned plan, with its PDF and
+  text shares; with openings marked, a card under the plan names each one by the plan's wall
+  letter and reads the net wall area.
 
 **Add point** commits the displayed candidate without a second raycast; tapping the camera never
 adds a point. Undo steps back one action at a time (an opening's first corner, the last opening, a locked

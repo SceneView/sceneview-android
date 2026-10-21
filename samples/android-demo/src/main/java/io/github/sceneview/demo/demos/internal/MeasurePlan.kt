@@ -20,8 +20,10 @@ import kotlin.math.sqrt
  * with the page (the turn that boxes it tightest, one of its own walls along x), its longer
  * side runs along x, y goes down the page, and the walls run clockwise from the corner nearest
  * the top-left — wall A along the top. Every wall was measured end to end, so every wall is
- * seen, and no figure is an estimate. A traced figure has no scatter: its `±` is 0, and the plan
- * rounds each figure in its own units.
+ * seen, and no figure is an estimate. A traced figure has no scatter: every `±` it carries is 0.
+ * Nothing is rounded or converted here: [SurveyFormat] writes the figures, picks their units
+ * (metres, or the locale's where it follows the locale), and prints a zero `±` as one rounding
+ * step (`± 0.05` on a length in metres) unless it leaves it off.
  *
  * `null` under three corners, or for an outline with no area.
  */
@@ -69,9 +71,9 @@ fun measureRoomSurvey(outline: List<Position>, height: Float?): RoomSurvey? {
 data class MeasurePlanOpening(val wall: String, val opening: MeasureOpening)
 
 /**
- * The [openings] of the room traced along [outline], marked on its walls unrolled in the order
- * they were traced ([MeasureOpening]), on its plan: each on the plan's wall it stands on, in the
- * plan's wall order, then along each wall. Empty when the outline makes no plan.
+ * The [openings] of the room traced along [outline], each on the wall it was marked on
+ * ([MeasureOpening]), on its plan: each on the plan's wall it stands on, in the plan's wall order,
+ * then along each wall. Empty when the outline makes no plan.
  */
 fun measurePlanOpenings(outline: List<Position>, openings: List<MeasureOpening>): List<MeasurePlanOpening> {
     val page = planCorners(outline) ?: return emptyList()
@@ -84,7 +86,7 @@ fun measurePlanOpenings(outline: List<Position>, openings: List<MeasureOpening>)
         val index = page.order.indexOf(if (page.reversed) (traced + 1) % n else traced)
         val length = measureDistanceMeters(outline[traced], outline[(traced + 1) % n])
         val onPlan = if (page.reversed) local.copy(from = length - local.to, to = length - local.from) else local
-        index to MeasurePlanOpening(planWallTag(index), onPlan)
+        index to MeasurePlanOpening(planWallTag(index), onPlan.copy(wall = index))
     }
         .sortedWith(compareBy({ it.first }, { it.second.opening.from }))
         .map { it.second }

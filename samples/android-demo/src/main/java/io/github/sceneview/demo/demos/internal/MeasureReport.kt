@@ -62,10 +62,9 @@ fun <P> measureFigureNumbers(
     } else {
         null
     }
-    // On a room the openings are marked along its walls unrolled (MeasureOpenings.kt), so the
-    // strip they cover is as long as the perimeter, as a wall's is as long as its width.
+    // Each opening is marked on one of the figure's walls (MeasureOpenings.kt) and counted there.
     val openingsArea = if (figure.mode != MeasureMode.Distance && figure.openings.isNotEmpty() && height != null) {
-        measureOpeningsArea(figure.openings, segments.sum(), height)
+        measureFigureOpeningsArea(figure.openings, segments, height)
     } else {
         null
     }
