@@ -5,6 +5,7 @@ import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
+import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
 
@@ -102,7 +103,8 @@ data class MeasurePlanCard(val netWallArea: String, val openings: List<MeasurePl
 /**
  * The card Plan shows under a traced room's plan when it has doors or windows: [netWallArea]
  * (m²) and each of [openings], written under [locale] in [units], the plan's own, so one page
- * never says feet on the card and metres on the plan.
+ * never says feet on the card and metres on the plan. In metres every length is in metres, to the
+ * centimetre, as the plan writes them: `0,93 m × 2,04 m`, never `93 cm × 2,04 m`.
  */
 fun measurePlanCard(
     netWallArea: Float,
@@ -114,11 +116,17 @@ fun measurePlanCard(
     openings = openings.map {
         MeasurePlanCardOpening(
             wall = it.wall,
-            width = formatMeasureLength(it.opening.width, units, locale),
-            height = formatMeasureLength(it.opening.height, units, locale),
+            width = planCardLength(it.opening.width, units, locale),
+            height = planCardLength(it.opening.height, units, locale),
         )
     },
 )
+
+/** A length on the plan's card: in metres below one too, `0.90 m`; feet and inches as the Measure screen writes them. */
+private fun planCardLength(metres: Float, units: MeasureUnitSystem, locale: Locale): String = when (units) {
+    MeasureUnitSystem.Metric -> String.format(locale, "%.2f m", (metres.coerceAtLeast(0f) * CENTIMETRES_PER_METRE).roundToInt() / CENTIMETRES_PER_METRE)
+    MeasureUnitSystem.Imperial -> formatMeasureLength(metres, units, locale)
+}
 
 /** The last room traced and raised among [figures], the one Plan draws: its index, `-1` with none. */
 fun measurePlanRoom(figures: List<MeasureFigure<*>>): Int =
@@ -255,5 +263,6 @@ private fun signedArea(corners: List<Pair<Float, Float>>): Float {
 
 private const val HALF_PI = (Math.PI / 2).toFloat()
 private const val MIN_WALL_M = 0.05f
+private const val CENTIMETRES_PER_METRE = 100f
 private const val MIN_AREA_M2 = 0.01f
 private const val AREA_TIE_M2 = 1e-3f
