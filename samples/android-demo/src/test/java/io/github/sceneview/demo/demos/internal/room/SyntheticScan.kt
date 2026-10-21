@@ -29,9 +29,10 @@ class SyntheticFloor(val x0: Float, val x1: Float, val z0: Float, val z1: Float)
  * on the left of each wall's walk), its walls floor to [height], the [openings] cut in them and
  * the [boxes] standing in it. [hidden] walls are never seen: a ray that reaches one returns no
  * depth. [drift] moves wall [driftWall] out by that much in every other frame: a scan that drew
- * the wall twice. [noise] is the depth's Gaussian spread, as a share of the depth. Walls are seen
- * only up to [seenUpTo] — a phone held towards the floor sees their foot and nothing higher — and
- * the floor goes on outside the room over [nextDoor], for whatever a doorway lets the camera see.
+ * the wall twice. [noise] is the depth's Gaussian spread, as a share of the depth. Walls and boxes
+ * are seen only up to [seenUpTo] — a phone held towards the floor sees their foot and nothing
+ * higher — and the floor goes on outside the room over [nextDoor], for whatever a doorway lets the
+ * camera see.
  * Nothing further than [reach] across the floor from the camera returns depth: a scan that stopped
  * before it went round the room.
  */
@@ -279,7 +280,7 @@ object SyntheticScan {
                     val t = slab(pose, dir, box) ?: continue
                     if (t >= best) continue
                     best = t
-                    blind = false
+                    blind = pose.y + dir.y * t > room.seenUpTo
                 }
                 if (best == Float.MAX_VALUE || blind) continue
                 if (hypot(dir.x, dir.z) * best > room.reach) continue

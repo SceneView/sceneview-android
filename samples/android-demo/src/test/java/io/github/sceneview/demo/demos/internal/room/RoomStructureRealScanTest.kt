@@ -107,6 +107,17 @@ class RoomStructureRealScanTest {
         assertTrue(summary, RoomGap.MissingWall in structure.gaps)
     }
 
+    @Test
+    fun `a wardrobe against a wall seen only low does not stand for the wall`() {
+        val structure = RoomStructure.read(capture(WARDROBE).scan())
+        val summary = summary(WARDROBE, structure)
+        println("RoomStructure real-scan-like $summary, ${timings(WARDROBE)}")
+        val area = structure.area?.value
+        assertTrue("$summary: area off", area == null || abs(area - WARDROBE.room.area) / WARDROBE.room.area < MAX_ERROR)
+        val front = structure.walls.filter { abs(it.az - WARDROBE_DEPTH_M) < FRONT_NEAR_M && abs(it.bz - WARDROBE_DEPTH_M) < FRONT_NEAR_M }
+        assertTrue("$summary: the wardrobe's front is a wall", front.isEmpty())
+    }
+
     /** A case's full reading's median and live reading's best run. */
     private fun timings(case: Case): String {
         val scan = capture(case).scan()
@@ -247,6 +258,22 @@ class RoomStructureRealScanTest {
             SyntheticRoom(RECTANGLE_X, RECTANGLE_Z, hidden = setOf(2), reach = 2f),
             figures = false,
             walk = listOf(Vec3(1.5f, 1.4f, 0.8f), Vec3(2.5f, 1.4f, 0.8f), Vec3(3.5f, 1.4f, 0.8f)),
+        )
+
+        /** How deep the wardrobe of [WARDROBE] stands out from its wall. */
+        const val WARDROBE_DEPTH_M = 0.6f
+        const val FRONT_NEAR_M = 0.15f
+
+        /** A 3.5 × 3 m bedroom seen only up to 1 m, a 2 m wardrobe in a corner against its south wall. */
+        val WARDROBE = Case(
+            "wardrobe",
+            SyntheticRoom(
+                floatArrayOf(0f, 3.5f, 3.5f, 0f),
+                floatArrayOf(0f, 0f, 3f, 3f),
+                seenUpTo = 1f,
+                boxes = listOf(SyntheticBox(0f, 2f, 0f, WARDROBE_DEPTH_M, 2f)),
+            ),
+            figures = true,
         )
 
         val captures = HashMap<String, SyntheticCapture>()
