@@ -8,6 +8,7 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.floatOrNull
 import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlin.math.abs
@@ -30,15 +31,25 @@ class RerunScanModel(
     val budgetReached: Boolean = false,
     /**
      * Built in full. `false` for a fallback shown while the finish failed — the raw surface, or
-     * the points when meshing did — which is never kept with its scan
-     * ([RerunSessionStore.saveModel]): the next open builds the model again. Not written to
-     * `model.json`: a model read back was finished.
+     * the points when meshing did — which is not kept with its scan ([keptWithScan]): the next
+     * open builds the model again. Not written to `model.json`: a model read back was finished,
+     * unless it is the raw surface a finish ran out of memory on.
      */
     val finished: Boolean = true,
+    /**
+     * The heap (`Runtime.maxMemory()`, bytes) the finish ran out of, the raw surface shown in its
+     * place: kept with its scan anyway, so the next open in a heap that size shows it at once
+     * instead of failing the same finish again. A bigger heap finishes it again ([parse]).
+     */
+    val outOfMemoryInHeap: Long? = null,
 ) {
     init {
         require(bounds.size == BOUNDS) { "six bounds" }
+        require(outOfMemoryInHeap == null || !finished) { "a finished model ran out of memory" }
     }
+
+    /** Kept with its scan ([RerunSessionStore.saveModel]): the finished model, or the raw surface left by [outOfMemoryInHeap]. */
+    val keptWithScan: Boolean get() = finished || outOfMemoryInHeap != null
 
     /** What the model is made of. */
     enum class Kind(val wireName: String) {
@@ -64,6 +75,7 @@ class RerunScanModel(
             put("triangles", triangles)
             put("vertices", vertices)
             put("budgetReached", budgetReached)
+            outOfMemoryInHeap?.let { put("outOfMemoryInHeap", it) }
         },
     )
 
@@ -80,10 +92,11 @@ class RerunScanModel(
         /**
          * `null` when [info] is not a whole `model.json`, was written in another format than this
          * app's ([VERSION]: an earlier app's raw surface, or a newer app's), or [glb] is not a
-         * `.glb`: the scan then builds its model again.
+         * `.glb`, or is a raw surface kept for running out of a smaller [heap] than this one: the
+         * scan then builds its model again.
          */
         @Suppress("ReturnCount") // one early return per required key
-        fun parse(info: String, glb: ByteArray): RerunScanModel? {
+        fun parse(info: String, glb: ByteArray, heap: Long = Runtime.getRuntime().maxMemory()): RerunScanModel? {
             if (glb.size < GLB_HEADER || !glb.startsWithGlbMagic()) return null
             val root = runCatching { lenient.parseToJsonElement(info) as? JsonObject }.getOrNull() ?: return null
             fun number(key: String) = (root[key] as? JsonPrimitive)?.takeIf { !it.isString }
@@ -94,6 +107,8 @@ class RerunScanModel(
                 ?.mapNotNull { (it as? JsonPrimitive)?.floatOrNull }
                 ?.takeIf { b -> b.size == BOUNDS && b.all { it.isFinite() } }
                 ?.toFloatArray() ?: return null
+            val outOfMemoryInHeap = root["outOfMemoryInHeap"]?.let { number("outOfMemoryInHeap")?.longOrNull ?: return null }
+            if (outOfMemoryInHeap != null && heap > outOfMemoryInHeap) return null
             return RerunScanModel(
                 kind = kind,
                 glb = glb,
@@ -101,6 +116,8 @@ class RerunScanModel(
                 triangles = number("triangles")?.intOrNull?.takeIf { it > 0 } ?: return null,
                 vertices = number("vertices")?.intOrNull ?: return null,
                 budgetReached = number("budgetReached")?.booleanOrNull ?: false,
+                finished = outOfMemoryInHeap == null,
+                outOfMemoryInHeap = outOfMemoryInHeap,
             )
         }
 

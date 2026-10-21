@@ -17,6 +17,7 @@ import kotlin.concurrent.thread
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.sqrt
+import kotlin.random.Random
 import kotlin.system.exitProcess
 
 /**
@@ -71,6 +72,21 @@ class CleanModelRealScanTest {
         println(report)
         assertTrue("glb ${result.glb.size} > raw ${rawGlb.size} | $report", result.glb.size <= rawGlb.size)
         assertTrue("glb: ${GlbCheck.problems(result.glb)} | $report", GlbCheck.problems(result.glb).isEmpty())
+    }
+
+    @Test
+    fun `a scan no finish makes lighter comes back as its raw surface`() {
+        // Every vertex its own colour: nothing to collapse, and the finished layout weighs more.
+        val raw = speckledFloor(SPECKLED_SIDE)
+        val rawGlb = RerunMeshGlb.write(raw)
+        val result = CleanModel.build(raw, null, null)
+        assertTrue("the finished model kept: ${result.glb.size} B, raw ${rawGlb.size} B", result.stats.rawKept)
+        assertTrue("expected the raw surface's own .glb", result.glb.contentEquals(rawGlb))
+        assertEquals(raw.triangleCount, result.stats.finalTriangles)
+
+        // Worked in place, the raw surface comes back as the .glb written before.
+        val consumed = CleanModel.build(speckledFloor(SPECKLED_SIDE), null, null, consume = true, rawGlb = rawGlb)
+        assertTrue("expected the .glb written before", consumed.glb === rawGlb)
     }
 
     @Test
@@ -141,6 +157,28 @@ class CleanModelRealScanTest {
         }.toList()
         assertTrue("no full collection logged: ${gcLog.takeLast(LOG_TAIL)}", after.isNotEmpty())
         return after.max()
+    }
+
+    /** A flat metre of floor, [side] vertices a side, every one a colour of its own. */
+    private fun speckledFloor(side: Int): RerunMesh {
+        val random = Random(SPECKLE_SEED)
+        val positions = FloatArray(side * side * 3)
+        val normals = FloatArray(side * side * 3)
+        val colors = IntArray(side * side) { OPAQUE or random.nextInt(RGB) }
+        for (v in 0 until side * side) {
+            positions[v * 3] = (v / side).toFloat() / (side - 1)
+            positions[v * 3 + 2] = (v % side).toFloat() / (side - 1)
+            normals[v * 3 + 1] = 1f
+        }
+        val indices = IntArray((side - 1) * (side - 1) * 6)
+        var t = 0
+        for (i in 0 until side - 1) {
+            for (j in 0 until side - 1) {
+                val a = i * side + j
+                for (v in intArrayOf(a, a + 1, a + side, a + 1, a + side + 1, a + side)) indices[t++] = v
+            }
+        }
+        return RerunMesh(positions, normals, colors, indices)
     }
 
     private fun check(furnished: Boolean) {
@@ -443,6 +481,11 @@ class CleanModelRealScanTest {
         /** The same corner, a metre across: a model under the size guard's 2 000 triangles. */
         val SMALL_CORNER = Box(-2.6f, -0.1f, -3.6f, -1.6f, 0.9f, -2.6f)
 
+        const val SPECKLED_SIDE = 12
+        const val SPECKLE_SEED = 7
+        const val OPAQUE = 0xFF shl 24
+        const val RGB = 0x1000000
+
         const val MB = 1024L * 1024L
         const val CHILD_TIMEOUT_S = 300L
         const val LOG_TAIL = 4000
@@ -494,7 +537,7 @@ object HeapCappedFinish {
             }
         }
         val start = System.nanoTime()
-        val result = CleanModel.build(raw, RealScanRoom.modelPhotos(furnished = true), JvmAtlasEncoder, consume = true)
+        val result = CleanModel.build(raw, RealScanRoom.modelPhotos(furnished = true), JvmAtlasEncoder, consume = true, rawGlb = rawGlb)
         val ms = (System.nanoTime() - start) / NANOS_PER_MS
         println(
             "$FINISHED $rawTriangles -> ${result.stats.finalTriangles} triangles, " +

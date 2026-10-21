@@ -283,7 +283,8 @@ internal object RerunLiveModels {
 
 /**
  * A built mesh: its `.glb`, its size, and what building it took. [finished] when [CleanModel]
- * finished it; `false` for the raw surface, shown first or kept when the finish failed.
+ * finished it; `false` for the raw surface, shown first or left when the finish failed — with
+ * [outOfMemoryInHeap] when it ran out of memory ([RerunScanModel.outOfMemoryInHeap]).
  */
 internal class RerunModelBuild(
     val glb: ByteArray,
@@ -294,12 +295,14 @@ internal class RerunModelBuild(
     val voxelBytes: Long,
     val budgetReached: Boolean,
     val finished: Boolean = true,
+    val outOfMemoryInHeap: Long? = null,
 )
 
 /**
  * Meshes [source] — fuse (unless done), mesh, then finish ([CleanModel]): clean, simplify, texture
- * from its photos and write — reporting its share done to [progress]. A finish that fails writes
- * the raw surface instead; one that runs out of memory lets the error through, for the points.
+ * from its photos and write — reporting its share done to [progress]. A finish that fails, out
+ * of memory included, leaves the raw surface: the one already shown, or written then (the
+ * finish's garbage gone). Out of memory, it carries the heap it ran out of, to be kept as it is.
  *
  * A surface of [RAW_FIRST_TRIANGLES] or more takes a phone longer to finish than a result should
  * keep the user waiting: when [onRaw] is given, that raw surface goes to it first (not
@@ -343,11 +346,13 @@ internal fun buildRerunModel(
     val rawTriangles = mesh.triangleCount
     val rawVertices = mesh.vertexCount
     val rawBounds = mesh.bounds()
-    val finished = if (rawTriangles > 0) {
-        finish(mesh, photos, consume = rawGlb != null) { progress(MESH_SHARE + (1f - MESH_SHARE) * it) }
+    val finish = if (rawTriangles > 0) {
+        finish(mesh, photos, rawGlb) { progress(MESH_SHARE + (1f - MESH_SHARE) * it) }
     } else {
         null
     }
+    val finished = finish?.getOrNull()
+    val outOfMemoryInHeap = Runtime.getRuntime().maxMemory().takeIf { finish?.exceptionOrNull() is OutOfMemoryError }
     val glb = when {
         finished != null -> finished.glb
         rawTriangles > 0 -> rawGlb ?: RerunMeshGlb.write(mesh)
@@ -355,14 +360,16 @@ internal fun buildRerunModel(
     }
     progress(1f)
     val done = System.nanoTime()
-    val finishedMesh = finished?.model?.asRerunMesh()
+    // A finish that kept the raw surface's .glb, lighter than its own, has the raw surface's figures.
+    val finishedMesh = finished?.takeUnless { it.stats.rawKept }?.model?.asRerunMesh()
     Log.i(
         TAG,
         "model (${source::class.simpleName}): $rawTriangles triangles, $rawVertices vertices " +
             "(${extraction.rawTriangles} raw, ${extraction.droppedComponents} pieces dropped, " +
             "capped ${extraction.capped}); " +
             "fused ${meshed.fuseMs} ms, meshed ${(meshedAt - started) / NS_PER_MS - meshed.fuseMs} ms, " +
-            "finished ${(done - meshedAt) / NS_PER_MS} ms (${finished?.stats ?: "raw surface"}); " +
+            "finished ${(done - meshedAt) / NS_PER_MS} ms (${finished?.stats ?: "raw surface"}" +
+            "${outOfMemoryInHeap?.let { ", out of a ${it / MB} MB heap" } ?: ""}); " +
             "tsdf ${meshed.frames} frames, ${meshed.blocks} blocks, ${meshed.bytes / MB} MB, " +
             "dropped ${meshed.droppedBlocks}, ${if (meshed.released) "released" else "kept"}; " +
             "glb ${glb.size / KB} KB",
@@ -376,6 +383,7 @@ internal fun buildRerunModel(
         voxelBytes = meshed.bytes,
         budgetReached = meshed.droppedBlocks > 0,
         finished = finished != null,
+        outOfMemoryInHeap = outOfMemoryInHeap,
     )
 }
 
@@ -423,16 +431,17 @@ private fun mesh(source: RerunModelSource, progress: (Float) -> Unit): Meshed {
 }
 
 /**
- * [mesh] finished by [CleanModel]; `null` (logged) when that fails — cancellation goes through, and
- * so does running out of memory: writing the raw surface next, in a spent heap, would only fail
- * again after the whole wait. The result then falls back to the points. With [consume], [mesh]'s
- * arrays are worked in, not copied: its `.glb` is already written, and [mesh] is not read again.
+ * [mesh] finished by [CleanModel], or why it failed (logged) — running out of memory included:
+ * the finish's garbage is gone with it, and the raw surface is left. Cancellation goes through.
+ * With [rawGlb], [mesh]'s arrays are worked in, not copied: its `.glb` is already written, and
+ * [mesh] is not read again.
  */
-private fun finish(mesh: RerunMesh, photos: ModelPhotos?, consume: Boolean, progress: (Float) -> Unit): CleanModelResult? =
-    runCatching { CleanModel.build(mesh, photos, JpegAtlasEncoder, consume = consume, progress = progress) }
-        .onFailure { if (it is CancellationException || it is OutOfMemoryError) throw it }
-        .onFailure { Log.w(TAG, "finishing the model failed: the raw surface is kept", it) }
-        .getOrNull()
+private fun finish(mesh: RerunMesh, photos: ModelPhotos?, rawGlb: ByteArray?, progress: (Float) -> Unit): Result<CleanModelResult> =
+    runCatching {
+        CleanModel.build(mesh, photos, JpegAtlasEncoder, consume = rawGlb != null, rawGlb = rawGlb, progress = progress)
+    }
+        .onFailure { if (it is CancellationException) throw it }
+        .onFailure { Log.w(TAG, "finishing the model failed: the raw surface is left", it) }
 
 /** QA only: the ray-cast room's key photos, as a recording keeps them. */
 private fun syntheticPhotos(): ModelPhotos =
@@ -455,8 +464,9 @@ private object JpegAtlasEncoder : AtlasEncoder {
  * The scan's model: the meshed surface, or — when meshing finds none — the scan's coloured points
  * as small squares ([RerunPointsMesh]). `null` when there is neither. Off the main thread.
  * Only the finished model is [RerunScanModel.finished]: the raw surface a failed finish leaves,
- * or the points, are shown but not kept, and the next open tries again. [onRaw] hears a big
- * scan's raw surface while it finishes ([buildRerunModel]).
+ * or the points, are shown but not kept, and the next open tries again — except the raw surface
+ * a finish ran out of memory on, kept as it is ([RerunScanModel.outOfMemoryInHeap]). [onRaw]
+ * hears a big scan's raw surface while it finishes ([buildRerunModel]).
  *
  * [progress] is also where a cancelled build stops: it may throw [CancellationException], which
  * goes through untouched — a screen left mid-build stops meshing instead of racing the next one.
@@ -508,6 +518,7 @@ private fun RerunModelBuild.scanModel() = RerunScanModel(
     vertices = vertices,
     budgetReached = budgetReached,
     finished = finished,
+    outOfMemoryInHeap = outOfMemoryInHeap,
 )
 
 /** QA only: the ray-cast room's depth, fused into coloured points as a recording fuses them. */
@@ -591,8 +602,11 @@ internal fun RerunModelScreen(
             }
         }
         // A model finished now is kept with its scan, so the next open reads it instead of meshing
-        // again. A fallback is not: the next open tries again, from the TSDF still held.
-        val keepAs = id?.takeIf { kept == null && store != null && model?.finished == true }
+        // again; so is the raw surface a finish ran out of memory on, which the same heap would
+        // only fail again. Another fallback is not: the next open tries again — from the TSDF
+        // while its slot holds it, from the scan's surfels once a big one was let go at meshing
+        // to give the finish its heap (mesh()). Only a model kept here lets go a TSDF still held.
+        val keepAs = id?.takeIf { kept == null && store != null && model?.keptWithScan == true }
         if (keepAs != null && model != null) {
             val saved = withContext(Dispatchers.IO) {
                 runCatching { checkNotNull(store).saveModel(keepAs, model) }

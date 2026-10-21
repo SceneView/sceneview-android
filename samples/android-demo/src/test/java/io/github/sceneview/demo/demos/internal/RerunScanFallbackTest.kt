@@ -110,6 +110,11 @@ class RerunScanFallbackTest {
         val reopened = assertNotNull(store.model(saved.id))
         assertFalse("a raw surface read back as finished", reopened.finished)
         assertTrue("expected the raw surface read back", raw.glb.contentEquals(reopened.glb))
+
+        // A bigger heap than the one it ran out of finishes it again.
+        val heap = assertNotNull(model.outOfMemoryInHeap)
+        assertNotNull(RerunScanModel.parse(model.infoJson(), model.glb, heap))
+        assertNull("a bigger heap left on the raw surface", RerunScanModel.parse(model.infoJson(), model.glb, heap + 1))
     }
 
     @Test

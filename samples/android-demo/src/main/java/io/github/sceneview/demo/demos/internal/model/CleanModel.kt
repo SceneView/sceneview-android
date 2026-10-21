@@ -28,6 +28,11 @@ internal data class CleanModelStats(
     val atlasHalvings: Int,
     /** Whether the texture was dropped, then the budget lowered, to keep within [glbLimitBytes]. */
     val glbGuarded: Boolean,
+    /**
+     * The finished model still outweighed the raw surface once the budget was down to
+     * [CleanModel.MIN_GUARD_TRIANGLES]: the raw surface's own `.glb` is the result instead.
+     */
+    val rawKept: Boolean,
     val prepareMs: Long,
     val cleanMs: Long,
     val simplifyMs: Long,
@@ -37,6 +42,10 @@ internal data class CleanModelStats(
     val totalMs: Long get() = prepareMs + cleanMs + simplifyMs + textureMs + writeMs
 }
 
+/**
+ * The finished model's [glb], and the [model] it was written from — unless [CleanModelStats.rawKept]:
+ * [glb] is then the raw surface's own, lighter than anything the finish made.
+ */
 internal class CleanModelResult(val glb: ByteArray, val model: ModelMesh, val stats: CleanModelStats)
 
 /**
@@ -47,8 +56,10 @@ internal class CleanModelResult(val glb: ByteArray, val model: ModelMesh, val st
  * ([ModelGlb]). Blocking CPU work, for a worker thread; [progress] (0–1) may throw to stop it.
  *
  * The finished `.glb` never weighs more than the raw surface's own: over it, the atlas is halved,
- * then the texture dropped, then the budget halved. With `consume`, the raw surface's arrays are
- * worked in instead of copied — for a caller that already wrote its `.glb` and is done with it.
+ * then the texture dropped, then the budget halved down to [MIN_GUARD_TRIANGLES]; a model still
+ * heavier gives way to the raw surface's `.glb` ([CleanModelStats.rawKept]). With `consume`, the
+ * raw surface's arrays are worked in instead of copied — for a caller that already wrote its
+ * `.glb`, passed as `rawGlb`, and is done with them.
  */
 internal object CleanModel {
     @Suppress("LongMethod", "LongParameterList")
@@ -58,12 +69,15 @@ internal object CleanModel {
         encoder: AtlasEncoder?,
         targetTriangles: Int = RerunMeshSimplifier.DEFAULT_TARGET_TRIANGLES,
         consume: Boolean = false,
+        rawGlb: ByteArray? = null,
         progress: (Float) -> Unit = {},
     ): CleanModelResult {
         require(raw.triangleCount > 0) { "a model needs triangles" }
+        require(!consume || rawGlb != null) { "a consumed raw surface needs its .glb written first" }
         var mark = System.nanoTime()
         fun lap(): Long = ((System.nanoTime() - mark) / NANOS_PER_MS).also { mark = System.nanoTime() }
         val rawTriangles = raw.triangleCount
+        val rawVertices = raw.vertexCount
         val glbLimit = RerunMeshGlb.binaryBytes(raw)
         val input = prepare(raw, consume) { progress(it * PREPARE_SHARE) }
         val cleanInputTriangles = input.triangleCount
@@ -97,8 +111,10 @@ internal object CleanModel {
         var glb = ModelGlb.write(model, encoder)
         // Never heavier than the raw surface: the seams' duplicated vertices and the atlas are
         // paid for by a coarser atlas first, then by the vertex colours alone, then by fewer faces.
+        // Each step reports, so a finish left meanwhile stops there.
         var halvings = 0
         while (glb.size > glbLimit && texture != null && halvings < MAX_ATLAS_HALVINGS) {
+            progress(BEFORE_WRITE)
             texture = texture.halved()
             model = model.withTexture(texture)
             glb = ModelGlb.write(model, encoder)
@@ -106,13 +122,23 @@ internal object CleanModel {
         }
         var guardTarget = minOf(targetTriangles, simplified.triangleCount)
         val guarded = glb.size > glbLimit
-        while (glb.size > glbLimit && guardTarget >= MIN_GUARD_TRIANGLES) {
+        while (glb.size > glbLimit && (texture != null || guardTarget >= MIN_GUARD_TRIANGLES)) {
+            progress(BEFORE_WRITE)
             if (texture == null) guardTarget /= 2
             texture = null
-            simplified = simplify(clean, textured = false, guardTarget, ceiling) {}
+            simplified = simplify(clean, textured = false, guardTarget, ceiling) { progress(BEFORE_WRITE) }
             model = ModelAssembly.assemble(simplified, null)
             glb = ModelGlb.write(model, encoder)
         }
+        // A few faces left and still over: the vertex layout outweighs the raw one's. The raw
+        // surface is the lighter model then — its own .glb, compared whole.
+        val own = if (glb.size > glbLimit) {
+            progress(BEFORE_WRITE)
+            (rawGlb ?: RerunMeshGlb.write(raw)).takeIf { it.size < glb.size }
+        } else {
+            null
+        }
+        if (own != null) glb = own
         val writeMs = lap()
         progress(1f)
         return CleanModelResult(
@@ -124,8 +150,8 @@ internal object CleanModel {
                 geometry = geometry,
                 simplifyTarget = if (texture != null) simplifyTarget else targetTriangles,
                 simplifiedTriangles = simplified.triangleCount,
-                finalTriangles = model.triangleCount,
-                finalVertices = model.vertexCount,
+                finalTriangles = if (own != null) rawTriangles else model.triangleCount,
+                finalVertices = if (own != null) rawVertices else model.vertexCount,
                 texture = texture?.stats,
                 droppedTextureShare = tried?.stats?.texturedShare?.takeIf { texture == null },
                 atlasWidth = model.texture?.width ?: 0,
@@ -134,6 +160,7 @@ internal object CleanModel {
                 glbLimitBytes = glbLimit,
                 atlasHalvings = halvings,
                 glbGuarded = guarded,
+                rawKept = own != null,
                 prepareMs = prepareMs,
                 cleanMs = cleanMs,
                 simplifyMs = simplifyMs,
@@ -286,7 +313,7 @@ internal object CleanModel {
     private const val MAX_ATLAS_HALVINGS = 2
 
     /** The fewest triangles the size guard brings a model down to. */
-    private const val MIN_GUARD_TRIANGLES = 2_000
+    const val MIN_GUARD_TRIANGLES = 2_000
 
     /**
      * A textured room needs fewer faces than a vertex-coloured one: the photos carry the detail,
@@ -314,5 +341,6 @@ internal object CleanModel {
     private const val TEXTURE_SHARE = 0.4f
     private const val BEFORE_SIMPLIFY = PREPARE_SHARE + CLEAN_SHARE
     private const val BEFORE_TEXTURE = BEFORE_SIMPLIFY + SIMPLIFY_SHARE
+    private const val BEFORE_WRITE = BEFORE_TEXTURE + TEXTURE_SHARE
     private const val NANOS_PER_MS = 1_000_000L
 }
