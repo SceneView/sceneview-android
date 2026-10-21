@@ -16,7 +16,7 @@ object NoDetector : SceneDetector {
 /**
  * A scan recognised in two passes, so that what needs no detector does not wait for it. The first
  * pass runs at once with [NoDetector] and no photo read: the doors and windows. The second runs
- * once [loadDetector] has the detector — a 20 MB download the first time, which may take minutes
+ * once [loadDetector] has the detector — a 10 MB download the first time, which may take minutes
  * or never end — and finds everything, the furniture included, with the first pass's openings
  * kept as they were. [loadDetector] starts before the first pass and runs alongside it; `null`
  * from it means no second pass.
