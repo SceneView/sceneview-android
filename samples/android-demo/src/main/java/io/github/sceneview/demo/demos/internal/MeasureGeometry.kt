@@ -380,7 +380,11 @@ private fun standsLikeAWall(outline: List<Position>, level: Float): Boolean {
 /** Without a tracked wall confirming it, a corner is squared within this only. */
 private const val SQUARE_UNCONFIRMED_TOLERANCE_DEGREES = 3f
 
-/** How close to square to the last wall a tracked wall runs to confirm a right angle. */
+/**
+ * How close to square to the last wall a tracked wall runs to confirm a right angle. The last
+ * wall is the traced one, so after a short one (1 m or less, its corners a few centimetres off)
+ * its own noise takes most of this, and the corner falls back to the unconfirmed 3°.
+ */
 private const val SQUARE_CONFIRM_DEGREES = 3f
 
 /** How far from the corner a confirming wall's foot may stop: ARCore's planes rarely reach into one. */

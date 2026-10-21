@@ -49,8 +49,8 @@ class MeasureSquareCornerTest {
     private fun square(start: Float, end: Float, across: Float = 0f, bottom: Float = 0.1f, top: Float = 2f) =
         wall(p(corner.x - across, start), p(corner.x - across, end), bottom, top)
 
-    private fun snap(raw: Position, planes: List<MeasurePlane> = emptyList()): MeasureSnap =
-        measureSnapAim(MeasureMode.Room, planes, 0f, listOf(from, corner), listOf(from, corner), raw, TOLERANCE)
+    private fun snap(raw: Position, planes: List<MeasurePlane> = emptyList(), level: Float? = 0f): MeasureSnap =
+        measureSnapAim(MeasureMode.Room, planes, level, listOf(from, corner), listOf(from, corner), raw, TOLERANCE)
 
     private fun assertSquared(raw: Position, planes: List<MeasurePlane> = emptyList()) {
         val snap = snap(raw, planes)
@@ -104,7 +104,7 @@ class MeasureSquareCornerTest {
 
     @Test
     fun `an open door by the corner confirms nothing`() {
-        // Hinged 15 cm from the corner and opened square: 0.8 m along the floor, 2 m high.
+        // Hinged 10 cm from the corner and opened square: 0.8 m along the floor, 2 m high.
         val door = square(start = 0.1f, end = 0.9f, bottom = 0f, top = 2f)
         assertAsAimed(aim(5f), listOf(door))
         assertAsAimed(aim(-5f), listOf(door))
@@ -130,6 +130,13 @@ class MeasureSquareCornerTest {
             listOf(p(3.98f, 0.1f), p(4.02f, 0.1f), p(4.02f, 1.3f), p(3.98f, 1.3f)),
         )
         assertAsAimed(aim(5f), listOf(floor))
+    }
+
+    @Test
+    fun `without a floor level a wall confirms nothing`() {
+        val snap = snap(aim(5.5f), listOf(wallFromCorner(0f)), level = null)
+        assertEquals(MeasureSnapKind.None, snap.kind)
+        assertEquals(aim(5.5f), snap.position)
     }
 
     // ── Each threshold, just inside and just outside ────────────────────────────────────────

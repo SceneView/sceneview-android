@@ -21,9 +21,9 @@ import kotlin.math.sqrt
  * side runs along x, y goes down the page, and the walls run clockwise from the corner nearest
  * the top-left — wall A along the top. Every wall was measured end to end, so every wall is
  * seen, and no figure is an estimate. A traced figure has no scatter: every `±` it carries is 0.
- * Nothing is rounded or converted here: [SurveyFormat] writes the figures, picks their units
- * (metres, or the locale's where it follows the locale), and prints a zero `±` as one rounding
- * step (`± 0.05` on a length in metres) unless it leaves it off.
+ * Nothing is rounded or converted here: [SurveyFormat] writes the figures in the plan's units,
+ * and where it prints a `±`, prints a zero one as one rounding step (`± 0.05` on a length in
+ * metres).
  *
  * `null` under three corners, or for an outline with no area.
  */
