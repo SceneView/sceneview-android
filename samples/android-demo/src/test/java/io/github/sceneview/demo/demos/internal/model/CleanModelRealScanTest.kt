@@ -740,7 +740,7 @@ object HeapCappedFinish {
         }
         val ms = (System.nanoTime() - start) / NANOS_PER_MS
         decoding?.join()
-        // The swap, everything the screen then holds held through a full collection.
+        // The swap: everything the screen then holds, held at once (the heap collects before it gives up).
         println("$STAGE$SWAP ${System.currentTimeMillis()}")
         val finished = RerunScanModel(
             RerunScanModel.Kind.Mesh, result.glb, FloatArray(BOUNDS), maxOf(result.stats.finalTriangles, 1), 0,
@@ -749,7 +749,6 @@ object HeapCappedFinish {
         )
         val rendered = result.glb.copyOf()
         val ground = groundSource(finished, settled = true)?.let { groundOf(it.glb) }
-        System.gc()
         println(
             "held at the swap: raw ${shownRaw.glb.size / MB} MB, finished ${finished.glb.size / MB} MB, " +
                 "its copy ${rendered.size / MB} MB, ground ${ground != null}, raw ground ${rawGround.get() != null}",
