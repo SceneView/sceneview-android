@@ -103,8 +103,9 @@ data class MeasurePlanCard(val netWallArea: String, val openings: List<MeasurePl
 /**
  * The card Plan shows under a traced room's plan when it has doors or windows: [netWallArea]
  * (m²) and each of [openings], written under [locale] in [units], the plan's own, so one page
- * never says feet on the card and metres on the plan. In metres every length is in metres, to the
- * centimetre, as the plan writes them: `0,93 m × 2,04 m`, never `93 cm × 2,04 m`.
+ * never says feet on the card and metres on the plan. In metres every length is in metres with two
+ * decimals, as the plan writes them, but to the centimetre, where the plan's own lengths go in 5 cm
+ * steps ([SurveyFormat.LENGTH_STEP_M]): `0,93 m × 2,04 m`, never `93 cm × 2,04 m`.
  */
 fun measurePlanCard(
     netWallArea: Float,
