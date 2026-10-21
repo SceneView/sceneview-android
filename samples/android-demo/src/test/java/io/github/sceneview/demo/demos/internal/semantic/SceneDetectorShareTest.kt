@@ -1,6 +1,7 @@
 package io.github.sceneview.demo.demos.internal.semantic
 
 import android.content.Context
+import android.content.pm.PackageManager
 import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -27,14 +28,16 @@ import java.security.MessageDigest
 import java.util.Collections
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * The detector is shared by every replay of the process: the first one that needs it fetches it,
  * the others wait for it and show its progress meanwhile. A download cut short — no network, the
  * replay left — resumes where it stopped; a file that fails its check is not fetched again; one
- * that ONNX Runtime refuses is fetched once more, never in a loop — not even one launch after the
+ * that the runtime refuses is fetched once more, never in a loop — not even one launch after the
  * other, until a copy loads: a file damaged after that is fetched once more. On a metered network
- * nothing is fetched until the user asks, as for the HD pack; a download already under way goes on.
+ * nothing is fetched until the user asks, as for the HD pack, and each download asks again; a
+ * download already under way goes on.
  *
  * Every download goes to a local fake server, into the app's own storage.
  */
@@ -146,7 +149,7 @@ class SceneDetectorShareTest {
     }
 
     @Test
-    fun `a model ONNX Runtime refuses is fetched once more, then given up`() = runBlocking {
+    fun `a model the runtime refuses is fetched once more, then given up`() = runBlocking {
         MockWebServer().use { server ->
             repeat(3) { server.enqueue(ok(payload)) }
             server.start()
@@ -188,7 +191,7 @@ class SceneDetectorShareTest {
             assertNull(share(server, opens = { opened++; null }).share())
             assertEquals(2, server.requestCount)
 
-            // The app restarts: a new share on the same storage, ONNX Runtime refusing still.
+            // The app restarts: a new share on the same storage, the runtime refusing still.
             val states = ArrayList<SceneModelState>()
             assertNull(share(server, opens = { opened++; null }).share { states += it })
 
@@ -196,7 +199,7 @@ class SceneDetectorShareTest {
             assertEquals("a third copy was fetched", 2, server.requestCount)
             assertEquals(SceneModelState.Unusable, states.last())
 
-            // A launch where ONNX Runtime takes it uses that same copy, with no download.
+            // A launch where the runtime takes it uses that same copy, with no download.
             assertNotNull(share(server).share())
             assertEquals(2, server.requestCount)
         }
@@ -207,13 +210,13 @@ class SceneDetectorShareTest {
         MockWebServer().use { server ->
             repeat(4) { server.enqueue(ok(payload)) }
             server.start()
-            // ONNX Runtime refuses the first copy and takes the one fetched again.
+            // The runtime refuses the first copy and takes the one fetched again.
             var opened = 0
             assertNotNull(share(server, opens = { if (opened++ == 0) null else FakeDetector }).share())
             assertEquals(2, server.requestCount)
             assertFalse("the mark outlived a copy that loaded", store(server).isRefetched())
 
-            // Later the file is damaged on the device — same size, other bytes — and ONNX Runtime
+            // Later the file is damaged on the device — same size, other bytes — and the runtime
             // refuses it: the next launch fetches it once more, and only once.
             File(dir, sha).let { file -> file.writeBytes(file.readBytes().also { it[0] = (it[0] + 1).toByte() }) }
             val states = ArrayList<SceneModelState>()
@@ -306,6 +309,47 @@ class SceneDetectorShareTest {
         }
     }
 
+    @Test
+    fun `on mobile data, a copy fetched again after a refusal waits for a new tap`() = runBlocking {
+        MockWebServer().use { server ->
+            repeat(2) { server.enqueue(ok(payload)) }
+            server.start()
+            val opened = AtomicInteger()
+            val refusedOnce = { _: File -> if (opened.getAndIncrement() == 0) null else FakeDetector }
+            val detectors = share(server, metered = { true }, opens = refusedOnce)
+            val states = Collections.synchronizedList(ArrayList<SceneModelState>())
+
+            val replay = async(Dispatchers.Default) { detectors.share { states += it } }
+            until("the download card") { SceneModelState.Metered in states }
+            detectors.allowMetered()
+
+            // The tap was for one download: the runtime refused that copy, and another one on
+            // mobile data is asked for again.
+            val cards = { synchronized(states) { states.count { it == SceneModelState.Metered } } }
+            until("the second download card") { cards() == 2 }
+            delay(200)
+            assertEquals(1, server.requestCount)
+            assertFalse("a second copy was fetched on mobile data without a tap", replay.isCompleted)
+
+            detectors.allowMetered()
+            assertNotNull(replay.await())
+            assertEquals(2, server.requestCount)
+            assertEquals(SceneModelState.Ready, states.last())
+        }
+    }
+
+    @Test
+    fun `nothing of ONNX Runtime runs at the app's launch`() {
+        @Suppress("DEPRECATION")
+        val providers = context.packageManager
+            .getPackageInfo(context.packageName, PackageManager.GET_PROVIDERS)
+            .providers.orEmpty().map { it.name }
+        // The merged manifest is the one read here: an app with no provider at all proves nothing.
+        assertTrue("no provider read from the merged manifest", providers.isNotEmpty())
+        val onnx = providers.filter { it.startsWith("ai.onnxruntime.") }
+        assertTrue("started at every cold start: $onnx", onnx.isEmpty())
+    }
+
     private fun share(
         server: MockWebServer,
         metered: () -> Boolean = { false },
@@ -320,7 +364,7 @@ class SceneDetectorShareTest {
     private fun store(server: MockWebServer) =
         SceneModelStore(dir, OkHttpClient(), server.url("/").toString().trimEnd('/'), asset)
 
-    /** ONNX Runtime as it treats a file damaged on the device: it loads only the intact model. */
+    /** The runtime as it treats a file damaged on the device: it loads only the intact model. */
     private fun intactOrRefused(file: File): SceneDetector? =
         if (file.readBytes().contentEquals(payload)) FakeDetector else null
 

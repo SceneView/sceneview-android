@@ -60,13 +60,13 @@ class SceneModelStoreTest {
         val root = repoRoot()
         val manifest = Json.parseToJsonElement(File(root, "assets/manifest.json").readText()).jsonObject
         val paths = manifest.getValue("files").jsonArray.map { it.jsonObject.getValue("path").jsonPrimitive.content }
-        val models = paths.filter { it.endsWith(".onnx") }
+        val models = paths.filter { path -> MODEL_EXTENSIONS.any { path.endsWith(".$it") } }
         assertTrue("fetched into the APK: $models", models.isEmpty())
         val dirs = manifest.getValue("scopes").jsonObject.values
             .flatMap { scope -> scope.jsonObject.getValue("dirs").jsonArray.map { it.jsonPrimitive.content } }
         assertTrue("an ML folder is still fetched into the APK", dirs.none { it.startsWith("$APK_ASSETS/ml") })
         // A model left over from an older fetch would still be packaged by a local build.
-        val stray = File(root, APK_ASSETS).walk().filter { it.extension == "onnx" }.toList()
+        val stray = File(root, APK_ASSETS).walk().filter { it.extension in MODEL_EXTENSIONS }.toList()
         assertTrue("delete $stray: it would be packaged into the APK", stray.isEmpty())
     }
 
@@ -74,11 +74,14 @@ class SceneModelStoreTest {
         val credits = File(repoRoot(), "$APK_ASSETS/CREDITS.md").readText()
         val downloaded = credits.substringAfter(DOWNLOADED_HEADING, missingDelimiterValue = "")
         assertTrue("CREDITS.md has no \"$DOWNLOADED_HEADING\" section", downloaded.isNotEmpty())
-        val line = downloaded.lines().first { "yolox_tiny.onnx" in it }
+        val line = downloaded.lines().first { YOLOX_FILE in it }
         assertTrue(line, "Apache-2.0" in line)
         assertTrue(line, "https://github.com/Megvii-BaseDetection/YOLOX" in line)
         // Listed as downloaded, not among the files bundled in the APK.
-        assertFalse(credits.substringBefore(DOWNLOADED_HEADING).contains("yolox_tiny.onnx"))
+        assertFalse(credits.substringBefore(DOWNLOADED_HEADING).contains(YOLOX_FILE))
+        // The file the app runs is a conversion: its credit says so, and from what.
+        val note = downloaded.lines().dropWhile { YOLOX_FILE !in it }.drop(1).first()
+        assertTrue(note, "onnx2tf" in note)
     }
 
     // ── Download ─────────────────────────────────────────────────────────
@@ -139,6 +142,26 @@ class SceneModelStoreTest {
             assertEquals(SceneModelState.Unusable, states.last())
             assertEquals(0, dir.listFiles()!!.size)
             assertNull(store(server, dir).cached())
+        }
+    }
+
+    @Test fun `a copy damaged on the device since its download is fetched again at the next launch`() = runBlocking {
+        MockWebServer().use { server ->
+            repeat(2) { server.enqueue(ok(payload)) }
+            server.start()
+            val dir = tmp.newFolder("scene-detector")
+            val file = store(server, dir).fetch()!!
+            // Same size, one byte changed: a size check alone takes it for the file it was.
+            file.writeBytes(file.readBytes().also { it[10] = (it[10] + 1).toByte() })
+
+            // The next launch of the app hashes the copy before the runtime opens it.
+            val nextLaunch = store(server, dir)
+            assertNull("a damaged copy passed for the detector", nextLaunch.cached())
+            val again = nextLaunch.fetch()
+
+            assertEquals(2, server.requestCount)
+            assertTrue(again!!.readBytes().contentEquals(payload))
+            assertEquals(listOf(sha), dir.list()!!.toList())
         }
     }
 
@@ -247,8 +270,13 @@ class SceneModelStoreTest {
         .first { File(it, "assets/manifest.json").isFile }
 
     private companion object {
-        const val YOLOX_SHA256 = "427cc366d34e27ff7a03e2899b5e3671425c262ea2291f88bb942bc1cc70b0f7"
-        const val YOLOX_BYTES = 20_219_662L
+        /** YOLOX-Tiny 0.1.1rc0 converted to LiteRT (float16), as published on `assets-v1`. */
+        const val YOLOX_SHA256 = "d1d61787dcd087234e41914688315b69f502a8dfdfb10982cdcd3b7c57549e0a"
+        const val YOLOX_BYTES = 10_178_328L
+        const val YOLOX_FILE = "yolox_tiny.tflite"
+
+        /** No model of either runtime may be packaged into the APK. */
+        val MODEL_EXTENSIONS = setOf("onnx", "tflite")
         const val APK_ASSETS = "samples/android-demo/src/main/assets"
         const val DOWNLOADED_HEADING = "## Downloaded on first use"
     }
