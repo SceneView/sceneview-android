@@ -6,80 +6,105 @@ import android.graphics.BitmapFactory
 import android.util.Log
 import androidx.annotation.StringRes
 import io.github.sceneview.demo.R
-import java.io.FileNotFoundException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileInputStream
 import java.nio.channels.FileChannel
+import kotlin.coroutines.cancellation.CancellationException
 
 /*
- * The Android side of scene recognition: the bundled model, the replay's photos as detector
- * images, and the labels' names in the app's language. Everything else is plain Kotlin the JVM
- * tests run.
+ * The Android side of scene recognition: the detector downloaded on first use, the replay's photos
+ * as detector images, and the labels' names in the app's language. Everything else is plain Kotlin
+ * the JVM tests run.
  */
 
 private const val TAG = "SceneRecognition"
 
-/** The detector bundled with the demo: YOLOX-Tiny (Apache-2.0), fetched into the assets by the build. */
-const val SCENE_MODEL_ASSET = "ml/yolox_tiny.onnx"
-
 /** The side a keyframe is decoded down to before the detector letterboxes it into 416 pixels. */
 const val SCENE_IMAGE_MAX_SIDE = 640
 
-private const val SCENE_MODEL_NAME = "yolox_tiny"
+/** The detector's folder in app storage: kept across launches, never cleared as a cache is. */
+private const val SCENE_MODEL_DIR = "scene-detector"
 
 /**
- * The bundled detector, `null` when the build carries no model (assets not fetched) or ONNX
- * Runtime will not load it. Off the main thread: the first call maps the 20 MB model and builds
- * its session; every later one, each replay opened again, shares that session ([BundledDetector]).
- * Closing what it returns lets go of the share, never the shared session.
+ * The furniture detector, `null` when it cannot be had — no network for its first download
+ * ([SceneModelState.Offline]), or a file that fails its check or that ONNX Runtime will not load
+ * ([SceneModelState.Unusable]): the replay then runs without it. [onState] hears where it is, on
+ * the caller's dispatcher: the progress of its download, then [SceneModelState.Ready] once its
+ * session is built, or why there is none.
+ *
+ * The first call downloads the model ([SceneModelStore]) — or finds it in app storage —, maps it
+ * and builds its session, all off the main thread; every later one, each replay opened again,
+ * shares that session ([SharedDetector]). Closing what it returns lets go of the share, never the
+ * shared session.
  */
-fun loadSceneDetector(context: Context): SceneDetector? = BundledDetector.share(context)
+suspend fun loadSceneDetector(context: Context, onState: (SceneModelState) -> Unit = {}): SceneDetector? =
+    SharedDetector.share(context.applicationContext, onState)
 
 /**
- * The bundled detector, built once for the process: a model that is not there, or that ONNX
- * Runtime will not load, is not looked for again either. The session lives as long as the
- * process, whose end frees it; the shares handed out close nothing ([Share]), so a replay that
- * closes its detector cannot pull the session from under another one.
+ * The detector, built once for the process. A model that failed its check, or that ONNX Runtime
+ * would not load, is not tried again before the app restarts; a download that found no network is,
+ * by the next replay, and resumes where it stopped. The session lives as long as the process,
+ * whose end frees it; the shares handed out close nothing ([Share]), so a replay that closes its
+ * detector cannot pull the session from under another one.
  */
-private object BundledDetector {
-    private var loaded = false
+private object SharedDetector {
+    private val lock = Mutex()
+    private var store: SceneModelStore? = null
     private var detector: SceneDetector? = null
+    private var unusable = false
 
-    @Synchronized
-    fun share(context: Context): SceneDetector? {
-        if (!loaded) {
-            detector = load(context)
-            loaded = true
+    suspend fun share(context: Context, onState: (SceneModelState) -> Unit): SceneDetector? = lock.withLock {
+        detector?.let {
+            onState(SceneModelState.Ready)
+            return@withLock Share(it)
         }
-        return detector?.let(::Share)
-    }
-
-    private fun load(context: Context): SceneDetector? = try {
-        open(context)
-    } catch (missing: FileNotFoundException) {
-        Log.i(TAG, "No $SCENE_MODEL_ASSET in this build: the scan is not recognised (${missing.message})")
-        null
-    } catch (@Suppress("TooGenericExceptionCaught") failure: Exception) {
-        Log.w(TAG, "The scene detector could not be loaded: ${failure.message}")
-        null
+        if (unusable) {
+            onState(SceneModelState.Unusable)
+            return@withLock null
+        }
+        val models = store ?: withContext(Dispatchers.IO) {
+            SceneModelStore(File(context.filesDir, SCENE_MODEL_DIR))
+        }.also { store = it }
+        var ended: SceneModelState? = null
+        // Ready is said once the session is built, not when the file is merely on the device.
+        val file = models.fetch { state ->
+            ended = state
+            if (state != SceneModelState.Ready) onState(state)
+        }
+        if (file == null) {
+            unusable = ended == SceneModelState.Unusable
+            Log.i(TAG, "No scene detector (${ended ?: "not fetched"}): the scan is recognised without it")
+            return@withLock null
+        }
+        val built = open(file)
+        if (built == null) {
+            unusable = true
+            onState(SceneModelState.Unusable)
+            return@withLock null
+        }
+        detector = built
+        onState(SceneModelState.Ready)
+        Share(built)
     }
 
     /**
-     * The model mapped in place from the APK, where `noCompress 'onnx'` keeps it stored; read
-     * whole only from a build that compressed it, which cannot hand out its file descriptor.
+     * [file] mapped in place — ONNX Runtime reads a direct buffer without copying it onto the heap —
+     * and its session built: the mapping on [Dispatchers.IO], the session on [Dispatchers.Default].
      */
-    private fun open(context: Context): SceneDetector {
-        val stored = try {
-            context.assets.openFd(SCENE_MODEL_ASSET)
-        } catch (@Suppress("SwallowedException") compressed: FileNotFoundException) {
-            null
+    private suspend fun open(file: File): SceneDetector? = try {
+        val mapped = withContext(Dispatchers.IO) {
+            FileInputStream(file).use { it.channel.map(FileChannel.MapMode.READ_ONLY, 0, it.channel.size()) }
         }
-        if (stored == null) {
-            val bytes = context.assets.open(SCENE_MODEL_ASSET).use { it.readBytes() }
-            return OnnxSceneDetector(bytes, name = SCENE_MODEL_NAME)
-        }
-        val mapped = stored.use { fd ->
-            fd.createInputStream().use { it.channel.map(FileChannel.MapMode.READ_ONLY, fd.startOffset, fd.declaredLength) }
-        }
-        return OnnxSceneDetector(mapped, name = SCENE_MODEL_NAME)
+        withContext(Dispatchers.Default) { OnnxSceneDetector(mapped, name = SceneModel.NAME) }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (@Suppress("TooGenericExceptionCaught") failure: Exception) {
+        Log.w(TAG, "The scene detector could not be loaded: ${failure.message}")
+        null
     }
 }
 

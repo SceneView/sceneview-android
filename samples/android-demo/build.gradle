@@ -262,9 +262,7 @@ android {
         // which the APK zip stage still shrinks meaningfully.
         // `.task` is the MediaPipe bundle (a ZIP that MediaPipe memory-maps at
         // runtime) — re-compressing it in the APK breaks `createFromOptions`.
-        // `.onnx` is the scan recogniser's detector: stored, it is memory-mapped
-        // straight from the APK instead of inflated onto the heap (20 MB).
-        noCompress 'filamat', 'ktx', 'task', 'onnx'
+        noCompress 'filamat', 'ktx', 'task'
     }
     packaging {
         resources {
@@ -480,8 +478,9 @@ dependencies {
     }
 
     // ONNX Runtime — the 3D Scan's furniture detector (YOLOX-Tiny, internal/semantic). The
-    // model is an asset fetched like the GLBs (assets/ml, tools/fetch-assets.sh), never in git.
-    // The JVM artifact below runs the very same detector in the unit tests (photos, real scans).
+    // model is not in the APK: the app downloads it on first use from the assets-v1 release,
+    // checks its SHA-256 and keeps it in app storage (SceneModel.kt). The JVM artifact below
+    // runs the very same detector in the unit tests (photos, real scans).
     implementation libs.onnxruntime.android
 
     // JVM tests on Robolectric — no emulator needed.

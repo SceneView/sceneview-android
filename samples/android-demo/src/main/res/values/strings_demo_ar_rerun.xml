@@ -92,4 +92,11 @@
     <string name="demo_ar_rerun_recognized_window">Window</string>
     <!-- %1$s what was recognised (Sofa), %2$d how sure the scan is, in percent. -->
     <string name="demo_ar_rerun_recognized_description">%1$s, recognized by the scan, %2$d%% sure</string>
+    <!-- The furniture detector is downloaded the first time a replay recognizes a scan. %1$s is its size, e.g. "20 MB". -->
+    <string name="demo_ar_rerun_detector_downloading">Downloading the furniture detector (%1$s)…</string>
+    <string name="demo_ar_rerun_detector_downloading_caption">%1$d%% · downloaded once, then kept on this device</string>
+    <string name="demo_ar_rerun_detector_downloading_description">Downloading the furniture detector, %1$s</string>
+    <string name="demo_ar_rerun_detector_off">Furniture recognition is off</string>
+    <string name="demo_ar_rerun_detector_offline_caption">No connection to download its detector. Doors and windows are still found.</string>
+    <string name="demo_ar_rerun_detector_unusable_caption">Its detector could not be used. Doors and windows are still found.</string>
 </resources>

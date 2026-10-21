@@ -10,16 +10,14 @@
       "dirs": [
         "samples/android-demo/src/main/assets/models",
         "samples/android-demo/src/main/assets/environments",
-        "samples/android-demo/src/main/assets/splats",
-        "samples/android-demo/src/main/assets/ml"
+        "samples/android-demo/src/main/assets/splats"
       ],
       "extensions": [
         ".glb",
         ".hdr",
         ".spz",
         ".ply",
-        ".ktx",
-        ".onnx"
+        ".ktx"
       ]
     },
     "ios": {
@@ -165,15 +163,6 @@
       "source": "https://polyhaven.com",
       "license": "CC0-1.0",
       "author": "Poly Haven"
-    },
-    {
-      "path": "samples/android-demo/src/main/assets/ml/yolox_tiny.onnx",
-      "scope": "android",
-      "sha256": "427cc366d34e27ff7a03e2899b5e3671425c262ea2291f88bb942bc1cc70b0f7",
-      "size": 20219662,
-      "source": "https://github.com/Megvii-BaseDetection/YOLOX/releases/tag/0.1.1rc0",
-      "license": "Apache-2.0",
-      "author": "Megvii Inc. (Megvii-BaseDetection/YOLOX)"
     },
     {
       "path": "samples/android-demo/src/main/assets/models/khronos_damaged_helmet.glb",

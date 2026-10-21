@@ -6,6 +6,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,8 +31,10 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.LayoutDirection
@@ -63,14 +66,18 @@ import io.github.sceneview.demo.demos.internal.semantic.RecognizedItem
 import io.github.sceneview.demo.demos.internal.semantic.SceneBoxMeshes
 import io.github.sceneview.demo.demos.internal.semantic.SceneDetector
 import io.github.sceneview.demo.demos.internal.semantic.SceneImage
+import io.github.sceneview.demo.demos.internal.semantic.SceneModel
+import io.github.sceneview.demo.demos.internal.semantic.SceneModelState
 import io.github.sceneview.demo.demos.internal.semantic.SceneRecognizer
 import io.github.sceneview.demo.demos.internal.semantic.loadSceneDetector
 import io.github.sceneview.demo.demos.internal.semantic.nameRes
 import io.github.sceneview.demo.demos.internal.semantic.sceneImageOf
+import io.github.sceneview.demo.hdpack.hdPackSize
 import io.github.sceneview.demo.theme.DebugPalette
 import io.github.sceneview.demo.theme.LocalStageChrome
 import io.github.sceneview.demo.theme.SceneViewTokens
 import io.github.sceneview.demo.theme.SceneViewTokens.Space
+import io.github.sceneview.demo.ui.NarrationText
 import io.github.sceneview.demo.ui.overMediaEdge
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.math.Position
@@ -130,8 +137,11 @@ internal class ScanObjectPick(
     private val materialLoader: MaterialLoader,
     palette: DebugPalette,
     parent: CoroutineScope,
-    /** The 2D detector the scan's parts are recognised with, off the main thread; `null` without one. */
-    private val loadDetector: () -> SceneDetector? = { null },
+    /**
+     * The 2D detector the scan's parts are recognised with, `null` without one. It may first have
+     * to be downloaded, off the main thread: it says where it is ([SceneModelState]) as it goes.
+     */
+    private val loadDetector: suspend (onState: (SceneModelState) -> Unit) -> SceneDetector? = { null },
 ) {
     /**
      * This picker's own coroutines, under the composition's [parent] scope: [destroy] cancels them,
@@ -229,6 +239,14 @@ internal class ScanObjectPick(
     var tooLargeAt: Offset by mutableStateOf(Offset.Unspecified)
         private set
 
+    /**
+     * Where the furniture detector is while this replay waits for it — downloading, or off for want
+     * of it until the notice has been read —; `null` once it is ready, or with nothing to say.
+     */
+    var detectorState: SceneModelState? by mutableStateOf(null)
+        private set
+    private var noticeJob: Job? = null
+
     init {
         nodes.forEach { it.isVisible = false }
         // Back from the Camera view: the object picked before it is still the one picked, and the
@@ -243,7 +261,8 @@ internal class ScanObjectPick(
 
     /**
      * Recognises the scan's parts, once ([SceneRecognizer]): the keyframes are read here, from the
-     * trace, on the main thread that owns it; the photos, the detector and the lifting run on
+     * trace, on the main thread that owns it; the detector is fetched — downloaded the first time,
+     * its progress in [detectorState] — then the photos, the detector and the lifting run on
      * [Dispatchers.Default], each lifting under the taps' own [picking] lock. Without a detector
      * the openings in the walls are still found.
      */
@@ -251,24 +270,34 @@ internal class ScanObjectPick(
         val keyframes = SceneRecognizer.keyframes(replay.trace, replay.manifest.lens)
         scope.launch {
             val sorted = objects.await() ?: return@launch
-            val recognition = withContext(Dispatchers.Default) {
-                val detector = runCatching { loadDetector() }.getOrNull()
-                try {
-                    SceneRecognizer(detector ?: NoDetector, maxFrames = if (detector == null) 0 else SceneRecognizer.MAX_FRAMES)
-                        .recognize(
-                            keyframes, dense.cloud, sorted,
-                            image = { path -> sceneImageOf { replay.decode(path, it) } },
-                            pickLimit = minOf(dense.cloud.count, DenseSurfels.MAX_SURFELS),
-                            picking = picking,
-                        )
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    Log.w(TAG, "The scan could not be recognised: ${e.message}")
-                    null
-                } finally {
-                    detector?.close()
+            val detector = try {
+                loadDetector(::detectorIs)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "No scene detector: ${e.message}")
+                detectorIs(SceneModelState.Unusable)
+                null
+            }
+            val recognition = try {
+                withContext(Dispatchers.Default) {
+                    try {
+                        SceneRecognizer(detector ?: NoDetector, maxFrames = if (detector == null) 0 else SceneRecognizer.MAX_FRAMES)
+                            .recognize(
+                                keyframes, dense.cloud, sorted,
+                                image = { path -> sceneImageOf { replay.decode(path, it) } },
+                                pickLimit = minOf(dense.cloud.count, DenseSurfels.MAX_SURFELS),
+                                picking = picking,
+                            )
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.w(TAG, "The scan could not be recognised: ${e.message}")
+                        null
+                    }
                 }
+            } finally {
+                detector?.close()
             } ?: return@launch
             Log.d(
                 TAG,
@@ -277,6 +306,18 @@ internal class ScanObjectPick(
             )
             selection.recognized = recognition.items
             recognized = recognition.items
+        }
+    }
+
+    /** Shows where the detector is: its progress while it downloads, a notice for a while when it is off. */
+    private fun detectorIs(state: SceneModelState) {
+        noticeJob?.cancel()
+        detectorState = state.takeUnless { it == SceneModelState.Ready }
+        if (state == SceneModelState.Offline || state == SceneModelState.Unusable) {
+            noticeJob = scope.launch {
+                delay(NOTICE_MILLIS)
+                detectorState = null
+            }
         }
     }
 
@@ -452,10 +493,13 @@ internal class ScanObjectPick(
         /** In `glPolygonOffset` units, towards the eye: Filament flips the sign for its reversed depth. */
         const val TINT_OFFSET = -1f
         const val HINT_MILLIS = 2600L
+
+        /** Long enough to read why recognition is off, two lines of it. */
+        const val NOTICE_MILLIS = 4500L
         const val NANOS_PER_MILLI = 1_000_000L
     }
 
-    /** No 2D detector — the model is not in the build: the walls' openings are still found. */
+    /** No 2D detector — not downloaded, or not usable: the walls' openings are still found. */
     private object NoDetector : SceneDetector {
         override val name = "none"
         override fun detect(image: SceneImage) =
@@ -496,8 +540,8 @@ internal fun rememberScanObjectPick(
     val pick = remember(engine, materialLoader, replay, session, orbit, palette, kept) {
         val dense = replay?.dense?.takeUnless { replay.growing }
         if (replay != null && dense != null) {
-            ScanObjectPick(replay, dense, session, orbit, kept, engine, materialLoader, palette, scope) {
-                loadSceneDetector(context)
+            ScanObjectPick(replay, dense, session, orbit, kept, engine, materialLoader, palette, scope) { onState ->
+                loadSceneDetector(context, onState)
             }
         } else {
             null
@@ -510,7 +554,8 @@ internal fun rememberScanObjectPick(
 /**
  * What [pick] writes over the replay: the picked object's three dimensions over its box — under
  * it where the replay's cards leave no room —, or, where a tap found something no single box
- * holds, a word saying so. It takes no touch — the view under it keeps every gesture.
+ * holds, a word saying so; and at its foot, while the furniture detector downloads or when it is
+ * off, where it is. It takes no touch — the view under it keeps every gesture.
  *
  * [cornerCard] is the card the replay hangs in the top end corner of this view, as far as it
  * reaches in from that corner under the other cards — nothing is written under it either.
@@ -580,6 +625,58 @@ internal fun ScanObjectOverlay(pick: ScanObjectPick?, modifier: Modifier = Modif
             RecognizedLabel(item)
         }
     }
+    DetectorStatus(pick.detectorState, modifier)
+}
+
+/**
+ * Where the furniture detector is, over the foot of the view: how much of it has downloaded — the
+ * first replay that needs it fetches it —, or why recognition is off. The replay plays on under it.
+ */
+@Composable
+private fun DetectorStatus(state: SceneModelState?, modifier: Modifier) {
+    val cover = LocalDemoSceneCover.current
+    // The last state stays through the fade out.
+    var last by remember { mutableStateOf(state) }
+    if (state != null) last = state
+    Box(modifier) {
+        AnimatedVisibility(
+            visible = state != null,
+            enter = fadeIn(SceneViewTokens.Motion.fade()),
+            exit = fadeOut(SceneViewTokens.Motion.fade()),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(start = Space.md, end = Space.md, bottom = cover.calculateBottomPadding() + Space.md),
+        ) {
+            when (val shown = last) {
+                is SceneModelState.Downloading -> {
+                    val size = hdPackSize(LocalContext.current, SceneModel.BYTES)
+                    ObjectLabel(
+                        title = stringResource(R.string.demo_ar_rerun_detector_downloading, size),
+                        caption = stringResource(
+                            R.string.demo_ar_rerun_detector_downloading_caption,
+                            (shown.fraction * PERCENT).roundToInt(),
+                        ),
+                        description = stringResource(R.string.demo_ar_rerun_detector_downloading_description, size),
+                        modifier = Modifier.testTag("scan-detector-downloading"),
+                        progress = shown.fraction,
+                    )
+                }
+                SceneModelState.Offline, SceneModelState.Unusable -> ObjectLabel(
+                    title = stringResource(R.string.demo_ar_rerun_detector_off),
+                    caption = stringResource(
+                        if (shown == SceneModelState.Offline) {
+                            R.string.demo_ar_rerun_detector_offline_caption
+                        } else {
+                            R.string.demo_ar_rerun_detector_unusable_caption
+                        },
+                    ),
+                    description = null,
+                    modifier = Modifier.testTag("scan-detector-off"),
+                )
+                SceneModelState.Ready, null -> Unit
+            }
+        }
+    }
 }
 
 /** A recognised part of the room: what it is, over its box's three dimensions. */
@@ -634,9 +731,18 @@ private fun ObjectSizeLabel(box: ScanBox) {
     )
 }
 
-/** A card of the stage's chrome: [title] over a quieter [caption]. */
+/**
+ * A card of the stage's chrome: [title] over a quieter [caption]. With a [progress], the title
+ * narrates a step under way, and the card reads as a progress bar instead of announcing each change.
+ */
 @Composable
-private fun ObjectLabel(title: String, caption: String, description: String?, modifier: Modifier = Modifier) {
+private fun ObjectLabel(
+    title: String,
+    caption: String,
+    description: String?,
+    modifier: Modifier = Modifier,
+    progress: Float? = null,
+) {
     val chrome = LocalStageChrome.current
     val shape = RoundedCornerShape(SceneViewTokens.Radius.sm)
     Column(
@@ -644,13 +750,18 @@ private fun ObjectLabel(title: String, caption: String, description: String?, mo
             .overMediaEdge(shape, chrome.edgeRing, chrome.edgeHalo)
             .background(chrome.card, shape)
             .semantics(mergeDescendants = true) {
-                liveRegion = LiveRegionMode.Polite
+                if (progress == null) {
+                    liveRegion = LiveRegionMode.Polite
+                } else {
+                    progressBarRangeInfo = ProgressBarRangeInfo(progress, 0f..1f)
+                }
                 if (description != null) contentDescription = description
             }
             .padding(horizontal = Space.md, vertical = Space.sm),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(title, style = SceneViewTokens.Type.card.copy(color = chrome.onCard, fontFeatureSettings = "tnum"))
+        val titleStyle = SceneViewTokens.Type.card.copy(color = chrome.onCard, fontFeatureSettings = "tnum")
+        if (progress == null) Text(title, style = titleStyle) else NarrationText(title, style = titleStyle)
         Text(caption, style = SceneViewTokens.Type.caption.copy(color = chrome.onCardMuted))
     }
 }

@@ -161,6 +161,21 @@ BUNDLED_SCOPES = [
                         "removed — played by `TwoDInThreeDDemo` (Media).",
             },
         ],
+        # Files the app downloads the first time a feature needs them, then keeps. Not in the
+        # APK and in no manifest: the URL, SHA-256 and size live in the code that fetches them.
+        "downloaded": [
+            {
+                "file": "yolox_tiny.onnx",
+                "title": "YOLOX-Tiny (COCO object detector, ONNX)",
+                "author": "Megvii Inc. (Megvii-BaseDetection/YOLOX)",
+                "copyright": "© 2021-2022 Megvii Inc.",
+                "source": "https://github.com/Megvii-BaseDetection/YOLOX/releases/tag/0.1.1rc0",
+                "license": "Apache-2.0",
+                "bytes": 20219662,
+                "note": "Furniture detector of the 3D Scan replay — fetched on its first use "
+                        "(`internal/semantic/SceneModel.kt`).",
+            },
+        ],
     },
     # ── JSON scopes (#3214) ──────────────────────────────────────────────────
     # The iOS and web demos cannot show a Markdown file to a user, so their
@@ -474,13 +489,6 @@ NON_CATALOG_BUNDLED = {
         "license": "Apache-2.0",
         "sourceUrl": "https://github.com/sceneview/sceneview/blob/main/LICENSE",
         "note": "Generated procedurally by `tools/generate-splat-sphere.py`",
-    },
-    "yolox_tiny.onnx": {
-        "name": "YOLOX-Tiny (COCO object detector, ONNX)",
-        "author": "Megvii Inc. (Megvii-BaseDetection/YOLOX)",
-        "license": "Apache-2.0",
-        "sourceUrl": "https://github.com/Megvii-BaseDetection/YOLOX/releases/tag/0.1.1rc0",
-        "note": "On-device furniture detector of the 3D Scan replay (`internal/semantic`)",
     },
     "pose_landmarker_lite.task": {
         "name": "MediaPipe Pose Landmarker (lite)",
@@ -1007,6 +1015,7 @@ def render_bundled_credits(scope: dict, index: dict[str, dict]) -> tuple[str, li
     if hd:
         lines.extend(render_hd_pack_section(hd, to_root))
     lines.extend(render_streamed_section(scope.get("streamed", [])))
+    lines.extend(render_downloaded_section(scope.get("downloaded", [])))
 
     return "\n".join(lines) + "\n", uncredited
 
@@ -1022,16 +1031,38 @@ def render_streamed_section(streamed: list[dict]) -> list[str]:
     )
     lines.append("")
     for m in sorted(streamed, key=lambda m: m["file"]):
-        lic = m["license"].strip()
-        lic_link = license_url(lic)
-        lic_md = f"[{lic}]({lic_link})" if lic_link else lic
-        lines.append(
-            f"- `{m['file']}` — **[{m['title']}]({m['source']})** by {m['author']} "
-            f"({m['copyright']}) — {lic_md} ({human_size(int(m['bytes']))})"
-        )
+        lines.append(f"- `{m['file']}` — {credit_line(m)}")
         lines.append(f"  - {m['note']}")
     lines.append("")
     return lines
+
+
+def render_downloaded_section(downloaded: list[dict]) -> list[str]:
+    """Credits of the files the app downloads on first use: never in the APK, declared on the scope."""
+    if not downloaded:
+        return []
+    lines = ["## Downloaded on first use (kept on the device)", ""]
+    lines.append(
+        "Not bundled: the app downloads each file from the `assets-v1` GitHub Release the first "
+        "time a feature needs it, checks its SHA-256, and keeps it in its own storage."
+    )
+    lines.append("")
+    for m in sorted(downloaded, key=lambda m: m["file"]):
+        lines.append(f"- `{m['file']}` — {credit_line(m)}")
+        lines.append(f"  - {m['note']}")
+    lines.append("")
+    return lines
+
+
+def credit_line(m: dict) -> str:
+    """`**[title](source)** by author (copyright) — [licence](url) (size)`."""
+    lic = m["license"].strip()
+    lic_link = license_url(lic)
+    lic_md = f"[{lic}]({lic_link})" if lic_link else lic
+    return (
+        f"**[{m['title']}]({m['source']})** by {m['author']} "
+        f"({m['copyright']}) — {lic_md} ({human_size(int(m['bytes']))})"
+    )
 
 
 def render_hd_pack_section(manifest_rel: str, to_root: str) -> list[str]:

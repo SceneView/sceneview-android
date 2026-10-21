@@ -15,7 +15,7 @@ Re-run that script after adding, removing or re-compressing a bundled asset;
 `ci.yml` → `build` (step "Check asset credits") fails if this file and the
 assets disagree.
 
-Assets bundled: **51**.
+Assets bundled: **50**.
 
 > **Optimization note (#934, #2305).** The bundled GLBs and HDRs are compressed
 > for a lean APK while preserving on-device visual quality:
@@ -113,8 +113,6 @@ Assets bundled: **51**.
   Compiled from `samples/android-demo/src/main/materials/viewer_grid.mat` (3D viewers' ground grid, #4651)
 - `mediapipe/pose_landmarker_lite.task` — **[MediaPipe Pose Landmarker (lite)](https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker)** by Google LLC — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) (5.8 MB)  
   On-device pose model bundle used by `ARBodyTrackerDemo`
-- `ml/yolox_tiny.onnx` — **[YOLOX-Tiny (COCO object detector, ONNX)](https://github.com/Megvii-BaseDetection/YOLOX/releases/tag/0.1.1rc0)** by Megvii Inc. (Megvii-BaseDetection/YOLOX) — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) (20.2 MB)  
-  On-device furniture detector of the 3D Scan replay (`internal/semantic`)
 - `rerun/sample-session.jsonl` — **[sample-session.jsonl](https://github.com/sceneview/sceneview/blob/main/LICENSE)** by SceneView project — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) (176 KB)  
   Synthetic room walk in the Rerun bridge wire format — QA fixture of `ARRerunDemo`'s in-app 3D view (#3950)
 - `rerun/showcase/showcase-manifest.json` — **[showcase-manifest.json](https://github.com/sceneview/sceneview/blob/main/LICENSE)** by SceneView project — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) (11 KB)  
@@ -214,4 +212,11 @@ Not bundled: the app reads each file from the `assets-v1` GitHub Release while t
 
 - `big_buck_bunny_excerpt_720p.mp4` — **[Big Buck Bunny (excerpt)](https://www.bigbuckbunny.org)** by Blender Foundation (© 2008 Blender Foundation) — [CC-BY-3.0](https://creativecommons.org/licenses/by/3.0/) (3.3 MB)
   - 16 s cut from the film (1:48–2:04), resized to 1280×720, sound removed — played by `TwoDInThreeDDemo` (Media).
+
+## Downloaded on first use (kept on the device)
+
+Not bundled: the app downloads each file from the `assets-v1` GitHub Release the first time a feature needs it, checks its SHA-256, and keeps it in its own storage.
+
+- `yolox_tiny.onnx` — **[YOLOX-Tiny (COCO object detector, ONNX)](https://github.com/Megvii-BaseDetection/YOLOX/releases/tag/0.1.1rc0)** by Megvii Inc. (Megvii-BaseDetection/YOLOX) (© 2021-2022 Megvii Inc.) — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) (20.2 MB)
+  - Furniture detector of the 3D Scan replay — fetched on its first use (`internal/semantic/SceneModel.kt`).
 

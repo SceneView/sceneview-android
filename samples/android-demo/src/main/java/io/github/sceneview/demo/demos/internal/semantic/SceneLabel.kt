@@ -3,7 +3,7 @@ package io.github.sceneview.demo.demos.internal.semantic
 /**
  * What a recognised part of a room is. The furniture comes from a 2D detector's classes
  * ([ofDetector]); the doors and the windows from the holes in the walls ([WallOpenings]) — the
- * bundled detector has no class for either, a later one would map its own here.
+ * app's detector (COCO classes) has none for either, a later one would map its own here.
  */
 enum class SceneLabel(val wireName: String) {
     Bed("bed"),
