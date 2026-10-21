@@ -285,6 +285,10 @@ import java.util.concurrent.atomic.AtomicReference
  *                                 and released when this view leaves composition (#4467).
  *                                 Pass `null` to skip permission checks.
  * @param lifecycle                Lifecycle that binds the AR session resume/pause cycle.
+ *                                 Defaults to `LocalLifecycleOwner`. For an AR screen inside a
+ *                                 `NavHost` with transitions, pass [rememberHostLifecycle] so the
+ *                                 camera stays live while the screen animates out instead of
+ *                                 freezing on its last image.
  * @param content                  Declare AR scene content using the [ARSceneScope] composable DSL.
  */
 /**
