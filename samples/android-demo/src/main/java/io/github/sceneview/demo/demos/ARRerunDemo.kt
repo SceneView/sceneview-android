@@ -1428,6 +1428,8 @@ private fun RerunLiveScreen(
     val scanCoverage = remember(scanMedia) { ScanCoverageState() }
     // A room's walls, recognised as it is scanned (#4540): Room and Home only.
     val scanWalls = remember(scanMedia, scanScope) { if (scanScope.hasFloorPlan) ScanWallsState() else null }
+    // The turn to its next gap, held once: the arrow and the coaching line change together.
+    val heldTurn = rememberHeld(scanWalls?.turn)
     // Tapped open, the live map is the map to complete (#4718).
     var scanMapExpanded by remember(scanMedia) { mutableStateOf(false) }
     // The phone now, written each AR frame (#4718): paused, the trace records nothing, and the
@@ -1894,8 +1896,7 @@ private fun RerunLiveScreen(
                                 ),
                                 nextRoom = roomNumber.takeIf { betweenRooms },
                                 walls = scanWalls?.wallCount,
-                                // Held as the arrow is, so the line does not flip either.
-                                turn = rememberHeld(scanWalls?.turn),
+                                turn = heldTurn,
                                 done = scanWalls?.done == true,
                                 facingWall = scanCoverage.facingWall,
                             ),
@@ -2061,6 +2062,7 @@ private fun RerunLiveScreen(
                     livePose = scanLivePose,
                     saving = phase == ScanPhase.Saving,
                     walls = scanWalls,
+                    turn = heldTurn,
                     reviewing = phase == ScanPhase.Reviewing,
                 )
             }
