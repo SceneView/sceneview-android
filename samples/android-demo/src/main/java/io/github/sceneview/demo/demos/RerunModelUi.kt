@@ -981,8 +981,14 @@ internal enum class ModelStatus(@StringRes val text: Int) {
     Failed(R.string.scan_result_failed),
     Partial(R.string.scan_result_partial),
 
-    /** Kept as scanned: the finish needs more heap than this phone's ([RerunScanModel.outOfMemoryInHeap]). */
+    /**
+     * Kept as scanned, its finishes spent: the finish needs more heap than this phone's
+     * ([RerunScanModel.outOfMemoryInHeap]).
+     */
     RawOutOfMemory(R.string.scan_result_raw_memory),
+
+    /** Kept as scanned after running out of memory, finished again at the next open ([RerunScanModel.retriesFinish]). */
+    RawOutOfMemoryRetry(R.string.scan_result_raw_memory_retry),
 
     /** Shown as scanned, not kept: the next open tries the finish again. */
     RawUnfinished(R.string.scan_result_raw_unfinished),
@@ -997,7 +1003,7 @@ internal enum class ModelStatus(@StringRes val text: Int) {
          * finish ends: the line keeps the room of the tallest, whichever it ends on.
          */
         val RAW_LINES: List<ModelStatus>
-            get() = listOf(Finishing, FinishingAgain, Finished, RawOutOfMemory, RawUnfinished)
+            get() = listOf(Finishing, FinishingAgain, Finished, RawOutOfMemory, RawOutOfMemoryRetry, RawUnfinished)
 
         /** For [model] on screen, `null` while none is; [settled] once it is known for good. `null`: nothing to say. */
         fun of(model: RerunScanModel?, settled: Boolean): ModelStatus? = when {
@@ -1009,7 +1015,7 @@ internal enum class ModelStatus(@StringRes val text: Int) {
             model == null -> Failed
             model.kind == RerunScanModel.Kind.Points -> Partial
             model.finished -> null
-            model.outOfMemoryInHeap != null -> RawOutOfMemory
+            model.outOfMemoryInHeap != null -> if (model.retriesFinish) RawOutOfMemoryRetry else RawOutOfMemory
             else -> RawUnfinished
         }
 
