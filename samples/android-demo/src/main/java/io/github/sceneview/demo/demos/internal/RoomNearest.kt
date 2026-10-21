@@ -19,8 +19,9 @@ import kotlin.math.sqrt
  *
  * ([nx], [nz]) points into the room, and only its side of the line counts: the normal the query
  * hands back is rebuilt square to the wall, so a reader's rough normal does not tilt it. With no
- * side given (zero), the room is on the left of a→b seen from above, +Y up. [confidence] is how
- * sure the reader is of the wall, 0..1, when it says.
+ * side given (zero), the room is on the right of a→b for someone walking from a to b, +Y up: along
+ * +X, the room is towards +Z. A side that is not finite makes the wall unreadable, and the query
+ * skips it. [confidence] is how sure the reader is of the wall, 0..1, when it says.
  */
 data class ShellWall(
     val ax: Float,
@@ -55,8 +56,12 @@ data class ShellOpening(
     companion object {
         /**
          * The opening [from] metres along [wall] from its start (`ax`, `az`), [width] wide, from
-         * the height [bottom] up to [top]. On a wall with no length it has no width either, and
-         * the query skips it.
+         * the height [bottom] up to [top].
+         *
+         * [from] and [width] are taken as given along the wall's line, not cut to its ends: an
+         * opening may start before the wall or run past it, so a wall seen shorter than its door
+         * keeps the door's width. A negative width is no width. An opening with no width, which is
+         * also what a wall with no length gives, is noise and the query skips it.
          */
         fun onWall(
             wall: ShellWall,
@@ -71,7 +76,7 @@ data class ShellOpening(
             val length = hypot(dx, dz).coerceAtLeast(Float.MIN_VALUE)
             val ux = dx / length
             val uz = dz / length
-            val to = from + width
+            val to = from + width.coerceAtLeast(0f)
             return ShellOpening(
                 wall.ax + ux * from, wall.az + uz * from,
                 wall.ax + ux * to, wall.az + uz * to,
@@ -116,6 +121,9 @@ data class NearestWall(
 /**
  * The opening nearest a point, [distance] metres away in the room, at [point]: the nearest point
  * of its rectangle, so 0 in the doorway.
+ *
+ * Whether it is a door or a window, and its sill above the floor, are not known here: a
+ * [ShellOpening] carries no kind and the shell no floor level. Its `bottom` is the scan's y.
  */
 data class NearestOpening(val opening: ShellOpening, val point: Vec3, val distance: Float) {
     /** The opening's width, in metres. */
@@ -134,15 +142,23 @@ data class RoomNearest(val wall: NearestWall?, val opening: NearestOpening?)
 /**
  * The walls and openings a scan found, ready to say which is nearest a point.
  *
+ * Nothing builds one from a scan yet. [RoomSurvey] hands its walls back on the plan's page,
+ * shifted and maybe turned a quarter, and drops that shift and turn, so they cannot be put back in
+ * the scan's frame from it. The feeds to come: the room structure's walls and openings
+ * through [ShellOpening.onWall], an opening's `bottom` being the floor's y plus its sill; and the
+ * wall openings found as boxes through [ShellOpening.of].
+ *
  * - The nearest wall is the one with the shortest distance on the floor plan to its floor line,
  *   a finite segment: the point's height does not count, since a wall stands floor to ceiling.
  * - The nearest opening is the one with the shortest straight-line distance to its rectangle: a
  *   window above the phone counts the climb to it.
  * - An opening does not cut its wall: in a doorway, the door's wall is 0 m away too.
  * - Distances within [TIE_M] of the shortest are a tie, settled by a wall faced over one seen from
- *   behind, then by the higher confidence (a known one over none), then by list order.
+ *   behind, then by the higher confidence, then by list order. A confidence counts between 0 and
+ *   1: below 0 counts as 0, above 1 as 1, and none (null or `NaN`) as 0, so any confidence above
+ *   0 beats none and a confidence of 0 ties with none.
  * - Walls and openings narrower than [MIN_M], or lower for an opening, are noise and skipped, as
- *   is anything not finite; a point not finite finds nothing.
+ *   is one with any coordinate, side, bottom or top not finite; a point not finite finds nothing.
  */
 data class RoomShell(
     val walls: List<ShellWall> = emptyList(),
@@ -175,6 +191,7 @@ data class RoomShell(
         const val MIN_M = 0.01f
 
         private fun measure(wall: ShellWall, x: Float, y: Float, z: Float): NearestWall? {
+            if (!wall.nx.isFinite() || !wall.nz.isFinite()) return null
             val dx = wall.bx - wall.ax
             val dz = wall.bz - wall.az
             val length = hypot(dx, dz)
@@ -195,6 +212,7 @@ data class RoomShell(
         }
 
         private fun measure(opening: ShellOpening, x: Float, y: Float, z: Float): NearestOpening? {
+            if (!opening.bottom.isFinite() || !opening.top.isFinite()) return null
             val dx = opening.bx - opening.ax
             val dz = opening.bz - opening.az
             val width = hypot(dx, dz)
@@ -214,7 +232,7 @@ data class RoomShell(
             return found.filter { distance(it) <= least + TIE_M }.minWithOrNull(order)
         }
 
-        /** A known confidence over none; `NaN` counts as none. */
-        private fun rank(confidence: Float?): Float = confidence?.takeIf { it.isFinite() } ?: -1f
+        /** A confidence between 0 and 1; none, `NaN` or below 0 counts as 0, above 1 as 1. */
+        private fun rank(confidence: Float?): Float = confidence?.takeIf { !it.isNaN() }?.coerceIn(0f, 1f) ?: 0f
     }
 }
