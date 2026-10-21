@@ -598,6 +598,11 @@ internal fun ScanLiveView(
             // The walls stand in the room while it is scanned; saving, the orbit shows the cloud.
             walls = walls,
             drawWalls = !saving,
+            // The cloud moves with the phone's eye, which ARCore updates at the camera's 30 Hz: a
+            // second view drawn at the display's 60 Hz redrew the same picture every other vsync,
+            // one GPU pass and one swap too many on a mid-range phone (#4743). Saving, the orbit is
+            // the view's own motion and gets the display's full rate back.
+            maxFps = if (saving) null else SCAN_LIVE_FPS,
         )
         if (walls != null && !saving) ScanTurnArrow(walls.turn)
     }
@@ -626,6 +631,9 @@ internal fun ScanShutter(startEnabled: Boolean, onStart: () -> Unit) {
 
 /** What the live view draws: the points, in the colours the camera saw. */
 private val SCAN_LIVE_GROUPS = setOf(DebugGroup.Points)
+
+/** ARCore's camera rate, which paces the phone's eye the live view draws from (#4743). */
+private const val SCAN_LIVE_FPS = 30
 
 /** A notch above the capture card's 10 dp dot: this one is read from a metre away. */
 private val ScanDotSize = Space.md - Space.xs / 2
