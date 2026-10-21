@@ -216,8 +216,11 @@ private class MeasureAim(
     val view: MeasureAimView,
     val createAnchor: () -> Anchor?,
     val reuse: Anchor?,
-    /** What the debug QA log records for a point committed from this aim. */
-    val qa: MeasureQaPoint,
+    /**
+     * What the debug QA log records for a point committed from this aim. Built only in debug
+     * builds and read only on a commit, so release does no extra work per frame.
+     */
+    val qa: (() -> MeasureQaPoint)?,
 )
 
 /** The reticle as the screen draws it — compared with [AIM_EPSILON] before each state write. */
@@ -324,6 +327,7 @@ fun ARMeasureDemo(onBack: () -> Unit) {
                 qaPoints[anchor]?.copy(position = now) ?: MeasureQaPoint(now)
             },
             tracking = qaTracking[0],
+            liveHeight = shownHeight,
             device = Build.MODEL,
             app = BuildConfig.VERSION_NAME,
         )
@@ -406,9 +410,8 @@ fun ARMeasureDemo(onBack: () -> Unit) {
             if (next == null || next == board) {
                 refuse(if (current == null) MeasureRefusal.NoSurface else MeasureRefusal.AnchorFailed)
             } else {
-                if (qaRecorder != null && current != null) {
-                    next.allPoints.filterNot { it in qaPoints }.forEach { qaPoints[it] = current.qa }
-                }
+                val qa = current?.qa?.takeIf { qaRecorder != null }?.invoke()
+                if (qa != null) next.allPoints.filterNot { it in qaPoints }.forEach { qaPoints[it] = qa }
                 commit(next, if (current?.view?.closes == true) "close" else "point")
                 tapRefusal = null
                 if (next.phase == MeasurePhase.Raising) {
@@ -1534,14 +1537,22 @@ private fun findMeasureAim(
     } else {
         null
     }
-    val qa = MeasureQaPoint(
-        position = snapped,
-        source = raw.source.name,
-        snap = snap.kind.name,
-        plane = raw.planeType?.name,
-        timestampNs = frame.timestamp,
-        cameraDistance = measureDistanceMeters(origin, snapped),
-    )
+    // Debug only, and lazy: release builds allocate nothing here, and no JNI call runs before a commit.
+    val qa: (() -> MeasureQaPoint)? = if (BuildConfig.DEBUG) {
+        {
+            MeasureQaPoint(
+                position = snapped,
+                source = raw.source.name,
+                snap = snap.kind.name,
+                plane = raw.plane?.let { plane -> runCatching { plane.type.name }.getOrNull() },
+                // The aim is at most a frame old; a frame ARCore already replaced may refuse.
+                timestampNs = runCatching { frame.timestamp }.getOrNull(),
+                cameraDistance = measureDistanceMeters(origin, snapped),
+            )
+        }
+    } else {
+        null
+    }
     return MeasureAim(MeasureAimView(snap, closes, raw.source, foot), createAnchor, reuse, qa)
 }
 
@@ -1553,8 +1564,8 @@ private class MeasureHit(
     val createHitAnchor: (() -> Anchor?)?,
     /** How the hit plane faces; `null` off a plane. */
     val planeKind: MeasurePlaneKind?,
-    /** ARCore's type of the hit plane, for the QA log; `null` off a plane. */
-    val planeType: Plane.Type? = null,
+    /** The hit plane, for the QA log only (its type is read on a commit); `null` off a plane. */
+    val plane: Plane? = null,
 )
 
 /** Accuracy-ordered hit at the screen centre, without creating an anchor. */
@@ -1571,7 +1582,7 @@ private fun hitTestCenter(frame: Frame, session: Session?, x: Float, y: Float, a
             source = MeasureHitSource.Plane,
             createHitAnchor = { hit.takeIf { it.trackable.trackingState == TrackingState.TRACKING }?.createAnchor() },
             planeKind = plane.liveKind.toMeasureKind(),
-            planeType = plane.type,
+            plane = plane,
         )
     }
     if (allowDepth) {

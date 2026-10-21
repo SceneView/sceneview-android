@@ -12,12 +12,13 @@ class MeasureQaLogTest {
     private fun p(x: Float, y: Float, z: Float) = Position(x = x, y = y, z = z)
 
     /** Points are their own positions here; the demo maps ARCore anchors the same way. */
-    private fun lines(board: MeasureBoard<Position>) = measureQaLines(
+    private fun lines(board: MeasureBoard<Position>, liveHeight: Float? = null) = measureQaLines(
         board = board,
         point = { MeasureQaPoint(it, source = "Plane", snap = "None", plane = "VERTICAL", timestampNs = 42L, cameraDistance = 1.42f) },
         tracking = "TRACKING",
         device = "Pixel \"QA\"",
         app = "4.60.0-qa",
+        liveHeight = liveHeight,
     )
 
     private fun MeasureBoard<Position>.taps(vararg points: Position): MeasureBoard<Position> =
@@ -44,6 +45,7 @@ class MeasureQaLogTest {
         assertEquals("false", second.field("closed"))
         assertEquals("null", second.field("outline_area_m2"))
         assertEquals("null", second.field("height_m"))
+        assertEquals("null", second.field("live_height_m"))
         assertTrue(second.startsWith("{\"v\":1,"))
         assertTrue(second.contains("{\"x\":1.2137,\"y\":0.0000,\"z\":1.0000,\"source\":\"Plane\",\"snap\":\"None\",\"plane\":\"VERTICAL\",\"t_ns\":42,\"cam_dist_m\":1.4200}"))
         assertTrue(second.endsWith("\"tracking\":\"TRACKING\",\"device\":\"Pixel \\\"QA\\\"\",\"app\":\"4.60.0-qa\"}"))
@@ -78,9 +80,16 @@ class MeasureQaLogTest {
     }
 
     @Test
-    fun aRisingWallLogsNoHeightYet() {
-        val board = MeasureBoard<Position>().withMode(MeasureMode.Wall).taps(p(0f, 0f, 0f), p(2f, 0f, 0f))
-        assertEquals("null", lines(board).single().field("height_m"))
+    fun aRisingWallLogsItsLiveHeightApartFromTheLockedOne() {
+        val rising = MeasureBoard<Position>().withMode(MeasureMode.Wall).taps(p(0f, 0f, 0f), p(2f, 0f, 0f))
+        val line = lines(rising, liveHeight = 1.8f).single()
+        assertEquals("null", line.field("height_m"))
+        assertEquals("1.8000", line.field("live_height_m"))
+        assertEquals("null", line.field("wall_area_m2"))
+        // Once locked, the live reading is no longer the figure's: only height_m is.
+        val locked = lines(rising.lockHeight(2.5f), liveHeight = 1.8f).single()
+        assertEquals("2.5000", locked.field("height_m"))
+        assertEquals("null", locked.field("live_height_m"))
     }
 
     @Test

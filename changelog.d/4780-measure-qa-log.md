@@ -1,2 +1,2 @@
-<!-- category: Changed -->
+<!-- category: Added -->
 - **Demo — Measure writes a debug-only accuracy log** ([#4780](https://github.com/sceneview/sceneview/pull/4780)). Debug builds of the AR Measure demo save the whole board after every change and on Share. The file is `Android/data/<package>/files/measure-qa/measure-<first point epoch ms>.jsonl`: one JSON line per figure, lengths in metres, named like the share text. Each point carries its hit source, snap, ARCore plane type, frame timestamp and camera distance. Every line is also logged to Logcat under `MeasureQA`. Release builds are unchanged.

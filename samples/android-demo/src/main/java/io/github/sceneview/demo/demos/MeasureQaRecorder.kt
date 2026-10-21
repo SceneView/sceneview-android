@@ -21,7 +21,9 @@ import java.util.concurrent.Executors
 internal class MeasureQaRecorder(context: Context) {
     private val appContext = context.applicationContext
     private val writer: ExecutorService = Executors.newSingleThreadExecutor()
+    /** File of the current session, named on its first point; created with its first segment. */
     private var fileName: String? = null
+    private var fileCreated = false
 
     /**
      * @param reason what changed the board (`point`, `undo`, `clear`, `share`…), logged only.
@@ -29,20 +31,27 @@ internal class MeasureQaRecorder(context: Context) {
      */
     fun record(reason: String, boardEmpty: Boolean, lines: List<String>) {
         if (boardEmpty) {
-            fileName?.let { Log.i(TAG, "$reason: board empty, $it kept as last written") }
+            fileName?.takeIf { fileCreated }?.let { Log.i(TAG, "$reason: board empty, $it kept as last written") }
             fileName = null
+            fileCreated = false
             return
         }
         val name = fileName ?: "measure-${System.currentTimeMillis()}.jsonl".also { fileName = it }
         Log.i(TAG, "$reason: ${lines.size} figure(s) -> $name")
         lines.forEach { Log.i(TAG, it) }
+        // No file before the first segment: a lone point undone leaves nothing behind.
+        if (lines.isEmpty() && !fileCreated) return
+        fileCreated = true
         val text = if (lines.isEmpty()) "" else lines.joinToString("\n", postfix = "\n")
-        writer.execute {
-            runCatching {
-                val dir = appContext.getExternalFilesDir(DIR) ?: error("no external files dir")
-                File(dir, name).writeText(text)
-            }.onFailure { Log.w(TAG, "could not write $name", it) }
-        }
+        if (writer.isShutdown) return
+        runCatching {
+            writer.execute {
+                runCatching {
+                    val dir = appContext.getExternalFilesDir(DIR) ?: error("no external files dir")
+                    File(dir, name).writeText(text)
+                }.onFailure { Log.w(TAG, "could not write $name", it) }
+            }
+        }.onFailure { Log.w(TAG, "writer closed, $name not written", it) }
     }
 
     /** Lets the queued writes finish, then stops the writer thread. */

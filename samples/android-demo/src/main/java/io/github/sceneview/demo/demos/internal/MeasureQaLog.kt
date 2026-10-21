@@ -33,18 +33,20 @@ const val MEASURE_QA_VERSION = 1
  *
  * Figures are named like the share text ("Distance 2", "Wall 1", "Room 1": one counter per
  * mode, a figure without a segment yet is skipped and not counted). Lengths are metres whatever
- * the unit system on screen, 4 decimals, `.` as the decimal separator in every locale. A
- * rising wall's live height is not logged: only a locked height is.
+ * the unit system on screen, 4 decimals, `.` as the decimal separator in every locale.
+ * `height_m` is a locked height only; while walls rise, the height they follow (the one the
+ * readout and the share text show) is `live_height_m`, `null` otherwise.
  *
  * Line shape (v1):
  * `{"v":1,"figure":"Distance 2","mode":"Distance","segments_m":[1.2137],"length_m":1.2137,
- * "closed":false,"outline_area_m2":null,"height_m":null,"wall_area_m2":null,"points":[{"x":…,
+ * "closed":false,"outline_area_m2":null,"height_m":null,"live_height_m":null,"wall_area_m2":null,"points":[{"x":…,
  * "y":…,"z":…,"source":"Plane","snap":"None","plane":"VERTICAL","t_ns":…,"cam_dist_m":1.42}],
  * "tracking":"TRACKING","device":"Pixel 9","app":"4.60.0-qa"}`
  *
  * @param point the QA record of a board point, `null` when its position is unknown (the
  *              figure is then measured without it, as the screen does).
  * @param tracking ARCore camera tracking state when the line is written.
+ * @param liveHeight the height rising walls follow right now, metres; logged on the raising figure only.
  */
 fun <P> measureQaLines(
     board: MeasureBoard<P>,
@@ -52,6 +54,7 @@ fun <P> measureQaLines(
     tracking: String?,
     device: String?,
     app: String?,
+    liveHeight: Float? = null,
 ): List<String> {
     val counters = IntArray(MeasureMode.entries.size)
     val lines = ArrayList<String>()
@@ -71,6 +74,7 @@ fun <P> measureQaLines(
             field("closed", numbers.closed.toString())
             field("outline_area_m2", jsonMeters(numbers.outlineArea))
             field("height_m", jsonMeters(numbers.height))
+            field("live_height_m", jsonMeters(liveHeight?.takeIf { figure.raising }))
             field("wall_area_m2", jsonMeters(numbers.wallArea))
             field("points", records.joinToString(",", "[", "]") { it.toJson() })
             field("tracking", jsonString(tracking))
