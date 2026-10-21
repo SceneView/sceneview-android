@@ -86,6 +86,12 @@ class SceneModelStore(
     private val asset: HdAsset = SceneModel.ASSET,
     private val onFailure: (IOException) -> Unit = {},
 ) {
+    /**
+     * Beside the detector's file when that copy was fetched again after ONNX Runtime refused an
+     * earlier one ([markRefetched]): kept across launches, deleted with the file by [discard].
+     */
+    private val refetched = File(dir, "${asset.file}$REFETCHED")
+
     private val store = HdPackManifest(version = 1, assets = listOf(asset)).let { manifest ->
         if (client == null) {
             HdPackStore(manifest, dir, baseUrl = baseUrl)
@@ -145,6 +151,28 @@ class SceneModelStore(
         store.removeAll()
     }
 
+    /**
+     * Notes that the copy now on the device replaces one ONNX Runtime refused, so that no launch
+     * fetches a third. Written once that copy has arrived: a download deletes the names it does not
+     * know. A marker that cannot be written is only logged ([onFailure]).
+     */
+    suspend fun markRefetched() {
+        withContext(Dispatchers.IO) {
+            try {
+                refetched.createNewFile()
+            } catch (failure: IOException) {
+                onFailure(failure)
+            }
+        }
+    }
+
+    /** Whether the copy on the device was fetched again after ONNX Runtime refused one ([markRefetched]). */
+    suspend fun isRefetched(): Boolean = withContext(Dispatchers.IO) { refetched.isFile }
+
     private fun fraction(onDisk: Long): Float =
         if (asset.bytes > 0L) (onDisk.toFloat() / asset.bytes).coerceIn(0f, 1f) else 0f
+
+    private companion object {
+        const val REFETCHED = ".refetched"
+    }
 }

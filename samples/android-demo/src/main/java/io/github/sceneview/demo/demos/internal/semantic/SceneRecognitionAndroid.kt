@@ -12,6 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -85,14 +86,17 @@ private object ProcessDetector {
  * The detector, built once and shared by every replay. The first replay that needs it fetches it
  * from [storeOf]'s store and [open]s it; the others wait for it, and meanwhile hear that download's
  * progress. On a [metered] network nothing is fetched until [allowMetered] — the HD pack's rule —
- * unless the file is already on the device.
+ * unless the file is already on the device. A download already under way goes on: a replay opened
+ * meanwhile follows it instead of asking, and asks only if it stops short.
  *
  * A download that found no network is tried again by the next replay, and resumes where it
  * stopped; so does one the replay left. A file that failed its check is not tried again before the
  * app restarts. One that ONNX Runtime will not load is deleted and fetched once more — a file
- * damaged on the device since its download —, and given up on if the new copy fails too. The
- * session lives as long as the process, whose end frees it; the shares handed out close nothing
- * ([Share]), so a replay that closes its detector cannot pull the session from under another one.
+ * damaged on the device since its download —, and given up on if the new copy fails too. That
+ * second copy is kept and marked ([SceneModelStore.markRefetched]): a later launch tries it again,
+ * never a third download. The session lives as long as the process, whose end frees it; the shares
+ * handed out close nothing ([Share]), so a replay that closes its detector cannot pull the session
+ * from under another one.
  */
 internal class SceneDetectorShare(
     private val storeOf: suspend () -> SceneModelStore,
@@ -157,26 +161,36 @@ internal class SceneDetectorShare(
     private suspend fun awaitGo(models: SceneModelStore, onState: (SceneModelState) -> Unit) {
         if (!mustAsk(models)) return
         onState(SceneModelState.Metered)
-        // A switch to Wi-Fi is a go too: looked at again every few seconds.
+        // A switch to Wi-Fi is a go too: looked at again every few seconds. Another replay's
+        // download starting is one at once.
         while (mustAsk(models)) {
-            withTimeoutOrNull(NETWORK_RECHECK_MILLIS) { meteredAllowed.first { it } }
+            withTimeoutOrNull(NETWORK_RECHECK_MILLIS) {
+                combine(meteredAllowed, progress) { allowed, under -> allowed || under != null }.first { it }
+            }
         }
     }
 
-    private fun mustAsk(models: SceneModelStore) = !meteredAllowed.value && models.cached() == null && metered()
+    /** Metered, not allowed, not on the device, and no download under way: that one goes on. */
+    private fun mustAsk(models: SceneModelStore) =
+        !meteredAllowed.value && progress.value == null && models.cached() == null && metered()
 
     private suspend fun fetchAndOpen(models: SceneModelStore, onState: (SceneModelState) -> Unit): SceneDetector? {
-        repeat(OPEN_ATTEMPTS) { attempt ->
-            if (attempt > 0) awaitGo(models, onState)
+        for (attempt in 0 until OPEN_ATTEMPTS) {
+            // Asked again under the lock: the download a replay followed here may have stopped
+            // short, on a network that has turned metered since.
+            awaitGo(models, onState)
             val file = fetch(models, onState) ?: return null
+            if (attempt > 0) models.markRefetched()
             open(file)?.let { built ->
                 detector = built
                 onState(SceneModelState.Ready)
                 return Share(built)
             }
             Log.w(TAG, "ONNX Runtime refused the scene detector (try ${attempt + 1} of $OPEN_ATTEMPTS)")
-            // The last copy was checked as it arrived: the fault is the runtime's, keep it.
-            if (attempt < OPEN_ATTEMPTS - 1) models.discard()
+            // A copy fetched again after a refusal — at this launch or an earlier one — was checked
+            // as it arrived: the fault is the runtime's, keep it and fetch no other.
+            if (attempt == OPEN_ATTEMPTS - 1 || models.isRefetched()) break
+            models.discard()
         }
         unusable = true
         onState(SceneModelState.Unusable)
