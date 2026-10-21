@@ -38,6 +38,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -91,6 +92,7 @@ import io.github.sceneview.ar.rememberArGuidanceState
 import io.github.sceneview.ar.rememberHostLifecycle
 import io.github.sceneview.demo.ARCameraInitScrim
 import io.github.sceneview.demo.common.ForcedTrackingFailure
+import io.github.sceneview.demo.common.LocalStatusBarIcons
 import io.github.sceneview.demo.common.QaCameraBackdrop
 import io.github.sceneview.demo.common.qaCameraBackdropEnabled
 import io.github.sceneview.demo.common.qaCameraBackdropSurfaceType
@@ -779,12 +781,18 @@ fun MeasureScreen(onBack: () -> Unit) {
 
 /**
  * The camera screen, [covered] while the plan is open over it: it runs on beneath the page, so
- * Back finds it as it was left, but TalkBack reads the page alone.
+ * Back finds it as it was left, but TalkBack reads the page alone, and the status bar takes the
+ * page's icons. The camera's scrim asks for light ones; the page, on the themed stage, keeps the
+ * theme's, dark in light theme. Its request is dropped while covered and made again on close.
  */
 @Composable
 internal fun MeasureCameraLayer(covered: Boolean, content: @Composable () -> Unit) {
     Box(modifier = Modifier.fillMaxSize().then(if (covered) Modifier.clearAndSetSemantics {} else Modifier)) {
-        content()
+        // Without a state to count in, the camera screen's requests are no-ops.
+        val icons = if (covered) null else LocalStatusBarIcons.current
+        CompositionLocalProvider(LocalStatusBarIcons provides icons) {
+            content()
+        }
     }
 }
 
