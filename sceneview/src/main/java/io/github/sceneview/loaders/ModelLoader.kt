@@ -133,9 +133,10 @@ class ModelLoader(
     private val asyncLoad = AsyncLoadSlot<Model>(
         beginLoad = { model ->
             asyncLoadStarted = true
-            // `false` only when the asset's resources were already loaded (ResourceLoader.cpp,
-            // `loadResources`): a missing buffer still returns `true`, see GltfBufferUris.
-            // That is why the suspend loads check the buffers themselves before beginning.
+            // `false` when the asset's resources were already loaded, or when its meshopt
+            // compressed buffers fail to decode (ResourceLoader.cpp, `loadResources`). Both return
+            // before any texture is queued. A missing buffer still returns `true`, see
+            // GltfBufferUris: that is why every load checks the buffers itself before beginning.
             resourceLoader.asyncBeginLoad(model)
         },
         cancelLoad = { inFlight ->
@@ -155,8 +156,9 @@ class ModelLoader(
             asyncLoadStarted = false
         },
         finishLoad = {
-            // The load is done (#3981): `asyncCancelLoad` would join no decoder and only
-            // `flushAndWait` the engine, a backend round trip on the main thread. Its one other
+            // The load is done, or was refused before queuing a texture (#3981): `asyncCancelLoad`
+            // would join no decoder and only `flushAndWait` the engine, a backend round trip on
+            // the main thread. Its one other
             // effect, dropping the asset pointer before the asset is freed, comes from retiring
             // this loader instead: nothing of it is left to finalise, and a fresh one takes over.
             retiredResourceLoaders += resourceLoader
@@ -333,10 +335,16 @@ class ModelLoader(
                     if (model !in models) return@withContext null
                     resources.forEach { (uri, data) -> resourceLoader.addResourceData(uri, data) }
                     if (!asyncLoad.begin(model)) {
-                        // Nothing is decoding for a refused begin: empty the slot now, so the
-                        // destroy below is immediate rather than deferred until a load settles.
-                        asyncLoad.cancelIfInFlight(model)
-                        throw MissingBufferException("gltfio refused to begin the resource load of $fileLocation")
+                        // A fresh asset is refused only when its meshopt buffers fail to decode,
+                        // before gltfio queues any texture. Drop the resources fed above; the
+                        // destroy that follows the throw then detaches this load through
+                        // `finishLoad`, without `asyncCancelLoad`'s `flushAndWait` on the main
+                        // thread. Only an earlier load still decoding defers it (see destroyModel).
+                        resourceLoader.evictResourceData()
+                        throw MissingBufferException(
+                            "gltfio refused to begin the resource load of $fileLocation " +
+                                "(its meshopt-compressed data could not be decoded)",
+                        )
                     }
                     onLoadBegun(model)
                 }
@@ -812,30 +820,39 @@ class ModelLoader(
     /**
      * The synchronous counterpart of [loadModelThen]'s resource step, same rule: a missing texture
      * is logged and skipped, a missing buffer (or a begin gltfio refuses) destroys [model] and
-     * throws, rather than handing out a model with no geometry. A resolver that throws anything
-     * other than an `IOException` also destroys [model], then the error is rethrown.
+     * throws an `IllegalArgumentException`, rather than handing out a model with no geometry. Its
+     * cause is the resolver's `IOException` for that buffer, when there was one. A resolver that
+     * throws anything other than an `IOException` also destroys [model], then the error is
+     * rethrown.
+     *
+     * This runs on the main thread, like the whole synchronous `createModel`, so the glTF JSON is
+     * parsed (to tell buffers from textures) only once a resource is missing: a model whose
+     * resources all resolve never pays for it. [loadModelThen] does that parse off the main thread.
      */
     @MainThread
     @Suppress("TooGenericExceptionCaught") // Destroy on any failure, then rethrow it unchanged.
     private fun loadResources(model: Model, source: Buffer, resourceResolver: (String) -> Buffer?) {
         // `data:` URIs are decoded by gltfio itself; only the others are resolved here.
         val uris = model.resourceUris.filterNot { it.startsWith("data:") }
-        val missing = mutableListOf<String>()
-        try {
-            val bufferUris = if (uris.isEmpty()) emptySet() else GltfBufferUris.of(source, uris)
+        // Each resource the resolver could not supply, with the IOException it threw if it did.
+        val unresolved = LinkedHashMap<String, IOException?>()
+        // The missing buffers, among them.
+        val missing: Map<String, IOException?> = try {
             for (uri in uris) {
                 val data = try {
                     resourceResolver(uri)
                 } catch (error: IOException) {
-                    Log.w(TAG, "Could not read $uri", error)
-                    null
+                    unresolved[uri] = error
+                    continue
                 }
-                when {
-                    data != null -> resourceLoader.addResourceData(uri, data)
-                    uri in bufferUris -> missing += uri
-                    else -> Log.w(TAG, "Could not read $uri; loading the model without it")
-                }
+                if (data != null) resourceLoader.addResourceData(uri, data) else unresolved[uri] = null
             }
+            val bufferUris = if (unresolved.isEmpty()) emptySet() else GltfBufferUris.of(source, unresolved.keys)
+            // Logged once each: a missing texture here, a missing buffer with the failure below.
+            unresolved.forEach { (uri, error) ->
+                if (uri !in bufferUris) Log.w(TAG, "Could not read $uri; loading the model without it", error)
+            }
+            unresolved.filterKeys { it in bufferUris }
         } catch (failure: Throwable) {
             // Not begun yet, so nothing is decoding: the destroy is immediate.
             resourceLoader.evictResourceData()
@@ -844,19 +861,29 @@ class ModelLoader(
             throw failure
         }
         val failure = when {
-            missing.isNotEmpty() -> "Could not load a glTF model without ${missing.joinToString()}"
-            // gltfio refuses only an asset whose resources were already loaded, which a freshly
-            // created one never is: this cannot overwrite the in-flight slot of another model.
-            !asyncLoad.begin(model) -> "gltfio refused to begin the resource load of a glTF model"
+            missing.isNotEmpty() -> {
+                val causes = missing.values.filterNotNull()
+                IllegalArgumentException(
+                    "Could not load a glTF model without ${missing.keys.joinToString()}",
+                    causes.firstOrNull(),
+                ).apply { causes.drop(1).forEach(::addSuppressed) }
+            }
+            // A freshly created asset is refused only when its meshopt-compressed buffers fail to
+            // decode (its resources were never loaded before), and before gltfio queues any texture.
+            !asyncLoad.begin(model) -> IllegalArgumentException(
+                "gltfio refused to begin the resource load of a glTF model " +
+                    "(its meshopt-compressed data could not be decoded)",
+            )
             else -> null
         }
         resourceLoader.evictResourceData()
         if (failure != null) {
-            // Nothing is decoding for a refused begin: empty the slot so the destroy is immediate.
-            asyncLoad.cancelIfInFlight(model)
+            // A refused begin queued no texture, so destroyModel detaches the load through
+            // `finishLoad`, without `asyncCancelLoad`'s `flushAndWait` on the main thread. It defers
+            // the destroy, without blocking either, only while an earlier load is still decoding.
             destroyModel(model)
-            Log.w(TAG, "$failure; the model was destroyed")
-            throw IllegalArgumentException(failure)
+            Log.w(TAG, "${failure.message}; the model was destroyed", failure.cause)
+            throw failure
         }
     }
 
