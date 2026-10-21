@@ -65,6 +65,28 @@ class ScanPhotoPolicyTest {
     }
 
     @Test
+    fun `the bake log names each decoded size with its count and sample`() {
+        // On a phone, the line tells a 540 x 960 sharp photo read at half from a 480 x 640 one read
+        // whole, and how many pixels the build holds for them.
+        fun read(w: Int, h: Int, sample: Int) = ScanPhotoPolicy.BakeRead(w, h, sample, w / sample, h / sample)
+        val reads = listOf(
+            read(540, 960, 2),
+            read(240, 320, 1),
+            read(480, 640, 1),
+            read(540, 960, 2),
+            read(240, 320, 1),
+            read(240, 320, 1),
+        )
+
+        assertEquals(
+            "photos decoded: 1 at 480x640 (sample 1), 2 at 270x480 (540x960, sample 2), " +
+                "3 at 240x320 (sample 1); 3.2 MB of pixels",
+            ScanPhotoPolicy.bakeReadsLog(reads),
+        )
+        assertEquals("photos decoded: none", ScanPhotoPolicy.bakeReadsLog(emptyList()))
+    }
+
+    @Test
     fun `a photo that failed to encode leaves the saved journal, depth and floor events stay`() {
         val journal = listOf(
             ArDebugEvent.CameraPose(1L, DebugPose(0f, 0f, 0f)),
