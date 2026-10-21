@@ -835,6 +835,9 @@ private fun skyboxAlpha(transparent: Boolean): Float = if (transparent) 0f else 
  *
  * [walls], 3D Scan's live walls (#4540), drawn by a [ScanWallLayer] once the caller's [observe]
  * has fed them the frame, while [drawWalls]; hidden, they still give the room its wall count.
+ *
+ * [maxFps] caps the full view's cadence (the picture-in-picture has its own): 3D Scan's live view
+ * draws from the phone's eye, which ARCore moves at the camera's rate, not the display's (#4743).
  */
 @Composable
 @Suppress("LongParameterList") // the demo's shared engine, handed down once, and one flag per reading
@@ -857,6 +860,7 @@ internal fun ArDebugSceneView(
     cornerCard: DpSize = DpSize.Zero,
     walls: ScanWallsState? = null,
     drawWalls: Boolean = true,
+    maxFps: Int? = null,
 ) {
     val shown by rememberUpdatedState(onShown)
     val wallsDrawn by rememberUpdatedState(drawWalls)
@@ -918,7 +922,7 @@ internal fun ArDebugSceneView(
             renderer = renderer,
             cameraNode = cameraNode,
             isOpaque = !transparent,
-            frameRatePolicy = FrameRatePolicy.Continuous(maxFps = if (compact) PIP_FPS else null),
+            frameRatePolicy = FrameRatePolicy.Continuous(maxFps = if (compact) PIP_FPS else maxFps),
             autoCenterContent = false,
             environment = environment,
             cameraManipulator = orbit,
