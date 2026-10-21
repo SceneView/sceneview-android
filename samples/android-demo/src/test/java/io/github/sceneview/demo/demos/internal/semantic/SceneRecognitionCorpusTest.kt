@@ -37,8 +37,9 @@ import java.nio.channels.FileChannel
  *
  * The detector is the file `SCENEVIEW_SCENE_MODEL` names, else the app's own YOLOX-Tiny,
  * downloaded once into `<java.io.tmpdir>/sceneview-scene-detector/` and checked as the app checks
- * it. Without network and without `SCENEVIEW_SCENE_MODEL`, both runs are skipped. CI sets none of
- * these variables, so it never downloads anything. `SCENEVIEW_SCENE_PHOTOS` runs the models on a
+ * it. Without network and without `SCENEVIEW_SCENE_MODEL`, the scans are still recognised for their
+ * doors and windows, which need no detector — what a phone shows while it downloads one — and the
+ * photo run is skipped. CI sets none of these variables, so it never downloads anything. `SCENEVIEW_SCENE_PHOTOS` runs the models on a
  * folder of plain photos instead, for the found / missed / time-per-photo table.
  */
 class SceneRecognitionCorpusTest {
@@ -53,8 +54,12 @@ class SceneRecognitionCorpusTest {
         val scans = corpus!!.walk().filter { it.isFile && it.extension in SCANS }.sorted().toList()
         assumeTrue("no .svscan or .rrd under $corpus", scans.isNotEmpty())
         val model = models().firstOrNull()
-        assumeTrue("no detector: set $MODEL, or run with network to download it", model != null)
-        val (name, file) = model!!
+        if (model == null) {
+            println("no detector (set $MODEL, or run with network to download it): doors and windows only")
+            scans.forEach { run(it, NoDetector, out!!) }
+            return
+        }
+        val (name, file) = model
         println("recognising ${scans.size} scans with $name")
         OnnxSceneDetector(mapped(file), name).use { detector -> scans.forEach { run(it, detector, out!!) } }
     }
@@ -137,7 +142,8 @@ class SceneRecognitionCorpusTest {
     }
 
     /**
-     * Recognises the scan in [file] with [detector] and writes its outputs under [out]; `null`
+     * Recognises the scan in [file] with [detector] — with [NoDetector], its openings only, no photo
+     * read, as the app's first pass — and writes its outputs under [out]; `null`
      * (and a line saying why) for a file that is no readable scan or has no dense cloud.
      */
     private fun run(file: File, detector: SceneDetector, out: File): SceneRecognition? {
@@ -149,7 +155,8 @@ class SceneRecognitionCorpusTest {
         val keyframes = SceneRecognizer.keyframes(opened.trace, opened.manifest.lens)
         val images = HashMap<String, SceneImage>()
         val recognition = runBlocking {
-            SceneRecognizer(detector).recognize(keyframes, cloud, objects, image = { path ->
+            val frames = if (detector == NoDetector) 0 else SceneRecognizer.MAX_FRAMES
+            SceneRecognizer(detector, maxFrames = frames).recognize(keyframes, cloud, objects, image = { path ->
                 opened.bytesOf(path)?.let { SceneTestKit.sceneImage(it) }?.also { images[path] = it }
             })
         }
