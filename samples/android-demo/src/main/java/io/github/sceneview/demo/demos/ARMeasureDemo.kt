@@ -62,6 +62,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntSize
@@ -453,310 +454,313 @@ fun MeasureScreen(onBack: () -> Unit) {
     val planDate = remember(locale) { DateFormat.getDateInstance(DateFormat.MEDIUM, locale).format(Date()) }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        DemoScaffold(
-            arSessionFailed = arSessionFailed,
-            arOverlaysEnabled = arCoreAvailability == null,
-            title = stringResource(R.string.demo_ar_measure_title),
-            chromeToggleOnTap = false,
-            onBack = onBack,
-            peekHeader = when {
-                marking -> stringResource(
-                    if (board.openingCorner == null) {
-                        R.string.demo_ar_measure_hint_opening_first
-                    } else {
-                        R.string.demo_ar_measure_hint_opening_second
-                    },
-                )
-                coaching && board.isEmpty -> null
-                else -> measureHint(board, aim, action, liveWallCount)
-            },
-            onReset = {
-                stopMarking()
-                commit(board.clear())
-                liveWalls.reset()
-            },
-            controls = { MeasureSettings(units = units, onUnits = { units = it }) },
-            dock = listOfNotNull(
-                // Done ends the open chain; walls and rooms end themselves, so only Distance has it.
-                DockItem(
-                    icon = Icons.Rounded.Done,
-                    label = stringResource(R.string.demo_ar_measure_action_done),
-                    onClick = {
-                        commit(board.finish())
-                        haptic.play(MeasureHapticEvent.ChainEnded)
-                    },
-                    enabled = board.canFinish,
-                ).takeIf { board.mode == MeasureMode.Distance },
-                DockItem(
-                    icon = Icons.AutoMirrored.Rounded.Undo,
-                    label = stringResource(R.string.demo_ar_measure_action_undo),
-                    onClick = {
-                        // An opening's first corner goes before anything measured.
-                        commit(board.undo())
-                    },
-                    enabled = !board.isEmpty,
-                ),
-                // Room fills the dock with Door or window and Plan: there, Reset in the settings clears.
-                DockItem(
-                    icon = Icons.Rounded.DeleteSweep,
-                    label = stringResource(R.string.demo_ar_measure_action_clear),
-                    onClick = {
-                        stopMarking()
-                        commit(board.clear())
-                    },
-                    enabled = !board.isEmpty,
-                ).takeIf { board.mode != MeasureMode.Room },
-                // On a measured wall or room: a door or a window, by two opposite corners; again to stop.
-                DockItem(
-                    icon = Icons.Rounded.SensorDoor,
-                    label = stringResource(R.string.demo_ar_measure_action_opening),
-                    onClick = {
-                        if (marking) {
-                            stopMarking()
+        // Under the plan, TalkBack reads the page alone: the camera screen runs on beneath it, unread.
+        Box(modifier = Modifier.fillMaxSize().then(if (plan != null) Modifier.clearAndSetSemantics {} else Modifier)) {
+            DemoScaffold(
+                arSessionFailed = arSessionFailed,
+                arOverlaysEnabled = arCoreAvailability == null,
+                title = stringResource(R.string.demo_ar_measure_title),
+                chromeToggleOnTap = false,
+                onBack = onBack,
+                peekHeader = when {
+                    marking -> stringResource(
+                        if (board.openingCorner == null) {
+                            R.string.demo_ar_measure_hint_opening_first
                         } else {
-                            commit(board.startOpening())
+                            R.string.demo_ar_measure_hint_opening_second
+                        },
+                    )
+                    coaching && board.isEmpty -> null
+                    else -> measureHint(board, aim, action, liveWallCount)
+                },
+                onReset = {
+                    stopMarking()
+                    commit(board.clear())
+                    liveWalls.reset()
+                },
+                controls = { MeasureSettings(units = units, onUnits = { units = it }) },
+                dock = listOfNotNull(
+                    // Done ends the open chain; walls and rooms end themselves, so only Distance has it.
+                    DockItem(
+                        icon = Icons.Rounded.Done,
+                        label = stringResource(R.string.demo_ar_measure_action_done),
+                        onClick = {
+                            commit(board.finish())
+                            haptic.play(MeasureHapticEvent.ChainEnded)
+                        },
+                        enabled = board.canFinish,
+                    ).takeIf { board.mode == MeasureMode.Distance },
+                    DockItem(
+                        icon = Icons.AutoMirrored.Rounded.Undo,
+                        label = stringResource(R.string.demo_ar_measure_action_undo),
+                        onClick = {
+                            // An opening's first corner goes before anything measured.
+                            commit(board.undo())
+                        },
+                        enabled = !board.isEmpty,
+                    ),
+                    // Room fills the dock with Door or window and Plan: there, Reset in the settings clears.
+                    DockItem(
+                        icon = Icons.Rounded.DeleteSweep,
+                        label = stringResource(R.string.demo_ar_measure_action_clear),
+                        onClick = {
+                            stopMarking()
+                            commit(board.clear())
+                        },
+                        enabled = !board.isEmpty,
+                    ).takeIf { board.mode != MeasureMode.Room },
+                    // On a measured wall or room: a door or a window, by two opposite corners; again to stop.
+                    DockItem(
+                        icon = Icons.Rounded.SensorDoor,
+                        label = stringResource(R.string.demo_ar_measure_action_opening),
+                        onClick = {
+                            if (marking) {
+                                stopMarking()
+                            } else {
+                                commit(board.startOpening())
+                                aimControl.update(null)
+                                aim = null
+                            }
+                        },
+                        enabled = openingWall != null,
+                        selected = marking,
+                    ).takeIf { board.mode != MeasureMode.Distance },
+                    // A traced, raised room: 3D Scan's dimensioned plan, and its PDF.
+                    DockItem(
+                        icon = Icons.Rounded.Map,
+                        label = stringResource(R.string.demo_ar_measure_action_plan),
+                        onClick = {
+                            when (val tap = measurePlanTap(board.figures, figureOutlines)) {
+                                is MeasurePlanTap.Open -> plan = MeasurePlanPage(
+                                    survey = tap.survey,
+                                    openings = measurePlanOpenings(figureOutlines[tap.room], board.figures[tap.room].openings),
+                                    numbers = figureNumbers[tap.room],
+                                )
+                                is MeasurePlanTap.Refused -> refuse(tap.reason)
+                                null -> Unit
+                            }
+                        },
+                        enabled = planRoom >= 0,
+                    ).takeIf { board.mode == MeasureMode.Room },
+                    DockItem(
+                        icon = Icons.Rounded.IosShare,
+                        label = shareTitle,
+                        onClick = {
+                            shareText(
+                                context = context,
+                                text = measureShareText(figureNumbers, units, locale),
+                                chooserTitle = shareTitle,
+                            )
+                        },
+                        enabled = figureNumbers.any { it.segments.isNotEmpty() },
+                    ),
+                ),
+                topOverlay = {
+                    val readout = measureReadout(
+                        board = board,
+                        numbers = figureNumbers,
+                        liveSegment = liveSegment,
+                        len = ::len,
+                        area = ::area,
+                        volume = ::volume,
+                    )
+                    AnimatedVisibility(
+                        visible = readout != null,
+                        enter = fadeIn(SceneViewTokens.Motion.fade()),
+                        exit = fadeOut(SceneViewTokens.Motion.fade()),
+                    ) {
+                        // Keep the last readout while fading out.
+                        val shown = remember { arrayOf<MeasureReadout?>(null) }
+                        if (readout != null) shown[0] = readout
+                        shown[0]?.let { MeasureReadoutCard(it) }
+                    }
+                },
+                bottomOverlay = {
+                    // The camera-app order: the modes, then the one big button that measures (#4732).
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        MeasureModePill(
+                            mode = board.mode,
+                            onSelect = { mode ->
+                                if (mode != board.mode) {
+                                    commit(board.withMode(mode))
+                                    haptic.play(MeasureHapticEvent.ModeChanged)
+                                }
+                            },
+                        )
+                        MeasureAddButton(
+                            action = action,
+                            refused = refusal != null,
+                            onClick = onPrimary,
+                            modifier = Modifier.padding(top = SceneViewTokens.Space.md),
+                            marking = marking,
+                        )
+                    }
+                },
+            ) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    if (qaBackdrop) QaCameraBackdrop(seed = "ar-measure")
+                    ARSceneView(
+                        lifecycle = rememberHostLifecycle(),
+                        onSessionFailure = { arSessionFailed = true },
+                        modifier = Modifier.fillMaxSize().onSizeChanged {
+                            viewport = it
                             aimControl.update(null)
                             aim = null
-                        }
-                    },
-                    enabled = openingWall != null,
-                    selected = marking,
-                ).takeIf { board.mode != MeasureMode.Distance },
-                // A traced, raised room: 3D Scan's dimensioned plan, and its PDF.
-                DockItem(
-                    icon = Icons.Rounded.Map,
-                    label = stringResource(R.string.demo_ar_measure_action_plan),
-                    onClick = {
-                        when (val tap = measurePlanTap(board.figures, figureOutlines)) {
-                            is MeasurePlanTap.Open -> plan = MeasurePlanPage(
-                                survey = tap.survey,
-                                openings = measurePlanOpenings(figureOutlines[tap.room], board.figures[tap.room].openings),
-                                numbers = figureNumbers[tap.room],
-                            )
-                            is MeasurePlanTap.Refused -> refuse(tap.reason)
-                            null -> Unit
-                        }
-                    },
-                    enabled = planRoom >= 0,
-                ).takeIf { board.mode == MeasureMode.Room },
-                DockItem(
-                    icon = Icons.Rounded.IosShare,
-                    label = shareTitle,
-                    onClick = {
-                        shareText(
-                            context = context,
-                            text = measureShareText(figureNumbers, units, locale),
-                            chooserTitle = shareTitle,
-                        )
-                    },
-                    enabled = figureNumbers.any { it.segments.isNotEmpty() },
-                ),
-            ),
-            topOverlay = {
-                val readout = measureReadout(
-                    board = board,
-                    numbers = figureNumbers,
-                    liveSegment = liveSegment,
-                    len = ::len,
-                    area = ::area,
-                    volume = ::volume,
-                )
-                AnimatedVisibility(
-                    visible = readout != null,
-                    enter = fadeIn(SceneViewTokens.Motion.fade()),
-                    exit = fadeOut(SceneViewTokens.Motion.fade()),
-                ) {
-                    // Keep the last readout while fading out.
-                    val shown = remember { arrayOf<MeasureReadout?>(null) }
-                    if (readout != null) shown[0] = readout
-                    shown[0]?.let { MeasureReadoutCard(it) }
-                }
-            },
-            bottomOverlay = {
-                // The camera-app order: the modes, then the one big button that measures (#4732).
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    MeasureModePill(
-                        mode = board.mode,
-                        onSelect = { mode ->
-                            if (mode != board.mode) {
-                                commit(board.withMode(mode))
-                                haptic.play(MeasureHapticEvent.ModeChanged)
+                        },
+                        engine = engine,
+                        materialLoader = materialLoader,
+                        isOpaque = !qaCameraBackdropEnabled(),
+                        surfaceType = qaCameraBackdropSurfaceType(),
+                        cameraStream = if (qaBackdrop) null else cameraStream,
+                        cameraNode = cameraNode,
+                        playbackDataset = arPlaybackDataset,
+                        // The same surface marks as every other AR demo, while the first point is sought.
+                        planeRenderer = board.isEmpty,
+                        sessionConfiguration = { configuredSession: Session, config: Config ->
+                            config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
+                            val supported = configuredSession.isDepthModeSupported(Config.DepthMode.AUTOMATIC)
+                            depthSupported = supported
+                            config.depthMode = if (supported) Config.DepthMode.AUTOMATIC else Config.DepthMode.DISABLED
+                        },
+                        onSessionCreated = { created: Session -> session = created },
+                        onARCoreAvailability = { arCoreAvailability = it },
+                        onTrackingFailureChanged = { reason -> trackingFailureReason = reason },
+                        onSessionUpdated = sessionUpdated@{ _: Session, frame: Frame ->
+                            cameraReady = true
+                            isTracking = frame.camera.trackingState == TrackingState.TRACKING
+                            // The plan covers the camera: nothing under it is read, aimed at or ticked.
+                            if (plan != null) return@sessionUpdated
+                            val cameraPose = frame.camera.pose
+                            val origin = cameraPose.toPosition()
+                            val z = cameraPose.zAxis
+                            val direction = Position(-z[0], -z[1], -z[2])
+
+                            // Anchors drift as tracking refines: follow them, but only on real moves.
+                            if (isTracking) movedPositions(board, positions)?.let { positions = it }
+
+                            // One read of ARCore's planes a frame: the live walls and the snapper share it.
+                            val livePlanes = if (isTracking) session?.livePlanes(liveWalls.planeIds).orEmpty() else emptyList()
+                            // Walls matter to Wall and Room; while a figure raises its own, it is the one shown.
+                            // Hidden, they are not recognised at all: the snapper still reads the planes, as on main.
+                            val wallsShown = board.mode != MeasureMode.Distance && board.phase != MeasurePhase.Raising
+                            val walls = if (wallsShown) {
+                                liveWalls.update(livePlanes, origin.y, frame.timestamp)
+                            } else {
+                                LiveWallSnapshot.Empty
+                            }
+                            if (wallsShown && walls.walls.size != liveWallCount) liveWallCount = walls.walls.size
+                            wallLayer.sync(liveWalls.motion, walls, liveWalls.dt, shown = wallsShown)
+
+                            val wall = board.openingWall?.takeIf { board.markingOpening }
+                            if (wall != null) {
+                                // Marking an opening: the aim reads the wall, nothing else snaps.
+                                aimControl.update(null)
+                                if (aim != null) aim = null
+                                val read = if (isTracking) {
+                                    openingWallPoint(
+                                        wall = wall,
+                                        outline = figureOutlines.lastOrNull().orEmpty(),
+                                        origin = origin,
+                                        direction = direction,
+                                        onWall = board.openingCorner?.wall,
+                                    )
+                                } else {
+                                    null
+                                }
+                                if (wallPointChanged(read, wallAim)) wallAim = read
+                            } else if (board.phase == MeasurePhase.Raising) {
+                                aimControl.update(null)
+                                if (aim != null) aim = null
+                                val height = if (isTracking) {
+                                    raisingHeight(board.active, figureOutlines.lastOrNull().orEmpty(), origin, direction)
+                                } else {
+                                    null
+                                }
+                                // Off the wall there is no height to lock: the shutter says why (#4751).
+                                val read = measureRaisingHeight(height, liveHeight, HEIGHT_EPSILON)
+                                if (read != liveHeight) liveHeight = read
+                                if (read != null && read != shownHeight) shownHeight = read
+                            } else {
+                                val next = if (isTracking && viewport.width > 0 && viewport.height > 0) {
+                                    findMeasureAim(
+                                        frame = frame,
+                                        session = session,
+                                        planes = livePlanes.map { it.toMeasurePlane() },
+                                        walls = walls.takeIf { wallsShown },
+                                        board = board,
+                                        outlines = figureOutlines,
+                                        positions = positions,
+                                        origin = origin,
+                                        direction = direction,
+                                        x = viewport.width / 2f,
+                                        y = viewport.height / 2f,
+                                        allowDepth = depthSupported,
+                                    )
+                                } else {
+                                    null
+                                }
+                                aimControl.update(next)
+                                if (aimChanged(next?.view, aim)) aim = next?.view
                             }
                         },
-                    )
-                    MeasureAddButton(
-                        action = action,
-                        refused = refusal != null,
-                        onClick = onPrimary,
-                        modifier = Modifier.padding(top = SceneViewTokens.Space.md),
-                        marking = marking,
-                    )
-                }
-            },
-        ) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                if (qaBackdrop) QaCameraBackdrop(seed = "ar-measure")
-                ARSceneView(
-                    lifecycle = rememberHostLifecycle(),
-                    onSessionFailure = { arSessionFailed = true },
-                    modifier = Modifier.fillMaxSize().onSizeChanged {
-                        viewport = it
-                        aimControl.update(null)
-                        aim = null
-                    },
-                    engine = engine,
-                    materialLoader = materialLoader,
-                    isOpaque = !qaCameraBackdropEnabled(),
-                    surfaceType = qaCameraBackdropSurfaceType(),
-                    cameraStream = if (qaBackdrop) null else cameraStream,
-                    cameraNode = cameraNode,
-                    playbackDataset = arPlaybackDataset,
-                    // The same surface marks as every other AR demo, while the first point is sought.
-                    planeRenderer = board.isEmpty,
-                    sessionConfiguration = { configuredSession: Session, config: Config ->
-                        config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
-                        val supported = configuredSession.isDepthModeSupported(Config.DepthMode.AUTOMATIC)
-                        depthSupported = supported
-                        config.depthMode = if (supported) Config.DepthMode.AUTOMATIC else Config.DepthMode.DISABLED
-                    },
-                    onSessionCreated = { created: Session -> session = created },
-                    onARCoreAvailability = { arCoreAvailability = it },
-                    onTrackingFailureChanged = { reason -> trackingFailureReason = reason },
-                    onSessionUpdated = sessionUpdated@{ _: Session, frame: Frame ->
-                        cameraReady = true
-                        isTracking = frame.camera.trackingState == TrackingState.TRACKING
-                        // The plan covers the camera: nothing under it is read, aimed at or ticked.
-                        if (plan != null) return@sessionUpdated
-                        val cameraPose = frame.camera.pose
-                        val origin = cameraPose.toPosition()
-                        val z = cameraPose.zAxis
-                        val direction = Position(-z[0], -z[1], -z[2])
-
-                        // Anchors drift as tracking refines: follow them, but only on real moves.
-                        if (isTracking) movedPositions(board, positions)?.let { positions = it }
-
-                        // One read of ARCore's planes a frame: the live walls and the snapper share it.
-                        val livePlanes = if (isTracking) session?.livePlanes(liveWalls.planeIds).orEmpty() else emptyList()
-                        // Walls matter to Wall and Room; while a figure raises its own, it is the one shown.
-                        // Hidden, they are not recognised at all: the snapper still reads the planes, as on main.
-                        val wallsShown = board.mode != MeasureMode.Distance && board.phase != MeasurePhase.Raising
-                        val walls = if (wallsShown) {
-                            liveWalls.update(livePlanes, origin.y, frame.timestamp)
-                        } else {
-                            LiveWallSnapshot.Empty
-                        }
-                        if (wallsShown && walls.walls.size != liveWallCount) liveWallCount = walls.walls.size
-                        wallLayer.sync(liveWalls.motion, walls, liveWalls.dt, shown = wallsShown)
-
-                        val wall = board.openingWall?.takeIf { board.markingOpening }
-                        if (wall != null) {
-                            // Marking an opening: the aim reads the wall, nothing else snaps.
-                            aimControl.update(null)
-                            if (aim != null) aim = null
-                            val read = if (isTracking) {
-                                openingWallPoint(
-                                    wall = wall,
-                                    outline = figureOutlines.lastOrNull().orEmpty(),
-                                    origin = origin,
-                                    direction = direction,
-                                    onWall = board.openingCorner?.wall,
+                    ) {
+                        val cameraPosition = cameraNode.worldPosition
+                        board.figures.forEachIndexed { index, figure ->
+                            key(index, figure.mode) {
+                                MeasureFigureNodes(
+                                    figure = figure,
+                                    outline = figureOutlines[index],
+                                    liveHeight = shownHeight,
+                                    cameraPosition = cameraPosition,
+                                    eye = cameraNode,
+                                    len = ::len,
+                                    area = ::area,
                                 )
-                            } else {
-                                null
                             }
-                            if (wallPointChanged(read, wallAim)) wallAim = read
-                        } else if (board.phase == MeasurePhase.Raising) {
-                            aimControl.update(null)
-                            if (aim != null) aim = null
-                            val height = if (isTracking) {
-                                raisingHeight(board.active, figureOutlines.lastOrNull().orEmpty(), origin, direction)
-                            } else {
-                                null
-                            }
-                            // Off the wall there is no height to lock: the shutter says why (#4751).
-                            val read = measureRaisingHeight(height, liveHeight, HEIGHT_EPSILON)
-                            if (read != liveHeight) liveHeight = read
-                            if (read != null && read != shownHeight) shownHeight = read
-                        } else {
-                            val next = if (isTracking && viewport.width > 0 && viewport.height > 0) {
-                                findMeasureAim(
-                                    frame = frame,
-                                    session = session,
-                                    planes = livePlanes.map { it.toMeasurePlane() },
-                                    walls = walls.takeIf { wallsShown },
-                                    board = board,
-                                    outlines = figureOutlines,
-                                    positions = positions,
-                                    origin = origin,
-                                    direction = direction,
-                                    x = viewport.width / 2f,
-                                    y = viewport.height / 2f,
-                                    allowDepth = depthSupported,
-                                )
-                            } else {
-                                null
-                            }
-                            aimControl.update(next)
-                            if (aimChanged(next?.view, aim)) aim = next?.view
                         }
-                    },
-                ) {
-                    val cameraPosition = cameraNode.worldPosition
-                    board.figures.forEachIndexed { index, figure ->
-                        key(index, figure.mode) {
-                            MeasureFigureNodes(
-                                figure = figure,
-                                outline = figureOutlines[index],
-                                liveHeight = shownHeight,
+                        val pending = board.openingCorner?.let { first -> wallAim?.let { measureOpening(first, it) } }
+                        val wallOutline = figureOutlines.lastOrNull()
+                        if (marking && pending != null && wallOutline != null && wallOutline.size >= 2) {
+                            MeasureOpeningNode(pending, wallOutline, closed = openingWall?.closed == true, accent = true)
+                        }
+                        aim?.let { view ->
+                            MeasureAimNodes(
+                                view = view,
+                                from = activeOutline.lastOrNull()?.takeIf { phase == MeasurePhase.Next },
+                                liveLabel = liveSegment?.let(::len),
                                 cameraPosition = cameraPosition,
                                 eye = cameraNode,
-                                len = ::len,
-                                area = ::area,
                             )
                         }
+                        key(wallLayer) { Node(apply = { wallLayer.nodes.forEach { addChildNode(it) } }) }
                     }
-                    val pending = board.openingCorner?.let { first -> wallAim?.let { measureOpening(first, it) } }
-                    val wallOutline = figureOutlines.lastOrNull()
-                    if (marking && pending != null && wallOutline != null && wallOutline.size >= 2) {
-                        MeasureOpeningNode(pending, wallOutline, closed = openingWall?.closed == true, accent = true)
-                    }
-                    aim?.let { view ->
-                        MeasureAimNodes(
-                            view = view,
-                            from = activeOutline.lastOrNull()?.takeIf { phase == MeasurePhase.Next },
-                            liveLabel = liveSegment?.let(::len),
-                            cameraPosition = cameraPosition,
-                            eye = cameraNode,
+
+                    if (cameraReady && arCoreAvailability == null && !arSessionFailed) {
+                        MeasureReticle(
+                            aim = aim,
+                            raising = phase == MeasurePhase.Raising || marking,
+                            wallFoot = board.mode != MeasureMode.Distance && phase != MeasurePhase.Raising && !marking,
+                            // A refused tap says why for a moment; aiming off a wall it reads says it all along.
+                            refusal = tapRefusal ?: refusal?.takeIf {
+                                (it == MeasureRefusal.OffWall || it == MeasureRefusal.OpeningOffWall) && !coaching
+                            },
+                            modifier = Modifier.align(Alignment.Center),
                         )
                     }
-                    key(wallLayer) { Node(apply = { wallLayer.nodes.forEach { addChildNode(it) } }) }
-                }
 
-                if (cameraReady && arCoreAvailability == null && !arSessionFailed) {
-                    MeasureReticle(
-                        aim = aim,
-                        raising = phase == MeasurePhase.Raising || marking,
-                        wallFoot = board.mode != MeasureMode.Distance && phase != MeasurePhase.Raising && !marking,
-                        // A refused tap says why for a moment; aiming off a wall it reads says it all along.
-                        refusal = tapRefusal ?: refusal?.takeIf {
-                            (it == MeasureRefusal.OffWall || it == MeasureRefusal.OpeningOffWall) && !coaching
-                        },
-                        modifier = Modifier.align(Alignment.Center),
+                    ARCoachingOverlay(
+                        cue = if (arCoreAvailability == null && !arSessionFailed) guidance.cue else ArGuidanceCue.NONE,
+                        surface = guidance.surface,
+                        hint = guidance.hint,
+                        scanLingering = guidance.scanLingering,
+                        contentPadding = PaddingValues(bottom = LocalDemoChromeBottomInset.current),
+                    )
+
+                    ARCameraInitScrim(
+                        initializing = !cameraReady,
+                        arCoreAvailability = arCoreAvailability,
                     )
                 }
-
-                ARCoachingOverlay(
-                    cue = if (arCoreAvailability == null && !arSessionFailed) guidance.cue else ArGuidanceCue.NONE,
-                    surface = guidance.surface,
-                    hint = guidance.hint,
-                    scanLingering = guidance.scanLingering,
-                    contentPadding = PaddingValues(bottom = LocalDemoChromeBottomInset.current),
-                )
-
-                ARCameraInitScrim(
-                    initializing = !cameraReady,
-                    arCoreAvailability = arCoreAvailability,
-                )
             }
         }
         // Over the camera, not instead of it: the session and its anchors live on underneath,
