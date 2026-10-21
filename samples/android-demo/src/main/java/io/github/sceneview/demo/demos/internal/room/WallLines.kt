@@ -87,6 +87,9 @@ internal class WallLine(
     /** The stretches of the line that are seen pieces, small gaps filled. */
     var pieces: List<ClosedFloatingPointRange<Float>> = emptyList()
 
+    /** The stretches of the line hidden behind furniture standing against it: the wall goes on there. */
+    var screened: List<ClosedFloatingPointRange<Float>> = emptyList()
+
     fun seenAt(t: Float): Boolean {
         val k = floor((t - t0) / column).toInt()
         return k in seen.indices && seen[k]
@@ -169,6 +172,7 @@ internal object WallLines {
     private const val STANDING_TO_M = 2f
     private const val BEHIND_SHARE = 4
     private const val FACING_ALONG = 0.5f
+    private const val ASIDE_M = 0.3f
 
     /** Reads the wall lines of [cloud] on [column]-wide columns; [minSupport] cells make a candidate. */
     @Suppress("LongMethod", "CyclomaticComplexMethod")
@@ -493,12 +497,31 @@ internal object WallLines {
      * Drops what is furniture: a column seen lower than a line of the same family standing
      * behind it (within [STRIP_M]) by [FURNITURE_UNDER_M] — a wardrobe's front before the wall
      * seen over it. A line left with too little of it seen is no wall.
+     *
+     * A wall seen only low says nothing of what stands before it higher up, and a wardrobe
+     * against it is seen no higher: a face in front of it (within [STRIP_M]) that the wall goes on
+     * beside and is hardly seen behind is furniture too — dropped with its sides, the wall
+     * [WallLine.screened] behind it. A chimney breast seen only low is taken for one: its
+     * footprint is counted in the room.
      */
+    @Suppress("CyclomaticComplexMethod")
     private fun withoutFurniture(cloud: FrameCloud, lines: List<WallLine>, column: Float, standing: IntArray): List<WallLine> {
+        val dropped = HashSet<WallLine>()
+        val screens = HashMap<WallLine, ArrayList<ClosedFloatingPointRange<Float>>>()
+        for (front in lines) {
+            val wall = lines.firstOrNull {
+                it !== front && it.family == front.family && it.offset <= front.offset - BEHIND_MIN_M &&
+                    it.offset >= front.offset - STRIP_M && it.top < WALL_MIN_TOP_M && against(front, it)
+            } ?: continue
+            dropped += front
+            screens.getOrPut(wall) { ArrayList() } += front.from..front.to
+            for (side in lines) if (!side.parallel(wall) && sideOf(side, front, wall)) dropped += side
+        }
         val result = ArrayList<WallLine>()
         for (line in lines) {
+            if (line in dropped) continue
             val behind = lines.filter {
-                it !== line && it.family == line.family && it.offset <= line.offset - BEHIND_MIN_M &&
+                it !in dropped && it !== line && it.family == line.family && it.offset <= line.offset - BEHIND_MIN_M &&
                     it.offset >= line.offset - STRIP_M
             }
             val kept = if (behind.isEmpty()) {
@@ -512,9 +535,39 @@ internal object WallLines {
                     }
                 }, standing)
             } ?: continue
-            if (kept.seen.count { it } * column > MIN_WALL_SEEN_M + column / 2) result += kept
+            if (kept.seen.count { it } * column > MIN_WALL_SEEN_M + column / 2) {
+                screens[line]?.let { kept.screened = it }
+                result += kept
+            }
         }
         return result.sortedWith(compareBy({ it.family }, { it.offset }))
+    }
+
+    /** Whether [side] runs, end to end, between [front] and the [wall] it stands against: a side of that furniture. */
+    private fun sideOf(side: WallLine, front: WallLine, wall: WallLine): Boolean =
+        floatArrayOf(side.from, side.to).all { t ->
+            val u = side.pointU(t)
+            val v = side.pointV(t)
+            val along = wall.tOf(u, v)
+            val depth = wall.oOf(u, v)
+            along in (front.from - ASIDE_M)..(front.to + ASIDE_M) &&
+                depth in (wall.offset - BEHIND_MIN_M)..(front.offset + BEHIND_MIN_M)
+        }
+
+    /** Whether [front] stands against [wall]: the wall is seen right beside it, within [ASIDE_M] of one of its ends, and hardly behind it. */
+    private fun against(front: WallLine, wall: WallLine): Boolean {
+        fun seenOver(from: Float, to: Float): Int {
+            var count = 0
+            var t = from + wall.column / 2
+            while (t < to) {
+                if (wall.seenAt(t)) count++
+                t += wall.column
+            }
+            return count
+        }
+        val beside = seenOver(front.from - ASIDE_M, front.from) > 0 || seenOver(front.to, front.to + ASIDE_M) > 0
+        val columns = ((front.to - front.from) / wall.column).toInt()
+        return beside && seenOver(front.from, front.to) * 2 < columns
     }
 
     /**
@@ -546,7 +599,7 @@ internal object WallLines {
         }
         for (line in lines) {
             val barrier = ArrayList<ClosedFloatingPointRange<Float>>()
-            val pieces = line.pieces
+            val pieces = joined(line.pieces, line.screened)
             if (pieces.isEmpty()) continue
             var from = pieces[0].start
             for (p in 0 until pieces.size - 1) {
@@ -567,6 +620,30 @@ internal object WallLines {
             }
             line.barrier = extended
         }
+    }
+
+    /** The seen [pieces] with the [screened] stretches beside them, one stretch where they are within [ASIDE_M]. */
+    private fun joined(
+        pieces: List<ClosedFloatingPointRange<Float>>,
+        screened: List<ClosedFloatingPointRange<Float>>,
+    ): List<ClosedFloatingPointRange<Float>> {
+        if (screened.isEmpty() || pieces.isEmpty()) return pieces
+        val all = (pieces + screened).sortedBy { it.start }
+        val result = ArrayList<ClosedFloatingPointRange<Float>>()
+        var from = all[0].start
+        var to = all[0].endInclusive
+        for (k in 1 until all.size) {
+            val range = all[k]
+            if (range.start <= to + ASIDE_M) {
+                to = max(to, range.endInclusive)
+            } else {
+                result += from..to
+                from = range.start
+                to = range.endInclusive
+            }
+        }
+        result += from..to
+        return result
     }
 
     /** Another wall sets off from [t] of [line], away from the room, facing the gap ([gapAhead]: the gap runs on towards +t). */
