@@ -120,6 +120,7 @@ object RoomCorpus {
         return "RoomCorpus ${r.name}: " + (
             r.error ?: ("area ${s?.area?.value} (before: measure ${r.beforeMeasureArea}, survey ${r.beforeSurvey?.area?.value}), " +
                 "height ${s?.ceilingHeight?.value}, ${s?.walls?.size} walls (${s?.walls?.count { it.deduced }} deduced), " +
+                "traced ${s?.reading?.traced}, closed ${s?.reading?.closed}, ${s?.reading?.distinctWalls} distinct walls, " +
                 "${s?.openings?.size} openings, full ${"%.1f".format(r.fullMs)} ms, live ${"%.2f".format(r.liveMs)} ms, ${r.points} points")
             )
     }
@@ -172,6 +173,9 @@ object RoomCorpus {
                     put("seenWalls", s.seenWalls)
                     put("deducedWalls", s.walls.count { it.deduced })
                     put("gaps", JsonArray(s.gaps.map { JsonPrimitive(it.name) }))
+                    put("traced", s.reading?.let { JsonPrimitive(it.traced) } ?: JsonNull)
+                    put("closed", s.reading?.let { JsonPrimitive(it.closed) } ?: JsonNull)
+                    put("distinctWalls", num(s.reading?.distinctWalls))
                     if (walls) {
                         put(
                             "walls",

@@ -107,6 +107,13 @@ enum class RoomGap {
 }
 
 /**
+ * How a room's outline was read: whether its sides were [traced] off the walls (`false`: it is the
+ * floor's own edge), whether its walls [closed] it — each side seen, or held between two seen
+ * ones — and on how many [distinctWalls], one wall seen twice counting once.
+ */
+class RoomReading(val traced: Boolean, val closed: Boolean, val distinctWalls: Int)
+
+/**
  * The structure of one room. [walls] is its outline in order, the room on each wall's normal
  * side — empty when no wall was seen. Every figure is `null` unless the walls close the room —
  * each side seen, or deduced between two seen ones — on at least [MIN_SEEN_WALLS] distinct walls
@@ -117,6 +124,7 @@ enum class RoomGap {
  * @property floorY the floor's height in the scan's frame, [floorThickness] how thick its layer of surfels is.
  * @property yaw the room's turn about +Y from the scan's axes: the turn that squares its main walls.
  * @property confidence 0..1: the share of the outline's length a wall was seen along.
+ * @property reading how its outline was read; `null` when no wall was seen.
  */
 @Suppress("LongParameterList")
 class RoomStructure(
@@ -132,6 +140,7 @@ class RoomStructure(
     val width: RoomFigure?,
     val confidence: Float,
     val gaps: List<RoomGap>,
+    val reading: RoomReading? = null,
 ) {
     /** How many walls of the outline were seen. */
     val seenWalls: Int get() = walls.count { it.seen }

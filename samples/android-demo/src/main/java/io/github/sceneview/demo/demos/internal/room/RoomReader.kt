@@ -527,6 +527,7 @@ internal object RoomReader {
                 RoomGap.MissingWall.takeIf { rough },
                 RoomGap.Ceiling.takeIf { height == null },
             ),
+            reading = RoomReading(outline.traced, closed, distinct),
         )
     }
 
