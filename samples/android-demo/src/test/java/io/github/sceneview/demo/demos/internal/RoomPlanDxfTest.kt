@@ -5,9 +5,11 @@ import io.github.sceneview.demo.demos.internal.RoomPlanDxf.OpeningKind
 import io.github.sceneview.demo.demos.internal.RoomPlanLayoutTest.Companion.WORDING
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.ByteArrayOutputStream
+import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -17,7 +19,7 @@ import kotlin.math.sin
 
 /**
  * The plan's DXF read back pair by pair, with a reader of its own: what a CAD tool finds in it.
- * AutoCAD 2000 in millimetres; the outline one closed polyline on WALLS; each wall's length as
+ * DXF AC1015 (R2000) in millimetres; the outline one closed polyline on WALLS; each wall's length as
  * lines and text on DIMENSIONS, never a DIMENSION entity; the room's name and area on TEXT; each
  * opening with its size on OPENINGS; the warning to check it on site on LEGEND.
  */
@@ -27,7 +29,7 @@ class RoomPlanDxfTest {
     private val lShape = planSurvey(0f, 0f, 6f, 0f, 6f, 3f, 3f, 3f, 3f, 5f, 0f, 5f)
 
     @Test
-    fun `an AutoCAD 2000 drawing in millimetres, in plain ASCII`() {
+    fun `a DXF AC1015 (R2000) drawing in millimetres, in plain ASCII`() {
         val dxf = dxf(room)
         assertTrue("pairs of a code and a value", dxf.wellFormed && dxf.pairs.isNotEmpty())
         assertEquals("AC1015", dxf.header("\$ACADVER"))
@@ -92,6 +94,46 @@ class RoomPlanDxfTest {
     }
 
     @Test
+    fun `a wall with a blank label is left undimensioned, the others dimensioned as before`() {
+        val labels = SurveyReport.planTexts(room, WORDING).walls
+        val blank = 1
+        val dxf = dxf(room, labels = labels.mapIndexed { i, label -> if (i == blank) "" else label })
+        val texts = dxf.entities("TEXT", "DIMENSIONS").map { it.text }
+        assertEquals("no empty text", labels.filterIndexed { i, _ -> i != blank }.sorted(), texts.map { it.orEmpty() }.sorted())
+        // Nothing drawn outside the unlabelled wall: no extension line, dimension line, tick or text.
+        val wall = room.walls[blank]
+        val side = Side(at(room, wall.ax, wall.ay), at(room, wall.bx, wall.by))
+        val outside = dxf.entities("LINE", "DIMENSIONS").filter { min(side.out(it.point(10)), side.out(it.point(11))) > 1.0 }
+        assertTrue("lines outside wall ${wall.tag}: ${outside.size}", outside.isEmpty())
+        assertTrue(dxf.entities("TEXT", "DIMENSIONS").none { side.out(it.point(11)) > 1.0 })
+    }
+
+    @Test
+    fun `numbers keep a decimal point under a French locale`() {
+        val saved = Locale.getDefault()
+        Locale.setDefault(Locale.FRANCE)
+        try {
+            val survey = planSurvey(0f, 0f, 3.0005f, 0f, 3.0005f, 2f, 0f, 2f)
+            val dxf = dxf(survey)
+            val numbers = dxf.pairs.filter { it.first in 10..59 }.map { it.second.trim() }
+            assertTrue("numbers", numbers.isNotEmpty())
+            assertTrue("a comma in ${numbers.filter { ',' in it }}", numbers.none { ',' in it })
+            val xs = dxf.entities("LWPOLYLINE", "WALLS").single().all(10).map { it.trim() }
+            assertTrue("3000.5 in $xs", "3000.5" in xs)
+            val dimensions = dxf.entities("TEXT", "DIMENSIONS").map { it.text }
+            assertTrue("$dimensions", dimensions.containsAll(listOf("3.00", "2.00")))
+        } finally {
+            Locale.setDefault(saved)
+        }
+    }
+
+    @Test
+    fun `a figure that is not a number stops the drawing rather than reach the file`() {
+        val astray = Opening(OpeningKind.Door, wall = 0, from = Float.NaN, width = 0.9f, height = 2.1f)
+        assertThrows(IllegalArgumentException::class.java) { dxf(room, openings = listOf(astray)) }
+    }
+
+    @Test
     fun `the room's name and floor area stand inside it, on TEXT`() {
         for (survey in listOf(room, lShape)) {
             val texts = dxf(survey).entities("TEXT", "TEXT")
@@ -148,7 +190,7 @@ class RoomPlanDxfTest {
     }
 
     @Test
-    fun `an estimate keeps its mark, escaped for AutoCAD 2000`() {
+    fun `an estimate keeps its mark, escaped for DXF AC1015 (R2000)`() {
         val base = room
         val walls = base.walls.mapIndexed { i, wall ->
             if (i != 0) {
@@ -203,9 +245,14 @@ class RoomPlanDxfTest {
         assertTrue("the legend alone", dxf.objects("ENTITIES").all { it.layer == "LEGEND" })
     }
 
-    private fun dxf(survey: RoomSurvey, wording: SurveyWording = WORDING, openings: List<Opening> = emptyList()): DxfRead {
+    private fun dxf(
+        survey: RoomSurvey,
+        wording: SurveyWording = WORDING,
+        openings: List<Opening> = emptyList(),
+        labels: List<String> = SurveyReport.planTexts(survey, wording).walls,
+    ): DxfRead {
         val out = ByteArrayOutputStream()
-        RoomPlanDxf.write(out, survey, wording, WORDS, openings)
+        RoomPlanDxf.write(out, survey, wording, WORDS, openings, labels)
         return DxfRead(out.toByteArray())
     }
 

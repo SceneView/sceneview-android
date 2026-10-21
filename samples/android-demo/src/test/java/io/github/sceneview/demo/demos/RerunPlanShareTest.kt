@@ -20,6 +20,8 @@ import androidx.core.content.FileProvider
 import androidx.core.content.IntentCompat
 import androidx.test.core.app.ApplicationProvider
 import io.github.sceneview.demo.R
+import io.github.sceneview.demo.demos.internal.RoomSurvey
+import io.github.sceneview.demo.demos.internal.SurveyGap
 import io.github.sceneview.demo.demos.internal.planSurvey
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -30,6 +32,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
@@ -46,8 +49,10 @@ import java.lang.reflect.Modifier
  * The floor plan's file shares, each tapped from the plan's share menu as a user would. "Share
  * PDF" hands over the PDF alone, typed `application/pdf`, so every app that takes a PDF is
  * offered and none is left out. "Share DXF (CAD)", right after it in the same menu, hands over
- * the DXF drawing alone, under its own type. Robolectric has no PDF backend: [PlanPdfStandIn]
- * stands in for the platform's writer, so the PDF's tap runs to the share sheet too.
+ * the DXF drawing alone, under its own type; a survey with no plan has no DXF to offer. Each kind
+ * keeps its latest file, so the PDF stays readable to the app it went to while the DXF is shared
+ * right after. Robolectric has no PDF backend: [PlanPdfStandIn] stands in for the platform's
+ * writer, so the PDF's tap runs to the share sheet too.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = "w411dp-h891dp-xhdpi", shadows = [PlanPdfStandIn::class])
@@ -60,18 +65,19 @@ class RerunPlanShareTest {
     private val app: Application get() = ApplicationProvider.getApplicationContext()
 
     /**
-     * FileProvider keeps each authority's roots in a static map, resolved once against the cache
-     * folder of the first test that shared a file. Each test has a cache folder of its own, so the
-     * map is emptied before each one, as a fresh process would have it.
+     * FileProvider keeps each authority's roots in its static `sCache` map, resolved once against
+     * the cache folder of the first test that shared a file. Each test has a cache folder of its
+     * own, so the map is emptied before each one, as a fresh process would have it. Should androidx
+     * rename or drop that field, this fails here rather than let the shares flake again.
      */
     @Before
     fun forgetFileProviderRoots() {
-        FileProvider::class.java.declaredFields
-            .filter { Modifier.isStatic(it.modifiers) && Map::class.java.isAssignableFrom(it.type) }
-            .forEach { field ->
-                field.isAccessible = true
-                (field.get(null) as MutableMap<*, *>).clear()
-            }
+        val cache = FileProvider::class.java.declaredFields.singleOrNull {
+            it.name == "sCache" && Modifier.isStatic(it.modifiers) && Map::class.java.isAssignableFrom(it.type)
+        }
+        assertNotNull("FileProvider has no static sCache map any more: find where it keeps its roots", cache)
+        cache!!.isAccessible = true
+        (cache.get(null) as MutableMap<*, *>).clear()
     }
 
     /** 4 × 3 m with its top-right corner cut at 45°, 2.50 m high: a room with a plan to draw. */
@@ -98,6 +104,27 @@ class RerunPlanShareTest {
         val send = IntentCompat.getParcelableExtra(sheet, Intent.EXTRA_INTENT, Intent::class.java)
         assertNotNull("the share sheet offers nothing", send)
         return send!!
+    }
+
+    /** The file [send] carries. */
+    private fun streamOf(send: Intent): Uri {
+        val stream = IntentCompat.getParcelableExtra(send, Intent.EXTRA_STREAM, Uri::class.java)
+        assertNotNull("the share carries no file", stream)
+        return stream!!
+    }
+
+    /** Opens [uri] as the app it was shared with would, through the app's FileProvider. */
+    private fun readShared(uri: Uri): Result<String> {
+        Robolectric.setupContentProvider(FileProvider::class.java, "${app.packageName}.fileprovider")
+        return runCatching { app.contentResolver.openInputStream(uri)!!.use { String(it.readBytes(), Charsets.ISO_8859_1) } }
+    }
+
+    /** [uri] still opens, and reads as a file that starts with [start] and holds [holds]. */
+    private fun assertStillReadable(uri: Uri, start: String, holds: String = start) {
+        val read = readShared(uri)
+        assertTrue("$uri no longer opens: ${read.exceptionOrNull()}", read.isSuccess)
+        val text = read.getOrThrow()
+        assertTrue("$uri reads ${text.take(16)}", text.startsWith(start) && text.contains(holds))
     }
 
     /** The files the share wrote for the share sheet to read. */
@@ -150,7 +177,7 @@ class RerunPlanShareTest {
         assertEquals(Intent.ACTION_SEND, send.action)
         assertEquals(DXF_TYPE, send.type)
         val dxf = assertOneFile(send, ".dxf")
-        assertTrue("not an AutoCAD 2000 drawing", dxf.readText().contains("AC1015"))
+        assertTrue("not a DXF AC1015 (R2000) drawing", dxf.readText().contains("AC1015"))
         assertNoAppLeftOut(sheet, send)
     }
 
@@ -170,6 +197,37 @@ class RerunPlanShareTest {
             items.map { it.label() },
         )
         assertTrue(items.all { it.config.getOrNull(SemanticsProperties.Role) == Role.Button })
+    }
+
+    @Test
+    fun `a DXF shared right after the PDF leaves the PDF readable, each kind keeping its latest file`() {
+        showPlan()
+        val pdf = streamOf(sentBy(shareSheetOf(composeRule.onNodeWithTag(RERUN_PLAN_SHARE_PDF_TAG))))
+        val dxf = streamOf(sentBy(shareSheetOf(composeRule.onNodeWithText(DXF_LABEL))))
+        // The app the PDF went to may read it only now: the DXF's share must not have taken it away.
+        assertStillReadable(pdf, "%PDF")
+        assertStillReadable(dxf, "  0", holds = "AC1015")
+        // A second PDF replaces the first, and leaves the DXF be.
+        val again = streamOf(sentBy(shareSheetOf(composeRule.onNodeWithTag(RERUN_PLAN_SHARE_PDF_TAG))))
+        assertStillReadable(again, "%PDF")
+        assertStillReadable(dxf, "  0", holds = "AC1015")
+        assertEquals(
+            listOf(again.lastPathSegment, dxf.lastPathSegment).sortedBy { it.orEmpty() },
+            sharedFiles().map { it.name }.sorted(),
+        )
+    }
+
+    @Test
+    fun `a survey with no plan offers no DXF: its share menu is the PDF and the text`() {
+        composeRule.setContent { RerunPlanView(survey = RoomSurvey.empty(SurveyGap.NoWalls), title = TITLE, date = null) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText(DXF_LABEL).assertDoesNotExist()
+        composeRule.onNodeWithTag(RERUN_PLAN_SHARE_DXF_TAG).assertDoesNotExist()
+        val menu = composeRule.onNodeWithTag(RERUN_PLAN_SHARES_TAG).fetchSemanticsNode()
+        assertEquals(
+            listOf(app.getString(R.string.demo_ar_rerun_plan_share_pdf), app.getString(R.string.demo_ar_rerun_plan_share_text)),
+            menu.children.map { it.label() },
+        )
     }
 
     private fun SemanticsNode.label(): String =
