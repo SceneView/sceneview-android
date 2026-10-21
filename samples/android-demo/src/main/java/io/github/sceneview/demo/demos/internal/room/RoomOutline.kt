@@ -91,6 +91,32 @@ internal object RoomOutline {
     /** A step of the camera's path over unseen floor looks this far for the seen floor nearest to it. */
     private const val NEAREST_FLOOR_M = 3f
 
+    /** Two facing walls' ends this close along them stop at the same place: a side open between them. */
+    private const val OPEN_ALIGN_M = 0.3f
+
+    /** Another wall this close to a wall's end meets it there: a corner, not an open end. */
+    private const val OPEN_MET_M = 0.3f
+
+    /** Two facing walls closer than this are no room's sides. */
+    private const val OPEN_MIN_APART_M = 1f
+
+    /** The camera's path this far past an open side's ends goes on into the room: it stays open. */
+    private const val OPEN_TRAIL_M = 0.3f
+
+    /** The floor past a wall's end is looked for this far on along it… */
+    private const val OPEN_PAST_FROM_M = 0.15f
+    private const val OPEN_PAST_TO_M = 0.75f
+
+    /** …this far into the room from it… */
+    private const val OPEN_IN_FROM_M = 0.05f
+    private const val OPEN_IN_TO_M = 0.35f
+
+    /** …and seen on this share of the cells there. */
+    private const val OPEN_FLOOR_SHARE = 0.5f
+
+    /** A deduced side this many cells from an open side closes it. */
+    private const val OPEN_NEAR_CELLS = 3
+
     /**
      * The outline of the room in [cloud] bounded by [lines], on [cell]-metre cells; `null` when
      * the raster would exceed [MAX_CELLS] or no floor was found to start from.
@@ -119,6 +145,7 @@ internal object RoomOutline {
             }
         }
         var evidence = BooleanArray(n)
+        val floorSeen = BooleanArray(n)
         val band = max(FLOOR_BAND_M, floorThickness)
         for (i in 0 until cloud.count) {
             val h = cloud.h[i]
@@ -126,9 +153,23 @@ internal object RoomOutline {
             val standing = h in EVIDENCE_FROM_M..EVIDENCE_TO_M && !members[i]
             if (!floorSurfel && !standing) continue
             val k = raster.index(cloud.u[i], cloud.v[i])
-            if (k >= 0) evidence[k] = true
+            if (k < 0) continue
+            evidence[k] = true
+            if (floorSurfel) floorSeen[k] = true
         }
         evidence = closing(evidence, raster, CLOSING_CELLS)
+        // A side open onto the next room: closed between the ends of the walls it runs between.
+        val open = openSides(lines, raster, floorSeen, trailU, trailV)
+        for (side in open) {
+            val length = hypot(side[2] - side[0], side[3] - side[1])
+            var d = 0f
+            while (d <= length + SAMPLE_M / 2) {
+                val f = if (length > 0f) d / length else 0f
+                val k = raster.index(side[0] + (side[2] - side[0]) * f, side[1] + (side[3] - side[1]) * f)
+                if (k >= 0) barrier[k] = true
+                d += SAMPLE_M
+            }
+        }
         // The room: what the camera's path reaches over seen floor without crossing a wall.
         val inside = insideOf(raster, evidence, barrier, trailU, trailV) ?: return null
         // Everything a way from outside reaches is not the room; what is left of it, around the inside, is.
@@ -181,7 +222,7 @@ internal object RoomOutline {
                 floorAt += cloud.v[i]
             }
         }
-        val traced = sidesOf(loop, raster, lines, cloud, floorAt.toFloatArray())
+        val traced = sidesOf(loop, raster, lines, cloud, floorAt.toFloatArray(), open)
         if (traced != null) {
             val (cu, cv, sides) = traced
             val area = signedArea(cu, cv)
@@ -192,6 +233,91 @@ internal object RoomOutline {
         // The sides did not close into a polygon that holds the room: its own edge.
         val (su, sv, sides) = alongRegion(loop, lines) ?: return null
         return Outline(su, sv, sides, raster, region, traced = false)
+    }
+
+    /**
+     * The sides of the room open onto the next room, as segments (`u0, v0, u1, v1`): where two
+     * walls facing each other both stop within [OPEN_ALIGN_M] of the same place, no other wall
+     * meeting them there, the floor seen on past each end along its wall. A wall would be seen
+     * before the floor at its foot: floor seen there says the wall ends, not that the scan
+     * stopped short of it. Not where the camera's path goes on past the ends — that is still
+     * the room.
+     */
+    @Suppress("CyclomaticComplexMethod", "NestedBlockDepth", "LongParameterList")
+    private fun openSides(
+        lines: List<WallLine>,
+        raster: Raster,
+        floorSeen: BooleanArray,
+        trailU: FloatArray,
+        trailV: FloatArray,
+    ): List<FloatArray> {
+        // Each wall's free ends the floor goes on past: (line, t, +1 forward or −1 backward).
+        val ends = ArrayList<Triple<WallLine, Float, Float>>()
+        for (line in lines) {
+            if (line.barrier.isEmpty()) continue
+            for (sign in floatArrayOf(-1f, 1f)) {
+                val t = if (sign < 0f) line.barrier.first().start else line.barrier.last().endInclusive
+                if (met(line, t, lines)) continue
+                if (floorOn(line, t, sign, raster, floorSeen)) ends += Triple(line, t, sign)
+            }
+        }
+        val sides = ArrayList<FloatArray>()
+        for (x in ends.indices) {
+            for (y in x + 1 until ends.size) {
+                val (a, ta, sa) = ends[x]
+                val (b, tb, sb) = ends[y]
+                // Facing each other, each on the room's side of the other, both ends the same way.
+                if (a.nu * b.nu + a.nv * b.nv > -SAME_FACING) continue
+                if ((a.tu * sa) * (b.tu * sb) + (a.tv * sa) * (b.tv * sb) < SAME_FACING) continue
+                val au = a.pointU(ta)
+                val av = a.pointV(ta)
+                val bu = b.pointU(tb)
+                val bv = b.pointV(tb)
+                val apart = a.oOf(bu, bv) - a.offset
+                if (apart < OPEN_MIN_APART_M || b.oOf(au, av) - b.offset < OPEN_MIN_APART_M) continue
+                if (abs(a.tOf(au, av) - a.tOf(bu, bv)) > OPEN_ALIGN_M) continue
+                // How far on the ends are, along a's end's way; the path past that, between the walls, goes on.
+                val reach = max(ta * sa, a.tOf(bu, bv) * sa)
+                val past = trailU.indices.any { k ->
+                    val u = trailU[k]
+                    val v = trailV[k]
+                    a.oOf(u, v) > a.offset && b.oOf(u, v) > b.offset && a.tOf(u, v) * sa - reach > OPEN_TRAIL_M
+                }
+                if (!past) sides += floatArrayOf(au, av, bu, bv)
+            }
+        }
+        return sides
+    }
+
+    /** Another wall meets [line] at its end [t]: within [OPEN_MET_M] of it, on its own extent. */
+    private fun met(line: WallLine, t: Float, lines: List<WallLine>): Boolean {
+        val pu = line.pointU(t)
+        val pv = line.pointV(t)
+        return lines.any { other ->
+            if (other === line || other.parallel(line) || other.barrier.isEmpty()) return@any false
+            val along = other.tOf(pu, pv)
+            abs(other.oOf(pu, pv) - other.offset) <= OPEN_MET_M &&
+                along >= other.barrier.first().start - OPEN_MET_M && along <= other.barrier.last().endInclusive + OPEN_MET_M
+        }
+    }
+
+    /** The floor was seen along [line] past its end [t], towards [sign], on the room's side of it. */
+    private fun floorOn(line: WallLine, t: Float, sign: Float, raster: Raster, floorSeen: BooleanArray): Boolean {
+        var cells = 0
+        var seen = 0
+        var d = OPEN_PAST_FROM_M
+        while (d <= OPEN_PAST_TO_M) {
+            var o = OPEN_IN_FROM_M
+            while (o <= OPEN_IN_TO_M) {
+                val tt = t + d * sign
+                val k = raster.index(line.pointU(tt) + o * line.nu, line.pointV(tt) + o * line.nv)
+                cells++
+                if (k >= 0 && floorSeen[k]) seen++
+                o += raster.cell
+            }
+            d += raster.cell
+        }
+        return cells > 0 && seen >= cells * OPEN_FLOOR_SHARE
     }
 
     /**
@@ -512,6 +638,7 @@ internal object RoomOutline {
         lines: List<WallLine>,
         cloud: FrameCloud,
         floorAt: FloatArray,
+        open: List<FloatArray>,
     ): Triple<FloatArray, FloatArray, List<Side>>? {
         val m = loop.size / 2
         if (m < 4) return null
@@ -617,7 +744,8 @@ internal object RoomOutline {
             val ends = ArrayList<FloatArray>()
             if (prev.label != UNLABELED) nearestEnd(lines[prev.label], first)?.let { ends += it }
             if (next.label != UNLABELED) nearestEnd(lines[next.label], last)?.let { ends += it }
-            sides += deduced(loop, run.start, run.count, m, lines, ends)
+            val side = deduced(loop, run.start, run.count, m, lines, ends)
+            sides += acrossOpening(side, first, last, open, raster.cell) ?: side
             junctions += first
         }
         // Parallel neighbours: one wall when they are one line, else a deduced step between them.
@@ -799,6 +927,29 @@ internal object RoomOutline {
                 r++
             }
         }
+    }
+
+    /**
+     * A deduced [side] from [first] to [last] that closes one of the [open] sides: across it, at
+     * the end of the shorter of its two walls, not on the floor's edge — the floor goes on into
+     * the next room. `null` when it closes none.
+     */
+    private fun acrossOpening(side: Side, first: FloatArray, last: FloatArray, open: List<FloatArray>, cell: Float): Side? {
+        val mu = (first[0] + last[0]) / 2
+        val mv = (first[1] + last[1]) / 2
+        for (segment in open) {
+            val du = segment[2] - segment[0]
+            val dv = segment[3] - segment[1]
+            val length = hypot(du, dv)
+            if (length <= 0f || abs(du * side.nu + dv * side.nv) / length > WallLine.PARALLEL_SIN) continue
+            val f = ((mu - segment[0]) * du + (mv - segment[1]) * dv) / (length * length)
+            if (f !in 0f..1f) continue
+            val off = abs((mu - segment[0]) * dv - (mv - segment[1]) * du) / length
+            if (off > OPEN_NEAR_CELLS * cell) continue
+            val offset = max(segment[0] * side.nu + segment[1] * side.nv, segment[2] * side.nu + segment[3] * side.nv)
+            return Side(null, side.nu, side.nv, offset)
+        }
+        return null
     }
 
     /** The end of [line]'s barrier nearest to [p], when within [ENDS_NEAR_M] of it. */
