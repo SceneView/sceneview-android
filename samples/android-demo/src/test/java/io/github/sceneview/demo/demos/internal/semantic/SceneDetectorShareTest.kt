@@ -170,6 +170,50 @@ class SceneDetectorShareTest {
     }
 
     @Test
+    fun `a device LiteRT has no library for keeps its copy and fetches no other`() = runBlocking {
+        MockWebServer().use { server ->
+            repeat(2) { server.enqueue(ok(payload)) }
+            server.start()
+            val opened = AtomicInteger()
+            // What LiteRT throws on a 32-bit x86 device: the file is not at fault.
+            val noRuntime = { _: File ->
+                opened.incrementAndGet()
+                throw UnsatisfiedLinkError("no LiteRT library for this ABI")
+            }
+            val detectors = share(server, opens = noRuntime)
+            val states = ArrayList<SceneModelState>()
+
+            val first = runCatching { detectors.share { states += it } }
+
+            assertTrue("the replay failed: ${first.exceptionOrNull()}", first.isSuccess)
+            assertNull(first.getOrNull())
+            assertEquals(SceneModelState.Unusable, states.last())
+            assertEquals("fetched again for a runtime that is missing", 1, server.requestCount)
+            assertNotNull("the copy was deleted", store(server).cached())
+            assertFalse("the copy was marked as fetched again", store(server).isRefetched())
+
+            assertNull(detectors.share())
+            assertEquals(1, opened.get())
+
+            // The next launch tries the copy it kept, and downloads nothing.
+            val next = runCatching { share(server, opens = noRuntime).share() }
+            assertTrue("the next launch failed: ${next.exceptionOrNull()}", next.isSuccess)
+            assertEquals(1, server.requestCount)
+        }
+    }
+
+    @Test
+    fun `with no LiteRT library, opening the detector says so rather than refuse the file`() = runBlocking {
+        // This JVM has no LiteRT library, as a 32-bit x86 device has none.
+        dir.mkdirs()
+        val file = File(dir, sha).apply { writeBytes(payload) }
+
+        val thrown = runCatching { openSceneDetector(file) }.exceptionOrNull()
+
+        assertTrue("got $thrown", thrown is UnsatisfiedLinkError)
+    }
+
+    @Test
     fun `a model refused once loads from its second download`() = runBlocking {
         MockWebServer().use { server ->
             repeat(2) { server.enqueue(ok(payload)) }

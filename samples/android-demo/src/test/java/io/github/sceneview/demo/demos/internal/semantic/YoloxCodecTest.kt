@@ -1,5 +1,6 @@
 package io.github.sceneview.demo.demos.internal.semantic
 
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -26,6 +27,54 @@ class YoloxCodecTest {
         assertEquals("blue of the blue pixel", 255f, input[3], 0f)
         assertEquals("red of the blue pixel", 0f, input[2 * plane + 3], 0f)
         for (at in 8 until 16) assertEquals("row ${at / 4} is padding", YoloxCodec.PAD, input[at], 0f)
+    }
+
+    @Test
+    fun `the LiteRT input holds each pixel's blue, green and red side by side`() {
+        // Four pixels of known colours, drawn 1:1 into a 2 × 2 input.
+        val image = SceneImage(
+            2, 2,
+            intArrayOf(0xFFFF0000.toInt(), 0xFF00FF00.toInt(), 0xFF0000FF.toInt(), 0xFF102030.toInt()),
+        )
+        val planar = FloatArray(3 * 4)
+        assertEquals(1f, YoloxCodec.input(image, 2, planar), 0f)
+        val interleaved = FloatArray(planar.size)
+
+        YoloxCodec.channelsLast(planar, 2, interleaved)
+
+        // NCHW to NHWC with the channels kept in order: blue at pixel × 3, then green, then red.
+        val expected = floatArrayOf(
+            0f, 0f, 255f, // red
+            0f, 255f, 0f, // green
+            255f, 0f, 0f, // blue
+            48f, 32f, 16f, // 0x102030: blue 0x30, green 0x20, red 0x10
+        )
+        assertArrayEquals(expected, interleaved, 0f)
+    }
+
+    @Test
+    fun `the conversion's tensors read channels last in, one row of 85 per cell out`() {
+        val layout = YoloxCodec.channelsLastLayout(intArrayOf(1, 416, 416, 3), intArrayOf(1, 3549, 85))
+        assertEquals(YoloxCodec.TensorLayout(size = 416, columns = 85), layout)
+    }
+
+    @Test
+    fun `a conversion that reads its tensors otherwise is refused, not decoded into noise`() {
+        val channelsLast = intArrayOf(1, 416, 416, 3)
+        val rows = intArrayOf(1, 3549, 85)
+        val refused = listOf(
+            "the channels first" to (intArrayOf(1, 3, 416, 416) to rows),
+            "the output transposed" to (channelsLast to intArrayOf(1, 85, 3549)),
+            "another class list" to (channelsLast to intArrayOf(1, 3549, 84)),
+            "the rows of another input side" to (channelsLast to intArrayOf(1, 2100, 85)),
+            "a side no grid divides" to (intArrayOf(1, 420, 420, 3) to rows),
+            "a side the tensor does not say" to (intArrayOf(1, -1, -1, 3) to rows),
+            "a batch of two" to (intArrayOf(2, 416, 416, 3) to intArrayOf(2, 3549, 85)),
+        )
+        for ((what, shapes) in refused) {
+            val thrown = runCatching { YoloxCodec.channelsLastLayout(shapes.first, shapes.second) }.exceptionOrNull()
+            assertTrue("$what was accepted", thrown is IllegalArgumentException)
+        }
     }
 
     @Test
