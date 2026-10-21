@@ -32,9 +32,24 @@ class RerunModelStatusTest {
 
     @Test
     fun `the raw surface left in the finished model's place never goes without a word`() {
-        val outOfMemory = mesh(finished = false, outOfMemoryInHeap = HEAP)
+        val outOfMemory = mesh(finished = false, outOfMemoryInHeap = HEAP, attempts = RerunScanModel.OUT_OF_MEMORY_ATTEMPTS)
         assertEquals(ModelStatus.RawOutOfMemory, ModelStatus.of(outOfMemory, settled = true))
         assertEquals(ModelStatus.RawUnfinished, ModelStatus.of(mesh(finished = false), settled = true))
+    }
+
+    @Test
+    fun `a raw surface out of memory with finishes left says the next open finishes it, not that the phone is too small`() {
+        // Its first finish ran out of memory: the next open finishes it again, so the phone's
+        // memory is not the last word yet.
+        val retried = mesh(finished = false, outOfMemoryInHeap = HEAP)
+        assertTrue(retried.retriesFinish)
+        val status = ModelStatus.of(retried, settled = true)
+        assertTrue("says $status", status != null && status != ModelStatus.RawOutOfMemory)
+        assertTrue("$status keeps the raw lines' room", status in ModelStatus.RAW_LINES)
+        // Its last finish spent: kept as scanned for good, for the phone's memory.
+        val spent = mesh(finished = false, outOfMemoryInHeap = HEAP, attempts = RerunScanModel.OUT_OF_MEMORY_ATTEMPTS)
+        assertFalse(spent.retriesFinish)
+        assertEquals(ModelStatus.RawOutOfMemory, ModelStatus.of(spent, settled = true))
     }
 
     @Test
@@ -91,7 +106,7 @@ class RerunModelStatusTest {
         assertEquals(ModelStatus.Partial, ModelStatus.of(points, settled = true))
     }
 
-    private fun mesh(finished: Boolean, outOfMemoryInHeap: Long? = null) = RerunScanModel(
+    private fun mesh(finished: Boolean, outOfMemoryInHeap: Long? = null, attempts: Int = 1) = RerunScanModel(
         RerunScanModel.Kind.Mesh,
         ByteArray(0),
         FloatArray(BOUNDS),
@@ -99,6 +114,7 @@ class RerunModelStatusTest {
         3,
         finished = finished,
         outOfMemoryInHeap = outOfMemoryInHeap,
+        outOfMemoryAttempts = attempts,
     )
 
     private companion object {
