@@ -156,6 +156,12 @@ internal object WallLines {
     private const val FAMILY_REFINE_DEG = 10f
     private const val FAMILY_REACH_DEG = 20f
     private const val FAMILY_MIN_SHARE = 0.03f
+
+    /**
+     * A square direction of the room is a family with this share of the vertical surfels: the
+     * walls of a cluttered bedroom scanned with a phone made 1.4 to 3 % each.
+     */
+    private const val FAMILY_SQUARE_SHARE = 0.01f
     private const val FAMILY_MIN_SURFELS = 50
     private const val QUARTER = 90f
     private const val GAP_FILL_M = 0.15f
@@ -299,6 +305,15 @@ internal object WallLines {
                 a = square % DEGREES
             }
             if (families.none { angleDiff(it, a) < FAMILY_APART_DEG }) families += a
+        }
+        // In a cluttered room a wall can make under [FAMILY_MIN_SHARE] of the vertical surfels,
+        // its faces lost among things turned every way. The room's frame was squared on all the
+        // walls together: each of its four directions no family covers is one when
+        // [FAMILY_SQUARE_SHARE] of the surfels face it — whether a wall stands there, its lines say.
+        val squareNeed = max(FAMILY_MIN_SURFELS, (n * FAMILY_SQUARE_SHARE).toInt())
+        for (q in 0 until DEGREES step QUARTER.toInt()) {
+            val a = q.toFloat()
+            if (smooth[q] >= squareNeed && families.none { angleDiff(it, a) < FAMILY_APART_DEG }) families += a
         }
         return families.sorted()
     }
