@@ -24,7 +24,7 @@ class ScanHudPhotoLimitTest {
     @Test
     fun `a scan past its photo limit keeps no lasting reminder of it`() {
         composeRule.setContent {
-            ScanHud(phase = ScanPhase.Scanning, seconds = SECONDS, points = POINTS, photoLimit = true)
+            ScanHud(phase = ScanPhase.Scanning, seconds = SECONDS, points = POINTS)
         }
         composeRule.onNodeWithText(LIMIT_WORDS, substring = true, ignoreCase = true).assertDoesNotExist()
     }

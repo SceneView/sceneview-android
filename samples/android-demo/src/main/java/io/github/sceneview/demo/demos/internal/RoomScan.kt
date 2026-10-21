@@ -387,11 +387,11 @@ object ScanCopy {
     const val LOADING = "Opening your scan…"
     const val REPLAY_TITLE = "Your scan"
     const val SAMPLE_TITLE = "Example scan"
-    /** Said once, for a few seconds, when the photos run out (#4717); then [PHOTO_LIMIT] stays in the HUD. */
+    /**
+     * Said once, for a few seconds, when the photos run out (#4717), and not again: past the limit
+     * the scan's points, their colours and its path still record, so nothing is left to warn about.
+     */
     const val FULL = "Photo limit reached — points and path keep recording."
-
-    /** The HUD's small, lasting reminder once [FULL] has been said. */
-    const val PHOTO_LIMIT = "Photo limit reached"
 
     // The capture lifecycle (#4627): Scanning ⇄ Paused, Finish opens a review that Keep scanning
     // leaves for the same capture; only Save scan ends it.

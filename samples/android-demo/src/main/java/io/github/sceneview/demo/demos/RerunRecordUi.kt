@@ -25,7 +25,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.MyLocation
-import androidx.compose.material.icons.rounded.NoPhotography
 import androidx.compose.material3.Icon
 import androidx.compose.ui.res.stringResource
 import io.github.sceneview.demo.R
@@ -104,7 +103,6 @@ internal fun ScanHud(
     seconds: Float,
     points: Int,
     label: String? = null,
-    photoLimit: Boolean = false,
     activity: ScanActivity? = null,
     room: ScanWallsState? = null,
 ) {
@@ -143,22 +141,6 @@ internal fun ScanHud(
             modifier = Modifier.testTag(SCAN_POINTS_TAG),
         )
         if (room != null) ScanRoomGauge(room)
-        if (photoLimit) {
-            // Said once in the coaching line; from then on, this small reminder (#4717).
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Space.xs),
-                modifier = Modifier.semantics(mergeDescendants = true) {}.testTag(SCAN_PHOTO_LIMIT_TAG),
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.NoPhotography,
-                    contentDescription = null,
-                    tint = LocalStageChrome.current.onCardMuted,
-                    modifier = Modifier.size(ScanDotSize + Space.xs),
-                )
-                Text(text = ScanCopy.PHOTO_LIMIT, style = OnScrimCaption, maxLines = 1)
-            }
-        }
     }
 }
 
@@ -649,7 +631,6 @@ internal const val SCAN_TURN_TAG = "ar_rerun_scan_turn"
 internal const val SCAN_STAGE_TAG = "ar_rerun_scan_stage"
 internal const val SCAN_RECENTER_TAG = "ar_rerun_scan_recenter"
 internal const val SCAN_POINTS_TAG = "ar_rerun_scan_points"
-internal const val SCAN_PHOTO_LIMIT_TAG = "ar_rerun_scan_photo_limit"
 internal const val SCAN_CONTROLS_TAG = "ar_rerun_scan_controls"
 internal const val SCAN_HINT_TAG = "ar_rerun_scan_hint"
 internal const val SCAN_REVIEW_TAG = "ar_rerun_scan_review"

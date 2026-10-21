@@ -1722,7 +1722,7 @@ private fun RerunLiveScreen(
             delay(HUD_TICK_MS)
         }
     }
-    // The photo limit is said once, in the coaching line, then stays as a small HUD line.
+    // The photo limit is said once, in the coaching line, and not again.
     var photoNoticeOver by remember(scanMedia) { mutableStateOf(false) }
     LaunchedEffect(photoLimitReached) {
         if (photoLimitReached && !photoNoticeOver) {
@@ -1765,7 +1765,6 @@ private fun RerunLiveScreen(
                     seconds = scan?.elapsedSeconds(now) ?: qaLong?.shownSeconds ?: stats.duration,
                     points = capturedPoints,
                     label = ScanScopeCopy.label(scanScope, roomNumber),
-                    photoLimit = photoLimitReached && photoNoticeOver,
                     activity = ScanActivity.of(
                         phase = phase,
                         trackingLost = trackingLost,
