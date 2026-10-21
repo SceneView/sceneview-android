@@ -99,4 +99,9 @@
     <string name="demo_ar_rerun_detector_off">Furniture recognition is off</string>
     <string name="demo_ar_rerun_detector_offline_caption">No connection to download its detector. Doors and windows are still found.</string>
     <string name="demo_ar_rerun_detector_unusable_caption">Its detector could not be used. Doors and windows are still found.</string>
+    <!-- On mobile data the detector waits for the user's tap, as the HD pack does. -->
+    <string name="demo_ar_rerun_detector_metered">Furniture recognition needs its detector</string>
+    <string name="demo_ar_rerun_detector_metered_caption">On mobile data, nothing is downloaded until you ask. Doors and windows are already found.</string>
+    <!-- %1$s is the detector's size, e.g. "20 MB". -->
+    <string name="demo_ar_rerun_detector_download">Download (%1$s)</string>
 </resources>

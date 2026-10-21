@@ -6,10 +6,18 @@ import android.graphics.BitmapFactory
 import android.util.Log
 import androidx.annotation.StringRes
 import io.github.sceneview.demo.R
+import io.github.sceneview.demo.hdpack.isOnMeteredNetwork
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
 import java.io.FileInputStream
 import java.nio.channels.FileChannel
@@ -33,81 +41,188 @@ private const val SCENE_MODEL_DIR = "scene-detector"
  * The furniture detector, `null` when it cannot be had — no network for its first download
  * ([SceneModelState.Offline]), or a file that fails its check or that ONNX Runtime will not load
  * ([SceneModelState.Unusable]): the replay then runs without it. [onState] hears where it is, on
- * the caller's dispatcher: the progress of its download, then [SceneModelState.Ready] once its
- * session is built, or why there is none.
+ * the caller's dispatcher: [SceneModelState.Metered] while it waits for the user's go, the progress
+ * of its download — another replay's too, when one is already downloading it —, then
+ * [SceneModelState.Ready] once its session is built, or why there is none.
  *
  * The first call downloads the model ([SceneModelStore]) — or finds it in app storage —, maps it
  * and builds its session, all off the main thread; every later one, each replay opened again,
- * shares that session ([SharedDetector]). Closing what it returns lets go of the share, never the
- * shared session.
+ * shares that session ([SceneDetectorShare]). Closing what it returns lets go of the share, never
+ * the shared session.
  */
 suspend fun loadSceneDetector(context: Context, onState: (SceneModelState) -> Unit = {}): SceneDetector? =
-    SharedDetector.share(context.applicationContext, onState)
+    ProcessDetector.of(context).share(onState)
 
 /**
- * The detector, built once for the process. A model that failed its check, or that ONNX Runtime
- * would not load, is not tried again before the app restarts; a download that found no network is,
- * by the next replay, and resumes where it stopped. The session lives as long as the process,
- * whose end frees it; the shares handed out close nothing ([Share]), so a replay that closes its
- * detector cannot pull the session from under another one.
+ * The user's go for the detector's download on a metered network — the replay's "Download" tap: a
+ * replay waiting at [SceneModelState.Metered] starts it. It holds until the app restarts.
  */
-private object SharedDetector {
+fun allowSceneDetectorDownload(context: Context) = ProcessDetector.of(context).allowMetered()
+
+/** The process's one [SceneDetectorShare], on the app's storage and network. */
+private object ProcessDetector {
+    @Volatile
+    private var share: SceneDetectorShare? = null
+
+    fun of(context: Context): SceneDetectorShare = share ?: synchronized(this) {
+        share ?: context.applicationContext.let { app ->
+            SceneDetectorShare(
+                storeOf = {
+                    withContext(Dispatchers.IO) {
+                        SceneModelStore(File(app.filesDir, SCENE_MODEL_DIR)) { failure ->
+                            Log.w(TAG, "The scene detector could not be fetched: ${failure.message}")
+                        }
+                    }
+                },
+                metered = { isOnMeteredNetwork(app) },
+                open = ::openSceneDetector,
+            )
+        }.also { share = it }
+    }
+}
+
+/**
+ * The detector, built once and shared by every replay. The first replay that needs it fetches it
+ * from [storeOf]'s store and [open]s it; the others wait for it, and meanwhile hear that download's
+ * progress. On a [metered] network nothing is fetched until [allowMetered] — the HD pack's rule —
+ * unless the file is already on the device.
+ *
+ * A download that found no network is tried again by the next replay, and resumes where it
+ * stopped; so does one the replay left. A file that failed its check is not tried again before the
+ * app restarts. One that ONNX Runtime will not load is deleted and fetched once more — a file
+ * damaged on the device since its download —, and given up on if the new copy fails too. The
+ * session lives as long as the process, whose end frees it; the shares handed out close nothing
+ * ([Share]), so a replay that closes its detector cannot pull the session from under another one.
+ */
+internal class SceneDetectorShare(
+    private val storeOf: suspend () -> SceneModelStore,
+    private val metered: () -> Boolean,
+    private val open: suspend (File) -> SceneDetector?,
+) {
     private val lock = Mutex()
+    private val storeLock = Mutex()
     private var store: SceneModelStore? = null
+
+    @Volatile
     private var detector: SceneDetector? = null
+
+    @Volatile
     private var unusable = false
 
-    suspend fun share(context: Context, onState: (SceneModelState) -> Unit): SceneDetector? = lock.withLock {
+    /** The download under way, for the replays waiting for it. */
+    private val progress = MutableStateFlow<SceneModelState.Downloading?>(null)
+    private val meteredAllowed = MutableStateFlow(false)
+
+    /** The user's go for the download on a metered network: every replay waiting for it starts. */
+    fun allowMetered() {
+        meteredAllowed.value = true
+    }
+
+    suspend fun share(onState: (SceneModelState) -> Unit = {}): SceneDetector? {
+        shared(onState)?.let { return it }
+        if (unusable) return null
+        val models = models()
+        awaitGo(models, onState)
+        // The lock is held for the whole download: while it waits, a replay shows its progress.
+        return coroutineScope {
+            val relay = launch(start = CoroutineStart.UNDISPATCHED) {
+                progress.collect { it?.let(onState) }
+            }
+            try {
+                lock.withLock {
+                    relay.cancelAndJoin()
+                    shared(onState) ?: if (unusable) null else fetchAndOpen(models, onState)
+                }
+            } finally {
+                relay.cancel()
+            }
+        }
+    }
+
+    /** The detector already built ([SceneModelState.Ready]), else `null` — said when it never will be. */
+    private fun shared(onState: (SceneModelState) -> Unit): SceneDetector? {
         detector?.let {
             onState(SceneModelState.Ready)
-            return@withLock Share(it)
+            return Share(it)
         }
-        if (unusable) {
-            onState(SceneModelState.Unusable)
-            return@withLock null
+        if (unusable) onState(SceneModelState.Unusable)
+        return null
+    }
+
+    private suspend fun models(): SceneModelStore = storeLock.withLock {
+        store ?: storeOf().also { store = it }
+    }
+
+    /** Returns once the download may start: not metered, the user said yes, or nothing to download. */
+    private suspend fun awaitGo(models: SceneModelStore, onState: (SceneModelState) -> Unit) {
+        if (!mustAsk(models)) return
+        onState(SceneModelState.Metered)
+        // A switch to Wi-Fi is a go too: looked at again every few seconds.
+        while (mustAsk(models)) {
+            withTimeoutOrNull(NETWORK_RECHECK_MILLIS) { meteredAllowed.first { it } }
         }
-        val models = store ?: withContext(Dispatchers.IO) {
-            SceneModelStore(File(context.filesDir, SCENE_MODEL_DIR)) { failure ->
-                Log.w(TAG, "The scene detector could not be fetched: ${failure.message}")
+    }
+
+    private fun mustAsk(models: SceneModelStore) = !meteredAllowed.value && models.cached() == null && metered()
+
+    private suspend fun fetchAndOpen(models: SceneModelStore, onState: (SceneModelState) -> Unit): SceneDetector? {
+        repeat(OPEN_ATTEMPTS) { attempt ->
+            if (attempt > 0) awaitGo(models, onState)
+            val file = fetch(models, onState) ?: return null
+            open(file)?.let { built ->
+                detector = built
+                onState(SceneModelState.Ready)
+                return Share(built)
             }
-        }.also { store = it }
+            Log.w(TAG, "ONNX Runtime refused the scene detector (try ${attempt + 1} of $OPEN_ATTEMPTS)")
+            // The last copy was checked as it arrived: the fault is the runtime's, keep it.
+            if (attempt < OPEN_ATTEMPTS - 1) models.discard()
+        }
+        unusable = true
+        onState(SceneModelState.Unusable)
+        return null
+    }
+
+    private suspend fun fetch(models: SceneModelStore, onState: (SceneModelState) -> Unit): File? {
         var ended: SceneModelState? = null
-        // Ready is said once the session is built, not when the file is merely on the device.
-        val file = models.fetch { state ->
-            ended = state
-            if (state != SceneModelState.Ready) onState(state)
+        val file = try {
+            models.fetch { state ->
+                ended = state
+                if (state is SceneModelState.Downloading) progress.value = state
+                // Ready is said once the session is built, not when the file is merely on the device.
+                if (state != SceneModelState.Ready) onState(state)
+            }
+        } finally {
+            progress.value = null
         }
         if (file == null) {
             unusable = ended == SceneModelState.Unusable
             Log.i(TAG, "No scene detector (${ended ?: "not fetched"}): the scan is recognised without it")
-            return@withLock null
         }
-        val built = open(file)
-        if (built == null) {
-            unusable = true
-            onState(SceneModelState.Unusable)
-            return@withLock null
-        }
-        detector = built
-        onState(SceneModelState.Ready)
-        Share(built)
+        return file
     }
 
-    /**
-     * [file] mapped in place — ONNX Runtime reads a direct buffer without copying it onto the heap —
-     * and its session built: the mapping on [Dispatchers.IO], the session on [Dispatchers.Default].
-     */
-    private suspend fun open(file: File): SceneDetector? = try {
-        val mapped = withContext(Dispatchers.IO) {
-            FileInputStream(file).use { it.channel.map(FileChannel.MapMode.READ_ONLY, 0, it.channel.size()) }
-        }
-        withContext(Dispatchers.Default) { OnnxSceneDetector(mapped, name = SceneModel.NAME) }
-    } catch (e: CancellationException) {
-        throw e
-    } catch (@Suppress("TooGenericExceptionCaught") failure: Exception) {
-        Log.w(TAG, "The scene detector could not be loaded: ${failure.message}")
-        null
+    private companion object {
+        /** The first download, and one more after ONNX Runtime refused it: never a loop. */
+        const val OPEN_ATTEMPTS = 2
+        const val NETWORK_RECHECK_MILLIS = 5_000L
     }
+}
+
+/**
+ * [file] mapped in place — ONNX Runtime reads a direct buffer without copying it onto the heap —
+ * and its session built: the mapping on [Dispatchers.IO], the session on [Dispatchers.Default].
+ */
+private suspend fun openSceneDetector(file: File): SceneDetector? = try {
+    val mapped = withContext(Dispatchers.IO) {
+        FileInputStream(file).use { it.channel.map(FileChannel.MapMode.READ_ONLY, 0, it.channel.size()) }
+    }
+    withContext(Dispatchers.Default) { OnnxSceneDetector(mapped, name = SceneModel.NAME) }
+} catch (e: CancellationException) {
+    throw e
+} catch (@Suppress("TooGenericExceptionCaught") failure: Exception) {
+    Log.w(TAG, "The scene detector could not be loaded: ${failure.message}")
+    null
 }
 
 /** A share of the process's detector: it detects with it, and closing it leaves it open. */

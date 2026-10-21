@@ -16,7 +16,8 @@ import java.io.IOException
 /**
  * The furniture detector: YOLOX-Tiny (Apache-2.0), 20 MB, too heavy to ride in every APK for a
  * feature only a scan's replay uses. It is published on the `assets-v1` release under its own
- * SHA-256, downloaded the first time a replay recognises a scan, and kept in app storage.
+ * SHA-256, downloaded the first time a replay recognises a scan — on a metered network, once the
+ * user asks —, and kept in app storage.
  */
 object SceneModel {
     /** The model's name in logs and in the corpus test's outputs. */
@@ -54,6 +55,12 @@ sealed interface SceneModelState {
 
     /** No network, or the server failed: what arrived is kept, and a later replay resumes it. */
     data object Offline : SceneModelState
+
+    /**
+     * Not on the device, and the network is metered: nothing is fetched until the user asks — the
+     * HD pack's rule. On a network that is not metered it downloads without asking.
+     */
+    data object Metered : SceneModelState
 
     /**
      * The file failed its SHA-256 or size check and was deleted, or ONNX Runtime would not load
@@ -100,7 +107,7 @@ class SceneModelStore(
             onState(SceneModelState.Ready)
             return it
         }
-        val part = File(store.fileFor(asset).path + PART_SUFFIX)
+        val part = store.partFile(asset)
         onState(SceneModelState.Downloading(fraction(withContext(Dispatchers.IO) { part.length() })))
         return try {
             coroutineScope {
@@ -130,11 +137,14 @@ class SceneModelStore(
         }
     }
 
+    /**
+     * Deletes the detector's file from the device — one that passed its checks but that ONNX Runtime
+     * would not load — so the next [fetch] downloads it again.
+     */
+    suspend fun discard() {
+        store.removeAll()
+    }
+
     private fun fraction(onDisk: Long): Float =
         if (asset.bytes > 0L) (onDisk.toFloat() / asset.bytes).coerceIn(0f, 1f) else 0f
-
-    private companion object {
-        /** [HdPackStore]'s temp file: `<file>.part`, kept across a cut. */
-        const val PART_SUFFIX = ".part"
-    }
 }

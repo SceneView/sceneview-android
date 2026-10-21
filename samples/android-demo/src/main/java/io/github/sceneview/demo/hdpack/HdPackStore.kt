@@ -161,7 +161,8 @@ class HdPackStore(
 
     private fun partName(asset: HdAsset) = "${asset.file}.part"
 
-    private fun partFile(asset: HdAsset) = File(dir, partName(asset))
+    /** Where [asset] is written while it downloads, kept across a cut and resumed from. */
+    fun partFile(asset: HdAsset): File = File(dir, partName(asset))
 
     private suspend fun download(asset: HdAsset, onProgress: (Long) -> Unit) {
         dir.mkdirs()
