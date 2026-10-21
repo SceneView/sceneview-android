@@ -45,11 +45,12 @@ fun measureHaptic(event: MeasureHapticEvent): MeasureHaptic = when (event) {
 /**
  * The tick of a new aim: the reticle locked onto a snap of [kind], or onto the first point
  * ([closes]). Played each time either changes, so `null` aims and plain hits stay silent.
- * [covered]: a page is open over the camera.
+ * [covered]: a page is open over the camera, which stays silent under it.
  */
-@Suppress("UnusedParameter")
 fun measureAimHapticEvent(kind: MeasureSnapKind?, closes: Boolean?, covered: Boolean = false): MeasureHapticEvent? =
-    MeasureHapticEvent.AimLocked.takeIf { closes == true || (kind ?: MeasureSnapKind.None) != MeasureSnapKind.None }
+    MeasureHapticEvent.AimLocked.takeIf {
+        !covered && (closes == true || (kind ?: MeasureSnapKind.None) != MeasureSnapKind.None)
+    }
 
 /** The haptic event of a tap that placed a point: closing the outline, or a plain point. */
 fun measurePointHapticEvent(closes: Boolean): MeasureHapticEvent =

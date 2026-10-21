@@ -354,9 +354,9 @@ fun MeasureScreen(onBack: () -> Unit) {
     )
     val coaching = arCoreAvailability == null && !arSessionFailed && guidance.isCoaching
 
-    // Snap haptics: one tick each time the reticle locks onto something new.
+    // Snap haptics: one tick each time the reticle locks onto something new, none under the plan.
     LaunchedEffect(aim?.snap?.kind, aim?.closes) {
-        measureAimHapticEvent(aim?.snap?.kind, aim?.closes)?.let { haptic.play(it) }
+        measureAimHapticEvent(aim?.snap?.kind, aim?.closes, covered = plan != null)?.let { haptic.play(it) }
     }
 
     val phase = board.phase
@@ -623,9 +623,11 @@ fun MeasureScreen(onBack: () -> Unit) {
                     onSessionCreated = { created: Session -> session = created },
                     onARCoreAvailability = { arCoreAvailability = it },
                     onTrackingFailureChanged = { reason -> trackingFailureReason = reason },
-                    onSessionUpdated = { _: Session, frame: Frame ->
+                    onSessionUpdated = sessionUpdated@{ _: Session, frame: Frame ->
                         cameraReady = true
                         isTracking = frame.camera.trackingState == TrackingState.TRACKING
+                        // The plan covers the camera: nothing under it is read, aimed at or ticked.
+                        if (plan != null) return@sessionUpdated
                         val cameraPose = frame.camera.pose
                         val origin = cameraPose.toPosition()
                         val z = cameraPose.zAxis
