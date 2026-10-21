@@ -7,6 +7,7 @@ import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.cos
+import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
@@ -218,8 +219,19 @@ object FootprintFit {
         // face or an L of two, which squares up by its faces where a smallest-area box would tilt.
         var bestAngle = 0f
         var bestScore = -1L
+        // Turned about the points' own middle, none of them is ever further than [reach] from it:
+        // none falls off an end of the histograms, where piling up would win the search for a
+        // wrong turn (sized on |x| and |z|, a turned point reaches √2 times as far).
+        var mx = 0f
+        var mz = 0f
+        for (i in sample) {
+            mx += xs[i]
+            mz += zs[i]
+        }
+        mx /= sample.size
+        mz /= sample.size
         var reach = 0f
-        for (i in sample) reach = max(reach, max(abs(xs[i]), abs(zs[i])))
+        for (i in sample) reach = max(reach, hypot(xs[i] - mx, zs[i] - mz))
         val bins = ceil(2 * (reach + BIN_M) / BIN_M).toInt() + 1
         val hu = IntArray(bins)
         val hv = IntArray(bins)
@@ -230,8 +242,10 @@ object FootprintFit {
             hu.fill(0)
             hv.fill(0)
             for (i in sample) {
-                hu[((xs[i] * c + zs[i] * s + reach + BIN_M) / BIN_M).toInt().coerceIn(0, bins - 1)]++
-                hv[((-xs[i] * s + zs[i] * c + reach + BIN_M) / BIN_M).toInt().coerceIn(0, bins - 1)]++
+                val x = xs[i] - mx
+                val z = zs[i] - mz
+                hu[((x * c + z * s + reach + BIN_M) / BIN_M).toInt().coerceIn(0, bins - 1)]++
+                hv[((-x * s + z * c + reach + BIN_M) / BIN_M).toInt().coerceIn(0, bins - 1)]++
             }
             var score = 0L
             for (k in 0 until bins) score += hu[k].toLong() * hu[k] + hv[k].toLong() * hv[k]

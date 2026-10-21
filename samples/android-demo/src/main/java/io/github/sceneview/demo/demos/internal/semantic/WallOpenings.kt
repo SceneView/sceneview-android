@@ -9,6 +9,7 @@ import kotlin.math.atan2
 import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.floor
+import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
@@ -235,7 +236,10 @@ class CloudWallOpenings(private val cell: Float = CELL_M) : WallOpenings {
         val step = max(1, walls.size / YAW_SAMPLES)
         val xs = (walls.indices step step).map { p[walls[it] * 3] }
         val zs = (walls.indices step step).map { p[walls[it] * 3 + 2] }
-        val reach = max(xs.maxOf { abs(it) }, zs.maxOf { abs(it) }) + cell
+        // About the walls' own middle, as [FootprintFit]: no turned surfel falls off the histograms.
+        val mx = xs.average().toFloat()
+        val mz = zs.average().toFloat()
+        val reach = xs.indices.maxOf { hypot(xs[it] - mx, zs[it] - mz) } + cell
         val bins = ceil(2 * reach / cell).toInt() + 1
         val ha = IntArray(bins)
         val hb = IntArray(bins)
@@ -248,8 +252,10 @@ class CloudWallOpenings(private val cell: Float = CELL_M) : WallOpenings {
             ha.fill(0)
             hb.fill(0)
             for (k in xs.indices) {
-                ha[((xs[k] * c + zs[k] * s + reach) / cell).toInt().coerceIn(0, bins - 1)]++
-                hb[((-xs[k] * s + zs[k] * c + reach) / cell).toInt().coerceIn(0, bins - 1)]++
+                val x = xs[k] - mx
+                val z = zs[k] - mz
+                ha[((x * c + z * s + reach) / cell).toInt().coerceIn(0, bins - 1)]++
+                hb[((-x * s + z * c + reach) / cell).toInt().coerceIn(0, bins - 1)]++
             }
             var score = 0L
             for (i in 0 until bins) score += ha[i].toLong() * ha[i] + hb[i].toLong() * hb[i]
