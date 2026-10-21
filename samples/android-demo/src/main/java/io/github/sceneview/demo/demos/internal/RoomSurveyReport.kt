@@ -180,6 +180,8 @@ object SurveyReport {
     fun wallRows(survey: RoomSurvey, wording: SurveyWording): List<SurveyRow> = survey.walls.map { wall ->
         val label = wording.wall.format(wall.tag)
         when {
+            !wall.sized ->
+                SurveyRow(label, wording.notMeasured + (if (wall.seen) "" else SEPARATOR + wording.notSeen), muted = true)
             !wall.seen -> SurveyRow(label, SurveyFormat.wall(wall) + METRES + SEPARATOR + wording.notSeen, muted = true)
             wall.length.estimate ->
                 SurveyRow(label, SurveyFormat.wall(wall) + METRES + SEPARATOR + wording.estimated, muted = true)

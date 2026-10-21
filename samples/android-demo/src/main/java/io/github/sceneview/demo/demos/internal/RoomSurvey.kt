@@ -44,6 +44,8 @@ typealias SurveyFigure = RoomFigure
  * @property seenShare the part of its length the scan saw a wall on, 0..1.
  * @property seen `false` under [RoomSurveyor.MIN_SEEN_SHARE]: drawn dashed, its length an estimate.
  * @property unseen the stretches the scan saw no wall on, in metres from the wall's start.
+ * @property sized `false` when its length would be a guess on a plan its walls do not close: no
+ *   length is given for it.
  */
 class SurveyWall(
     val tag: String,
@@ -55,6 +57,7 @@ class SurveyWall(
     val seenShare: Float,
     val seen: Boolean,
     val unseen: List<ClosedFloatingPointRange<Float>>,
+    val sized: Boolean = true,
 ) {
     val horizontal: Boolean get() = abs(by - ay) < abs(bx - ax)
 }
@@ -105,12 +108,12 @@ class RoomSurvey(
 
     /** `true` when any figure or wall is an estimate: the exports then explain the mark. */
     val hasEstimates: Boolean
-        get() = walls.any { it.length.estimate } || area?.estimate == true || length?.estimate == true ||
+        get() = walls.any { it.sized && it.length.estimate } || area?.estimate == true || length?.estimate == true ||
             width?.estimate == true || perimeter?.estimate == true || ceilingHeight?.estimate == true
 
     /** `true` when any figure is measured, and so carries a ±: the exports then say what the ± is. */
     val hasSpread: Boolean
-        get() = (walls.map { it.length } + listOfNotNull(area, length, width, perimeter, ceilingHeight))
+        get() = (walls.filter { it.sized }.map { it.length } + listOfNotNull(area, length, width, perimeter, ceilingHeight))
             .any { !it.estimate }
 
     companion object {
@@ -206,6 +209,8 @@ object RoomSurveyor {
                 seenShare = wall.seenShare,
                 seen = wall.seen,
                 unseen = wall.unseen,
+                // An estimated length is a figure too: none on a plan its walls do not close.
+                sized = !wall.length.estimate || structure.area != null,
             )
         }
         return RoomSurvey(
