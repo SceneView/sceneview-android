@@ -4,6 +4,8 @@ import io.github.sceneview.demo.demos.internal.ArDebugFormat
 import io.github.sceneview.demo.demos.internal.RerunSessionSource
 import io.github.sceneview.demo.demos.internal.RerunStoredSession
 import io.github.sceneview.demo.demos.internal.formatFileSize
+import io.github.sceneview.demo.demos.internal.liveCaptureStats
+import io.github.sceneview.demo.demos.internal.rerunStatusUx
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -75,6 +77,15 @@ class RerunEnglishFormatsTest {
         assertEquals("4,8k", ArDebugFormat.compactCount(4_812))
         assertEquals("1 204 m²", ArDebugFormat.area(1204f).plainSpaces())
         assertEquals("0:18", ArDebugFormat.clock(18.4f))
+    }
+
+    /** The replay's live row and the streaming status count with the same separators. */
+    @Test
+    fun `the live row and the streaming status take the French separators`() {
+        val live = liveCaptureStats(frames = 1204, metersMoved = 2.3f, surfaces = 1, placements = 3)
+        assertEquals(listOf("1 204", "2,3 m"), live.take(2).map { it.value.plainSpaces() })
+        val status = rerunStatusUx(isConnected = true, eventsSent = 1204, eventsPerSecond = 10f)
+        assertEquals("1 204 events sent · 10 per second", status.detail.plainSpaces())
     }
 
     @Test
