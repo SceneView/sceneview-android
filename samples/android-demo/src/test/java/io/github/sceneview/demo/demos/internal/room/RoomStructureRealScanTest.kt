@@ -1,6 +1,7 @@
 package io.github.sceneview.demo.demos.internal.room
 
 import io.github.sceneview.demo.demos.internal.Vec3
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -148,11 +149,13 @@ class RoomStructureRealScanTest {
     }
 
     @Test
-    fun `one wall seen along 1,5 m of a 5 m side still draws the plan`() {
+    fun `one wall seen along 1,5 m of a 5 m side draws no plan`() {
         val structure = RoomStructure.read(capture(STRETCH).scan())
         val summary = summary(STRETCH, structure)
-        assertTrue("$summary: a wall stands where one was seen", structure.walls.any { !it.deduced })
-        check(STRETCH)
+        assertTrue("$summary: a plan", structure.walls.isEmpty())
+        assertEquals(summary, RoomGap.NoWalls, structure.gaps.first())
+        assertNull(summary, structure.area)
+        assertEquals(summary, 2.5f, structure.ceilingHeight!!.value, 0.05f)
     }
 
     @Test
@@ -440,7 +443,11 @@ class RoomStructureRealScanTest {
             figures = true,
         )
 
-        /** The rectangle with one wall of four seen, and that one only along 1.5 m of its 5 m: no figure, but a plan. */
+        /**
+         * The rectangle with one wall of four seen, and that one only along 1.5 m of its 5 m: a stub
+         * on the floor's edge, under half the side it stands on — no plan, as `RoomSurveyTest` holds
+         * on a clean cloud, the height still given.
+         */
         val STRETCH = Case(
             "one wall seen on 1.5 m",
             SyntheticRoom(RECTANGLE_X, RECTANGLE_Z, hidden = setOf(1, 2, 3), seenAlong = mapOf(0 to 1.75f..3.25f)),
@@ -473,7 +480,7 @@ class RoomStructureRealScanTest {
         )
 
         val CASES = listOf(
-            LOW_WALLS, FLOOR_AHEAD, DOOR, TWICE, TWO_LOW, TWO, L_PART, T_PART, CORNERS, HEADBOARD, CLUTTERED, STRETCH, GARAGE,
+            LOW_WALLS, FLOOR_AHEAD, DOOR, TWICE, TWO_LOW, TWO, L_PART, T_PART, CORNERS, HEADBOARD, CLUTTERED, GARAGE,
             PLANES,
         )
 
