@@ -83,6 +83,9 @@ internal object RoomOutline {
     private const val CORNER_RUN_M = 1f
     private const val CORNER_NEAR_M = 0.75f
     private const val FAMILY_FIT_DEG = 20f
+
+    /** A stretch no wall was seen along turns a corner where it strays this far off its chord. */
+    private const val TURN_M = 0.5f
     private const val ENDS_NEAR_M = 1f
     private const val SAME_SIDE_M = 0.15f
     private const val SAME_FACING = 0.94f
@@ -759,12 +762,18 @@ internal object RoomOutline {
                     if (corner != null && hypot(corner[0] - mu, corner[1] - mv) <= CORNER_NEAR_M) continue
                 }
             }
-            val ends = ArrayList<FloatArray>()
-            if (prev.label != UNLABELED) nearestEnd(lines[prev.label], first)?.let { ends += it }
-            if (next.label != UNLABELED) nearestEnd(lines[next.label], last)?.let { ends += it }
-            val side = deduced(loop, run.start, run.count, m, lines, ends)
-            sides += acrossOpening(side, first, last, open, raster.cell) ?: side
-            junctions += first
+            // A stretch that turns a corner — two walls unseen side by side — is one side per straight piece.
+            val pieces = straightPieces(loop, run.start, run.count, m)
+            for ((p, piece) in pieces.withIndex()) {
+                val from = point(piece[0])
+                val to = point(piece[0] + piece[1])
+                val ends = ArrayList<FloatArray>()
+                if (p == 0 && prev.label != UNLABELED) nearestEnd(lines[prev.label], from)?.let { ends += it }
+                if (p == pieces.lastIndex && next.label != UNLABELED) nearestEnd(lines[next.label], to)?.let { ends += it }
+                val side = deduced(loop, piece[0], piece[1], m, lines, ends)
+                sides += acrossOpening(side, from, to, open, raster.cell) ?: side
+                junctions += from
+            }
         }
         // Parallel neighbours: one wall when they are one line, else a deduced step between them.
         val merged = ArrayList<Side>()
@@ -1033,6 +1042,42 @@ internal object RoomOutline {
         }
         for (end in ends) offset = min(offset, end[0] * nu + end[1] * nv)
         return Side(null, nu, nv, offset, floorEdge = true)
+    }
+
+    /**
+     * The stretch of [loop] [count] steps long from [start], cut where it turns a corner: at its
+     * point furthest from the chord when that is more than [TURN_M] off it, then each piece again.
+     * As `[start, count]` pairs, in order along the loop.
+     */
+    private fun straightPieces(loop: FloatArray, start: Int, count: Int, m: Int): List<IntArray> {
+        val pieces = ArrayList<IntArray>()
+        fun cut(from: Int, steps: Int) {
+            val au = loop[(from % m) * 2]
+            val av = loop[(from % m) * 2 + 1]
+            val du = loop[((from + steps) % m) * 2] - au
+            val dv = loop[((from + steps) % m) * 2 + 1] - av
+            val len = hypot(du, dv)
+            var far = -1
+            var farD = TURN_M
+            for (k in 1 until steps) {
+                val e = (from + k) % m
+                val pu = loop[e * 2] - au
+                val pv = loop[e * 2 + 1] - av
+                val d = if (len > 1e-6f) abs(pu * dv - pv * du) / len else hypot(pu, pv)
+                if (d > farD) {
+                    farD = d
+                    far = k
+                }
+            }
+            if (far < 0) {
+                pieces += intArrayOf(from, steps)
+            } else {
+                cut(from, far)
+                cut(from + far, steps - far)
+            }
+        }
+        cut(start, count)
+        return pieces
     }
 
     /** A deduced side through [at], square to two parallel sides it steps between, facing the room. */
