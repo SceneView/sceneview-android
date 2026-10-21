@@ -6,8 +6,9 @@ import kotlin.math.min
 
 /**
  * The pre- and post-processing of a YOLOX model exported to ONNX the way its repository does
- * it (`tools/export_onnx.py`, decoding left out of the graph): plain Kotlin, so the JVM tests run
- * the very code the device runs.
+ * it (`tools/export_onnx.py`, decoding left out of the graph), and of its LiteRT conversion, which
+ * reads the same input with the channels last ([LiteRtSceneDetector]): plain Kotlin, so the JVM
+ * tests run the very code the device runs.
  *
  * In: the photo letterboxed into the model's square — scaled to fit, pinned to the top left,
  * the rest grey (114) —, BGR, 0–255, channels first. Out: one row per anchor point of the three

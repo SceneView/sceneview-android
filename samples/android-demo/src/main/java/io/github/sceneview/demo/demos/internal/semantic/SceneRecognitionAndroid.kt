@@ -40,23 +40,24 @@ private const val SCENE_MODEL_DIR = "scene-detector"
 
 /**
  * The furniture detector, `null` when it cannot be had — no network for its first download
- * ([SceneModelState.Offline]), or a file that fails its check or that ONNX Runtime will not load
+ * ([SceneModelState.Offline]), or a file that fails its check or that LiteRT will not load
  * ([SceneModelState.Unusable]): the replay then runs without it. [onState] hears where it is, on
  * the caller's dispatcher: [SceneModelState.Metered] while it waits for the user's go, the progress
  * of its download — another replay's too, when one is already downloading it —, then
- * [SceneModelState.Ready] once its session is built, or why there is none.
+ * [SceneModelState.Ready] once its interpreter is built, or why there is none.
  *
  * The first call downloads the model ([SceneModelStore]) — or finds it in app storage —, maps it
- * and builds its session, all off the main thread; every later one, each replay opened again,
- * shares that session ([SceneDetectorShare]). Closing what it returns lets go of the share, never
- * the shared session.
+ * and builds its interpreter, all off the main thread; every later one, each replay opened again,
+ * shares that interpreter ([SceneDetectorShare]). Closing what it returns lets go of the share,
+ * never the shared interpreter.
  */
 suspend fun loadSceneDetector(context: Context, onState: (SceneModelState) -> Unit = {}): SceneDetector? =
     ProcessDetector.of(context).share(onState)
 
 /**
  * The user's go for the detector's download on a metered network — the replay's "Download" tap: a
- * replay waiting at [SceneModelState.Metered] starts it. It holds until the app restarts.
+ * replay waiting at [SceneModelState.Metered] starts it. It holds until the app restarts, except
+ * once LiteRT has refused a copy: fetching another one on mobile data asks again.
  */
 fun allowSceneDetectorDownload(context: Context) = ProcessDetector.of(context).allowMetered()
 
@@ -91,13 +92,13 @@ private object ProcessDetector {
  *
  * A download that found no network is tried again by the next replay, and resumes where it
  * stopped; so does one the replay left. A file that failed its check is not tried again before the
- * app restarts. One that ONNX Runtime will not load is deleted and fetched once more — a file
- * damaged on the device since its download —, and given up on if the new copy fails too. That
- * second copy is kept and marked ([SceneModelStore.markRefetched]): a later launch tries it again,
- * never a third download. A copy that loads clears the mark ([SceneModelStore.clearRefetched]), so
- * a file damaged after that is fetched once more. The session lives as long as the process, whose
- * end frees it; the shares handed out close nothing ([Share]), so a replay that closes its detector
- * cannot pull the session from under another one.
+ * app restarts. One that LiteRT will not load is deleted and fetched once more — after a new go on
+ * a metered network —, and given up on if the new copy fails too. That second copy is kept and
+ * marked ([SceneModelStore.markRefetched]): a later launch tries it again, never a third download.
+ * A copy that loads clears the mark ([SceneModelStore.clearRefetched]), so a file refused after
+ * that is fetched once more. The interpreter lives as long as the process, whose end frees it; the
+ * shares handed out close nothing ([Share]), so a replay that closes its detector cannot pull the
+ * interpreter from under another one.
  */
 internal class SceneDetectorShare(
     private val storeOf: suspend () -> SceneModelStore,
@@ -118,7 +119,10 @@ internal class SceneDetectorShare(
     private val progress = MutableStateFlow<SceneModelState.Downloading?>(null)
     private val meteredAllowed = MutableStateFlow(false)
 
-    /** The user's go for the download on a metered network: every replay waiting for it starts. */
+    /**
+     * The user's go for the download on a metered network: every replay waiting for it starts. It
+     * is for one copy: a refused one fetched again asks again ([fetchAndOpen]).
+     */
     fun allowMetered() {
         meteredAllowed.value = true
     }
@@ -188,11 +192,13 @@ internal class SceneDetectorShare(
                 onState(SceneModelState.Ready)
                 return Share(built)
             }
-            Log.w(TAG, "ONNX Runtime refused the scene detector (try ${attempt + 1} of $OPEN_ATTEMPTS)")
+            Log.w(TAG, "LiteRT refused the scene detector (try ${attempt + 1} of $OPEN_ATTEMPTS)")
             // A copy fetched again after a refusal — at this launch or an earlier one — was checked
             // as it arrived: the fault is the runtime's, keep it and fetch no other.
             if (attempt == OPEN_ATTEMPTS - 1 || models.isRefetched()) break
             models.discard()
+            // The go was for the copy just refused: another 10 MB on mobile data is asked for again.
+            meteredAllowed.value = false
         }
         unusable = true
         onState(SceneModelState.Unusable)
@@ -205,7 +211,7 @@ internal class SceneDetectorShare(
             models.fetch { state ->
                 ended = state
                 if (state is SceneModelState.Downloading) progress.value = state
-                // Ready is said once the session is built, not when the file is merely on the device.
+                // Ready is said once the interpreter is built, not when the file is merely on disk.
                 if (state != SceneModelState.Ready) onState(state)
             }
         } finally {
@@ -219,25 +225,29 @@ internal class SceneDetectorShare(
     }
 
     private companion object {
-        /** The first download, and one more after ONNX Runtime refused it: never a loop. */
+        /** The first download, and one more after LiteRT refused it: never a loop. */
         const val OPEN_ATTEMPTS = 2
         const val NETWORK_RECHECK_MILLIS = 5_000L
     }
 }
 
 /**
- * [file] mapped in place — ONNX Runtime reads a direct buffer without copying it onto the heap —
- * and its session built: the mapping on [Dispatchers.IO], the session on [Dispatchers.Default].
+ * [file] mapped in place — LiteRT reads a direct buffer without copying it onto the heap — and its
+ * interpreter built: the mapping on [Dispatchers.IO], the interpreter on [Dispatchers.Default]. A
+ * device LiteRT has no native library for (32-bit x86) gets no detector, never a crash.
  */
 private suspend fun openSceneDetector(file: File): SceneDetector? = try {
     val mapped = withContext(Dispatchers.IO) {
         FileInputStream(file).use { it.channel.map(FileChannel.MapMode.READ_ONLY, 0, it.channel.size()) }
     }
-    withContext(Dispatchers.Default) { OnnxSceneDetector(mapped, name = SceneModel.NAME) }
+    withContext(Dispatchers.Default) { LiteRtSceneDetector(mapped, name = SceneModel.NAME) }
 } catch (e: CancellationException) {
     throw e
 } catch (@Suppress("TooGenericExceptionCaught") failure: Exception) {
     Log.w(TAG, "The scene detector could not be loaded: ${failure.message}")
+    null
+} catch (missing: UnsatisfiedLinkError) {
+    Log.w(TAG, "No LiteRT for this device's ABI: the scan is recognised without a detector (${missing.message})")
     null
 }
 

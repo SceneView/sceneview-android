@@ -165,15 +165,16 @@ BUNDLED_SCOPES = [
         # APK and in no manifest: the URL, SHA-256 and size live in the code that fetches them.
         "downloaded": [
             {
-                "file": "yolox_tiny.onnx",
-                "title": "YOLOX-Tiny (COCO object detector, ONNX)",
+                "file": "yolox_tiny.tflite",
+                "title": "YOLOX-Tiny (COCO object detector, TFLite)",
                 "author": "Megvii Inc. (Megvii-BaseDetection/YOLOX)",
                 "copyright": "© 2021-2022 Megvii Inc.",
                 "source": "https://github.com/Megvii-BaseDetection/YOLOX/releases/tag/0.1.1rc0",
                 "license": "Apache-2.0",
-                "bytes": 20219662,
-                "note": "Furniture detector of the 3D Scan replay — fetched on its first use "
-                        "(`internal/semantic/SceneModel.kt`).",
+                "bytes": 10178328,
+                "note": "Converted from the release's `yolox_tiny.onnx` to float16 TFLite with "
+                        "onnx2tf 1.29.24 — furniture detector of the 3D Scan replay, fetched on "
+                        "its first use (`internal/semantic/SceneModel.kt`).",
             },
         ],
     },

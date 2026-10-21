@@ -41,9 +41,10 @@ import java.nio.channels.FileChannel
  *   ./gradlew :samples:android-demo:testDebugUnitTest --tests '*SceneRecognitionCorpusTest*'
  * ```
  *
- * The detector is the file `SCENEVIEW_SCENE_MODEL` names, else the app's own YOLOX-Tiny,
- * downloaded once into `<java.io.tmpdir>/sceneview-scene-detector/` and checked as the app checks
- * it. A path there that is no file stops the run instead of dropping to no detector. With
+ * The detector is the `.onnx` file `SCENEVIEW_SCENE_MODEL` names, else YOLOX-Tiny's ONNX export —
+ * the one the app's LiteRT model was converted from ([OnnxSceneDetector]) —, downloaded once into
+ * `<java.io.tmpdir>/sceneview-scene-detector/` and checked as the app checks its own. A path there
+ * that is no file stops the run instead of dropping to no detector. With
  * `SCENEVIEW_SCENE_MODEL=none`, or without network, the scans are still recognised for their doors
  * and windows, which need no detector — what a phone shows while it downloads one — and the photo
  * run is skipped. CI sets none of these variables, so it never downloads anything. `SCENEVIEW_SCENE_PHOTOS` runs the models on a
@@ -265,9 +266,9 @@ class SceneRecognitionCorpusTest {
 
     /**
      * The models to run, by name: none for [NO_MODEL]; the files [spec] names (`:`-separated) —
-     * one that is no file stops the run, a typo never drops it to no detector unseen; else the
-     * app's own detector, downloaded once into the temp folder by the app's own store. Empty when
-     * that download fails (no network).
+     * one that is no file stops the run, a typo never drops it to no detector unseen; else the ONNX
+     * export of the app's detector, downloaded once into the temp folder by the app's own store.
+     * Empty when that download fails (no network).
      */
     private fun models(spec: String?): List<Pair<String, File>> {
         if (spec == NO_MODEL) return emptyList()
@@ -278,7 +279,7 @@ class SceneRecognitionCorpusTest {
             }
         }
         val cache = File(System.getProperty("java.io.tmpdir"), DOWNLOAD_DIR)
-        val file = runBlocking { SceneModelStore(cache).fetch() }
+        val file = runBlocking { SceneModelStore(cache, asset = ONNX_EXPORT).fetch() }
         return listOfNotNull(file?.let { SceneModel.NAME to it })
     }
 
@@ -290,6 +291,17 @@ class SceneRecognitionCorpusTest {
         const val OUT = "SCENEVIEW_SCAN_OUT"
         const val PHOTOS = "SCENEVIEW_SCENE_PHOTOS"
         const val MODEL = "SCENEVIEW_SCENE_MODEL"
+
+        /**
+         * YOLOX-Tiny 0.1.1rc0 as its repository exports it, which the app's `.tflite` was converted
+         * from: still on `assets-v1` under its own hash, for the JVM, where only ONNX Runtime runs.
+         */
+        val ONNX_EXPORT = SceneModel.ASSET.copy(
+            title = "YOLOX-Tiny (COCO object detector, ONNX)",
+            file = "427cc366d34e27ff7a03e2899b5e3671425c262ea2291f88bb942bc1cc70b0f7",
+            sha256 = "427cc366d34e27ff7a03e2899b5e3671425c262ea2291f88bb942bc1cc70b0f7",
+            bytes = 20_219_662L,
+        )
 
         /** As [MODEL]: no detector, no download — the doors and windows only, as a phone without one. */
         const val NO_MODEL = "none"

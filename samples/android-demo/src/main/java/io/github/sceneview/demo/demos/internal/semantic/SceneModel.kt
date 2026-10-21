@@ -14,17 +14,17 @@ import java.io.File
 import java.io.IOException
 
 /**
- * The furniture detector: YOLOX-Tiny (Apache-2.0), 20 MB, too heavy to ride in every APK for a
- * feature only a scan's replay uses. It is published on the `assets-v1` release under its own
- * SHA-256, downloaded the first time a replay recognises a scan — on a metered network, once the
- * user asks —, and kept in app storage.
+ * The furniture detector: YOLOX-Tiny (Apache-2.0), converted from its ONNX export to LiteRT in
+ * float16 — 10 MB, too heavy to ride in every APK for a feature only a scan's replay uses. It is
+ * published on the `assets-v1` release under its own SHA-256, downloaded the first time a replay
+ * recognises a scan — on a metered network, once the user asks —, and kept in app storage.
  */
 object SceneModel {
     /** The model's name in logs and in the corpus test's outputs. */
     const val NAME = "yolox_tiny"
 
-    const val SHA256 = "427cc366d34e27ff7a03e2899b5e3671425c262ea2291f88bb942bc1cc70b0f7"
-    const val BYTES = 20_219_662L
+    const val SHA256 = "d1d61787dcd087234e41914688315b69f502a8dfdfb10982cdcd3b7c57549e0a"
+    const val BYTES = 10_178_328L
 
     /** Where `tools/fetch-assets.sh` reads the repository's binary assets from, too. */
     const val BASE_URL = "https://github.com/sceneview/sceneview/releases/download/assets-v1"
@@ -35,7 +35,7 @@ object SceneModel {
     /** The detector as a one-file download for [HdPackStore], with the credit `CREDITS.md` gives it. */
     val ASSET = HdAsset(
         id = "yolox-tiny",
-        title = "YOLOX-Tiny (COCO object detector, ONNX)",
+        title = "YOLOX-Tiny (COCO object detector, TFLite)",
         file = SHA256,
         sha256 = SHA256,
         bytes = BYTES,
@@ -63,8 +63,8 @@ sealed interface SceneModelState {
     data object Metered : SceneModelState
 
     /**
-     * The file failed its SHA-256 or size check and was deleted, or ONNX Runtime would not load
-     * it. Recognition is off; the replay runs without it.
+     * The file failed its SHA-256 or size check and was deleted, or LiteRT would not load it.
+     * Recognition is off; the replay runs without it.
      */
     data object Unusable : SceneModelState
 }
@@ -73,8 +73,9 @@ sealed interface SceneModelState {
  * The detector's file in [dir], a folder of its own: downloaded once, resumed after a cut, checked
  * against its SHA-256 and size before it is renamed into place, and reused from then on. Built on
  * [HdPackStore] — a pack of one file — so the transfer, the hashing and the rename run on
- * [Dispatchers.IO], never on the caller's thread. Building one looks at [dir]: do it off the main
- * thread too.
+ * [Dispatchers.IO], never on the caller's thread. Building one hashes the copy already in [dir],
+ * once per launch: one damaged on the device since its download is fetched again, never handed to
+ * the runtime, which maps it and trusts it. Do it off the main thread too.
  *
  * [client] and [baseUrl] are for tests; [asset] too, with a payload a fake server can serve.
  * [onFailure] hears why a fetch ended without a file — the app logs it.
@@ -87,7 +88,7 @@ class SceneModelStore(
     private val onFailure: (IOException) -> Unit = {},
 ) {
     /**
-     * Beside the detector's file when that copy was fetched again after ONNX Runtime refused an
+     * Beside the detector's file when that copy was fetched again after LiteRT refused an
      * earlier one ([markRefetched]): kept across launches, deleted with the file by [discard], and
      * once a copy loads ([clearRefetched]).
      */
@@ -95,9 +96,9 @@ class SceneModelStore(
 
     private val store = HdPackManifest(version = 1, assets = listOf(asset)).let { manifest ->
         if (client == null) {
-            HdPackStore(manifest, dir, baseUrl = baseUrl)
+            HdPackStore(manifest, dir, baseUrl = baseUrl, hashOnScan = true)
         } else {
-            HdPackStore(manifest, dir, client, baseUrl)
+            HdPackStore(manifest, dir, client, baseUrl, hashOnScan = true)
         }
     }
 
@@ -145,7 +146,7 @@ class SceneModelStore(
     }
 
     /**
-     * Deletes the detector's file from the device — one that passed its checks but that ONNX Runtime
+     * Deletes the detector's file from the device — one that passed its checks but that LiteRT
      * would not load — so the next [fetch] downloads it again.
      */
     suspend fun discard() {
@@ -153,7 +154,7 @@ class SceneModelStore(
     }
 
     /**
-     * Notes that the copy now on the device replaces one ONNX Runtime refused, so that no launch
+     * Notes that the copy now on the device replaces one LiteRT refused, so that no launch
      * fetches a third. Written once that copy has arrived: a download deletes the names it does not
      * know. A marker that cannot be written is only logged ([onFailure]).
      */
@@ -167,11 +168,11 @@ class SceneModelStore(
         }
     }
 
-    /** Whether the copy on the device was fetched again after ONNX Runtime refused one ([markRefetched]). */
+    /** Whether the copy on the device was fetched again after LiteRT refused one ([markRefetched]). */
     suspend fun isRefetched(): Boolean = withContext(Dispatchers.IO) { refetched.isFile }
 
     /**
-     * Forgets [markRefetched] once ONNX Runtime has loaded the copy on the device: a file damaged
+     * Forgets [markRefetched] once LiteRT has loaded the copy on the device: a file damaged
      * there later is fetched once more, as a first refusal is.
      */
     suspend fun clearRefetched() {
