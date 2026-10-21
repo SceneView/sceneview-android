@@ -671,7 +671,12 @@ internal object WallLines {
         return false
     }
 
-    /** How far the end [t] of [line] carries to meet another wall, within [EXTEND_M]; `null` when none. */
+    /**
+     * How far the end [t] of [line] carries to meet another wall, within [EXTEND_M]; `null` when
+     * none. The other wall's extent counts the stretches of it hidden behind furniture, and where
+     * the crossing is behind furniture the end carries as far as furniture stands out from a wall
+     * ([STRIP_M]): a wardrobe in a corner hides both walls' ends.
+     */
     private fun reachOf(line: WallLine, t: Float, lines: List<WallLine>, backward: Boolean): Float? {
         var best: Float? = null
         for (other in lines) {
@@ -681,13 +686,14 @@ internal object WallLines {
             if (abs(denom) < EPSILON) continue
             val cross = (other.offset - line.offset * (line.nu * other.nu + line.nv * other.nv)) / denom
             val beyond = if (backward) t - cross else cross - t
-            if (beyond < -EXTEND_M || beyond > EXTEND_M) continue
-            // The crossing has to be near the other wall's own extent.
-            val cu = line.pointU(cross)
-            val cv = line.pointV(cross)
-            val along = other.tOf(cu, cv)
-            if (along < other.from - EXTEND_M || along > other.to + EXTEND_M) continue
             if (beyond < 0f) continue
+            // The crossing has to be near the other wall's own extent, what furniture hides of it included.
+            val along = other.tOf(line.pointU(cross), line.pointV(cross))
+            val from = other.screened.minOfOrNull { it.start }?.let { min(it, other.from) } ?: other.from
+            val to = other.screened.maxOfOrNull { it.endInclusive }?.let { max(it, other.to) } ?: other.to
+            if (along < from - EXTEND_M || along > to + EXTEND_M) continue
+            val hidden = other.screened.any { along >= it.start - ASIDE_M && along <= it.endInclusive + ASIDE_M }
+            if (beyond > if (hidden) STRIP_M else EXTEND_M) continue
             val reach = if (backward) min(t, cross) else max(t, cross)
             if (best == null || abs(reach - t) < abs(best - t)) best = reach
         }
