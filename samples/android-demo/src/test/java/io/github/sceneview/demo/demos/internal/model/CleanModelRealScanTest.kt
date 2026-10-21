@@ -1,6 +1,8 @@
 package io.github.sceneview.demo.demos.internal.model
 
+import io.github.sceneview.demo.demos.internal.BakePhoto
 import io.github.sceneview.demo.demos.internal.DenseCloud
+import io.github.sceneview.demo.demos.internal.DenseFusion
 import io.github.sceneview.demo.demos.internal.RerunMesh
 import io.github.sceneview.demo.demos.internal.RerunMeshGlb
 import io.github.sceneview.demo.demos.internal.RerunMeshSimplifier
@@ -144,7 +146,18 @@ class CleanModelRealScanTest {
     }
 
     @Test
-    fun `the furnished room finishes within a 192 MB heap`() {
+    fun `the furnished room finishes within a 192 MB heap`() = finishesWithinHeap(HeapCappedFinish.ROOM)
+
+    @Test
+    fun `a scan meshed to the most a 192 MB heap takes finishes within it`() = finishesWithinHeap(HEAP_RAW_TRIANGLES)
+
+    /**
+     * [HeapCappedFinish] of a raw surface of [triangles] in a JVM capped at a phone's heap. What
+     * stays live, not what a sampler saw used: the heap after each full collection, garbage gone,
+     * plus the copy the screen hands the renderer to show the raw surface meanwhile — ART
+     * allocates a direct buffer in its Java heap, which the child does not hold.
+     */
+    private fun finishesWithinHeap(triangles: Int) {
         val log = folder.newFile("finish.log")
         val java = File(File(System.getProperty("java.home"), "bin"), "java").path
         val classpath = (
@@ -155,21 +168,24 @@ class CleanModelRealScanTest {
         val gcLog = File(folder.root, "gc.log")
         val process = ProcessBuilder(
             java, "-Xmx${HeapCappedFinish.HEAP_MB}m", "-XX:+UseSerialGC", "-Djava.awt.headless=true",
-            "-Xlog:gc:file=${gcLog.path}", "-cp", classpath, HeapCappedFinish::class.java.name,
+            "-Xlog:gc:file=${gcLog.path}:timemillis", "-cp", classpath, HeapCappedFinish::class.java.name, "$triangles",
         ).redirectErrorStream(true).redirectOutput(log).start()
         val done = process.waitFor(CHILD_TIMEOUT_S, TimeUnit.SECONDS)
         if (!done) process.destroyForcibly().waitFor()
         val output = log.readText()
-        val tail = "furnished room in ${HeapCappedFinish.HEAP_MB} MB: " + output.takeLast(LOG_TAIL)
+        val stages = Regex("${HeapCappedFinish.STAGE}(\\w+) (\\d+)").findAll(output)
+            .map { it.groupValues[2].toLong() to it.groupValues[1] }.toList()
+        // The finish's own collections: the TSDF and the room tiled into the scan are gone by then.
+        val collections = fullCollections(gcLog.readText()).filter { c -> stages.any { it.first <= c.atMs } }
+        val tail = "${HeapCappedFinish.HEAP_MB} MB heap, live peak by stage ${stagePeaks(collections, stages)}: " +
+            output.takeLast(LOG_TAIL)
         println(tail)
         assertTrue("timed out after $CHILD_TIMEOUT_S s: $tail", done)
         assertEquals(tail, 0, process.exitValue())
         assertTrue(tail, output.contains(HeapCappedFinish.FINISHED))
+        assertTrue("no full collection logged: $tail", collections.isNotEmpty())
 
-        // What stays live, not what the sampler saw used: the heap after each full collection,
-        // garbage gone. Plus the copy the screen hands the renderer to show the raw surface
-        // meanwhile: ART allocates a direct buffer in its Java heap, which the child does not hold.
-        val live = livePeakBytes(gcLog.readText())
+        val live = collections.maxOf { it.live }
         val shown = Regex("${HeapCappedFinish.RAW_GLB}(\\d+)").find(output)?.groupValues?.get(1)?.toLong()
         assertTrue("no raw GLB size reported: $tail", shown != null)
         val peak = live + shown!!
@@ -178,23 +194,29 @@ class CleanModelRealScanTest {
         assertTrue("live peak ${peak / MB} MB over ${bar / MB} MB: $tail", peak <= bar)
     }
 
+    /** A full collection: when it ended, and what the heap held after it. */
+    private class Collection(val atMs: Long, val live: Long)
+
     /**
-     * The most the heap held right after a full collection, from a `-Xlog:gc` log
-     * (`Pause Full (Allocation Failure) 172M->135M(185M)`). A young collection is no live figure:
-     * the old objects it skips may be garbage, and one that cannot promote collects nothing
-     * (`172M->172M`) before the full one that follows.
+     * The full collections of a `-Xlog:gc:file=…:timemillis` log
+     * (`[1729512345678ms] GC(12) Pause Full (Allocation Failure) 172M->135M(185M)`). A young
+     * collection is no live figure: the old objects it skips may be garbage, and one that cannot
+     * promote collects nothing (`172M->172M`) before the full one that follows.
      */
-    private fun livePeakBytes(gcLog: String): Long {
-        val after = Regex("""Pause Full .*?\d+[KMG]->(\d+)([KMG])\(""").findAll(gcLog).map {
-            it.groupValues[1].toLong() * when (it.groupValues[2]) {
+    private fun fullCollections(gcLog: String): List<Collection> =
+        Regex("""\[(\d+)ms\][^\n]*Pause Full [^\n]*?\d+[KMG]->(\d+)([KMG])\(""").findAll(gcLog).map {
+            val unit = when (it.groupValues[3]) {
                 "K" -> KB.toLong()
                 "M" -> MB
                 else -> MB * KB
             }
+            Collection(it.groupValues[1].toLong(), it.groupValues[2].toLong() * unit)
         }.toList()
-        assertTrue("no full collection logged: ${gcLog.takeLast(LOG_TAIL)}", after.isNotEmpty())
-        return after.max()
-    }
+
+    /** The most each stage of the finish left live, in MB, by when each started ([HeapCappedFinish.STAGE]). */
+    private fun stagePeaks(collections: List<Collection>, stages: List<Pair<Long, String>>): Map<String, Long> =
+        collections.groupBy { c -> stages.last { it.first <= c.atMs }.second }
+            .mapValues { (_, inStage) -> inStage.maxOf { it.live } / MB }
 
     /** Throws [OutOfMemoryError] once the finish reports [share] done, as a phone's heap would run out there. */
     private fun outOfMemoryFrom(share: Float): (Float) -> Unit = { done ->
@@ -515,6 +537,12 @@ class CleanModelRealScanTest {
         const val TEXTURING = 0.6f
         const val CLEANING = 0.2f
 
+        /**
+         * The furnished room tiled to at least as many raw triangles as [CleanModel.maxRawTriangles]
+         * lets a 192 MB heap mesh, past the biggest recordings' half million.
+         */
+        const val HEAP_RAW_TRIANGLES = 650_000
+
         const val MB = 1024L * 1024L
         const val CHILD_TIMEOUT_S = 300L
         const val LOG_TAIL = 4000
@@ -531,30 +559,44 @@ private class PaddedAtlasEncoder(private val padding: Int) : AtlasEncoder {
 }
 
 /**
- * The finish of [CleanModelRealScanTest]'s furnished room in a JVM of its own, its heap capped
- * at a mid-range phone's ([HEAP_MB], a Pixel 4a's `dalvik.vm.heapgrowthlimit`). What the result
- * screen holds meanwhile stays live too: [APP_BYTES] for the rest of the app, the recording's dense
- * cloud ([CLOUD_POINTS_PER_TRIANGLE] points per raw triangle, as the recordings have), its TSDF
+ * The finish of a raw surface in a JVM of its own, its heap capped at a mid-range phone's
+ * ([HEAP_MB], a Pixel 4a's `dalvik.vm.heapgrowthlimit`): [CleanModelRealScanTest]'s furnished
+ * room, or that room tiled along x up to the triangles given, each copy with its photos — a scan
+ * as large as a recording meshes to. What the result screen holds meanwhile stays live too:
+ * [APP_BYTES] for the rest of the app, the recording's dense cloud ([CLOUD_POINTS_PER_TRIANGLE]
+ * points per raw triangle, as the recordings have, within [DenseFusion.MAX_POINTS]), its TSDF
  * unless meshing let it go (half its budget or more, as the screen does), and the raw surface's
- * `.glb`, shown while the finish runs in the surface's own arrays. Prints [FINISHED] and its
- * figures when it fits.
+ * `.glb`, shown while the finish works in the surface's own arrays. Prints each
+ * stage as it starts ([STAGE]), then [FINISHED] and its figures when it fits.
  */
 object HeapCappedFinish {
     const val FINISHED = "FINISHED"
     const val RAW_GLB = "rawGlbBytes="
+    const val STAGE = "STAGE "
     const val HEAP_MB = 192
+
+    /** The furnished room as it is, not tiled. */
+    const val ROOM = 0
+
+    /** [CleanModel]'s stages, by the share of its progress each starts at. */
+    private val STAGES = listOf("prepare" to 0f, "clean" to 0.1f, "simplify" to 0.4f, "texture" to 0.55f, "write" to 0.95f)
     private const val APP_BYTES = 32 * 1024 * 1024
     private const val CLOUD_POINTS_PER_TRIANGLE = 0.85f
     private const val MB = 1024 * 1024
     private const val SAMPLE_MS = 20L
     private const val NANOS_PER_MS = 1_000_000L
 
+    /** The copies of the room stand side by side along x, further apart than it is wide. */
+    private const val PITCH_M = 5.6f
+
+    /** [args]: the raw surface's triangles, [ROOM] for the furnished room's own. */
     @JvmStatic
-    fun main(@Suppress("UNUSED_PARAMETER") args: Array<String>) {
+    fun main(args: Array<String>) {
         val app = ByteArray(APP_BYTES)
-        val (raw, tsdf, tsdfBytes) = scanned()
+        val scanned = scanned(args.firstOrNull()?.toInt() ?: ROOM)
+        val raw = scanned.mesh
         val rawTriangles = raw.triangleCount
-        val cloud = cloudOf(raw, (raw.triangleCount * CLOUD_POINTS_PER_TRIANGLE).toInt())
+        val cloud = cloudOf(raw, minOf((rawTriangles * CLOUD_POINTS_PER_TRIANGLE).toInt(), DenseFusion.MAX_POINTS))
         val rawGlb = RerunMeshGlb.write(raw)
         val runtime = Runtime.getRuntime()
         val peak = AtomicLong()
@@ -565,31 +607,91 @@ object HeapCappedFinish {
                 Thread.sleep(SAMPLE_MS)
             }
         }
+        var stage = 0
+        println("$STAGE${STAGES[stage].first} ${System.currentTimeMillis()}")
         val start = System.nanoTime()
-        val result = CleanModel.build(raw, RealScanRoom.modelPhotos(furnished = true), JvmAtlasEncoder, consume = true, rawGlb = rawGlb)
+        val result = CleanModel.build(raw, scanned.photos, JvmAtlasEncoder, consume = true, rawGlb = rawGlb) { done ->
+            while (stage + 1 < STAGES.size && done >= STAGES[stage + 1].second) {
+                stage++
+                println("$STAGE${STAGES[stage].first} ${System.currentTimeMillis()}")
+            }
+        }
         val ms = (System.nanoTime() - start) / NANOS_PER_MS
         // Out of memory, the finish gives the raw surface back: that is no finish within the heap.
         println(
             "${if (result.stats.rawKept) "RAW SURFACE KEPT, out of memory in ${result.stats.outOfMemoryIn}:" else FINISHED} $rawTriangles -> ${result.stats.finalTriangles} triangles, " +
-                "glb ${result.glb.size / MB.toFloat()} MB (raw ${rawGlb.size / MB.toFloat()} MB), " +
+                "textured ${result.stats.texture != null}, glb ${result.glb.size / MB.toFloat()} MB (raw ${rawGlb.size / MB.toFloat()} MB), " +
                 "peak used ${peak.get() / MB} MB of $HEAP_MB, $ms ms; held: app ${app.size / MB} MB, " +
-                "tsdf ${tsdfBytes / MB} MB ${if (tsdf != null) "held" else "let go"}, cloud ${cloud.count} points; " +
+                "tsdf ${scanned.tsdfBytes / MB} MB ${if (scanned.tsdf != null) "held" else "let go"}, cloud ${cloud.count} points; " +
                 "$RAW_GLB${rawGlb.size}",
         )
         System.out.flush()
         exitProcess(0)
     }
 
+    /** A raw surface, its photos, and its TSDF if the screen keeps it, with its size. */
+    private class Scanned(val mesh: RerunMesh, val photos: ModelPhotos, val tsdf: RerunTsdf?, val tsdfBytes: Long)
+
     /**
-     * The furnished room's raw surface, its TSDF unless the screen lets it go once meshed (half the
-     * app's budget, [RerunTsdf.MAX_BYTES], or more), and the TSDF's size. In a function of its own,
-     * so nothing in `main`'s frame holds what is let go.
+     * The furnished room, tiled up to [triangles] if it has fewer, with its TSDF unless the
+     * screen lets it go once meshed (half the app's budget, [RerunTsdf.MAX_BYTES], or more) —
+     * copies of the room take copies of its TSDF. In a function of its own, so nothing in
+     * `main`'s frame holds what is let go.
      */
-    private fun scanned(): Triple<RerunMesh, RerunTsdf?, Long> {
+    private fun scanned(triangles: Int): Scanned {
         val scan = RealScanRoom.scan(furnished = true)
-        val tsdf = scan.tsdf.takeIf { it.bytes < RerunTsdf.MAX_BYTES / 2 }
-        return Triple(scan.mesh, tsdf, scan.tsdf.bytes)
+        val photos = RealScanRoom.modelPhotos(furnished = true)
+        val room = scan.mesh.triangleCount
+        val copies = if (triangles > room) (triangles + room - 1) / room else 1
+        val tsdfBytes = scan.tsdf.bytes * copies
+        val tsdf = scan.tsdf.takeIf { tsdfBytes < RerunTsdf.MAX_BYTES / 2 }
+        if (copies == 1) return Scanned(scan.mesh, photos, tsdf, tsdfBytes)
+        return Scanned(tiled(scan.mesh, triangles), tiled(photos, copies), tsdf, tsdfBytes)
     }
+
+    /** The first [triangles] of copies of [mesh] side by side, [PITCH_M] apart along x. */
+    private fun tiled(mesh: RerunMesh, triangles: Int): RerunMesh {
+        val copies = (triangles + mesh.triangleCount - 1) / mesh.triangleCount
+        val remap = IntArray(copies * mesh.vertexCount) { -1 }
+        val indices = IntArray(triangles * 3)
+        var vertices = 0
+        for (t in 0 until triangles) {
+            val copy = t / mesh.triangleCount
+            val local = t % mesh.triangleCount
+            for (k in 0..2) {
+                val key = copy * mesh.vertexCount + mesh.indices[local * 3 + k]
+                if (remap[key] < 0) remap[key] = vertices++
+                indices[t * 3 + k] = remap[key]
+            }
+        }
+        val positions = FloatArray(vertices * 3)
+        val normals = FloatArray(vertices * 3)
+        val colors = IntArray(vertices)
+        for (key in remap.indices) {
+            val v = remap[key]
+            if (v < 0) continue
+            val copy = key / mesh.vertexCount
+            val s = key % mesh.vertexCount
+            positions[v * 3] = mesh.positions[s * 3] + copy * PITCH_M
+            positions[v * 3 + 1] = mesh.positions[s * 3 + 1]
+            positions[v * 3 + 2] = mesh.positions[s * 3 + 2]
+            mesh.normals.copyInto(normals, v * 3, s * 3, s * 3 + 3)
+            colors[v] = mesh.colors[s]
+        }
+        return RerunMesh(positions, normals, colors, indices)
+    }
+
+    /** [photos] taken again in each of [copies] copies of the room, [PITCH_M] apart along x. */
+    private fun tiled(photos: ModelPhotos, copies: Int): ModelPhotos =
+        ModelPhotos(
+            photos.lens,
+            (0 until copies).flatMap { copy ->
+                photos.photos.map { photo ->
+                    val pose = photo.pose.copy(x = photo.pose.x + copy * PITCH_M)
+                    ModelPhoto(pose) { photo.load()?.let { BakePhoto(pose, it.width, it.height, it.argb) } }
+                }
+            },
+        )
 
     /** A dense cloud of [points] points on [mesh]'s vertices, as large as a recording's. */
     private fun cloudOf(mesh: RerunMesh, points: Int): DenseCloud {
