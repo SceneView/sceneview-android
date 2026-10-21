@@ -392,10 +392,12 @@ private const val SQUARE_CONFIRM_REACH_M = 0.2f
 
 /**
  * A confirming wall's foot runs at least this: longer than an open door is wide or a cupboard is
- * deep, and long enough for ARCore's few centimetres at its ends to leave its direction within a
- * couple of degrees.
+ * deep, with room for ARCore's plane to run a few centimetres past each end of a 0.93 m door
+ * leaf, and long enough for those centimetres to leave its direction within a couple of degrees.
+ * The risk is lopsided: a wrong confirmation squares a corner up to 6° off without a word, a
+ * missed one only falls back to 3°.
  */
-private const val SQUARE_CONFIRM_MIN_LENGTH_M = 1f
+private const val SQUARE_CONFIRM_MIN_LENGTH_M = 1.2f
 
 /** A confirming wall's bottom is at most this above the floor: a wall cupboard is not a wall. */
 private const val SQUARE_CONFIRM_FLOOR_GAP_M = 0.3f

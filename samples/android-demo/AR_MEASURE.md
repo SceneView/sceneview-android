@@ -16,9 +16,11 @@ Three modes behind one mode pill, built against Apple Measure, Google Measure an
 - **Room** — trace the floor corner by corner and close it on the first corner; every wall then
   rises together to the ceiling: floor area, perimeter, ceiling height, wall area, volume. A
   corner within 3° of square snaps to 90°, within 6° when ARCore tracks the next wall: a
-  vertical plane standing on the floor (its bottom within 30 cm), at least 1.5 m tall and 1 m
-  long, within 3° of square to the last wall, its foot within 20 cm of the corner. An open door,
-  a cupboard's side or a wall cupboard does not count. After a short wall (1 m or less) the few
+  vertical plane standing on the floor (its bottom within 30 cm), at least 1.5 m tall and 1.2 m
+  long, within 3° of square to the last wall, its foot within 20 cm of the corner. An open door
+  (a 0.93 m leaf included, even with ARCore's plane a few centimetres past each end), a
+  cupboard's side or a wall cupboard does not count: a wrong confirmation would square a corner
+  up to 6° off without a word, where a missed one only falls back to 3°. After a short wall (1 m or less) the few
   centimetres of noise on its corners eat that 3° margin, so the corner often stays at 3°.
   **Door or window** marks openings on any of its walls the same way, two opposite corners on
   one wall, and the readout adds the openings and the net wall area; the floor area and the

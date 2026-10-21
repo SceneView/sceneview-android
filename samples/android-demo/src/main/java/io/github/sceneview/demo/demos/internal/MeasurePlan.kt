@@ -101,23 +101,23 @@ data class MeasurePlanCard(val netWallArea: String, val openings: List<MeasurePl
 
 /**
  * The card Plan shows under a traced room's plan when it has doors or windows: [netWallArea]
- * (m²) and each of [openings], written under [locale] in [units] — the Measure screen's.
+ * (m²) and each of [openings], written under [locale] in the plan's own units
+ * ([SurveyFormat.units]), so one page never says feet on the card and metres on the plan. The
+ * Measure screen's unit setting stays on the Measure screen.
  */
-fun measurePlanCard(
-    netWallArea: Float,
-    openings: List<MeasurePlanOpening>,
-    locale: Locale,
-    units: MeasureUnitSystem = MeasureUnitSystem.forLocale(locale),
-): MeasurePlanCard = MeasurePlanCard(
-    netWallArea = formatMeasureArea(netWallArea, units, locale),
-    openings = openings.map {
-        MeasurePlanCardOpening(
-            wall = it.wall,
-            width = formatMeasureLength(it.opening.width, units, locale),
-            height = formatMeasureLength(it.opening.height, units, locale),
-        )
-    },
-)
+fun measurePlanCard(netWallArea: Float, openings: List<MeasurePlanOpening>, locale: Locale): MeasurePlanCard {
+    val units = SurveyFormat.units(locale)
+    return MeasurePlanCard(
+        netWallArea = formatMeasureArea(netWallArea, units, locale),
+        openings = openings.map {
+            MeasurePlanCardOpening(
+                wall = it.wall,
+                width = formatMeasureLength(it.opening.width, units, locale),
+                height = formatMeasureLength(it.opening.height, units, locale),
+            )
+        },
+    )
+}
 
 /**
  * A traced outline on the plan's page: its [corners] clockwise from the one nearest the top-left,

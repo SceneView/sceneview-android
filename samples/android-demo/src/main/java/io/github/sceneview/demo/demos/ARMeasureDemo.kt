@@ -763,7 +763,6 @@ fun MeasureScreen(onBack: () -> Unit) {
                 title = stringResource(R.string.demo_ar_measure_plan_room),
                 date = planDate,
                 locale = locale,
-                units = units,
                 onClose = { plan = null },
             )
         }
@@ -783,7 +782,7 @@ private class MeasurePlanPage(
  * camera.
  *
  * With doors or windows marked, a card under the plan names each one by the wall the plan
- * letters it on, and reads the walls' net area.
+ * letters it on, and reads the walls' net area, in the plan's units ([measurePlanCard]).
  */
 @Composable
 private fun MeasurePlanOverlay(
@@ -791,7 +790,6 @@ private fun MeasurePlanOverlay(
     title: String,
     date: String,
     locale: Locale,
-    units: MeasureUnitSystem,
     onClose: () -> Unit,
 ) {
     BackHandler(onBack = onClose)
@@ -807,7 +805,7 @@ private fun MeasurePlanOverlay(
             modeSwitch = null,
             bottomOverlay = if (net != null) {
                 {
-                    val card = measurePlanCard(net, page.openings, locale, units)
+                    val card = measurePlanCard(net, page.openings, locale)
                     val openings = card.openings.map {
                         stringResource(R.string.demo_ar_measure_plan_opening, it.wall, it.width, it.height)
                     }
