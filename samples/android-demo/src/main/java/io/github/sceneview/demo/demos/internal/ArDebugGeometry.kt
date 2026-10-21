@@ -50,6 +50,19 @@ class DebugMesh(initialVertices: Int = 64) {
         indexCount = 0
     }
 
+    /** Makes this mesh a copy of [other] — positions, the texture coordinates it has, indices. */
+    fun set(other: DebugMesh) {
+        if (positions.size < other.vertexCount * 3) positions = FloatArray(other.vertexCount * 3)
+        other.positions.copyInto(positions, endIndex = other.vertexCount * 3)
+        val uvCount = min(other.uvs.size, other.vertexCount * 2)
+        if (uvs.size < other.vertexCount * 2) uvs = FloatArray(other.vertexCount * 2)
+        other.uvs.copyInto(uvs, endIndex = uvCount)
+        if (indices.size < other.indexCount) indices = IntArray(other.indexCount)
+        other.indices.copyInto(indices, endIndex = other.indexCount)
+        vertexCount = other.vertexCount
+        indexCount = other.indexCount
+    }
+
     fun vertex(x: Float, y: Float, z: Float): Int {
         if ((vertexCount + 1) * 3 > positions.size) positions = positions.copyOf(max(positions.size * 2, 48))
         positions[vertexCount * 3] = x

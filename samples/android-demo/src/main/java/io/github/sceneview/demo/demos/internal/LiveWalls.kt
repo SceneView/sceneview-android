@@ -444,7 +444,9 @@ class LiveWallMotion(
 
     /**
      * Steps the walls drawn [dt] seconds towards [target]. Returns `true` when anything drawn
-     * moved — when the meshes need rebuilding.
+     * moved — when the meshes need rebuilding. A step of no time (`dt = 0`: ARCore handed the same
+     * camera image again, as it does on every other vsync and for good once a recording has ended)
+     * moves nothing still easing, so it reports no move: the walls are only rebuilt when they changed.
      */
     fun step(target: LiveWallSnapshot, dt: Float): Boolean {
         var moved = false
@@ -466,24 +468,27 @@ class LiveWallMotion(
             }
             moved = s.approach(wall, ease) or moved
             if (s.rise < 1f) {
-                s.rise = if (1f - s.rise < DONE) 1f else s.rise + (1f - s.rise) * rise
-                moved = true
+                val next = if (1f - s.rise < DONE) 1f else s.rise + (1f - s.rise) * rise
+                if (next != s.rise) moved = true
+                s.rise = next
             }
         }
         if (floorY != target.floorY || height == 0f) {
+            val was = floorY
             if (height == 0f || abs(floorY - target.floorY) > JUMP_M) floorY = target.floorY else {
                 floorY += (target.floorY - floorY) * ease
                 if (abs(floorY - target.floorY) < DONE) floorY = target.floorY
             }
-            if (drawn) moved = true
+            if (drawn && floorY != was) moved = true
         }
         if (height != target.height) {
+            val was = height
             height = if (height == 0f || abs(height - target.height) < DONE) {
                 target.height
             } else {
                 height + (target.height - height) * ease
             }
-            moved = true
+            if (height != was) moved = true
         }
         return moved
     }
@@ -503,6 +508,8 @@ class LiveWallMotion(
             bx = wall.bx
             bz = wall.bz
         } else {
+            // No time, no step: the ends stay where they are drawn.
+            if (ease == 0f) return false
             ax += (wall.ax - ax) * ease
             az += (wall.az - az) * ease
             bx += (wall.bx - bx) * ease
