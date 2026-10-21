@@ -1705,6 +1705,11 @@ private fun RerunLiveScreen(
         qaLong != null -> qaLong?.shownCount ?: 0
         else -> stats.mapPoints
     }
+    // Points still rising are a scan at work, whatever the floor's coverage says: the top line
+    // and the coaching line both read it.
+    val pointsRising = rememberPointsRising(capturedPoints) {
+        scan?.elapsedSeconds() ?: qaLong?.shownSeconds ?: stats.duration
+    }
     // #4717: whether the surface in view gives too little to read, and whether the photos ran
     // out. Plain fields of the scan, read on the HUD's tick.
     val lowTexture by produceState(false, scan, qaLong) {
@@ -1776,6 +1781,7 @@ private fun RerunLiveScreen(
                         lowTexture = lowTexture,
                         depthStarved = depthStarved,
                         done = scanWalls?.done == true,
+                        pointsRising = pointsRising,
                     ),
                     room = scanWalls,
                 )
@@ -1893,6 +1899,7 @@ private fun RerunLiveScreen(
                                     coach = scanCoverage.coachLine,
                                     lowTexture = lowTexture,
                                     depthStarved = depthStarved,
+                                    pointsRising = pointsRising,
                                 ),
                                 nextRoom = roomNumber.takeIf { betweenRooms },
                                 walls = scanWalls?.wallCount,
