@@ -81,4 +81,33 @@
     <string name="demo_ar_rerun_plan_pdf_page">Page %1$d of %2$d</string>
     <string name="demo_ar_rerun_plan_pdf_walls_continued">Walls (continued)</string>
     <string name="demo_ar_rerun_plan_content_description">Floor plan of the room</string>
+    <!-- Scene recognition: the name written over a box the scan recognized. -->
+    <string name="demo_ar_rerun_recognized_bed">Bed</string>
+    <string name="demo_ar_rerun_recognized_sofa">Sofa</string>
+    <string name="demo_ar_rerun_recognized_chair">Chair</string>
+    <string name="demo_ar_rerun_recognized_table">Table</string>
+    <string name="demo_ar_rerun_recognized_bench">Bench</string>
+    <string name="demo_ar_rerun_recognized_toilet">Toilet</string>
+    <string name="demo_ar_rerun_recognized_sink">Sink</string>
+    <string name="demo_ar_rerun_recognized_refrigerator">Fridge</string>
+    <string name="demo_ar_rerun_recognized_oven">Oven</string>
+    <string name="demo_ar_rerun_recognized_microwave">Microwave</string>
+    <string name="demo_ar_rerun_recognized_television">TV</string>
+    <string name="demo_ar_rerun_recognized_plant">Plant</string>
+    <string name="demo_ar_rerun_recognized_door">Door</string>
+    <string name="demo_ar_rerun_recognized_window">Window</string>
+    <!-- %1$s what was recognised (Sofa), %2$d how sure the scan is, in percent. -->
+    <string name="demo_ar_rerun_recognized_description">%1$s, recognized by the scan, %2$d%% sure</string>
+    <!-- The furniture detector is downloaded the first time a replay recognizes a scan. %1$s is its size, e.g. "10 MB". -->
+    <string name="demo_ar_rerun_detector_downloading">Downloading the furniture detector (%1$s)…</string>
+    <string name="demo_ar_rerun_detector_downloading_caption">%1$d%% · downloaded once, then kept on this device</string>
+    <string name="demo_ar_rerun_detector_downloading_description">Downloading the furniture detector, %1$s</string>
+    <string name="demo_ar_rerun_detector_off">Furniture recognition is off</string>
+    <string name="demo_ar_rerun_detector_offline_caption">No connection to download its detector. Doors and windows are still found.</string>
+    <string name="demo_ar_rerun_detector_unusable_caption">Its detector could not be used. Doors and windows are still found.</string>
+    <!-- On mobile data the detector waits for the user's tap, as the HD pack does. -->
+    <string name="demo_ar_rerun_detector_metered">Furniture recognition needs its detector</string>
+    <string name="demo_ar_rerun_detector_metered_caption">On mobile data, nothing is downloaded until you ask. Doors and windows are already found.</string>
+    <!-- %1$s is the detector's size, e.g. "10 MB". -->
+    <string name="demo_ar_rerun_detector_download">Download (%1$s)</string>
 </resources>
