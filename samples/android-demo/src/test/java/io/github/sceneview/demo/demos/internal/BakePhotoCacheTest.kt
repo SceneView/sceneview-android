@@ -1,5 +1,6 @@
 package io.github.sceneview.demo.demos.internal
 
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -75,12 +76,7 @@ class BakePhotoCacheTest {
     @Test
     fun `the synthetic room's bake holds far fewer photos at once than it decodes`() {
         val poses = RerunSyntheticRoom.poses()
-        val stops = RerunSyntheticRoom.STOPS
-        val viewpoint = Vec3(
-            stops.map { it.x }.average().toFloat(),
-            stops.map { it.y }.average().toFloat(),
-            stops.map { it.z }.average().toFloat(),
-        )
+        val viewpoint = roomViewpoint()
         val picks = roomPlanes().map { plane ->
             PlaneBake.rectOf(plane, viewpoint)?.let { PlaneBake.pickPhotos(it, poses, ReplayLens.Default) }.orEmpty()
         }
@@ -96,6 +92,77 @@ class BakePhotoCacheTest {
         assertTrue("every plane paints from photos", picks.all { it.isNotEmpty() })
         assertTrue("held ${cache.peak} of $decodedBefore", cache.peak * 2 <= decodedBefore)
         assertEquals(emptySet<Int>(), cache.held)
+    }
+
+    /**
+     * The release changes when a photo is held, never what a plane is painted with: on the
+     * furnished synthetic room, photographed from every pose and occluded by its own dense cloud,
+     * the bake that kept every decoded photo until the build ended and the bake that lets each go
+     * after its last plane paint the very same texels.
+     */
+    @Test
+    fun `the synthetic room's planes are painted the same as when every photo was kept`() {
+        val scene = RerunSyntheticRoom.scene
+        val poses = RerunSyntheticRoom.poses()
+        val lens = ReplayLens.of(PHOTO_W.toFloat(), PHOTO_H.toFloat(), PHOTO_F, PHOTO_F)!!
+        val fusion = DenseFusion()
+        val shots = poses.map { pose ->
+            val frame = scene.render(pose, PHOTO_W, PHOTO_H, PHOTO_F, PHOTO_F)
+            fusion.add(DepthBackProjection.project(frame))
+            val pixels = IntArray(PHOTO_W * PHOTO_H) { frame.colors[it].takeIf { c -> c != 0 } ?: BLACK }
+            BakePhoto(pose, PHOTO_W, PHOTO_H, pixels)
+        }
+        // Each read a fresh copy, as a JPEG decode would be.
+        fun decode(index: Int) = shots[index].let { BakePhoto(it.pose, it.width, it.height, it.argb.copyOf()) }
+        val planes = roomPlanes()
+        val occlusion = BakeOcclusion.of(fusion.cloud(minViews = 1), planes)
+        val viewpoint = roomViewpoint()
+
+        // Before: every photo decoded once and kept until the build ends.
+        val kept = HashMap<Int, BakePhoto?>()
+        val before = planes.map { plane ->
+            val rect = PlaneBake.rectOf(plane, viewpoint) ?: return@map null
+            val (width, height) = PlaneBake.sizeOf(rect)
+            val picked = PlaneBake.pickPhotos(rect, poses, lens).mapNotNull { kept.getOrPut(it) { decode(it) } }
+            PlaneBake.bake(rect, width, height, picked, lens, occlusion, plane.id)
+        }
+
+        // After: each photo let go after the last plane that paints from it.
+        val rects = planes.map { PlaneBake.rectOf(it, viewpoint) }
+        val picks = rects.map { rect -> rect?.let { PlaneBake.pickPhotos(it, poses, lens) }.orEmpty() }
+        val cache = BakePhotoCache(picks, ::decode)
+        val after = planes.indices.map { i ->
+            val picked = cache.photosFor(i)
+            val rect = rects[i] ?: return@map null
+            val (width, height) = PlaneBake.sizeOf(rect)
+            PlaneBake.bake(rect, width, height, picked, lens, occlusion, planes[i].id)
+        }
+
+        println("synthetic room bake, texels compared on ${before.count { it != null }} planes; held at once " +
+            "before ${kept.size}, after ${cache.peak}")
+        assertTrue("planes baked: ${before.count { it != null }}", before.count { it != null } >= 5)
+        planes.forEachIndexed { i, plane ->
+            val old = before[i]
+            val new = after[i]
+            assertEquals("plane ${plane.id} baked", old != null, new != null)
+            if (old == null || new == null) return@forEachIndexed
+            assertEquals("plane ${plane.id} width", old.width, new.width)
+            assertEquals("plane ${plane.id} height", old.height, new.height)
+            assertArrayEquals("plane ${plane.id} texels", old.argb, new.argb)
+        }
+        assertEquals(kept.size, cache.loads)
+        assertTrue("held ${cache.peak} of ${kept.size}", cache.peak < kept.size)
+        assertEquals(emptySet<Int>(), cache.held)
+    }
+
+    /** Where the room is seen from: the middle of the scan's stops. */
+    private fun roomViewpoint(): Vec3 {
+        val stops = RerunSyntheticRoom.STOPS
+        return Vec3(
+            stops.map { it.x }.average().toFloat(),
+            stops.map { it.y }.average().toFloat(),
+            stops.map { it.z }.average().toFloat(),
+        )
     }
 
     private fun roomPlanes(): List<DebugPlane> {
@@ -117,5 +184,11 @@ class BakePhotoCacheTest {
     private companion object {
         /** A photo decoded for the bake: 270 × 480 ARGB, the sharp photos' read size. */
         const val BAKE_PHOTO_BYTES = 270 * 480 * 4
+
+        /** The synthetic photos: small, the lens of the room's depth camera at that size. */
+        const val PHOTO_W = 96
+        const val PHOTO_H = 54
+        const val PHOTO_F = 75f
+        const val BLACK = 0xFF000000.toInt()
     }
 }
