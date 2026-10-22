@@ -214,15 +214,21 @@ fun <P> measureAddPoint(
  * not while the coaching overlay already says what to do ([coaching]). [reading]: a wall height
  * reads this frame; [read]: one has read since the walls started rising.
  */
-@Suppress("UnusedParameter") // Seam: [reading] and [read] come with their fix.
 fun measureRefusalChip(
     tapped: MeasureRefusal?,
     live: MeasureRefusal?,
     coaching: Boolean,
     reading: Boolean,
     read: Boolean,
-): MeasureRefusal? = tapped ?: live?.takeIf {
-    (it == MeasureRefusal.OffWall || it == MeasureRefusal.OpeningOffWall) && !coaching
+): MeasureRefusal? {
+    // A refused Set height off the wall stops being true the moment the aim finds it again.
+    val shownTap = tapped?.takeIf { !(it == MeasureRefusal.OffWall && reading) }
+    // "Aim at the wall to read its height" teaches how heights read: once one has, it only
+    // flickers each time the aim crosses a door or the ceiling line (#4765).
+    val shownLive = live?.takeIf {
+        !coaching && (it == MeasureRefusal.OpeningOffWall || (it == MeasureRefusal.OffWall && !read))
+    }
+    return shownTap ?: shownLive
 }
 
 /** A label on a figure's walls in AR: its [text], at [position]. */
