@@ -10,6 +10,7 @@ import com.google.android.filament.Engine
 import com.google.android.filament.Material
 import com.google.android.filament.MaterialInstance
 import io.github.sceneview.demo.demos.internal.ArDebugFrame
+import io.github.sceneview.demo.demos.internal.ArDebugTrace
 import io.github.sceneview.demo.demos.internal.DebugMesh
 import io.github.sceneview.demo.demos.internal.DebugPose
 import io.github.sceneview.demo.demos.internal.LiveWallMotion
@@ -18,8 +19,8 @@ import io.github.sceneview.demo.demos.internal.LiveWallSource
 import io.github.sceneview.demo.demos.internal.PlaneWallSource
 import io.github.sceneview.demo.demos.internal.ScanGuide
 import io.github.sceneview.demo.demos.internal.ScanTurn
-import io.github.sceneview.demo.demos.internal.TRACE_LOST_AFTER_S
 import io.github.sceneview.demo.demos.internal.WallMesh
+import io.github.sceneview.demo.demos.internal.lostBetween
 import io.github.sceneview.demo.demos.internal.openFloorEdges
 import io.github.sceneview.demo.demos.internal.update
 import io.github.sceneview.demo.theme.SceneViewTokens.ArOverlay
@@ -68,10 +69,14 @@ internal class ScanWallsState(private val source: LiveWallSource = PlaneWallSour
     /** The trace time of the last frame observed, seconds; `NaN` before the first. */
     private var observedAt = Float.NaN
 
-    fun observe(frame: ArDebugFrame, coverage: ScanCoverageState, pose: DebugPose?) {
-        // The recorder writes nothing while ARCore has lost tracking: the trace's time stops, then
-        // jumps on. A frame that far from the last is the first after a loss, which the walls skip.
-        val tracking = !(frame.time - observedAt > TRACE_LOST_AFTER_S)
+    /**
+     * [frame], the trace's latest, after [coverage] observed it. The recorder writes nothing while
+     * ARCore has lost tracking: [record], the trace being recorded ([ScanCoverageState.recorded]),
+     * has no camera pose for that long, and the first frame after the gap is not tracked
+     * ([lostBetween]); the walls skip it. How long since the last frame observed says nothing.
+     */
+    fun observe(frame: ArDebugFrame, coverage: ScanCoverageState, pose: DebugPose?, record: ArDebugTrace? = coverage.recorded) {
+        val tracking = record?.lostBetween(observedAt, frame.time) != true
         observedAt = frame.time
         val next = source.update(frame, tracking)
         val wallsChanged = next !== snapshot
