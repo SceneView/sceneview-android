@@ -1,5 +1,6 @@
 package io.github.sceneview.demo.demos.internal.room
 
+import io.github.sceneview.demo.demos.internal.stopIfInterrupted
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.max
@@ -75,6 +76,7 @@ internal object WallOpenings {
             var r0 = nr
             var r1 = -1
             while (head < tail) {
+                stopIfInterrupted()
                 val k = queue[head++]
                 val c = k % nc
                 val r = k / nc

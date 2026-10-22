@@ -1,5 +1,6 @@
 package io.github.sceneview.demo.demos.internal.room
 
+import io.github.sceneview.demo.demos.internal.stopIfInterrupted
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -123,6 +124,7 @@ internal object RoomLevels {
         var sx = 0.0
         var sy = 0.0
         for (i in 0 until positions.size / 3) {
+            stopIfInterrupted()
             if (abs(normals[i * 3 + 1]) > VERTICAL) continue
             val h = positions[i * 3 + 1] - floorY
             if (h < WALL_FROM_M || h > CEILING_MAX_M) continue

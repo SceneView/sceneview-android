@@ -206,7 +206,7 @@ class RoomPlanLayoutTest {
         assertTrue(lines[1].contains("Length × width: 5.00 × 4.00 m ± 0.05"))
         assertTrue(text.contains("Ceiling height: 2.50 m ± 0.05"))
         // A measured wall keeps its ±, as on the screen and the PDF.
-        assertTrue(text.contains("Walls: A 5.00 m ± 0.05, B 4.00 m ± 0.05, C 5.00 m ± 0.05, D 4.00 m ± 0.05"))
+        assertTrue(text.contains("Walls: A 5.00 m ± 0.05; B 4.00 m ± 0.05; C 5.00 m ± 0.05; D 4.00 m ± 0.05"))
         assertTrue(lines.last().startsWith(WORDING.notice))
         // Every ± is explained, once.
         assertEquals(WORDING.spreadNote, lines[lines.size - 2])

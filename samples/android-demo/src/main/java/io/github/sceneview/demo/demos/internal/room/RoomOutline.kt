@@ -1,5 +1,6 @@
 package io.github.sceneview.demo.demos.internal.room
 
+import io.github.sceneview.demo.demos.internal.stopIfInterrupted
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -205,6 +206,7 @@ internal object RoomOutline {
             }
         }
         while (head < tail) {
+            stopIfInterrupted()
             val k = queue[head++]
             forNeighbours(raster, k) { m ->
                 if (!outside[m] && !inside[m] && !barrier[m]) {
@@ -223,6 +225,7 @@ internal object RoomOutline {
             }
         }
         while (head < tail) {
+            stopIfInterrupted()
             val k = queue[head++]
             forNeighbours(raster, k) { m ->
                 if (!region[m] && !outside[m] && !barrier[m]) {
@@ -459,6 +462,7 @@ internal object RoomOutline {
             label[start] = components
             queue[tail++] = start
             while (head < tail) {
+                stopIfInterrupted()
                 val k = queue[head++]
                 forNeighbours(raster, k) { m ->
                     if (label[m] < 0 && evidence[m] && !barrier[m]) {
@@ -504,6 +508,7 @@ internal object RoomOutline {
                 var layerEnd = tail
                 var any = false
                 while (head < tail) {
+                    stopIfInterrupted()
                     if (head == layerEnd) {
                         depth++
                         layerEnd = tail

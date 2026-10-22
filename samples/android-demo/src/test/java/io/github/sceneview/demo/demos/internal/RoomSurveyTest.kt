@@ -703,6 +703,19 @@ class RoomSurveyTest {
         assertEquals("AA", RoomSurveyor.tagOf(26))
     }
 
+    @Test
+    fun `a survey whose thread is interrupted stops instead of running to its end`() {
+        // A measure nobody waits for any more is interrupted: it has to give its thread back.
+        val room = Room().box().input()
+        Thread.currentThread().interrupt()
+        val ended = try {
+            runCatching { RoomSurveyor.survey(room) }.exceptionOrNull()
+        } finally {
+            Thread.interrupted()
+        }
+        assertTrue("the survey ran to its end: $ended", ended is InterruptedException)
+    }
+
     private companion object {
         const val STEP = 0.025f
         const val RISE = 0.04f

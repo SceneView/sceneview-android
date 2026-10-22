@@ -363,13 +363,23 @@ object ScanCopy {
         }
     }
 
-    /** A kept session's figures: `4.2 m · 3.8k points · 42 photos · 0:18`, as on iOS. */
-    fun figures(pathMetres: Float, points: Int, photos: Int, seconds: Float): String {
+    /**
+     * A kept session's figures: `4.2 m · 3.8k points · 42 photos · 0:18`, as on iOS. The path
+     * length takes the replay's units under [locale] (`13 ft 11 in` in US English), so the card
+     * and the replay it opens never disagree.
+     */
+    fun figures(
+        pathMetres: Float,
+        points: Int,
+        photos: Int,
+        seconds: Float,
+        locale: Locale = Locale.getDefault(),
+    ): String {
         val parts = mutableListOf(
-            ArDebugFormat.distance(pathMetres),
-            "${ArDebugFormat.compactCount(points)} ${label(points, "point", "points")}",
+            scanPathLength(pathMetres, locale),
+            "${ArDebugFormat.compactCount(points, locale)} ${label(points, "point", "points")}",
         )
-        if (photos > 0) parts += "${ArDebugFormat.count(photos)} ${label(photos, "photo", "photos")}"
+        if (photos > 0) parts += "${ArDebugFormat.count(photos, locale)} ${label(photos, "photo", "photos")}"
         if (seconds.isFinite() && seconds > 0f) parts += ArDebugFormat.clock(seconds)
         return parts.joinToString(" · ")
     }
@@ -377,11 +387,11 @@ object ScanCopy {
     const val LOADING = "Opening your scan…"
     const val REPLAY_TITLE = "Your scan"
     const val SAMPLE_TITLE = "Example scan"
-    /** Said once, for a few seconds, when the photos run out (#4717); then [PHOTO_LIMIT] stays in the HUD. */
+    /**
+     * Said once, for a few seconds, when the photos run out (#4717), and not again: past the limit
+     * the scan's points, their colours and its path still record, so nothing is left to warn about.
+     */
     const val FULL = "Photo limit reached — points and path keep recording."
-
-    /** The HUD's small, lasting reminder once [FULL] has been said. */
-    const val PHOTO_LIMIT = "Photo limit reached"
 
     // The capture lifecycle (#4627): Scanning ⇄ Paused, Finish opens a review that Keep scanning
     // leaves for the same capture; only Save scan ends it.
@@ -522,7 +532,8 @@ object ScanCopy {
      * with no usable depth ([depthStarved], before texture: a starved depth gate looks like a
      * blank surface, #4540), with too little texture ([lowTexture]), moving too fast — then the dense map's
      * "Adjusting detail", then the [coach]'s "nothing new" (#4631) and "standing still", then the
-     * plain advice.
+     * plain advice. "Nothing new" never shows while the scan's points keep rising
+     * ([pointsRising]): the scan adds to the room, and the top line says it is working.
      */
     @Suppress("LongParameterList") // one flag per cause the line can speak of
     fun coaching(
@@ -533,6 +544,7 @@ object ScanCopy {
         coach: ScanCoach.Line? = null,
         lowTexture: Boolean = false,
         depthStarved: Boolean = false,
+        pointsRising: Boolean = false,
     ): String? = when (phase) {
         ScanPhase.Scanning -> when {
             trackingLost -> TRACKING_LOST
@@ -542,7 +554,7 @@ object ScanCopy {
             lowTexture -> COACH_LOW_TEXTURE
             coach == ScanCoach.Line.Slower -> COACH_SLOWER
             detail == ScanDetail.Adjusting -> ADJUSTING_DETAIL
-            coach == ScanCoach.Line.NothingNew -> COACH_NOTHING_NEW
+            coach == ScanCoach.Line.NothingNew && !pointsRising -> COACH_NOTHING_NEW
             coach == ScanCoach.Line.Still -> COACH_STILL
             else -> COACH_SCANNING
         }

@@ -81,6 +81,9 @@ enum class SurveyGap {
 
     /** Too little ceiling seen for a height. */
     Ceiling,
+
+    /** The measure failed or did not end in time: nothing to scan again, the plan can be reopened. */
+    Unmeasured,
 }
 
 /**
@@ -114,9 +117,17 @@ class RoomSurvey(
         get() = walls.any { it.sized && it.length.estimate } || area?.estimate == true || length?.estimate == true ||
             width?.estimate == true || perimeter?.estimate == true || ceilingHeight?.estimate == true
 
+    /** `true` when any figure is measured, and so carries a ±: the exports then say what the ± is. */
+    val hasSpread: Boolean
+        get() = (walls.filter { it.sized }.map { it.length } + listOfNotNull(area, length, width, perimeter, ceilingHeight))
+            .any { !it.estimate }
+
     companion object {
-        fun empty(gap: SurveyGap) =
-            RoomSurvey(emptyList(), 0f, 0f, null, null, null, null, null, listOf(gap, SurveyGap.Ceiling), 0f, 0f, 0f)
+        fun empty(gap: SurveyGap) = RoomSurvey(
+            emptyList(), 0f, 0f, null, null, null, null, null,
+            // A room that was not measured lacks nothing it could be scanned for.
+            listOfNotNull(gap, SurveyGap.Ceiling.takeIf { gap != SurveyGap.Unmeasured }), 0f, 0f, 0f,
+        )
     }
 }
 

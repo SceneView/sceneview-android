@@ -1,5 +1,6 @@
 package io.github.sceneview.demo.demos.internal.room
 
+import io.github.sceneview.demo.demos.internal.stopIfInterrupted
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -41,6 +42,7 @@ internal class FrameCloud(
             var k = 0
             var i = 0
             while (i < all && k < n) {
+                stopIfInterrupted()
                 val x = positions[i * 3]
                 val z = positions[i * 3 + 2]
                 u[k] = c * x + s * z

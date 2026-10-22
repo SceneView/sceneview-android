@@ -1,0 +1,2 @@
+<!-- category: Added -->
+- **Room scans: the nearest wall and the nearest door or window to a pose ([#4779](https://github.com/sceneview/sceneview/pull/4779)).** A pure, unit-tested query over the walls and openings a scan found returns, from any pose in the scan's frame and in metres, the nearest wall (its plane, inward normal and distance, and whether it is seen from behind) and the nearest opening (its width, height, distance and confidence). Nothing on screen uses it yet: it is the ground for telling whether something fits through a door without typing its size.
