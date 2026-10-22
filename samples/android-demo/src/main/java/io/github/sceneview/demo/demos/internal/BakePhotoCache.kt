@@ -5,12 +5,15 @@ package io.github.sceneview.demo.demos.internal
  * plane by plane in bake order, the photos each one paints from. A photo is decoded once, on the
  * first plane that asks for it, and let go after the last, so a room's bake holds a handful of
  * photos at a time instead of every photo it decoded, until the build ends. A photo [load] cannot
- * decode is remembered as missing, not decoded again. Planes are asked for in order, each once.
+ * decode is remembered as missing, not decoded again. Planes are asked for in order, each once:
+ * a plane asked for early, or twice, would decode its photos again or let go of photos a plane still
+ * to come needs, so [photosFor] throws [IllegalStateException] instead.
  */
 class BakePhotoCache<T : Any>(private val picks: List<List<Int>>, private val load: (Int) -> T?) {
     private val lastPlane = HashMap<Int, Int>()
     private val pixels = HashMap<Int, T>()
     private val missing = HashSet<Int>()
+    private var next = 0
 
     /** Photos decoded so far, missing ones included. */
     var loads = 0
@@ -29,6 +32,8 @@ class BakePhotoCache<T : Any>(private val picks: List<List<Int>>, private val lo
 
     /** [plane]'s photos, decoded if no earlier plane decoded them; the ones it is the last to use are let go. */
     fun photosFor(plane: Int): List<T> {
+        check(plane == next) { "plane $plane asked for, plane $next expected: planes are asked for in order, each once" }
+        next++
         val photos = picks[plane]
         val out = photos.mapNotNull { index ->
             pixels[index] ?: if (index in missing) {
