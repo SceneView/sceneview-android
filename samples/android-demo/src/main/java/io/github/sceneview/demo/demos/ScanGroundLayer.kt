@@ -16,67 +16,48 @@ import com.google.android.filament.Engine
 import com.google.android.filament.Material
 import com.google.android.filament.MaterialInstance
 import io.github.sceneview.SceneScope
+import io.github.sceneview.demo.demos.internal.ArDebugGeometry
+import io.github.sceneview.demo.demos.internal.ArDebugStyle
+import io.github.sceneview.demo.demos.internal.DebugLayer
+import io.github.sceneview.demo.demos.internal.DebugMesh
+import io.github.sceneview.demo.demos.internal.ScanGround
 import io.github.sceneview.demo.demos.internal.ScanGroundMeshes
 import io.github.sceneview.demo.theme.LocalStageChrome
-import io.github.sceneview.demo.theme.SceneViewTokens
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.material.setColor
 
 /**
  * The colours of the ground a scan's result stands on (#4719), from the stage's own: the slab is
- * the stage's card, like the dollhouse's plinth; what the scan did not see is hatched in the
- * guidance amber the live map marks "still to scan" with, so the two read as one map.
+ * the stage's card, like the dollhouse's plinth.
  *
- * - On a light stage the edge is a shade darker than the slab and a hole is the slab tinted amber.
+ * - On a light stage the edge is a shade darker than the slab.
  * - On a dark stage the card is near-black like the ground, so the slab would read as a hole in
- *   it: the slab takes the theme's `surface-container-high`, its edge `outline-variant`, and a
- *   hole a light `on-surface` veil over the slab, the way the light stage's holes are white, so
- *   all three lift off the dark ground.
+ *   it: the slab takes the theme's `surface-container-high`, its edge `outline-variant`, so both
+ *   lift off the dark ground.
  *
- * Every colour opaque, composited over what it lies on: unlit and linear-mapped
- * (`configureForDebug`), each shows at its token's value, and a theme switch repaints the same
- * materials without changing their kind.
+ * The floor the scan did not see is not marked on it: holes read as the slab, and the parts worth
+ * scanning again have their own pill (#4736). Every colour opaque, composited over what it lies
+ * on: unlit and linear-mapped (`configureForDebug`), each shows at its token's value, and a theme
+ * switch repaints the same materials without changing their kind.
  */
-internal data class ScanGroundColors(
-    val slab: Color,
-    val edge: Color,
-    val missing: Color,
-    val hatch: Color,
-    /** Whether these are a dark stage's: the legend's swatch then frames its hatching. */
-    val dark: Boolean = false,
-) {
+internal data class ScanGroundColors(val slab: Color, val edge: Color) {
     companion object {
         /** How far the slab's edge is shaded from its top: the dollhouse plinth's shade. */
         const val EDGE_SHADE = 0.28f
 
-        /** How much amber a missing tile takes: a tint, so the hatching reads on it. */
-        const val MISSING_TINT = 0.2f
-
-        /** How much of `on-surface` a hole takes on a dark stage: light, like the light stage's. */
-        const val DARK_HOLE_VEIL = 0.55f
-
         private const val HALF = 0.5f
 
         /**
-         * The colours on the stage of [card] over [ground]; [container], [outline] and
-         * [onSurface] are the theme's `surface-container-high`, `outline-variant` and
-         * `on-surface`, used on a dark stage only.
+         * The colours on the stage of [card] over [ground]; [container] and [outline] are the
+         * theme's `surface-container-high` and `outline-variant`, used on a dark stage only.
          */
-        fun of(card: Color, ground: Color, container: Color, outline: Color, onSurface: Color): ScanGroundColors {
+        fun of(card: Color, ground: Color, container: Color, outline: Color): ScanGroundColors {
             val stage = card.compositeOver(ground)
             val dark = stage.luminance() < HALF
             val slab = if (dark) container.compositeOver(ground) else stage
-            val amber = SceneViewTokens.ArOverlay.accentGuidance
             return ScanGroundColors(
                 slab = slab,
                 edge = if (dark) outline.compositeOver(slab) else lerp(slab, Color.Black, EDGE_SHADE),
-                missing = if (dark) {
-                    onSurface.copy(alpha = DARK_HOLE_VEIL).compositeOver(slab)
-                } else {
-                    lerp(slab, amber, MISSING_TINT)
-                },
-                hatch = amber,
-                dark = dark,
             )
         }
 
@@ -85,12 +66,12 @@ internal data class ScanGroundColors(
         fun current(): ScanGroundColors {
             val chrome = LocalStageChrome.current
             val scheme = MaterialTheme.colorScheme
-            return of(chrome.card, chrome.ground, scheme.surfaceContainerHigh, scheme.outlineVariant, scheme.onSurface)
+            return of(chrome.card, chrome.ground, scheme.surfaceContainerHigh, scheme.outlineVariant)
         }
     }
 }
 
-/** The four layers of [ScanGroundMeshes] and their materials. Main thread, as every Filament call. */
+/** The two layers of [ScanGroundMeshes] and their materials. Main thread, as every Filament call. */
 private class ScanGroundNodes(private val engine: Engine, private val materialLoader: MaterialLoader, colors: ScanGroundColors) {
     private val materials = mutableListOf<MaterialInstance>()
     private var colors = colors
@@ -105,15 +86,11 @@ private class ScanGroundNodes(private val engine: Engine, private val materialLo
 
     val slab = node(colors.slab)
     val edge = node(colors.edge)
-    val missing = node(colors.missing)
-    val hatch = node(colors.hatch)
-    val nodes = listOf(slab, edge, missing, hatch)
+    val nodes = listOf(slab, edge)
 
     fun upload(meshes: ScanGroundMeshes) {
         slab.upload(meshes.slab)
         edge.upload(meshes.edge)
-        missing.upload(meshes.missingFill)
-        hatch.upload(meshes.hatch)
     }
 
     /** A theme switch: the same nodes, repainted. Every colour is opaque, so no material changes kind. */
@@ -122,8 +99,6 @@ private class ScanGroundNodes(private val engine: Engine, private val materialLo
         this.colors = colors
         materials[0].setColor(colors.slab)
         materials[1].setColor(colors.edge)
-        materials[2].setColor(colors.missing)
-        materials[3].setColor(colors.hatch)
     }
 
     fun destroy() = materials.forEach { materialLoader.destroyMaterialInstance(it) }
@@ -134,8 +109,8 @@ private class ScanGroundNodes(private val engine: Engine, private val materialLo
 }
 
 /**
- * The ground under a scan's result (#4719): [meshes] — the slab, its edge, the hatching of the
- * floor the scan did not see — in [colors], in the scan's own world space next to the model.
+ * The ground under a scan's result (#4719): [meshes] — the slab and its edge — in [colors], in
+ * the scan's own world space next to the model.
  */
 @Composable
 internal fun SceneScope.ScanGroundLayer(
@@ -166,3 +141,76 @@ internal fun SceneScope.ScanGroundLayer(
 
 private const val TAG = "ScanGround"
 private const val NS_PER_US = 1_000L
+
+/**
+ * The replay's floor grid under a scan's result (QA 2026-10-22): the grid of the replay's 3D view
+ * — Polycam's, Reality Composer's — round the slab, fading out with the distance from the room, so
+ * the result shows the room's scale as the replay does. Just under the slab's top: the slab hides
+ * it inside the room, the grid carries on outside. In the stage's grid colours, light and dark.
+ *
+ * [style] sizes the lines for the camera the result opens on.
+ */
+@Composable
+internal fun SceneScope.ScanGridLayer(
+    ground: ScanGround,
+    style: ArDebugStyle,
+    engine: Engine,
+    materialLoader: MaterialLoader,
+) {
+    val chrome = LocalStageChrome.current
+    val layers = remember(engine, materialLoader) { ScanGridNodes(engine, materialLoader) }
+    DisposableEffect(layers) { onDispose { layers.destroy() } }
+    remember(layers, ground, style) { layers.upload(ground, style) }
+    SideEffect { layers.paint(chrome.gridMinor, chrome.gridMajor) }
+    key(layers) {
+        Node(apply = { layers.nodes.forEach { addChildNode(it) } })
+    }
+}
+
+/** The grid's two layers on `replay_grid.mat`, as the replay draws them. Main thread. */
+private class ScanGridNodes(engine: Engine, private val materialLoader: MaterialLoader) {
+    private val material = materialLoader.createMaterial(GRID_MATERIAL)
+    private val minorMaterial = materialLoader.createInstance(material)
+    private val majorMaterial = materialLoader.createInstance(material)
+    private val minor = DebugLayerNode(engine, minorMaterial, ScanGroundNodes.PRIORITY)
+    private val major = DebugLayerNode(engine, majorMaterial, ScanGroundNodes.PRIORITY)
+    val nodes = listOf(minor, major)
+    private var colors: Pair<Color, Color>? = null
+
+    fun upload(ground: ScanGround, style: ArDebugStyle) {
+        val bounds = floatArrayOf(
+            ground.originX, ground.floorY, ground.originZ,
+            ground.originX + ground.columns * ground.cellM, ground.floorY, ground.originZ + ground.rows * ground.cellM,
+        )
+        val meshes = HashMap<DebugLayer, DebugMesh>()
+        val y = ground.floorY - ScanGroundMeshes.SLAB_DROP_M - UNDER_SLAB_M
+        ArDebugGeometry.buildStage(bounds, y, style) { meshes.getOrPut(it) { DebugMesh() } }
+        minor.upload(meshes[DebugLayer.GridMinor])
+        major.upload(meshes[DebugLayer.GridMajor])
+        val fade = ArDebugGeometry.gridFade(bounds)
+        listOf(minorMaterial, majorMaterial).forEach {
+            it.setParameter("fade", fade.centreX, fade.centreZ, fade.start, fade.end)
+        }
+    }
+
+    fun paint(minorColor: Color, majorColor: Color) {
+        if (colors == minorColor to majorColor) return
+        colors = minorColor to majorColor
+        minorMaterial.setColor(minorColor)
+        majorMaterial.setColor(majorColor)
+    }
+
+    /** After the nodes left the scene: the instances, then their material. */
+    fun destroy() {
+        materialLoader.destroyMaterialInstance(minorMaterial)
+        materialLoader.destroyMaterialInstance(majorMaterial)
+        materialLoader.destroyMaterial(material)
+    }
+
+    companion object {
+        const val GRID_MATERIAL = "materials/replay_grid.filamat"
+
+        /** How far under the slab's top the grid lies, so the slab hides it with no z-fighting. */
+        const val UNDER_SLAB_M = 0.005f
+    }
+}

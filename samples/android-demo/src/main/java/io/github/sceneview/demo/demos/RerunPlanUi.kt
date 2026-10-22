@@ -68,6 +68,7 @@ import io.github.sceneview.demo.LocalDemoBottomChromeCover
 import io.github.sceneview.demo.R
 import io.github.sceneview.demo.SETTINGS_FAB_RESERVED_SPACE
 import io.github.sceneview.demo.demos.internal.ArDebugEvent
+import io.github.sceneview.demo.demos.internal.ArDebugGeometry
 import io.github.sceneview.demo.demos.internal.DenseCloud
 import io.github.sceneview.demo.demos.internal.DebugPose
 import io.github.sceneview.demo.demos.internal.DenseFusion
@@ -78,6 +79,7 @@ import io.github.sceneview.demo.demos.internal.PlanMetrics
 import io.github.sceneview.demo.demos.internal.PlanStroke
 import io.github.sceneview.demo.demos.internal.PlanTextRole
 import io.github.sceneview.demo.demos.internal.ReplayLens
+import io.github.sceneview.demo.demos.internal.orPlanes
 import io.github.sceneview.demo.demos.internal.RerunCapturePack
 import io.github.sceneview.demo.demos.internal.RerunSyntheticRoom
 import io.github.sceneview.demo.demos.internal.SyntheticScene
@@ -227,8 +229,11 @@ internal fun planHeading(title: String, epochSeconds: Long?, locale: Locale = Lo
 /** [media]'s survey, measured on the calling thread: call it off the main one. */
 internal fun surveyOf(media: RerunReplayMedia): RoomSurvey {
     val cloud = media.dense?.cloud ?: return RoomSurvey.empty(SurveyGap.NoDepth)
-    val trail = media.trace.let { it.frameAt(it.duration) }.trail
-    return RoomSurveyor.survey(RoomSurveyInput(cloud.positions, cloud.normals, trail))
+    val last = media.trace.let { it.frameAt(it.duration) }
+    // The cloud holds no wall when the depth stalled while ARCore kept finding them: the walls
+    // the capture counted then give the plan, not "scan the walls" under a count of ten.
+    return RoomSurveyor.survey(RoomSurveyInput(cloud.positions, cloud.normals, last.trail))
+        .orPlanes(last.planes, ArDebugGeometry.floorHeight(last))
 }
 
 /**

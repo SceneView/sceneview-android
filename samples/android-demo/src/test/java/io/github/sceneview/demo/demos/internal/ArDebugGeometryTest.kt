@@ -150,8 +150,9 @@ class ArDebugGeometryTest {
         val fade = ArDebugGeometry.gridFade(room)
         assertEquals(0f, fade.centreX, 1e-5f)
         assertEquals(0f, fade.centreZ, 1e-5f)
-        // The corners (2.5 m out) stay whole; the lines are gone 3 m further.
-        assertTrue(fade.start > 2.5f)
+        // The corners (2.5 m out) stay whole, and 2 m past them; the lines are gone 6 m further.
+        assertEquals(2.5f + ArDebugGeometry.GRID_FADE_START_M, fade.start, 1e-4f)
+        assertTrue(ArDebugGeometry.GRID_FADE_START_M >= 2f)
         assertEquals(ArDebugGeometry.GRID_FADE_M, fade.end - fade.start, 1e-4f)
         val end = fade.end
 
