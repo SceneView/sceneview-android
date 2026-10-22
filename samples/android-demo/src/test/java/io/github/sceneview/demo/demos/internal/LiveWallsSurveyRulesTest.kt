@@ -229,4 +229,24 @@ class LiveWallsSurveyRulesTest {
         source.measuredHeight = null
         assertEquals(2.5f, source.update(low, floorY, 4f).height, 0.01f)
     }
+
+    @Test
+    fun `furniture is strictly lower than the wall behind it, as the survey cuts`() {
+        // A wall up to 0.4 m world height, furniture up to 0.2 m: exactly the cut apart, no rounding.
+        val cut = WallRules.FURNITURE_UNDER_M
+        val wall = Segment(0f, 0f, 0f, -2f, 2f, top = 2 * cut)
+        fun front(top: Float) = Segment(0f, 0f, 0.5f, -1.5f, 1.5f, top = top)
+        fun side(top: Float) = Segment(PI.toFloat() / 2f, 1.5f, 0.25f, -0.25f, 0.25f, top = top)
+        fun panel(top: Float) = floatArrayOf(-1.5f, 0f, 0.5f, 1.5f, 0f, 0.5f, 1.5f, top, 0.5f, -1.5f, top, 0.5f)
+        val ceilingY = 10f
+        // Exactly the cut lower: a wall still, for each of the three rules.
+        assertEquals(null, WallRules.furnitureTop(wall, panel(cut)))
+        assertTrue(!WallRules.standsBefore(front(cut), wall, ceilingY))
+        assertTrue(!WallRules.isSideOf(side(cut), front(cut), wall))
+        // A centimetre lower: furniture.
+        val lower = cut - 0.01f
+        assertEquals(lower, WallRules.furnitureTop(wall, panel(lower))!!, 0f)
+        assertTrue(WallRules.standsBefore(front(lower), wall, ceilingY))
+        assertTrue(WallRules.isSideOf(side(lower), front(lower), wall))
+    }
 }
