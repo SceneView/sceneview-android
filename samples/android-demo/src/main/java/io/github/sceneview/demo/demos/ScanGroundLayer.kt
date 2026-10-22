@@ -109,6 +109,9 @@ private class ScanGroundNodes(private val engine: Engine, private val materialLo
     val hatch = node(colors.hatch)
     val nodes = listOf(slab, edge, missing, hatch)
 
+    /** The meshes last uploaded: the live ground uploads a new set only. */
+    var shown: ScanGroundMeshes? = null
+
     fun upload(meshes: ScanGroundMeshes) {
         slab.upload(meshes.slab)
         edge.upload(meshes.edge)
@@ -159,6 +162,33 @@ internal fun SceneScope.ScanGroundLayer(
     }
     DisposableEffect(layers) { onDispose { layers.destroy() } }
     SideEffect { layers.paint(colors) }
+    key(layers) {
+        Node(apply = { layers.nodes.forEach { addChildNode(it) } })
+    }
+}
+
+/**
+ * The live 3D map's ground: the same four layers as [ScanGroundLayer], made once and refilled with
+ * each new [meshes] instead of rebuilt, since the coverage grows all through a capture. `null`
+ * meshes draw nothing.
+ */
+@Composable
+internal fun SceneScope.ScanLiveGroundLayer(
+    meshes: ScanGroundMeshes?,
+    engine: Engine,
+    materialLoader: MaterialLoader,
+    colors: ScanGroundColors,
+) {
+    val layers = remember(engine, materialLoader) { ScanGroundNodes(engine, materialLoader, colors) }
+    DisposableEffect(layers) { onDispose { layers.destroy() } }
+    SideEffect {
+        layers.paint(colors)
+        if (meshes != null && meshes !== layers.shown) {
+            layers.upload(meshes)
+            layers.shown = meshes
+        }
+        layers.nodes.forEach { it.isVisible = meshes != null }
+    }
     key(layers) {
         Node(apply = { layers.nodes.forEach { addChildNode(it) } })
     }
