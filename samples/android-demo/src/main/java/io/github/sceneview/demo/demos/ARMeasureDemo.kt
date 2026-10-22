@@ -570,7 +570,7 @@ fun ARMeasureDemo(onBack: () -> Unit) {
                     // Hidden, they are not recognised at all: the snapper still reads the planes, as on main.
                     val wallsShown = board.mode != MeasureMode.Distance && board.phase != MeasurePhase.Raising
                     val walls = if (wallsShown) {
-                        liveWalls.update(livePlanes, origin.y, frame.timestamp)
+                        liveWalls.update(livePlanes, origin.y, frame.timestamp, isTracking)
                     } else {
                         LiveWallSnapshot.Empty
                     }
@@ -1628,7 +1628,7 @@ private fun LivePlane.toMeasurePlane(): MeasurePlane = MeasurePlane(
  * The walls recognised live for Measure: the shared [PlaneWallSource] fed ARCore's planes once a
  * frame, eased by a [LiveWallMotion]. Nothing is shown before a floor is tracked.
  */
-private class MeasureLiveWalls {
+internal class MeasureLiveWalls {
     val planeIds = LivePlaneIds()
     private val source = PlaneWallSource()
     val motion = LiveWallMotion()
@@ -1639,11 +1639,12 @@ private class MeasureLiveWalls {
     var dt = 0f
         private set
 
-    fun update(planes: List<LivePlane>, cameraY: Float, timestampNanos: Long): LiveWallSnapshot {
+    /** [planes] as ARCore reads them now; [tracking] `false` while ARCore has lost tracking. */
+    fun update(planes: List<LivePlane>, cameraY: Float, timestampNanos: Long, tracking: Boolean = true): LiveWallSnapshot {
         dt = if (lastNanos == 0L || timestampNanos <= lastNanos) 0f else (timestampNanos - lastNanos) / NANOS_PER_SECOND
         lastNanos = timestampNanos
         val floorY = livePlanesFloorY(planes, cameraY) ?: return snapshot
-        snapshot = source.update(planes, floorY, timestampNanos / NANOS_PER_SECOND)
+        snapshot = source.update(planes, floorY, timestampNanos / NANOS_PER_SECOND, tracking)
         return snapshot
     }
 
