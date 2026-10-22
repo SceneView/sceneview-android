@@ -99,7 +99,7 @@ class CloudWallOpenings(private val cell: Float = CELL_M) : WallOpenings {
         // Each wall is laid out as far as its own surfels go. A phone scan seldom sees four walls,
         // and the one it did not see is no limit to the one it did: a wall's ends taken from where
         // the walls across it were guessed cut its door or its window in two, and a hole cut in
-        // two runs off the wall's end — no opening was ever found in a scan of a corner (#PRNUM).
+        // two runs off the wall's end — no opening was ever found in a scan of a corner (#4796).
         val planes = sides(walls.map { a[it] }.toFloatArray()).map { (plane, inward) -> Triple(true, plane, inward) } +
             sides(walls.map { b[it] }.toFloatArray()).map { (plane, inward) -> Triple(false, plane, inward) }
         val sides = planes.mapNotNull { (alongB, plane, inward) ->

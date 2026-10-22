@@ -54,7 +54,7 @@ class WallOpeningsTest {
         // The phone saw the north and east walls, not the two across them, and the room beyond
         // through the door and the window. The walls across used to be guessed from whatever
         // stood on their side and to cut both walls' ends short: both openings ran off a wall's
-        // end and the scan had none (#PRNUM).
+        // end and the scan had none (#4796).
         val corner = HoledRoomScan.cloud.cropped { x, _, z -> x > -0.6f && z < 0.9f }
         val survey = survey(corner)
         assertEquals(survey.note, listOf(SceneLabel.Door, SceneLabel.Window), survey.openings.map { it.label }.sorted())
