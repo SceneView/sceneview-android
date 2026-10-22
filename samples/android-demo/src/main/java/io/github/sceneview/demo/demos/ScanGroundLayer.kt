@@ -161,7 +161,7 @@ internal fun SceneScope.ScanGridLayer(
     val layers = remember(engine, materialLoader) { ScanGridNodes(engine, materialLoader) }
     DisposableEffect(layers) { onDispose { layers.destroy() } }
     remember(layers, ground, style) { layers.upload(ground, style) }
-    SideEffect { layers.paint(chrome.gridMinor, chrome.gridMajor) }
+    SideEffect { layers.paint(chrome.debug.gridMinor, chrome.debug.gridMajor) }
     key(layers) {
         Node(apply = { layers.nodes.forEach { addChildNode(it) } })
     }

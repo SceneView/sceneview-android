@@ -167,10 +167,11 @@ class ArDebugGeometryTest {
     fun `a major line every metre, three minor lines between`() {
         val (meshes, out) = layers()
         ArDebugGeometry.buildStage(floatArrayOf(-1f, 0f, -1f, 1f, 0f, 1f), 0f, style, out)
-        // Four vertices per ribbon: count the lines of each kind along x and z together.
+        // Four vertices per ribbon: count the lines of each kind along x and z together. Three
+        // minors between two majors, and up to three more past each end of each axis.
         val majors = meshes.getValue(DebugLayer.GridMajor).vertexCount / 4
         val minors = meshes.getValue(DebugLayer.GridMinor).vertexCount / 4
-        assertTrue("$minors minor lines for $majors major", minors > 2 * majors && minors <= 3 * majors)
+        assertTrue("$minors minor lines for $majors major", minors > 2 * majors && minors <= 3 * majors + 6)
         assertEquals(1f, ArDebugGeometry.GRID_CELL_M * ArDebugGeometry.GRID_MAJOR_EVERY, 1e-6f)
     }
 

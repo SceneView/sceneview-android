@@ -155,6 +155,7 @@ import io.github.sceneview.demo.demos.internal.RerunSessionSource
 import io.github.sceneview.demo.demos.internal.RerunSessionStore
 import io.github.sceneview.demo.demos.internal.RerunSetupStep
 import io.github.sceneview.demo.demos.internal.RerunStatusUx
+import io.github.sceneview.demo.demos.internal.DenseCloud
 import io.github.sceneview.demo.demos.internal.DollhouseCopy
 import io.github.sceneview.demo.demos.internal.RoomDollhouse
 import io.github.sceneview.demo.demos.internal.ScanBack
@@ -359,7 +360,7 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
             when (qaState) {
                 QA_STATE_RECORD_OBJECT -> ScanScope.Object
                 QA_STATE_RECORD_HOME, QA_STATE_HOME_SUMMARY -> ScanScope.Home
-                QA_STATE_RECORD, QA_STATE_RECORD_NO_DEPTH, QA_STATE_RECORD_WALLS -> ScanScope.Room
+                QA_STATE_RECORD, QA_STATE_RECORD_NO_DEPTH, QA_STATE_RECORD_WALLS, QA_STATE_RECORD_WALLS_STALLED -> ScanScope.Room
                 QA_STATE_RECORD_AREA -> ScanScope.Area
                 else -> ScanScopeStore.last(context)
             },
@@ -1384,7 +1385,7 @@ private fun RerunLiveScreen(
         val source = sample?.takeIf { qaRecord } ?: return@LaunchedEffect
         val events = withContext(Dispatchers.IO) {
             // #4540: a turn round a synthetic room, whose walls the sample's close take lacks.
-            if (qaState == QA_STATE_RECORD_WALLS) {
+            if (qaState == QA_STATE_RECORD_WALLS || qaState == QA_STATE_RECORD_WALLS_STALLED) {
                 ScanWallWalk.events()
             } else {
                 context.assets.open(RerunReplayAssets.LOG).bufferedReader().useLines { parseArDebugLog(it) }
@@ -1618,7 +1619,11 @@ private fun RerunLiveScreen(
             val built = runCatching {
                 builtPack ?: when {
                     qaTrace != null && sample != null ->
-                        qaSessionOf(qaTrace, sample, scanScope, depth = qaState != QA_STATE_RECORD_NO_DEPTH)
+                        qaSessionOf(
+                            qaTrace, sample, scanScope,
+                            depth = qaState != QA_STATE_RECORD_NO_DEPTH,
+                            depthStalled = qaState == QA_STATE_RECORD_WALLS_STALLED,
+                        )
                     capture != null -> capture.finish()
                     else -> null
                 }
@@ -2411,10 +2416,17 @@ private const val QA_STATE_HOME_SUMMARY = "home-summary"
 /** QA only (#4540): a room's scan turning round a synthetic room, its walls rising as they are found. */
 private const val QA_STATE_RECORD_WALLS = "record-walls"
 
+/**
+ * QA only (QA 2026-10-22): the same turn whose depth stalled - its fused cloud a floor and no
+ * wall, the walls on ARCore's planes only - for the plan the export offers from the counted walls.
+ */
+private const val QA_STATE_RECORD_WALLS_STALLED = "record-walls-stalled"
+
 private val RECORD_QA_STATES =
     setOf(
         QA_STATE_RECORD,
         QA_STATE_RECORD_WALLS,
+        QA_STATE_RECORD_WALLS_STALLED,
         QA_STATE_RECORD_TRACKING_LOST,
         QA_STATE_RECORD_SAVE_FAILED,
         QA_STATE_RECORD_OBJECT,
@@ -2448,6 +2460,7 @@ private suspend fun qaSessionOf(
     sample: RerunReplayMedia,
     scope: ScanScope,
     depth: Boolean = true,
+    depthStalled: Boolean = false,
 ): RerunCapturePack? {
     val events = trace.journal?.toList().orEmpty()
     trace.journal = null
@@ -2468,7 +2481,7 @@ private suspend fun qaSessionOf(
     }
     // The emulator has no depth: the ray-cast room stands in for a scan's fused points, so the
     // result the QA take opens on is built, kept and reopened as a real scan's is.
-    val dense = withContext(Dispatchers.Default) { syntheticCloud() }
+    val dense = withContext(Dispatchers.Default) { syntheticCloud().let { if (depthStalled) it.floorOnly() else it } }
     val device = ScanDevice("android", Build.MODEL, ScanDevice.TIER_DEPTH, ScanDevice.SOURCE_RAW_DEPTH)
     return RerunCaptureBuilder.build(events, sample.manifest.lens, photos, device = device, dense = dense)
 }
@@ -2582,3 +2595,21 @@ internal object QaPausedTurn {
 
 /** How long the photo limit's notice holds the coaching line before it becomes the HUD's line. */
 private const val PHOTO_NOTICE_MS = 4_000L
+
+/** QA only: the cloud's floor alone, what a stalled depth leaves (QA 2026-10-22). */
+private fun DenseCloud.floorOnly(): DenseCloud {
+    val n = normals ?: return this
+    val minY = (0 until count).minOfOrNull { positions[it * 3 + 1] } ?: return this
+    val keep = (0 until count).filter { n[it * 3 + 1] > QA_FLOOR_NORMAL_Y && positions[it * 3 + 1] < minY + QA_FLOOR_BAND_M }
+    fun FloatArray.pick() = FloatArray(keep.size * 3) { this[keep[it / 3] * 3 + it % 3] }
+    return DenseCloud(
+        positions.pick(),
+        IntArray(keep.size) { colors[keep[it]] },
+        n.pick(),
+        confidences?.let { c -> ByteArray(keep.size) { c[keep[it]] } },
+        levels?.let { l -> ByteArray(keep.size) { l[keep[it]] } },
+    )
+}
+
+private const val QA_FLOOR_NORMAL_Y = 0.9f
+private const val QA_FLOOR_BAND_M = 0.15f

@@ -87,7 +87,7 @@ class PlaneRoomSurveyTest {
         assertFalse(SurveyGap.MissingWall in survey.gaps)
         // The plan's DXF is written from it.
         val out = ByteArrayOutputStream()
-        RoomPlanDxf.write(out, survey, RoomPlanLayoutTest.WORDING, RoomPlanDxfTest.WORDS)
+        RoomPlanDxf.write(out, survey, RoomPlanLayoutTest.WORDING, DXF_WORDS)
         assertTrue(out.toString(Charsets.US_ASCII.name()).contains("LWPOLYLINE"))
     }
 
@@ -120,3 +120,10 @@ class PlaneRoomSurveyTest {
         assertSame(drawn, drawn.orPlanes(room(0f), floorY))
     }
 }
+
+private val DXF_WORDS = RoomPlanDxf.Words(
+    legend = listOf("Room plan", "Indicative plan: verify every figure on site.", "Drawing in millimetres, figures in metres."),
+    door = "Door %1\$s",
+    window = "Window %1\$s",
+    sill = "sill %1\$s",
+)
