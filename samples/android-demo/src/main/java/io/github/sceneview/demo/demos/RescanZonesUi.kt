@@ -40,6 +40,7 @@ import com.google.android.filament.Material
 import io.github.sceneview.SceneScope
 import io.github.sceneview.demo.R
 import io.github.sceneview.demo.demos.internal.DebugMesh
+import io.github.sceneview.demo.demos.internal.DenseCloud
 import io.github.sceneview.demo.demos.internal.RescanKind
 import io.github.sceneview.demo.demos.internal.RescanSources
 import io.github.sceneview.demo.demos.internal.RescanZone
@@ -57,8 +58,18 @@ internal const val RERUN_MODEL_RESCAN_TAG = "rerun_model_rescan"
 /** One part's "Re-scan this part" in the list. */
 internal const val RERUN_MODEL_RESCAN_ACTION_TAG = "rerun_model_rescan_action"
 
-/** The parts of a scan worth scanning again, and the frames the result draws them with. */
-internal class RescanBuild(val zones: List<RescanZone>, val mesh: DebugMesh)
+/**
+ * The parts of a scan worth scanning again, the frames the result draws them with, and the
+ * scan's [cloud] they were read from, which a re-scan lines up on.
+ */
+internal class RescanBuild(val zones: List<RescanZone>, val mesh: DebugMesh, val cloud: DenseCloud) {
+    /**
+     * "Re-scan this part" for [onRescan], `null` when there is none or the cloud has no normals
+     * to line a re-scan up on.
+     */
+    fun picker(onRescan: ((RescanPick) -> Unit)?): ((RescanZone) -> Unit)? =
+        onRescan?.takeIf { cloud.normals != null }?.let { pick -> { zone -> pick(RescanPick(zone, zones, cloud)) } }
+}
 
 /**
  * The parts of [source]'s scan worth scanning again (#4736), [ground] the floor read off its
@@ -74,7 +85,7 @@ internal fun rescanOf(source: RerunModelSource?, ground: ScanGround?): RescanBui
     val zones = RescanSources.zones(cloud, ground)
     Log.i(TAG, "${zones.size} zones from ${cloud.count} points in ${(System.nanoTime() - started) / NS_PER_MS} ms")
     zones.forEach { Log.i(TAG, "  $it") }
-    zones.takeIf { it.isNotEmpty() }?.let { RescanBuild(it, RescanZoneMesh.of(it)) }
+    zones.takeIf { it.isNotEmpty() }?.let { RescanBuild(it, RescanZoneMesh.of(it), cloud) }
 }.onFailure { Log.w(TAG, "zones failed", it) }.getOrNull()
 
 /**
@@ -140,11 +151,11 @@ private fun ZoneSwatch() {
 }
 
 /**
- * The parts to scan again, each with its kind, why, and its own "Re-scan this part": shown but not
- * yet usable, since a part scanned on its own needs lining up with this scan first.
+ * The parts to scan again, each with its kind, why, and its own "Re-scan this part", which
+ * [onRescan] starts; without it, the button is shown but not usable.
  */
 @Composable
-internal fun RescanZonesDialog(zones: List<RescanZone>, onDismiss: () -> Unit) {
+internal fun RescanZonesDialog(zones: List<RescanZone>, onDismiss: () -> Unit, onRescan: ((RescanZone) -> Unit)? = null) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.scan_rescan_title)) },
@@ -161,14 +172,14 @@ internal fun RescanZonesDialog(zones: List<RescanZone>, onDismiss: () -> Unit) {
                         }
                         Text(zone.reason, style = SceneViewTokens.Type.body, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         OutlinedButton(
-                            onClick = {},
-                            enabled = false,
+                            onClick = { onRescan?.invoke(zone) },
+                            enabled = onRescan != null,
                             modifier = Modifier.testTag(RERUN_MODEL_RESCAN_ACTION_TAG),
                         ) { Text(stringResource(R.string.scan_rescan_action)) }
                     }
                 }
                 Text(
-                    stringResource(R.string.scan_rescan_unavailable),
+                    stringResource(if (onRescan != null) R.string.scan_rescan_how else R.string.scan_rescan_unavailable),
                     style = SceneViewTokens.Type.caption,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

@@ -575,11 +575,13 @@ internal fun ScanLiveView(
             },
             observe = { frame ->
                 val pose = livePose(frame.camera)
-                val cells = media.liveDense?.invoke()?.coveredCells
+                val dense = media.liveDense?.invoke()
+                val cells = dense?.coveredCells
                 // The view hands the same frame to every render until it rebuilds one (#4743).
                 if (observed.isNew(frame, pose, cells)) {
                     coverage.observe(frame, pose = pose, snapshotCells = cells, record = media.trace)
-                    walls?.observe(frame, coverage, pose)
+                    // The depth cloud tells how much of each wall was seen: a wall is drawn that far.
+                    walls?.observe(frame, coverage, pose, dense = dense?.cloud?.positions)
                 }
             },
             // The walls stand in the room while it is scanned; saving, the orbit shows the cloud.

@@ -1,2 +1,0 @@
-<!-- category: Fixed -->
-- **`TextNode`, `BillboardNode` and `ImageNode` show a new text or bitmap at every size on screen ([#4765](https://github.com/sceneview/sceneview/pull/4765)).** A new `text` or `bitmap` was written to the texture's full-size level only, while a quad drawn smaller than its bitmap is read from the smaller mip levels, which kept the first image: a label a few centimetres wide went on showing its first text. The mip levels are now rebuilt from the new image on every change.

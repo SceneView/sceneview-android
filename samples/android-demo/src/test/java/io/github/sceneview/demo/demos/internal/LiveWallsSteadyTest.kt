@@ -95,6 +95,38 @@ class LiveWallsSteadyTest {
     }
 
     @Test
+    fun `a wall's top is judged at its very edge, first and once shown`() {
+        fun piece(at: Float) = listOf(front, left, plane(24, -1f, -1f, 0.5f, -1f, top = at))
+        // A first verdict takes standing height as it is: a plane up to 1.30 m exactly is a wall.
+        assertEquals("up to 1.30 m exactly, at first", 3, idsOver(listOf(piece(WallRules.MIN_TOP_M)), step = 1f).single().size)
+        // Shown, it keeps standing 6 cm under it, the noise and the hold: down to 1.24 m.
+        val shown = idsOver(listOf(piece(1.33f), piece(1.245f), piece(1.245f), piece(1.235f), piece(1.235f)), step = 1f)
+        assertEquals("shown, then refit to 1.245 m, then to 1.235 m", listOf(3, 3, 3, 2, 2), shown.map { it.size })
+    }
+
+    @Test
+    fun `a wall whose plane ARCore merges into another keeps its verdict`() {
+        // Shown up to 1.33 m, refit to 1.27 m: held. ARCore then merges it into a plane of
+        // another id, the same outline: the wall it was still stands, held as before.
+        fun piece(id: Int, at: Float) = listOf(front, left, plane(id, -1f, -1f, 0.5f, -1f, top = at))
+        val frames = listOf(piece(24, 1.33f), piece(24, 1.27f)) + List(4) { piece(25, 1.27f) }
+        assertSteady("merged under another id", frames, step = 1f, walls = 3)
+        // A plane that never stood is no wall for being merged: short of standing height, it stays out.
+        val ids = idsOver(listOf(piece(24, 1.27f), piece(25, 1.27f)), step = 1f)
+        assertEquals("never shown", listOf(2, 2), ids.map { it.size })
+    }
+
+    @Test
+    fun `the walls follow the floor when it moves under the same planes`() {
+        val source = PlaneWallSource()
+        assertEquals(2, source.update(listOf(front, left), floorY, time = 1f).walls.size)
+        // The same planes, the floor found 1.1 m higher: they rise short of standing height.
+        val moved = source.update(listOf(front, left), floorY + 1.1f, time = 2f)
+        assertEquals("the floor the snapshot stands on", floorY + 1.1f, moved.floorY, 0f)
+        assertEquals("walls over the new floor", 0, moved.walls.size)
+    }
+
+    @Test
     fun `a plane refit across the length's threshold keeps its wall`() {
         val seen = WallRules.MIN_SEEN_M
         fun piece(length: Float) = listOf(front, left, plane(24, -1f, -1f, -1f + length, -1f, top = 1.8f))

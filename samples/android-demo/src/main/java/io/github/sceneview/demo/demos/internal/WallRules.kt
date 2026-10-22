@@ -17,8 +17,8 @@ class WallFamily(val direction: Float, val weight: Float, val square: Boolean)
 
 /**
  * What makes a vertical surface a wall for the live walls ([PlaneWallSource], shared by 3D Scan and
- * Measure), on the room survey's terms. The survey ([RoomSurveyor]) does not call these rules: it
- * reads the depth cloud on a grid, not planes. What they share is its thresholds — how high a wall
+ * Measure), on the room survey's terms. The survey ([RoomSurveyor]) does not call these rules: its
+ * structure engine reads the depth cloud's walls as lines, not planes. What they share is its thresholds — how high a wall
  * rises ([MIN_TOP_M]), how much of its height is seen ([MIN_SPAN_M]), how long it is seen
  * ([MIN_SEEN_M], [OBLIQUE_MIN_SEEN_M]), how much lower furniture is ([FURNITURE_UNDER_M]) — and a
  * wall seen only above furniture is a wall for both. Where a plane can say more than a depth cell,
@@ -49,7 +49,10 @@ object WallRules {
     /** A wall off the room's square needs this much seen, the survey's [RoomSurveyor.OBLIQUE_MIN_M]: a short slanted piece is furniture. */
     const val OBLIQUE_MIN_SEEN_M = RoomSurveyor.OBLIQUE_MIN_M
 
-    /** Lower than the wall behind it by more than this, it is furniture: [RoomSurveyor.FURNITURE_UNDER_M]. */
+    /**
+     * Lower than the wall behind it by more than this, it is furniture: [RoomSurveyor.FURNITURE_UNDER_M].
+     * Strictly more, as the survey's structure engine cuts: exactly this much lower is still a wall.
+     */
     const val FURNITURE_UNDER_M = RoomSurveyor.FURNITURE_UNDER_M
 
     /** Two walls further apart than this in direction are two of the room's directions. */
@@ -58,7 +61,14 @@ object WallRules {
     /** A direction this close to square with the room's main axis is square. */
     const val SNAP_DEGREES = 7f
 
-    /** Two near-parallel fits whose lines are this close are one wall seen twice. */
+    /**
+     * Two near-parallel fits whose lines are this close are one wall seen twice. The live walls'
+     * own, wider than the survey's 0.3 m between layers of one wall (`WallLines.WALL_MERGE_M`): ARCore
+     * fitted one wall twice 0.30 m apart, and a plane hanging 0.35 m before a wall along it, upper
+     * cabinets' fronts, is that wall rather than one of its own (at 0.3 m, the replayed kitchen shows
+     * five walls for four). Two real walls 0.3 to 0.5 m apart, parallel and along each other, a thin
+     * partition's two faces, read as one.
+     */
     const val DUPLICATE_M = 0.5f
 
     /** Furniture stands this far before a wall, at most: further, it is a wall of its own. */
@@ -80,8 +90,12 @@ object WallRules {
     /** How far a shard's ends, or a side's, may be off the line they sit on. */
     const val ASIDE_M = 0.3f
 
-    /** A gap along a wall no longer than this, between a shard and the wall, was not seen yet. */
-    const val SHARD_GAP_M = 0.6f
+    /**
+     * A gap along a wall no longer than this, between a shard and the wall, was not seen yet: the
+     * same as between two pieces on one line ([PlaneWallSource.SAME_WALL_GAP_M]). The survey's
+     * structure engine lets the shards of a line stand up to 1 m apart; the live walls keep one gap.
+     */
+    const val SHARD_GAP_M = PlaneWallSource.SAME_WALL_GAP_M
 
     /** Furniture's side, from its front back to the wall, is no longer than this. */
     const val SIDE_MAX_M = 1.3f
@@ -224,7 +238,7 @@ object WallRules {
 
     /**
      * Whether [side] is the side of furniture [front] standing before the wall [behind]: short,
-     * square to the front, lower than the wall, one end on the front's line by its end and the
+     * square to the front, lower than the wall by more than [FURNITURE_UNDER_M], one end on the front's line by its end and the
      * other on the wall's. [wasFurniture] holds the last verdict, as for [standsBefore].
      */
     fun isSideOf(side: Segment, front: Segment, behind: Segment, wasFurniture: Boolean? = null): Boolean {

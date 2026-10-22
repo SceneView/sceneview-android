@@ -75,4 +75,11 @@
     <string name="scan_rescan_action">Re-scan this part</string>
     <string name="scan_rescan_unavailable">Each part is framed in amber on the model and the plan. Scanning one part on its own is not available yet: scan the room again to fill them in.</string>
     <string name="scan_rescan_close">Close</string>
+    <!-- Re-scanning one part (#4736): the live guide, and the copy of the scan it completes. -->
+    <string name="scan_rescan_how">Each part is framed in amber on the model. Scan one again and it is added to a copy of this scan; this one stays as it is.</string>
+    <string name="scan_rescan_lining_up">Point at a part you scanned before so this lines up.</string>
+    <string name="scan_rescan_fill">Fill the amber frame: %1$d%%</string>
+    <string name="scan_rescan_covered">This part is covered. Save to add it to your scan.</string>
+    <string name="scan_rescan_refused">Couldn\'t line up this part. Scan it again from where you started.</string>
+    <string name="scan_rescan_merged_title">%1$s, completed</string>
 </resources>

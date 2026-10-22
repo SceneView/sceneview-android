@@ -19,6 +19,7 @@ import io.github.sceneview.demo.demos.internal.LiveWallSource
 import io.github.sceneview.demo.demos.internal.PlaneWallSource
 import io.github.sceneview.demo.demos.internal.ScanGuide
 import io.github.sceneview.demo.demos.internal.ScanTurn
+import io.github.sceneview.demo.demos.internal.WallExtent
 import io.github.sceneview.demo.demos.internal.WallMesh
 import io.github.sceneview.demo.demos.internal.lostBetween
 import io.github.sceneview.demo.demos.internal.openFloorEdges
@@ -38,8 +39,14 @@ import kotlin.math.sqrt
 internal class ScanWallsState(private val source: LiveWallSource = PlaneWallSource()) {
     val motion = LiveWallMotion()
 
+    /** The walls as drawn: the [source]'s, each cut back to the points seen on it ([WallExtent.clip]). */
     var snapshot: LiveWallSnapshot = LiveWallSnapshot.Empty
         private set
+
+    /** The [source]'s walls as it found them, before [WallExtent.clip]: what the room's edges and gauge read. */
+    private var found: LiveWallSnapshot = LiveWallSnapshot.Empty
+    private var clippedFor: Any? = null
+    private var clippedPoints = -1
 
     /** The floor edges seen with no wall on them: where the room still opens onto the unscanned. */
     var openEdges: List<FloatArray> = emptyList()
@@ -63,6 +70,13 @@ internal class ScanWallsState(private val source: LiveWallSource = PlaneWallSour
     var turn by mutableStateOf<ScanTurn?>(null)
         private set
 
+    /**
+     * The phone faces a wall the scan has seen only part of ([WallExtent.facingUnfinished]): the
+     * HUD asks to move along it, which is how a wall gets finished.
+     */
+    var facingUnfinished by mutableStateOf(false)
+        private set
+
     private var extentFor: List<Pair<Float, Float>>? = null
     private var gridVersion = -1
 
@@ -75,12 +89,35 @@ internal class ScanWallsState(private val source: LiveWallSource = PlaneWallSour
      * has no camera pose for that long, and the first frame after the gap is not tracked
      * ([lostBetween]); the walls skip it. How long since the last frame observed says nothing.
      */
-    fun observe(frame: ArDebugFrame, coverage: ScanCoverageState, pose: DebugPose?, record: ArDebugTrace? = coverage.recorded) {
+    @Suppress("LongParameterList") // the frame, its coverage, the phone, and the two point sources
+    fun observe(
+        frame: ArDebugFrame,
+        coverage: ScanCoverageState,
+        pose: DebugPose?,
+        record: ArDebugTrace? = coverage.recorded,
+        dense: FloatArray? = null,
+    ) {
         val tracking = record?.lostBetween(observedAt, frame.time) != true
         observedAt = frame.time
         val next = source.update(frame, tracking)
-        val wallsChanged = next !== snapshot
-        snapshot = next
+        val wallsChanged = next !== found
+        found = next
+        // Cut back to the points seen on each wall: again when the walls or the points change.
+        val points = frame.mapPointCount
+        if (wallsChanged || dense !== clippedFor || points != clippedPoints) {
+            clippedFor = dense
+            clippedPoints = points
+            val clouds = listOfNotNull(frame.mapPoints, dense)
+            val walls = WallExtent.clip(next.walls, clouds, next.floorY, next.height)
+            val drawn = if (walls === next.walls) next else next.copy(walls = walls)
+            if (drawn.walls != snapshot.walls || drawn.floorY != snapshot.floorY || drawn.height != snapshot.height ||
+                drawn.ceilingSeen != snapshot.ceilingSeen
+            ) {
+                snapshot = drawn
+            }
+        }
+        val facing = WallExtent.facingUnfinished(pose, next.walls, snapshot.walls) != null
+        if (facing != facingUnfinished) facingUnfinished = facing
         if (wallsChanged || coverage.extent !== extentFor || coverage.grid.version != gridVersion) {
             extentFor = coverage.extent
             gridVersion = coverage.grid.version
@@ -101,6 +138,10 @@ internal class ScanWallsState(private val source: LiveWallSource = PlaneWallSour
         source.reset()
         motion.reset()
         snapshot = LiveWallSnapshot.Empty
+        found = LiveWallSnapshot.Empty
+        clippedFor = null
+        clippedPoints = -1
+        facingUnfinished = false
         openEdges = emptyList()
         cueEdge = null
         extentFor = null

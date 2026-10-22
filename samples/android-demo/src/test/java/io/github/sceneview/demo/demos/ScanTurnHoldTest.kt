@@ -21,7 +21,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * The turn a room's scan points to ("Turn left — no wall seen there yet") changes only once the
+ * The turn a room's scan points to ("Turn left — no wall yet at the dashed line") changes only once the
  * turn has left the side shown for a few seconds in a row, to the latest side: facing a wall, the
  * next gap's side flips with every small sway of the phone, and a hint that flips back and forth
  * says nothing. The live screen holds the turn once, for the arrow and the coaching line alike.
