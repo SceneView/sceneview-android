@@ -241,6 +241,7 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
     LaunchedEffect(engine, materialLoader) { warmUpReplay(engine, materialLoader) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    ForgetRoomSurveysOnExit()
     // Replay a recorded ARCore dataset when the device-QA harness deep-links this demo
     // with `--es ar_playback_file <path>` (#1576): that harness drives the live path.
     val arPlaybackDataset = rememberArPlaybackDataset()
@@ -570,14 +571,15 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
             }
         }
     }
-    // A room of the home just saved: kept in the summary, then measured off the main thread.
+    // A room of the home just saved: kept in the summary, then measured off the main thread, by
+    // the same measure the export sheet and the plan wait on for this scan.
     val onRoomSaved = { scan: RerunReplayMedia, title: String, id: String? ->
         sessionsVersion++
         val number = home.nextNumber
         home = home.add(id, title)
         val measuring = home.id
         scope.launch {
-            val survey = withContext(Dispatchers.Default) { surveyOf(scan) }
+            val survey = measureRoom(scan)
             // A new home started meanwhile: this survey is the old one's, never the new Room's.
             home = home.measuredIn(measuring, number, survey)
         }
@@ -1432,6 +1434,8 @@ private fun RerunLiveScreen(
     val scanCoverage = remember(scanMedia) { ScanCoverageState() }
     // A room's walls, recognised as it is scanned (#4540): Room and Home only.
     val scanWalls = remember(scanMedia, scanScope) { if (scanScope.hasFloorPlan) ScanWallsState() else null }
+    // The turn to its next gap, held once: the arrow and the coaching line change together.
+    val heldTurn = rememberHeld(scanWalls?.turn)
     // Tapped open, the live map is the map to complete (#4718).
     var scanMapExpanded by remember(scanMedia) { mutableStateOf(false) }
     // The phone now, written each AR frame (#4718): paused, the trace records nothing, and the
@@ -1707,6 +1711,11 @@ private fun RerunLiveScreen(
         qaLong != null -> qaLong?.shownCount ?: 0
         else -> stats.mapPoints
     }
+    // Points still rising are a scan at work, whatever the floor's coverage says: the top line
+    // and the coaching line both read it.
+    val pointsRising = rememberPointsRising(capturedPoints) {
+        scan?.elapsedSeconds() ?: qaLong?.shownSeconds ?: stats.duration
+    }
     // #4717: whether the surface in view gives too little to read, and whether the photos ran
     // out. Plain fields of the scan, read on the HUD's tick.
     val lowTexture by produceState(false, scan, qaLong) {
@@ -1728,7 +1737,7 @@ private fun RerunLiveScreen(
             delay(HUD_TICK_MS)
         }
     }
-    // The photo limit is said once, in the coaching line, then stays as a small HUD line.
+    // The photo limit is said once, in the coaching line, and not again.
     var photoNoticeOver by remember(scanMedia) { mutableStateOf(false) }
     LaunchedEffect(photoLimitReached) {
         if (photoLimitReached && !photoNoticeOver) {
@@ -1771,7 +1780,6 @@ private fun RerunLiveScreen(
                     seconds = scan?.elapsedSeconds(now) ?: qaLong?.shownSeconds ?: stats.duration,
                     points = capturedPoints,
                     label = ScanScopeCopy.label(scanScope, roomNumber),
-                    photoLimit = photoLimitReached && photoNoticeOver,
                     activity = ScanActivity.of(
                         phase = phase,
                         trackingLost = trackingLost,
@@ -1779,6 +1787,7 @@ private fun RerunLiveScreen(
                         lowTexture = lowTexture,
                         depthStarved = depthStarved,
                         done = scanWalls?.done == true,
+                        pointsRising = pointsRising,
                     ),
                     room = scanWalls,
                 )
@@ -1896,10 +1905,11 @@ private fun RerunLiveScreen(
                                     coach = scanCoverage.coachLine,
                                     lowTexture = lowTexture,
                                     depthStarved = depthStarved,
+                                    pointsRising = pointsRising,
                                 ),
                                 nextRoom = roomNumber.takeIf { betweenRooms },
                                 walls = scanWalls?.wallCount,
-                                turn = scanWalls?.turn,
+                                turn = heldTurn,
                                 done = scanWalls?.done == true,
                                 facingWall = scanCoverage.facingWall,
                             ),
@@ -2065,6 +2075,7 @@ private fun RerunLiveScreen(
                     livePose = scanLivePose,
                     saving = phase == ScanPhase.Saving,
                     walls = scanWalls,
+                    turn = heldTurn,
                     reviewing = phase == ScanPhase.Reviewing,
                 )
             }
