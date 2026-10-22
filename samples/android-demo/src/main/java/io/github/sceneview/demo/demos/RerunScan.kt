@@ -18,6 +18,7 @@ import io.github.sceneview.demo.demos.internal.DepthBackProjection
 import io.github.sceneview.demo.demos.internal.DepthFrame
 import io.github.sceneview.demo.demos.internal.DepthFreshness
 import io.github.sceneview.demo.demos.internal.DepthIntake
+import io.github.sceneview.demo.demos.internal.DepthWindow
 import io.github.sceneview.demo.demos.internal.DepthIntake.Outcome
 import io.github.sceneview.demo.demos.internal.IntervalGate
 import io.github.sceneview.demo.demos.internal.KeyframeGate
@@ -117,7 +118,8 @@ internal class ScanCapture private constructor(
     private var fuseJob: Job? = null
     // The final model's TSDF, fed the same depth copies on its own worker (RerunModelUi.kt).
     private val model = if (rawDepth) RerunLiveModel(preset) else null
-    private var lastDepthNanos: Long? = null
+    // Which depth estimate was taken last, and how long the scan has waited for one.
+    private val depthWindow = DepthWindow()
     private var loggedSizes = false
     private val logGate = IntervalGate(LOG_INTERVAL_NS)
     private val verdictCounts = IntArray(DepthFreshness.Verdict.entries.size)
@@ -137,10 +139,6 @@ internal class ScanCapture private constructor(
 
     // Why depth frames did or did not grow the map, logged every two seconds for a device run.
     private val intake = DepthIntake()
-
-    // The last frame seen, and the last that brought fresh depth (or the first frame): [depthStarved].
-    @Volatile private var lastFrameNanos = 0L
-    @Volatile private var depthSeenFromNanos = 0L
 
     /**
      * The HUD's clock, from when Record started on the monotonic clock (see [elapsedSeconds]). It
@@ -170,13 +168,14 @@ internal class ScanCapture private constructor(
     val lowTexture: Boolean get() = !depthStarved && (dense?.confidence ?: trace.pointConfidence)?.lowTexture == true
 
     /**
-     * A depth scan that has had no fresh depth for [DEPTH_STARVED_NANOS] (#4540): ARCore gives
-     * none, or none the scan can use, so nothing is fused whatever the phone points at. The real
-     * cause of a count frozen at zero — which read as "this surface has little texture" in front
-     * of a parquet floor, because a starved confidence gate looks like a blank surface.
+     * A depth scan that has had no depth to fuse for [DepthFreshness.STARVED_AFTER_NANOS] (#4540):
+     * ARCore gives none, so nothing is fused whatever the phone points at. The real cause of a
+     * count frozen at zero — which read as "this surface has little texture" in front of a parquet
+     * floor, because a starved confidence gate looks like a blank surface. Depth that ARCore hands
+     * over late no longer starves the scan ([DepthWindow]).
      */
     val depthStarved: Boolean
-        get() = dense != null && depthSeenFromNanos != 0L && lastFrameNanos - depthSeenFromNanos > DEPTH_STARVED_NANOS
+        get() = dense != null && depthWindow.starved
 
     /** What the coaching line says of the dense map now: fine, adjusting its detail, or full. */
     val denseDetail: ScanDetail get() = dense?.detail() ?: ScanDetail.Fine
@@ -271,15 +270,12 @@ internal class ScanCapture private constructor(
 
     /**
      * ARCore's raw depth of [frame] when it holds a new estimate, at most
-     * [DepthFreshness.MAX_AGE_NANOS] behind the frame and not fused already ([DepthFreshness]),
-     * and no fusion is running; `null` otherwise, or without [rawDepth]. Close it this frame.
+     * [DepthFreshness.MAX_AGE_NANOS] behind the frame and not fused already ([DepthFreshness]) —
+     * or past that window once none has come for a while ([DepthWindow]) — and no fusion is
+     * running; `null` otherwise, or without [rawDepth]. Close it this frame.
      */
     fun acquireDepth(frame: Frame): ScanDepth? {
-        // The wait for depth starts again after a gap — a pause, tracking lost: no frame came, so
-        // no depth could, and "No depth yet" flashed on resuming.
-        val gap = lastFrameNanos != 0L && frame.timestamp - lastFrameNanos > FRAME_GAP_NANOS
-        lastFrameNanos = frame.timestamp
-        if (depthSeenFromNanos == 0L || gap) depthSeenFromNanos = frame.timestamp
+        depthWindow.frame(frame.timestamp)
         if (dense == null || !depthGate.isDue(frame.timestamp)) return null
         if (fusing.get()) {
             intake.count(Outcome.Busy)
@@ -294,15 +290,13 @@ internal class ScanCapture private constructor(
         }
         // Before the gate, so a device log says what the scan sees even when it fuses nothing.
         logSizesOnce(depth, frame.timestamp)
-        val verdict = DepthFreshness.judge(frame.timestamp, depth.timestamp, lastDepthNanos)
+        val verdict = DepthFreshness.judge(frame.timestamp, depth.timestamp, depthWindow.lastTakenNanos)
         logVerdict(verdict, frame.timestamp, depth.timestamp)
-        if (verdict != DepthFreshness.Verdict.FRESH) {
+        if (!depthWindow.take(verdict, frame.timestamp, depth.timestamp)) {
             intake.count(Outcome.Stale)
             depth.close()
             return null
         }
-        lastDepthNanos = depth.timestamp
-        depthSeenFromNanos = frame.timestamp
         depthGate.mark(frame.timestamp)
         val confidence = runCatching { frame.acquireRawDepthConfidenceImage() }.getOrNull()
         return ScanDepth(depth, confidence, frame.camera.pose.toScanPose(), frame.timestamp)
@@ -347,7 +341,11 @@ internal class ScanCapture private constructor(
         } + listOfNotNull(
             unavailableReason?.takeIf { unavailableCount > 0 }?.let { "unavailable $unavailableCount ($it)" },
         )
-        Log.i(LOG_TAG, "depth verdicts: ${counts.joinToString()}; points $denseCount")
+        Log.i(
+            LOG_TAG,
+            "depth verdicts: ${counts.joinToString()}; late taken ${depthWindow.lateTaken}" +
+                "${if (depthWindow.late) " (late now)" else ""}; points $denseCount",
+        )
         verdictCounts.fill(0)
         unavailableCount = 0
     }
@@ -492,11 +490,6 @@ internal class ScanCapture private constructor(
         /** 100 ms between two fused depth keyframes. */
         const val DEPTH_INTERVAL_NS = 100_000_000L
 
-        /** Two seconds without fresh depth: twenty missed keyframes, not a hiccup. */
-        const val DEPTH_STARVED_NANOS = 2_000_000_000L
-
-        /** Longer than this between two tracked frames, the scan was paused or lost track. */
-        const val FRAME_GAP_NANOS = 500_000_000L
 
         /** `adb logcat -s RerunScan`: the depth verdicts every second, the intake every two. */
         private const val LOG_TAG = "RerunScan"
