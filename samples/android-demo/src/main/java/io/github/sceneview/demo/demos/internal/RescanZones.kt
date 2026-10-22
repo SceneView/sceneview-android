@@ -5,6 +5,7 @@ import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 /*
@@ -255,8 +256,274 @@ object RescanZones {
     const val EDGE_TOLERANCE_M = 0.02f
 
     /** The zones of [input]. */
-    @Suppress("UnusedParameter", "UNUSED_PARAMETER")
-    fun find(input: RescanInput): List<RescanZone> = emptyList()
+    fun find(input: RescanInput): List<RescanZone> {
+        val walls = wallZones(input)
+        val floor = floorZones(input)
+        val kept = floor.filter { zone ->
+            val area = zone.footprintM2
+            area <= 0f || walls.none { zone.overlapM2(it.box) >= ABSORB_SHARE * area }
+        }
+        return walls.sortedByDescending { it.size } +
+            kept.filter { it.kind == RescanKind.FloorHole }.sortedByDescending { it.size } +
+            kept.filter { it.kind == RescanKind.LowDensity }.sortedByDescending { it.size }
+    }
+
+    private fun wallZones(input: RescanInput): List<RescanZone> = buildList {
+        for (wall in input.walls) {
+            val length = wall.length
+            if (length < MIN_WALL_RUN_M) continue
+            val runs = if (wall.inferred) {
+                listOf(0f..length)
+            } else {
+                wall.unseen.map { it.start.coerceIn(0f, length)..it.endInclusive.coerceIn(0f, length) }
+            }
+            for (run in runs) {
+                val span = run.endInclusive - run.start
+                if (span < MIN_WALL_RUN_M) continue
+                val ux = (wall.bx - wall.ax) / length
+                val uz = (wall.bz - wall.az) / length
+                val x0 = wall.ax + ux * run.start
+                val z0 = wall.az + uz * run.start
+                val x1 = wall.ax + ux * run.endInclusive
+                val z1 = wall.az + uz * run.endInclusive
+                val box = floatArrayOf(
+                    min(x0, x1) - WALL_HALF_M, input.floorY, min(z0, z1) - WALL_HALF_M,
+                    max(x0, x1) + WALL_HALF_M, input.floorY + input.height, max(z0, z1) + WALL_HALF_M,
+                )
+                val reason = if (wall.inferred) {
+                    String.format(Locale.ROOT, "No wall was seen along these %.1f m: it is drawn from its neighbours.", span)
+                } else {
+                    String.format(Locale.ROOT, "%.1f m of this wall was never seen.", span)
+                }
+                add(RescanZone(RescanKind.MissingWall, box, span, reason))
+            }
+        }
+    }
+
+    @Suppress("CyclomaticComplexMethod", "LongMethod")
+    private fun floorZones(input: RescanInput): List<RescanZone> {
+        val coverage = input.coverage
+        val holes = input.holes.filter { it.area > 0f }
+        if (coverage == null) return holes.filter { it.area >= MIN_HOLE_M2 }.map { holeZone(input, listOf(it)) }
+        val columns = coverage.columns
+        val rows = coverage.rows
+        val inside = insideMask(coverage, outlineOf(input.walls))
+        val covered = (0 until columns * rows).filter { inside[it] && coverage.density[it] > 0f }
+            .map { coverage.density[it] }
+        if (covered.isEmpty()) return holes.filter { it.area >= MIN_HOLE_M2 }.map { holeZone(input, listOf(it)) }
+        val median = covered.sorted()[covered.size / 2]
+        val low = LOW_SHARE * median
+        val empty = EMPTY_SHARE * median
+
+        // The holes: the cells each covers, and whether something stands on it.
+        val holeOf = IntArray(columns * rows) { -1 }
+        val holeCells = holes.map { cellsOf(coverage, it) }
+        val standing = BooleanArray(holes.size) { h ->
+            val cells = holeCells[h]
+            cells.isNotEmpty() && cells.map { coverage.density[it] }.sorted()[cells.size / 2] >= low
+        }
+        holes.indices.filter { !standing[it] }.forEach { h -> holeCells[h].forEach { holeOf[it] = h } }
+        val held = BooleanArray(columns * rows)
+        holes.indices.filter { standing[it] }.forEach { h -> holeCells[h].forEach { held[it] = true } }
+
+        val short = BooleanArray(columns * rows) {
+            inside[it] && (holeOf[it] >= 0 || (!held[it] && coverage.density[it] < low))
+        }
+        val seen = BooleanArray(columns * rows)
+        val used = BooleanArray(holes.size)
+        val zones = ArrayList<RescanZone>()
+        val stack = ArrayDeque<Int>()
+        for (start in 0 until columns * rows) {
+            if (!short[start] || seen[start]) continue
+            // One patch: the short cells that touch, side by side.
+            val patch = ArrayList<Int>()
+            seen[start] = true
+            stack.addLast(start)
+            while (stack.isNotEmpty()) {
+                val at = stack.removeLast()
+                patch += at
+                val c = at % columns
+                val r = at / columns
+                for ((dc, dr) in NEIGHBOURS) {
+                    val nc = c + dc
+                    val nr = r + dr
+                    if (nc !in 0 until columns || nr !in 0 until rows) continue
+                    val next = nr * columns + nc
+                    if (short[next] && !seen[next]) {
+                        seen[next] = true
+                        stack.addLast(next)
+                    }
+                }
+            }
+            val emptyCells = patch.filter { coverage.density[it] < empty || holeOf[it] >= 0 }
+            val patchHoles = patch.map { holeOf[it] }.filter { it >= 0 }.distinct()
+            patchHoles.forEach { used[it] = true }
+            if (emptyCells.size >= HOLE_EMPTY_SHARE * patch.size) {
+                val zone = if (patchHoles.isNotEmpty()) {
+                    holeZone(input, patchHoles.map { holes[it] })
+                } else {
+                    cellsZone(input, coverage, emptyCells, RescanKind.FloorHole, emptyCells.size * cellArea(coverage))
+                }
+                if (zone.size >= MIN_HOLE_M2) zones += zone
+            } else {
+                val area = patch.size * cellArea(coverage)
+                if (area >= MIN_LOW_M2) {
+                    val share = patch.sumOf { coverage.density[it].toDouble() }.toFloat() / patch.size / median
+                    zones += cellsZone(input, coverage, patch, RescanKind.LowDensity, area, share)
+                }
+            }
+        }
+        // A hole no patch took — by a wall, or where the coverage has no cell inside — stands alone.
+        holes.indices.filter { !used[it] && !standing[it] && holes[it].area >= MIN_HOLE_M2 }
+            .forEach { zones += holeZone(input, listOf(holes[it])) }
+        return zones
+    }
+
+    private fun cellArea(coverage: RescanCoverage) = coverage.cellM * coverage.cellM
+
+    /** A floor hole zone over [holes]: their bounds, their summed area. */
+    private fun holeZone(input: RescanInput, holes: List<RescanHole>): RescanZone {
+        val box = floatArrayOf(Float.MAX_VALUE, input.floorY, Float.MAX_VALUE, -Float.MAX_VALUE, input.floorY + FLOOR_ZONE_H_M, -Float.MAX_VALUE)
+        for (hole in holes) {
+            val b = hole.bounds()
+            box[0] = min(box[0], b[0])
+            box[2] = min(box[2], b[1])
+            box[3] = max(box[3], b[2])
+            box[5] = max(box[5], b[3])
+        }
+        val area = holes.sumOf { it.area.toDouble() }.toFloat()
+        return RescanZone(RescanKind.FloorHole, box, area, holeReason(area))
+    }
+
+    private fun holeReason(area: Float) =
+        String.format(Locale.ROOT, "About %.1f m² of floor was never seen, and nothing stands on it.", area)
+
+    /** A floor zone over the coverage [cells]. */
+    private fun cellsZone(
+        input: RescanInput,
+        coverage: RescanCoverage,
+        cells: List<Int>,
+        kind: RescanKind,
+        area: Float,
+        share: Float = 0f,
+    ): RescanZone {
+        var c0 = Int.MAX_VALUE
+        var r0 = Int.MAX_VALUE
+        var c1 = Int.MIN_VALUE
+        var r1 = Int.MIN_VALUE
+        for (at in cells) {
+            c0 = min(c0, at % coverage.columns)
+            c1 = max(c1, at % coverage.columns)
+            r0 = min(r0, at / coverage.columns)
+            r1 = max(r1, at / coverage.columns)
+        }
+        val box = floatArrayOf(
+            coverage.originX + c0 * coverage.cellM, input.floorY, coverage.originZ + r0 * coverage.cellM,
+            coverage.originX + (c1 + 1) * coverage.cellM, input.floorY + FLOOR_ZONE_H_M, coverage.originZ + (r1 + 1) * coverage.cellM,
+        )
+        val reason = when (kind) {
+            RescanKind.LowDensity -> String.format(
+                Locale.ROOT,
+                "Only sparsely seen: about %d %% of the room's usual density over %.1f m².",
+                (share * PERCENT).roundToInt(),
+                area,
+            )
+            else -> holeReason(area)
+        }
+        return RescanZone(kind, box, area, reason)
+    }
+
+    /** The coverage cells whose centres lie in [hole], else the one under its middle. */
+    private fun cellsOf(coverage: RescanCoverage, hole: RescanHole): List<Int> {
+        val b = hole.bounds()
+        val c0 = floor((b[0] - coverage.originX) / coverage.cellM).toInt().coerceAtLeast(0)
+        val c1 = floor((b[2] - coverage.originX) / coverage.cellM).toInt().coerceAtMost(coverage.columns - 1)
+        val r0 = floor((b[1] - coverage.originZ) / coverage.cellM).toInt().coerceAtLeast(0)
+        val r1 = floor((b[3] - coverage.originZ) / coverage.cellM).toInt().coerceAtMost(coverage.rows - 1)
+        val cells = ArrayList<Int>()
+        for (r in r0..r1) {
+            for (c in c0..c1) {
+                val x = coverage.originX + (c + HALF) * coverage.cellM
+                val z = coverage.originZ + (r + HALF) * coverage.cellM
+                if (hole.contains(x, z)) cells += r * coverage.columns + c
+            }
+        }
+        if (cells.isEmpty()) {
+            coverage.cellOf((b[0] + b[2]) / 2f, (b[1] + b[3]) / 2f)?.let { cells += it[1] * coverage.columns + it[0] }
+        }
+        return cells
+    }
+
+    /**
+     * The room's outline from [walls] when they chain end to start into a closed loop
+     * (`[x0, z0, x1, z1, …]`), `null` otherwise.
+     */
+    internal fun outlineOf(walls: List<RescanWall>): FloatArray? {
+        if (walls.size < MIN_WALLS) return null
+        val outline = FloatArray(walls.size * 2)
+        for ((i, wall) in walls.withIndex()) {
+            val next = walls[(i + 1) % walls.size]
+            if (abs(wall.bx - next.ax) > CHAIN_GAP_M || abs(wall.bz - next.az) > CHAIN_GAP_M) return null
+            outline[i * 2] = wall.ax
+            outline[i * 2 + 1] = wall.az
+        }
+        return outline
+    }
+
+    /**
+     * The cells inside the room: those whose corners, drawn [EDGE_TOLERANCE_M] in, all lie in
+     * [outline]; without one, the covered cells' filled footprint less its rim of one cell.
+     */
+    private fun insideMask(coverage: RescanCoverage, outline: FloatArray?): BooleanArray {
+        val columns = coverage.columns
+        val rows = coverage.rows
+        if (outline != null) {
+            val t = EDGE_TOLERANCE_M
+            val m = coverage.cellM
+            return BooleanArray(columns * rows) { at ->
+                val x0 = coverage.originX + (at % columns) * m
+                val z0 = coverage.originZ + (at / columns) * m
+                insidePolygon(outline, x0 + t, z0 + t) && insidePolygon(outline, x0 + m - t, z0 + t) &&
+                    insidePolygon(outline, x0 + t, z0 + m - t) && insidePolygon(outline, x0 + m - t, z0 + m - t)
+            }
+        }
+        // Outside is what the grid's edge reaches without crossing a covered cell.
+        val outside = BooleanArray(columns * rows)
+        val stack = ArrayDeque<Int>()
+        fun push(c: Int, r: Int) {
+            if (c !in 0 until columns || r !in 0 until rows) return
+            val at = r * columns + c
+            if (outside[at] || coverage.density[at] > 0f) return
+            outside[at] = true
+            stack.addLast(at)
+        }
+        for (c in 0 until columns) {
+            push(c, 0)
+            push(c, rows - 1)
+        }
+        for (r in 0 until rows) {
+            push(0, r)
+            push(columns - 1, r)
+        }
+        while (stack.isNotEmpty()) {
+            val at = stack.removeLast()
+            for ((dc, dr) in NEIGHBOURS) push(at % columns + dc, at / columns + dr)
+        }
+        return BooleanArray(columns * rows) { at ->
+            val c = at % columns
+            val r = at / columns
+            !outside[at] && NEIGHBOURS.all { (dc, dr) ->
+                val nc = c + dc
+                val nr = r + dr
+                nc in 0 until columns && nr in 0 until rows && !outside[nr * columns + nc]
+            }
+        }
+    }
+
+    private const val HALF = 0.5f
+    private const val PERCENT = 100f
+    private const val MIN_WALLS = 3
+    private val NEIGHBOURS = listOf(1 to 0, -1 to 0, 0 to 1, 0 to -1)
 }
 
 /** Whether `(x, z)` lies inside the closed [polygon] `[x0, z0, x1, z1, …]` (even-odd rule). */
