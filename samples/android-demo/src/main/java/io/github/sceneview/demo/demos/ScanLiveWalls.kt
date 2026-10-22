@@ -18,6 +18,7 @@ import io.github.sceneview.demo.demos.internal.LiveWallSource
 import io.github.sceneview.demo.demos.internal.PlaneWallSource
 import io.github.sceneview.demo.demos.internal.ScanGuide
 import io.github.sceneview.demo.demos.internal.ScanTurn
+import io.github.sceneview.demo.demos.internal.TRACE_LOST_AFTER_S
 import io.github.sceneview.demo.demos.internal.WallMesh
 import io.github.sceneview.demo.demos.internal.openFloorEdges
 import io.github.sceneview.demo.demos.internal.update
@@ -64,8 +65,15 @@ internal class ScanWallsState(private val source: LiveWallSource = PlaneWallSour
     private var extentFor: List<Pair<Float, Float>>? = null
     private var gridVersion = -1
 
+    /** The trace time of the last frame observed, seconds; `NaN` before the first. */
+    private var observedAt = Float.NaN
+
     fun observe(frame: ArDebugFrame, coverage: ScanCoverageState, pose: DebugPose?) {
-        val next = source.update(frame)
+        // The recorder writes nothing while ARCore has lost tracking: the trace's time stops, then
+        // jumps on. A frame that far from the last is the first after a loss, which the walls skip.
+        val tracking = !(frame.time - observedAt > TRACE_LOST_AFTER_S)
+        observedAt = frame.time
+        val next = source.update(frame, tracking)
         val wallsChanged = next !== snapshot
         snapshot = next
         if (wallsChanged || coverage.extent !== extentFor || coverage.grid.version != gridVersion) {
@@ -92,6 +100,7 @@ internal class ScanWallsState(private val source: LiveWallSource = PlaneWallSour
         cueEdge = null
         extentFor = null
         gridVersion = -1
+        observedAt = Float.NaN
         wallCount = 0
         completion = 0f
         done = false

@@ -71,7 +71,8 @@ interface LiveWallSource {
     /**
      * The walls recognised from [planes], over a floor at [floorY], at [time] seconds. Called each
      * frame: cheap when nothing changed, and the same snapshot instance while the walls do not.
-     * [tracking] is whether ARCore tracks the camera at [time]: `false` while it has lost it.
+     * [tracking] is whether ARCore tracks the camera at [time]: `false` while it has lost it, and
+     * the walls stay as they are, the time lost not counted towards a release.
      */
     fun update(planes: List<LivePlane>, floorY: Float, time: Float, tracking: Boolean = true): LiveWallSnapshot
 
@@ -87,8 +88,9 @@ interface LiveWallSource {
  * and fits of one wall a little apart, are joined into one wall; a wall is shown once seen long
  * enough along one of the room's directions and when it is not furniture before another wall; and
  * the walls are squared to the room's directions and joined at the corners they nearly meet at. A
- * wall no plane has held up for [RELEASE_S] goes. A plane ARCore refits a few centimetres across
- * one of these thresholds keeps the verdict it had ([WallRules.HOLD_M]): a wall does not flicker.
+ * wall no plane has held up for [RELEASE_S] goes, counted while ARCore tracks: through a tracking
+ * loss the walls keep their ids. A plane ARCore refits a few centimetres across one of these
+ * thresholds keeps the verdict it had ([WallRules.HOLD_M]): a wall does not flicker.
  */
 class PlaneWallSource : LiveWallSource {
     private val tracks = ArrayList<Track>()
@@ -105,6 +107,12 @@ class PlaneWallSource : LiveWallSource {
     /** A wall no plane holds up is waiting to go: the next update works it out even with the planes unchanged. */
     private var releasing = false
 
+    /** The time of the last update while ARCore tracked, seconds; `NaN` before one. */
+    private var trackedAt = Float.NaN
+
+    /** ARCore lost tracking since [trackedAt]: the time since does not count towards a wall's release. */
+    private var lost = false
+
     /**
      * The room's height, floor to ceiling in metres, measured some other way in the same session
      * (Measure's Room mode): the walls are drawn to it when no ceiling plane was seen; a ceiling
@@ -117,8 +125,24 @@ class PlaneWallSource : LiveWallSource {
         }
 
     override fun update(planes: List<LivePlane>, floorY: Float, time: Float, tracking: Boolean): LiveWallSnapshot {
+        if (!tracking) {
+            // ARCore holds its planes up again once it finds the room: until then the walls stay.
+            lost = true
+            return last
+        }
+        if (lost) {
+            // The release timers resume where they stopped: a wall waits for its plane as long as before.
+            val gap = time - trackedAt
+            if (gap > 0f) tracks.forEach { it.heldAt = min(time, it.heldAt + gap) }
+            lost = false
+        }
+        trackedAt = time
         val newKey = keyOf(planes)
-        if (newKey.contentEquals(key) && !stale && !releasing) return last
+        if (newKey.contentEquals(key) && !stale && !releasing) {
+            // The same planes hold up every wall still: none of them has started waiting to go.
+            tracks.forEach { it.heldAt = time }
+            return last
+        }
         key = newKey
         stale = false
         merge(clusters(laidOnHosts(pieces(planes, floorY, standing))), time)
@@ -143,6 +167,8 @@ class PlaneWallSource : LiveWallSource {
         last = LiveWallSnapshot.Empty
         stale = true
         releasing = false
+        trackedAt = Float.NaN
+        lost = false
     }
 
     /**
