@@ -191,7 +191,8 @@ object RoomSurveyor {
     private const val AXIS = 0.9f
     private const val REACH_M = 8f
     private const val WALL_CELL_SURFELS = 5
-    private const val WALL_CELL_SPAN_M = 0.4f
+    /** A wall cell is seen over this much of its height at least, or stands over furniture before it: [WallRules.MIN_SPAN_M] too. */
+    internal const val WALL_CELL_SPAN_M = 0.4f
     private const val WALL_FROM_M = 0.2f
     private const val INSIDE_BELOW_M = 0.3f
     private const val INSIDE_ABOVE_M = 2.2f
