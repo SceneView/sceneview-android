@@ -288,6 +288,106 @@ class RoomPlanDxfTest {
     }
 
     @Test
+    fun `its sections, tables and records are those of the R2000 file ezdxf writes`() {
+        for ((what, dxf) in drawings()) {
+            assertEquals("$what: sections", REFERENCE.sections.keys.toList(), dxf.sections.keys.toList())
+            assertEquals("$what: tables", REFERENCE.tables.keys.toList(), dxf.tables.keys.toList())
+            for ((table, records) in REFERENCE.tables) {
+                val ours = dxf.tables[table].orEmpty().mapNotNull { it.first(2)?.uppercase(Locale.ROOT) }
+                for (name in records.mapNotNull { it.first(2)?.uppercase(Locale.ROOT) } - EZDXF_ONLY) {
+                    assertTrue("$what: $table $name in $ours", name in ours)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `each record and object carries the group codes ezdxf writes for its type`() {
+        val reference = REFERENCE.codes()
+        val missing = ArrayList<String>()
+        for ((what, dxf) in drawings()) {
+            for ((section, objects) in dxf.sections) {
+                for (o in objects) {
+                    val expected = reference[section to o.type] ?: continue
+                    val wanted = if (o.type == "DIMSTYLE") expected intersect DIMSTYLE_HEAD else expected
+                    val lacks = wanted - o.pairs.map { it.first }.toSet()
+                    if (lacks.isNotEmpty()) missing += "$what: $section ${o.type} ${o.first(2).orEmpty()} lacks $lacks"
+                }
+            }
+        }
+        assertEquals(emptyList<String>(), missing)
+    }
+
+    @Test
+    fun `every owner and pointer names an object of the file`() {
+        for ((what, dxf) in drawings() + ("ezdxf" to REFERENCE)) {
+            for ((section, objects) in dxf.sections) {
+                if (section == "HEADER") continue
+                for (o in objects) {
+                    for ((code, value) in o.pairs) {
+                        if (code !in POINTERS || (code == 330 && value == "0")) continue
+                        assertNotNull("$what: ${o.type} ${o.handle} $code -> $value", dxf.byHandle[value])
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `the root dictionary names what an R2000 reader looks for, each owned where it is named`() {
+        val reference = REFERENCE.root.entries.filter { (name, _) -> name !in LATER_THAN_R2000 }
+        for ((what, dxf) in drawings()) {
+            val root = dxf.root
+            assertEquals("$what: root", reference.map { it.first }, root.entries.map { it.first })
+            for ((name, handle) in root.entries) {
+                val expected = REFERENCE.byHandle[reference.first { it.first == name }.second]!!
+                val entry = dxf.byHandle[handle]
+                assertEquals("$what: $name", expected.type, entry?.type)
+                assertEquals("$what: $name's owner", root.handle, entry?.owner)
+                val inner = expected.entries.map { (key, at) -> key to REFERENCE.byHandle[at]?.type }
+                assertEquals("$what: $name's entries", inner, entry!!.entries.map { (key, at) -> key to dxf.byHandle[at]?.type })
+                for ((key, at) in entry.entries) assertEquals("$what: $name $key's owner", handle, dxf.byHandle[at]?.owner)
+            }
+        }
+    }
+
+    @Test
+    fun `every layer plots in the Normal style that ACAD_PLOTSTYLENAME names and defaults to`() {
+        for ((what, dxf) in drawings() + ("ezdxf" to REFERENCE)) {
+            val styles = dxf.root.entries.firstOrNull { it.first == "ACAD_PLOTSTYLENAME" }?.let { dxf.byHandle[it.second] }
+            assertEquals("$what: ACAD_PLOTSTYLENAME", "ACDBDICTIONARYWDFLT", styles?.type)
+            val normal = styles!!.entries.firstOrNull { it.first == "Normal" }?.second
+            assertEquals("$what: Normal", "ACDBPLACEHOLDER", dxf.byHandle[normal]?.type)
+            assertEquals("$what: the default style", normal, styles.first(340))
+            val layers = dxf.tables["LAYER"].orEmpty()
+            assertTrue("$what: layers", layers.isNotEmpty())
+            for (layer in layers) assertEquals("$what: layer ${layer.first(2)}'s 390", normal, layer.first(390))
+        }
+    }
+
+    @Test
+    fun `each class of object it holds is declared as ezdxf declares it`() {
+        val declared = REFERENCE.objects("CLASSES", "CLASS").associateBy { it.first(1) }
+        for ((what, dxf) in drawings()) {
+            val used = dxf.objects("OBJECTS").map { it.type }.filter { it in declared }.toSet()
+            assertTrue("$what: a LAYOUT among $used", "LAYOUT" in used)
+            val classes = dxf.objects("CLASSES", "CLASS").associateBy { it.first(1) }
+            assertEquals("$what: classes", used, classes.keys)
+            for (type in used) assertEquals("$what: $type", declared[type]?.pairs, classes[type]?.pairs)
+        }
+    }
+
+    @Test
+    fun `a typed title keeps its percent signs, carets and backslashes as typed, not as DXF codes`() {
+        // %%d is a degree sign to a CAD tool, ^I a tab and \U+0041 an A, unless each is escaped.
+        val title = "Den %%d ^I C:\\plans \\U+0041"
+        val words = RoomPlanDxf.Words(listOf("$title plan") + WORDS.legend.drop(1), WORDS.door, WORDS.window, WORDS.sill)
+        val legend = dxf(room, words = words).entities("TEXT", "LEGEND").first()
+        assertEquals("Den \\U+0025\\U+0025d \\U+005EI C:\\U+005Cplans \\U+005CU+0041 plan", legend.first(1))
+        assertEquals("$title plan", legend.text)
+    }
+
+    @Test
     fun `a survey with no plan still gives a drawing, its legend alone`() {
         val dxf = dxf(RoomSurvey.empty(SurveyGap.NoWalls))
         assertEquals("AC1015", dxf.header("\$ACADVER"))
@@ -300,10 +400,33 @@ class RoomPlanDxfTest {
         wording: SurveyWording = WORDING,
         openings: List<Opening> = emptyList(),
         labels: List<String> = SurveyReport.planTexts(survey, wording).walls,
+        words: RoomPlanDxf.Words = WORDS,
     ): DxfRead {
         val out = ByteArrayOutputStream()
-        RoomPlanDxf.write(out, survey, wording, WORDS, openings, labels)
+        RoomPlanDxf.write(out, survey, wording, words, openings, labels)
         return DxfRead(out.toByteArray())
+    }
+
+    /** The drawings held to ezdxf's: metric and imperial, with openings, an L-shaped room, and no plan at all. */
+    private fun drawings() = listOf(
+        "metric" to dxf(room, openings = OPENINGS),
+        "imperial" to dxf(room, imperialWording(), OPENINGS),
+        "L-shaped" to dxf(lShape),
+        "no plan" to dxf(RoomSurvey.empty(SurveyGap.NoWalls)),
+    )
+
+    /** The group codes every object of each type carries, by its section and type; extended data left out. */
+    private fun DxfRead.codes(): Map<Pair<String, String>, Set<Int>> {
+        val codes = LinkedHashMap<Pair<String, String>, Set<Int>>()
+        for ((section, objects) in sections) {
+            if (section == "HEADER") continue
+            for (o in objects) {
+                if (o.type.isEmpty()) continue
+                val own = o.pairs.map { it.first }.filter { it < EXTENDED_DATA }.toSet()
+                codes[section to o.type] = codes[section to o.type]?.intersect(own) ?: own
+            }
+        }
+        return codes
     }
 
     /**
@@ -362,6 +485,19 @@ class RoomPlanDxfTest {
             val handle get() = first(if (type == "DIMSTYLE") 105 else 5)
             val vertices get() = all(10).zip(all(20)) { x, y -> doubleArrayOf(x.trim().toDouble(), y.trim().toDouble()) }
 
+            /** A dictionary's entries: each name and the handle it names. */
+            val entries get() = all(3).zip(all(350))
+
+            /** What owns it: its 330 outside a `102` group, such as its reactors'. */
+            val owner: String?
+                get() {
+                    var grouped = false
+                    for ((code, value) in pairs) {
+                        if (code == 102) grouped = value.startsWith("{") else if (code == 330 && !grouped) return value
+                    }
+                    return null
+                }
+
             /** The text's string, its `\U+XXXX` escapes read back. */
             val text get() = first(1)?.let { s -> ESCAPE.replace(s) { it.groupValues[1].toInt(16).toChar().toString() } }
         }
@@ -401,6 +537,25 @@ class RoomPlanDxfTest {
         fun objects(section: String, type: String? = null) =
             sections[section].orEmpty().filter { type == null || it.type == type }
 
+        /** Each table's records under its name, in the file's order. */
+        val tables: Map<String, List<Obj>> = LinkedHashMap<String, MutableList<Obj>>().also { tables ->
+            var records: MutableList<Obj>? = null
+            for (o in objects("TABLES")) {
+                when (o.type) {
+                    "TABLE" -> records = ArrayList<Obj>().also { tables[o.first(2).orEmpty()] = it }
+                    "ENDTAB" -> records = null
+                    else -> records?.add(o)
+                }
+            }
+        }
+
+        /** Every object with a handle, under it. */
+        val byHandle: Map<String, Obj> = sections.filterKeys { it != "HEADER" }.values.flatten()
+            .mapNotNull { o -> o.handle?.let { it to o } }.toMap()
+
+        /** The root dictionary: owned by nothing, it names every other one. */
+        val root get() = objects("OBJECTS").first { it.type == "DICTIONARY" && it.owner == "0" }
+
         fun entities(type: String, layer: String? = null) =
             objects("ENTITIES", type).filter { layer == null || it.layer == layer }
 
@@ -427,6 +582,42 @@ class RoomPlanDxfTest {
 
     private companion object {
         val LAYERS = listOf("WALLS", "OPENINGS", "DIMENSIONS", "TEXT", "LEGEND")
+
+        /**
+         * The empty R2000 drawing ezdxf 1.4.2 writes, `ezdxf.new("R2000").saveas("ezdxf-new-R2000.dxf")`:
+         * the structure a CAD tool expects of an AC1015 file, which this drawing is held to.
+         */
+        val REFERENCE by lazy {
+            val stream = RoomPlanDxfTest::class.java.getResourceAsStream("ezdxf-new-R2000.dxf")
+            DxfRead(requireNotNull(stream) { "ezdxf-new-R2000.dxf is not among the test resources" }.use { it.readBytes() })
+        }
+
+        /**
+         * Records ezdxf adds that this drawing has no use for: its own application, the hatch
+         * background's (no hatch here), and Defpoints, the layer a DIMENSION's points go on (none here).
+         */
+        val EZDXF_ONLY = setOf("EZDXF", "HATCHBACKGROUNDCOLOR", "DEFPOINTS")
+
+        /**
+         * Root dictionary entries ezdxf writes whatever the version, but that came after R2000:
+         * colours (2004), table styles (2005), materials and visual styles (2007), multileader
+         * styles and scale lists (2008), and ezdxf's own.
+         */
+        val LATER_THAN_R2000 = setOf(
+            "ACAD_COLOR", "ACAD_TABLESTYLE", "ACAD_MATERIAL", "ACAD_VISUALSTYLE", "ACAD_MLEADERSTYLE", "ACAD_SCALELIST", "EZDXF_META",
+        )
+
+        /**
+         * The dimension style's head, the only codes held to ezdxf's: its variables are ISO, in
+         * millimetres, and no DIMENSION entity here would use them.
+         */
+        val DIMSTYLE_HEAD = setOf(105, 330, 100, 2, 70)
+
+        /** An owner, a soft pointer, an entry, a hard owner and a plot style: each names a handle. */
+        val POINTERS = setOf(330, 340, 350, 360, 390)
+
+        /** Group codes from 1000 up carry an application's extended data. */
+        const val EXTENDED_DATA = 1000
 
         const val MILLIMETRES_PER_METRE = 1000.0
         const val INCHES_PER_METRE = 1000.0 / 25.4

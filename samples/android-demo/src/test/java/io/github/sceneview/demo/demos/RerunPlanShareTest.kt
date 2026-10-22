@@ -30,6 +30,7 @@ import io.github.sceneview.demo.R
 import io.github.sceneview.demo.demos.internal.RoomSurvey
 import io.github.sceneview.demo.demos.internal.SurveyGap
 import io.github.sceneview.demo.demos.internal.planSurvey
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -50,6 +51,7 @@ import org.robolectric.shadows.ShadowToast
 import org.robolectric.util.ReflectionHelpers
 import org.robolectric.util.ReflectionHelpers.ClassParameter
 import java.io.File
+import java.io.IOException
 import java.io.OutputStream
 import java.lang.reflect.Modifier
 import java.util.Collections
@@ -303,6 +305,18 @@ class RerunPlanShareTest {
             composeRule.waitForIdle()
             assertNull("$share: a share sheet opened", started.peekNextStartedActivity())
         }
+    }
+
+    @Test
+    fun `a file whose writing fails is not left half-written in the plan's cache`() {
+        val uri = runBlocking {
+            writePlanShare(app, "Room - floor plan.dxf") { out ->
+                out.write("  0\nSECTION\n".toByteArray())
+                throw IOException("no space left on the device")
+            }
+        }
+        assertNull("a URI to a half-written file", uri)
+        assertEquals("files left in the plan's cache", emptyList<File>(), sharedFiles())
     }
 
     @Test
