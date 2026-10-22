@@ -42,8 +42,8 @@ private const val SCENE_MODEL_DIR = "scene-detector"
 
 /**
  * The furniture detector, `null` when it cannot be had — no network for its first download
- * ([SceneModelState.Offline]), or a file that fails its check or that LiteRT will not load
- * ([SceneModelState.Unusable]): the replay then runs without it. [onState] hears where it is, on
+ * ([SceneModelState.Offline]), or a file that fails its check, that LiteRT will not load, or a
+ * device LiteRT has no library for ([SceneModelState.Unusable]): the replay then runs without it. [onState] hears where it is, on
  * the caller's dispatcher: [SceneModelState.Metered] while it waits for the user's go, the progress
  * of its download — another replay's too, when one is already downloading it —, then
  * [SceneModelState.Ready] once its interpreter is built, or why there is none.
@@ -99,9 +99,13 @@ private object ProcessDetector {
  * a metered network —, and given up on if the new copy fails too. That second copy is kept and
  * marked ([SceneModelStore.markRefetched]): a later launch tries it again, never a third download.
  * A copy that loads clears the mark ([SceneModelStore.clearRefetched]), so a file refused after
- * that is fetched once more. A device LiteRT ships no library for (32-bit x86) is no fault of the
- * file: its copy is kept, no other is fetched, and each launch runs without a detector. [abis] are
- * the device's ABIs, the one the app runs as first, as `Build.SUPPORTED_ABIS` lists them.
+ * that is fetched once more.
+ *
+ * [abis] are the device's ABIs as `Build.SUPPORTED_ABIS` lists them, the one the app runs as first.
+ * When LiteRT ships no library for that one (32-bit x86, even on a device that also translates ARM
+ * code), nothing is downloaded and no tap asked for: every replay runs without a detector
+ * ([SceneModelState.Unusable]). Should LiteRT still fail to load on another device, the file is not
+ * at fault: its copy is kept, no other is fetched, and each launch runs without a detector.
  *
  * The interpreter lives as long as the process, whose end frees it; the shares handed out close
  * nothing ([Share]), so a replay that closes its detector cannot pull the interpreter from under
@@ -136,6 +140,10 @@ internal class SceneDetectorShare(
     }
 
     suspend fun share(onState: (SceneModelState) -> Unit = {}): SceneDetector? {
+        if (!unusable && !liteRtRunsOn(abis)) {
+            Log.i(TAG, "No LiteRT for ${abis.firstOrNull()}: no scene detector downloaded")
+            unusable = true
+        }
         shared(onState)?.let { return it }
         if (unusable) return null
         val models = models()
@@ -242,6 +250,15 @@ internal class SceneDetectorShare(
         /** The first download, and one more after LiteRT refused it: never a loop. */
         const val OPEN_ATTEMPTS = 2
         const val NETWORK_RECHECK_MILLIS = 5_000L
+
+        /** The ABIs LiteRT ships its native library for: no 32-bit x86. */
+        val LITERT_ABIS = setOf("arm64-v8a", "armeabi-v7a", "x86_64")
+
+        /**
+         * Whether LiteRT can load on a device with these [abis]. The app runs as the first one, whose
+         * libraries the installer picked: a second ABI the device translates does not count.
+         */
+        fun liteRtRunsOn(abis: List<String>) = abis.firstOrNull() in LITERT_ABIS
     }
 }
 
