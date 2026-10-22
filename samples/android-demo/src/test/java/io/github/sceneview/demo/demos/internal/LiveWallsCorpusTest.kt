@@ -48,6 +48,9 @@ class LiveWallsCorpusTest {
         for (result in results) {
             assertTrue("before: $result", result.before.final > result.after.final)
             assertEquals("after: $result", 4, result.after.final)
+            assertEquals("on the record screen: $result", 4, result.screen.walls)
+            assertTrue("the room done: $result", result.screen.done)
+            assertTrue("the room named: $result", result.screen.named)
         }
     }
 

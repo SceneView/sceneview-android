@@ -1,12 +1,16 @@
 package io.github.sceneview.demo.demos.internal
 
+import io.github.sceneview.demo.demos.ScanCoverageState
+import io.github.sceneview.demo.demos.ScanWallsState
 import java.io.File
 import kotlin.math.max
 import kotlin.math.min
 
 /**
  * Recorded scans replayed through the live walls, before the survey's rules ([LegacyPlaneWalls])
- * and with them ([PlaneWallSource]): how many walls each shows. Counts only, never a dimension.
+ * and with them ([PlaneWallSource]): how many walls each shows, and what the record screen makes
+ * of them ([ScanWallsState]) — whether it invites Finish and names the room. Counts only, never a
+ * dimension.
  */
 internal object LiveWallsCorpus {
     /** How often the replay looks at the walls, in seconds of the recording; the last frame too. */
@@ -19,11 +23,31 @@ internal object LiveWallsCorpus {
         override fun toString(): String = "final $final, at once $maxAtOnce, distinct $distinct"
     }
 
-    class Result(val name: String, val samples: Int, val before: Counts, val after: Counts) {
-        fun toMap(): Map<String, Any> =
-            mapOf("name" to name, "samples" to samples, "before" to before.toMap(), "after" to after.toMap())
+    /**
+     * The record screen over the replay, with the rules: the walls its HUD counts at the end,
+     * whether it invites Finish ([ScanWallsState.done]) and names the room (two walls and a floor
+     * outline, as the live view's HUD), and from when, in seconds of the recording (`null`: never).
+     */
+    class Screen(val walls: Int, val doneAt: Float?, val namedAt: Float?, val named: Boolean) {
+        val done: Boolean get() = doneAt != null
 
-        override fun toString(): String = "$name: before ($before) -> after ($after)"
+        fun toMap(): Map<String, Any?> =
+            mapOf("walls" to walls, "done" to done, "doneAt" to doneAt, "named" to named, "namedAt" to namedAt)
+
+        override fun toString(): String = "walls $walls, done ${doneAt ?: "never"}, named ${namedAt ?: "never"}" +
+            if (named || namedAt == null) "" else " (not at the end)"
+    }
+
+    class Result(val name: String, val samples: Int, val before: Counts, val after: Counts, val screen: Screen) {
+        fun toMap(): Map<String, Any> = mapOf(
+            "name" to name,
+            "samples" to samples,
+            "before" to before.toMap(),
+            "after" to after.toMap(),
+            "screen" to screen.toMap(),
+        )
+
+        override fun toString(): String = "$name: before ($before) -> after ($after); screen ($screen)"
     }
 
     private class Tally {
@@ -75,6 +99,12 @@ internal object LiveWallsCorpus {
         val source = PlaneWallSource()
         val before = Tally()
         val after = Tally()
+        // The record screen fed the same frames, its floor covered as a saved scan's replay covers it.
+        val screen = ScanWallsState(Replayed(PlaneWallSource(), poses))
+        val coverage = ScanCoverageState()
+        var doneAt: Float? = null
+        var namedAt: Float? = null
+        var named = false
         var samples = 0
         var t = 0f
         while (true) {
@@ -84,11 +114,24 @@ internal object LiveWallsCorpus {
             val floorY = ArDebugGeometry.floorHeight(frame)
             before.add(legacy.update(planes, floorY))
             after.add(source.update(planes, floorY, time, tracked(poses, time)).walls.map { it.id })
+            coverage.observe(frame, saved = trace)
+            screen.observe(frame, coverage, frame.camera)
+            if (screen.done && doneAt == null) doneAt = time
+            named = screen.wallCount >= ArDebugSession.MIN_ROOM_WALLS && RoomMeasure.of(frame.planes, floorY) != null
+            if (named && namedAt == null) namedAt = time
             samples++
             if (time >= trace.duration) break
             t += STEP_S
         }
-        return Result(name, samples, before.counts(), after.counts())
+        return Result(name, samples, before.counts(), after.counts(), Screen(screen.wallCount, doneAt, namedAt, named))
+    }
+
+    /** [source] told when the recording had lost tracking ([tracked]), as the replay reads it off the poses. */
+    private class Replayed(private val source: LiveWallSource, private val poses: FloatArray) : LiveWallSource {
+        override fun update(planes: List<LivePlane>, floorY: Float, time: Float, tracking: Boolean): LiveWallSnapshot =
+            source.update(planes, floorY, time, tracked(poses, time))
+
+        override fun reset() = source.reset()
     }
 
     /** When [pack] recorded a camera pose, in seconds of its [trace], in order. */
@@ -125,6 +168,9 @@ internal object LiveWallsCorpus {
             "afterMaxAtOnce" to results.sumOf { it.after.maxAtOnce },
             "beforeDistinct" to results.sumOf { it.before.distinct },
             "afterDistinct" to results.sumOf { it.after.distinct },
+            "screenWalls" to results.sumOf { it.screen.walls },
+            "done" to results.count { it.screen.done },
+            "named" to results.count { it.screen.named },
         )
         File(out, "summary.json").writeText(RerunJson.write(mapOf("total" to total, "sessions" to results.map { it.toMap() })))
         return results
