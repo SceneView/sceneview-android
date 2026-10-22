@@ -107,6 +107,16 @@ class LiveWallsSteadyTest {
     }
 
     @Test
+    fun `the walls follow the floor when it moves under the same planes`() {
+        val source = PlaneWallSource()
+        assertEquals(2, source.update(listOf(front, left), floorY, time = 1f).walls.size)
+        // The same planes, the floor found 1.1 m higher: they rise short of standing height.
+        val moved = source.update(listOf(front, left), floorY + 1.1f, time = 2f)
+        assertEquals("the floor the snapshot stands on", floorY + 1.1f, moved.floorY, 0f)
+        assertEquals("walls over the new floor", 0, moved.walls.size)
+    }
+
+    @Test
     fun `a plane refit across the length's threshold keeps its wall`() {
         val seen = WallRules.MIN_SEEN_M
         fun piece(length: Float) = listOf(front, left, plane(24, -1f, -1f, -1f + length, -1f, top = 1.8f))

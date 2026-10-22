@@ -98,6 +98,9 @@ class PlaneWallSource : LiveWallSource {
     private val tracks = ArrayList<Track>()
     private var nextId = 0
     private var key = LongArray(0)
+
+    /** The floor [key]'s planes were worked out over: the same planes over another floor stand otherwise. */
+    private var keyFloorY = Float.NaN
     private var last = LiveWallSnapshot.Empty
 
     /** The snapshot must be worked out again, whatever the planes: new, reset, or the height changed. */
@@ -137,12 +140,13 @@ class PlaneWallSource : LiveWallSource {
         }
         trackedAt = time
         val newKey = keyOf(planes)
-        if (newKey.contentEquals(key) && !stale && !releasing) {
+        if (newKey.contentEquals(key) && floorY == keyFloorY && !stale && !releasing) {
             // The same planes hold up every wall still: none of them has started waiting to go.
             tracks.forEach { it.heldAt = time }
             return last
         }
         key = newKey
+        keyFloorY = floorY
         stale = false
         merge(clusters(laidOnHosts(pieces(planes, floorY, ::onKnownWall))), time)
         val ceiling = ceilingOf(planes, floorY)
@@ -162,6 +166,7 @@ class PlaneWallSource : LiveWallSource {
         tracks.clear()
         nextId = 0
         key = LongArray(0)
+        keyFloorY = Float.NaN
         last = LiveWallSnapshot.Empty
         stale = true
         releasing = false
