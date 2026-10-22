@@ -132,13 +132,18 @@ mlkitGenaiPrompt = "1.0.0-beta4"
 # fallback for any remaining transitive 4 KB .so not covered by this bump.
 mediapipeTasksVision = "0.10.26"
 # LiteRT (ex-TensorFlow Lite) — runtime of the optional `arsceneview-depth-ml` module
-# (monocular depth, Depth Anything V2 Small). Never a dependency of `arsceneview` itself.
+# (monocular depth, Depth Anything V2 Small), and of the demo's 3D Scan furniture detector
+# (YOLOX-Tiny, `.tflite`). Never a dependency of `arsceneview` itself.
 # 2.3.0 ships three AARs with distinct namespaces — `litert` (…litert.impl, libLiteRt.so),
 # `litert-api` (…litert, JNI, pulled in transitively) and `litert-gpu` (…litert.gpu, the
 # OpenCL/OpenGL accelerator that 2.1.5 bundled). 2.2.x gave `litert` and `litert-api` the same
 # namespace, which failed AGP 9's app manifest merge; `:samples:android-demo:processDebugMainManifest`
 # is the proof for any bump. `litert-gpu` must stay declared or `Backend.Gpu` loses its accelerator.
 litert = "2.3.0"
+# ONNX Runtime (MIT) — JVM tests only: the desktop artifact runs YOLOX-Tiny's ONNX export, which the
+# demo's LiteRT model was converted from, in the tests that judge the detector on photos and on real
+# scans. Not in any app: the Android artifact started a telemetry provider at every launch.
+onnxruntime = "1.30.0"
 
 # Publishing & Docs
 mavenPublish = "0.37.0"
@@ -276,6 +281,7 @@ mlkit-genai-prompt = { group = "com.google.mlkit", name = "genai-prompt", versio
 mediapipe-tasks-vision = { group = "com.google.mediapipe", name = "tasks-vision", version.ref = "mediapipeTasksVision" }
 litert = { group = "com.google.ai.edge.litert", name = "litert", version.ref = "litert" }
 litert-gpu = { group = "com.google.ai.edge.litert", name = "litert-gpu", version.ref = "litert" }
+onnxruntime-jvm = { group = "com.microsoft.onnxruntime", name = "onnxruntime", version.ref = "onnxruntime" }
 
 # Testing
 androidx-test-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxTestJunit" }
