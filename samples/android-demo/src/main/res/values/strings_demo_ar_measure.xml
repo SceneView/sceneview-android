@@ -14,7 +14,9 @@
 
     <string name="demo_ar_measure_hint_first">Aim at a surface, then Add point</string>
     <string name="demo_ar_measure_hint_second">Aim at the next point, then Add point</string>
-    <string name="demo_ar_measure_hint_chain">Add point to go on, or Done to end this line</string>
+    <string name="demo_ar_measure_hint_chain">Add point continues this line, Done ends it</string>
+    <string name="demo_ar_measure_hint_new">Measure kept. Add point starts a new one</string>
+    <string name="demo_ar_measure_hint_wall_find">Point the phone at the floor, then at a wall, to find the walls</string>
     <string name="demo_ar_measure_hint_close">On the first point: tap to close the shape</string>
     <string name="demo_ar_measure_hint_wall_first">Aim where the wall meets the floor, at one end</string>
     <string name="demo_ar_measure_hint_wall_second">Now aim at the other end of the wall, on the floor</string>
@@ -32,6 +34,7 @@
     <string name="demo_ar_measure_label_ceiling_live">Ceiling height, following your aim</string>
     <string name="demo_ar_measure_label_ceiling">Ceiling height</string>
     <string name="demo_ar_measure_label_wall">Wall %1$d</string>
+    <string name="demo_ar_measure_number">Measure %1$d</string>
     <string name="demo_ar_measure_total">Total %1$s</string>
     <string name="demo_ar_measure_perimeter">Perimeter %1$s</string>
     <string name="demo_ar_measure_area">Area %1$s</string>
@@ -46,10 +49,17 @@
     <string name="demo_ar_measure_snap_level">Level</string>
     <string name="demo_ar_measure_snap_square">Square corner</string>
     <string name="demo_ar_measure_snap_close">Close</string>
+    <string name="demo_ar_measure_snap_wall">Wall foot</string>
+
+    <string name="demo_ar_measure_refusal_tracking">Tracking lost: move the phone slowly</string>
+    <string name="demo_ar_measure_refusal_no_surface">No surface here: aim at the floor or a wall</string>
+    <string name="demo_ar_measure_refusal_off_wall">Aim at the wall to read its height</string>
+    <string name="demo_ar_measure_refusal_anchor">Could not pin the point: try again</string>
 
     <string name="demo_ar_measure_action_add">Add point</string>
     <string name="demo_ar_measure_action_set_height">Set height</string>
     <string name="demo_ar_measure_action_close">Close shape</string>
+    <string name="demo_ar_measure_action_new">New measure</string>
     <string name="demo_ar_measure_action_done">Done</string>
     <string name="demo_ar_measure_action_undo">Undo</string>
     <string name="demo_ar_measure_action_clear">Clear</string>

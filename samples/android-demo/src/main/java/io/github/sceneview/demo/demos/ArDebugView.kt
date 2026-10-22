@@ -92,6 +92,7 @@ import io.github.sceneview.demo.demos.internal.DebugAnchor
 import io.github.sceneview.demo.demos.internal.DebugGroup
 import io.github.sceneview.demo.demos.internal.DebugLayer
 import io.github.sceneview.demo.demos.internal.DebugMesh
+import io.github.sceneview.demo.demos.internal.OneUploadInFlight
 import io.github.sceneview.demo.demos.internal.DebugPlaneKind
 import io.github.sceneview.demo.demos.internal.DebugPose
 import io.github.sceneview.demo.demos.internal.IntervalGate
@@ -193,7 +194,7 @@ internal class ArDebugRecorder {
         val capture = scan?.takeIf { it.trace === trace }
         capture?.recordDepthStats(nanos)
         val pointsDue = pointsGate.isDue(nanos)
-        val photoDue = capture?.wantsPhoto(display) == true
+        val photoDue = capture?.wantsPhoto(nanos, display) == true
         // A new raw-depth image (Rerun v2 dense map), when the scan has depth and is free to fuse.
         val depth = capture?.acquireDepth(frame)
         // One camera image per frame at most, shared by the colours, the photo and the depth.
@@ -347,25 +348,79 @@ internal class DebugLayerNode(
     private var uploadedIndices = 3
     private var shownIndices = 3
 
+    /** What [showIndices] last asked for, re-applied when a deferred upload lands; `-1`: all. */
+    private var wantedIndices = -1
+
+    /**
+     * One upload in flight at a time (#4750): an [upload] asked for while Filament still holds the
+     * previous one's buffers is copied into [pendingMesh] / [pendingOffsets] and goes out from the
+     * release callback. However long the renderer stops consuming, this layer pins one upload.
+     */
+    private val flight = OneUploadInFlight()
+    private val pendingMesh = DebugMesh(0)
+    private var pendingEmpty = true
+    private var pendingOffsets: FloatArray? = null
+
+    /** The array [pendingOffsets] is copied into, kept so each deferred upload does not allocate one. */
+    private var offsetSpare: FloatArray? = null
+
     /**
      * CUSTOM0 staging for a [surfels] layer, reused across uploads: a live room is megabytes of
-     * offsets per snapshot. Filament reads it asynchronously, so it is only refilled once the
-     * previous upload's callback has fired; meanwhile an upload falls back to a fresh buffer.
+     * offsets per snapshot. Filament reads it asynchronously; [flight] guarantees the previous
+     * upload let go of it before it is refilled.
      */
     private var offsetScratch: ByteBuffer? = null
-    private val offsetScratchInFlight = java.util.concurrent.atomic.AtomicBoolean(false)
 
     init {
         // The buffers are uninitialised until the first upload: draw one degenerate triangle.
-        upload(null)
+        // Not tracked: it is one upload, and the first real one should not wait a frame on it.
+        write(null, null, tracked = false)
     }
 
     /**
      * Replaces the layer's triangles with [mesh]'s; `null` or empty draws nothing. A [surfels]
      * layer takes [offsets] too, xyz per vertex (`DenseSurfels.cornerOffsets`); none draws every
      * surfel at its world size.
+     *
+     * While the previous upload is still in Filament's hands, [mesh] and [offsets] are copied and
+     * uploaded once it lets go — the caller may reuse both at once. Only the latest such call wins.
      */
     fun upload(mesh: DebugMesh?, offsets: FloatArray? = null) {
+        wantedIndices = -1
+        if (flight.request()) {
+            write(mesh, offsets, tracked = true)
+            return
+        }
+        val empty = mesh == null || mesh.isEmpty
+        pendingEmpty = empty
+        if (empty) {
+            pendingMesh.clear()
+            pendingOffsets = null
+        } else {
+            pendingMesh.set(mesh!!)
+            pendingOffsets = offsets?.let { source ->
+                val size = minOf(source.size, mesh.vertexCount * 3)
+                // Reuse the held copy: a surfel layer's offsets run to megabytes per frame.
+                val target = offsetSpare?.takeIf { it.size >= size } ?: FloatArray(size)
+                offsetSpare = target
+                source.copyInto(target, 0, 0, size)
+                target
+            }
+        }
+    }
+
+    /** Filament let go of one buffer of upload [id]: on the main thread, via [mainHandler]. */
+    private fun onReleased(id: Int) {
+        if (!flight.release(id) || isDestroyed) return
+        val offsets = pendingOffsets
+        pendingOffsets = null
+        write(pendingMesh.takeUnless { pendingEmpty }, offsets, tracked = true)
+        if (wantedIndices >= 0) applyShownIndices()
+        // Left from a callback, not from a frame of the scene: ask for the frame that shows it.
+        requestRender()
+    }
+
+    private fun write(mesh: DebugMesh?, offsets: FloatArray?, tracked: Boolean) {
         val empty = mesh == null || mesh.isEmpty
         val vertexCount = if (empty) 1 else mesh!!.vertexCount
         val indexCount = if (empty) 3 else mesh!!.indexCount
@@ -380,43 +435,43 @@ internal class DebugLayerNode(
             if (indexCount > indexCapacity) createIndexBuffer(engine, nextPowerOfTwo(indexCount)) else null
         val vertexTarget = newVertexBuffer ?: ownedVertexBuffer
         val indexTarget = newIndexBuffer ?: ownedIndexBuffer
+        // Every buffer handed over below reports back once: the gate reopens on the last one.
+        val id = if (tracked) flight.begin(1 + (if (textured) 1 else 0) + (if (surfels) 1 else 0) + 1) else 0
+        val handler = if (tracked) mainHandler else null
+        val released = if (tracked) Runnable { onReleased(id) } else null
         try {
             val vertexBytes = ByteBuffer.allocateDirect(vertexCount * 3 * Float.SIZE_BYTES)
                 .order(ByteOrder.nativeOrder())
             if (empty) vertexBytes.asFloatBuffer().put(floatArrayOf(0f, 0f, 0f))
             else vertexBytes.asFloatBuffer().put(mesh!!.positions, 0, vertexCount * 3)
-            vertexTarget.setBufferAt(engine, 0, vertexBytes, 0, vertexCount * 3 * Float.SIZE_BYTES)
+            vertexTarget.setBufferAt(engine, 0, vertexBytes, 0, vertexCount * 3 * Float.SIZE_BYTES, handler, released)
             if (textured) {
                 val uvBytes = ByteBuffer.allocateDirect(vertexCount * 2 * Float.SIZE_BYTES)
                     .order(ByteOrder.nativeOrder())
                 if (empty) uvBytes.asFloatBuffer().put(floatArrayOf(0f, 0f))
                 else uvBytes.asFloatBuffer().put(mesh!!.uvs, 0, vertexCount * 2)
-                vertexTarget.setBufferAt(engine, 1, uvBytes, 0, vertexCount * 2 * Float.SIZE_BYTES)
+                vertexTarget.setBufferAt(engine, 1, uvBytes, 0, vertexCount * 2 * Float.SIZE_BYTES, handler, released)
             }
             if (surfels) {
                 val bytes = vertexCount * 3 * Float.SIZE_BYTES
-                val reuse = offsetScratchInFlight.compareAndSet(false, true)
-                if (reuse && (offsetScratch?.capacity() ?: 0) < bytes) {
-                    offsetScratch = ByteBuffer.allocateDirect(nextPowerOfTwo(bytes)).order(ByteOrder.nativeOrder())
+                val offsetBytes = if (tracked) {
+                    if ((offsetScratch?.capacity() ?: 0) < bytes) {
+                        offsetScratch = ByteBuffer.allocateDirect(nextPowerOfTwo(bytes)).order(ByteOrder.nativeOrder())
+                    }
+                    offsetScratch!!.apply { clear() }
+                } else {
+                    ByteBuffer.allocateDirect(bytes).order(ByteOrder.nativeOrder())
                 }
-                val offsetBytes = if (reuse) offsetScratch!!.apply { clear() }
-                else ByteBuffer.allocateDirect(bytes).order(ByteOrder.nativeOrder())
                 if (!empty && offsets != null && offsets.size >= vertexCount * 3) {
                     offsetBytes.asFloatBuffer().put(offsets, 0, vertexCount * 3)
                 }
-                if (reuse) {
-                    vertexTarget.setBufferAt(engine, 2, offsetBytes, 0, bytes, DirectExecutor) {
-                        offsetScratchInFlight.set(false)
-                    }
-                } else {
-                    vertexTarget.setBufferAt(engine, 2, offsetBytes, 0, bytes)
-                }
+                vertexTarget.setBufferAt(engine, 2, offsetBytes, 0, bytes, handler, released)
             }
 
             val indexBytes = ByteBuffer.allocateDirect(indexCount * Int.SIZE_BYTES).order(ByteOrder.nativeOrder())
             if (empty) indexBytes.asIntBuffer().put(intArrayOf(0, 0, 0))
             else indexBytes.asIntBuffer().put(mesh!!.indices, 0, indexCount)
-            indexTarget.setBuffer(engine, indexBytes, 0, indexCount * Int.SIZE_BYTES)
+            indexTarget.setBuffer(engine, indexBytes, 0, indexCount * Int.SIZE_BYTES, handler, released)
 
             renderableManager.setGeometryAt(
                 renderableInstance, 0, PrimitiveType.TRIANGLES, vertexTarget, indexTarget, 0, indexCount,
@@ -424,6 +479,11 @@ internal class DebugLayerNode(
             uploadedIndices = indexCount
             shownIndices = indexCount
         } catch (t: Throwable) {
+            if (tracked) {
+                flight.abort()
+                // Filament may still read the scratch handed over before the throw: never refill it.
+                offsetScratch = null
+            }
             newVertexBuffer?.let { engine.safeDestroyVertexBuffer(it) }
             newIndexBuffer?.let { engine.safeDestroyIndexBuffer(it) }
             throw t
@@ -442,10 +502,16 @@ internal class DebugLayerNode(
 
     /**
      * Draws only the first [count] indices of the last [upload] — a prefix of its triangles, with
-     * no re-upload: how the replay reveals a dense cloud as it grew. Clamped to what was uploaded.
+     * no re-upload: how the replay reveals a dense cloud as it grew. Clamped to what was uploaded;
+     * asked again of an upload still waiting on the previous one when that one goes out.
      */
     fun showIndices(count: Int) {
-        val shown = (count - count % 3).coerceIn(3, uploadedIndices)
+        wantedIndices = count
+        applyShownIndices()
+    }
+
+    private fun applyShownIndices() {
+        val shown = (wantedIndices - wantedIndices % 3).coerceIn(3, uploadedIndices)
         if (shown == shownIndices) return
         shownIndices = shown
         renderableManager.setGeometryAt(
@@ -455,6 +521,7 @@ internal class DebugLayerNode(
 
     override fun destroy() {
         if (isDestroyed) return
+        flight.clear()
         // The renderable goes before the buffers it references.
         super.destroy()
         engine.safeDestroyVertexBuffer(ownedVertexBuffer)
@@ -465,8 +532,8 @@ internal class DebugLayerNode(
         const val INITIAL_CAPACITY = 64
         const val WORLD_HALF_EXTENT_M = 500f
 
-        /** Runs Filament's buffer-released callback where it fires; it only clears a flag. */
-        val DirectExecutor = java.util.concurrent.Executor { it.run() }
+        /** Where Filament's buffer-released callbacks run: the next upload is a Filament call. */
+        val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
 
         fun nextPowerOfTwo(value: Int): Int = Integer.highestOneBit((value - 1).coerceAtLeast(1)) shl 1
 
@@ -768,6 +835,9 @@ private fun skyboxAlpha(transparent: Boolean): Float = if (transparent) 0f else 
  *
  * [walls], 3D Scan's live walls (#4540), drawn by a [ScanWallLayer] once the caller's [observe]
  * has fed them the frame, while [drawWalls]; hidden, they still give the room its wall count.
+ *
+ * [maxFps] caps the full view's cadence (the picture-in-picture has its own): 3D Scan's live view
+ * draws from the phone's eye, which ARCore moves at the camera's rate, not the display's (#4743).
  */
 @Composable
 @Suppress("LongParameterList") // the demo's shared engine, handed down once, and one flag per reading
@@ -790,6 +860,7 @@ internal fun ArDebugSceneView(
     cornerCard: DpSize = DpSize.Zero,
     walls: ScanWallsState? = null,
     drawWalls: Boolean = true,
+    maxFps: Int? = null,
 ) {
     val shown by rememberUpdatedState(onShown)
     val wallsDrawn by rememberUpdatedState(drawWalls)
@@ -851,7 +922,7 @@ internal fun ArDebugSceneView(
             renderer = renderer,
             cameraNode = cameraNode,
             isOpaque = !transparent,
-            frameRatePolicy = FrameRatePolicy.Continuous(maxFps = if (compact) PIP_FPS else null),
+            frameRatePolicy = FrameRatePolicy.Continuous(maxFps = if (compact) PIP_FPS else maxFps),
             autoCenterContent = false,
             environment = environment,
             cameraManipulator = orbit,

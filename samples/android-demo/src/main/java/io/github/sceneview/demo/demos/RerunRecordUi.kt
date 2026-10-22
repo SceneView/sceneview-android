@@ -24,13 +24,13 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.MyLocation
-import androidx.compose.material.icons.rounded.NoPhotography
 import androidx.compose.material3.Icon
 import androidx.compose.ui.res.stringResource
 import io.github.sceneview.demo.R
 import io.github.sceneview.demo.demos.internal.DebugGroup
 import io.github.sceneview.demo.demos.internal.DebugPose
 import io.github.sceneview.demo.demos.internal.ScanFollow
+import io.github.sceneview.demo.demos.internal.ScanObserveGate
 import io.github.sceneview.demo.demos.internal.ScanSavingOrbit
 import io.github.sceneview.demo.demos.internal.ScanOpenTop
 import kotlinx.coroutines.Dispatchers
@@ -102,7 +102,6 @@ internal fun ScanHud(
     seconds: Float,
     points: Int,
     label: String? = null,
-    photoLimit: Boolean = false,
     activity: ScanActivity? = null,
     room: ScanWallsState? = null,
 ) {
@@ -137,22 +136,6 @@ internal fun ScanHud(
             modifier = Modifier.testTag(SCAN_POINTS_TAG),
         )
         if (room != null) ScanRoomGauge(room)
-        if (photoLimit) {
-            // Said once in the coaching line; from then on, this small reminder (#4717).
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Space.xs),
-                modifier = Modifier.semantics(mergeDescendants = true) {}.testTag(SCAN_PHOTO_LIMIT_TAG),
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.NoPhotography,
-                    contentDescription = null,
-                    tint = LocalStageChrome.current.onCardMuted,
-                    modifier = Modifier.size(ScanDotSize + Space.xs),
-                )
-                Text(text = ScanCopy.PHOTO_LIMIT, style = OnScrimCaption, maxLines = 1)
-            }
-        }
     }
 }
 
@@ -204,7 +187,8 @@ internal fun ScanRoomGauge(room: ScanWallsState) {
  * The turn to the next gap of a room's scan (#4540, "arrows to say turn this way"): a glass disc at
  * the screen's edge on that side, an arrow in `accent-guidance`, the colour of the dashed gap in
  * the room. Behind the phone, it sits in the middle with a turning arrow; ahead, the gap is in
- * view and the dashes speak for it.
+ * view and the dashes speak for it. [turn] is held by the caller ([rememberHeld]), once for the
+ * arrow and the coaching line.
  */
 @Composable
 internal fun BoxScope.ScanTurnArrow(turn: ScanTurn?) {
@@ -519,7 +503,8 @@ private fun ScanHint(text: String) {
  * stop tap is the camera's view of the frame before, eased from there onto the orbit.
  *
  * [walls] (#4540), a room's scan only: the walls recognised so far rise in the room, on the
- * camera, and the floor edges still open are dashed where the next wall should be.
+ * camera, and the floor edges still open are dashed where the next wall should be; an arrow points
+ * to the next one's [turn], as held by the caller.
  */
 @Composable
 @Suppress("LongParameterList") // the demo's shared engine, handed down once
@@ -535,6 +520,7 @@ internal fun ScanLiveView(
     livePose: (traced: DebugPose?) -> DebugPose? = { it },
     saving: Boolean = false,
     walls: ScanWallsState? = null,
+    turn: ScanTurn? = walls?.turn,
     reviewing: Boolean = false,
 ) {
     // Saving, the view is handed back to the automatic framing, which the orbit then drives.
@@ -564,8 +550,12 @@ internal fun ScanLiveView(
         lidOff = true
     }
     val drawn = remember(media) {
-        media.liveDense?.let { live -> media.withLiveDense { openTop?.takeIf { savingNow } ?: live() } } ?: media
+        // Over the camera its surfels are capped small; the save flight leaves the phone's eye.
+        media.liveDense?.let { live ->
+            media.withLiveDense(overCamera = { !savingNow }) { openTop?.takeIf { savingNow } ?: live() }
+        } ?: media
     }
+    val observed = remember(coverage, walls) { ScanObserveGate() }
     Box(modifier = Modifier.fillMaxSize().testTag(SCAN_STAGE_TAG)) {
         // Only the camera is dimmed: the cloud is drawn by its own view, above the veil.
         Box(Modifier.fillMaxSize().background(veil))
@@ -586,19 +576,23 @@ internal fun ScanLiveView(
             },
             observe = { frame ->
                 val pose = livePose(frame.camera)
-                coverage.observe(
-                    frame,
-                    pose = pose,
-                    snapshotCells = media.liveDense?.invoke()?.coveredCells,
-                    record = media.trace,
-                )
-                walls?.observe(frame, coverage, pose)
+                val cells = media.liveDense?.invoke()?.coveredCells
+                // The view hands the same frame to every render until it rebuilds one (#4743).
+                if (observed.isNew(frame, pose, cells)) {
+                    coverage.observe(frame, pose = pose, snapshotCells = cells, record = media.trace)
+                    walls?.observe(frame, coverage, pose)
+                }
             },
             // The walls stand in the room while it is scanned; saving, the orbit shows the cloud.
             walls = walls,
             drawWalls = !saving,
+            // The cloud moves with the phone's eye, which ARCore updates at the camera's 30 Hz: a
+            // second view drawn at the display's 60 Hz redrew the same picture every other vsync,
+            // one GPU pass and one swap too many on a mid-range phone (#4743). Saving, the orbit is
+            // the view's own motion and gets the display's full rate back.
+            maxFps = if (saving) null else SCAN_LIVE_FPS,
         )
-        if (walls != null && !saving) ScanTurnArrow(walls.turn)
+        if (walls != null && !saving) ScanTurnArrow(turn)
     }
 }
 
@@ -626,6 +620,9 @@ internal fun ScanShutter(startEnabled: Boolean, onStart: () -> Unit) {
 /** What the live view draws: the points, in the colours the camera saw. */
 private val SCAN_LIVE_GROUPS = setOf(DebugGroup.Points)
 
+/** ARCore's camera rate, which paces the phone's eye the live view draws from (#4743). */
+private const val SCAN_LIVE_FPS = 30
+
 /** A notch above the capture card's 10 dp dot: this one is read from a metre away. */
 private val ScanDotSize = Space.md - Space.xs / 2
 
@@ -635,7 +632,6 @@ internal const val SCAN_TURN_TAG = "ar_rerun_scan_turn"
 internal const val SCAN_STAGE_TAG = "ar_rerun_scan_stage"
 internal const val SCAN_RECENTER_TAG = "ar_rerun_scan_recenter"
 internal const val SCAN_POINTS_TAG = "ar_rerun_scan_points"
-internal const val SCAN_PHOTO_LIMIT_TAG = "ar_rerun_scan_photo_limit"
 internal const val SCAN_CONTROLS_TAG = "ar_rerun_scan_controls"
 internal const val SCAN_HINT_TAG = "ar_rerun_scan_hint"
 internal const val SCAN_REVIEW_TAG = "ar_rerun_scan_review"

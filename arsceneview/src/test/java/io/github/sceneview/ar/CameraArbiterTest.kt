@@ -52,7 +52,7 @@ class CameraArbiterTest {
         assertTrue(a.isRunning && !b.isRunning)
 
         // B gave up its turn: when A is closed there is nobody to hand the camera to.
-        arbiter.destroy(a) { a.close() }
+        arbiter.destroy(a) { onClosed -> a.close(); onClosed() }
         assertEquals("A close", calls.last())
     }
 
@@ -74,9 +74,65 @@ class CameraArbiterTest {
         arbiter.resume(b)
         arbiter.resume(a)
 
-        arbiter.destroy(a) { a.close() }
+        arbiter.destroy(a) { onClosed -> a.close(); onClosed() }
 
         assertEquals(listOf("B start", "B stop", "A start", "A close", "B start"), calls)
+        assertTrue(b.isRunning)
+    }
+
+    @Test
+    fun `the camera goes back only once the closed session has released it`() {
+        // #4771: ARCore releases the camera on a background thread. B must not try to open it
+        // while A still holds it.
+        arbiter.resume(b)
+        arbiter.resume(a)
+        var releaseCamera: (() -> Unit)? = null
+
+        arbiter.destroy(a) { onClosed ->
+            a.close()
+            releaseCamera = onClosed
+        }
+        assertEquals(listOf("B start", "B stop", "A start", "A close"), calls)
+
+        releaseCamera!!.invoke()
+        assertEquals(listOf("B start", "B stop", "A start", "A close", "B start"), calls)
+        assertTrue(b.isRunning)
+    }
+
+    @Test
+    fun `a session resumed while another one is closing is not stopped by it`() {
+        arbiter.resume(a)
+        var releaseCamera: (() -> Unit)? = null
+        arbiter.destroy(a) { onClosed ->
+            a.close()
+            releaseCamera = onClosed
+        }
+
+        arbiter.resume(b)
+        releaseCamera!!.invoke()
+
+        assertEquals(listOf("A start", "A close", "B start"), calls)
+        assertTrue(b.isRunning)
+    }
+
+    @Test
+    fun `a session that could not wait for the close resumes once the close is done`() {
+        // #4771 review: the closing session outlives the resume's wait. The new session must stay
+        // entitled to the camera and start when the close reports, not stay black.
+        arbiter.resume(a)
+        var releaseCamera: (() -> Unit)? = null
+        arbiter.destroy(a) { onClosed ->
+            a.close()
+            releaseCamera = onClosed
+        }
+        b.waitsForCamera = true
+
+        arbiter.resume(b)
+        assertEquals(listOf("A start", "A close", "B waits"), calls)
+        assertTrue(!b.isRunning)
+
+        releaseCamera!!.invoke()
+        assertEquals(listOf("A start", "A close", "B waits", "B start"), calls)
         assertTrue(b.isRunning)
     }
 
@@ -86,7 +142,7 @@ class CameraArbiterTest {
         arbiter.resume(b)
         calls.clear()
 
-        arbiter.destroy(a) { a.close() }
+        arbiter.destroy(a) { onClosed -> a.close(); onClosed() }
 
         assertEquals(listOf("A close"), calls)
         assertTrue(b.isRunning)
@@ -101,7 +157,7 @@ class CameraArbiterTest {
         calls.clear()
         b.failure = IllegalStateException("camera not available")
 
-        arbiter.destroy(c) { c.close() }
+        arbiter.destroy(c) { onClosed -> c.close(); onClosed() }
 
         assertEquals(listOf("C close", "B start", "B failed", "A start"), calls)
         assertTrue(a.isRunning)
@@ -114,7 +170,7 @@ class CameraArbiterTest {
         calls.clear()
         a.canRun = false
 
-        arbiter.destroy(b) { b.close() }
+        arbiter.destroy(b) { onClosed -> b.close(); onClosed() }
 
         assertEquals(listOf("B close"), calls)
     }
@@ -181,7 +237,15 @@ class CameraArbiterTest {
         override var canRun = true
         var failure: Exception? = null
 
+        /** Next [start] finds the camera still held by a closing session and returns idle. */
+        var waitsForCamera = false
+
         override fun start() {
+            if (waitsForCamera) {
+                waitsForCamera = false
+                calls += "$name waits"
+                return
+            }
             calls += "$name start"
             failure?.let { throw it }
             isRunning = true

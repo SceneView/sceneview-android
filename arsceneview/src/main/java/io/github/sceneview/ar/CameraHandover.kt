@@ -123,12 +123,19 @@ internal class CameraArbiter(private val postToMainThread: (() -> Unit) -> Unit)
         if (handover.holder != null) postToMainThread(::handBack)
     }
 
-    /** [client] is closed by [close]; the camera goes back to the session entitled to it. */
+    /**
+     * [client] is closed by [close]; the camera goes back to the session entitled to it once
+     * [close] reports, on the main thread, that it is done.
+     *
+     * The close may finish later (#4771: ARCore releases the camera off the main thread), and
+     * no session can open the camera before the closing one has let it go, so the hand back
+     * waits for it. [client] leaves the queue at once: a session resuming meanwhile does not
+     * try to stop it.
+     */
     @MainThread
-    fun destroy(client: CameraClient, close: () -> Unit) {
+    fun destroy(client: CameraClient, close: (onClosed: () -> Unit) -> Unit) {
         handover.release(client)
-        close()
-        handBack()
+        close(::handBack)
     }
 
     /**
