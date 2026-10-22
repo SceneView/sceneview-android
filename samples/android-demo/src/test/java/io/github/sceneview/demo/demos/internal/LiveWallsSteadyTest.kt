@@ -95,6 +95,16 @@ class LiveWallsSteadyTest {
     }
 
     @Test
+    fun `a wall's top is judged at its very edge, first and once shown`() {
+        fun piece(at: Float) = listOf(front, left, plane(24, -1f, -1f, 0.5f, -1f, top = at))
+        // A first verdict takes standing height as it is: a plane up to 1.30 m exactly is a wall.
+        assertEquals("up to 1.30 m exactly, at first", 3, idsOver(listOf(piece(WallRules.MIN_TOP_M)), step = 1f).single().size)
+        // Shown, it keeps standing 6 cm under it, the noise and the hold: down to 1.24 m.
+        val shown = idsOver(listOf(piece(1.33f), piece(1.245f), piece(1.245f), piece(1.235f), piece(1.235f)), step = 1f)
+        assertEquals("shown, then refit to 1.245 m, then to 1.235 m", listOf(3, 3, 3, 2, 2), shown.map { it.size })
+    }
+
+    @Test
     fun `a wall whose plane ARCore merges into another keeps its verdict`() {
         // Shown up to 1.33 m, refit to 1.27 m: held. ARCore then merges it into a plane of
         // another id, the same outline: the wall it was still stands, held as before.
