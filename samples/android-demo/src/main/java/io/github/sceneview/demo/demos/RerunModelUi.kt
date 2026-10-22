@@ -324,11 +324,10 @@ internal fun buildRerunModel(
     source: RerunModelSource,
     onRaw: ((RerunModelBuild) -> Unit)? = null,
     shown: ByteArray? = null,
-    reconstruction: ReconstructionMethod = ReconstructionMethod.Fused,
     progress: (Float) -> Unit,
 ): RerunModelBuild {
     val started = System.nanoTime()
-    val meshed = mesh(source, progress, reconstruction)
+    val meshed = mesh(source, progress)
     val raw = meshed.surface
     val meshedAt = System.nanoTime()
     val photos = when (source) {
@@ -529,7 +528,6 @@ internal fun buildScanModel(
     source: RerunModelSource,
     onRaw: ((RerunScanModel) -> Unit)? = null,
     shown: ByteArray? = null,
-    reconstruction: ReconstructionMethod = ReconstructionMethod.Fused,
     progress: (Float) -> Unit,
 ): RerunScanModel? {
     val skipMesh = source is RerunModelSource.Synthetic && source.meshFails
@@ -537,7 +535,7 @@ internal fun buildScanModel(
         null
     } else {
         val raw = onRaw?.let { show -> { build: RerunModelBuild -> show(build.scanModel()) } }
-        runCatching { buildRerunModel(source, raw, shown, reconstruction) { progress(it * MESH_PART) } }
+        runCatching { buildRerunModel(source, raw, shown) { progress(it * MESH_PART) } }
             .onFailure { if (it is CancellationException) throw it }
             .onFailure { Log.w(TAG, "meshing failed", it) }
             .getOrNull()
