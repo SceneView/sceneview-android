@@ -18,11 +18,12 @@ class MeasureGeometryTest {
     // ── Units ───────────────────────────────────────────────────────────────
 
     @Test
-    fun `locale picks imperial only where feet are used`() {
+    fun `locale picks imperial in US English only, as the plan does`() {
         assertEquals(MeasureUnitSystem.Imperial, MeasureUnitSystem.forLocale(Locale.US))
         assertEquals(MeasureUnitSystem.Metric, MeasureUnitSystem.forLocale(Locale.UK))
         assertEquals(MeasureUnitSystem.Metric, MeasureUnitSystem.forLocale(Locale.FRANCE))
-        assertEquals(MeasureUnitSystem.Imperial, MeasureUnitSystem.forLocale(Locale("en", "LR")))
+        assertEquals(MeasureUnitSystem.Metric, MeasureUnitSystem.forLocale(Locale("en", "LR")))
+        assertEquals(MeasureUnitSystem.Metric, MeasureUnitSystem.forLocale(Locale.forLanguageTag("es-US")))
     }
 
     @Test

@@ -141,17 +141,18 @@ internal class PlanWords(
 )
 
 /**
- * The Plan view's words under the phone's language, its figures in that language's units: feet
- * and inches in US English, metres everywhere else ([SurveyFormat.units]).
+ * The Plan view's words under the phone's language, its figures in [units]: by default that
+ * language's, feet and inches in US English, metres everywhere else ([SurveyFormat.units]). Their
+ * decimal mark is [locale]'s, English by default ([SurveyWording.locale]).
  */
 @Composable
-internal fun rememberPlanWords(): PlanWords {
-    val units = SurveyFormat.units(LocalLocale.current.platformLocale)
-    return planWords(units)
-}
+internal fun rememberPlanWords(
+    units: MeasureUnitSystem = SurveyFormat.units(LocalLocale.current.platformLocale),
+    locale: Locale = Locale.US,
+): PlanWords = planWords(units, locale)
 
 @Composable
-private fun planWords(units: MeasureUnitSystem): PlanWords = PlanWords(
+private fun planWords(units: MeasureUnitSystem, locale: Locale): PlanWords = PlanWords(
     survey = SurveyWording(
         heading = stringResource(R.string.demo_ar_rerun_plan_heading),
         area = stringResource(R.string.demo_ar_rerun_plan_area),
@@ -187,6 +188,7 @@ private fun planWords(units: MeasureUnitSystem): PlanWords = PlanWords(
             SurveyGap.Unmeasured to stringResource(R.string.demo_ar_rerun_plan_gap_unmeasured),
         ),
         units = units,
+        locale = locale,
     ),
     surveyTitle = stringResource(R.string.demo_ar_rerun_plan_survey_title),
     emptyTitle = stringResource(R.string.demo_ar_rerun_plan_empty_title),
@@ -252,14 +254,22 @@ internal fun RerunPlanScreen(media: RerunReplayMedia?, title: String, date: Stri
 
 /**
  * The Plan view: the dimensioned plan, the survey's table, what the scan lacks, and the two
- * shares. A phone on its side puts the table beside the plan.
+ * shares. A phone on its side puts the table beside the plan. Its figures, on screen, on the PDF
+ * and in the text alike, are in [units], with [locale]'s decimal mark ([rememberPlanWords]).
  *
  * The page is text, and the header's pills float over the stage without a ground of their own:
  * the page starts under them and is clipped there, so nothing scrolls behind a pill.
  */
 @Composable
-internal fun RerunPlanView(survey: RoomSurvey?, title: String, date: String?, modifier: Modifier = Modifier) {
-    val words = rememberPlanWords()
+internal fun RerunPlanView(
+    survey: RoomSurvey?,
+    title: String,
+    date: String?,
+    modifier: Modifier = Modifier,
+    units: MeasureUnitSystem = SurveyFormat.units(LocalLocale.current.platformLocale),
+    locale: Locale = Locale.US,
+) {
+    val words = rememberPlanWords(units, locale)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val writing = remember { AtomicBoolean() }

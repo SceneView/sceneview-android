@@ -1,5 +1,6 @@
 package io.github.sceneview.demo.demos.internal
 
+import java.util.Locale
 import kotlin.math.max
 
 /*
@@ -89,6 +90,11 @@ class SurveyWording(
     val gaps: Map<SurveyGap, String>,
     /** The units its figures are written in: [SurveyFormat.units] of the phone's language. */
     val units: MeasureUnitSystem = MeasureUnitSystem.Metric,
+    /**
+     * The language whose decimal mark its figures take: `4.00` in English, `4,00` in French.
+     * English by default, as 3D Scan's screens are; Measure's plan passes the phone's.
+     */
+    val locale: Locale = Locale.US,
 )
 
 /** One line of the survey's table. [muted] ones say a figure is missing. */
@@ -101,16 +107,23 @@ object SurveyReport {
     private const val CUBIC_METRES = " m³"
     private const val INCHES = " in"
     private const val SQUARE_FEET = " ft²"
-    private const val ROOM_SEPARATOR = "; "
+    /**
+     * Between the rooms, and between the walls, of the shared text: a comma there reads as one
+     * more decimal where the comma is the decimal mark, `A 4,00 m, B 3,00 m`.
+     */
+    private const val LIST_SEPARATOR = "; "
     private const val PLUS_MINUS = " ± "
+
+    /** A half-metre scale bar's length: `0.5`, `0,5` in French. */
+    private const val HALF_METRE = "%.1f"
 
     /**
      * `20.0 m² ± 0.3` when scanned, `20.0 m²` when traced, `≈ 20.0 m²` when an estimate; in
      * [units] of feet, `215 ft² ± 4`.
      */
-    fun area(figure: SurveyFigure, units: MeasureUnitSystem = MeasureUnitSystem.Metric): String = when {
-        figure.estimate -> SurveyFormat.ESTIMATE + areaFigure(figure.value, units)
-        else -> areaFigure(figure.value, units) + areaSpread(figure.plusMinus, units)
+    fun area(figure: SurveyFigure, units: MeasureUnitSystem = MeasureUnitSystem.Metric, locale: Locale = Locale.US): String = when {
+        figure.estimate -> SurveyFormat.ESTIMATE + areaFigure(figure.value, units, locale)
+        else -> areaFigure(figure.value, units, locale) + areaSpread(figure.plusMinus, units, locale)
     }
 
     /**
@@ -118,32 +131,32 @@ object SurveyReport {
      * tenth of a cubic metre, the area's own step — a finer one would claim more than the floor
      * it stands on. In [units] of feet, to the cubic foot: `1321 ft³ ± 43`.
      */
-    fun volume(figure: SurveyFigure, units: MeasureUnitSystem = MeasureUnitSystem.Metric): String = when {
-        figure.estimate -> SurveyFormat.ESTIMATE + volumeFigure(figure.value, units)
-        else -> volumeFigure(figure.value, units) + volumeSpread(figure.plusMinus, units)
+    fun volume(figure: SurveyFigure, units: MeasureUnitSystem = MeasureUnitSystem.Metric, locale: Locale = Locale.US): String = when {
+        figure.estimate -> SurveyFormat.ESTIMATE + volumeFigure(figure.value, units, locale)
+        else -> volumeFigure(figure.value, units, locale) + volumeSpread(figure.plusMinus, units, locale)
     }
 
     /**
      * `5.00 m ± 0.05` when scanned, `5.00 m` when traced, `≈ 5.00 m` when an estimate; in [units]
      * of feet, to the inch: `16 ft 5 in ± 2 in`.
      */
-    fun length(figure: SurveyFigure, units: MeasureUnitSystem = MeasureUnitSystem.Metric): String = when {
-        figure.estimate -> SurveyFormat.ESTIMATE + lengthFigure(figure.value, units)
-        else -> lengthFigure(figure.value, units) + lengthSpread(figure.plusMinus, units)
+    fun length(figure: SurveyFigure, units: MeasureUnitSystem = MeasureUnitSystem.Metric, locale: Locale = Locale.US): String = when {
+        figure.estimate -> SurveyFormat.ESTIMATE + lengthFigure(figure.value, units, locale)
+        else -> lengthFigure(figure.value, units, locale) + lengthSpread(figure.plusMinus, units, locale)
     }
 
-    private fun lengthFigure(metres: Float, units: MeasureUnitSystem): String = when (units) {
-        MeasureUnitSystem.Metric -> SurveyFormat.length(metres) + METRES
+    private fun lengthFigure(metres: Float, units: MeasureUnitSystem, locale: Locale): String = when (units) {
+        MeasureUnitSystem.Metric -> SurveyFormat.length(metres, locale) + METRES
         MeasureUnitSystem.Imperial -> SurveyFormat.feetAndInches(metres)
     }
 
-    private fun areaFigure(squareMetres: Float, units: MeasureUnitSystem): String = when (units) {
-        MeasureUnitSystem.Metric -> SurveyFormat.area(squareMetres) + SQUARE_METRES
-        MeasureUnitSystem.Imperial -> SurveyFormat.squareFeet(squareMetres)
+    private fun areaFigure(squareMetres: Float, units: MeasureUnitSystem, locale: Locale): String = when (units) {
+        MeasureUnitSystem.Metric -> SurveyFormat.area(squareMetres, locale) + SQUARE_METRES
+        MeasureUnitSystem.Imperial -> SurveyFormat.squareFeet(squareMetres, locale)
     }
 
-    private fun volumeFigure(cubicMetres: Float, units: MeasureUnitSystem): String = when (units) {
-        MeasureUnitSystem.Metric -> SurveyFormat.area(cubicMetres) + CUBIC_METRES
+    private fun volumeFigure(cubicMetres: Float, units: MeasureUnitSystem, locale: Locale): String = when (units) {
+        MeasureUnitSystem.Metric -> SurveyFormat.area(cubicMetres, locale) + CUBIC_METRES
         MeasureUnitSystem.Imperial -> SurveyFormat.cubicFeet(cubicMetres)
     }
 
@@ -152,27 +165,27 @@ object SurveyReport {
      * one measured end to end, which has none to give — rounded up to a step, its 0 would read as
      * a scatter of 5 cm.
      */
-    private fun lengthSpread(plusMinus: Float, units: MeasureUnitSystem): String = when {
+    private fun lengthSpread(plusMinus: Float, units: MeasureUnitSystem, locale: Locale): String = when {
         plusMinus <= 0f -> ""
         units == MeasureUnitSystem.Imperial -> PLUS_MINUS + SurveyFormat.inchSpread(plusMinus) + INCHES
-        else -> PLUS_MINUS + SurveyFormat.lengthSpread(plusMinus)
+        else -> PLUS_MINUS + SurveyFormat.lengthSpread(plusMinus, locale)
     }
 
     /** ` ± 0.3` behind an area read with a scatter, ` ± 4` in square feet; nothing behind one measured end to end. */
-    private fun areaSpread(plusMinus: Float, units: MeasureUnitSystem): String = when {
+    private fun areaSpread(plusMinus: Float, units: MeasureUnitSystem, locale: Locale): String = when {
         plusMinus <= 0f -> ""
         units == MeasureUnitSystem.Imperial -> PLUS_MINUS + SurveyFormat.squareFeetSpread(plusMinus)
-        else -> PLUS_MINUS + SurveyFormat.areaSpread(plusMinus)
+        else -> PLUS_MINUS + SurveyFormat.areaSpread(plusMinus, locale)
     }
 
     /**
      * ` ± 1.2` behind a volume read with a scatter, ` ± 43` in cubic feet;
      * nothing behind one measured end to end.
      */
-    private fun volumeSpread(plusMinus: Float, units: MeasureUnitSystem): String = when {
+    private fun volumeSpread(plusMinus: Float, units: MeasureUnitSystem, locale: Locale): String = when {
         plusMinus <= 0f -> ""
         units == MeasureUnitSystem.Imperial -> PLUS_MINUS + SurveyFormat.cubicFeetSpread(plusMinus)
-        else -> PLUS_MINUS + SurveyFormat.areaSpread(plusMinus)
+        else -> PLUS_MINUS + SurveyFormat.areaSpread(plusMinus, locale)
     }
 
     /** `true` when [figure] is written with a "±": measured, and read with a scatter. */
@@ -210,34 +223,35 @@ object SurveyReport {
         val length = survey.length
         val width = survey.width
         val units = wording.units
+        val locale = wording.locale
         rows += when (area) {
             null -> SurveyRow(wording.area, wording.notMeasured, muted = true)
-            else -> SurveyRow(wording.area, area(area, units))
+            else -> SurveyRow(wording.area, area(area, units, locale))
         }
         if (length != null && width != null) {
             // `4.00 × 3.00 m`, one unit for both; feet and inches name theirs on each side.
             val first = when (units) {
-                MeasureUnitSystem.Metric -> SurveyFormat.length(length.value)
-                MeasureUnitSystem.Imperial -> lengthFigure(length.value, units)
+                MeasureUnitSystem.Metric -> SurveyFormat.length(length.value, locale)
+                MeasureUnitSystem.Imperial -> lengthFigure(length.value, units, locale)
             }
-            val both = first + " × " + lengthFigure(width.value, units)
+            val both = first + " × " + lengthFigure(width.value, units, locale)
             val value = when {
                 length.estimate || width.estimate -> SurveyFormat.ESTIMATE + both
-                else -> both + lengthSpread(max(length.plusMinus, width.plusMinus), units)
+                else -> both + lengthSpread(max(length.plusMinus, width.plusMinus), units, locale)
             }
             rows += SurveyRow(wording.dimensions, value)
         } else {
-            (length ?: width)?.let { rows += SurveyRow(wording.span, length(it, units)) }
+            (length ?: width)?.let { rows += SurveyRow(wording.span, length(it, units, locale)) }
         }
-        survey.perimeter?.let { rows += SurveyRow(wording.perimeter, length(it, units)) }
+        survey.perimeter?.let { rows += SurveyRow(wording.perimeter, length(it, units, locale)) }
         val height = survey.ceilingHeight
         rows += when (height) {
             null -> SurveyRow(wording.height, wording.notSeen, muted = true)
-            else -> SurveyRow(wording.height, length(height, units))
+            else -> SurveyRow(wording.height, length(height, units, locale))
         }
         rows += when (val volume = PlanAreas.volume(survey.area, height)) {
             null -> SurveyRow(wording.volume, wording.notMeasured, muted = true)
-            else -> SurveyRow(wording.volume, volume(volume, units))
+            else -> SurveyRow(wording.volume, volume(volume, units, locale))
         }
         return rows
     }
@@ -257,8 +271,8 @@ object SurveyReport {
     private fun roomRow(label: String, area: SurveyFigure?, volume: SurveyFigure?, wording: SurveyWording) =
         SurveyRow(
             label = label,
-            value = (area?.let { area(it, wording.units) } ?: wording.notMeasured) + SEPARATOR +
-                (volume?.let { volume(it, wording.units) } ?: wording.notMeasured),
+            value = (area?.let { area(it, wording.units, wording.locale) } ?: wording.notMeasured) + SEPARATOR +
+                (volume?.let { volume(it, wording.units, wording.locale) } ?: wording.notMeasured),
             muted = area == null,
         )
 
@@ -266,16 +280,16 @@ object SurveyReport {
     fun wallRows(survey: RoomSurvey, wording: SurveyWording): List<SurveyRow> = survey.walls.map { wall ->
         val label = wording.wall.format(wall.tag)
         when {
-            !wall.seen -> SurveyRow(label, wallFigure(wall, wording.units) + SEPARATOR + wording.notSeen, muted = true)
+            !wall.seen -> SurveyRow(label, wallFigure(wall, wording) + SEPARATOR + wording.notSeen, muted = true)
             wall.length.estimate ->
-                SurveyRow(label, wallFigure(wall, wording.units) + SEPARATOR + wording.estimated, muted = true)
-            else -> SurveyRow(label, length(wall.length, wording.units))
+                SurveyRow(label, wallFigure(wall, wording) + SEPARATOR + wording.estimated, muted = true)
+            else -> SurveyRow(label, length(wall.length, wording.units, wording.locale))
         }
     }
 
     /** A wall's length with its unit and its "≈", without its "±": `≈ 4.00 m`, `≈ 13 ft 1 in`. */
-    private fun wallFigure(wall: SurveyWall, units: MeasureUnitSystem): String = when (units) {
-        MeasureUnitSystem.Metric -> SurveyFormat.wall(wall) + METRES
+    private fun wallFigure(wall: SurveyWall, wording: SurveyWording): String = when (wording.units) {
+        MeasureUnitSystem.Metric -> SurveyFormat.wall(wall, wording.locale) + METRES
         MeasureUnitSystem.Imperial -> (if (wall.length.estimate) SurveyFormat.ESTIMATE else "") +
             SurveyFormat.feetAndInches(wall.length.value)
     }
@@ -295,20 +309,21 @@ object SurveyReport {
      */
     fun planTexts(survey: RoomSurvey, wording: SurveyWording): PlanTexts {
         val units = wording.units
+        val locale = wording.locale
         return PlanTexts(
-            walls = survey.walls.map { SurveyFormat.wall(it, units) },
-            area = survey.area?.let { (if (it.estimate) SurveyFormat.ESTIMATE else "") + areaFigure(it.value, units) },
+            walls = survey.walls.map { SurveyFormat.wall(it, units, locale) },
+            area = survey.area?.let { (if (it.estimate) SurveyFormat.ESTIMATE else "") + areaFigure(it.value, units, locale) },
             // An estimate has no scatter to give, nor has an area measured end to end.
             areaNote = survey.area?.takeIf(::scattered)?.let {
                 PLUS_MINUS.trim() + " " + when (units) {
-                    MeasureUnitSystem.Metric -> SurveyFormat.areaSpread(it.plusMinus) + SQUARE_METRES
+                    MeasureUnitSystem.Metric -> SurveyFormat.areaSpread(it.plusMinus, locale) + SQUARE_METRES
                     MeasureUnitSystem.Imperial -> SurveyFormat.squareFeetSpread(it.plusMinus) + SQUARE_FEET
                 }
             },
             scale = { metres ->
                 wording.scaleBar.format(
                     when (units) {
-                        MeasureUnitSystem.Metric -> if (metres < 1f) "0.5" else metres.toInt().toString()
+                        MeasureUnitSystem.Metric -> if (metres < 1f) HALF_METRE.format(locale, 0.5f) else metres.toInt().toString()
                         MeasureUnitSystem.Imperial -> SurveyFormat.feet(metres).toString()
                     },
                 )
@@ -332,12 +347,12 @@ object SurveyReport {
         lines += room.joinToString(SEPARATOR) { it.label + ": " + it.value }
         if (survey.hasPlan) {
             lines += wording.rooms + ": " +
-                roomRows(areas(survey, wording), wording).joinToString(ROOM_SEPARATOR) { it.label + " " + it.value }
+                roomRows(areas(survey, wording), wording).joinToString(LIST_SEPARATOR) { it.label + " " + it.value }
         }
         if (survey.walls.isNotEmpty()) {
             val walls = wallRows(survey, wording)
             lines += wording.walls + ": " +
-                survey.walls.indices.joinToString(", ") { survey.walls[it].tag + " " + walls[it].value }
+                survey.walls.indices.joinToString(LIST_SEPARATOR) { survey.walls[it].tag + " " + walls[it].value }
         }
         hints(survey, wording).takeIf { it.isNotEmpty() }?.let { lines += it.joinToString(" ") }
         lines += notes(survey, wording)
