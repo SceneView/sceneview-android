@@ -291,7 +291,12 @@ class DenseFusion(
             }
             if ((confidence[i].toInt() and 0xFF) > (conf[o].toInt() and 0xFF)) conf[o] = confidence[i]
         }
-        // Past the budget still: every n-th merged surfel, the near ones whole while they fit.
+        // Past the budget still: every n-th merged surfel, the near ones whole while they fit. The
+        // n-th counts in the order the map met the cells, so a cell confirmed early in the map, or
+        // a level boundary the eye moved across, shifts every count after it: from one snapshot to
+        // the next, a far wall may keep other surfels and shimmer. This happens past the budget
+        // only, in a scan of more than a room. A pick by each cell's own key would hold them still,
+        // at the cost of the even spread a stride gives.
         val keepNear = out > maxPoints && nearOut < maxPoints
         val thinned = if (keepNear) out - nearOut else out
         val room = if (keepNear) maxPoints - nearOut else maxPoints
