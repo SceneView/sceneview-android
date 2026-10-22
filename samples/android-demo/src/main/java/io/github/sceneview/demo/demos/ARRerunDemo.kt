@@ -288,6 +288,9 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
     var scanTitle by remember { mutableStateOf(ScanCopy.REPLAY_TITLE) }
     // The scan's own files, for the export sheet; the sample's are read from the assets there.
     var scanPack by remember { mutableStateOf<RerunCapturePack?>(null) }
+    // A part of the open scan scanned again (#4736): for the live screen it was started for only.
+    var rescanTarget by remember { mutableStateOf<RescanTarget?>(null) }
+    LaunchedEffect(screen) { if (screen != RerunScreen.Live) rescanTarget = null }
     // What the scan shows (#4683), kept with it: an object's has no floor plan and no room figures.
     var scanKind by remember { mutableStateOf(ScanScope.Room) }
     // The floor it covered, the figure its replay ends on, said on its result too (#4734).
@@ -718,6 +721,7 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
                 materialLoader = materialLoader,
                 arPlaybackDataset = arPlaybackDataset,
                 qaState = qaState,
+                rescan = rescanTarget,
             )
         }
         RerunScreen.Replay -> RerunReplayScreen(
@@ -795,6 +799,16 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
             hintStays = qaState != null,
             opened = resultModel,
             floorCovered = scanFloorCovered,
+            // One room or area of yours: a part scanned again is kept as a completed copy (#4736).
+            onRescan = scanPack?.takeIf { showingScan && !scanKind.roomByRoom }?.let { pack ->
+                val completed = stringResource(R.string.scan_rescan_merged_title, scanTitle)
+                val start: (RescanPick) -> Unit = { pick ->
+                    rescanTarget = RescanTarget(pick, pack, completed)
+                    scanScope = scanKind
+                    screen = RerunScreen.Live
+                }
+                start
+            },
         )
     }
     val exportable = when (screen) {
@@ -1297,6 +1311,8 @@ private fun RerunLiveScreen(
     materialLoader: MaterialLoader,
     arPlaybackDataset: File?,
     qaState: String?,
+    /** A part of a scan scanned again (#4736): guided live, merged into a copy of the scan on save. */
+    rescan: RescanTarget? = null,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -1638,12 +1654,22 @@ private fun RerunLiveScreen(
                 dropCapture()
                 return@launch
             }
-            val title = builtTitle
+            // A part scanned again (#4736) is lined up on its scan and merged into a copy of it,
+            // kept as a new scan, the scan itself untouched; one that does not line up is refused,
+            // never merged wrong, and the guide says so over "Couldn't save".
+            val rescanned = rescan?.let { withContext(Dispatchers.Default) { it.merge(pack) } }
+            if (rescanned is RescanSave.Refused) {
+                phase = ScanPhase.SaveFailed
+                if (!attached.get()) onSaveFailedAway()
+                return@launch
+            }
+            val saved = (rescanned as? RescanSave.Merged)?.pack ?: pack
+            val title = rescan?.mergedTitle ?: builtTitle
             // The saved entry's id opens its result screen, where the name is edited (#4597).
             val savedId = withContext(Dispatchers.IO) {
                 runCatching {
                     check(!qaSaveFails) { "QA: forced save failure" }
-                    store.save(pack, title, RerunSessionSource.Recorded, now, scope = scanScope).id
+                    store.save(saved, title, RerunSessionSource.Recorded, now, scope = scanScope).id
                 }.getOrNull()
             }
             if (savedId == null) {
@@ -1651,7 +1677,7 @@ private fun RerunLiveScreen(
                 if (!attached.get()) onSaveFailedAway()
                 return@launch
             }
-            val opened = runCatching { loadRerunSession(pack) }.getOrNull()
+            val opened = runCatching { loadRerunSession(saved) }.getOrNull()
             dropCapture()
             if (!attached.get()) {
                 // The screen was left while it saved: the scan is kept and listed, nothing opens.
@@ -1660,7 +1686,7 @@ private fun RerunLiveScreen(
             }
             if (opened == null) return@launch
             when (next) {
-                SaveNext.Open -> onScanned(opened, title, pack, savedId)
+                SaveNext.Open -> onScanned(opened, title, saved, savedId)
                 SaveNext.FinishHome -> {
                     onRoomSaved(opened, title, savedId)
                     onFinishHome()
@@ -2079,6 +2105,10 @@ private fun RerunLiveScreen(
                     turn = heldTurn,
                     reviewing = phase == ScanPhase.Reviewing,
                 )
+            }
+            // A part scanned again (#4736): its frame over the camera, and how far along it is.
+            if (recording && rescan != null) {
+                RescanGuide(rescan, live = { scanMedia?.liveDense?.invoke()?.cloud }, lens = scanLens, drawn = scanFollowing)
             }
 
             // Full-screen 3D view over the camera, which keeps tracking (and recording) under it.

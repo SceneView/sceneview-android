@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.isDialog
@@ -29,6 +30,8 @@ import io.github.sceneview.demo.theme.LocalStageChrome
 import io.github.sceneview.demo.theme.SceneViewDemoTheme
 import io.github.sceneview.demo.theme.SceneViewTokens
 import io.github.sceneview.demo.theme.StageChrome
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -40,9 +43,9 @@ import java.io.File
 
 /**
  * The parts to scan again on the result (#4736): the pill beside the tour's, and the list a tap
- * opens, each part with its kind, why, and a "Re-scan this part" shown but not usable yet. Each
- * render run leaves the pill and the list, light and dark, in `build/rescan-renders/` (not
- * committed).
+ * opens, each part with its kind, why, and a "Re-scan this part" that starts its re-scan, or is
+ * shown but not usable when the scan cannot be lined up on. Each render run leaves the pill and
+ * the list, light and dark, in `build/rescan-renders/` (not committed).
  */
 @RunWith(RobolectricTestRunner::class)
 // A phone's width and height, so the list shows whole as on one.
@@ -69,8 +72,8 @@ class RescanZonesUiTest {
         ),
     )
 
-    /** The pill on the stage's own ground, under the app's [dark] or light theme; a tap opens the list. */
-    private fun show(dark: Boolean) {
+    /** The pill on the stage's own ground, under the app's [dark] or light theme; a tap opens the list, [onRescan] its buttons. */
+    private fun show(dark: Boolean, onRescan: ((RescanZone) -> Unit)? = null) {
         composeRule.setContent {
             SceneViewDemoTheme(darkTheme = dark) {
                 val chrome = if (dark) StageChrome.Media else StageChrome.Light
@@ -79,7 +82,7 @@ class RescanZonesUiTest {
                     Box(Modifier.background(chrome.ground).padding(SceneViewTokens.Space.md).testTag(STAGE_TAG)) {
                         RescanZonesPill(zones.size, onClick = { open = true })
                     }
-                    if (open) RescanZonesDialog(zones, onDismiss = { open = false })
+                    if (open) RescanZonesDialog(zones, onDismiss = { open = false }, onRescan = onRescan)
                 }
             }
         }
@@ -107,7 +110,7 @@ class RescanZonesUiTest {
     /** The pill and the list under one theme, saved, and the amber swatch found on both. */
     private fun render(dark: Boolean) {
         val name = if (dark) "dark" else "light"
-        show(dark)
+        show(dark, onRescan = {})
         val pill = composeRule.onNodeWithTag(STAGE_TAG).captureToImage().asAndroidBitmap()
         save(pill, "rescan-pill-$name")
         assertTrue("no amber swatch on the $name pill", holdsAmber(pill))
@@ -119,7 +122,7 @@ class RescanZonesUiTest {
     }
 
     @Test
-    fun `the pill counts the parts and its list offers each one's re-scan, not usable yet`() {
+    fun `without a scan to line up on, each part's re-scan is shown but not usable`() {
         show(dark = false)
         composeRule.onNodeWithTag(RERUN_MODEL_RESCAN_TAG)
             .assertContentDescriptionEquals("3 parts to scan again")
@@ -135,6 +138,22 @@ class RescanZonesUiTest {
 
         composeRule.onNodeWithText("Close").performClick()
         composeRule.onAllNodesWithTag(RERUN_MODEL_RESCAN_ACTION_TAG).assertCountEquals(0)
+    }
+
+    @Test
+    fun `each part's re-scan starts that part's`() {
+        val picked = mutableListOf<RescanZone>()
+        show(dark = false, onRescan = { picked += it })
+        composeRule.onNodeWithTag(RERUN_MODEL_RESCAN_TAG).performClick()
+        val actions = composeRule.onAllNodesWithTag(RERUN_MODEL_RESCAN_ACTION_TAG)
+        actions.assertCountEquals(zones.size)
+        repeat(zones.size) { actions[it].assertIsEnabled() }
+        composeRule.onNodeWithText("Scan one again and it is added to a copy of this scan", substring = true).assertExists()
+        composeRule.onNodeWithText("not available yet", substring = true).assertDoesNotExist()
+
+        actions[1].performClick()
+        assertEquals(1, picked.size)
+        assertSame(zones[1], picked.single())
     }
 
     @Test
