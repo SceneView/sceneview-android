@@ -91,10 +91,18 @@ internal class RerunReplayMedia(
      * new snapshot to upload.
      */
     val liveDense: (() -> ReplayDenseLayer?)? = null,
+    /**
+     * Whether a recording's view is drawn over the camera, from the phone's eye; its save flight
+     * leaves the phone and is not. Read on the main thread each frame.
+     */
+    val overCamera: () -> Boolean = { true },
 ) {
-    /** The same scan, its live dense cloud read from [liveDense] instead. */
-    fun withLiveDense(liveDense: () -> ReplayDenseLayer?) =
-        RerunReplayMedia(trace, manifest, planeBitmaps, thumbnails, archive, growing, dense, liveDense)
+    /** The same scan, its live dense cloud read from [liveDense] instead, over the camera while [overCamera]. */
+    fun withLiveDense(overCamera: () -> Boolean = { true }, liveDense: () -> ReplayDenseLayer?) =
+        RerunReplayMedia(trace, manifest, planeBitmaps, thumbnails, archive, growing, dense, liveDense, overCamera)
+
+    /** The largest side the dense layer draws a surfel at, now ([DenseSurfels.maxScreenSide]). */
+    val denseMaxSide: Float get() = DenseSurfels.maxScreenSide(live = liveDense != null)
 
     /** The thumbnail of the camera image in force at [time], `null` before the first one. */
     fun thumbnailAt(time: Float): Bitmap? {
@@ -394,7 +402,7 @@ internal class ReplayLayers(
     private val denseNode: DebugLayerNode? = denseAtlas?.let { atlas ->
         val instance = materialLoader.createInstance(surfelMaterial!!).also {
             it.setParameter("texture", atlas, nearest)
-            it.setParameter("maxSide", DenseSurfels.maxScreenSide(live = media.liveDense != null))
+            it.setParameter("maxSide", media.denseMaxSide)
             it.setParameter("nearFade", DenseSurfels.NEAR_FADE_M)
             it.setDepthWrite(true)
             materials += it
