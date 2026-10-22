@@ -74,6 +74,7 @@ internal object PlaneFlattening {
         tick()
         val noise = noise(mesh, label, planes)
         val snapped = snap(mesh, topology, faces, label, planes, maxSnapM)
+        adopt(mesh, topology, label, planes)
         var flatArea = 0f
         for (t in 0 until n) if (label[t] >= 0) flatArea += faces.areas[t]
         return Flattening(planes, label, flatArea, totalArea, snapped, noise)
@@ -349,6 +350,37 @@ internal object PlaneFlattening {
         }
         val offset = normal[0] * cx + normal[1] * cy + normal[2] * cz
         return Plane(normal[0].toFloat(), normal[1].toFloat(), normal[2].toFloat(), offset.toFloat())
+    }
+
+    /**
+     * Gives a plane the faces the snap laid on it: a face no region took whose three vertices
+     * all lie on its neighbour's plane now. The smoothing tips a face at the rim of a hole past
+     * [ABSORB_ANGLE_DEG]; its vertices, shared with the plane's faces, go onto the plane all the
+     * same, and the face with them. Left off the plane, it would keep the hole from closing on it.
+     */
+    private fun adopt(mesh: WorkMesh, topology: MeshTopology, label: IntArray, planes: List<Plane>) {
+        val p = mesh.positions
+        val idx = mesh.indices
+        val queue = IntArray(label.size)
+        var tail = 0
+        for (t in label.indices) if (label[t] >= 0) queue[tail++] = t
+        var head = 0
+        while (head < tail) {
+            val t = queue[head++]
+            val plane = planes[label[t]]
+            for (k in 0 until 3) {
+                val u = topology.neighbours[t * 3 + k]
+                if (u < 0 || label[u] >= 0) continue
+                var on = true
+                for (c in 0 until 3) {
+                    val v = idx[u * 3 + c] * 3
+                    if (abs(plane.distance(p[v], p[v + 1], p[v + 2])) > ON_PLANE_M) on = false
+                }
+                if (!on) continue
+                label[u] = label[t]
+                queue[tail++] = u
+            }
+        }
     }
 
     /**
@@ -877,6 +909,9 @@ internal object PlaneFlattening {
     private const val LOW_INT = 0xFFFFFFFFL
     private const val ABSORB_ANGLE_DEG = 45.0
     private const val ABSORB_DISTANCE_M = 0.02f
+
+    /** A vertex this close to a plane lies on it: the snap puts it there to float precision. */
+    private const val ON_PLANE_M = 1e-4f
     private const val MERGE_ANGLE_DEG = 5.0
 
     /**
