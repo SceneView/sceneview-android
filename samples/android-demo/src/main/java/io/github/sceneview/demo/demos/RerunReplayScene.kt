@@ -101,8 +101,11 @@ internal class RerunReplayMedia(
     fun withLiveDense(overCamera: () -> Boolean = { true }, liveDense: () -> ReplayDenseLayer?) =
         RerunReplayMedia(trace, manifest, planeBitmaps, thumbnails, archive, growing, dense, liveDense, overCamera)
 
-    /** The largest side the dense layer draws a surfel at, now ([DenseSurfels.maxScreenSide]). */
-    val denseMaxSide: Float get() = DenseSurfels.maxScreenSide(live = liveDense != null)
+    /**
+     * The largest side the dense layer draws a surfel at, now ([DenseSurfels.maxScreenSide]): the
+     * live cap only while a recording is drawn over the camera, the replay's on its save flight.
+     */
+    val denseMaxSide: Float get() = DenseSurfels.maxScreenSide(live = liveDense != null && overCamera())
 
     /** The thumbnail of the camera image in force at [time], `null` before the first one. */
     fun thumbnailAt(time: Float): Bitmap? {
@@ -396,13 +399,17 @@ internal class ReplayLayers(
      * The dense layer's material: the image material's look, a surfel nearer than
      * [DenseSurfels.NEAR_FADE_M] shrunk towards a dot and any capped at
      * [DenseSurfels.MAX_SCREEN_SIDE] (#4742), so one the camera passes close to never fills it;
-     * over the camera, at the size of the largest fine one ([DenseSurfels.maxScreenSide]).
+     * over the camera, at the size of the largest fine one ([RerunReplayMedia.denseMaxSide]).
      */
     private val surfelMaterial: Material? = denseAtlas?.let { materialLoader.createMaterial(SURFEL_MATERIAL) }
+    /** [denseNode]'s material and the cap it was last given, set again as a recording's view changes ([syncDense]). */
+    private var denseMaterial: MaterialInstance? = null
+    private var denseSide = media.denseMaxSide
     private val denseNode: DebugLayerNode? = denseAtlas?.let { atlas ->
         val instance = materialLoader.createInstance(surfelMaterial!!).also {
+            denseMaterial = it
             it.setParameter("texture", atlas, nearest)
-            it.setParameter("maxSide", media.denseMaxSide)
+            it.setParameter("maxSide", denseSide)
             it.setParameter("nearFade", DenseSurfels.NEAR_FADE_M)
             it.setDepthWrite(true)
             materials += it
@@ -627,6 +634,11 @@ internal class ReplayLayers(
         val live = media.liveDense
         if (live != null) {
             // Recording: the latest snapshot, drawn whole. One upload a snapshot, about a second.
+            val side = media.denseMaxSide
+            if (side != denseSide) {
+                denseSide = side
+                denseMaterial?.setParameter("maxSide", side)
+            }
             val snapshot = live()
             if (snapshot != null && snapshot !== liveDenseShown) {
                 liveDenseShown = snapshot
