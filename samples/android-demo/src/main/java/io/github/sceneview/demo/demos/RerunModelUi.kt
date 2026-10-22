@@ -336,7 +336,7 @@ internal fun buildRerunModel(
     }
     val rawTriangles = raw.triangleCount
     val rawVertices = raw.vertexCount
-    val rawBounds = raw.mesh.bounds()
+    val rawBounds = RerunResultView.framingBounds(raw.mesh)
     val rawGlb = if (shown != null) {
         shown
     } else if (onRaw != null && rawTriangles >= RAW_FIRST_TRIANGLES) {
@@ -392,7 +392,7 @@ internal fun buildRerunModel(
     )
     return RerunModelBuild(
         glb = glb,
-        bounds = finishedMesh?.bounds() ?: rawBounds,
+        bounds = finishedMesh?.let(RerunResultView::framingBounds) ?: rawBounds,
         triangles = finishedMesh?.triangleCount ?: rawTriangles,
         vertices = finishedMesh?.vertexCount ?: rawVertices,
         buildMs = (done - started) / NS_PER_MS,

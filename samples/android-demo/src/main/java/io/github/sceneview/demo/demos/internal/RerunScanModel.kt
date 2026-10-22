@@ -25,7 +25,10 @@ class RerunScanModel(
     val kind: Kind,
     /** The model as one `.glb` ([RerunMeshGlb]), metres, Y up, the scan's world space. */
     val glb: ByteArray,
-    /** `[minX, minY, minZ, maxX, maxY, maxZ]` of the geometry: what the result frames. */
+    /**
+     * `[minX, minY, minZ, maxX, maxY, maxZ]` of the geometry, the few vertices far off left out
+     * ([RerunResultView.framingBounds]): what the result frames.
+     */
     val bounds: FloatArray,
     val triangles: Int,
     val vertices: Int,
@@ -324,8 +327,9 @@ object RerunPointsMesh {
 
 /**
  * The result screen's view of a model: a fixed three-quarter angle, a little higher than the
- * replay's so the eye looks into the space over its near walls, the geometry's box fitted whole
- * inside the area the chrome leaves free. The export thumbnail is drawn from the same view.
+ * replay's so the eye looks into the space over its near walls, the geometry's box
+ * ([framingBounds]) fitted whole inside the area the chrome leaves free. The export thumbnail is
+ * drawn from the same view.
  */
 object RerunResultView {
     const val AZIMUTH = ArDebugFraming.HOME_AZIMUTH
@@ -341,6 +345,16 @@ object RerunResultView {
             aspect = aspect,
             insets = area(aspect, insets),
         )
+
+    /**
+     * The box the result frames [mesh] by: per axis, from its vertices' [FRAMING_TAIL] quantile to
+     * their 1 - [FRAMING_TAIL]. A raw surface still has the pieces depth left beyond the walls —
+     * through a window, in a mirror — that the finish removes: fitted whole, they leave the room
+     * itself small in the middle of the screen. The finished model is framed the same way, so
+     * shown in the raw surface's framing, which it replaces in place, it fills it as much.
+     */
+    fun framingBounds(mesh: RerunMesh): FloatArray =
+        RerunPointsMesh.framingBounds(mesh, FRAMING_TAIL, 1f - FRAMING_TAIL)
 
     /**
      * Where a result opens on a view of [aspect] (width / height) whose chrome covers [insets]:
@@ -387,6 +401,9 @@ object RerunResultView {
 
     /** The share of the view's narrower side a result opens across ([area]). */
     const val NARROW_FILL = 0.8f
+
+    /** The share of a mesh's vertices [framingBounds] leaves out past each end of each axis. */
+    const val FRAMING_TAIL = 0.02f
 
     /** The least room [area] leaves at the ends of the view's longer side, a share of it. */
     const val EDGE = 0.04f
