@@ -198,7 +198,19 @@ class SceneModelStoreTest {
         }
     }
 
-    @Test fun `a server error reads as offline and keeps what already arrived`() = runBlocking {
+    @Test fun `a file not found reads as unavailable, not as no connection`() = runBlocking {
+        MockWebServer().use { server ->
+            server.enqueue(MockResponse.Builder().code(404).build())
+            server.start()
+            val states = ArrayList<SceneModelState>()
+
+            assertNull(store(server, tmp.newFolder("scene-detector")).fetch { states += it })
+
+            assertEquals(SceneModelState.Unavailable, states.last())
+        }
+    }
+
+    @Test fun `a server error reads as unavailable and keeps what already arrived`() = runBlocking {
         MockWebServer().use { server ->
             server.enqueue(MockResponse.Builder().code(503).build())
             server.start()
@@ -208,7 +220,7 @@ class SceneModelStoreTest {
 
             assertNull(store(server, dir).fetch { states += it })
 
-            assertEquals(SceneModelState.Offline, states.last())
+            assertEquals(SceneModelState.Unavailable, states.last())
             assertEquals(1_000L, File(dir, "$sha.part").length())
         }
     }
