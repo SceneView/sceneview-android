@@ -462,6 +462,9 @@ object ScanCopy {
     /** A depth scan getting no usable depth: the true cause of a count stuck at zero. */
     const val COACH_NO_DEPTH = "No depth yet — keep the lens clear and move slowly"
 
+    /** The same, once the scan has points: depth came, then stopped — never "yet". */
+    const val COACH_DEPTH_LOST = "Depth lost — keep the lens clear and move slowly"
+
     /** Standing still with nothing new: the scan waits on the phone. */
     const val COACH_STILL = "Move the phone to scan more"
 
@@ -543,7 +546,8 @@ object ScanCopy {
      * blank surface, #4540), with too little texture ([lowTexture]), moving too fast — then the dense map's
      * "Adjusting detail", then the [coach]'s "nothing new" (#4631) and "standing still", then the
      * plain advice. "Nothing new" never shows while the scan's points keep rising
-     * ([pointsRising]): the scan adds to the room, and the top line says it is working.
+     * ([pointsRising]): the scan adds to the room, and the top line says it is working. A scan
+     * that already [hasPoints] says its depth was lost, not that none came yet.
      */
     @Suppress("LongParameterList") // one flag per cause the line can speak of
     fun coaching(
@@ -555,12 +559,13 @@ object ScanCopy {
         lowTexture: Boolean = false,
         depthStarved: Boolean = false,
         pointsRising: Boolean = false,
+        hasPoints: Boolean = false,
     ): String? = when (phase) {
         ScanPhase.Scanning -> when {
             trackingLost -> TRACKING_LOST
             detail == ScanDetail.Full -> SCAN_FULL
             photoLimitReached -> FULL
-            depthStarved -> COACH_NO_DEPTH
+            depthStarved -> if (hasPoints) COACH_DEPTH_LOST else COACH_NO_DEPTH
             lowTexture -> COACH_LOW_TEXTURE
             coach == ScanCoach.Line.Slower -> COACH_SLOWER
             detail == ScanDetail.Adjusting -> ADJUSTING_DETAIL

@@ -1932,6 +1932,7 @@ private fun RerunLiveScreen(
                                     lowTexture = lowTexture,
                                     depthStarved = depthStarved,
                                     pointsRising = pointsRising,
+                                    hasPoints = capturedPoints > 0,
                                 ),
                                 nextRoom = roomNumber.takeIf { betweenRooms },
                                 walls = scanWalls?.wallCount,
