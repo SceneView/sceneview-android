@@ -194,6 +194,174 @@ class DenseFusion(
     }
 
     /**
+     * The map as a live view draws it from ([eyeX], [eyeY], [eyeZ]) (#4743): the voxels at least
+     * [minViews] depth frames saw, those nearer than [LIVE_FIRST_LEVEL_M] as they are and farther
+     * ones merged on the map's own grid, one level coarser each time the distance doubles, up to
+     * [LIVE_MAX_LEVEL] — a far surfel spans about as many pixels as a near one, and a far wall
+     * keeps its surface with a quarter, a sixteenth of the surfels, where a stride ([cloud] with
+     * `maxPoints`) thins the whole room into holes. While that leaves more than [maxPoints], the
+     * merging starts nearer, down to [LIVE_NEAR_M]; past it still, every n-th merged surfel, the
+     * near ones kept whole while they fit. Merged surfels average their parts weighted by the
+     * surface each stands for, in the order the map found them. Reads the map only: [cloud] and
+     * a saved scan are left as they were.
+     */
+    @Suppress("LongMethod", "CyclomaticComplexMethod") // two passes over the map, one merge
+    fun liveCloud(eyeX: Float, eyeY: Float, eyeZ: Float, maxPoints: Int, minViews: Int = MIN_VIEWS): DenseCloud {
+        val n = count
+        if (n == 0 || maxPoints <= 0) return DenseCloud.Empty
+        var first = LIVE_FIRST_LEVEL_M
+        var tries = 0
+        val step = maxOf(1, n / LIVE_SAMPLE)
+        while (tries < LIVE_TRIES && first > LIVE_NEAR_M &&
+            liveEstimate(eyeX, eyeY, eyeZ, first, step, minViews) > maxPoints
+        ) {
+            first = maxOf(first * LIVE_SHRINK, LIVE_NEAR_M)
+            tries++
+        }
+        val near2 = first * first
+        // First pass: the merged surfel each voxel goes to, numbered as first met.
+        val outOf = IntArray(n)
+        val outLevel = ByteArray(n)
+        val near = BooleanArray(n)
+        val index = LongIntMap(Integer.highestOneBit(minOf(n, maxPoints).coerceAtLeast(1)) shl 2)
+        var out = 0
+        var nearOut = 0
+        // The map holds what a depth frame found together: the voxel before often merges into the same surfel.
+        var lastKey = Long.MIN_VALUE
+        var lastOut = -1
+        for (i in 0 until n) {
+            if (views[i] < minViews) {
+                outOf[i] = -1
+                continue
+            }
+            val own = levelOf(voxelKeys[i])
+            val dx = px[i] - eyeX
+            val dy = py[i] - eyeY
+            val dz = pz[i] - eyeZ
+            val live = liveLevel(dx * dx + dy * dy + dz * dz, near2)
+            val target = maxOf(own, live)
+            val key = coarser(voxelKeys[i], target)
+            var o = if (key == lastKey) lastOut else index.get(key)
+            if (o < 0) {
+                o = out++
+                index.put(key, o)
+                outLevel[o] = target.toByte()
+                if (live == 0) {
+                    near[o] = true
+                    nearOut++
+                }
+            }
+            lastKey = key
+            lastOut = o
+            outOf[i] = o
+        }
+        if (out == 0) return DenseCloud.Empty
+        // Second pass: each part weighs the surface it stands for, four times as much per level.
+        val sx = FloatArray(out)
+        val sy = FloatArray(out)
+        val sz = FloatArray(out)
+        val snx = FloatArray(out)
+        val sny = FloatArray(out)
+        val snz = FloatArray(out)
+        val sr = FloatArray(out)
+        val sg = FloatArray(out)
+        val sb = FloatArray(out)
+        val sw = FloatArray(out)
+        val scw = FloatArray(out)
+        val conf = ByteArray(out)
+        for (i in 0 until n) {
+            val o = outOf[i]
+            if (o < 0) continue
+            val w = (1 shl (2 * levelOf(voxelKeys[i]))).toFloat()
+            sx[o] += px[i] * w
+            sy[o] += py[i] * w
+            sz[o] += pz[i] * w
+            sw[o] += w
+            val l = sqrt(nx[i] * nx[i] + ny[i] * ny[i] + nz[i] * nz[i])
+            if (l > 1e-6f) {
+                snx[o] += nx[i] / l * w
+                sny[o] += ny[i] / l * w
+                snz[o] += nz[i] / l * w
+            }
+            if (colorWeight[i] > 0f) {
+                sr[o] += r[i] * w
+                sg[o] += g[i] * w
+                sb[o] += b[i] * w
+                scw[o] += w
+            }
+            if ((confidence[i].toInt() and 0xFF) > (conf[o].toInt() and 0xFF)) conf[o] = confidence[i]
+        }
+        // Past the budget still: every n-th merged surfel, the near ones whole while they fit.
+        val keepNear = out > maxPoints && nearOut < maxPoints
+        val thinned = if (keepNear) out - nearOut else out
+        val room = if (keepNear) maxPoints - nearOut else maxPoints
+        val stride = if (out <= maxPoints) 1 else (thinned - 1) / room + 1
+        val keep = BooleanArray(out)
+        var kept = 0
+        var seen = 0
+        for (o in 0 until out) {
+            if (keepNear && near[o]) {
+                keep[o] = true
+            } else {
+                keep[o] = seen % stride == 0
+                seen++
+            }
+            if (keep[o]) kept++
+        }
+        val positions = FloatArray(kept * 3)
+        val normals = FloatArray(kept * 3)
+        val colors = IntArray(kept)
+        val confidences = ByteArray(kept)
+        val levels = ByteArray(kept)
+        var coarse = false
+        var k = -1
+        for (o in 0 until out) {
+            if (!keep[o]) continue
+            k++
+            positions[k * 3] = sx[o] / sw[o]
+            positions[k * 3 + 1] = sy[o] / sw[o]
+            positions[k * 3 + 2] = sz[o] / sw[o]
+            val l = sqrt(snx[o] * snx[o] + sny[o] * sny[o] + snz[o] * snz[o])
+            if (l > 1e-6f) {
+                normals[k * 3] = snx[o] / l
+                normals[k * 3 + 1] = sny[o] / l
+                normals[k * 3 + 2] = snz[o] / l
+            } else {
+                normals[k * 3 + 1] = 1f // opposite views cancelled out: face up, as [cloud] does
+            }
+            val cw = scw[o]
+            colors[k] = if (cw == 0f) 0 else {
+                (0xFF shl 24) or (channel(sr[o] / cw) shl 16) or (channel(sg[o] / cw) shl 8) or channel(sb[o] / cw)
+            }
+            confidences[k] = conf[o]
+            levels[k] = outLevel[o]
+            if (outLevel[o].toInt() != 0) coarse = true
+        }
+        return DenseCloud(positions, colors, normals, confidences, if (coarse) levels else null)
+    }
+
+    /** About how many surfels [liveCloud] keeps merging from [first] metres, from every [step]-th voxel. */
+    @Suppress("LongParameterList")
+    private fun liveEstimate(eyeX: Float, eyeY: Float, eyeZ: Float, first: Float, step: Int, minViews: Int): Double {
+        val near2 = first * first
+        var total = 0.0
+        var i = 0
+        while (i < count) {
+            if (views[i] >= minViews) {
+                val own = levelOf(voxelKeys[i])
+                val dx = px[i] - eyeX
+                val dy = py[i] - eyeY
+                val dz = pz[i] - eyeZ
+                val target = maxOf(own, liveLevel(dx * dx + dy * dy + dz * dz, near2))
+                // A surface's surfels merge four to one per level.
+                total += 1.0 / (1 shl (2 * (target - own)))
+            }
+            i += step
+        }
+        return total * step
+    }
+
+    /**
      * For each of [atFrames] (ascending [frames] values), how many voxels of [cloud] with
      * [minViews] had been found by that frame: the prefix of the saved cloud a replay shows then.
      * A compaction merges voxels, so a count taken during the scan no longer is that prefix.
@@ -506,6 +674,36 @@ class DenseFusion(
          */
         fun budgetFor(maxHeapBytes: Long): Int =
             (maxHeapBytes / HEAP_BYTES_PER_POINT).coerceIn(MIN_BUDGET.toLong(), MAX_BUDGET.toLong()).toInt()
+
+        /**
+         * Where [liveCloud] starts merging, in metres from the eye: a voxel there spans on screen
+         * what one twice as fine does at half the distance, so no merged surfel looks coarser than
+         * a full-detail one 1 m away.
+         */
+        const val LIVE_FIRST_LEVEL_M = 2f
+
+        /** The coarsest [liveCloud] merges to: 8 voxels a side, 16 cm at [VOXEL_M]. */
+        const val LIVE_MAX_LEVEL = 3
+
+        /** At arm's length and nearer, [liveCloud] draws the map's own surfels, whatever its budget. */
+        const val LIVE_NEAR_M = 1f
+
+        /** Voxels [liveCloud] reads to find where to start merging, and how it moves nearer. */
+        private const val LIVE_SAMPLE = 16_384
+        private const val LIVE_TRIES = 8
+        private const val LIVE_SHRINK = 0.75f
+
+        /** The level a surfel [distance2] (squared) from the eye is drawn at, merging from `√near2`. */
+        private fun liveLevel(distance2: Float, near2: Float): Int {
+            if (distance2 < near2) return 0
+            var level = 1
+            var edge2 = near2 * 4f
+            while (level < LIVE_MAX_LEVEL && distance2 >= edge2) {
+                level++
+                edge2 *= 4f
+            }
+            return level
+        }
 
         private const val CHUNK_SHIFT = 5
         private const val LEVEL_SHIFT = 60
