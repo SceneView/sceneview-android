@@ -1,0 +1,2 @@
+<!-- category: Fixed -->
+- **Android 3D Scan: a sloped floor keeps its slope in the finished model ([#4802](https://github.com/sceneview/sceneview/pull/4802)).** A floor that really slopes, even by a single degree, is no longer flattened level: it keeps its tilt, with no step where it meets a level part of the floor and no gap under the furniture standing on it. A floor that is level but scanned slightly tilted is still made exactly level. A hole in the floor under a raised piece of furniture now closes too.

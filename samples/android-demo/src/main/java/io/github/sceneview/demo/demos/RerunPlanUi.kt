@@ -145,12 +145,12 @@ internal class PlanWords(
 /**
  * The Plan view's words under the phone's language, its figures in [units]: by default that
  * language's, feet and inches in US English, metres everywhere else ([SurveyFormat.units]). Their
- * decimal mark is [locale]'s, English by default ([SurveyWording.locale]).
+ * decimal mark is [locale]'s, the phone's by default: `4,00 m` in French, `4.00 m` in English.
  */
 @Composable
 internal fun rememberPlanWords(
     units: MeasureUnitSystem = SurveyFormat.units(LocalLocale.current.platformLocale),
-    locale: Locale = Locale.US,
+    locale: Locale = LocalLocale.current.platformLocale,
 ): PlanWords = planWords(units, locale)
 
 @Composable
@@ -184,6 +184,7 @@ private fun planWords(units: MeasureUnitSystem, locale: Locale): PlanWords = Pla
         gaps = mapOf(
             SurveyGap.NoDepth to stringResource(R.string.demo_ar_rerun_plan_gap_no_depth),
             SurveyGap.NoWalls to stringResource(R.string.demo_ar_rerun_plan_gap_no_walls),
+            SurveyGap.WallEnd to stringResource(R.string.demo_ar_rerun_plan_gap_wall_end),
             SurveyGap.MissingWall to stringResource(R.string.demo_ar_rerun_plan_gap_missing_wall),
             SurveyGap.ObliqueWall to stringResource(R.string.demo_ar_rerun_plan_gap_oblique_wall),
             SurveyGap.Ceiling to stringResource(R.string.demo_ar_rerun_plan_gap_ceiling),
@@ -272,7 +273,7 @@ internal fun RerunPlanView(
     date: String?,
     modifier: Modifier = Modifier,
     units: MeasureUnitSystem = SurveyFormat.units(LocalLocale.current.platformLocale),
-    locale: Locale = Locale.US,
+    locale: Locale = LocalLocale.current.platformLocale,
 ) {
     val words = rememberPlanWords(units, locale)
     val context = LocalContext.current

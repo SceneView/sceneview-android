@@ -13,9 +13,22 @@ import kotlin.math.sqrt
  * within [SEARCH_M] of the lowest ([height]). Its [area] is theirs projected onto the floor, so a
  * floor rippled by the scan's noise and the same floor made flat weigh the same. Its holes are
  * the loops of its open edges, vertices welded within [WELD_M], less one — the rim around the
- * rest: [innerLoops]. What it leaves open of another floor: [openedOn].
+ * rest: [innerLoops]. The ones the eye sees through are those with a free edge, no face of the
+ * model across it: [visibleHoles]. What it leaves open of another floor: [openedOn].
  */
-internal class FloorArea private constructor(val height: Float, val area: Float, val innerLoops: Int, private val cells: Set<Long>) {
+internal class FloorArea private constructor(
+    val height: Float,
+    val area: Float,
+    val innerLoops: Int,
+    /**
+     * The loops, the rim aside, with at least one edge no face of the whole model has across it:
+     * holes the eye sees through. A loop whose every edge has a face across — a face of the floor
+     * the smoothing tipped past [MIN_UP] at the foot of a wall, a crease — is a hole in the
+     * selection, not in the model, and is not one of them.
+     */
+    val visibleHoles: Int,
+    private val cells: Set<Long>,
+) {
     /**
      * The share of [raw]'s floor this one leaves open: the [COVER_CELL_M] cells [raw]'s floor
      * faces cover and this one's do not — where the eye sees through a floor the scan had.
@@ -28,9 +41,12 @@ internal class FloorArea private constructor(val height: Float, val area: Float,
     /** How many [COVER_CELL_M] cells this floor covers. */
     val cellCount: Int get() = cells.size
 
+    /** Whether this floor covers [cell] ([cellAt]). */
+    fun covers(cell: Long): Boolean = cell in cells
+
     companion object {
-        /** The floor of the triangle soup [positions] / [indices], at [height] when known. */
-        fun of(positions: FloatArray, indices: IntArray, height: Float? = null): FloorArea {
+        /** The floor of the triangle soup [positions] / [indices], at [height] when known, [bandM] either side of it. */
+        fun of(positions: FloatArray, indices: IntArray, height: Float? = null, bandM: Float = BAND_M): FloorArea {
             val count = indices.size / 3
             val up = FloatArray(count)
             val centreY = FloatArray(count)
@@ -54,12 +70,17 @@ internal class FloorArea private constructor(val height: Float, val area: Float,
                 up[t] = ny / length
                 centreY[t] = (positions[a + 1] + positions[b + 1] + positions[c + 1]) / 3f
             }
-            val floorY = height ?: height(up, centreY, area) ?: return FloorArea(Float.NaN, 0f, 0, emptySet())
-            val floor = BooleanArray(count) { up[it] >= MIN_UP && abs(centreY[it] - floorY) <= BAND_M }
+            val floorY = height ?: height(up, centreY, area) ?: return FloorArea(Float.NaN, 0f, 0, 0, emptySet())
+            val floor = BooleanArray(count) { up[it] >= MIN_UP && abs(centreY[it] - floorY) <= bandM }
             var projected = 0.0
             for (t in 0 until count) if (floor[t]) projected += area[t] * up[t]
-            return FloorArea(floorY, projected.toFloat(), innerLoops(positions, indices, floor), cells(positions, indices, floor))
+            val loops = loops(positions, indices, floor)
+            return FloorArea(floorY, projected.toFloat(), loops[0], loops[1], cells(positions, indices, floor))
         }
+
+        /** The [COVER_CELL_M] cell holding ([x], [z]). */
+        fun cellAt(x: Float, z: Float): Long =
+            (floor(x / COVER_CELL_M).toLong() shl Int.SIZE_BITS) or (floor(z / COVER_CELL_M).toLong() and LOW_INT)
 
         /** [cell]'s centre along x, in metres. */
         fun centreX(cell: Long): Float = ((cell shr Int.SIZE_BITS).toInt() + HALF) * COVER_CELL_M
@@ -140,8 +161,13 @@ internal class FloorArea private constructor(val height: Float, val area: Float,
             return floorBin * BIN_M
         }
 
-        /** The loops of the open edges of the faces [kept], less one: the rim. */
-        private fun innerLoops(positions: FloatArray, indices: IntArray, kept: BooleanArray): Int {
+        /**
+         * The loops of the open edges of the faces [kept], less one: the rim; and how many of
+         * them, the rim (the loop of the most edges) aside, have a free edge — one no face of
+         * the whole soup has across it.
+         */
+        @Suppress("CyclomaticComplexMethod")
+        private fun loops(positions: FloatArray, indices: IntArray, kept: BooleanArray): IntArray {
             // Welded ids: a model split at its seams has its vertices twice in the same place.
             val weld = HashMap<Triple<Long, Long, Long>, Int>()
             val id = IntArray(positions.size / 3) { -1 }
@@ -180,12 +206,41 @@ internal class FloorArea private constructor(val height: Float, val area: Float,
                 val b = root((key and LOW_INT).toInt())
                 if (a != b) parent[a] = b
             }
+            // How many faces of the whole soup share each open edge: one, the floor's own, is a free edge.
+            val across = HashMap<Long, Int>()
+            for (t in kept.indices) {
+                if (kept[t]) continue
+                for (k in 0 until 3) {
+                    val a = onFloor(indices[t * 3 + k], positions, weld, id) ?: continue
+                    val b = onFloor(indices[t * 3 + (k + 1) % 3], positions, weld, id) ?: continue
+                    if (a == b) continue
+                    val key = (minOf(a, b).toLong() shl Int.SIZE_BITS) or maxOf(a, b).toLong()
+                    if (key in open) across[key] = (across[key] ?: 0) + 1
+                }
+            }
             val edges = HashMap<Int, Int>()
+            val free = HashSet<Int>()
             for (key in open) {
                 val r = root((key shr Int.SIZE_BITS).toInt())
                 edges[r] = (edges[r] ?: 0) + 1
+                if (key !in across) free += r
             }
-            return (edges.size - 1).coerceAtLeast(0)
+            val rim = edges.maxByOrNull { it.value }?.key
+            return intArrayOf((edges.size - 1).coerceAtLeast(0), free.count { it != rim })
+        }
+
+        /** [v]'s welded id when a vertex of the floor lies where it does, else `null`; caches in [id] (-2: none). */
+        private fun onFloor(v: Int, positions: FloatArray, weld: Map<Triple<Long, Long, Long>, Int>, id: IntArray): Int? {
+            if (id[v] >= 0) return id[v]
+            if (id[v] == NOT_ON_FLOOR) return null
+            val key = Triple(
+                (positions[v * 3] / WELD_M).roundToLong(),
+                (positions[v * 3 + 1] / WELD_M).roundToLong(),
+                (positions[v * 3 + 2] / WELD_M).roundToLong(),
+            )
+            val found = weld[key]
+            id[v] = found ?: NOT_ON_FLOOR
+            return found
         }
 
         /** cos 60°: a face of the floor rippled by the scan still faces up. */
@@ -207,5 +262,6 @@ internal class FloorArea private constructor(val height: Float, val area: Float,
         const val SAMPLE_AT = 0.33f
         private const val LOW_INT = 0xFFFFFFFFL
         private const val HALF = 0.5f
+        private const val NOT_ON_FLOOR = -2
     }
 }

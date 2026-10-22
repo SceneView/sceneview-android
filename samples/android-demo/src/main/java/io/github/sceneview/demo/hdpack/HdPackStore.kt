@@ -51,6 +51,12 @@ data class HdTransfer(
 class HdPackIntegrityException(message: String) : IOException(message)
 
 /**
+ * The server answered, but not with the file: [code] is a 404 when it is gone, a 5xx when it is
+ * down. The network itself works — a caller that tells the user why can say so.
+ */
+class HdPackHttpException(val code: Int, message: String) : IOException(message)
+
+/**
  * Permanent on-disk store of the HD pack: `filesDir/hd-pack/<sha256>.<ext>`.
  *
  * Same streaming discipline as `NetworkModelDownloader` — OkHttp `executeAsync` tied to the
@@ -206,7 +212,7 @@ class HdPackStore(
         executeCancellably(call) {
             call.executeAsync().use { response ->
                 if (!response.isSuccessful) {
-                    throw IOException("HD asset ${asset.id}: HTTP ${response.code}")
+                    throw HdPackHttpException(response.code, "HD asset ${asset.id}: HTTP ${response.code}")
                 }
                 // 206 → the server honoured the range: append. 200 → it sent the whole file.
                 val append = resumeFrom > 0L && response.code == HTTP_PARTIAL

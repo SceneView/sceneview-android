@@ -36,6 +36,8 @@ class SceneRecognition(
     val openings: List<WallOpening>,
     val detector: String,
     val totalMillis: Long,
+    /** What the walls' openings were found on, or why there are none ([WallSurvey.note]). */
+    val openingsNote: String = "",
 )
 
 /**
@@ -90,8 +92,11 @@ class SceneRecognizer(
         }
         currentCoroutineContext().ensureActive()
         val furniture = SceneFusion.fuse(frames.flatMap { it.lifted }, cloud)
-        val holes = openings.find(cloud) { objects.surfaceOf(it) }
-        return SceneRecognition(merge(furniture, holes), frames, holes, detector.name, millis(System.nanoTime() - started))
+        val survey = openings.survey(cloud) { objects.surfaceOf(it) }
+        val holes = survey.openings
+        return SceneRecognition(
+            merge(furniture, holes), frames, holes, detector.name, millis(System.nanoTime() - started), survey.note,
+        )
     }
 
     companion object {

@@ -1,5 +1,7 @@
 package io.github.sceneview.demo.demos.internal.semantic
 
+import io.github.sceneview.demo.demos.internal.DenseCloud
+import io.github.sceneview.demo.demos.internal.ScanSurface
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -39,11 +41,31 @@ suspend fun recognizeInPasses(
             first?.let(onPass)
             loading.join()
             val detector = loaded ?: return@coroutineScope
-            val found = first?.openings
-            val kept = if (found != null) WallOpenings { _, _ -> found } else openings
+            val kept = if (first != null) KeptOpenings(first.openings, first.openingsNote) else openings
             recognize(SceneRecognizer(detector, kept))?.let(onPass)
         }
     } finally {
         loaded?.close()
     }
 }
+
+/** The first pass's openings, kept as they were for the second, with what they were found on. */
+private class KeptOpenings(private val openings: List<WallOpening>, private val note: String) : WallOpenings {
+    override fun find(cloud: DenseCloud, surfaceOf: (Int) -> ScanSurface) = openings
+    override fun survey(cloud: DenseCloud, surfaceOf: (Int) -> ScanSurface) = WallSurvey(openings, note)
+}
+
+/**
+ * One pass of [recognizeInPasses] as the replay logs it. The openings pass runs with [NoDetector]
+ * and reads no photo — its "0 keyframes" is by design —, so it says what the walls gave, and why
+ * none when there are none; the detector's pass says what it found on how many photos.
+ */
+fun recognitionLogLine(recognition: SceneRecognition): String =
+    if (recognition.detector == NoDetector.name) {
+        "wall openings (from the dense cloud, no photo read): ${recognition.openingsNote} " +
+            "in ${recognition.totalMillis} ms"
+    } else {
+        "recognised ${recognition.items.size} parts on ${recognition.frames.size} keyframes " +
+            "with ${recognition.detector} in ${recognition.totalMillis} ms, " +
+            "${recognition.openings.size} wall openings among them before the furniture's precedence"
+    }

@@ -1,0 +1,2 @@
+<!-- category: Fixed -->
+- **Android 3D Scan: the floor plan writes the phone's decimal separator ([#4787](https://github.com/sceneview/sceneview/pull/4787)).** On a French or German phone the plan reads `4,00 × 3,00 m` and `11,5 m²` on screen, on the PDF, on its scale bar and in the shared text, as Measure's plan already did; in English it stays `4.00 × 3.00 m`, and US English keeps feet and inches.
