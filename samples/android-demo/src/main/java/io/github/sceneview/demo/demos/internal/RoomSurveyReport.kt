@@ -20,6 +20,9 @@ enum class PlanOffer {
     /** The survey is still being read: the row waits, disabled. */
     Measuring,
 
+    /** The survey has taken longer than usual and is still being read: the row says so, and waits. */
+    StillMeasuring,
+
     /** The survey drew a plan: the row opens it. */
     Ready,
 
@@ -28,6 +31,9 @@ enum class PlanOffer {
 
     /** The scan has depth but too few walls for a plan. */
     NoWalls,
+
+    /** The measure failed ([SurveyGap.Unmeasured]): the row says so. */
+    Failed,
     ;
 
     companion object {
@@ -35,11 +41,19 @@ enum class PlanOffer {
         fun of(survey: RoomSurvey?): PlanOffer = when {
             survey == null -> Measuring
             survey.hasPlan -> Ready
+            SurveyGap.Unmeasured in survey.gaps -> Failed
             SurveyGap.NoDepth in survey.gaps -> NoDepth
             else -> NoWalls
         }
+
+        /** The offer for [measure]: still measuring once it is overdue, else as its survey's. */
+        fun of(measure: PlanMeasure): PlanOffer =
+            if (measure.survey == null && measure.overdue) StillMeasuring else of(measure.survey)
     }
 }
+
+/** A room's survey as the plan waits for it: `null` while measured, [overdue] past its usual time. */
+data class PlanMeasure(val survey: RoomSurvey?, val overdue: Boolean = false)
 
 /** The survey's words, read from the app's resources: this file holds none of its own. */
 class SurveyWording(

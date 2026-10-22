@@ -40,7 +40,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -182,6 +181,7 @@ private fun planWords(units: MeasureUnitSystem): PlanWords = PlanWords(
             SurveyGap.MissingWall to stringResource(R.string.demo_ar_rerun_plan_gap_missing_wall),
             SurveyGap.ObliqueWall to stringResource(R.string.demo_ar_rerun_plan_gap_oblique_wall),
             SurveyGap.Ceiling to stringResource(R.string.demo_ar_rerun_plan_gap_ceiling),
+            SurveyGap.Unmeasured to stringResource(R.string.demo_ar_rerun_plan_gap_unmeasured),
         ),
         units = units,
     ),
@@ -219,18 +219,6 @@ internal fun planHeading(title: String, epochSeconds: Long?, locale: Locale = Lo
     return if (title.contains(short)) PlanHeading(title.replace(short, full), null) else PlanHeading(title, full)
 }
 
-/**
- * [media]'s survey, measured off the main thread once [wanted]; `null` while it is being read.
- * A scan without a dense cloud has no walls to measure: its survey says so.
- */
-@Composable
-internal fun rememberRoomSurvey(media: RerunReplayMedia?, wanted: Boolean): RoomSurvey? =
-    produceState<RoomSurvey?>(null, media, wanted) {
-    value = null
-    if (media == null || !wanted) return@produceState
-    value = withContext(Dispatchers.Default) { surveyOf(media) }
-}.value
-
 /** [media]'s survey, measured on the calling thread: call it off the main one. */
 internal fun surveyOf(media: RerunReplayMedia): RoomSurvey {
     val cloud = media.dense?.cloud ?: return RoomSurvey.empty(SurveyGap.NoDepth)
@@ -246,7 +234,7 @@ internal fun surveyOf(media: RerunReplayMedia): RoomSurvey {
  */
 @Composable
 internal fun RerunPlanScreen(media: RerunReplayMedia?, title: String, date: String?, onBack: () -> Unit) {
-    val survey = rememberRoomSurvey(media, wanted = true)
+    val survey = rememberRoomSurvey(media, wanted = true).survey
     DemoScaffold(
         title = stringResource(R.string.demo_ar_rerun_plan_export_title),
         onBack = onBack,
