@@ -71,8 +71,9 @@ interface LiveWallSource {
     /**
      * The walls recognised from [planes], over a floor at [floorY], at [time] seconds. Called each
      * frame: cheap when nothing changed, and the same snapshot instance while the walls do not.
+     * [tracking] is whether ARCore tracks the camera at [time]: `false` while it has lost it.
      */
-    fun update(planes: List<LivePlane>, floorY: Float, time: Float): LiveWallSnapshot
+    fun update(planes: List<LivePlane>, floorY: Float, time: Float, tracking: Boolean = true): LiveWallSnapshot
 
     /** Forgets every wall: a new capture. */
     fun reset()
@@ -115,7 +116,7 @@ class PlaneWallSource : LiveWallSource {
             field = value
         }
 
-    override fun update(planes: List<LivePlane>, floorY: Float, time: Float): LiveWallSnapshot {
+    override fun update(planes: List<LivePlane>, floorY: Float, time: Float, tracking: Boolean): LiveWallSnapshot {
         val newKey = keyOf(planes)
         if (newKey.contentEquals(key) && !stale && !releasing) return last
         key = newKey
