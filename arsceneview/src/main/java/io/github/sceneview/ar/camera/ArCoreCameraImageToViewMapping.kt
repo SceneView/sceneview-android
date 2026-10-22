@@ -14,10 +14,12 @@ import com.google.ar.core.Frame
  * `VIEW` is the view ARCore was last given through `Session.setDisplayGeometry`, which
  * `ARSceneView` keeps in sync with its own size: there is no view size to pass.
  *
+ * Internal until a caller draws in view space (#4314 review).
+ *
  * @param imageSize dimensions of the CPU image the detector is fed, unrotated.
  * @param inputRotationDegrees clockwise rotation passed to the vision API: 0, 90, 180, or 270.
  */
-fun Frame.cameraImageToViewMapping(
+internal fun Frame.cameraImageToViewMapping(
     imageSize: CameraImageSize,
     inputRotationDegrees: Int,
 ): CameraImageToViewMapping {
@@ -29,13 +31,12 @@ fun Frame.cameraImageToViewMapping(
     val mapped = FloatArray(raw.size)
     transformCoordinates2d(Coordinates2d.IMAGE_PIXELS, raw, Coordinates2d.VIEW, mapped)
     return CameraImageToViewMapping(
-        imageSize = imageSize,
-        inputRotationDegrees = inputRotationDegrees,
+        detector = DetectorImageMapping(imageSize, inputRotationDegrees),
         imagePixelsToView = cameraImageToViewTransform(
             imageSize = imageSize,
-            origin = CameraImagePoint(mapped[0], mapped[1]),
-            xAxisEnd = CameraImagePoint(mapped[2], mapped[3]),
-            yAxisEnd = CameraImagePoint(mapped[4], mapped[5]),
+            origin = ViewPoint(mapped[0], mapped[1]),
+            xAxisEnd = ViewPoint(mapped[2], mapped[3]),
+            yAxisEnd = ViewPoint(mapped[4], mapped[5]),
         ),
     )
 }

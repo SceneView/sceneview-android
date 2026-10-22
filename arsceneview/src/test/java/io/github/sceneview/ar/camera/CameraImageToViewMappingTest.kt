@@ -67,7 +67,7 @@ class CameraImageToViewMappingTest {
 
                     assertPoint(
                         actual = centre,
-                        expected = CameraImagePoint(view.width / 2f, view.height / 2f),
+                        expected = ViewPoint(view.width / 2f, view.height / 2f),
                         message = "centre at $rotation degrees, mirrored=$mirrored, in $view",
                     )
                 }
@@ -82,11 +82,11 @@ class CameraImageToViewMappingTest {
         val transform = solvedTransform(IMAGE, PORTRAIT_VIEW, rotation = 90, mirrored = false)
 
         // Detector-upright left edge is image row y = height, right edge is y = 0.
-        assertPoint(transform.map(0f, IMAGE.height.toFloat()), CameraImagePoint(-180f, 0f), "left")
-        assertPoint(transform.map(0f, 0f), CameraImagePoint(1260f, 0f), "right")
+        assertPoint(transform.map(0f, IMAGE.height.toFloat()), ViewPoint(-180f, 0f), "left")
+        assertPoint(transform.map(0f, 0f), ViewPoint(1260f, 0f), "right")
         assertPoint(
             transform.map(IMAGE.width.toFloat(), 0f),
-            CameraImagePoint(1260f, 1920f),
+            ViewPoint(1260f, 1920f),
             "bottom right",
         )
     }
@@ -95,7 +95,7 @@ class CameraImageToViewMappingTest {
     fun `a translated view origin is carried by the offsets only`() {
         // ARCore `VIEW` can start away from (0, 0) of the surface; the linear part must not move.
         val base = solvedTransform(IMAGE, PORTRAIT_VIEW, rotation = 90, mirrored = false)
-        val shift = CameraImagePoint(37f, -12f)
+        val shift = ViewPoint(37f, -12f)
         val shifted = cameraImageToViewTransform(
             imageSize = IMAGE,
             origin = base.map(0f, 0f) + shift,
@@ -147,14 +147,14 @@ class CameraImageToViewMappingTest {
         )
 
         detectorOrigin.forEach { (rotation, expected) ->
-            val mapping = CameraImageToViewMapping.centerCrop(IMAGE, PORTRAIT_VIEW, rotation)
+            val mapping = DetectorImageMapping(IMAGE, rotation)
 
-            assertPoint(
+            assertImagePoint(
                 actual = mapping.detectorPixelToImagePixel(0f, 0f),
                 expected = expected,
                 message = "detector origin at $rotation degrees",
             )
-            assertPoint(
+            assertImagePoint(
                 actual = mapping.detectorPixelToImagePixel(
                     mapping.detectorWidth / 2f,
                     mapping.detectorHeight / 2f,
@@ -169,17 +169,18 @@ class CameraImageToViewMappingTest {
     fun `center crop maps rotated detector pixels for every quarter turn`() {
         QUARTER_TURNS.forEach { rotation ->
             val mapping = CameraImageToViewMapping.centerCrop(IMAGE, PORTRAIT_VIEW, rotation)
-            val center = mapping.mapPixel(mapping.detectorWidth / 2f, mapping.detectorHeight / 2f)
-            assertPoint(center, CameraImagePoint(540f, 960f), "centre at $rotation degrees")
+            val detector = mapping.detector
+            val center = mapping.mapPixel(detector.detectorWidth / 2f, detector.detectorHeight / 2f)
+            assertPoint(center, ViewPoint(540f, 960f), "centre at $rotation degrees")
 
             val leftQuarter = mapping.mapPixel(
-                mapping.detectorWidth / 4f,
-                mapping.detectorHeight / 2f,
+                detector.detectorWidth / 4f,
+                detector.detectorHeight / 2f,
             )
             val expectedX = if (rotation % 180 == 0) -100f else 180f
             assertPoint(
                 leftQuarter,
-                CameraImagePoint(expectedX, 960f),
+                ViewPoint(expectedX, 960f),
                 "left quarter at $rotation degrees",
             )
         }
@@ -193,23 +194,38 @@ class CameraImageToViewMappingTest {
             inputRotationDegrees = 90,
         )
 
-        assertPoint(mapping.mapNormalized(0.5f, 0.75f), CameraImagePoint(540f, 1440f))
+        assertPoint(mapping.mapNormalized(0.5f, 0.75f), ViewPoint(540f, 1440f))
         // An API that reports in the unrotated source image (MediaPipe) skips the rotation undo.
-        assertPoint(mapping.mapImageNormalized(0.5f, 0.75f), CameraImagePoint(180f, 960f))
-        assertPoint(mapping.mapImagePixel(320f, 360f), CameraImagePoint(180f, 960f))
-        assertPoint(mapping.mapPixel(120f, 320f), CameraImagePoint(180f, 960f))
+        assertPoint(mapping.mapImageNormalized(0.5f, 0.75f), ViewPoint(180f, 960f))
+        assertPoint(mapping.mapImagePixel(320f, 360f), ViewPoint(180f, 960f))
+        assertPoint(mapping.mapPixel(120f, 320f), ViewPoint(180f, 960f))
+    }
+
+    @Test
+    fun `image sizes and points compare by value without being data classes`() {
+        assertEquals(CameraImageSize(640, 480), CameraImageSize(640, 480))
+        assertEquals(CameraImageSize(640, 480).hashCode(), CameraImageSize(640, 480).hashCode())
+        assertTrue(CameraImageSize(640, 480) != CameraImageSize(480, 640))
+        assertEquals(CameraImagePoint(1f, 2f), CameraImagePoint(1f, 2f))
+        assertEquals(CameraImagePoint(1f, 2f).hashCode(), CameraImagePoint(1f, 2f).hashCode())
+        assertTrue(CameraImagePoint(1f, 2f) != CameraImagePoint(2f, 1f))
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `rejects a non-positive image size`() {
+        CameraImageSize(0, 480)
     }
 
     @Test(expected = IllegalArgumentException::class)
     fun `rejects a non-quarter-turn rotation`() {
-        CameraImageToViewMapping.centerCrop(IMAGE, PORTRAIT_VIEW, 45)
+        DetectorImageMapping(IMAGE, 45)
     }
 
     // ── Reference model ──────────────────────────────────────────────────────────────────────
 
     private fun solvedTransform(
         image: CameraImageSize,
-        view: CameraImageSize,
+        view: ViewSize,
         rotation: Int,
         mirrored: Boolean,
     ): CameraImageToViewTransform {
@@ -233,10 +249,10 @@ class CameraImageToViewMappingTest {
         x: Float,
         y: Float,
         image: CameraImageSize,
-        view: CameraImageSize,
+        view: ViewSize,
         rotation: Int,
         mirrored: Boolean,
-    ): CameraImagePoint {
+    ): ViewPoint {
         val w = image.width.toFloat()
         val h = image.height.toFloat()
         // Clockwise quarter turns, one at a time: (x, y) in a WxH image -> (H - y, x) in HxW.
@@ -255,7 +271,7 @@ class CameraImageToViewMappingTest {
         }
         if (mirrored) px = pw - px
         val scale = maxOf(view.width / pw, view.height / ph)
-        return CameraImagePoint(
+        return ViewPoint(
             x = (px - pw / 2f) * scale + view.width / 2f,
             y = (py - ph / 2f) * scale + view.height / 2f,
         )
@@ -263,10 +279,14 @@ class CameraImageToViewMappingTest {
 
     private fun CameraImageToViewTransform.determinant(): Float = m00 * m11 - m01 * m10
 
-    private operator fun CameraImagePoint.plus(other: CameraImagePoint) =
-        CameraImagePoint(x + other.x, y + other.y)
+    private operator fun ViewPoint.plus(other: ViewPoint) = ViewPoint(x + other.x, y + other.y)
 
-    private fun assertPoint(
+    private fun assertPoint(actual: ViewPoint, expected: ViewPoint, message: String = "point") {
+        assertEquals("$message x", expected.x, actual.x, EPSILON)
+        assertEquals("$message y", expected.y, actual.y, EPSILON)
+    }
+
+    private fun assertImagePoint(
         actual: CameraImagePoint,
         expected: CameraImagePoint,
         message: String = "point",
@@ -278,8 +298,8 @@ class CameraImageToViewMappingTest {
     private companion object {
         const val EPSILON = 0.01f
         val IMAGE = CameraImageSize(640, 480)
-        val PORTRAIT_VIEW = CameraImageSize(1080, 1920)
-        val LANDSCAPE_VIEW = CameraImageSize(2400, 1080)
+        val PORTRAIT_VIEW = ViewSize(1080, 1920)
+        val LANDSCAPE_VIEW = ViewSize(2400, 1080)
         val VIEWS = listOf(PORTRAIT_VIEW, LANDSCAPE_VIEW)
         val QUARTER_TURNS = listOf(0, 90, 180, 270)
 

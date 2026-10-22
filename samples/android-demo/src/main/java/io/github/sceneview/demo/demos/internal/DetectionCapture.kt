@@ -1,6 +1,6 @@
 package io.github.sceneview.demo.demos.internal
 
-import io.github.sceneview.ar.camera.CameraImageToViewMapping
+import io.github.sceneview.ar.camera.DetectorImageMapping
 import kotlin.math.sqrt
 
 /** World pose of the physical camera when a detector input image was acquired. */
@@ -48,7 +48,7 @@ internal class WorldRay(val origin: FloatArray, val direction: FloatArray)
 internal class DetectionCapture(
     val pose: DetectionCameraPose,
     val intrinsics: DetectionIntrinsics,
-    val mapping: CameraImageToViewMapping,
+    val mapping: DetectorImageMapping,
 ) {
     /**
      * The world ray through a detector-output pixel ([detectorX], [detectorY]), i.e. a pixel of

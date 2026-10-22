@@ -1,10 +1,10 @@
 package io.github.sceneview.ar.camera
 
-/** A two-dimensional point expressed in pixels. */
-data class CameraImagePoint(val x: Float, val y: Float)
+/** A point in Android view pixels. */
+internal data class ViewPoint(val x: Float, val y: Float)
 
-/** Positive pixel dimensions of an image or view. */
-data class CameraImageSize(val width: Int, val height: Int) {
+/** Positive pixel dimensions of an Android view. */
+internal data class ViewSize(val width: Int, val height: Int) {
     init {
         require(width > 0 && height > 0) { "width and height must be positive" }
     }
@@ -16,8 +16,11 @@ data class CameraImageSize(val width: Int, val height: Int) {
  * The coefficients follow `x' = m00*x + m01*y + m02` and
  * `y' = m10*x + m11*y + m12`. Keeping this value independent of ARCore makes a captured
  * camera geometry safe to retain while an asynchronous vision request is in flight.
+ *
+ * Internal until a caller draws in view space (#4314 review): label placement goes through
+ * world rays ([DetectorImageMapping]), not through the screen.
  */
-data class CameraImageToViewTransform(
+internal data class CameraImageToViewTransform(
     val m00: Float,
     val m01: Float,
     val m02: Float,
@@ -26,7 +29,7 @@ data class CameraImageToViewTransform(
     val m12: Float,
 ) {
     /** Maps one raw camera-image pixel into view pixels. */
-    fun map(x: Float, y: Float): CameraImagePoint = CameraImagePoint(
+    fun map(x: Float, y: Float): ViewPoint = ViewPoint(
         x = m00 * x + m01 * y + m02,
         y = m10 * x + m11 * y + m12,
     )
@@ -48,9 +51,9 @@ data class CameraImageToViewTransform(
  */
 internal fun cameraImageToViewTransform(
     imageSize: CameraImageSize,
-    origin: CameraImagePoint,
-    xAxisEnd: CameraImagePoint,
-    yAxisEnd: CameraImagePoint,
+    origin: ViewPoint,
+    xAxisEnd: ViewPoint,
+    yAxisEnd: ViewPoint,
 ): CameraImageToViewTransform = CameraImageToViewTransform(
     m00 = (xAxisEnd.x - origin.x) / imageSize.width,
     m01 = (yAxisEnd.x - origin.x) / imageSize.height,
@@ -61,79 +64,38 @@ internal fun cameraImageToViewTransform(
 )
 
 /**
- * Immutable mapping from a detector's rotated output coordinates to view pixels.
+ * Immutable mapping from a detector's rotated output coordinates to view pixels: [detector]
+ * undoes the input rotation, then the captured [imagePixelsToView] transform applies ARCore's
+ * display crop and rotation.
  *
- * Vision APIs accept a clockwise input rotation; APIs such as ML Kit report points in that
- * rotated image, while others retain the raw input coordinates. ARCore's
- * `Frame.transformCoordinates2d`, however, maps the unrotated CPU image. [mapPixel] first undoes
- * [inputRotationDegrees], then applies the captured
- * [imagePixelsToView] transform, preserving ARCore's display crop and rotation exactly.
- *
- * Capture this mapping while the ARCore frame used to acquire the CPU image is current by calling
- * `Frame.cameraImageToViewMapping`. Retaining a frame and asking it to transform coordinates
- * after an asynchronous detector completes is invalid. For pipelines without an ARCore frame,
- * [centerCrop] creates the equivalent pure-Kotlin rotation plus centered-crop mapping.
- *
- * @param imageSize dimensions of the unrotated CPU image.
- * @param inputRotationDegrees clockwise rotation passed to the vision API: 0, 90, 180, or 270.
- * @param imagePixelsToView captured raw `IMAGE_PIXELS` to `VIEW` affine transform.
+ * Internal until a caller draws in view space (#4314 review).
  */
-class CameraImageToViewMapping(
-    val imageSize: CameraImageSize,
-    val inputRotationDegrees: Int,
+internal class CameraImageToViewMapping(
+    val detector: DetectorImageMapping,
     val imagePixelsToView: CameraImageToViewTransform,
 ) {
-    init {
-        require(inputRotationDegrees in VALID_ROTATIONS) {
-            "inputRotationDegrees must be 0, 90, 180, or 270"
-        }
-    }
-
-    /** Width of the detector's rotated output image. */
-    val detectorWidth: Int
-        get() = if (inputRotationDegrees % 180 == 0) imageSize.width else imageSize.height
-
-    /** Height of the detector's rotated output image. */
-    val detectorHeight: Int
-        get() = if (inputRotationDegrees % 180 == 0) imageSize.height else imageSize.width
-
-    /**
-     * Undoes [inputRotationDegrees]: the pixel of the unrotated CPU image a detector-output
-     * pixel comes from. This is the pixel the camera intrinsics describe, so it is also the
-     * entry point for casting a world ray through a detection.
-     */
-    fun detectorPixelToImagePixel(x: Float, y: Float): CameraImagePoint =
-        when (inputRotationDegrees) {
-            0 -> CameraImagePoint(x, y)
-            90 -> CameraImagePoint(y, imageSize.height - x)
-            180 -> CameraImagePoint(imageSize.width - x, imageSize.height - y)
-            else -> CameraImagePoint(imageSize.width - y, x) // 270° clockwise
-        }
-
     /** Maps a detector-output pixel to Android view pixels. */
-    fun mapPixel(x: Float, y: Float): CameraImagePoint {
-        val raw = detectorPixelToImagePixel(x, y)
+    fun mapPixel(x: Float, y: Float): ViewPoint {
+        val raw = detector.detectorPixelToImagePixel(x, y)
         return imagePixelsToView.map(raw.x, raw.y)
     }
 
     /** Maps a detector-output point normalized to `[0, 1]` into Android view pixels. */
-    fun mapNormalized(x: Float, y: Float): CameraImagePoint = mapPixel(
-        x = x * detectorWidth,
-        y = y * detectorHeight,
+    fun mapNormalized(x: Float, y: Float): ViewPoint = mapPixel(
+        x = x * detector.detectorWidth,
+        y = y * detector.detectorHeight,
     )
 
     /** Maps a point in the unrotated CPU image directly into Android view pixels. */
-    fun mapImagePixel(x: Float, y: Float): CameraImagePoint = imagePixelsToView.map(x, y)
+    fun mapImagePixel(x: Float, y: Float): ViewPoint = imagePixelsToView.map(x, y)
 
     /** Maps an unrotated CPU-image point normalized to `[0, 1]` into Android view pixels. */
-    fun mapImageNormalized(x: Float, y: Float): CameraImagePoint = mapImagePixel(
-        x = x * imageSize.width,
-        y = y * imageSize.height,
+    fun mapImageNormalized(x: Float, y: Float): ViewPoint = mapImagePixel(
+        x = x * detector.imageSize.width,
+        y = y * detector.imageSize.height,
     )
 
     companion object {
-        private val VALID_ROTATIONS = setOf(0, 90, 180, 270)
-
         /**
          * Builds a rotation-aware centered-crop mapping without ARCore.
          *
@@ -142,22 +104,12 @@ class CameraImageToViewMapping(
          */
         fun centerCrop(
             imageSize: CameraImageSize,
-            viewSize: CameraImageSize,
+            viewSize: ViewSize,
             inputRotationDegrees: Int,
         ): CameraImageToViewMapping {
-            require(inputRotationDegrees in VALID_ROTATIONS) {
-                "inputRotationDegrees must be 0, 90, 180, or 270"
-            }
-            val detectorWidth = if (inputRotationDegrees % 180 == 0) {
-                imageSize.width.toFloat()
-            } else {
-                imageSize.height.toFloat()
-            }
-            val detectorHeight = if (inputRotationDegrees % 180 == 0) {
-                imageSize.height.toFloat()
-            } else {
-                imageSize.width.toFloat()
-            }
+            val detector = DetectorImageMapping(imageSize, inputRotationDegrees)
+            val detectorWidth = detector.detectorWidth.toFloat()
+            val detectorHeight = detector.detectorHeight.toFloat()
             val scale = maxOf(viewSize.width / detectorWidth, viewSize.height / detectorHeight)
             val cropX = (viewSize.width - detectorWidth * scale) / 2f
             val cropY = (viewSize.height - detectorHeight * scale) / 2f
@@ -178,11 +130,7 @@ class CameraImageToViewMapping(
                     -scale, 0f, imageSize.width * scale + cropY,
                 )
             }
-            return CameraImageToViewMapping(
-                imageSize = imageSize,
-                inputRotationDegrees = inputRotationDegrees,
-                imagePixelsToView = transform,
-            )
+            return CameraImageToViewMapping(detector = detector, imagePixelsToView = transform)
         }
     }
 }

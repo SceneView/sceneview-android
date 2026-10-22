@@ -108,6 +108,16 @@ internal class ObjectLabelTracker<T>(
         tracks.clear()
     }
 
+    /**
+     * Drops every track without disposing its payload: for when the payloads' owner is already
+     * going away and releases them itself. An ARCore session closed by Back (#4775) releases its
+     * anchors on its teardown thread; detaching them from the main thread at the same time
+     * would be two native calls into one closing session.
+     */
+    fun forgetAll() {
+        tracks.clear()
+    }
+
     private fun nearestFallbackKey(
         observation: ObjectLabelObservation,
         usedKeys: Set<String>,

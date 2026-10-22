@@ -124,6 +124,26 @@ class ObjectLabelTrackingTest {
         assertEquals(listOf("anchor"), disposed)
     }
 
+    @Test
+    fun `leaving the demo forgets the anchors without detaching them`() {
+        // Back closes the ARCore session on a teardown thread (#4775); the demo's own disposal
+        // may run after that has started, so it must not call into ARCore (Anchor.detach) at
+        // all. The closing session releases its anchors itself.
+        val disposed = mutableListOf<String>()
+        val tracker = ObjectLabelTracker<String> { disposed += it }
+        tracker.reconcile(listOf(observation(id = 7, x = 32f), observation(id = 8, x = 400f))) {
+            observation, _ -> "anchor ${observation.trackingId}"
+        }
+
+        tracker.forgetAll()
+
+        assertTrue(disposed.isEmpty())
+        // Nothing left to dispose later either: a pass after the teardown starts from scratch.
+        assertTrue(tracker.reconcile(emptyList()) { _, _ -> error("no observation") }.isEmpty())
+        tracker.clear()
+        assertTrue(disposed.isEmpty())
+    }
+
     private fun observation(id: Int?, x: Float) = ObjectLabelObservation(
         trackingId = id,
         label = "Home good",

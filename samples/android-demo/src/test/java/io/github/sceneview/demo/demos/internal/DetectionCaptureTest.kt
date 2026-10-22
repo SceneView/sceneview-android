@@ -1,7 +1,7 @@
 package io.github.sceneview.demo.demos.internal
 
 import io.github.sceneview.ar.camera.CameraImageSize
-import io.github.sceneview.ar.camera.CameraImageToViewMapping
+import io.github.sceneview.ar.camera.DetectorImageMapping
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -113,7 +113,7 @@ class DetectionCaptureTest {
     ) = DetectionCapture(
         pose = pose,
         intrinsics = intrinsics,
-        mapping = CameraImageToViewMapping.centerCrop(IMAGE, CameraImageSize(1080, 1920), rotation),
+        mapping = DetectorImageMapping(IMAGE, rotation),
     )
 
     private fun assertVector(

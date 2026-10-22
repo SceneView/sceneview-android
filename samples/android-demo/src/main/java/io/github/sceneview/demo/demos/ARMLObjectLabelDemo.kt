@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.google.ar.core.Anchor
 import com.google.ar.core.Config
+import com.google.ar.core.Coordinates2d
 import com.google.ar.core.DepthPoint
 import com.google.ar.core.Frame
 import com.google.ar.core.HitResult
@@ -47,13 +48,15 @@ import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.arcore.cameraImage
 import io.github.sceneview.ar.arcore.position
 import io.github.sceneview.ar.camera.CameraImageSize
-import io.github.sceneview.ar.camera.cameraImageToViewMapping
+import io.github.sceneview.ar.camera.DetectorImageMapping
 import io.github.sceneview.ar.rememberHostLifecycle
 import io.github.sceneview.demo.DemoScaffold
+import io.github.sceneview.demo.BuildConfig
 import io.github.sceneview.demo.R
 import io.github.sceneview.demo.common.CameraImageRotation
 import io.github.sceneview.demo.common.trackingFailureMessage
 import io.github.sceneview.demo.demos.internal.CAMERA_IMAGE_MAPPING_TAG
+import io.github.sceneview.demo.demos.internal.CameraImageCentreSample
 import io.github.sceneview.demo.demos.internal.CameraMappingProbe
 import io.github.sceneview.demo.demos.internal.DetectionCameraPose
 import io.github.sceneview.demo.demos.internal.DetectionCapture
@@ -166,7 +169,7 @@ fun ARMLObjectLabelDemo(onBack: () -> Unit) {
     var statusBannerRes by remember { mutableIntStateOf(R.string.demo_ar_ml_status_warming) }
 
     // Real pixel size of the AR surface, measured by Compose layout. Only compared, in one log
-    // line per orientation, with where the camera-image mapping puts the image centre (see
+    // line per orientation, with where ARCore draws the camera image centre (see
     // [CameraMappingProbe]); placement itself goes through world rays and needs no view size.
     var viewSize by remember { mutableStateOf(IntSize.Zero) }
     val mappingProbe = remember { CameraMappingProbe() }
@@ -380,11 +383,16 @@ fun ARMLObjectLabelDemo(onBack: () -> Unit) {
                         val input = InputImage.fromMediaImage(cameraImage, rotationDegrees)
                         // Pose and intrinsics of *this* frame, the one the image comes from:
                         // what the result needs to be placed whenever it arrives.
+                        val imageSize = CameraImageSize(cameraImage.width, cameraImage.height)
                         val capture = frame.toDetectionCapture(
-                            imageSize = CameraImageSize(cameraImage.width, cameraImage.height),
+                            imageSize = imageSize,
                             rotationDegrees = rotationDegrees,
                         )
-                        mappingProbe.report(capture.mapping, viewSize.width, viewSize.height)
+                        mappingProbe.report(
+                            frame.imageCentreSample(imageSize, rotationDegrees),
+                            viewSize.width,
+                            viewSize.height,
+                        )
 
                         activeDetector.process(input)
                             .addOnSuccessListener { results ->
@@ -475,10 +483,14 @@ fun ARMLObjectLabelDemo(onBack: () -> Unit) {
         }
     }
 
-    // Sanity cleanup if the composable leaves — detach anchors so ARCore reclaims them.
+    // Cleanup when the composable leaves. The anchors are forgotten, not detached: leaving the
+    // demo also disposes `ARSceneView`, which closes the ARCore session on a teardown thread
+    // (#4775) and releases every anchor with it. Compose does not promise that this effect runs
+    // before that close starts, and an `Anchor.detach()` racing it would be two native calls
+    // into one closing session.
     DisposableEffect(Unit) {
         onDispose {
-            detectionTracker.clear()
+            detectionTracker.forgetAll()
             detections.clear()
             labelBitmaps.clear()
             shownConfidence.clear()
@@ -566,11 +578,14 @@ private fun findLabelHit(
     val baseCandidates = baseHits.map { it.toLabelHitCandidate() }
     val choice = chooseLabelHit(centreHits = centreCandidates, baseHits = baseCandidates)
     // ARCore documents depth points for the screen-point `hitTest` only. Whether this ray
-    // variant returns them too is read off this line on a device, once per detection and pass.
-    android.util.Log.d(
-        CAMERA_IMAGE_MAPPING_TAG,
-        labelHitReport(observation.label, centreCandidates, baseCandidates, choice),
-    )
+    // variant returns them too is read off this line on a device, once per detection and pass:
+    // debug builds only, so the release app does not log every object on every pass.
+    if (BuildConfig.DEBUG) {
+        android.util.Log.d(
+            CAMERA_IMAGE_MAPPING_TAG,
+            labelHitReport(observation.label, centreCandidates, baseCandidates, choice),
+        )
+    }
     if (choice == null) return null
     return when (choice.ray) {
         LabelRay.Centre -> centreHits[choice.index]
@@ -675,10 +690,33 @@ private fun Frame.toDetectionCapture(
             width = dimensions[0],
             height = dimensions[1],
         ),
-        mapping = cameraImageToViewMapping(
+        mapping = DetectorImageMapping(
             imageSize = imageSize,
             inputRotationDegrees = rotationDegrees,
         ),
+    )
+}
+
+/**
+ * Where this frame draws the centre of its CPU image in the view, for the one-line device check
+ * of [CameraMappingProbe]. Call it while this frame is current.
+ */
+private fun Frame.imageCentreSample(
+    imageSize: CameraImageSize,
+    rotationDegrees: Int,
+): CameraImageCentreSample {
+    val centre = FloatArray(2)
+    transformCoordinates2d(
+        Coordinates2d.IMAGE_PIXELS,
+        floatArrayOf(imageSize.width / 2f, imageSize.height / 2f),
+        Coordinates2d.VIEW,
+        centre,
+    )
+    return CameraImageCentreSample(
+        imageSize = imageSize,
+        inputRotationDegrees = rotationDegrees,
+        centreInViewX = centre[0],
+        centreInViewY = centre[1],
     )
 }
 
