@@ -92,7 +92,7 @@ class SurveyWording(
     val units: MeasureUnitSystem = MeasureUnitSystem.Metric,
     /**
      * The language whose decimal mark its figures take: `4.00` in English, `4,00` in French.
-     * English by default, as 3D Scan's screens are; Measure's plan passes the phone's.
+     * English when none is given; the Plan view, 3D Scan's and Measure's alike, passes the phone's.
      */
     val locale: Locale = Locale.US,
 )
