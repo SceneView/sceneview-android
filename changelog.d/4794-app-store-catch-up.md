@@ -1,0 +1,2 @@
+<!-- category: Fixed -->
+- **App Store releases reach review again, or fail red ([#4794](https://github.com/sceneview/sceneview/pull/4794)).** 4.59.0 and 4.60.0 stopped at TestFlight: each deferred behind 4.58.0 with a green run, and the catch-up workflow that was meant to submit them later never did. A GitHub run stuck "queued" since May made every catch-up run believe a deploy was already running. Catch-up now ignores runs older than 24 hours and submits both iOS and macOS. A release that is not in review after its deploy now ends in a red run.
