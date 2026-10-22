@@ -1635,15 +1635,22 @@ internal class MeasureLiveWalls {
     private var snapshot = LiveWallSnapshot.Empty
     private var lastNanos = 0L
 
+    /** The floor found last: ARCore finds it again a few frames after tracking comes back. */
+    private var lastFloorY: Float? = null
+
     /** Seconds since the previous [update], for [motion]. */
     var dt = 0f
         private set
 
-    /** [planes] as ARCore reads them now; [tracking] `false` while ARCore has lost tracking. */
+    /**
+     * [planes] as ARCore reads them now; [tracking] `false` while ARCore has lost tracking. The
+     * walls are fed every frame once a floor was found, over the last floor while ARCore has not
+     * found it again: a wall then waits for its plane as long as it would with the floor in sight.
+     */
     fun update(planes: List<LivePlane>, cameraY: Float, timestampNanos: Long, tracking: Boolean = true): LiveWallSnapshot {
         dt = if (lastNanos == 0L || timestampNanos <= lastNanos) 0f else (timestampNanos - lastNanos) / NANOS_PER_SECOND
         lastNanos = timestampNanos
-        val floorY = livePlanesFloorY(planes, cameraY) ?: return snapshot
+        val floorY = livePlanesFloorY(planes, cameraY)?.also { lastFloorY = it } ?: lastFloorY ?: return snapshot
         snapshot = source.update(planes, floorY, timestampNanos / NANOS_PER_SECOND, tracking)
         return snapshot
     }
@@ -1655,6 +1662,7 @@ internal class MeasureLiveWalls {
         motion.reset()
         snapshot = LiveWallSnapshot.Empty
         lastNanos = 0L
+        lastFloorY = null
         dt = 0f
     }
 
