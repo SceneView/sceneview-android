@@ -95,6 +95,18 @@ class LiveWallsSteadyTest {
     }
 
     @Test
+    fun `a wall whose plane ARCore merges into another keeps its verdict`() {
+        // Shown up to 1.33 m, refit to 1.27 m: held. ARCore then merges it into a plane of
+        // another id, the same outline: the wall it was still stands, held as before.
+        fun piece(id: Int, at: Float) = listOf(front, left, plane(id, -1f, -1f, 0.5f, -1f, top = at))
+        val frames = listOf(piece(24, 1.33f), piece(24, 1.27f)) + List(4) { piece(25, 1.27f) }
+        assertSteady("merged under another id", frames, step = 1f, walls = 3)
+        // A plane that never stood is no wall for being merged: short of standing height, it stays out.
+        val ids = idsOver(listOf(piece(24, 1.27f), piece(25, 1.27f)), step = 1f)
+        assertEquals("never shown", listOf(2, 2), ids.map { it.size })
+    }
+
+    @Test
     fun `a plane refit across the length's threshold keeps its wall`() {
         val seen = WallRules.MIN_SEEN_M
         fun piece(length: Float) = listOf(front, left, plane(24, -1f, -1f, -1f + length, -1f, top = 1.8f))
