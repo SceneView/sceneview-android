@@ -70,15 +70,19 @@ class ScanLiveFrameBenchTest {
                 snapshots++
                 // The snapshot's parts again, one by one, on the map as it now stands.
                 val fusion = dense.fusion
-                val cloud = steps.time("snapshot: cloud") {
+                val whole = steps.time("snapshot: stride cloud, for the floor cells") {
                     fusion.cloud(minViews = DenseFusion.MIN_VIEWS, maxPoints = ScanDenseMap.LIVE_MAX_SURFELS)
+                }
+                val eye = frame.pose
+                val cloud = steps.time("snapshot: drawn cloud, merged by distance") {
+                    fusion.liveCloud(eye.x, eye.y, eye.z, maxPoints = ScanDenseMap.LIVE_DRAWN_SURFELS)
                 }
                 val mesh = steps.time("snapshot: mesh") { DenseSurfels.mesh(cloud, fusion.voxelM) }
                 steps.time("snapshot: atlas") {
                     DenseSurfels.atlas(cloud, fallback = ReplayDenseLayer.DENSE_FALLBACK_COLOR)
                 }
                 steps.time("snapshot: corner offsets") { DenseSurfels.cornerOffsets(mesh) }
-                steps.time("snapshot: floor cells") { CoverageGrid.coveredKeys(cloud.positions, cloud.count) }
+                steps.time("snapshot: floor cells") { CoverageGrid.coveredKeys(whole.positions, whole.count) }
                 // The main thread's share: what uploadDense and DebugLayerNode.write copy.
                 steps.time("main: atlas handed over") {
                     ByteBuffer.allocateDirect(live!!.atlas.size).put(live.atlas)
