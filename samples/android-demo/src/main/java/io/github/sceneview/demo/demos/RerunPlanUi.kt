@@ -143,12 +143,12 @@ internal class PlanWords(
 /**
  * The Plan view's words under the phone's language, its figures in [units]: by default that
  * language's, feet and inches in US English, metres everywhere else ([SurveyFormat.units]). Their
- * decimal mark is [locale]'s, English by default ([SurveyWording.locale]).
+ * decimal mark is [locale]'s, the phone's by default: `4,00 m` in French, `4.00 m` in English.
  */
 @Composable
 internal fun rememberPlanWords(
     units: MeasureUnitSystem = SurveyFormat.units(LocalLocale.current.platformLocale),
-    locale: Locale = Locale.US,
+    locale: Locale = LocalLocale.current.platformLocale,
 ): PlanWords = planWords(units, locale)
 
 @Composable
@@ -267,7 +267,7 @@ internal fun RerunPlanView(
     date: String?,
     modifier: Modifier = Modifier,
     units: MeasureUnitSystem = SurveyFormat.units(LocalLocale.current.platformLocale),
-    locale: Locale = Locale.US,
+    locale: Locale = LocalLocale.current.platformLocale,
 ) {
     val words = rememberPlanWords(units, locale)
     val context = LocalContext.current
