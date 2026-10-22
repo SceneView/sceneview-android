@@ -2,6 +2,7 @@ package io.github.sceneview.demo.demos
 
 import android.os.Build
 import androidx.activity.compose.BackHandler
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
@@ -113,6 +114,7 @@ import io.github.sceneview.demo.demos.internal.LiveWallMotion
 import io.github.sceneview.demo.demos.internal.LiveWallSnapshot
 import io.github.sceneview.demo.demos.internal.MeasureAction
 import io.github.sceneview.demo.demos.internal.measureAction
+import io.github.sceneview.demo.demos.internal.measureAddPoint
 import io.github.sceneview.demo.demos.internal.measureAimHapticEvent
 import io.github.sceneview.demo.demos.internal.MeasureBoard
 import io.github.sceneview.demo.demos.internal.MeasureCandidateControl
@@ -137,7 +139,6 @@ import io.github.sceneview.demo.demos.internal.MeasureMode
 import io.github.sceneview.demo.demos.internal.measureOnLevel
 import io.github.sceneview.demo.demos.internal.MeasureOpening
 import io.github.sceneview.demo.demos.internal.measureOpening
-import io.github.sceneview.demo.demos.internal.measureOpeningsArea
 import io.github.sceneview.demo.demos.internal.MeasurePhase
 import io.github.sceneview.demo.demos.internal.MeasurePlane
 import io.github.sceneview.demo.demos.internal.MeasurePlaneKind
@@ -149,12 +150,14 @@ import io.github.sceneview.demo.demos.internal.MeasurePlanTap
 import io.github.sceneview.demo.demos.internal.measurePlanTap
 import io.github.sceneview.demo.demos.internal.measurePointHapticEvent
 import io.github.sceneview.demo.demos.internal.measurePointsMoved
+import io.github.sceneview.demo.demos.internal.MeasurePointTap
 import io.github.sceneview.demo.demos.internal.MeasureQaPoint
 import io.github.sceneview.demo.demos.internal.measureQaLines
 import io.github.sceneview.demo.demos.internal.measureRaisingHeight
 import io.github.sceneview.demo.demos.internal.measureRayFloorHit
 import io.github.sceneview.demo.demos.internal.MeasureRefusal
 import io.github.sceneview.demo.demos.internal.measureRefusal
+import io.github.sceneview.demo.demos.internal.measureRefusalChip
 import io.github.sceneview.demo.demos.internal.measureRoomHeightFromRay
 import io.github.sceneview.demo.demos.internal.measureShareText
 import io.github.sceneview.demo.demos.internal.MeasureSnap
@@ -166,7 +169,9 @@ import io.github.sceneview.demo.demos.internal.MeasureUnitSystem
 import io.github.sceneview.demo.demos.internal.measureWallFootAt
 import io.github.sceneview.demo.demos.internal.measureWallHeightFromRay
 import io.github.sceneview.demo.demos.internal.measureWallIndices
+import io.github.sceneview.demo.demos.internal.measureWallLabels
 import io.github.sceneview.demo.demos.internal.MeasureWallPoint
+import io.github.sceneview.demo.demos.internal.measureWallText
 import io.github.sceneview.demo.demos.internal.measureWallVertices
 import io.github.sceneview.demo.demos.internal.PlaneWallSource
 import io.github.sceneview.demo.demos.internal.RoomSurvey
@@ -469,9 +474,10 @@ fun MeasureScreen(onBack: () -> Unit) {
             }
         } else {
             val current = aimControl.current?.takeIf { isTracking }
-            val next = tapAt(board, current)
-            if (next == null || next == board) {
-                refuse(if (current == null) MeasureRefusal.NoSurface else MeasureRefusal.AnchorFailed)
+            val tap = tapAt(board, current, positions)
+            val next = tap.board
+            if (tap.refusal != null || next == board) {
+                refuse(tap.refusal ?: MeasureRefusal.AnchorFailed)
             } else {
                 val qa = current?.qa?.takeIf { qaRecorder != null }?.invoke()
                 if (qa != null) next.allPoints.filterNot { it in qaPoints }.forEach { qaPoints[it] = qa }
@@ -748,6 +754,7 @@ fun MeasureScreen(onBack: () -> Unit) {
                                 MeasureFigureNodes(
                                     figure = figure,
                                     outline = figureOutlines[index],
+                                    numbers = figureNumbers[index],
                                     liveHeight = shownHeight,
                                     cameraPosition = cameraPosition,
                                     eye = cameraNode,
@@ -779,9 +786,13 @@ fun MeasureScreen(onBack: () -> Unit) {
                             raising = phase == MeasurePhase.Raising || marking,
                             wallFoot = board.mode != MeasureMode.Distance && phase != MeasurePhase.Raising && !marking,
                             // A refused tap says why for a moment; aiming off a wall it reads says it all along.
-                            refusal = tapRefusal ?: refusal?.takeIf {
-                                (it == MeasureRefusal.OffWall || it == MeasureRefusal.OpeningOffWall) && !coaching
-                            },
+                            refusal = measureRefusalChip(
+                                tapped = tapRefusal,
+                                live = refusal,
+                                coaching = coaching,
+                                reading = liveHeight != null,
+                                read = shownHeight != null,
+                            ),
                             modifier = Modifier.align(Alignment.Center),
                         )
                     }
@@ -991,12 +1002,13 @@ private fun measureReadout(
         }
         MeasureMode.Wall -> {
             val width = n.segments.firstOrNull() ?: liveSegment ?: return null
-            val height = n.height
-            if (height == null) {
+            // The same words as the labels on the wall in AR.
+            val wall = measureWallText(n, len, area)
+            if (wall.height == null) {
                 MeasureReadout(len(width), stringResource(R.string.demo_ar_measure_label_width), null)
             } else {
                 MeasureReadout(
-                    value = len(height),
+                    value = wall.height,
                     label = stringResource(
                         if (raising) {
                             R.string.demo_ar_measure_label_height_live
@@ -1006,19 +1018,20 @@ private fun measureReadout(
                     ),
                     details = listOfNotNull(
                         stringResource(R.string.demo_ar_measure_width, len(width)),
-                        n.wallArea?.let { stringResource(R.string.demo_ar_measure_area, area(it)) },
+                        wall.area?.let { stringResource(R.string.demo_ar_measure_area, it) },
                         // A door or a window marked: what it takes off, and the wall left to cover.
                         n.openingsArea?.let { stringResource(R.string.demo_ar_measure_openings, area(it)) },
-                        n.netWallArea?.let { stringResource(R.string.demo_ar_measure_net, area(it)) },
+                        wall.net?.let { stringResource(R.string.demo_ar_measure_net, it) },
                     ).joinToString(sep),
                 )
             }
         }
         MeasureMode.Room -> {
-            val height = n.height
+            // The same words as the height up the room's first corner in AR.
+            val walls = measureWallText(n, len, area)
             when {
-                height != null -> MeasureReadout(
-                    value = len(height),
+                walls.height != null -> MeasureReadout(
+                    value = walls.height,
                     label = stringResource(
                         if (raising) {
                             R.string.demo_ar_measure_label_ceiling_live
@@ -1029,10 +1042,10 @@ private fun measureReadout(
                     details = listOfNotNull(
                         n.outlineArea?.let { stringResource(R.string.demo_ar_measure_floor, area(it)) },
                         stringResource(R.string.demo_ar_measure_perimeter, len(n.length)),
-                        n.wallArea?.let { stringResource(R.string.demo_ar_measure_walls, area(it)) },
+                        walls.area?.let { stringResource(R.string.demo_ar_measure_walls, it) },
                         // Doors and windows marked on its walls: what they take off, and the walls left to cover.
                         n.openingsArea?.let { stringResource(R.string.demo_ar_measure_openings, area(it)) },
-                        n.netWallArea?.let { stringResource(R.string.demo_ar_measure_net, area(it)) },
+                        walls.net?.let { stringResource(R.string.demo_ar_measure_net, it) },
                         n.volume?.let { stringResource(R.string.demo_ar_measure_volume, volume(it)) },
                     ).joinToString(sep),
                 )
@@ -1324,13 +1337,7 @@ internal fun MeasureReticle(
             }
         }
         val chip = when {
-            refusal == MeasureRefusal.NotTracking -> R.string.demo_ar_measure_refusal_tracking
-            refusal == MeasureRefusal.NoSurface -> R.string.demo_ar_measure_refusal_no_surface
-            refusal == MeasureRefusal.OffWall -> R.string.demo_ar_measure_refusal_off_wall
-            refusal == MeasureRefusal.AnchorFailed -> R.string.demo_ar_measure_refusal_anchor
-            refusal == MeasureRefusal.OpeningOffWall -> R.string.demo_ar_measure_refusal_opening_off_wall
-            refusal == MeasureRefusal.OpeningTooSmall -> R.string.demo_ar_measure_refusal_opening_small
-            refusal == MeasureRefusal.NoPlan -> R.string.demo_ar_measure_refusal_no_plan
+            refusal != null -> measureRefusalMessage(refusal)
             aim?.closes == true -> R.string.demo_ar_measure_snap_close
             kind == MeasureSnapKind.Point -> R.string.demo_ar_measure_snap_point
             kind == MeasureSnapKind.Corner -> R.string.demo_ar_measure_snap_corner
@@ -1379,6 +1386,7 @@ private const val RETICLE_ARM = 1.6f
 private fun ARSceneScope.MeasureFigureNodes(
     figure: MeasureFigure<Anchor>,
     outline: List<Position>,
+    numbers: MeasureFigureNumbers,
     liveHeight: Float?,
     cameraPosition: Position,
     eye: SceneNode,
@@ -1438,29 +1446,22 @@ private fun ARSceneScope.MeasureFigureNodes(
                 )
             }
         }
-        // Height on the first upright, wall area on the first wall.
-        val first = outline.first()
-        MeasureLabel(
-            text = len(height),
-            position = Position(first.x, first.y + height / 2f, first.z),
-            accent = true,
-            cameraPosition = cameraPosition,
-            eye = eye,
-        )
         if (figure.mode == MeasureMode.Wall) {
-            val mid = measureMidpoint(outline[0], outline[1])
-            val width = measureDistanceMeters(outline[0], outline[1])
-            // With a door or a window marked, the wall reads what is left to cover.
-            val wallArea = width * height - measureOpeningsArea(figure.openings, width, height)
             figure.openings.forEachIndexed { i, opening ->
                 key("opening-$i") { MeasureOpeningNode(opening, outline, closed = false, accent = false) }
             }
-            MeasureLabel(
-                text = area(wallArea.coerceAtLeast(0f)),
-                position = Position(mid.x, mid.y + height / 2f, mid.z),
-                cameraPosition = cameraPosition,
-                eye = eye,
-            )
+        }
+        // Height on the first upright (in the accent), wall area on the first wall.
+        measureWallLabels(figure, outline, numbers, height, len, area).forEachIndexed { i, label ->
+            key("wall-label-$i") {
+                MeasureLabel(
+                    text = label.text,
+                    position = label.position,
+                    accent = i == 0,
+                    cameraPosition = cameraPosition,
+                    eye = eye,
+                )
+            }
         }
     }
 
@@ -1695,14 +1696,38 @@ private fun ARSceneScope.rememberTwoSidedMaterial(color: Color): MaterialInstanc
     return instance
 }
 
+/** What the chip under the reticle says for [refusal]: every refusal says why, none is silent. */
+@StringRes
+internal fun measureRefusalMessage(refusal: MeasureRefusal): Int = when (refusal) {
+    MeasureRefusal.NotTracking -> R.string.demo_ar_measure_refusal_tracking
+    MeasureRefusal.NoSurface -> R.string.demo_ar_measure_refusal_no_surface
+    MeasureRefusal.OffWall -> R.string.demo_ar_measure_refusal_off_wall
+    MeasureRefusal.AnchorFailed -> R.string.demo_ar_measure_refusal_anchor
+    MeasureRefusal.OpeningOffWall -> R.string.demo_ar_measure_refusal_opening_off_wall
+    MeasureRefusal.OpeningTooSmall -> R.string.demo_ar_measure_refusal_opening_small
+    MeasureRefusal.NoPlan -> R.string.demo_ar_measure_refusal_no_plan
+    MeasureRefusal.SameCorner -> R.string.demo_ar_measure_refusal_same_corner
+    MeasureRefusal.PlanNeedsRoom -> R.string.demo_ar_measure_refusal_plan_room
+    MeasureRefusal.PlanNeedsClose -> R.string.demo_ar_measure_refusal_plan_close
+    MeasureRefusal.PlanNeedsHeight -> R.string.demo_ar_measure_refusal_plan_height
+}
+
 // ── Per-frame helpers ───────────────────────────────────────────────────────────────────────
 
-/** The board after a tap with the reticle on [aim]: close the outline, or add an anchored point. */
-private fun tapAt(board: MeasureBoard<Anchor>, aim: MeasureAim?): MeasureBoard<Anchor>? {
-    if (aim == null) return null
-    if (aim.view.closes) return board.tap(null, closesOutline = true)
-    val anchor = aim.reuse ?: runCatching { aim.createAnchor() }.getOrNull() ?: return null
-    return board.tap(anchor, closesOutline = false)
+/**
+ * The add button's tap with the reticle on [aim]: close the outline, or add an anchored point,
+ * with [positions] the anchored points' positions.
+ */
+private fun tapAt(
+    board: MeasureBoard<Anchor>,
+    aim: MeasureAim?,
+    positions: Map<Anchor, Position>,
+): MeasurePointTap<Anchor> = when {
+    aim == null -> MeasurePointTap(board, MeasureRefusal.NoSurface)
+    aim.view.closes -> MeasurePointTap(board.tap(null, closesOutline = true), null)
+    else -> measureAddPoint(board, aim.view.snap.position, { positions[it] }) {
+        aim.reuse ?: runCatching { aim.createAnchor() }.getOrNull()
+    }
 }
 
 /** New anchor positions when one of them really moved, `null` otherwise. */

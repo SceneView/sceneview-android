@@ -66,6 +66,10 @@
     <string name="demo_ar_measure_refusal_opening_off_wall">Aim at the wall to mark a corner</string>
     <string name="demo_ar_measure_refusal_opening_small">Too close to the first corner: aim at the opposite one</string>
     <string name="demo_ar_measure_refusal_no_plan">No floor between the corners: trace the room again</string>
+    <string name="demo_ar_measure_refusal_same_corner">Move to the next corner first</string>
+    <string name="demo_ar_measure_refusal_plan_room">Trace the room, close it and set its height first</string>
+    <string name="demo_ar_measure_refusal_plan_close">Close the room and set its height first</string>
+    <string name="demo_ar_measure_refusal_plan_height">Set the room height first</string>
 
     <string name="demo_ar_measure_action_add">Add point</string>
     <string name="demo_ar_measure_action_set_height">Set height</string>

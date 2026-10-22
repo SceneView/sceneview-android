@@ -83,6 +83,25 @@ fun <P> measureFigureNumbers(
 }
 
 /**
+ * A wall's or a room's numbers as words, each `null` until there is a height: [height] the wall
+ * height, [area] the wall area, [net] the wall area left once the doors and windows marked on it
+ * are off (`null` with none marked). Formatted once for the readout card and the labels on the
+ * walls in AR alike, so both say the same thing in the same units (#4765).
+ */
+data class MeasureWallText(val height: String?, val area: String?, val net: String?)
+
+/** [numbers]' [MeasureWallText], with [len] and [area] the screen's length and area formats. */
+fun measureWallText(
+    numbers: MeasureFigureNumbers,
+    len: (Float) -> String,
+    area: (Float) -> String,
+): MeasureWallText = MeasureWallText(
+    height = numbers.height?.let(len),
+    area = numbers.wallArea?.let(area),
+    net = numbers.netWallArea?.let(area),
+)
+
+/**
  * Plain-text summary of every figure, for the share sheet: what a person pastes into a
  * message to a carpenter or into a quote. English, like the rest of the demo.
  */
