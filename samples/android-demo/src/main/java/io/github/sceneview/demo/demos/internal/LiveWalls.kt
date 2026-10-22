@@ -83,8 +83,8 @@ interface LiveWallSource {
 /**
  * Walls from ARCore's vertical planes, by the room survey's rules ([WallRules]). ARCore cuts one
  * wall into several planes (a picture, a door frame, a wall seen from two places, a piece fitted
- * askew) and keeps planes of furniture: only a plane standing on the floor and rising past
- * standing height (or standing on the furniture before it) can be a wall; pieces on one line,
+ * askew) and keeps planes of furniture: only a plane rising past standing height and seen over
+ * 0.40 m of its height (or over the furniture before it) can be a wall; pieces on one line,
  * and fits of one wall a little apart, are joined into one wall; a wall is shown once seen long
  * enough along one of the room's directions and when it is not furniture before another wall; and
  * the walls are squared to the room's directions and joined at the corners they nearly meet at. A
@@ -329,8 +329,8 @@ class PlaneWallSource : LiveWallSource {
 
         /**
          * Each vertical plane that stands as a wall ([WallRules.standsAsWall]) as a floor segment:
-         * its line, its extent along it, its top. Its foot may stand on the furniture before it
-         * ([WallRules.furnitureTop]), which hides the rest. [standing] holds the ids of the planes
+         * its line, its extent along it, its top. Seen over less than [WallRules.MIN_SPAN_M] of its
+         * height, it may stand on the furniture before it ([WallRules.furnitureTop]), which hides the rest. [standing] holds the ids of the planes
          * that stood the last time, which keep standing a little past the thresholds, and is
          * rewritten with this time's.
          */
@@ -351,7 +351,7 @@ class PlaneWallSource : LiveWallSource {
                 }
                 val segment = Segment.ofPolygon(plane.polygon) ?: return@mapNotNull null
                 val held = plane.id in before
-                // Furniture is looked for only when the floor alone does not hold it up.
+                // Furniture is looked for only when what was seen of the plane alone does not hold it up.
                 val stands = WallRules.standsAsWall(bottom, top, floorY, held) ||
                     WallRules.standsAsWall(bottom, top, floorY, held, underY = furnitureUnder(plane, segment, planes, floorY))
                 if (!stands) return@mapNotNull null

@@ -81,7 +81,7 @@ class LiveWallsSteadyTest {
     @Test
     fun `a plane refit across the seen height's threshold keeps its wall`() {
         // Seen over 0.40 m of its height, the survey's least, then 3 cm either side of it.
-        val span = 0.4f
+        val span = WallRules.MIN_SPAN_M
         fun piece(seen: Float) = listOf(front, left, plane(24, -1f, -1f, 0.5f, -1f, bottom = 1.8f - seen, top = 1.8f))
         // A refit a second apart, longer than a wall waits for its plane.
         assertSteady("seen height", alternate(piece(span + 0.03f), piece(span - 0.03f)), step = 1f, walls = 3)

@@ -19,11 +19,14 @@ class WallFamily(val direction: Float, val weight: Float, val square: Boolean)
  * What makes a vertical surface a wall for the live walls ([PlaneWallSource], shared by 3D Scan and
  * Measure), on the room survey's terms. The survey ([RoomSurveyor]) does not call these rules: it
  * reads the depth cloud on a grid, not planes. What they share is its thresholds — how high a wall
- * rises ([MIN_TOP_M]), how much of it is seen ([MIN_SEEN_M], [OBLIQUE_MIN_SEEN_M]), how much lower
- * furniture is ([FURNITURE_UNDER_M]) — and a wall seen only above furniture is a wall for both.
+ * rises ([MIN_TOP_M]), how much of its height is seen ([MIN_SPAN_M]), how long it is seen
+ * ([MIN_SEEN_M], [OBLIQUE_MIN_SEEN_M]), how much lower furniture is ([FURNITURE_UNDER_M]) — and a
+ * wall seen only above furniture is a wall for both. Where a plane can say more than a depth cell,
+ * the rule is the live walls' own, and says so ([DUPLICATE_M]).
  *
- * - It stands on the floor, or on the furniture before it, and rises past standing height
- *   ([standsAsWall], [furnitureTop]).
+ * - It rises past standing height and is seen over [MIN_SPAN_M] of its height, or over the
+ *   furniture before it ([standsAsWall], [furnitureTop]). Its foot is not looked for, as the
+ *   survey does not look for it: furniture ARCore fitted no plane to hides it as often as not.
  * - It was seen long enough ([seenEnough]), along one of the room's directions ([families]).
  * - It is neither a second fit of a wall nearby ([duplicates]), nor a piece of furniture before a
  *   wall ([standsBefore], [isSideOf]); a piece fitted a little askew along a wall is that wall
@@ -31,8 +34,8 @@ class WallFamily(val direction: Float, val weight: Float, val square: Boolean)
  * - It is drawn as tall as the room ([height]), never as the top of what was seen of it.
  */
 object WallRules {
-    /** A wall's lowest point seen is no higher than this over the floor: a sofa's front starts higher. */
-    const val MAX_FOOT_M = 0.3f
+    /** A wall is seen over this much of its height at least, unless furniture before it hides the rest: the survey's [RoomSurveyor.WALL_CELL_SPAN_M]. */
+    const val MIN_SPAN_M = RoomSurveyor.WALL_CELL_SPAN_M
 
     /** A wall's highest point seen is at least this high over the floor: the survey's [RoomSurveyor.WALL_MIN_TOP_M]. */
     const val MIN_TOP_M = RoomSurveyor.WALL_MIN_TOP_M
@@ -106,17 +109,18 @@ object WallRules {
 
     /**
      * Whether a vertical surface seen from [bottom] to [top] (world heights) stands as a wall over a
-     * floor at [floorY]: it rises past standing height, and its foot is on the floor — or on the
-     * furniture before it, up to [underY] ([furnitureTop]), which hides the rest. A first verdict
-     * takes standing height as it is: a cabinet whose top ARCore fits a centimetre short of it is
-     * not a wall. The foot keeps [TOLERANCE_M]: a cabinet standing on the floor passes it anyway.
-     * One that [held], that stood the last time, keeps standing until it is [TOLERANCE_M] and
-     * [HOLD_M] past either threshold.
+     * floor at [floorY], as the survey reads a wall cell: it rises past standing height
+     * ([MIN_TOP_M]), and it is seen over [MIN_SPAN_M] of its height — or it stands over the furniture
+     * before it, up to [underY] ([furnitureTop]), which hides the rest. Where its foot is does not
+     * count: a panel standing in the room with no wall within [BEHIND_MAX_M] behind it is a wall here
+     * as in the survey. A first verdict takes both thresholds as they are: a cabinet whose top ARCore
+     * fits a centimetre short of standing height is not a wall. One that [held], that stood the last
+     * time, keeps standing until it is [TOLERANCE_M] and [HOLD_M] past either threshold.
      */
     fun standsAsWall(bottom: Float, top: Float, floorY: Float, held: Boolean = false, underY: Float = floorY): Boolean {
-        val hold = if (held) HOLD_M else 0f
-        return bottom - max(floorY, underY) <= MAX_FOOT_M + TOLERANCE_M + hold &&
-            top - floorY >= MIN_TOP_M - (if (held) TOLERANCE_M + hold else 0f)
+        val slack = if (held) TOLERANCE_M + HOLD_M else 0f
+        val tall = top - floorY >= MIN_TOP_M - slack
+        return tall && (top - bottom >= MIN_SPAN_M - slack || underY > floorY)
     }
 
     /**
