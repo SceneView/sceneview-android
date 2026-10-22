@@ -17,8 +17,8 @@ class WallFamily(val direction: Float, val weight: Float, val square: Boolean)
 
 /**
  * What makes a vertical surface a wall for the live walls ([PlaneWallSource], shared by 3D Scan and
- * Measure), on the room survey's terms. The survey ([RoomSurveyor]) does not call these rules: it
- * reads the depth cloud on a grid, not planes. What they share is its thresholds — how high a wall
+ * Measure), on the room survey's terms. The survey ([RoomSurveyor]) does not call these rules: its
+ * structure engine reads the depth cloud's walls as lines, not planes. What they share is its thresholds — how high a wall
  * rises ([MIN_TOP_M]), how much of its height is seen ([MIN_SPAN_M]), how long it is seen
  * ([MIN_SEEN_M], [OBLIQUE_MIN_SEEN_M]), how much lower furniture is ([FURNITURE_UNDER_M]) — and a
  * wall seen only above furniture is a wall for both. Where a plane can say more than a depth cell,
@@ -49,7 +49,10 @@ object WallRules {
     /** A wall off the room's square needs this much seen, the survey's [RoomSurveyor.OBLIQUE_MIN_M]: a short slanted piece is furniture. */
     const val OBLIQUE_MIN_SEEN_M = RoomSurveyor.OBLIQUE_MIN_M
 
-    /** Lower than the wall behind it by more than this, it is furniture: [RoomSurveyor.FURNITURE_UNDER_M]. */
+    /**
+     * Lower than the wall behind it by more than this, it is furniture: [RoomSurveyor.FURNITURE_UNDER_M].
+     * Strictly more, as the survey's structure engine cuts: exactly this much lower is still a wall.
+     */
     const val FURNITURE_UNDER_M = RoomSurveyor.FURNITURE_UNDER_M
 
     /** Two walls further apart than this in direction are two of the room's directions. */
@@ -235,7 +238,7 @@ object WallRules {
 
     /**
      * Whether [side] is the side of furniture [front] standing before the wall [behind]: short,
-     * square to the front, lower than the wall, one end on the front's line by its end and the
+     * square to the front, lower than the wall by more than [FURNITURE_UNDER_M], one end on the front's line by its end and the
      * other on the wall's. [wasFurniture] holds the last verdict, as for [standsBefore].
      */
     fun isSideOf(side: Segment, front: Segment, behind: Segment, wasFurniture: Boolean? = null): Boolean {
