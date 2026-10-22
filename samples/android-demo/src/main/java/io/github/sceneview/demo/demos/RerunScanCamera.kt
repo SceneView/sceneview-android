@@ -13,14 +13,16 @@ import java.util.EnumSet
  * then one fixed at 30 fps, then the largest CPU image ([CameraStreamPick]), so the photos and
  * the depth are read from the sharpest image the scan keeps up with. The session's default config
  * stays when ARCore offers none, or throws. [line] keeps the choice for the bake log, next to the
- * image size the scan actually received: during a playback, the recording's own stream wins.
+ * image size the scan actually received. During a playback ARCore serves the recording's own
+ * stream and ignores the config asked for, so the line starts by saying so.
  */
 internal object RerunScanCamera {
     @Volatile
     var line: String = CameraStreamPick.logLine(emptyList(), null)
         private set
 
-    fun select(session: Session): CameraConfig = select(
+    /** [playback] is whether the session replays a recording instead of the camera. */
+    fun select(session: Session, playback: Boolean): CameraConfig = select(
         offered = {
             val filter = CameraConfigFilter(session)
                 .setFacingDirection(CameraConfig.FacingDirection.BACK)
@@ -29,21 +31,28 @@ internal object RerunScanCamera {
         },
         streamOf = ::streamOf,
         default = { session.cameraConfig },
+        playback = playback,
     )
 
     /**
      * [select] on any config type, which the JVM tests drive without ARCore: [offered] is read
      * once, and the config whose stream [CameraStreamPick] chooses is returned, or [default]'s
-     * when none qualifies or reading the offer throws. [line] says which, and why.
+     * when none qualifies or reading the offer throws. [line] says which, and why, and whether a
+     * [playback] serves the recording's stream instead.
      */
-    fun <C : Any> select(offered: () -> List<C>, streamOf: (C) -> CameraStream, default: () -> C): C {
+    fun <C : Any> select(
+        offered: () -> List<C>,
+        streamOf: (C) -> CameraStream,
+        default: () -> C,
+        playback: Boolean = false,
+    ): C {
         val chosen = runCatching {
             val configs = offered()
             val streams = configs.map(streamOf)
             val pick = CameraStreamPick.pickOf(configs.zip(streams))
-            line = CameraStreamPick.logLine(streams, pick?.second)
+            line = CameraStreamPick.logLine(streams, pick?.second, playback)
             pick?.first
-        }.onFailure { line = "camera: default config, the offered streams could not be read ($it)" }.getOrNull()
+        }.onFailure { line = CameraStreamPick.unreadLine(it, playback) }.getOrNull()
         // The JVM tests' android.util.Log is a stub that throws.
         runCatching { Log.i(LOG_TAG, line) }
         return chosen ?: default()

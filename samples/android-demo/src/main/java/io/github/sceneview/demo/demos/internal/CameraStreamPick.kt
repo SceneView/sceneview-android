@@ -58,17 +58,31 @@ object CameraStreamPick {
     fun meetsTarget(stream: CameraStream): Boolean =
         maxOf(stream.cpuWidth, stream.cpuHeight) >= TARGET_LONG && minOf(stream.cpuWidth, stream.cpuHeight) >= TARGET_SHORT
 
-    /** The choice in one line for the bake log: the stream, what was offered, and the target. */
-    fun logLine(offered: List<CameraStream>, chosen: CameraStream?): String {
+    /**
+     * The choice in one line for the bake log: the stream, what was offered, and the target. During
+     * a [playback] ARCore serves the recording's own stream whatever is asked for, so the line says
+     * so before what the scan asked for.
+     */
+    fun logLine(offered: List<CameraStream>, chosen: CameraStream?, playback: Boolean = false): String =
+        line(choice(offered, chosen), playback)
+
+    /** The line when the offered streams could not be read, so the session's default config stays. */
+    fun unreadLine(error: Throwable, playback: Boolean = false): String =
+        line("default config, the offered streams could not be read ($error)", playback)
+
+    private fun line(choice: String, playback: Boolean): String =
+        if (playback) "camera: playback, the recording's own stream serves; asked for $choice" else "camera: $choice"
+
+    private fun choice(offered: List<CameraStream>, chosen: CameraStream?): String {
         val list = if (offered.isEmpty()) "" else offered.map(::label).distinct().joinToString(", ", " [", "]")
-        if (chosen == null) return "camera: default config, none of ${offered.size} offered holds $FPS fps$list"
+        if (chosen == null) return "default config, none of ${offered.size} offered holds $FPS fps$list"
         val extras = listOfNotNull(
             "gpu ${chosen.gpuWidth}x${chosen.gpuHeight}".takeIf { chosen.gpuPixels > 0 },
             "depth sensor".takeIf { chosen.depthSensor },
         )
         val details = if (extras.isEmpty()) "" else extras.joinToString(", ", " (", ")")
         val target = if (meetsTarget(chosen)) "meets" else "below"
-        return "camera: ${chosen.cpuWidth}x${chosen.cpuHeight} at ${fps(chosen)} fps$details, " +
+        return "${chosen.cpuWidth}x${chosen.cpuHeight} at ${fps(chosen)} fps$details, " +
             "picked from ${offered.size} offered$list; $target ${TARGET_LONG}x$TARGET_SHORT"
     }
 
