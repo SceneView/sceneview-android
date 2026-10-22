@@ -477,6 +477,12 @@ dependencies {
         exclude group: 'com.google.auto.value', module: 'auto-value'
     }
 
+    // LiteRT — the 3D Scan's furniture detector (YOLOX-Tiny converted to .tflite,
+    // internal/semantic), on the runtime `arsceneview-depth-ml` already ships: no second native
+    // runtime in the APK. The model is not in the APK either: the app downloads it on first use
+    // from the assets-v1 release, checks its SHA-256 and keeps it in app storage (SceneModel.kt).
+    implementation libs.litert
+
     // JVM tests on Robolectric — no emulator needed.
     testImplementation libs.robolectric
     testImplementation libs.androidx.test.junit
@@ -501,6 +507,10 @@ dependencies {
     // comment there.
 
     testImplementation libs.kotlin.coroutines.test
+    // The scan recogniser's detector on the JVM, where LiteRT does not run: the ONNX export the
+    // app's .tflite was converted from, on the desktop ONNX Runtime (SceneRecognitionCorpusTest).
+    // Tests only — nothing of ONNX Runtime is in the app.
+    testImplementation libs.onnxruntime.jvm
     // Local HTTP double for SketchfabService's cooperative-cancellation test
     // (#2644) — proves an aborted search releases its socket instead of
     // running to completion behind the debounce.

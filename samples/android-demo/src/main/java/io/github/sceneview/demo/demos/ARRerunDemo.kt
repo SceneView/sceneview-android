@@ -484,13 +484,19 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
             val capture = withContext(Dispatchers.IO) { store.capture(id) }
             val opened = capture?.let { runCatching { loadRerunSession(it) }.getOrNull() }
             when {
-                capture != null && opened != null -> if (screen == RerunScreen.Model && kept) {
-                    // Already on the model: the recording only completes the scan behind it.
-                    scanMedia = opened
-                    scanPack = capture
-                    openCount++
-                } else {
-                    openResult(opened, title, capture, id, kept, kind)
+                capture != null && opened != null -> {
+                    if (screen == RerunScreen.Model && kept) {
+                        // Already on the model: the recording only completes the scan behind it.
+                        scanMedia = opened
+                        scanPack = capture
+                        openCount++
+                    } else {
+                        openResult(opened, title, capture, id, kept, kind)
+                    }
+                    // A raw surface kept for running out of memory, with attempts left, is finished
+                    // again from the recording, behind the surface already shown
+                    // ([io.github.sceneview.demo.demos.internal.RerunScanModel.retriesFinish]).
+                    if (keptModel?.retriesFinish == true) modelSource = RerunModelSource.of(capture, opened)
                 }
                 kept -> Unit
                 else -> {
@@ -1972,6 +1978,7 @@ private fun RerunLiveScreen(
                 cameraStream = if (qaBackdrop) null else cameraStream,
                 playbackDataset = arPlaybackDataset,
                 planeRenderer = true,
+                sessionCameraConfig = { RerunScanCamera.select(it, playback = arPlaybackDataset != null) },
                 sessionConfiguration = { session: Session, config: Config ->
                     config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
                     config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR

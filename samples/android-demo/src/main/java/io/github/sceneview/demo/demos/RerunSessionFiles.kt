@@ -20,12 +20,14 @@ import io.github.sceneview.demo.demos.internal.ArDebugLogWriter
 import io.github.sceneview.demo.demos.internal.ArDebugTrace
 import io.github.sceneview.demo.demos.internal.BakeOcclusion
 import io.github.sceneview.demo.demos.internal.BakePhoto
+import io.github.sceneview.demo.demos.internal.BakePhotoCache
 import io.github.sceneview.demo.demos.internal.DebugPlane
 import io.github.sceneview.demo.demos.internal.DebugPlaneKind
 import io.github.sceneview.demo.demos.internal.DebugPose
 import io.github.sceneview.demo.demos.internal.DenseCloud
 import io.github.sceneview.demo.demos.internal.DenseFusion
 import io.github.sceneview.demo.demos.internal.PlaneBake
+import io.github.sceneview.demo.demos.internal.PlaneRect
 import io.github.sceneview.demo.demos.internal.ReplayDense
 import io.github.sceneview.demo.demos.internal.ReplayGeometry
 import io.github.sceneview.demo.demos.internal.ReplayLens
@@ -91,26 +93,31 @@ internal object RerunCaptureBuilder {
         dense: DenseCloud? = null,
         denseVoxelM: Float = DenseFusion.VOXEL_M,
         denseMs: Long = 0L,
+        camera: String? = null,
     ): RerunCapturePack = withContext(Dispatchers.Default) {
         val trace = ArDebugTrace.of(events).apply { keyframeSpacing = ReplayGeometry.KEYFRAME_SPACING_M }
         val whole = trace.frameAt(trace.duration)
-        val decoded = HashMap<Int, BakePhoto?>()
         val reads = ArrayList<ScanPhotoPolicy.BakeRead>()
-        fun photo(index: Int): BakePhoto? = decoded.getOrPut(index) { decodePhoto(photos[index], reads::add) }
 
         val viewpoint = centroid(whole.trail)
         val planes = trace.lastPlanes()
         // What stands in front of a plane hides it from a photo: its own dense cloud and the other planes.
         val bakeStart = System.nanoTime()
         val occlusion = BakeOcclusion.of(dense, planes)
-        val baked = planes.mapNotNull { plane -> bakePlane(plane, viewpoint, photos, lens, occlusion, ::photo) }
+        // Each photo decoded on the first plane that paints from it, and let go after the last one.
+        val rects = planes.map { PlaneBake.rectOf(it, viewpoint) }
+        val poses = photos.map { it.pose }
+        val picks = rects.map { rect -> rect?.let { PlaneBake.pickPhotos(it, poses, lens) }.orEmpty() }
+        val cache = BakePhotoCache(picks) { decodePhoto(photos[it], reads::add) }
+        val baked = planes.indices.mapNotNull { i -> bakePlane(planes[i], rects[i], lens, occlusion, cache.photosFor(i)) }
         // `adb logcat -s RerunCaptureBuilder`: what the visibility test costs on a real phone (#4697),
         // and at what size the bake read the photos it painted from.
         // The JVM tests build scans too, and their android.util.Log is a stub that throws.
         val bakeMs = (System.nanoTime() - bakeStart) / NANOS_PER_MS
         runCatching {
             Log.i(BAKE_LOG_TAG, "planes baked: ${baked.size} of ${planes.size}, ${photos.size} photos, " +
-                "${dense?.count ?: 0} dense points, $bakeMs ms; ${ScanPhotoPolicy.bakeReadsLog(reads)}")
+                "${dense?.count ?: 0} dense points, $bakeMs ms; ${ScanPhotoPolicy.bakeReadsLog(reads)}; " +
+                cache.logLine() + camera?.let { "; $it" }.orEmpty())
         }
         val denseCloud = dense?.takeIf { device != null && it.count > 0 }
         val denseBlob = denseCloud?.let { listOf(ReplayDense.PATH to SvpcCodec.encode(it)) }.orEmpty()
@@ -141,15 +148,13 @@ internal object RerunCaptureBuilder {
     /** [plane]'s texture and its JPEG, painted from the photos that see it best; `null` if none do. */
     private fun bakePlane(
         plane: DebugPlane,
-        viewpoint: Vec3?,
-        photos: List<ScanPhoto>,
+        rect: PlaneRect?,
         lens: ReplayLens,
         occlusion: BakeOcclusion?,
-        photo: (Int) -> BakePhoto?,
+        picked: List<BakePhoto>,
     ): Pair<ReplayPlaneTexture, ByteArray>? {
-        val rect = PlaneBake.rectOf(plane, viewpoint) ?: return null
+        if (rect == null) return null
         val (width, height) = PlaneBake.sizeOf(rect)
-        val picked = PlaneBake.pickPhotos(rect, photos.map { it.pose }, lens).mapNotNull(photo)
         val baked = PlaneBake.bake(rect, width, height, picked, lens, occlusion, plane.id) ?: return null
         val bitmap = Bitmap.createBitmap(baked.argb, baked.width, baked.height, Bitmap.Config.ARGB_8888)
         val jpeg = ByteArrayOutputStream().also { bitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, it) }
@@ -162,7 +167,7 @@ internal object RerunCaptureBuilder {
 
     /**
      * [photo]'s pixels for the plane bake, read at [ScanPhotoPolicy.BAKE_LONG_SIDE] on the long side
-     * rather than whole: the build keeps every photo it painted from until it ends, and a sharp
+     * rather than whole: the build holds every photo a plane still to bake paints from, and a sharp
      * photo read whole holds four times the pixels the texture can use. The bake samples a photo by
      * its normalized position, so a reduced one still lands where the full one would. [onRead] hears
      * each photo read, for the build's log line.
