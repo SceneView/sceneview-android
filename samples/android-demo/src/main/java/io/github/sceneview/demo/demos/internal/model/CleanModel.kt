@@ -76,8 +76,9 @@ internal class RawSurface(mesh: RerunMesh) {
  * ([PhotoTexturing]), its normals split at creases ([ModelAssembly]), and written as a GLB
  * ([ModelGlb]). Blocking CPU work, for a worker thread; [progress] (0–1) may throw to stop it.
  *
- * The finished `.glb` weighs at most [MAX_GLB_BYTES]: over it, the atlas is halved, then the
- * texture dropped, then the budget halved down to [MIN_GUARD_TRIANGLES]. A finish the heap cannot
+ * The finished `.glb` weighs at most [MAX_GLB_BYTES]: over it, a textured model's faces are cut
+ * down to [MIN_GUARD_TEXTURED_TRIANGLES], then its atlas halved, then — last — its texture
+ * dropped and the budget halved down to [MIN_GUARD_TRIANGLES]. A finish the heap cannot
  * hold gives the raw surface back — its own `.glb`, no [CleanModelResult.model] — and says in
  * which [Stage] it ran out ([CleanModelStats.outOfMemoryIn]): a phone too small for the scan still
  * keeps it as scanned. With `consume`, the raw surface's arrays are worked in instead of copied —
@@ -173,13 +174,13 @@ internal object CleanModel {
         val textured = photos != null && photos.photos.isNotEmpty() && encoder != null
         val simplifyTarget = if (textured) minOf(targetTriangles, TEXTURED_TARGET_TRIANGLES) else targetTriangles
         val ceiling = errorCeiling(geometry)
-        val shape = simplify(clean, textured, targetTriangles, ceiling) { progress(BEFORE_SIMPLIFY + it * SIMPLIFY_SHARE) }
+        val shape = simplify(clean, textured, simplifyTarget, ceiling) { progress(BEFORE_SIMPLIFY + it * SIMPLIFY_SHARE) }
         reached.lap(Stage.Texture)
         // A shape simplified for a texture keeps only coarse colours where the photos did not
         // reach: the photos texture what they saw, the vertex colours the rest. Photos that
         // failed to decode, wrong poses, a corner of the room seen — under [MIN_TEXTURED_SHARE],
         // the colours are simplified again, edges kept, as without photos.
-        val textures = if (textured) textures(shape, photos!!, progress) else null
+        val textures = if (textured) textures(shape, photos!!) { progress(BEFORE_TEXTURE + it * TEXTURE_SHARE) } else null
         val covered = textures?.covering != null
         var texture = textures?.covering
         var simplified = if (textured && !covered) {
@@ -189,22 +190,39 @@ internal object CleanModel {
         } else {
             shape
         }
-        var model = ModelAssembly.assemble(simplified, texture)
+        var model: ModelMesh? = ModelAssembly.assemble(simplified, texture)
         reached.lap(Stage.Write)
-        var glb = ModelGlb.write(model, encoder)
-        // Within the cap: an atlas that compresses badly is paid for by a coarser atlas first,
-        // then by the vertex colours alone, then by fewer faces. Each step reports, so a finish
-        // left meanwhile stops there.
+        var glb = ModelGlb.write(checkNotNull(model), encoder)
+        val guarded = glb.size > MAX_GLB_BYTES
+        // Within the cap, the model gives up first what shows least. A textured one sheds faces
+        // past its budget, down to [MIN_GUARD_TEXTURED_TRIANGLES]: its shape simplified again,
+        // the error no longer capped, and textured again. Then its atlas's resolution. Only then
+        // its photo texture, for the vertex colours, its faces halved as they must. Each step
+        // reports, so a finish left meanwhile stops there.
+        var cut = true
+        while (glb.size > MAX_GLB_BYTES && texture != null && cut && simplified.triangleCount > MIN_GUARD_TEXTURED_TRIANGLES) {
+            progress(BEFORE_WRITE)
+            val before = simplified.triangleCount
+            val target = maxOf(MIN_GUARD_TEXTURED_TRIANGLES, (before * GUARD_FILL * MAX_GLB_BYTES / glb.size).toInt())
+            // The model, its atlas and its file go before the coarser shape and its texture are made.
+            model = null
+            texture = null
+            glb = NO_BYTES
+            simplified = simplify(clean, textured = true, target, ceiling = Float.POSITIVE_INFINITY) { progress(BEFORE_WRITE) }
+            cut = simplified.triangleCount < before
+            texture = textures(simplified, photos!!) { progress(BEFORE_WRITE) }.covering
+            model = ModelAssembly.assemble(simplified, texture)
+            glb = ModelGlb.write(model, encoder)
+        }
         var halvings = 0
         while (glb.size > MAX_GLB_BYTES && texture != null && halvings < MAX_ATLAS_HALVINGS) {
             progress(BEFORE_WRITE)
             texture = texture.halved()
-            model = model.withTexture(texture)
+            model = checkNotNull(model).withTexture(texture)
             glb = ModelGlb.write(model, encoder)
             halvings++
         }
         var guardTarget = minOf(targetTriangles, simplified.triangleCount)
-        val guarded = glb.size > MAX_GLB_BYTES
         while (glb.size > MAX_GLB_BYTES && (texture != null || guardTarget >= MIN_GUARD_TRIANGLES)) {
             progress(BEFORE_WRITE)
             if (texture == null) guardTarget /= 2
@@ -215,21 +233,22 @@ internal object CleanModel {
         }
         reached.lap(Stage.Write)
         progress(1f)
+        val finished = checkNotNull(model)
         return CleanModelResult(
             glb,
-            model,
+            finished,
             CleanModelStats(
                 rawTriangles = rawTriangles,
                 cleanInputTriangles = reached.cleanInputTriangles,
                 geometry = geometry,
                 simplifyTarget = if (texture != null) simplifyTarget else targetTriangles,
                 simplifiedTriangles = simplified.triangleCount,
-                finalTriangles = model.triangleCount,
-                finalVertices = model.vertexCount,
+                finalTriangles = finished.triangleCount,
+                finalVertices = finished.vertexCount,
                 texture = texture?.stats,
                 droppedTextureShare = textures?.share?.takeIf { texture == null },
-                atlasWidth = model.texture?.width ?: 0,
-                atlasHeight = model.texture?.height ?: 0,
+                atlasWidth = finished.texture?.width ?: 0,
+                atlasHeight = finished.texture?.height ?: 0,
                 glbBytes = glb.size,
                 glbLimitBytes = MAX_GLB_BYTES,
                 atlasHalvings = halvings,
@@ -260,7 +279,7 @@ internal object CleanModel {
     private class Textures(val covering: PhotoTexture?, val share: Float?)
 
     private fun textures(shape: WorkMesh, photos: ModelPhotos, progress: (Float) -> Unit): Textures {
-        val tried = PhotoTexturing.texture(shape, photos) { progress(BEFORE_TEXTURE + it * TEXTURE_SHARE) }
+        val tried = PhotoTexturing.texture(shape, photos, progress)
         val share = tried?.stats?.texturedShare
         return Textures(tried.takeIf { share != null && share >= MIN_TEXTURED_SHARE }, share)
     }
@@ -382,7 +401,7 @@ internal object CleanModel {
         val grey = IntArray(clean.vertexCount) { FLAT_COLOR }
         val out = RerunMeshSimplifier.simplify(
             RerunMesh(clean.positions, normals, grey, clean.indices),
-            minOf(target, TEXTURED_TARGET_TRIANGLES),
+            target,
             maxEdgeM = MAX_TEXTURED_EDGE_M,
             maxErrorM = MAX_TEXTURED_ERROR_M,
             maxErrorCeilingM = ceiling,
@@ -468,6 +487,17 @@ internal object CleanModel {
 
     /** The fewest triangles the size guard brings a model down to: well under [MAX_GLB_BYTES] untextured. */
     const val MIN_GUARD_TRIANGLES = 2_000
+
+    /**
+     * The fewest faces the size guard cuts a textured model to before it halves the atlas: a
+     * little over [TEXTURED_TARGET_TRIANGLES], so a room keeps the shape it was simplified to
+     * and a big scan held over its budget by its noise sheds that first.
+     */
+    const val MIN_GUARD_TEXTURED_TRIANGLES = 60_000
+
+    /** The share of the cap a textured model's faces are cut to fill, its size taken as theirs. */
+    private const val GUARD_FILL = 0.85
+    private val NO_BYTES = ByteArray(0)
 
     /**
      * The most a finished `.glb` weighs: 8 MB. A room textured as the finish makes it — a
