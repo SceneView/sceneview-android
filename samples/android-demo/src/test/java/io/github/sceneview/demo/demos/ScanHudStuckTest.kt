@@ -22,7 +22,8 @@ import org.robolectric.annotation.Config
 /**
  * A scan says it is stuck only when it adds nothing: a count of points that keeps rising is the
  * scan working, whatever the coverage of the floor says — on its top line and on its coaching
- * line alike, so the two never contradict each other.
+ * line alike, so the two never contradict each other. A surface with too little texture or no
+ * depth still says so on both.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -116,13 +117,28 @@ class ScanHudStuckTest {
     }
 
     @Test
-    fun `rising points make any stuck scan a working one, but never a paused one`() {
-        val stuckCauses = listOf(
-            ScanActivity.of(ScanPhase.Scanning, false, ScanCoach.Line.NothingNew, pointsRising = true),
-            ScanActivity.of(ScanPhase.Scanning, false, null, lowTexture = true, pointsRising = true),
-            ScanActivity.of(ScanPhase.Scanning, false, null, depthStarved = true, pointsRising = true),
+    fun `with points rising the top line says stuck exactly when the coaching line says why`() {
+        val stuckLines = setOf(ScanCopy.COACH_NOTHING_NEW, ScanCopy.COACH_LOW_TEXTURE, ScanCopy.COACH_NO_DEPTH)
+        // (coach, low texture, no depth): the coverage finding nothing new, a blank surface, no depth.
+        val causes = listOf(
+            Triple(ScanCoach.Line.NothingNew, false, false),
+            Triple(null, true, false),
+            Triple(null, false, true),
         )
-        assertEquals(List(3) { ScanActivity.Working }, stuckCauses)
+        val said = causes.map { (coach, lowTexture, depthStarved) ->
+            val activity = ScanActivity.of(
+                ScanPhase.Scanning, false, coach,
+                lowTexture = lowTexture, depthStarved = depthStarved, pointsRising = true,
+            )
+            val line = ScanCopy.coaching(
+                ScanPhase.Scanning, false, false,
+                coach = coach, lowTexture = lowTexture, depthStarved = depthStarved, pointsRising = true,
+            )
+            assertEquals("\"$line\" below", line in stuckLines, activity == ScanActivity.Stuck)
+            activity
+        }
+        // Rising points answer the coverage, not a surface the depth cannot read.
+        assertEquals(listOf(ScanActivity.Working, ScanActivity.Stuck, ScanActivity.Stuck), said)
         assertEquals(
             ScanActivity.Paused,
             ScanActivity.of(ScanPhase.Scanning, trackingLost = true, coach = null, pointsRising = true),

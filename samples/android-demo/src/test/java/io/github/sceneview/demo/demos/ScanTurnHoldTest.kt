@@ -102,6 +102,18 @@ class ScanTurnHoldTest {
     }
 
     @Test
+    fun `a turn that left the side shown, swaying between two others, changes the hint once the hold has passed`() {
+        hold()
+        advance(SETTLED_MS)
+        repeat(SWAYS) { i ->
+            turnTo(if (i % 2 == 0) ScanTurn.Right else ScanTurn.Ahead)
+            advance(SWAY_MS)
+        }
+        assertTrue("the hint still says $shown, left ten seconds ago", shown != ScanTurn.Left)
+        assertEquals(1, changes)
+    }
+
+    @Test
     fun `the arrow points where it is told at once, the screen holding the turn for it`() {
         composeRule.mainClock.autoAdvance = false
         composeRule.setContent { Box(Modifier.fillMaxSize()) { ScanTurnArrow(turn) } }

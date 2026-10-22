@@ -12,6 +12,8 @@ import io.github.sceneview.demo.demos.internal.PlanOffer
 import io.github.sceneview.demo.demos.internal.ReplayLens
 import io.github.sceneview.demo.demos.internal.ReplayManifest
 import io.github.sceneview.demo.demos.internal.RoomSurvey
+import io.github.sceneview.demo.demos.internal.RoomSurveyInput
+import io.github.sceneview.demo.demos.internal.RoomSurveyor
 import io.github.sceneview.demo.demos.internal.SurveyGap
 import io.github.sceneview.demo.demos.internal.planSurvey
 import kotlinx.coroutines.CoroutineScope
@@ -22,6 +24,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -32,6 +35,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 
@@ -63,6 +67,35 @@ class RerunPlanMeasureTest {
             atlas = ByteArray(0),
         ),
     )
+
+    /**
+     * The surfels of an empty [ROOM_M] square room — its floor and four walls, [STEP_M] apart —
+     * and a camera at its middle: a cloud the survey reads through, loop after loop.
+     */
+    private fun room(): RoomSurveyInput {
+        val positions = ArrayList<Float>()
+        val normals = ArrayList<Float>()
+        fun add(x: Float, y: Float, z: Float, nx: Float, ny: Float, nz: Float) {
+            positions += listOf(x, y, z)
+            normals += listOf(nx, ny, nz)
+        }
+        val across = (ROOM_M / STEP_M).toInt()
+        val high = (WALL_M / STEP_M).toInt()
+        for (i in 0 until across) {
+            val a = (i + 0.5f) * STEP_M
+            for (j in 0 until across) add(a, 0f, (j + 0.5f) * STEP_M, 0f, 1f, 0f)
+            for (h in 0 until high) {
+                val y = (h + 0.5f) * STEP_M
+                add(a, y, 0f, 0f, 0f, 1f)
+                add(a, y, ROOM_M, 0f, 0f, -1f)
+                add(0f, y, a, 1f, 0f, 0f)
+                add(ROOM_M, y, a, -1f, 0f, 0f)
+            }
+        }
+        val middle = ROOM_M / 2
+        val trail = floatArrayOf(middle, EYE_M, middle, middle + STEP_M, EYE_M, middle)
+        return RoomSurveyInput(positions.toFloatArray(), normals.toFloatArray(), trail)
+    }
 
     /**
      * Holds every thread of [Dispatchers.Default] until the returned latch is released (or
@@ -216,6 +249,34 @@ class RerunPlanMeasureTest {
     }
 
     @Test
+    fun `a dropped measure busy computing gives the thread to the next scan`() {
+        val room = room()
+        val started = CountDownLatch(1)
+        val stop = AtomicBoolean(false)
+        try {
+            val next = runBlocking {
+                val sheet = launch(Dispatchers.IO) {
+                    measureRoom(scan()) {
+                        started.countDown()
+                        // Nothing here waits on anything: only the survey itself can see it was dropped.
+                        while (!stop.get()) RoomSurveyor.survey(room)
+                        RoomSurvey.empty(SurveyGap.NoWalls)
+                    }
+                }
+                assertTrue(started.await(HOLD_S, TimeUnit.SECONDS))
+                // The sheet closes, then another scan is opened and measured on the one thread.
+                sheet.cancelAndJoin()
+                withTimeoutOrNull(TimeUnit.SECONDS.toMillis(ENDED_S)) {
+                    measureRoom(scan()) { RoomSurvey.empty(SurveyGap.NoDepth) }
+                }
+            }
+            assertEquals("the next scan still waits for the thread", SurveyGap.NoDepth, next?.gaps?.first())
+        } finally {
+            stop.set(true)
+        }
+    }
+
+    @Test
     fun `a measure still waited for is kept when another scan is measured`() {
         val started = CountDownLatch(1)
         val gate = CountDownLatch(1)
@@ -299,8 +360,15 @@ class RerunPlanMeasureTest {
         /** Between two frames while a measure ends on its own thread. */
         const val POLL_MS = 10L
 
-        /** The side of the room the slow measure finds. */
+        /** The side of the room the slow measure finds, and of the room [room] builds. */
         const val ROOM_M = 4f
+
+        /** Between two surfels of [room], and the height of its walls. */
+        const val STEP_M = 0.05f
+        const val WALL_M = 2.5f
+
+        /** The height the camera of [room] moves at. */
+        const val EYE_M = 1.4f
 
         /** How long a blocker gets to start before the pool counts as full. */
         const val START_MS = 500L
