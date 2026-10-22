@@ -7,9 +7,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The 3D Scan's camera stream: of what ARCore offers, the back stream with the largest CPU image
- * that holds 30 fps, so the photos and the depth come from the sharpest image the scan keeps up
- * with. Nothing to pick keeps the session's default config.
+ * The 3D Scan's camera stream: of the back streams ARCore offers that reach 30 fps, one that meets
+ * 1280 × 720 first, then one fixed at 30 fps, then the largest CPU image, so the photos and the
+ * depth come from the sharpest image the scan keeps up with. Nothing to pick keeps the session's
+ * default config.
  */
 class CameraStreamPickTest {
 
@@ -30,12 +31,29 @@ class CameraStreamPickTest {
     }
 
     @Test
-    fun `a steady 30 fps stream beats a larger one that may drop below 30`() {
+    fun `a steady 30 fps stream beats a larger one only on the same side of 1280 x 720`() {
         val offered = listOf(stream(1920, 1080, minFps = 15, maxFps = 30), stream(1280, 720))
         assertEquals(stream(1280, 720), CameraStreamPick.pick(offered))
+        // Below the target as well, the steady stream comes first.
+        val small = listOf(stream(1024, 768, minFps = 15, maxFps = 30), stream(640, 480))
+        assertEquals(stream(640, 480), CameraStreamPick.pick(small))
+        // Across the target, steadiness does not win: the stream that meets it does.
+        val across = listOf(stream(640, 480), stream(1280, 720, minFps = 15, maxFps = 30))
+        assertEquals(stream(1280, 720, minFps = 15, maxFps = 30), CameraStreamPick.pick(across))
         // With no steady stream on offer, the largest that reaches 30 is still better than none.
         val ranged = listOf(stream(1920, 1080, minFps = 15, maxFps = 30), stream(640, 480, minFps = 15, maxFps = 30))
         assertEquals(stream(1920, 1080, minFps = 15, maxFps = 30), CameraStreamPick.pick(ranged))
+    }
+
+    /**
+     * A 640 × 480 stream fixed at 30 fps must not beat a 1920 × 1080 one that may drop to 15:
+     * the session's default config would have taken the larger one, and the scan would fall
+     * back to the very image size it is meant to leave.
+     */
+    @Test
+    fun `a stream that meets 1280 x 720 beats a smaller one fixed at 30 fps`() {
+        val offered = listOf(stream(640, 480), stream(1920, 1080, minFps = 15, maxFps = 30))
+        assertEquals(stream(1920, 1080, minFps = 15, maxFps = 30), CameraStreamPick.pick(offered))
     }
 
     @Test
