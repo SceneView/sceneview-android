@@ -294,7 +294,11 @@ class RerunPlanShareTest {
         for ((share, button) in buttons) {
             val toasts = ShadowToast.shownToastCount()
             button.performScrollTo().performClick()
-            composeRule.waitUntil(SHARE_TIMEOUT_MS) { ShadowToast.shownToastCount() > toasts }
+            // The toast is posted to the main thread, this test's: run what was posted there.
+            composeRule.waitUntil(SHARE_TIMEOUT_MS) {
+                shadowOf(Looper.getMainLooper()).idle()
+                ShadowToast.shownToastCount() > toasts
+            }
             assertEquals("$share: the toast", failed, ShadowToast.getTextOfLatestToast())
             composeRule.waitForIdle()
             assertNull("$share: a share sheet opened", started.peekNextStartedActivity())

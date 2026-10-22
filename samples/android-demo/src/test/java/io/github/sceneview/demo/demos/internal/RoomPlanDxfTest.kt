@@ -213,7 +213,7 @@ class RoomPlanDxfTest {
     }
 
     @Test
-    fun `figures in metres: the drawing in millimetres, metric`() {
+    fun `figures in metres give a drawing in millimetres, metric`() {
         val dxf = dxf(room, openings = OPENINGS)
         assertEquals("millimetres", "4", dxf.header("\$INSUNITS")?.trim())
         assertEquals("metric", "1", dxf.header("\$MEASUREMENT")?.trim())
@@ -225,7 +225,7 @@ class RoomPlanDxfTest {
     }
 
     @Test
-    fun `figures in feet and inches: the drawing in inches, imperial, read in feet and inches`() {
+    fun `figures in feet and inches give a drawing in inches, imperial, read in feet and inches`() {
         val wording = imperialWording()
         val dxf = dxf(room, wording, openings = OPENINGS)
         assertEquals("inches", "1", dxf.header("\$INSUNITS")?.trim())
