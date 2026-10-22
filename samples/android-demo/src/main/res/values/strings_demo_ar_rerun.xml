@@ -61,6 +61,7 @@
     <string name="demo_ar_rerun_plan_empty_title">No plan for this scan yet</string>
     <string name="demo_ar_rerun_plan_gap_no_depth">This scan has no depth: scan the room again on a phone with a depth sensor.</string>
     <string name="demo_ar_rerun_plan_gap_no_walls">Scan the walls from the floor up to above your head.</string>
+    <string name="demo_ar_rerun_plan_gap_wall_end">Walk along the wall to the corner.</string>
     <string name="demo_ar_rerun_plan_gap_missing_wall">Scan the missing wall.</string>
     <string name="demo_ar_rerun_plan_gap_oblique_wall">A wall of this room is not square to the others: the plan draws square corners only, so the area and the perimeter are estimates.</string>
     <string name="demo_ar_rerun_plan_gap_ceiling">Raise the phone to the ceiling.</string>

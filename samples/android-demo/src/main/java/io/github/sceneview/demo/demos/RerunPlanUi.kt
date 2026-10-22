@@ -182,6 +182,7 @@ private fun planWords(units: MeasureUnitSystem, locale: Locale): PlanWords = Pla
         gaps = mapOf(
             SurveyGap.NoDepth to stringResource(R.string.demo_ar_rerun_plan_gap_no_depth),
             SurveyGap.NoWalls to stringResource(R.string.demo_ar_rerun_plan_gap_no_walls),
+            SurveyGap.WallEnd to stringResource(R.string.demo_ar_rerun_plan_gap_wall_end),
             SurveyGap.MissingWall to stringResource(R.string.demo_ar_rerun_plan_gap_missing_wall),
             SurveyGap.ObliqueWall to stringResource(R.string.demo_ar_rerun_plan_gap_oblique_wall),
             SurveyGap.Ceiling to stringResource(R.string.demo_ar_rerun_plan_gap_ceiling),
