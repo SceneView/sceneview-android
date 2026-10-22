@@ -157,10 +157,13 @@ internal class ScanDenseMap(
         val now = clock()
         if (liveAtNanos != Long.MIN_VALUE && now - liveAtNanos < LIVE_INTERVAL_NS) return
         liveAtNanos = now
-        val whole = fusion.cloud(minViews = DenseFusion.MIN_VIEWS, maxPoints = LIVE_MAX_SURFELS)
-        if (whole.count == 0) return
+        // The map's even stride, its positions only: the snapshot keeps them, nothing else of it.
+        val whole = fusion.cloudPositions(minViews = DenseFusion.MIN_VIEWS, maxPoints = LIVE_MAX_SURFELS)
+        if (whole.isEmpty()) return
         val at = eye
-        val drawn = if (at == null) whole else {
+        val drawn = if (at == null) {
+            fusion.cloud(minViews = DenseFusion.MIN_VIEWS, maxPoints = LIVE_MAX_SURFELS)
+        } else {
             fusion.liveCloud(at.x, at.y, at.z, maxPoints = LIVE_DRAWN_SURFELS)
         }
         live = ReplayDenseLayer(
@@ -170,10 +173,10 @@ internal class ScanDenseMap(
             atlas = DenseSurfels.atlas(drawn, fallback = ReplayDenseLayer.DENSE_FALLBACK_COLOR),
             // The floor cells are found here too, on the worker, from the map as before: the
             // live map and the area read them, however far the drawn surfels are merged.
-            coveredCells = CoverageGrid.coveredKeys(whole.positions, whole.count),
+            coveredCells = CoverageGrid.coveredKeys(whole),
             // The saving orbit and the open top read the map as it stands, not the merged
             // surfels, dense by the eye and sparse away from it (#4792).
-            whole = whole.positions,
+            whole = whole,
         )
     }
 
