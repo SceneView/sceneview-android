@@ -63,9 +63,14 @@ internal object LiveWallsCorpus {
         }
         .toList()
 
-    /** [pack] replayed every [STEP_S] seconds and at its end; `null` when it does not open. */
+    /**
+     * [pack] replayed every [STEP_S] seconds and at its end; `null` when it does not open. The
+     * walls are told when ARCore had lost tracking: no camera pose recorded for longer than
+     * [TRACE_LOST_AFTER_S] before the time looked at, as the recorder writes nothing then.
+     */
     fun replay(name: String, pack: RerunCapturePack): Result? {
         val trace = pack.open()?.trace ?: return null
+        val poses = poseTimes(pack, trace)
         val legacy = LegacyPlaneWalls()
         val source = PlaneWallSource()
         val before = Tally()
@@ -78,12 +83,31 @@ internal object LiveWallsCorpus {
             val planes = livePlanesOf(frame)
             val floorY = ArDebugGeometry.floorHeight(frame)
             before.add(legacy.update(planes, floorY))
-            after.add(source.update(planes, floorY, time).walls.map { it.id })
+            after.add(source.update(planes, floorY, time, tracked(poses, time)).walls.map { it.id })
             samples++
             if (time >= trace.duration) break
             t += STEP_S
         }
         return Result(name, samples, before.counts(), after.counts())
+    }
+
+    /** When [pack] recorded a camera pose, in seconds of its [trace], in order. */
+    private fun poseTimes(pack: RerunCapturePack, trace: ArDebugTrace): FloatArray =
+        parseArDebugLog(String(pack.log).lineSequence())
+            .filterIsInstance<ArDebugEvent.CameraPose>()
+            .map { trace.secondsOf(it.nanos) }
+            .sorted()
+            .toFloatArray()
+
+    /** Whether ARCore tracked the camera at [time]: a pose in [poses] at most [TRACE_LOST_AFTER_S] before it. */
+    private fun tracked(poses: FloatArray, time: Float): Boolean {
+        var lo = 0
+        var hi = poses.size
+        while (lo < hi) {
+            val mid = (lo + hi) ushr 1
+            if (poses[mid] <= time) lo = mid + 1 else hi = mid
+        }
+        return lo > 0 && time - poses[lo - 1] <= TRACE_LOST_AFTER_S
     }
 
     /** Each capture under [root] replayed, a `<name>.json` each and a `summary.json` written to [out]. */

@@ -1,6 +1,7 @@
 package io.github.sceneview.demo.demos.internal
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.math.PI
 import kotlin.math.cos
@@ -115,6 +116,40 @@ class LiveWallsSteadyTest {
         fun piece(across: Float) = listOf(front, left, plane(24, -1f, -2.6f + across, 0.5f, -2.6f + across, top = 1.6f))
         assertSteady("a wall first", alternate(piece(reach + 0.02f), piece(reach - 0.02f)), step = 1f, walls = 3)
         assertSteady("furniture first", alternate(piece(reach - 0.02f), piece(reach + 0.02f)), step = 1f, walls = 2)
+    }
+
+    @Test
+    fun `a panel standing on the floor just short of a wall's height is never a wall`() {
+        // A cabinet's side 1.2 m long, foot on the floor, more than a metre before the front wall,
+        // so nothing says it is furniture before it. ARCore refits its top a few centimetres
+        // either way, never up to standing height: with nothing seen above it, it is never a wall.
+        val top = WallRules.MIN_TOP_M
+        val tops = listOf(-0.05f, -0.03f, -0.005f, -0.04f, -0.01f, -0.02f, -0.005f, -0.05f).map { top + it }
+        val frames = tops.map { listOf(front, left, plane(24, -1f, -1f, 0.2f, -1f, top = it)) }
+        assertSteady("a panel short of standing height", frames, step = 0.2f, walls = 2)
+    }
+
+    @Test
+    fun `the walls keep their ids and count through two seconds of tracking lost`() {
+        val source = PlaneWallSource()
+        var time = 1f
+        fun ids(planes: List<LivePlane>, tracking: Boolean = true): Set<Int> {
+            val shown = source.update(planes, floorY, time, tracking).walls.mapTo(HashSet()) { it.id }
+            time += 1f / 30f
+            return shown
+        }
+        val before = List(10) { ids(listOf(front, left)) }.last()
+        assertEquals("walls before the loss", 2, before.size)
+        // Two seconds at 30 frames a second with tracking lost: ARCore holds up no plane.
+        repeat(60) { assertEquals("walls with tracking lost, frame $it", before, ids(emptyList(), tracking = false)) }
+        // Tracking found again, the planes a few frames later, under new ids.
+        repeat(5) { assertEquals("walls as tracking comes back, frame $it", before, ids(emptyList())) }
+        val again = listOf(LivePlane(11, front.kind, front.polygon), LivePlane(12, left.kind, left.polygon))
+        repeat(10) { assertEquals("walls with the planes back, frame $it", before, ids(again)) }
+        // Tracked again, a wall no plane holds up goes as before: half a second after its plane.
+        val after = List(30) { ids(again.take(1)) }.last()
+        assertEquals("a second after a plane went for good", 1, after.size)
+        assertTrue("the wall left keeps its id", before.containsAll(after))
     }
 
     @Test
