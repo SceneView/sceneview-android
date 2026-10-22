@@ -454,7 +454,8 @@ internal class ScanCapture private constructor(
             tier = if (cloud != null) ScanDevice.TIER_DEPTH else ScanDevice.TIER_SPARSE,
             depthSource = if (cloud != null) ScanDevice.SOURCE_RAW_DEPTH else ScanDevice.SOURCE_FEATURE_POINTS,
         )
-        return RerunCaptureBuilder.build(timeline, lens, photos, device, cloud, DenseFusion.VOXEL_M, denseMs)
+        val camera = "${RerunScanCamera.line}; images ${intrinsics.width}x${intrinsics.height}"
+        return RerunCaptureBuilder.build(timeline, lens, photos, device, cloud, DenseFusion.VOXEL_M, denseMs, camera)
             .also { model?.keepFor(it) }
     }
 
