@@ -1,0 +1,3 @@
+<!-- category: Changed -->
+- **Android 3D Scan: the scan chooses its camera stream ([#4791](https://github.com/sceneview/sceneview/pull/4791)).** The live scan asks ARCore for the back camera stream with the largest CPU image that holds 30 fps, aiming for 1280x720 or more, and keeps the default stream when none qualifies. The streams offered, the one chosen and the image size the scan received are written to the bake log.
+- **Android 3D Scan: the plane bake holds fewer photos at once.** Each photo is decoded on the first plane that paints from it and let go after the last one, instead of staying in memory until the scan is built. On the synthetic test room, 19 photos are held at once instead of 77.

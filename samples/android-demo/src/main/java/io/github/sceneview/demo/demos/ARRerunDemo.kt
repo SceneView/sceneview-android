@@ -1972,6 +1972,7 @@ private fun RerunLiveScreen(
                 cameraStream = if (qaBackdrop) null else cameraStream,
                 playbackDataset = arPlaybackDataset,
                 planeRenderer = true,
+                sessionCameraConfig = RerunScanCamera::select,
                 sessionConfiguration = { session: Session, config: Config ->
                     config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
                     config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
