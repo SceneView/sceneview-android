@@ -45,12 +45,16 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
@@ -170,6 +174,7 @@ import io.github.sceneview.demo.demos.internal.measureWallFootAt
 import io.github.sceneview.demo.demos.internal.measureWallHeightFromRay
 import io.github.sceneview.demo.demos.internal.measureWallIndices
 import io.github.sceneview.demo.demos.internal.measureWallLabels
+import io.github.sceneview.demo.demos.internal.measureWallRise
 import io.github.sceneview.demo.demos.internal.MeasureWallPoint
 import io.github.sceneview.demo.demos.internal.measureWallText
 import io.github.sceneview.demo.demos.internal.measureWallVertices
@@ -196,6 +201,7 @@ import io.github.sceneview.rememberMaterialLoader
 import io.github.sceneview.safeDestroyGeometry
 import io.github.sceneview.sample.rememberUnlitMaterialInstance
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
@@ -1424,10 +1430,22 @@ private fun ARSceneScope.MeasureFigureNodes(
 
     if (figure.hasWalls && outline.size >= 2) {
         val target = figure.height ?: liveHeight ?: WALL_MIN_HEIGHT
-        // Walls rise from the floor the moment they appear, then follow the aim on a spring.
-        val rising = remember { Animatable(WALL_MIN_HEIGHT) }
-        LaunchedEffect(target) { rising.animateTo(target, SceneViewTokens.Motion.spring()) }
-        val height = rising.value
+        // Walls rise from the floor the moment they appear, then follow the aim, eased frame by
+        // frame toward the latest height (#4765): an animation restarted on every new height read
+        // never got past its start, and the walls stayed a strip on the floor.
+        val latest by rememberUpdatedState(target)
+        var height by remember { mutableFloatStateOf(WALL_MIN_HEIGHT) }
+        LaunchedEffect(Unit) {
+            while (true) {
+                snapshotFlow { height != latest }.first { it }
+                var last = withFrameNanos { it }
+                while (height != latest) {
+                    val now = withFrameNanos { it }
+                    height = measureWallRise(height, latest, (now - last) / FRAME_NANOS_PER_SECOND)
+                    last = now
+                }
+            }
+        }
         val closed = figure.closed
         MeasureWalls(outline = outline, closed = closed, height = height)
         // The top edge and each corner's upright, in the accent.
@@ -1986,6 +2004,9 @@ private class MeasureLiveWalls {
 
 /** How long a refused tap's reason stays under the reticle. */
 private const val REFUSAL_SHOWN_MS = 2500L
+
+/** Frame clock nanoseconds in a second, for the rising walls' frame time. */
+private const val FRAME_NANOS_PER_SECOND = 1e9f
 
 /** ARCore [Pose] translation as a SceneView world [Position]. */
 private fun Pose.toPosition(): Position = Position(x = tx(), y = ty(), z = tz())

@@ -5,6 +5,7 @@ import dev.romainguy.kotlin.math.Quaternion
 import dev.romainguy.kotlin.math.lookTowards
 import io.github.sceneview.math.Position
 import kotlin.math.abs
+import kotlin.math.exp
 import kotlin.math.hypot
 import kotlin.math.sqrt
 
@@ -230,9 +231,10 @@ data class MeasureWallLabel(val text: String, val position: Position)
 /**
  * The labels on [figure]'s walls in AR along its [outline], the walls drawn [drawn] metres high
  * right now: the height halfway up the first corner and, on a wall, its area halfway up the wall
- * — net of the doors and windows marked on it.
+ * — net of the doors and windows marked on it. The words are the readout card's, from the same
+ * [numbers] and the same [measureWallText] (#4765): the height read or set, not the height the
+ * walls are drawn at while they rise to it. None before a height reads, as on the card.
  */
-@Suppress("UnusedParameter") // Seam: [numbers] comes with its fix.
 fun measureWallLabels(
     figure: MeasureFigure<*>,
     outline: List<Position>,
@@ -242,25 +244,37 @@ fun measureWallLabels(
     area: (Float) -> String,
 ): List<MeasureWallLabel> {
     if (outline.size < 2) return emptyList()
+    val text = measureWallText(numbers, len, area)
+    val height = text.height ?: return emptyList()
     val first = outline.first()
     val labels = ArrayList<MeasureWallLabel>(2)
-    labels += MeasureWallLabel(len(drawn), Position(first.x, first.y + drawn / 2f, first.z))
-    if (figure.mode == MeasureMode.Wall) {
+    labels += MeasureWallLabel(height, Position(first.x, first.y + drawn / 2f, first.z))
+    val wallArea = text.net ?: text.area
+    if (figure.mode == MeasureMode.Wall && wallArea != null) {
         val mid = measureMidpoint(outline[0], outline[1])
-        val width = measureDistanceMeters(outline[0], outline[1])
-        val wallArea = width * drawn - measureOpeningsArea(figure.openings, width, drawn)
-        labels += MeasureWallLabel(area(wallArea.coerceAtLeast(0f)), Position(mid.x, mid.y + drawn / 2f, mid.z))
+        labels += MeasureWallLabel(wallArea, Position(mid.x, mid.y + drawn / 2f, mid.z))
     }
     return labels
 }
 
 /**
  * The walls' drawn height one frame of [dt] seconds after [drawn], on its way to [target]: the
- * height read or set, which moves every frame while the walls follow the aim.
+ * height read or set, which moves every frame while the walls follow the aim. Eased toward the
+ * latest target each frame, without overshoot, and exactly on it once within a millimetre, so a
+ * target that keeps moving is still reached (#4765) — an animation restarted on each new target
+ * never left its start.
  */
-@Suppress("UnusedParameter") // Seam: the walls do not rise on it yet.
-fun measureWallRise(drawn: Float, target: Float, dt: Float): Float = drawn
+fun measureWallRise(drawn: Float, target: Float, dt: Float): Float {
+    if (!(dt > 0f)) return drawn
+    val next = target + (drawn - target) * exp(-dt / WALL_RISE_TIME_S)
+    return if (abs(next - target) <= WALL_RISE_LANDED_M) target else next
+}
 
+/** The walls' rise time constant, seconds: two thirds of the way to the height in this long. */
+private const val WALL_RISE_TIME_S = 0.08f
+
+/** Within this of the height, metres, the walls are on it. */
+private const val WALL_RISE_LANDED_M = 0.001f
 private const val WALL_MIN_LENGTH_M = 0.05f
 private const val SPAN_SLACK_M = 0.1f
 private const val WALL_FOOT_NEAR_M = 0.1f
