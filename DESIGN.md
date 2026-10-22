@@ -673,8 +673,13 @@ themed surface — so it is theme-independent and uses the "Button glass" row.
   `chrome-scrim` itself, under its glass and cut to its own outline
   (`LocalGlassGround`): same stack (scene, scrim, glass, glyph), same contrast,
   on the chip instead of across the picture.
-- **There is no overflow menu.** Reset, Send feedback and QA mode live in the
-  settings sheet the dock's Controls item opens — one settings surface, not two.
+- **The overflow menu is for a screen with no controls of its own (#PRNUM).** Reset, Send
+  feedback and QA mode live in the settings sheet the dock's Controls item opens — one
+  settings surface, not two. A screen that owns the whole window and has nothing of its own
+  to tweak (3D Scan's live capture) passes `actionsMenu`: the same actions go in a standard
+  ⋮ menu (`glass-icon-button`, Material `DropdownMenu` on the app theme) at the end of the
+  identity row, and with no other dock item no dock is drawn — a Settings button that took
+  the bottom of the screen for two rows was reported again and again.
 - **A sheet you tweak the scene through is glass, low and non-modal (#3827).** The
   settings sheet exists to be watched through: drag a slider, look at what it did.
   - `sheet-peek`: it rests at **36 % of the window** (or hugs its controls when they
@@ -1062,6 +1067,12 @@ button is the only way out of the state the card explains.
   nothing is worse than a plain explanation (`ARCoreAvailabilityOverlay`, #3374).
 - **One card at a time, and never doubled with a pill saying the same thing.** When a card
   explains the state, the coaching overlay stays silent.
+- **A capture has one record control, in one place (#PRNUM).** The 72dp shutter (`danger`
+  disc, a stop square while recording) sits centred from the first frame to the last; Pause
+  is the secondary, a 56dp `ar-scrim` disc on its leading side that turns into a play glyph
+  while paused. Its stop opens the review. No Pause / Finish text buttons in its place: the
+  REC everyone knows must not vanish when recording starts. The live capture holds the
+  phone upright (portrait lock while it records), as dedicated scan apps do.
 - **Recording is `danger` red, and only recording.** The live dot of a capture card and
   the shutter disc use `danger` (#ea4335) — the camera-app convention — so a red dot over
   the camera always means "this is being recorded", never an error (#3831).

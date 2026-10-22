@@ -24,6 +24,11 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.MyLocation
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.material3.Surface
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.material3.Icon
 import androidx.compose.ui.res.stringResource
 import io.github.sceneview.demo.R
@@ -67,6 +72,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import com.google.android.filament.Engine
 import io.github.sceneview.demo.demos.internal.ArDebugFormat
 import io.github.sceneview.demo.demos.internal.ArDebugOrbitCamera
@@ -85,7 +91,7 @@ import io.github.sceneview.loaders.ModelLoader
  * The capture screen of 3D Scan (#4627, #4628): the scan growing full screen over the dimmed
  * camera, following the phone heading-up, one
  * compact line above it — "Scanning · 0:42" and the points captured so far — and, under it,
- * one coaching line with Pause and Finish. Finish opens a review that Keep scanning leaves for
+ * one coaching line over the record control: Pause beside the stop shutter, which opens a review that Keep scanning leaves for
  * the same capture; only Save scan builds and writes it.
  */
 
@@ -129,10 +135,14 @@ internal fun ScanHud(
                 modifier = Modifier.weight(1f),
             )
         }
+        // One line for both counts on a room's scan (#PRNUM): `274,778 points captured · 3 walls`.
+        // A line less of card over the top of the camera, where the next wall's dashes are drawn.
         Text(
-            text = ScanCopy.pointsCaptured(points),
+            text = room?.let { "${ScanCopy.pointsCaptured(points)} · ${ScanCopy.wallsFound(it.wallCount)}" }
+                ?: ScanCopy.pointsCaptured(points),
             style = OnScrimBody,
             maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.testTag(SCAN_POINTS_TAG),
         )
         if (room != null) ScanRoomGauge(room)
@@ -140,9 +150,9 @@ internal fun ScanHud(
 }
 
 /**
- * A room's scan so far (#4540 live walls): `3 walls` over a ten-segment meter (DESIGN.md "Meters",
+ * A room's scan so far (#4540 live walls): a ten-segment meter under the HUD's `· 3 walls` (DESIGN.md "Meters",
  * one segment per 10 %), lit in `accent-progress`, then `accent-success` once the walls close the
- * room — the moment to tap Finish. The share is the meter alone, said aloud to TalkBack: the one
+ * room — the moment to tap stop. The share is the meter alone, said aloud to TalkBack: the one
  * figure on screen is the map's area, once two walls are seen.
  */
 @Composable
@@ -156,11 +166,7 @@ internal fun ScanRoomGauge(room: ScanWallsState) {
             .semantics(mergeDescendants = true) { stateDescription = ScanCopy.completion(share) }
             .testTag(SCAN_ROOM_GAUGE_TAG),
     ) {
-        Text(
-            text = ScanCopy.wallsFound(room.wallCount),
-            style = OnScrimBody,
-            maxLines = 1,
-        )
+        // The walls are counted on the HUD's points line (#PRNUM): the meter is the gauge here.
         Row(
             horizontalArrangement = Arrangement.spacedBy(Space.xs),
             modifier = Modifier.widthIn(max = ArOverlay.maxWidth).fillMaxWidth(),
@@ -234,8 +240,11 @@ internal fun BoxScope.ScanTurnArrow(turn: ScanTurn?) {
 private const val GAUGE_SEGMENTS = 10
 
 /**
- * Under a capture still open: the one coaching line, then Pause (Resume while paused) and the
- * prominent Finish. Both are full-height Material buttons, 48 dp targets.
+ * Under a capture still open: the one coaching line, then the camera app's record control (#PRNUM).
+ * The red stop shutter — the one REC knows from every camera — sits in the middle from the first
+ * frame to the last and ends the capture (Finish: the review opens); Pause, the secondary, is a
+ * smaller disc beside it and turns into Resume (a play glyph) while paused. Nothing swaps places:
+ * the 72 dp shutter is where the thumb found it, paused or not.
  */
 @Composable
 internal fun ScanControls(
@@ -253,20 +262,50 @@ internal fun ScanControls(
         if (coaching != null) ScanHint(coaching)
         Row(
             modifier = Modifier.widthIn(max = ArOverlay.maxWidth).fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(Space.sm),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            FilledTonalButton(
-                onClick = onTogglePause,
-                modifier = Modifier.weight(1f).heightIn(min = SceneViewTokens.Layout.touchTarget),
-            ) {
-                Text(if (phase == ScanPhase.Paused) resumeLabel else ScanCopy.PAUSE)
+            Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                val paused = phase == ScanPhase.Paused
+                ScanPauseButton(
+                    paused = paused,
+                    label = if (paused) resumeLabel else ScanCopy.PAUSE,
+                    onClick = onTogglePause,
+                )
             }
-            Button(
-                onClick = onFinish,
-                modifier = Modifier.weight(1f).heightIn(min = SceneViewTokens.Layout.touchTarget),
-            ) {
-                Text(ScanCopy.FINISH)
-            }
+            RecordShutter(
+                isRecording = true,
+                startEnabled = true,
+                onStart = {},
+                onStop = onFinish,
+                modifier = Modifier.testTag(SCAN_FINISH_TAG),
+                stopLabel = ScanCopy.FINISH_SCAN,
+            )
+            // The shutter's mirror: it stays centred on the screen, as a camera's does.
+            Spacer(Modifier.weight(1f))
+        }
+    }
+}
+
+/** Pause and Resume, the record control's secondary: a 56 dp disc on the coaching line's ground. */
+@Composable
+private fun ScanPauseButton(paused: Boolean, label: String, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = CircleShape,
+        color = ArOverlay.scrimDark,
+        contentColor = ArOverlay.onScrim,
+        border = BorderStroke(SceneViewTokens.Layout.hairlineWidth, ArOverlay.onScrimMuted),
+        modifier = Modifier
+            .size(SceneViewTokens.Layout.touchTarget + Space.sm)
+            .testTag(SCAN_PAUSE_TAG)
+            .semantics { contentDescription = label },
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = if (paused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
+                contentDescription = null,
+                modifier = Modifier.size(SceneViewTokens.Layout.dockIconSize + Space.xs),
+            )
         }
     }
 }
@@ -633,6 +672,8 @@ internal const val SCAN_STAGE_TAG = "ar_rerun_scan_stage"
 internal const val SCAN_RECENTER_TAG = "ar_rerun_scan_recenter"
 internal const val SCAN_POINTS_TAG = "ar_rerun_scan_points"
 internal const val SCAN_CONTROLS_TAG = "ar_rerun_scan_controls"
+internal const val SCAN_PAUSE_TAG = "ar_rerun_scan_pause"
+internal const val SCAN_FINISH_TAG = "ar_rerun_scan_finish"
 internal const val SCAN_HINT_TAG = "ar_rerun_scan_hint"
 internal const val SCAN_REVIEW_TAG = "ar_rerun_scan_review"
 internal const val SCAN_SAVING_TAG = "ar_rerun_scan_saving"

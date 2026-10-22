@@ -50,6 +50,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FiberManualRecord
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.outlined.Feedback
@@ -59,6 +60,9 @@ import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -582,6 +586,11 @@ fun DemoScaffold(
     arOverlaysEnabled: Boolean = true,
     dock: List<DockItem> = emptyList(),
     dockAccent: DockItem? = null,
+    // The app-level actions (Reset, Send feedback, QA mode) in a ⋮ menu at the end of the
+    // identity row instead of a Settings item in the dock (#PRNUM). For a screen with no
+    // `controls` of its own, where that dock item opened a sheet of two rows: with no other
+    // dock item either, no dock is drawn at all and the bottom band reaches down to the gutter.
+    actionsMenu: Boolean = false,
     loadingLabel: String? = null,
     chromeToggleOnTap: Boolean = false,
     // The demo's own overlays leave with the chrome on a scene tap (#4379). Off by default: a
@@ -965,11 +974,22 @@ fun DemoScaffold(
                 // measure from this one, or it inherits the reserve's 24 dp on top of its own
                 // gutter and lands 40 dp up. Floored at the token band rather than 104 dp so the
                 // first frame, before `onDockBandHeight` reports, is already the right height.
-                val dockClearance = maxOf(SETTINGS_FAB_RESERVED_SPACE, dockBand)
-                val dockBandClearance = maxOf(
-                    SceneViewTokens.Layout.dockHeight + SceneViewTokens.Space.md,
-                    dockBand,
-                )
+                // No dock at all (#PRNUM): the band rests `space-lg` off the safe area, a camera's
+                // shutter height above the gesture bar.
+                val noDock = actionsMenu && dock.isEmpty() && dockAccent == null
+                val dockClearance = if (noDock) {
+                    SceneViewTokens.Space.lg
+                } else {
+                    maxOf(SETTINGS_FAB_RESERVED_SPACE, dockBand)
+                }
+                val dockBandClearance = if (noDock) {
+                    SceneViewTokens.Space.lg
+                } else {
+                    maxOf(
+                        SceneViewTokens.Layout.dockHeight + SceneViewTokens.Space.md,
+                        dockBand,
+                    )
+                }
                 // What the chrome covers of the window, top and bottom. A demo that reserves the
                 // scene gets its slot inset by exactly these — unless that would leave no scene at
                 // all (a phone in landscape), in which case the slot stays full-frame and the bands
@@ -1278,7 +1298,19 @@ fun DemoScaffold(
                         haptic = haptic,
                         dock = dock,
                         dockAccent = dockAccent,
-                        controlsItem = DockItem(
+                        menu = if (actionsMenu) {
+                            {
+                                DemoActionsMenu(
+                                    haptic = haptic,
+                                    onReset = onResetConfirmed,
+                                    onRecord = recorder?.let { { toggleRecording() } },
+                                    recording = recorder?.isRecording == true,
+                                )
+                            }
+                        } else {
+                            null
+                        },
+                        controlsItem = if (actionsMenu) null else DockItem(
                             icon = Icons.Outlined.Tune,
                             // The content description stays "Demo settings" verbatim —
                             // `DemoInteractionTest` and the band tests key on it. Only the
@@ -1526,6 +1558,7 @@ private fun BoxScope.DemoChrome(
     controlsItem: DockItem?,
     onFullScreen: () -> Unit,
     onIdentityRowHeight: (Int) -> Unit,
+    menu: (@Composable () -> Unit)? = null,
     onDockBandHeight: (Int) -> Unit,
     onDockWidth: (Int) -> Unit,
 ) {
@@ -1543,6 +1576,7 @@ private fun BoxScope.DemoChrome(
                 haptic = haptic,
                 onFullScreen = onFullScreen,
                 onHeightChanged = onIdentityRowHeight,
+                menu = menu,
             )
             val items = dock.take(DOCK_MAX_ITEMS) + listOfNotNull(controlsItem)
             if (items.isNotEmpty() || dockAccent != null) {
@@ -1580,6 +1614,7 @@ private fun BoxScope.DemoIdentityRow(
     haptic: SceneViewHaptic,
     onFullScreen: () -> Unit,
     onHeightChanged: (Int) -> Unit,
+    menu: (@Composable () -> Unit)? = null,
 ) {
     Row(
         modifier = Modifier
@@ -1701,6 +1736,89 @@ private fun BoxScope.DemoIdentityRow(
             onClick = onFullScreen,
             modifier = Modifier.testTag(DemoScaffoldTestTags.FULL_SCREEN),
         )
+        // The ⋮ menu ends the row, where Android puts a screen's overflow (#PRNUM).
+        menu?.invoke()
+    }
+}
+
+/**
+ * The app-level actions as a standard overflow menu (#PRNUM): a ⋮ glass button at the end of the
+ * identity row, opening a Material menu — Record video, Reset, Send feedback, QA mode — in the
+ * order the settings sheet lists them. For a screen that owns the whole window (3D Scan's live
+ * capture), where a Settings item in the dock took a dock's height for two rows.
+ */
+@Composable
+private fun DemoActionsMenu(
+    haptic: SceneViewHaptic,
+    onReset: (() -> Unit)?,
+    onRecord: (() -> Unit)?,
+    recording: Boolean,
+) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        GlassIconButton(
+            icon = Icons.Filled.MoreVert,
+            contentDescription = stringResource(R.string.demo_more_options_cd),
+            onClick = {
+                haptic.selection()
+                open = true
+            },
+            modifier = Modifier.testTag(DemoScaffoldTestTags.ACTIONS_MENU),
+        )
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            if (onRecord != null) {
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            stringResource(
+                                if (recording) R.string.demo_record_stop_action else R.string.demo_record_action,
+                            ),
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(if (recording) Icons.Filled.Stop else Icons.Filled.FiberManualRecord, null)
+                    },
+                    onClick = {
+                        open = false
+                        onRecord()
+                    },
+                    modifier = Modifier.testTag(DemoScaffoldTestTags.RECORD_ACTION),
+                )
+            }
+            if (onReset != null) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.demo_reset_action)) },
+                    leadingIcon = { Icon(Icons.Filled.Refresh, null) },
+                    onClick = {
+                        open = false
+                        onReset()
+                    },
+                    modifier = Modifier.testTag(DemoScaffoldTestTags.RESET_ACTION),
+                )
+            }
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.feedback_action_cd)) },
+                leadingIcon = { Icon(Icons.Outlined.Feedback, null) },
+                onClick = {
+                    open = false
+                    haptic.selection()
+                    io.github.sceneview.demo.feedback.FeedbackOpenRequest.request()
+                },
+                modifier = Modifier.testTag(DemoScaffoldTestTags.FEEDBACK_ACTION),
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.demo_menu_qa_mode)) },
+                leadingIcon = { Icon(Icons.Outlined.Science, null) },
+                // Decorative: the whole item is the toggle, one focus stop for TalkBack.
+                trailingIcon = { Checkbox(checked = DemoSettings.qaMode, onCheckedChange = null) },
+                onClick = {
+                    open = false
+                    haptic.medium()
+                    DemoSettings.qaMode = !DemoSettings.qaMode
+                },
+                modifier = Modifier.testTag(DemoScaffoldTestTags.QA_MODE_ACTION),
+            )
+        }
     }
 }
 
@@ -2060,6 +2178,9 @@ object DemoScaffoldTestTags {
     /** Rows in the settings sheet's actions section — the overflow menu's heirs (#3328). */
     const val RESET_ACTION = "demo-reset-action"
     const val FEEDBACK_ACTION = "demo-feedback-action"
+
+    /** The ⋮ button of a screen that keeps its app-level actions in a menu (#PRNUM). */
+    const val ACTIONS_MENU = "demo-actions-menu"
     const val QA_MODE_ACTION = "demo-qa-mode-action"
     /** The shared Record action: its sheet row and its bottom-band pill (samples step 0). */
     const val RECORD_ACTION = "demo-record-action"

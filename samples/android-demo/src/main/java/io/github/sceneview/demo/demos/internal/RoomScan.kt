@@ -388,10 +388,11 @@ object ScanCopy {
     const val REPLAY_TITLE = "Your scan"
     const val SAMPLE_TITLE = "Example scan"
     /**
-     * Said once, for a few seconds, when the photos run out (#4717), and not again: past the limit
-     * the scan's points, their colours and its path still record, so nothing is left to warn about.
+     * Said once, briefly, when the photos run out (#4717), and not again: past the limit the
+     * scan's points, their colours and its path still record, so nothing is left to warn about.
+     * Worded as news, not as a limit hit (#PRNUM): "Photo limit reached" read as a fault.
      */
-    const val FULL = "Photo limit reached — points and path keep recording."
+    const val FULL = "All photos taken — still scanning"
 
     // The capture lifecycle (#4627): Scanning ⇄ Paused, Finish opens a review that Keep scanning
     // leaves for the same capture; only Save scan ends it.
@@ -400,6 +401,9 @@ object ScanCopy {
     const val PAUSE = "Pause"
     const val RESUME = "Resume"
     const val FINISH = "Finish"
+
+    /** The stop shutter's spoken name (#PRNUM): it ends the capture and opens the review. */
+    const val FINISH_SCAN = "Finish scan"
     const val COACH_SCANNING = "Move slowly sideways"
     const val COACH_PAUSED = "Nothing is captured while paused."
 
@@ -420,7 +424,7 @@ object ScanCopy {
     const val REVIEW_TITLE = "Review your scan"
     const val REVIEW_DETAIL = "Keep scanning to add more, or save it on this phone."
     const val EMPTY_TITLE = "Nothing captured yet"
-    const val EMPTY_DETAIL = "Move the phone slowly around the space, then tap Finish again."
+    const val EMPTY_DETAIL = "Move the phone slowly around the space, then tap stop again."
     const val KEEP_SCANNING = "Keep scanning"
     const val SAVE_SCAN = "Save scan"
     const val SAVING = "Saving scan…"
@@ -456,8 +460,11 @@ object ScanCopy {
 
     const val WALLS_NONE = "No walls yet"
 
-    /** A room whose walls close it, or whose gauge is full: the scan can end (#4540). */
-    const val ROOM_DONE = "Room complete — tap Finish"
+    /**
+     * A room whose walls close it, or whose gauge is full: the scan can end (#4540). "stop" is the
+     * red shutter that ends a capture (#PRNUM); there is no Finish button to name any more.
+     */
+    const val ROOM_DONE = "Room complete — tap stop to finish"
 
     /** A depth scan getting no usable depth: the true cause of a count stuck at zero. */
     const val COACH_NO_DEPTH = "No depth yet — keep the lens clear and move slowly"
@@ -494,7 +501,7 @@ object ScanCopy {
     const val WALLS_FIRST = "Point at a wall and sweep along it"
     const val WALLS_NEXT = "Turn to the next wall"
     const val WALLS_FOLLOW = "Follow the walls round the room"
-    const val WALLS_CLOSE = "Keep going round, then tap Finish"
+    const val WALLS_CLOSE = "Keep going round, then tap stop"
 
     /** The guidance line of a room's scan once it can see walls: what to do next, in a few words. */
     fun wallGuide(walls: Int): String = when {
