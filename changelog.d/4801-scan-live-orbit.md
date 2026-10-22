@@ -1,2 +1,0 @@
-<!-- category: Fixed -->
-- **Android 3D Scan: the save flight turns round the middle of the room ([#4801](https://github.com/sceneview/sceneview/pull/4801)).** Since the live view merges far points, the flight that follows a save turned round the corner where the scan ended and opened the room at the height of whatever lay under the phone. It now turns round the whole room and opens it at the room's own floor.

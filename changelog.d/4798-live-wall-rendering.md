@@ -1,2 +1,0 @@
-<!-- category: Fixed -->
-- **3D Scan draws a wall only as far as it saw it ([#4798](https://github.com/sceneview/sceneview/pull/4798)).** While a room is scanned, a recognised wall no longer stands wider than the wall: it stops where the scan's points on it stop, and facing a half-seen wall the scan says "Walk along this wall to finish it". The turn hint now names the dashed line on the floor where no wall was seen yet, and ARCore's own plane dots and dashes no longer cover the walls during a capture.

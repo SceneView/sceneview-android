@@ -1,2 +1,0 @@
-<!-- category: Fixed -->
-- **Demo app: a live wall in 3D Scan and Measure no longer goes when ARCore merges its plane into another ([#4800](https://github.com/sceneview/sceneview/pull/4800)).** A wall refit just under standing height kept standing only while ARCore kept its plane's id; it now keeps standing while a plane lies along it, whatever the id. The live walls are also worked out again when the floor moves under the same planes, instead of staying measured from the old floor.
