@@ -15,8 +15,8 @@ import kotlin.math.sqrt
  * The floor plan as a DXF drawing, for a CAD tool to take it up where the PDF stops.
  *
  * DXF `AC1015` (R2000, the version AutoCAD 2000 introduced) in ASCII: the oldest version with the
- * light polyline. Its structure follows the format's AC1015 reference, which the unit tests check
- * by reading the file back. Its y runs up, as CAD has it. One drawing unit is a millimetre, metric
+ * light polyline. Its structure is that of the R2000 file ezdxf writes, plot styles, classes and
+ * dictionaries included, which the unit tests check by reading both back. Its y runs up, as CAD has it. One drawing unit is a millimetre, metric
  * (`$INSUNITS` 4), or an inch, imperial (`$INSUNITS` 1), when the figures are in feet and inches:
  * a CAD tool set to either system then takes the drawing in at its true size, and reads the
  * distances it measures in metres, or in feet and inches. Five layers:
@@ -163,6 +163,11 @@ object RoomPlanDxf {
         private val layouts = handle()
         private val modelLayout = handle()
         private val paperLayout = handle()
+        private val mlineStyles = handle()
+        private val mlineStandard = handle()
+        private val plotSettings = handle()
+        private val plotStyles = handle()
+        private val normalPlotStyle = handle()
 
         private val entities = StringBuilder()
         private var minX = Double.MAX_VALUE
@@ -424,7 +429,7 @@ object RoomPlanDxf {
         /** The whole file: its header last written, once every handle is given out. */
         fun file(): String {
             val body = StringBuilder()
-            body.section("CLASSES") {}
+            body.section("CLASSES") { classes() }
             body.section("TABLES") { tables() }
             body.section("BLOCKS") { blocks() }
             body.section("ENTITIES") { append(entities) }
@@ -451,6 +456,19 @@ object RoomPlanDxf {
             variable("\$HANDSEED") { pair(5, seed) }
         }
 
+        /** The classes of the objects that are not R12's: each declared before the file uses it. */
+        private fun StringBuilder.classes() {
+            for ((name, subclass) in CLASSES) {
+                pair(0, "CLASS")
+                pair(1, name)
+                pair(2, subclass)
+                pair(3, "ObjectDBX Classes")
+                pair(90, 0)
+                pair(280, 0)
+                pair(281, 0)
+            }
+        }
+
         private fun StringBuilder.tables() {
             table("VPORT", vportTable, 1) {
                 record("VPORT", vportTable, "AcDbViewportTableRecord", "*ACTIVE")
@@ -471,6 +489,7 @@ object RoomPlanDxf {
                     pair(62, color)
                     pair(6, "Continuous")
                     pair(370, weight)
+                    pair(390, normalPlotStyle)
                 }
             }
             table("STYLE", styleTable, 1) {
@@ -537,6 +556,9 @@ object RoomPlanDxf {
             pair(76, 0)
             pair(77, 0)
             pair(78, 0)
+            pair(281, 0)
+            pair(65, 0)
+            pair(146, 0.0)
         }
 
         private fun StringBuilder.blocks() {
@@ -561,13 +583,68 @@ object RoomPlanDxf {
             }
         }
 
-        /** The dictionaries an R2000 reader looks for, and the model's and the sheet's layouts. */
+        /**
+         * The dictionaries an R2000 reader looks for, as ezdxf writes them: groups, the model's
+         * and the sheet's layouts, the standard multiline style, page setups, and the plot styles
+         * with the Normal one every layer plots in.
+         */
         private fun StringBuilder.objects() {
-            dictionary(root, "0", "ACAD_GROUP" to groups, "ACAD_LAYOUT" to layouts)
+            dictionary(
+                root,
+                "0",
+                "ACAD_GROUP" to groups,
+                "ACAD_LAYOUT" to layouts,
+                "ACAD_MLINESTYLE" to mlineStyles,
+                "ACAD_PLOTSETTINGS" to plotSettings,
+                "ACAD_PLOTSTYLENAME" to plotStyles,
+            )
             dictionary(groups, root)
             dictionary(layouts, root, "Model" to modelLayout, "Layout1" to paperLayout)
+            dictionary(mlineStyles, root, "Standard" to mlineStandard)
+            dictionary(plotSettings, root)
+            plotStyles()
             layout(modelLayout, "Model", 0, modelRecord, PLOT_MODEL)
             layout(paperLayout, "Layout1", 1, paperRecord, 0)
+            mlineStyle()
+        }
+
+        /** The plot styles by name, Normal alone and the default: a placeholder, as no style table is attached. */
+        private fun StringBuilder.plotStyles() {
+            pair(0, "ACDBDICTIONARYWDFLT")
+            pair(5, plotStyles)
+            pair(330, root)
+            pair(100, "AcDbDictionary")
+            pair(281, 1)
+            pair(3, "Normal")
+            pair(350, normalPlotStyle)
+            pair(100, "AcDbDictionaryWithDefault")
+            pair(340, normalPlotStyle)
+            pair(0, "ACDBPLACEHOLDER")
+            pair(5, normalPlotStyle)
+            pair(330, plotStyles)
+        }
+
+        /** The standard multiline style: two lines half a unit either side, in the layer's colour and line type. */
+        private fun StringBuilder.mlineStyle() {
+            pair(0, "MLINESTYLE")
+            pair(5, mlineStandard)
+            pair(102, "{ACAD_REACTORS")
+            pair(330, mlineStyles)
+            pair(102, "}")
+            pair(330, mlineStyles)
+            pair(100, "AcDbMlineStyle")
+            pair(2, "Standard")
+            pair(70, 0)
+            pair(3, "")
+            pair(62, BY_LAYER)
+            pair(51, QUARTER_TURN)
+            pair(52, QUARTER_TURN)
+            pair(71, 2)
+            for (offset in listOf(0.5, -0.5)) {
+                pair(49, offset)
+                pair(62, BY_LAYER)
+                pair(6, "BYLAYER")
+            }
         }
 
         private fun StringBuilder.dictionary(handle: String, owner: String, vararg entries: Pair<String, String>) {
@@ -669,6 +746,16 @@ object RoomPlanDxf {
             const val VIEW_MARGIN = 1.15
             const val PLOT_MODEL = 1024
 
+            /** The colour index (ACI) that takes the layer's colour. */
+            const val BY_LAYER = 256
+
+            /** The class objects the file holds, by DXF name and C++ class, as ezdxf declares them. */
+            val CLASSES = listOf(
+                "ACDBDICTIONARYWDFLT" to "AcDbDictionaryWithDefault",
+                "ACDBPLACEHOLDER" to "AcDbPlaceHolder",
+                "LAYOUT" to "AcDbLayout",
+            )
+
             /** Name, colour index (ACI) and line weight (hundredths of a millimetre) of each layer. */
             val LAYERS = listOf(
                 Triple("0", 7, -3),
@@ -732,13 +819,17 @@ object RoomPlanDxf {
     private const val QUARTER_TURN = 90.0
     private const val ANGLE_EPSILON = 1e-3
 
-    /** [text] as an R2000 file carries it: ASCII, anything else as its `\U+XXXX` escape. */
+    /**
+     * [text] as an R2000 file carries it: ASCII, anything else as its `\U+XXXX` escape. So are
+     * `%`, `^` and `\`, which a CAD tool would read as codes, `%%d` as a degree sign, `^I` as a tab
+     * and `\U+0041` as an A, rather than show them as typed.
+     */
     private fun encode(text: String): String = buildString {
         var i = 0
         while (i < text.length) {
             val code = text.codePointAt(i)
             when {
-                code in PRINTABLE -> append(code.toChar())
+                code in PRINTABLE && code.toChar() !in CODES -> append(code.toChar())
                 code < PRINTABLE.first -> append(' ')
                 code <= Char.MAX_VALUE.code -> append("\\U+%04X".format(Locale.US, code))
                 else -> append('?')
@@ -748,6 +839,9 @@ object RoomPlanDxf {
     }
 
     private val PRINTABLE = 0x20..0x7E
+
+    /** What starts a code in a DXF text: `%%`, a caret and a backslash. */
+    private const val CODES = "%^\\"
 
     private fun StringBuilder.pair(code: Int, value: String) {
         append(code.toString().padStart(CODE_WIDTH)).append('\n').append(value).append('\n')

@@ -891,15 +891,16 @@ private suspend fun sharePlanPdf(
 /**
  * A plan file named [name], written by [write] to the share cache off the main thread, and the
  * URI the share sheet reads it through; `null` when it could not be written or given a URI, for
- * the caller to say so rather than crash.
+ * the caller to say so rather than crash. A file that fails half-written is deleted: no app is
+ * handed it, and the cache does not keep it.
  */
 internal suspend fun writePlanShare(context: Context, name: String, write: (OutputStream) -> Unit): Uri? =
     withContext(Dispatchers.IO) {
+        val file = runCatching { planShareFile(context, name) }.getOrNull() ?: return@withContext null
         runCatching {
-            val file = planShareFile(context, name)
             file.outputStream().use(write)
             FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-        }.getOrNull()
+        }.onFailure { file.delete() }.getOrNull()
     }
 
 /**
