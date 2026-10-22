@@ -19,9 +19,10 @@ import kotlin.math.sin
 
 /**
  * The plan's DXF read back pair by pair, with a reader of its own: what a CAD tool finds in it.
- * DXF AC1015 (R2000) in millimetres; the outline one closed polyline on WALLS; each wall's length as
- * lines and text on DIMENSIONS, never a DIMENSION entity; the room's name and area on TEXT; each
- * opening with its size on OPENINGS; the warning to check it on site on LEGEND.
+ * DXF AC1015 (R2000) in millimetres, or in inches when the figures are in feet and inches; the
+ * outline one closed polyline on WALLS; each wall's length as lines and text on DIMENSIONS, never
+ * a DIMENSION entity; the room's name and area on TEXT; each opening with its size on OPENINGS;
+ * the warning to check it on site on LEGEND.
  */
 class RoomPlanDxfTest {
 
@@ -212,14 +213,63 @@ class RoomPlanDxfTest {
     }
 
     @Test
-    fun `figures in feet and inches when the wording is, the drawing still in millimetres`() {
+    fun `figures in metres: the drawing in millimetres, metric`() {
+        val dxf = dxf(room, openings = OPENINGS)
+        assertEquals("millimetres", "4", dxf.header("\$INSUNITS")?.trim())
+        assertEquals("metric", "1", dxf.header("\$MEASUREMENT")?.trim())
+        assertEquals("decimal", "2", dxf.header("\$LUNITS")?.trim())
+        assertEquals("to the millimetre", "0", dxf.header("\$LUPREC")?.trim())
+        assertDrawnAt(dxf, room, MILLIMETRES_PER_METRE)
+        val dimensions = dxf.entities("TEXT", "DIMENSIONS").map { it.text }
+        assertTrue("$dimensions", dimensions.containsAll(listOf("4.00", "5.00")))
+    }
+
+    @Test
+    fun `figures in feet and inches: the drawing in inches, imperial, read in feet and inches`() {
         val wording = imperialWording()
-        val dxf = dxf(room, wording)
-        assertEquals("4", dxf.header("\$INSUNITS")?.trim())
+        val dxf = dxf(room, wording, openings = OPENINGS)
+        assertEquals("inches", "1", dxf.header("\$INSUNITS")?.trim())
+        assertEquals("imperial", "0", dxf.header("\$MEASUREMENT")?.trim())
+        // A distance taken in the CAD tool reads in feet and inches, to the sixteenth of an inch.
+        assertEquals("architectural", "4", dxf.header("\$LUNITS")?.trim())
+        assertEquals("to 1/16\"", "4", dxf.header("\$LUPREC")?.trim())
+        assertDrawnAt(dxf, room, INCHES_PER_METRE)
         val dimensions = dxf.entities("TEXT", "DIMENSIONS").map { it.text }
         assertTrue("$dimensions", dimensions.containsAll(listOf("13' 1\"", "16' 5\"")))
         val area = SurveyReport.area(room.area!!, MeasureUnitSystem.Imperial)
         assertTrue(area, dxf.entities("TEXT", "TEXT").any { it.text == area })
+    }
+
+    /**
+     * [dxf] draws [survey] and [OPENINGS] at [perMetre] drawing units a metre: the outline's
+     * corners, each wall's dimension line, each door's swing, the texts' heights and the extents.
+     */
+    private fun assertDrawnAt(dxf: DxfRead, survey: RoomSurvey, perMetre: Double) {
+        val corners = survey.walls.map { at(survey, it.ax, it.ay, perMetre) }
+        val vertices = dxf.entities("LWPOLYLINE", "WALLS").single().vertices
+        assertEquals("vertices", corners.size, vertices.size)
+        corners.zip(vertices).forEach { (e, v) ->
+            assertTrue("${v.toList()} for ${e.toList()}", hypot(e[0] - v[0], e[1] - v[1]) < UNIT_TOLERANCE)
+        }
+        val lines = dxf.entities("LINE", "DIMENSIONS").map { hypot(it.point(11)[0] - it.point(10)[0], it.point(11)[1] - it.point(10)[1]) }
+        for (wall in survey.walls) {
+            val length = hypot(wall.bx - wall.ax, wall.by - wall.ay) * perMetre
+            assertTrue("wall ${wall.tag}: a $length line in $lines", lines.any { abs(it - length) < UNIT_TOLERANCE })
+        }
+        val swings = dxf.entities("ARC", "OPENINGS").mapNotNull { it.number(40) }.sorted()
+        val doors = OPENINGS.filter { it.kind == OpeningKind.Door }.map { it.width * perMetre }.sorted()
+        assertEquals("swings", doors.size, swings.size)
+        doors.zip(swings).forEach { (e, r) -> assertEquals("swing", e, r, UNIT_TOLERANCE) }
+        // Text sizes keep their print size: 150 mm on the drawing, 3 mm at 1:50.
+        for (layer in listOf("DIMENSIONS", "LEGEND")) {
+            for (text in dxf.entities("TEXT", layer)) assertEquals("$layer text height", 0.15 * perMetre, text.number(40)!!, UNIT_TOLERANCE)
+        }
+        val low = dxf.headerPoint("\$EXTMIN")
+        val high = dxf.headerPoint("\$EXTMAX")
+        for (corner in corners) {
+            assertTrue("${corner.toList()} within the extents", corner[0] in low[0]..high[0] && corner[1] in low[1]..high[1])
+        }
+        assertTrue("extents of a 4 x 5 m room: ${high[0] - low[0]}", high[0] - low[0] < survey.planLength * 2 * perMetre)
     }
 
     @Test
@@ -256,8 +306,12 @@ class RoomPlanDxfTest {
         return DxfRead(out.toByteArray())
     }
 
-    /** A point of the plan (metres, y down the page) where the drawing has it: millimetres, y up. */
-    private fun at(survey: RoomSurvey, x: Float, y: Float) = doubleArrayOf(x * 1000.0, (survey.planWidth - y) * 1000.0)
+    /**
+     * A point of the plan (metres, y down the page) where the drawing has it: [perMetre] drawing
+     * units a metre, millimetres by default, y up.
+     */
+    private fun at(survey: RoomSurvey, x: Float, y: Float, perMetre: Double = MILLIMETRES_PER_METRE) =
+        doubleArrayOf(x * perMetre, (survey.planWidth - y) * perMetre)
 
     /** Whether [p] is inside the outline [corners]. */
     private fun inside(corners: List<DoubleArray>, p: DoubleArray): Boolean {
@@ -357,6 +411,15 @@ class RoomPlanDxfTest {
             return variables.getOrNull(at + 1)?.takeIf { at >= 0 && it.first != 9 }?.second
         }
 
+        /** The point the header variable [name] holds: its x and y. */
+        fun headerPoint(name: String): DoubleArray {
+            val variables = sections["HEADER"]?.firstOrNull { it.type.isEmpty() }?.pairs.orEmpty()
+            val at = variables.indexOf(9 to name)
+            val x = variables.getOrNull(at + 1)?.takeIf { at >= 0 && it.first == 10 }?.second?.trim()?.toDoubleOrNull()
+            val y = variables.getOrNull(at + 2)?.takeIf { at >= 0 && it.first == 20 }?.second?.trim()?.toDoubleOrNull()
+            return doubleArrayOf(x ?: Double.NaN, y ?: Double.NaN)
+        }
+
         private companion object {
             val ESCAPE = Regex("""\\U\+([0-9A-Fa-f]{4})""")
         }
@@ -364,6 +427,12 @@ class RoomPlanDxfTest {
 
     private companion object {
         val LAYERS = listOf("WALLS", "OPENINGS", "DIMENSIONS", "TEXT", "LEGEND")
+
+        const val MILLIMETRES_PER_METRE = 1000.0
+        const val INCHES_PER_METRE = 1000.0 / 25.4
+
+        /** A thousandth of a drawing unit is written; a hundredth is the slack read back. */
+        const val UNIT_TOLERANCE = 0.01
 
         val WORDS = RoomPlanDxf.Words(
             legend = listOf(

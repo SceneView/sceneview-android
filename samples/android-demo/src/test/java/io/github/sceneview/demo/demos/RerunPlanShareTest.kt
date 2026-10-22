@@ -1,12 +1,18 @@
 package io.github.sceneview.demo.demos
 
 import android.app.Application
+import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.pdf.PdfDocument
 import android.net.Uri
+import android.os.Looper
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -40,11 +46,17 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import org.robolectric.annotation.Implementation
 import org.robolectric.annotation.Implements
+import org.robolectric.shadows.ShadowToast
 import org.robolectric.util.ReflectionHelpers
 import org.robolectric.util.ReflectionHelpers.ClassParameter
 import java.io.File
 import java.io.OutputStream
 import java.lang.reflect.Modifier
+import java.util.Collections
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 /**
  * The floor plan's file shares, each tapped from the plan's share menu as a user would. "Share
@@ -52,8 +64,11 @@ import java.lang.reflect.Modifier
  * offered and none is left out. "Share DXF (CAD)", right after it in the same menu, hands over
  * the DXF drawing alone, under its own type; a survey with no plan has no DXF to offer. Each kind
  * keeps its latest file, so the PDF stays readable to the app it went to while the DXF is shared
- * right after. Robolectric has no PDF backend: [PlanPdfStandIn] stands in for the platform's
- * writer, so the PDF's tap runs to the share sheet too.
+ * right after, and a share clears what earlier builds left in the plan's cache. The drawing is in
+ * inches in US English, in millimetres elsewhere, its legend saying which. A file that cannot be
+ * handed over is said so in a toast, and a second tap while a file is being written is let go.
+ * Robolectric has no PDF backend: [PlanPdfStandIn] stands in for the platform's writer, so the
+ * PDF's tap runs to the share sheet too.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = "w411dp-h891dp-xhdpi", shadows = [PlanPdfStandIn::class])
@@ -84,8 +99,14 @@ class RerunPlanShareTest {
     /** 4 × 3 m with its top-right corner cut at 45°, 2.50 m high: a room with a plan to draw. */
     private val traced = planSurvey(0f, 0f, 3f, 0f, 4f, 1f, 4f, 3f, 0f, 3f)
 
-    private fun showPlan() {
-        composeRule.setContent { RerunPlanView(survey = traced, title = TITLE, date = null) }
+    /** Shows the traced room's plan, its shares made through the context [wrap] makes of the activity's. */
+    private fun showPlan(wrap: (Context) -> Context = { it }) {
+        composeRule.setContent {
+            val activity = LocalContext.current
+            CompositionLocalProvider(LocalContext provides remember(activity) { wrap(activity) }) {
+                RerunPlanView(survey = traced, title = TITLE, date = null)
+            }
+        }
         composeRule.waitForIdle()
     }
 
@@ -235,6 +256,124 @@ class RerunPlanShareTest {
             listOf(app.getString(R.string.demo_ar_rerun_plan_share_pdf), app.getString(R.string.demo_ar_rerun_plan_share_text)),
             menu.children.map { it.label() },
         )
+    }
+
+    @Test
+    @Config(qualifiers = "en-rUS-w411dp-h891dp-xhdpi")
+    fun `in US English the DXF is drawn in inches, and says so under the plan`() {
+        showPlan()
+        val dxf = assertOneFile(sentBy(shareSheetOf(composeRule.onNodeWithText(DXF_LABEL))), ".dxf").readText()
+        assertEquals("inches", "1", headerOf(dxf, "\$INSUNITS"))
+        assertEquals("imperial", "0", headerOf(dxf, "\$MEASUREMENT"))
+        assertTrue("the legend's units line", dxf.contains("\nDrawn in inches \\U+00B7 figures in feet and inches.\n"))
+        assertFalse("millimetres named", dxf.contains("millimetres"))
+    }
+
+    @Test
+    @Config(qualifiers = "en-rGB-w411dp-h891dp-xhdpi")
+    fun `in British English the DXF is drawn in millimetres, and says so under the plan`() {
+        showPlan()
+        val dxf = assertOneFile(sentBy(shareSheetOf(composeRule.onNodeWithText(DXF_LABEL))), ".dxf").readText()
+        assertEquals("millimetres", "4", headerOf(dxf, "\$INSUNITS"))
+        assertEquals("metric", "1", headerOf(dxf, "\$MEASUREMENT"))
+        assertTrue("the legend's units line", dxf.contains("\nDrawn in millimetres \\U+00B7 figures in metres.\n"))
+    }
+
+    @Test
+    fun `a file that gets no URI to share by says so, and opens no share sheet`() {
+        // No FileProvider is declared for this package's authority: getUriForFile throws.
+        showPlan { context ->
+            object : ContextWrapper(context) {
+                override fun getPackageName() = "io.github.sceneview.demo.undeclared"
+            }
+        }
+        val started = shadowOf(app)
+        while (started.peekNextStartedActivity() != null) started.nextStartedActivity
+        val failed = app.getString(R.string.demo_ar_rerun_plan_share_failed)
+        val buttons = listOf("PDF" to composeRule.onNodeWithTag(RERUN_PLAN_SHARE_PDF_TAG), "DXF" to composeRule.onNodeWithText(DXF_LABEL))
+        for ((share, button) in buttons) {
+            val toasts = ShadowToast.shownToastCount()
+            button.performScrollTo().performClick()
+            composeRule.waitUntil(SHARE_TIMEOUT_MS) { ShadowToast.shownToastCount() > toasts }
+            assertEquals("$share: the toast", failed, ShadowToast.getTextOfLatestToast())
+            composeRule.waitForIdle()
+            assertNull("$share: a share sheet opened", started.peekNextStartedActivity())
+        }
+    }
+
+    @Test
+    fun `two quick taps on Share DXF write one file and open one share sheet`() {
+        val held = HeldCache()
+        showPlan { context -> held.wrap(context) }
+        val started = shadowOf(app)
+        while (started.peekNextStartedActivity() != null) started.nextStartedActivity
+        val dxf = composeRule.onNodeWithText(DXF_LABEL).performScrollTo()
+        dxf.performClick()
+        // The first tap's file is being written when the second tap lands.
+        composeRule.waitUntil(SHARE_TIMEOUT_MS) { held.writing }
+        dxf.performClick()
+        composeRule.waitForIdle()
+        assertNull("a share sheet before the file was written", started.peekNextStartedActivity())
+        held.release()
+        composeRule.waitUntil(SHARE_TIMEOUT_MS) { started.peekNextStartedActivity() != null }
+        val sheet = started.nextStartedActivity
+        composeRule.waitForIdle()
+        assertNull("a second share sheet", started.peekNextStartedActivity())
+        assertEquals("writes", 1, held.writes)
+        assertOneFile(sentBy(sheet), ".dxf")
+        // Once the file is handed over, the next tap shares again.
+        assertOneFile(sentBy(shareSheetOf(composeRule.onNodeWithText(DXF_LABEL))), ".dxf")
+    }
+
+    @Test
+    fun `a share clears what earlier builds left in the plan's cache, and keeps the other kind's latest file`() {
+        val plan = rerunShareDirectory(app, RERUN_SHARE_PLAN)
+        // One folder per share, straight under plan/: how earlier builds kept the plan's PDF.
+        val legacy = File(plan, UUID.randomUUID().toString()).apply { mkdirs() }
+        File(legacy, "Old room - floor plan.pdf").writeText("%PDF")
+        val loose = File(plan, "stray.tmp").apply { writeText("stray") }
+        val pdf = planShareFile(app, "Room - floor plan.pdf").apply { writeText("%PDF") }
+        assertFalse("$legacy is still there", legacy.exists())
+        assertFalse("$loose is still there", loose.exists())
+        val dxf = planShareFile(app, "Room - floor plan.dxf").apply { writeText("AC1015") }
+        assertTrue("the PDF went with the DXF's share", pdf.exists())
+        assertEquals(listOf("dxf", "pdf"), plan.list().orEmpty().sorted())
+        assertEquals(listOf(dxf.name, pdf.name).sorted(), sharedFiles().map { it.name }.sorted())
+    }
+
+    /** The value of the header variable [name] in the DXF [text]. */
+    private fun headerOf(text: String, name: String): String? {
+        val lines = text.lines().map { it.trim() }
+        val at = lines.indexOf(name)
+        return lines.getOrNull(at + 2)?.takeIf { at >= 0 }
+    }
+
+    /**
+     * The share's file held while it is being written: the cache folder, asked for off the main
+     * thread as a share writes its file, is handed out only once [release] is called. [writes]
+     * counts the shares that came to write a file.
+     */
+    private class HeldCache {
+        private val gate = CountDownLatch(1)
+        private val writers = Collections.newSetFromMap(ConcurrentHashMap<Thread, Boolean>())
+
+        @Volatile
+        var writing = false
+            private set
+
+        val writes get() = writers.size
+
+        fun wrap(context: Context): Context = object : ContextWrapper(context) {
+            override fun getCacheDir(): File {
+                if (Looper.myLooper() != Looper.getMainLooper() && writers.add(Thread.currentThread())) {
+                    writing = true
+                    gate.await(SHARE_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                }
+                return super.getCacheDir()
+            }
+        }
+
+        fun release() = gate.countDown()
     }
 
     private fun SemanticsNode.label(): String =
