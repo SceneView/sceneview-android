@@ -35,12 +35,26 @@ class WallOpening(
 fun interface WallOpenings {
     /** The openings in the walls of [cloud], whose surfels [surfaceOf] sorts. */
     fun find(cloud: DenseCloud, surfaceOf: (Int) -> ScanSurface): List<WallOpening>
+
+    /** [find], with what it was found on — or why nothing was — for the log. */
+    fun survey(cloud: DenseCloud, surfaceOf: (Int) -> ScanSurface): WallSurvey {
+        val found = find(cloud, surfaceOf)
+        return WallSurvey(found, "${found.size} openings")
+    }
 }
 
 /**
+ * What a look for the walls' openings came to: the [openings], and a [note] that says what they
+ * were found on, or why there are none — no wall in the scan, a wall seen too low, gaps that ran
+ * off the edge of what was scanned — so that a scan with none is never just "0 parts".
+ */
+class WallSurvey(val openings: List<WallOpening>, val note: String)
+
+/**
  * Openings found from the cloud alone. The room is squared up (its walls' direction, from where
- * their surfels stack up), its four walls placed where the most upright surfels are, and each is laid
- * out flat as a grid of [cell]-sized cells: those with a surfel on the wall's plane are wall, and
+ * their surfels stack up), its walls — up to four, as many as the scan saw — placed where the most
+ * upright surfels are, and each is laid out flat, as far as its own surfels go, as a grid of
+ * [cell]-sized cells: those with a surfel on the wall's plane are wall, and
  * an empty patch walled in on three or four sides, as rectangular as a frame, is a hole. What
  * stands in front of a wall hides it rather than opens it: a patch behind furniture is no hole.
  * A patch down to the floor and of a door's size is a door; one higher up, a window.
@@ -48,7 +62,11 @@ fun interface WallOpenings {
 class CloudWallOpenings(private val cell: Float = CELL_M) : WallOpenings {
     private class Wall(val alongB: Boolean, val plane: Float, val inward: Float, val from: Float, val to: Float)
 
-    override fun find(cloud: DenseCloud, surfaceOf: (Int) -> ScanSurface): List<WallOpening> {
+    override fun find(cloud: DenseCloud, surfaceOf: (Int) -> ScanSurface): List<WallOpening> =
+        survey(cloud, surfaceOf).openings
+
+    @Suppress("ReturnCount", "LongMethod")
+    override fun survey(cloud: DenseCloud, surfaceOf: (Int) -> ScanSurface): WallSurvey {
         val n = cloud.count
         // Every upright surfel, not just those sorted as wall: the sorting takes the first heavy
         // plane coming in from outside for the wall, and through a door or a window that is the
@@ -59,31 +77,60 @@ class CloudWallOpenings(private val cell: Float = CELL_M) : WallOpenings {
             (surface == ScanSurface.Wall || surface == ScanSurface.Object) &&
                 (normals == null || abs(normals[i * 3 + 1]) <= UPRIGHT_NORMAL_Y)
         }.toIntArray()
-        if (walls.size < MIN_WALL_SURFELS) return emptyList()
+        if (walls.size < MIN_WALL_SURFELS) {
+            return WallSurvey(emptyList(), "no wall: ${walls.size} upright surfels of $n, under $MIN_WALL_SURFELS")
+        }
         val p = cloud.positions
         val floors = (0 until n).filter { surfaceOf(it) == ScanSurface.Floor }.map { p[it * 3 + 1] }
         val ceilings = (0 until n).filter { surfaceOf(it) == ScanSurface.Ceiling }.map { p[it * 3 + 1] }
         val wallYs = walls.map { p[it * 3 + 1] }.sorted()
         val floorY = floors.median() ?: wallYs[(wallYs.size * LOW_SHARE).toInt()]
         val topY = ceilings.median() ?: wallYs[(wallYs.size * HIGH_SHARE).toInt()]
-        if (topY - floorY < MIN_ROOM_HEIGHT_M) return emptyList()
+        val height = topY - floorY
+        if (height < MIN_ROOM_HEIGHT_M) {
+            return WallSurvey(emptyList(), "walls seen %.2f m high, under %.1f m".format(height, MIN_ROOM_HEIGHT_M))
+        }
 
         val yaw = roomYaw(p, walls)
         val c = cos(yaw)
         val s = sin(yaw)
         val a = FloatArray(n) { p[it * 3] * c + p[it * 3 + 2] * s }
         val b = FloatArray(n) { -p[it * 3] * s + p[it * 3 + 2] * c }
-        val (aLow, aHigh) = sides(walls.map { a[it] }.toFloatArray()) ?: return emptyList()
-        val (bLow, bHigh) = sides(walls.map { b[it] }.toFloatArray()) ?: return emptyList()
-        val sides = listOf(
-            Wall(alongB = true, plane = aLow, inward = 1f, from = bLow, to = bHigh),
-            Wall(alongB = true, plane = aHigh, inward = -1f, from = bLow, to = bHigh),
-            Wall(alongB = false, plane = bLow, inward = 1f, from = aLow, to = aHigh),
-            Wall(alongB = false, plane = bHigh, inward = -1f, from = aLow, to = aHigh),
-        )
-        return sides.flatMap { wall ->
-            holes(wall, cloud, a, b, surfaceOf, floorY, topY).map { hole -> hole.placed(wall, c, s) }
+        // Each wall is laid out as far as its own surfels go. A phone scan seldom sees four walls,
+        // and the one it did not see is no limit to the one it did: a wall's ends taken from where
+        // the walls across it were guessed cut its door or its window in two, and a hole cut in
+        // two runs off the wall's end — no opening was ever found in a scan of a corner (#PRNUM).
+        val planes = sides(walls.map { a[it] }.toFloatArray()).map { (plane, inward) -> Triple(true, plane, inward) } +
+            sides(walls.map { b[it] }.toFloatArray()).map { (plane, inward) -> Triple(false, plane, inward) }
+        val sides = planes.mapNotNull { (alongB, plane, inward) ->
+            val across = if (alongB) a else b
+            val along = if (alongB) b else a
+            val on = walls.filter { abs(across[it] - plane) <= ON_WALL_M }.map { along[it] }.sorted()
+            if (on.size < MIN_WALL_SURFELS) return@mapNotNull null
+            Wall(alongB, plane, inward, on[(on.size * LOW_SHARE).toInt()], on[(on.size * HIGH_SHARE).toInt()])
         }
+        if (sides.isEmpty()) return WallSurvey(emptyList(), "no wall plane among ${walls.size} upright surfels")
+        val tally = Tally()
+        val found = sides.flatMap { wall ->
+            holes(wall, cloud, a, b, surfaceOf, floorY, topY, tally).map { hole -> hole.placed(wall, c, s) }
+        }
+        val ceiling = if (ceilings.isEmpty()) ", no ceiling seen" else ""
+        val note = "${found.size} openings on ${sides.size} walls %.2f m high$ceiling; ".format(height) + tally.describe()
+        return WallSurvey(found, note)
+    }
+
+    /** Why the gaps in the walls were or were not openings: one count per reason, for the log. */
+    private class Tally {
+        var gaps = 0
+        var atEnd = 0
+        var upToTop = 0
+        var ragged = 0
+        var hidden = 0
+        var unframed = 0
+        var unsized = 0
+
+        fun describe() = "$gaps gaps: $atEnd at a wall's end, $upToTop up to the top of the scanned wall, " +
+            "$ragged ragged, $hidden behind furniture, $unframed not framed, $unsized not a door's or a window's size"
     }
 
     /** A hole of [wall]: columns along it, rows up from the floor, and what was seen in it. */
@@ -116,6 +163,7 @@ class CloudWallOpenings(private val cell: Float = CELL_M) : WallOpenings {
         surfaceOf: (Int) -> ScanSurface,
         floorY: Float,
         topY: Float,
+        tally: Tally,
     ): List<Hole> {
         val t0 = min(wall.from, wall.to)
         val cols = ceil((max(wall.from, wall.to) - t0) / cell).toInt()
@@ -188,10 +236,26 @@ class CloudWallOpenings(private val cell: Float = CELL_M) : WallOpenings {
                 }
             }
             val count = tail
+            // A speck between surfels is no gap worth a word in the log.
+            if (count >= MIN_GAP_CELLS) tally.gaps++
             // Running into a corner or up to the ceiling: the scan's edge, not a hole.
-            if (c0 == 0 || c1 == cols - 1 || r1 >= rows - 1) continue
+            if (c0 == 0 || c1 == cols - 1) {
+                if (count >= MIN_GAP_CELLS) tally.atEnd++
+                continue
+            }
+            if (r1 >= rows - 1) {
+                if (count >= MIN_GAP_CELLS) tally.upToTop++
+                continue
+            }
             val fill = count.toFloat() / ((c1 - c0 + 1) * (r1 - r0 + 1))
-            if (fill < MIN_FILL || shadowed > count * MAX_SHADOW) continue
+            if (fill < MIN_FILL || shadowed > count * MAX_SHADOW) {
+                when {
+                    count < MIN_GAP_CELLS -> Unit
+                    fill < MIN_FILL -> tally.ragged++
+                    else -> tally.hidden++
+                }
+                continue
+            }
             var border = 0
             var closed = 0
             fun edge(row: Int, col: Int) {
@@ -208,7 +272,10 @@ class CloudWallOpenings(private val cell: Float = CELL_M) : WallOpenings {
                 if (r0 > 0) edge(r0 - 1, col)
             }
             val enclosed = if (border == 0) 0f else closed.toFloat() / border
-            if (enclosed < MIN_ENCLOSED) continue
+            if (enclosed < MIN_ENCLOSED) {
+                if (count >= MIN_GAP_CELLS) tally.unframed++
+                continue
+            }
             // The closing above took a cell off each side of the hole: given back.
             val from = t0 + (c0 - 1) * cell
             val to = t0 + (c1 + 2) * cell
@@ -223,7 +290,11 @@ class CloudWallOpenings(private val cell: Float = CELL_M) : WallOpenings {
                 sill >= WINDOW_SILL_M && width in WINDOW_WIDTH && height in WINDOW_HEIGHT &&
                     (throughShare > 0f || fill >= WINDOW_FILL) -> SceneLabel.Window
                 else -> null
-            } ?: continue
+            }
+            if (label == null) {
+                if (count >= MIN_GAP_CELLS) tally.unsized++
+                continue
+            }
             val confidence = (BASE_CONFIDENCE + ENCLOSED_WEIGHT * enclosed + THROUGH_WEIGHT * throughShare)
                 .coerceAtMost(MAX_CONFIDENCE)
             found += Hole(label, from, to, bottom, top, floorY, confidence)
@@ -267,24 +338,44 @@ class CloudWallOpenings(private val cell: Float = CELL_M) : WallOpenings {
         return best
     }
 
-    /** The two walls across one axis: the most wall surfels on each side of the room's middle. */
-    private fun sides(values: FloatArray): Pair<Float, Float>? {
+    /**
+     * The walls across one axis, each with the way into the room: the most wall surfels on each
+     * side of the room's middle — or, with the upright surfels spread less than a room's side
+     * along it, the one wall a scan of a single wall saw, the room on the side most surfels are.
+     */
+    private fun sides(values: FloatArray): List<Pair<Float, Float>> {
         val sorted = values.sortedArray()
         val lo = sorted[(sorted.size * LOW_SHARE).toInt()]
         val hi = sorted[(sorted.size * HIGH_SHARE).toInt()]
-        if (hi - lo < MIN_ROOM_SIDE_M) return null
+        if (hi - lo < MIN_ROOM_SIDE_M) {
+            val only = peak(sorted.asList()) ?: return emptyList()
+            return listOf(only to if (sorted[sorted.size / 2] >= only) 1f else -1f)
+        }
         val mid = (lo + hi) / 2
-        val low = peak(sorted.filter { it < mid }) ?: return null
-        val high = peak(sorted.filter { it >= mid }) ?: return null
-        return low to high
+        return listOfNotNull(
+            peak(sorted.filter { it < mid }, inward = 1)?.let { it to 1f },
+            peak(sorted.filter { it >= mid }, inward = -1)?.let { it to -1f },
+        )
     }
 
-    /** Where [values] stack up most, refined to the median of those near it. */
-    private fun peak(values: List<Float>): Float? {
+    /**
+     * Where [values] stack up most, refined to the median of those near it. With an [inward]
+     * direction, of the stacks nearly as tall as the tallest the one furthest that way: what is
+     * seen through a door or a window is beyond the wall it is cut in, never on the room's side
+     * of it, and the room beyond can be seen as much as the wall itself.
+     */
+    private fun peak(values: List<Float>, inward: Int = 0): Float? {
         if (values.isEmpty()) return null
         val counts = HashMap<Int, Int>()
         values.forEach { counts.merge(floor(it / cell).toInt(), 1, Int::plus) }
-        val bin = counts.maxBy { it.value }.key
+        // A wall a little off the grid falls in two bins: each counted with its neighbours.
+        val stacks = counts.keys.associateWith { k -> (k - 1..k + 1).sumOf { counts[it] ?: 0 } }
+        val tallest = stacks.values.max()
+        val bin = if (inward == 0) {
+            stacks.maxBy { it.value }.key
+        } else {
+            stacks.filter { it.value >= tallest * NEAR_PEAK_SHARE }.keys.maxBy { it * inward }
+        }
         val centre = (bin + 0.5f) * cell
         return values.filter { abs(it - centre) <= ON_WALL_M }.median()
     }
@@ -322,6 +413,12 @@ class CloudWallOpenings(private val cell: Float = CELL_M) : WallOpenings {
         private const val THROUGH_WEIGHT = 0.3f
         private const val MAX_CONFIDENCE = 0.95f
         private const val MIN_WALL_SURFELS = 200
+
+        /** A stack of wall surfels this share of the tallest is a wall too. */
+        private const val NEAR_PEAK_SHARE = 0.5f
+
+        /** A gap of fewer cells is a speck between surfels, not counted in the log's note. */
+        private const val MIN_GAP_CELLS = 16
 
         /** A surfel whose normal leans less than this towards ±Y faces sideways: a wall's. */
         private const val UPRIGHT_NORMAL_Y = 0.5f
