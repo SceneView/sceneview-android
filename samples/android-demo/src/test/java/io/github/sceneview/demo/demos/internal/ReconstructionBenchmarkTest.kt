@@ -26,6 +26,7 @@ class ReconstructionBenchmarkTest {
     @Test
     fun `poisson misses less of the room and leaves fewer holes, as accurate and within time`() {
         val rows = ArrayList<String>()
+        val measured = ArrayList<Triple<String, List<BenchRow>, BenchRow>>()
         for (scan in listOf(ReconstructionBench.FULL, ReconstructionBench.QUICK)) {
             val seen = ReconstructionBench.seen(scan)
             val tsdf = scan.liveTsdf()
@@ -51,12 +52,16 @@ class ReconstructionBenchmarkTest {
             rows += BenchRow.RULE
             rows += listOf(fusedLive, fusedSurfels, screened).map(BenchRow::line)
             rows += ""
-
             for (mesh in listOf(live.first, surfels.first, poisson.first)) {
                 assertEquals(emptyList<String>(), GlbCheck.problems(RerunMeshGlb.write(mesh)))
             }
+            measured += Triple(scan.name, listOf(fusedLive, fusedSurfels), screened)
+        }
+        // The table first, so a failing run still shows what it measured.
+        println(rows.joinToString("\n"))
+        for ((label, fused, screened) in measured) {
+            val (fusedLive, fusedSurfels) = fused
             // What the choice rests on: Poisson sees more of the room, with fewer holes, as close to it.
-            val label = scan.name
             assertTrue("$label: missed ${screened.missedShare} vs ${fusedSurfels.missedShare}", screened.missedShare < fusedSurfels.missedShare)
             assertTrue("$label: missed ${screened.missedShare} vs ${fusedLive.missedShare}", screened.missedShare < fusedLive.missedShare)
             assertTrue("$label: boundary ${screened.boundaryM} vs ${fusedSurfels.boundaryM}", screened.boundaryM < fusedSurfels.boundaryM)
@@ -65,7 +70,6 @@ class ReconstructionBenchmarkTest {
             assertTrue("$label: p90 error ${screened.p90ErrorM}", screened.p90ErrorM < P90_LIMIT_M)
             assertTrue("$label: ${screened.endMs} ms", screened.endMs < TIME_LIMIT_MS)
         }
-        println(rows.joinToString("\n"))
     }
 
     @Test
@@ -163,6 +167,10 @@ object ReconstructionHeapProbe {
         val runtime = Runtime.getRuntime()
         var peak = 0L
         var next = 0f
+        // This JVM runs nothing but the probe: a full collection first leaves only what is held,
+        // so the reading is the live heap a phone would need, not garbage awaiting collection.
+        // The JVM has no other way to read its live heap.
+        @Suppress("ExplicitGarbageCollectionCall")
         fun probe() {
             System.gc()
             peak = maxOf(peak, runtime.totalMemory() - runtime.freeMemory())

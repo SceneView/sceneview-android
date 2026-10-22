@@ -36,8 +36,9 @@ enum class ReconstructionMethod {
  * the TSDF, so marching cubes meshes it unchanged.
  *
  * Poisson closes what the samples leave open. Nodes further than [TRIM] nodes from every sample
- * are left out of the field: holes up to about twice that close, larger ones stay open rather
- * than bulge into surfaces nothing saw.
+ * are left out of the field, and so are those the samples do not surround ([trimOpenEdges]):
+ * holes up to about 7 cm across the radius close, larger ones stay open rather than bulge into
+ * surfaces nothing saw, and an open edge stops at its last samples.
  *
  * Memory: [NODE_BYTES] a node and [SAMPLE_BYTES] a surfel while solving, within the budget
  * given; a band over it is solved again with nodes twice as far apart, up to [MAX_COARSENING]
@@ -50,7 +51,7 @@ object ScreenedPoisson {
     /** Nodes the band reaches past a sample's cell, every way: about 10 cm at 2.5 cm. */
     const val REACH = 4
 
-    /** Nodes past the nearest sample that keep their field: holes up to ~15 cm close at 2.5 cm. */
+    /** Nodes past the nearest sample that keep their field, at most: 7.5 cm at 2.5 cm. */
     const val TRIM = 3
 
     /** The paper's α, in node units: how hard the field holds its level at the samples. */
@@ -81,6 +82,19 @@ object ScreenedPoisson {
     private const val REGULARIZATION = 1e-5f
     private const val TANGENT_SWITCH = 0.9f
     private val BOOLEANS = booleanArrayOf(false, true)
+
+    /** Nodes round a node its [Coverage] looks: holes up to about 0.7 of it across the radius close. */
+    private const val COVERAGE_REACH = TRIM + 1
+
+    /** The share of that disk the samples must cover: ½ is the edge of a seen surface. */
+    private const val COVERED = 0.5f
+
+    /** A node [trimOpenEdges] leaves out, until its pass is over. */
+    private const val DROPPED: Byte = -1
+
+    /** Half a square's diagonal over its side. */
+    private const val HALF_DIAGONAL = 0.7072f
+    private const val PI_F = kotlin.math.PI.toFloat()
 
     /** The field crosses one unit over about two nodes: back to metres, roughly a distance. */
     private const val METRES_PER_UNIT_NODES = 2f
@@ -315,6 +329,7 @@ object ScreenedPoisson {
                 }
             }
         }
+        trimOpenEdges(cloud, normals, band, f, iso, distance)
         val tsdf = RerunTsdf(voxelM = h)
         val scale = METRES_PER_UNIT_NODES * h
         val at = IntArray(3)
@@ -340,6 +355,146 @@ object ScreenedPoisson {
     }
 
     /**
+     * Where the field crosses its level away from the samples (1 to [TRIM] nodes off), keeps
+     * the node only where the samples surround it: their surface covers at least [COVERED] of
+     * a disk [COVERAGE_REACH] nodes round it ([Coverage]). A hole they ring keeps its fill; past
+     * the edge of what was seen — a doorway, the top of a wall seen from below — the field would
+     * carry the plane on for [TRIM] nodes, and the surface stops at the last samples instead. As
+     * PoissonRecon's trimming by sample density, on the nodes that would make triangles.
+     */
+    @Suppress("LongParameterList")
+    private fun trimOpenEdges(cloud: DenseCloud, normals: FloatArray, band: Band, f: FloatArray, iso: Float, distance: ByteArray) {
+        val coverage = Coverage(cloud, normals, band.h)
+        val h = band.h
+        val at = IntArray(3)
+        for (m in 0 until band.nodes) {
+            val d = distance[m]
+            if (d < 1 || d > TRIM || !crosses(band, f, iso, distance, m)) continue
+            band.coordinates(m, at)
+            if (coverage.of(at[0] * h, at[1] * h, at[2] * h) < COVERED) distance[m] = DROPPED
+        }
+        for (m in 0 until band.nodes) {
+            if (distance[m] == DROPPED) distance[m] = (TRIM + 1).toByte()
+        }
+    }
+
+    /** Whether node [m]'s field and a kept neighbour's lie either side of [iso]: a triangle's corner. */
+    private fun crosses(band: Band, f: FloatArray, iso: Float, distance: ByteArray, m: Int): Boolean {
+        val above = f[m] > iso
+        for (axis in 0 until 3) {
+            for (up in BOOLEANS) {
+                val o = band.neighbour(m, axis, up)
+                // A node already dropped still counts: the outcome must not depend on the order.
+                if (o >= 0 && distance[o] <= TRIM && (f[o] > iso) != above) return true
+            }
+        }
+        return false
+    }
+
+    /**
+     * How much of a disk round a point [cloud]'s samples cover: their area within `radius`
+     * across the nearest sample's plane and within `radius` along its normal, over the disk's
+     * (`radius` = [COVERAGE_REACH] nodes). About 1 inside a seen surface, ½ at its edge, less
+     * past it, and `1 − (r / radius)²` at the middle of a hole of radius `r`. Surfels are
+     * indexed by every cell of `radius` their square reaches.
+     */
+    private class Coverage(private val cloud: DenseCloud, private val normals: FloatArray, private val h: Float) {
+        private val radius = COVERAGE_REACH * h
+        private val heads = LongIntMap()
+        private var surfels = IntArray(cloud.count.coerceAtLeast(1))
+        private var next = IntArray(surfels.size)
+        private var entries = 0
+        private val stamp = IntArray(cloud.count)
+        private var query = 0
+
+        init {
+            val positions = cloud.positions
+            for (i in 0 until cloud.count) {
+                val x = positions[i * 3]
+                val y = positions[i * 3 + 1]
+                val z = positions[i * 3 + 2]
+                if (!(x.isFinite() && y.isFinite() && z.isFinite())) continue
+                val reach = surfelSide(cloud, i) * HALF_DIAGONAL
+                for (cz in cell(z - reach)..cell(z + reach)) {
+                    for (cy in cell(y - reach)..cell(y + reach)) {
+                        for (cx in cell(x - reach)..cell(x + reach)) add(RerunTsdf.blockKey(cx, cy, cz), i)
+                    }
+                }
+            }
+        }
+
+        private fun cell(v: Float): Int = floor(v / radius).toInt()
+
+        private fun add(key: Long, surfel: Int) {
+            if (entries == surfels.size) {
+                surfels = surfels.copyOf(entries * 2)
+                next = next.copyOf(entries * 2)
+            }
+            surfels[entries] = surfel
+            next[entries] = heads.get(key)
+            heads.put(key, entries++)
+        }
+
+        /** The share of the disk round ([x], [y], [z]) the samples cover; 0 with none within reach. */
+        fun of(x: Float, y: Float, z: Float): Float {
+            val r2 = radius * radius
+            var best = r2
+            var nx = 0f
+            var ny = 0f
+            var nz = 0f
+            forEachNear(x, y, z) { sx, sy, sz, snx, sny, snz, _ ->
+                val dx = sx - x
+                val dy = sy - y
+                val dz = sz - z
+                val d = dx * dx + dy * dy + dz * dz
+                if (d < best) {
+                    best = d
+                    nx = snx
+                    ny = sny
+                    nz = snz
+                }
+            }
+            if (nx == 0f && ny == 0f && nz == 0f) return 0f
+            var area = 0f
+            forEachNear(x, y, z) { sx, sy, sz, _, _, _, a ->
+                val dx = sx - x
+                val dy = sy - y
+                val dz = sz - z
+                val along = dx * nx + dy * ny + dz * nz
+                if (abs(along) <= radius && dx * dx + dy * dy + dz * dz - along * along <= r2) area += a
+            }
+            return area / (PI_F * r2)
+        }
+
+        /** Every sample within a cell of ([x], [y], [z]), each surfel once. */
+        private inline fun forEachNear(
+            x: Float,
+            y: Float,
+            z: Float,
+            visit: (x: Float, y: Float, z: Float, nx: Float, ny: Float, nz: Float, area: Float) -> Unit,
+        ) {
+            query++
+            val cx = cell(x)
+            val cy = cell(y)
+            val cz = cell(z)
+            for (kz in cz - 1..cz + 1) {
+                for (ky in cy - 1..cy + 1) {
+                    for (kx in cx - 1..cx + 1) {
+                        var e = heads.get(RerunTsdf.blockKey(kx, ky, kz))
+                        while (e >= 0) {
+                            val s = surfels[e]
+                            e = next[e]
+                            if (stamp[s] == query) continue
+                            stamp[s] = query
+                            forEachSampleOf(cloud, normals, h, s) { sx, sy, sz, snx, sny, snz, a, _ -> visit(sx, sy, sz, snx, sny, snz, a) }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
      * Every sample of [cloud] at spacing [h] or finer: a surfel of level 0 as it is, a coarsened
      * one (level L, 2^L × 2^L level-0 surfels, #4629) as a grid of samples across its square,
      * each standing for its share of the area. Non-finite surfels are skipped.
@@ -351,52 +506,66 @@ object ScreenedPoisson {
         h: Float,
         visit: (x: Float, y: Float, z: Float, nx: Float, ny: Float, nz: Float, area: Float, colour: Int) -> Unit,
     ) {
+        for (i in 0 until cloud.count) forEachSampleOf(cloud, normals, h, i, visit)
+    }
+
+    /** Surfel [i]'s samples at spacing [h], as [forEachSample] gives them. */
+    @Suppress("LongParameterList")
+    private inline fun forEachSampleOf(
+        cloud: DenseCloud,
+        normals: FloatArray,
+        h: Float,
+        i: Int,
+        visit: (x: Float, y: Float, z: Float, nx: Float, ny: Float, nz: Float, area: Float, colour: Int) -> Unit,
+    ) {
         val positions = cloud.positions
-        for (i in 0 until cloud.count) {
-            val px = positions[i * 3]
-            val py = positions[i * 3 + 1]
-            val pz = positions[i * 3 + 2]
-            val nx = normals[i * 3]
-            val ny = normals[i * 3 + 1]
-            val nz = normals[i * 3 + 2]
-            if (!(px.isFinite() && py.isFinite() && pz.isFinite() && nx.isFinite() && ny.isFinite() && nz.isFinite())) continue
-            val colour = cloud.colors[i]
-            val side = DenseFusion.VOXEL_M * (1 shl cloud.levelOf(i).coerceAtMost(DenseFusion.LEVEL_LIMIT))
-            val split = ceil(side / h).toInt().coerceAtLeast(1)
-            if (split == 1) {
-                visit(px, py, pz, nx, ny, nz, side * side, colour)
-                continue
-            }
-            // Two tangents of the surfel's plane, a sub-sample apart, as RerunTsdf.integrateSurfels.
-            val ax = if (abs(ny) < TANGENT_SWITCH) 0f else 1f
-            val ay = if (abs(ny) < TANGENT_SWITCH) 1f else 0f
-            var tx = ay * nz
-            var ty = -ax * nz
-            var tz = ax * ny - ay * nx
-            val tl = sqrt(tx * tx + ty * ty + tz * tz)
-            if (tl < 1e-6f) continue
-            val step = side / split / tl
-            tx *= step
-            ty *= step
-            tz *= step
-            val bx = ny * tz - nz * ty
-            val by = nz * tx - nx * tz
-            val bz = nx * ty - ny * tx
-            val centre = (split - 1) / 2f
-            val area = side * side / (split * split)
-            for (u in 0 until split) {
-                for (v in 0 until split) {
-                    val a = u - centre
-                    val c = v - centre
-                    visit(px + tx * a + bx * c, py + ty * a + by * c, pz + tz * a + bz * c, nx, ny, nz, area, colour)
-                }
+        val px = positions[i * 3]
+        val py = positions[i * 3 + 1]
+        val pz = positions[i * 3 + 2]
+        val nx = normals[i * 3]
+        val ny = normals[i * 3 + 1]
+        val nz = normals[i * 3 + 2]
+        if (!(px.isFinite() && py.isFinite() && pz.isFinite() && nx.isFinite() && ny.isFinite() && nz.isFinite())) return
+        val colour = cloud.colors[i]
+        val side = surfelSide(cloud, i)
+        val split = ceil(side / h).toInt().coerceAtLeast(1)
+        if (split == 1) {
+            visit(px, py, pz, nx, ny, nz, side * side, colour)
+            return
+        }
+        // Two tangents of the surfel's plane, a sub-sample apart, as RerunTsdf.integrateSurfels.
+        val ax = if (abs(ny) < TANGENT_SWITCH) 0f else 1f
+        val ay = if (abs(ny) < TANGENT_SWITCH) 1f else 0f
+        var tx = ay * nz
+        var ty = -ax * nz
+        var tz = ax * ny - ay * nx
+        val tl = sqrt(tx * tx + ty * ty + tz * tz)
+        if (tl < 1e-6f) return
+        val step = side / split / tl
+        tx *= step
+        ty *= step
+        tz *= step
+        val bx = ny * tz - nz * ty
+        val by = nz * tx - nx * tz
+        val bz = nx * ty - ny * tx
+        val centre = (split - 1) / 2f
+        val area = side * side / (split * split)
+        for (u in 0 until split) {
+            for (v in 0 until split) {
+                val a = u - centre
+                val c = v - centre
+                visit(px + tx * a + bx * c, py + ty * a + by * c, pz + tz * a + bz * c, nx, ny, nz, area, colour)
             }
         }
     }
 
+    /** The side of surfel [i]'s square, in metres. */
+    private fun surfelSide(cloud: DenseCloud, i: Int): Float =
+        DenseFusion.VOXEL_M * (1 shl cloud.levelOf(i).coerceAtMost(DenseFusion.LEVEL_LIMIT))
+
     /** The surface surfel [i] stands for, in square metres. */
     private fun surfelArea(cloud: DenseCloud, i: Int): Float {
-        val side = DenseFusion.VOXEL_M * (1 shl cloud.levelOf(i).coerceAtMost(DenseFusion.LEVEL_LIMIT))
+        val side = surfelSide(cloud, i)
         return side * side
     }
 
