@@ -79,8 +79,10 @@ internal object MeshCleanup {
      * two sheets a few centimetres apart facing the same way. A triangle whose own normal, cast
      * towards the free space it faces, meets another triangle facing the same way within
      * [maxGapM] is behind that one, where no camera could have seen it: it goes. A thin object
-     * seen from both sides (a door, a table top) faces opposite ways and stays. Returns the mesh
-     * and how many triangles went.
+     * seen from both sides (a door, a table top) faces opposite ways and stays. What the cut
+     * leaves of a hidden sheet goes with it ([dropCutPieces]) — except where the sheet in front
+     * has a hole: there the hidden sheet is the surface the camera saw, and it stays. Returns the
+     * mesh and how many triangles went.
      */
     fun removeDoubledSurfaces(
         mesh: WorkMesh,
@@ -94,6 +96,7 @@ internal object MeshCleanup {
         val topology = MeshTopology(mesh.vertexCount, mesh.indices)
         val rings = RingWalk(n)
         val keep = BooleanArray(n) { true }
+        val behind = BooleanArray(n)
         var removed = 0
         val p = mesh.positions
         val idx = mesh.indices
@@ -113,6 +116,7 @@ internal object MeshCleanup {
             }
             if (hidden) {
                 keep[t] = false
+                behind[t] = true
                 removed++
             }
         }
@@ -140,17 +144,37 @@ internal object MeshCleanup {
                 removed++
             }
         }
-        removed += dropCutPieces(mesh, topology, keep)
+        removed += dropCutPieces(mesh, topology, faces, grid, keep, behind, minCos, maxGapM)
         return mesh.keepTriangles(keep) to removed
     }
 
     /**
      * After the hidden sheets went, what hung between them — the pocket's thin side walls — is a
      * piece whose rim is mostly where triangles were cut away. Such a piece, small next to the
-     * largest one, goes too; a wall that merely lost a patch behind a picture keeps. Returns
-     * how many triangles went.
+     * largest one, goes too; a wall that merely lost a patch behind a picture keeps. So does
+     * what the cut leaves of a sheet, the few triangles at its rim the test did not reach: any
+     * piece under [MIN_PIECE_SHARE] of the largest.
+     *
+     * A piece of the hidden sheet that nothing stands in front of, cut out of it all round, lies
+     * in a hole of the sheet in front: through that hole, it is the surface the camera saw —
+     * a floor scanned twice, each pass missing its own patches, is whole from above only with
+     * both sheets. Such a piece stays, however small: most of its cut rim
+     * ([SEEN_THROUGH_SHARE]) borders triangles of the hidden sheet ([behind]) facing its way, and
+     * most of its area ([SEEN_OPEN_SHARE]) looks out on nothing within [maxGapM] — the specks
+     * the hidden-sheet test missed under a rough wall look out on that wall.
+     * Returns how many triangles went.
      */
-    private fun dropCutPieces(mesh: WorkMesh, topology: MeshTopology, keep: BooleanArray): Int {
+    @Suppress("LongParameterList")
+    private fun dropCutPieces(
+        mesh: WorkMesh,
+        topology: MeshTopology,
+        faces: FaceGeometry,
+        grid: TriangleGrid,
+        keep: BooleanArray,
+        behind: BooleanArray,
+        minCos: Float,
+        maxGapM: Float,
+    ): Int {
         val n = mesh.triangleCount
         val idx = mesh.indices
         val parent = IntArray(mesh.vertexCount) { it }
@@ -174,9 +198,9 @@ internal object MeshCleanup {
             val r = root(b)
             if (c != r) parent[c] = r
         }
-        val faces = FaceGeometry(mesh.positions, idx)
         val area = HashMap<Int, Float>()
         val cut = HashMap<Int, Int>()
+        val seenThrough = HashMap<Int, Int>()
         val rim = HashMap<Int, Int>()
         val triangles = HashMap<Int, Int>()
         for (t in 0 until n) {
@@ -188,16 +212,47 @@ internal object MeshCleanup {
                 val u = topology.neighbours[t * 3 + k]
                 if (u >= 0 && keep[u]) continue
                 rim.merge(piece, 1, Int::plus)
-                if (u >= 0) cut.merge(piece, 1, Int::plus)
+                if (u < 0) continue
+                cut.merge(piece, 1, Int::plus)
+                if (behind[u] && faces.dot(t, u) >= minCos) seenThrough.merge(piece, 1, Int::plus)
             }
         }
         val largest = area.values.maxOrNull() ?: return 0
+        val inHole = area.keys.filter { piece ->
+            val cutEdges = cut[piece] ?: 0
+            cutEdges > 0 && (seenThrough[piece] ?: 0) >= cutEdges * SEEN_THROUGH_SHARE
+        }.toHashSet()
+        val open = HashMap<Int, Float>()
+        if (inHole.isNotEmpty()) {
+            val p = mesh.positions
+            for (t in 0 until n) {
+                if (!keep[t] || faces.areas[t] <= 0f) continue
+                val piece = root(idx[t * 3])
+                if (piece !in inHole) continue
+                val nx = faces.normals[t * 3]
+                val ny = faces.normals[t * 3 + 1]
+                val nz = faces.normals[t * 3 + 2]
+                val ox = faces.centroids[t * 3] + nx * RAY_START_M
+                val oy = faces.centroids[t * 3 + 1] + ny * RAY_START_M
+                val oz = faces.centroids[t * 3 + 2] + nz * RAY_START_M
+                val blocked = grid.anyAlong(ox, oy, oz, nx, ny, nz, maxGapM) { u ->
+                    keep[u] && root(idx[u * 3]) != piece &&
+                        rayHits(p, idx, u, ox, oy, oz, nx, ny, nz, maxGapM, DOUBLED_MIN_GAP_M)
+                }
+                if (!blocked) open.merge(piece, faces.areas[t], Float::plus)
+            }
+        }
         val drop = area.keys.filter { piece ->
             val edges = rim[piece] ?: 0
             val cutEdges = cut[piece] ?: 0
-            // Mostly cut rim, and narrow: the rim is long next to the piece's size.
-            edges > 0 && cutEdges * 2 >= edges && cutEdges * CUT_PIECE_TRIANGLES_PER_EDGE >= (triangles[piece] ?: 0) &&
-                area.getValue(piece) < largest * CUT_PIECE_SHARE
+            val pieceArea = area.getValue(piece)
+            when {
+                piece in inHole && (open[piece] ?: 0f) >= pieceArea * SEEN_OPEN_SHARE -> false
+                pieceArea < largest * MIN_PIECE_SHARE -> true
+                // Mostly cut rim, and narrow: the rim is long next to the piece's size.
+                else -> edges > 0 && cutEdges * 2 >= edges && cutEdges * CUT_PIECE_TRIANGLES_PER_EDGE >= (triangles[piece] ?: 0) &&
+                    pieceArea < largest * CUT_PIECE_SHARE
+            }
         }.toHashSet()
         if (drop.isEmpty()) return 0
         var dropped = 0
@@ -304,9 +359,55 @@ internal object MeshCleanup {
     }
 
     /**
+     * Removes what a hole's patch now covers. Where the sheet in front had a hole, the hidden
+     * sheet seen through it stayed ([removeDoubledSurfaces]); the plane snap then brought it
+     * onto the wall's plane, and once [fillSmallHoles] closed the hole on that plane, the patch
+     * and the piece lie on each other — two surfaces in one place, which the renderer would
+     * show in stripes. A triangle before [firstNew] goes when the line along its normal meets a
+     * patch triangle (from [firstNew] on) facing its way, from [COVERED_BACK_M] behind it to
+     * [maxGapM] in front. Returns the mesh and how many triangles went.
+     */
+    fun removeCovered(
+        mesh: WorkMesh,
+        firstNew: Int,
+        maxGapM: Float = DOUBLED_GAP_M,
+        minCos: Float = DOUBLED_MIN_COS,
+    ): Pair<WorkMesh, Int> {
+        val n = mesh.triangleCount
+        if (firstNew >= n) return mesh to 0
+        val p = mesh.positions
+        val idx = mesh.indices
+        val faces = FaceGeometry(p, idx)
+        val grid = TriangleGrid(p, idx.copyOfRange(firstNew * 3, n * 3), maxGapM)
+        val keep = BooleanArray(n) { true }
+        var removed = 0
+        for (t in 0 until firstNew) {
+            if (faces.areas[t] <= 0f) continue
+            val nx = faces.normals[t * 3]
+            val ny = faces.normals[t * 3 + 1]
+            val nz = faces.normals[t * 3 + 2]
+            val ox = faces.centroids[t * 3] - nx * COVERED_BACK_M
+            val oy = faces.centroids[t * 3 + 1] - ny * COVERED_BACK_M
+            val oz = faces.centroids[t * 3 + 2] - nz * COVERED_BACK_M
+            val length = maxGapM + COVERED_BACK_M
+            val covered = grid.anyAlong(ox, oy, oz, nx, ny, nz, length) { patch ->
+                val u = firstNew + patch
+                faces.dot(t, u) >= minCos && rayHits(p, idx, u, ox, oy, oz, nx, ny, nz, length)
+            }
+            if (covered) {
+                keep[t] = false
+                removed++
+            }
+        }
+        if (removed == 0) return mesh to 0
+        return mesh.keepTriangles(keep) to removed
+    }
+
+    /**
      * Closes the small holes: a border loop of at most [maxEdges] edges spanning at most
      * [maxSpanM] gets a fan of triangles around its centre, coloured as its rim. A large opening
-     * — a doorway, a part of the room nobody scanned — is left open rather than invented.
+     * — a doorway, a part of the room nobody scanned — is left open rather than invented, and so
+     * is a small piece's own outline ([isOutline]).
      *
      * With the flattening's [facePlane] and [planes], a hole whose whole rim lies on one plane —
      * the lace a scanned wall comes out as — closes up to [MAX_PLANE_HOLE_EDGES] edges and
@@ -366,6 +467,7 @@ internal object MeshCleanup {
                 }
             }
             if (!closed || !simple || length < 3 || length > longest) continue
+            if (isOutline(mesh.positions, idx, loop, loopFace, length)) continue
             val holeSpan = span(mesh.positions, loop, length)
             val plane = if (onPlanes) rimPlane(facePlane!!, loopFace, length) else -1
             if (plane >= 0 && holeSpan <= MAX_PLANE_HOLE_SPAN_M &&
@@ -416,6 +518,48 @@ internal object MeshCleanup {
         }
         for (i in 0 until planeTriangles.size) indices[write++] = planeTriangles[i]
         return WorkMesh(positions, colors, indices) to added + planeHoles
+    }
+
+    /**
+     * Whether a patch closing [loop] would face against the faces along its rim ([faces]): the
+     * loop is then a piece's own outline — an island of the hidden sheet [removeDoubledSurfaces]
+     * kept — not a hole in it, and the patch would lie back to back with the piece.
+     */
+    @Suppress("LongParameterList")
+    private fun isOutline(p: FloatArray, idx: IntArray, loop: IntArray, faces: IntArray, length: Int): Boolean {
+        // The rim's own normal (Newell's), the way it runs; the patch runs it the other way.
+        var nx = 0f
+        var ny = 0f
+        var nz = 0f
+        for (i in 0 until length) {
+            val a = loop[i] * 3
+            val b = loop[(i + 1) % length] * 3
+            nx += (p[a + 1] - p[b + 1]) * (p[a + 2] + p[b + 2])
+            ny += (p[a + 2] - p[b + 2]) * (p[a] + p[b])
+            nz += (p[a] - p[b]) * (p[a + 1] + p[b + 1])
+        }
+        var rx = 0f
+        var ry = 0f
+        var rz = 0f
+        for (i in 0 until length) {
+            val t = faces[i] * 3
+            val a = idx[t] * 3
+            val b = idx[t + 1] * 3
+            val c = idx[t + 2] * 3
+            val ux = p[b] - p[a]
+            val uy = p[b + 1] - p[a + 1]
+            val uz = p[b + 2] - p[a + 2]
+            val vx = p[c] - p[a]
+            val vy = p[c + 1] - p[a + 1]
+            val vz = p[c + 2] - p[a + 2]
+            rx += uy * vz - uz * vy
+            ry += uz * vx - ux * vz
+            rz += ux * vy - uy * vx
+        }
+        val patch = sqrt(nx * nx + ny * ny + nz * nz)
+        val rim = sqrt(rx * rx + ry * ry + rz * rz)
+        if (patch <= 0f || rim <= 0f) return false
+        return -(nx * rx + ny * ry + nz * rz) < -OUTLINE_COS * patch * rim
     }
 
     /** The plane every face along a loop's rim ([faces]) lies on, or -1 when they run over more than one, or none. */
@@ -573,6 +717,19 @@ internal object MeshCleanup {
     const val CUT_PIECE_SHARE = 0.1f
     private const val CUT_PIECE_TRIANGLES_PER_EDGE = 8
 
+    /**
+     * A cut piece is the hidden sheet seen through a hole in the one in front when this share of
+     * its cut rim borders the hidden sheet facing its way: a pocket's side walls, cut at right
+     * angles, are not.
+     */
+    const val SEEN_THROUGH_SHARE = 0.8f
+
+    /** A piece is seen through a hole when this share of its area looks out on nothing nearby. */
+    const val SEEN_OPEN_SHARE = 0.5f
+
+    /** A surface up to this far in front of a hole's patch still lies on it: the plane snap's tolerance. */
+    const val COVERED_BACK_M = 0.01f
+
     /** A same-facing sheet this few triangle rings away is the surface folding over, not a second pass. */
     private const val FOLD_RINGS = 5
 
@@ -590,6 +747,9 @@ internal object MeshCleanup {
 
     /** The widest hole within one plane that [fillSmallHoles] closes. */
     const val MAX_PLANE_HOLE_SPAN_M = 0.9f
+
+    /** A loop whose patch would face more than 60° against its rim's faces is an outline, left open. */
+    private const val OUTLINE_COS = 0.5f
     private const val INITIAL_PLANE_TRIANGLES = 4096
     private const val MAX_FAN_STEPS = 64
 

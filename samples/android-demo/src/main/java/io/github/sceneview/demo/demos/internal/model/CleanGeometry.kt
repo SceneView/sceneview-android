@@ -42,16 +42,10 @@ internal object CleanGeometry {
         require(raw.triangleCount <= MAX_TRIANGLES) { "${raw.triangleCount} triangles: clean takes $MAX_TRIANGLES" }
         val trianglesIn = raw.triangleCount
         val piecesIn = MeshCleanup.pieces(raw)
-        var (mesh, dropped) = MeshCleanup.removeSmallPieces(raw)
+        val (pieces, dropped) = MeshCleanup.removeSmallPieces(raw)
         progress(PROGRESS_PIECES)
-        val (undoubled, doubled) = MeshCleanup.removeDoubledSurfaces(mesh)
-        mesh = undoubled
-        if (doubled > 0) {
-            // A sheet's leftovers — the few triangles at its rim the test did not reach — go too.
-            val (pruned, more) = MeshCleanup.removeSmallPieces(mesh)
-            mesh = pruned
-            dropped += more
-        }
+        // Where the sheet in front has a hole, the hidden sheet stays: it is the only surface there.
+        var (mesh, doubled) = MeshCleanup.removeDoubledSurfaces(pieces)
         progress(PROGRESS_DOUBLED)
         MeshCleanup.smooth(mesh) { progress(PROGRESS_DOUBLED) }
         progress(PROGRESS_SMOOTH)
@@ -63,7 +57,9 @@ internal object CleanGeometry {
             facePlane = flattening.facePlane,
             planes = flattening.planes,
         )
-        mesh = filled
+        // What the hidden sheet showed through a hole just closed is behind the patch now.
+        val (uncovered, covered) = MeshCleanup.removeCovered(filled, firstNew = mesh.triangleCount)
+        mesh = uncovered
         progress(1f)
         val stats = CleanGeometryStats(
             trianglesIn = trianglesIn,
@@ -71,7 +67,7 @@ internal object CleanGeometry {
             piecesIn = piecesIn,
             piecesOut = MeshCleanup.pieces(mesh),
             piecesDropped = dropped,
-            doubledTriangles = doubled,
+            doubledTriangles = doubled + covered,
             planes = flattening.planes.size,
             flatShare = if (flattening.totalArea > 0f) flattening.flatArea / flattening.totalArea else 0f,
             holesFilled = holes,

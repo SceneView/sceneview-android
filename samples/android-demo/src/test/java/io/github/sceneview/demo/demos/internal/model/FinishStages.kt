@@ -25,15 +25,14 @@ internal object FinishStages {
         var (kept, _) = MeshCleanup.removeSmallPieces(mesh)
         mesh = kept
         note("small pieces", mesh.positions, mesh.indices)
-        val (undoubled, doubled) = MeshCleanup.removeDoubledSurfaces(mesh)
-        mesh = undoubled
-        if (doubled > 0) mesh = MeshCleanup.removeSmallPieces(mesh).first
+        mesh = MeshCleanup.removeDoubledSurfaces(mesh).first
         note("doubled surfaces", mesh.positions, mesh.indices)
         MeshCleanup.smooth(mesh)
         note("smoothing", mesh.positions, mesh.indices)
         val flattening = PlaneFlattening.flatten(mesh)
         note("planes", mesh.positions, mesh.indices)
-        mesh = MeshCleanup.fillSmallHoles(mesh, facePlane = flattening.facePlane, planes = flattening.planes).first
+        val filled = MeshCleanup.fillSmallHoles(mesh, facePlane = flattening.facePlane, planes = flattening.planes).first
+        mesh = MeshCleanup.removeCovered(filled, firstNew = mesh.triangleCount).first
         note("small holes", mesh.positions, mesh.indices)
         val simplified = simplified(mesh, textured, flattening.noiseM, flattening.planes.isEmpty())
         note("simplification", simplified.positions, simplified.indices)

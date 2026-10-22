@@ -154,6 +154,22 @@ class CleanGeometryTest {
         assertTrue("the hidden sheet stays away from the hole: $island m²", island <= hole * 1.3f)
     }
 
+    @Test
+    fun `a hole patched over the hidden sheet leaves one surface there, not two`() {
+        // Once the fill closes the front sheet's hole, the hidden sheet kept under it lies
+        // behind the patch: two surfaces on each other, which the renderer shows as stripes.
+        val sheets = MeshCleanup.removeDoubledSurfaces(twoFloorSheets(HOLE_HALF_M)).first
+        val (filled, holes) = MeshCleanup.fillSmallHoles(sheets)
+        val (clean, covered) = MeshCleanup.removeCovered(filled, firstNew = sheets.triangleCount)
+        val island = areaWhere(sheets) { _, y, _ -> y < -0.02f }
+        println("holes closed $holes, covered triangles $covered, hidden sheet ${areaWhere(clean) { _, y, _ -> y < -0.02f }} m²")
+        assertEquals(1, holes)
+        assertTrue("nothing to cover: the hidden sheet was not kept", island > 0f)
+        assertEquals(0f, areaWhere(clean) { _, y, _ -> y < -0.02f }, 1e-6f)
+        // The front sheet and its patch stay whole: only the 2 m outline is open.
+        assertEquals(400, openEdges(clean))
+    }
+
     /** A 2 m floor facing up at y = 0 with a square hole of half-side [holeHalfM] at its centre, over a whole one at y = -4 cm. */
     private fun twoFloorSheets(holeHalfM: Float): WorkMesh {
         val step = 0.02f

@@ -245,8 +245,7 @@ class PlaneFlatteningTest {
     private fun prepared(raw: WorkMesh): WorkMesh {
         val copy = WorkMesh(raw.positions.copyOf(), raw.colors.copyOf(), raw.indices.copyOf())
         val pieces = MeshCleanup.removeSmallPieces(copy).first
-        val (undoubled, doubled) = MeshCleanup.removeDoubledSurfaces(pieces)
-        val mesh = if (doubled > 0) MeshCleanup.removeSmallPieces(undoubled).first else undoubled
+        val mesh = MeshCleanup.removeDoubledSurfaces(pieces).first
         MeshCleanup.smooth(mesh)
         return mesh
     }
