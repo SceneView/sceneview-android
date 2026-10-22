@@ -42,9 +42,13 @@ object ScanOpenTop {
         return out
     }
 
-    /** [cloud] cut open as the dollhouse cuts it; [cloud] itself without a floor. Off the main thread. */
-    fun cloud(cloud: DenseCloud): DenseCloud {
-        val floor = floorOf(cloud.positions) ?: return cloud
+    /**
+     * [cloud] cut open as the dollhouse cuts it, its floor read from [floorFrom] (`x, y, z`
+     * triples): [cloud]'s own points, or the map's whole when [cloud] is the live view's, merged
+     * far from the eye (#4792). [cloud] itself without a floor. Off the main thread.
+     */
+    fun cloud(cloud: DenseCloud, floorFrom: FloatArray = cloud.positions): DenseCloud {
+        val floor = floorOf(floorFrom) ?: return cloud
         return RoomDollhouse.cropDense(cloud, floor).takeIf { it.count > 0 } ?: cloud
     }
 }

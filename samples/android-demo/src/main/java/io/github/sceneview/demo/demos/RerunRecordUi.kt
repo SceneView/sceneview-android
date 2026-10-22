@@ -581,10 +581,8 @@ internal fun ScanLiveView(
         openTop = null
         lidOff = false
         if (!cutting) return@LaunchedEffect
-        media.liveDense?.invoke()?.let { whole ->
-            openTop = withContext(Dispatchers.Default) {
-                ReplayDenseLayer.of(ScanOpenTop.cloud(whole.cloud), whole.voxelM)
-            }
+        media.liveDense?.invoke()?.let { live ->
+            openTop = withContext(Dispatchers.Default) { live.openTop() }
         }
         lidOff = true
     }
@@ -610,8 +608,9 @@ internal fun ScanLiveView(
             visible = { it in SCAN_LIVE_GROUPS },
             follow = { frame ->
                 val phone = follow.poseFor(livePose(frame.camera))
-                val cloud = drawn.liveDense?.invoke()?.cloud ?: media.dense?.cloud
-                savingOrbit?.poseFor(phone, cloud?.positions ?: frame.mapPoints, orbit, ready = lidOff) ?: phone
+                // Round the map as it stands, not the merged surfels the live view draws (#4792).
+                val points = (drawn.liveDense?.invoke() ?: media.dense)?.whole ?: frame.mapPoints
+                savingOrbit?.poseFor(phone, points, orbit, ready = lidOff) ?: phone
             },
             observe = { frame ->
                 val pose = livePose(frame.camera)

@@ -92,6 +92,13 @@ class ScanLiveLodTest {
 
         /** The stride drawn before left 0.706 of the screen covered (p50) and 1.13 fragments a pixel. */
         const val MIN_COVERAGE = 0.9
+
+        /**
+         * The merged surfels overlap: 3.14 fragments a pixel at p50 when this bound was set (#4792).
+         * The walkthrough is synthetic and has no noise, so the figure moves only when the code
+         * does. The bound stays 10 % above it on purpose: a change that makes the live view draw
+         * more fragments than this is measured on a phone before the bound is raised.
+         */
         const val MAX_OVERDRAW = 3.5
 
         const val P50 = 0.5
