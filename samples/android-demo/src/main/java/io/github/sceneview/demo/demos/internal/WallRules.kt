@@ -58,7 +58,14 @@ object WallRules {
     /** A direction this close to square with the room's main axis is square. */
     const val SNAP_DEGREES = 7f
 
-    /** Two near-parallel fits whose lines are this close are one wall seen twice. */
+    /**
+     * Two near-parallel fits whose lines are this close are one wall seen twice. The live walls'
+     * own, wider than the survey's 0.3 m between layers of one wall (`WallLines.WALL_MERGE_M`): ARCore
+     * fitted one wall twice 0.30 m apart, and a plane hanging 0.35 m before a wall along it, upper
+     * cabinets' fronts, is that wall rather than one of its own (at 0.3 m, the replayed kitchen shows
+     * five walls for four). Two real walls 0.3 to 0.5 m apart, parallel and along each other, a thin
+     * partition's two faces, read as one.
+     */
     const val DUPLICATE_M = 0.5f
 
     /** Furniture stands this far before a wall, at most: further, it is a wall of its own. */
@@ -80,8 +87,12 @@ object WallRules {
     /** How far a shard's ends, or a side's, may be off the line they sit on. */
     const val ASIDE_M = 0.3f
 
-    /** A gap along a wall no longer than this, between a shard and the wall, was not seen yet. */
-    const val SHARD_GAP_M = 0.6f
+    /**
+     * A gap along a wall no longer than this, between a shard and the wall, was not seen yet: the
+     * same as between two pieces on one line ([PlaneWallSource.SAME_WALL_GAP_M]). The survey's
+     * structure engine lets the shards of a line stand up to 1 m apart; the live walls keep one gap.
+     */
+    const val SHARD_GAP_M = PlaneWallSource.SAME_WALL_GAP_M
 
     /** Furniture's side, from its front back to the wall, is no longer than this. */
     const val SIDE_MAX_M = 1.3f
