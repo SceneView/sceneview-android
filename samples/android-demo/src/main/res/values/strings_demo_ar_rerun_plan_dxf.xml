@@ -8,7 +8,7 @@
     <string name="demo_ar_rerun_plan_dxf_heading">%1$s · floor plan</string>
     <string name="demo_ar_rerun_plan_dxf_verify">Indicative plan, not a certified measurement: verify every figure on site.</string>
     <string name="demo_ar_rerun_plan_dxf_units">Drawn in millimetres · figures in metres.</string>
-    <string name="demo_ar_rerun_plan_dxf_units_feet">Drawn in millimetres · figures in feet and inches.</string>
+    <string name="demo_ar_rerun_plan_dxf_units_feet">Drawn in inches · figures in feet and inches.</string>
     <string name="demo_ar_rerun_plan_dxf_estimates">≈ marks an estimate: the scan did not see all of what that figure needs.</string>
     <!-- %1$s the door's width, and its height when known: 0.90 × 2.10. -->
     <string name="demo_ar_rerun_plan_dxf_door">Door %1$s</string>

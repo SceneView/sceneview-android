@@ -16,8 +16,10 @@ import kotlin.math.sqrt
  *
  * DXF `AC1015` (R2000, the version AutoCAD 2000 introduced) in ASCII: the oldest version with the
  * light polyline. Its structure follows the format's AC1015 reference, which the unit tests check
- * by reading the file back. One drawing unit is a millimetre (`$INSUNITS` 4), y up as CAD has it.
- * Five layers:
+ * by reading the file back. Its y runs up, as CAD has it. One drawing unit is a millimetre, metric
+ * (`$INSUNITS` 4), or an inch, imperial (`$INSUNITS` 1), when the figures are in feet and inches:
+ * a CAD tool set to either system then takes the drawing in at its true size, and reads the
+ * distances it measures in metres, or in feet and inches. Five layers:
  * - [WALLS]: the room's outline, one closed polyline;
  * - [OPENINGS]: each door with its leaf and swing, each window with its frame, and its size;
  * - [DIMENSIONS]: each wall's length as plain lines and text. No DIMENSION entity: a CAD tool
@@ -78,7 +80,7 @@ object RoomPlanDxf {
         openings: List<Opening> = emptyList(),
         labels: List<String> = SurveyReport.planTexts(survey, wording).walls,
     ) {
-        val drawing = Drawing(survey.planWidth)
+        val drawing = Drawing(survey.planWidth, DrawingUnit.of(wording.units))
         if (survey.hasPlan) {
             drawing.outline(survey)
             drawing.dimensions(survey, labels)
@@ -100,7 +102,32 @@ object RoomPlanDxf {
         return name + (opening.sill?.let { ", " + words.sill.format(length(it)) } ?: "")
     }
 
-    /** A point or a direction on the drawing, in millimetres. */
+    /**
+     * The drawing's unit: a millimetre in metric, an inch in imperial, [perMillimetre] of it to a
+     * millimetre. [insUnits] and [measurement] name it to a CAD tool; [linearUnits] and
+     * [precision] say how the tool shows the distances it measures: in decimals to the
+     * millimetre, or in feet and inches to the sixteenth of an inch.
+     */
+    private enum class DrawingUnit(
+        val perMillimetre: Double,
+        val insUnits: Int,
+        val measurement: Int,
+        val linearUnits: Int,
+        val precision: Int,
+    ) {
+        Millimetre(perMillimetre = 1.0, insUnits = 4, measurement = 1, linearUnits = 2, precision = 0),
+        Inch(perMillimetre = 1 / MM_PER_INCH, insUnits = 1, measurement = 0, linearUnits = 4, precision = 4),
+        ;
+
+        companion object {
+            fun of(units: MeasureUnitSystem) = when (units) {
+                MeasureUnitSystem.Metric -> Millimetre
+                MeasureUnitSystem.Imperial -> Inch
+            }
+        }
+    }
+
+    /** A point or a direction on the drawing, in millimetres, written out in the [DrawingUnit]. */
     private class V(val x: Double, val y: Double) {
         operator fun plus(o: V) = V(x + o.x, y + o.y)
         operator fun minus(o: V) = V(x - o.x, y - o.y)
@@ -112,9 +139,10 @@ object RoomPlanDxf {
     /**
      * The drawing being written: its entities, the extents they cover, and the handles given out.
      * The plan's y runs down the page from its top edge at [top] metres; the drawing's runs up.
+     * Everything is laid out in millimetres, and written in [unit].
      */
     @Suppress("TooManyFunctions") // one small function per DXF object
-    private class Drawing(private val top: Float) {
+    private class Drawing(private val top: Float, private val unit: DrawingUnit) {
         private var handles = 0
         private fun handle() = (++handles).toString(HEX).uppercase(Locale.US)
 
@@ -145,6 +173,12 @@ object RoomPlanDxf {
 
         fun at(x: Float, y: Float) = V(x * MM, (top - y) * MM)
 
+        /** A length laid out in millimetres, in the drawing's unit. */
+        private fun drawn(length: Double) = length * unit.perMillimetre
+
+        /** A point laid out in millimetres, in the drawing's unit. */
+        private fun drawn(p: V) = p * unit.perMillimetre
+
         /** The walls, one closed polyline through each wall's start — and its end, where the next wall does not start there. */
         fun outline(survey: RoomSurvey) {
             val corners = ArrayList<V>()
@@ -160,8 +194,8 @@ object RoomPlanDxf {
             entities.pair(70, 1)
             entities.pair(43, 0.0)
             for (corner in corners) {
-                entities.pair(10, corner.x)
-                entities.pair(20, corner.y)
+                entities.pair(10, drawn(corner.x))
+                entities.pair(20, drawn(corner.y))
                 cover(corner)
             }
         }
@@ -338,8 +372,8 @@ object RoomPlanDxf {
         private fun line(layer: String, a: V, b: V) {
             entity("LINE", layer)
             entities.pair(100, "AcDbLine")
-            entities.point(10, a)
-            entities.point(11, b)
+            entities.point(10, drawn(a))
+            entities.point(11, drawn(b))
             cover(a)
             cover(b)
         }
@@ -347,8 +381,8 @@ object RoomPlanDxf {
         private fun arc(layer: String, centre: V, radius: Double, startDegrees: Double, endDegrees: Double) {
             entity("ARC", layer)
             entities.pair(100, "AcDbCircle")
-            entities.point(10, centre)
-            entities.pair(40, radius)
+            entities.point(10, drawn(centre))
+            entities.pair(40, drawn(radius))
             entities.pair(100, "AcDbArc")
             entities.pair(50, startDegrees)
             entities.pair(51, endDegrees)
@@ -360,14 +394,14 @@ object RoomPlanDxf {
         private fun text(layer: String, at: V, height: Double, value: String, degrees: Double = 0.0, centred: Boolean = true) {
             entity("TEXT", layer)
             entities.pair(100, "AcDbText")
-            entities.point(10, at)
-            entities.pair(40, height)
+            entities.point(10, drawn(at))
+            entities.pair(40, drawn(height))
             entities.pair(1, encode(value))
             entities.pair(50, degrees)
             entities.pair(7, "Standard")
             if (centred) {
                 entities.pair(72, 1)
-                entities.point(11, at)
+                entities.point(11, drawn(at))
             }
             entities.pair(100, "AcDbText")
             if (centred) entities.pair(73, 2)
@@ -408,12 +442,12 @@ object RoomPlanDxf {
             variable("\$ACADVER") { pair(1, "AC1015") }
             variable("\$DWGCODEPAGE") { pair(3, "ANSI_1252") }
             variable("\$INSBASE") { point(10, V(0.0, 0.0)) }
-            variable("\$EXTMIN") { point(10, extentMin()) }
-            variable("\$EXTMAX") { point(10, extentMax()) }
-            variable("\$LUNITS") { pair(70, 2) }
-            variable("\$LUPREC") { pair(70, 0) }
-            variable("\$INSUNITS") { pair(70, MILLIMETRES) }
-            variable("\$MEASUREMENT") { pair(70, 1) }
+            variable("\$EXTMIN") { point(10, drawn(extentMin())) }
+            variable("\$EXTMAX") { point(10, drawn(extentMax())) }
+            variable("\$LUNITS") { pair(70, unit.linearUnits) }
+            variable("\$LUPREC") { pair(70, unit.precision) }
+            variable("\$INSUNITS") { pair(70, unit.insUnits) }
+            variable("\$MEASUREMENT") { pair(70, unit.measurement) }
             variable("\$HANDSEED") { pair(5, seed) }
         }
 
@@ -445,7 +479,7 @@ object RoomPlanDxf {
                 pair(41, 1.0)
                 pair(50, 0.0)
                 pair(71, 0)
-                pair(42, DIMENSION_TEXT)
+                pair(42, drawn(DIMENSION_TEXT))
                 // A TrueType font: the standard shape font has no ≈, ² or ×.
                 pair(3, "arial.ttf")
                 pair(4, "")
@@ -466,10 +500,10 @@ object RoomPlanDxf {
 
         /** The view the drawing opens on: everything drawn, with a margin. */
         private fun StringBuilder.viewport() {
-            val low = extentMin()
-            val high = extentMax()
-            val width = max(high.x - low.x, 1.0) * VIEW_MARGIN
-            val height = max(high.y - low.y, 1.0) * VIEW_MARGIN
+            val low = drawn(extentMin())
+            val high = drawn(extentMax())
+            val width = max(high.x - low.x, drawn(1.0)) * VIEW_MARGIN
+            val height = max(high.y - low.y, drawn(1.0)) * VIEW_MARGIN
             pair(10, 0.0)
             pair(20, 0.0)
             pair(11, 1.0)
@@ -634,7 +668,6 @@ object RoomPlanDxf {
             const val EMPTY_EXTENT = 1e20
             const val VIEW_MARGIN = 1.15
             const val PLOT_MODEL = 1024
-            const val MILLIMETRES = 4
 
             /** Name, colour index (ACI) and line weight (hundredths of a millimetre) of each layer. */
             val LAYERS = listOf(
@@ -650,6 +683,7 @@ object RoomPlanDxf {
 
     // Sizes and distances on the drawing, millimetres: a 1:50 print reads its dimensions at 3 mm.
     private const val MM = 1000.0
+    private const val MM_PER_INCH = 25.4
     private const val JOIN = 1.0
     private const val DIMENSION_OFFSET = 600.0
     private const val CHAIN_PITCH = 450.0
@@ -743,7 +777,7 @@ object RoomPlanDxf {
     }
 
     /**
-     * To the thousandth of a millimetre, its trailing zeros dropped. A figure that is not finite
+     * To the thousandth of a drawing unit, its trailing zeros dropped. A figure that is not finite
      * stops the drawing: written as `NaN` or `Infinity`, it would make the whole file unreadable.
      */
     private fun number(value: Double): String {

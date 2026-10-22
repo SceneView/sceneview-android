@@ -298,13 +298,16 @@ internal fun RerunPlanView(survey: RoomSurvey?, title: String, date: String?, mo
             return@BoxWithConstraints
         }
         val wide = maxWidth > maxHeight
-        // A file share writes its file in the background, and says so when it could not. A tap
-        // while one is being written is let go: two quick taps write one file, never half of two.
+        // A file share writes its file in the background, and says so when it could not, in a
+        // toast made on the main thread whichever thread the write resumes on. A tap while one is
+        // being written is let go: two quick taps write one file, never half of two.
         fun shareFile(share: suspend () -> Boolean) {
             if (!writing.compareAndSet(false, true)) return
             scope.launch {
                 try {
-                    if (!share()) Toast.makeText(context, failed, Toast.LENGTH_SHORT).show()
+                    if (!share()) {
+                        withContext(Dispatchers.Main) { Toast.makeText(context, failed, Toast.LENGTH_SHORT).show() }
+                    }
                 } finally {
                     writing.set(false)
                 }
@@ -915,16 +918,22 @@ internal suspend fun writePlanShare(context: Context, name: String, write: (Outp
  * A fresh file named [name] in the plan's share cache, in the folder of its kind, its extension:
  * `plan/pdf/`, `plan/dxf/`. Each kind keeps its latest file only: a new PDF replaces the last
  * one, which its share sheet has read by then, and leaves the DXF be, which an app may still be
- * reading — so the cache never holds more than a file of each kind.
+ * reading — so the cache never holds more than a file of each kind. Anything else under `plan/`,
+ * such as the one-folder-per-share an earlier build left there, goes with the next share.
  */
 internal fun planShareFile(context: Context, name: String): File {
     val safe = name.replace(Regex("[\\\\/:*?\"<>|]"), "-")
     val kind = safe.substringAfterLast('.', missingDelimiterValue = "").lowercase(Locale.ROOT).ifEmpty { "file" }
-    val folder = File(rerunShareDirectory(context, RERUN_SHARE_PLAN), kind)
+    val plan = rerunShareDirectory(context, RERUN_SHARE_PLAN)
+    plan.listFiles()?.filter { it.name !in PLAN_SHARE_KINDS }?.forEach { it.deleteRecursively() }
+    val folder = File(plan, kind)
     folder.deleteRecursively()
     val dir = File(folder, UUID.randomUUID().toString()).apply { mkdirs() }
     return File(dir, safe)
 }
+
+/** The kinds of plan file shared, each in its own folder under `plan/`. */
+private val PLAN_SHARE_KINDS = setOf("pdf", "dxf")
 
 /**
  * The file at [uri] alone handed to the share sheet as [mimeType]: one [Intent.ACTION_SEND],
