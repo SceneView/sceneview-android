@@ -2,13 +2,13 @@ package io.github.sceneview.demo.demos.internal
 
 import io.github.sceneview.math.Position
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * What a tap on Plan does: it opens the plan of the last room traced and raised, is greyed out
- * with no such room, and says why when that room has no plan to draw — never a silent tap.
+ * What a tap on Plan does: it opens the plan of the last room traced and raised and, with no such
+ * room, says what is missing — trace it, close it, set its height (#4765); it says why too when that
+ * room has no plan to draw. Never a silent tap.
  */
 class MeasurePlanTapTest {
 
@@ -28,12 +28,34 @@ class MeasurePlanTapTest {
     /** Three corners in a line: the room closed and raised, but with no floor between its walls. */
     private val line = listOf(0f to 0f, 2f to 0f, 4f to 0f)
 
+    /** The room still being traced along [corners]: open, or closed with its walls rising. */
+    private fun tracing(corners: List<Pair<Float, Float>>, closed: Boolean = false) =
+        room(corners, height = null).copy(closed = closed, raising = closed)
+
     @Test
-    fun `with no room traced and raised, Plan has nothing to open`() {
-        assertNull(tap())
-        assertNull(tap(room(rectangle, height = null)))
-        assertNull(tap(MeasureFigure(mode = MeasureMode.Wall, points = room(rectangle).points.take(2), height = 2.5f)))
+    fun `with no room traced, Plan says to trace one`() {
+        assertEquals(MeasurePlanTap.Refused(MeasureRefusal.PlanNeedsRoom), tap())
+        // A wall measured on its own is no room.
+        val wall = MeasureFigure(mode = MeasureMode.Wall, points = room(rectangle).points.take(2), height = 2.5f)
+        assertEquals(MeasurePlanTap.Refused(MeasureRefusal.PlanNeedsRoom), tap(wall))
         assertEquals(-1, measurePlanRoom(listOf(room(rectangle, height = null))))
+    }
+
+    @Test
+    fun `on a room still open, Plan says to close it`() {
+        assertEquals(MeasurePlanTap.Refused(MeasureRefusal.PlanNeedsClose), tap(tracing(rectangle)))
+        assertEquals(MeasurePlanTap.Refused(MeasureRefusal.PlanNeedsClose), tap(tracing(rectangle.take(2))))
+    }
+
+    @Test
+    fun `on a closed room with no height yet, Plan says to set it`() {
+        assertEquals(MeasurePlanTap.Refused(MeasureRefusal.PlanNeedsHeight), tap(tracing(rectangle, closed = true)))
+    }
+
+    @Test
+    fun `a room traced after a raised one leaves Plan on the raised one`() {
+        val opened = tap(room(rectangle), tracing(rectangle.take(2)))
+        assertTrue(opened.toString(), opened is MeasurePlanTap.Open && opened.room == 0)
     }
 
     @Test
