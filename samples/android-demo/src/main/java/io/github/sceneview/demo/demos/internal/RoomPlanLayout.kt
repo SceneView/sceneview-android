@@ -49,8 +49,9 @@ object SurveyFormat {
         return "${inches / INCHES_PER_FOOT}' ${inches % INCHES_PER_FOOT}\""
     }
 
-    /** An area in square feet: whole ones from 10 up, `124 ft²`, tenths below. */
-    fun squareFeet(squareMetres: Float): String = formatMeasureArea(squareMetres, MeasureUnitSystem.Imperial, Locale.US)
+    /** An area in square feet: whole ones from 10 up, `124 ft²`, tenths below, with [locale]'s decimal mark. */
+    fun squareFeet(squareMetres: Float, locale: Locale = Locale.US): String =
+        formatMeasureArea(squareMetres, MeasureUnitSystem.Imperial, locale)
 
     /** A volume in whole cubic feet, `1015 ft³`: the square feet it stands on are whole too. */
     fun cubicFeet(cubicMetres: Float): String =
@@ -78,11 +79,12 @@ object SurveyFormat {
     fun feet(metres: Float): Int = (metres / METRES_PER_FOOT).roundToInt()
 
     /**
-     * A wall's length as the plan labels it in [units]: [wall] in metres, `≈ 13' 1"` in feet and
-     * inches. A wall the plan leaves unlabelled in metres stays unlabelled in feet.
+     * A wall's length as the plan labels it in [units]: [wall] in metres, with [locale]'s decimal
+     * mark, `≈ 13' 1"` in feet and inches. A wall the plan leaves unlabelled in metres stays
+     * unlabelled in feet.
      */
-    fun wall(wall: SurveyWall, units: MeasureUnitSystem): String {
-        val metric = wall(wall)
+    fun wall(wall: SurveyWall, units: MeasureUnitSystem, locale: Locale = Locale.US): String {
+        val metric = wall(wall, locale)
         if (units == MeasureUnitSystem.Metric || metric.isEmpty()) return metric
         return (if (wall.length.estimate) ESTIMATE else "") + feetAndInchesMark(wall.length.value)
     }
@@ -94,21 +96,29 @@ object SurveyFormat {
     private const val CUBIC_FEET_PER_M3 = 35.314667f
     private val FOOT_BARS = floatArrayOf(1f, 2f, 5f, 10f, 20f, 50f)
 
-    fun length(metres: Float): String = "%.2f".format(Locale.US, (metres / LENGTH_STEP_M).roundToInt() * LENGTH_STEP_M)
+    /*
+     * The figures below take [Locale]'s decimal mark: `4.00` in English, `4,00` in French and
+     * German. English by default, as 3D Scan's screens write theirs; Measure's plan passes the
+     * phone's language, as the Measure screen beside it does.
+     */
 
-    fun area(squareMetres: Float): String =
-        "%.1f".format(Locale.US, (squareMetres / AREA_STEP_M2).roundToInt() * AREA_STEP_M2)
+    fun length(metres: Float, locale: Locale = Locale.US): String =
+        "%.2f".format(locale, (metres / LENGTH_STEP_M).roundToInt() * LENGTH_STEP_M)
+
+    fun area(squareMetres: Float, locale: Locale = Locale.US): String =
+        "%.1f".format(locale, (squareMetres / AREA_STEP_M2).roundToInt() * AREA_STEP_M2)
 
     /** A length's spread, rounded up: never tighter than a step. */
-    fun lengthSpread(metres: Float): String =
-        "%.2f".format(Locale.US, max(1, ceil(metres / LENGTH_STEP_M - EPSILON).toInt()) * LENGTH_STEP_M)
+    fun lengthSpread(metres: Float, locale: Locale = Locale.US): String =
+        "%.2f".format(locale, max(1, ceil(metres / LENGTH_STEP_M - EPSILON).toInt()) * LENGTH_STEP_M)
 
     /** An area's spread, rounded up: never tighter than a step. */
-    fun areaSpread(squareMetres: Float): String =
-        "%.1f".format(Locale.US, max(1, ceil(squareMetres / AREA_STEP_M2 - EPSILON).toInt()) * AREA_STEP_M2)
+    fun areaSpread(squareMetres: Float, locale: Locale = Locale.US): String =
+        "%.1f".format(locale, max(1, ceil(squareMetres / AREA_STEP_M2 - EPSILON).toInt()) * AREA_STEP_M2)
 
     /** A wall's length as the plan labels it: `≈ 4.00` when part of it was not seen. */
-    fun wall(wall: SurveyWall): String = (if (wall.length.estimate) ESTIMATE else "") + length(wall.length.value)
+    fun wall(wall: SurveyWall, locale: Locale = Locale.US): String =
+        (if (wall.length.estimate) ESTIMATE else "") + length(wall.length.value, locale)
 
     private const val EPSILON = 1e-3f
 }

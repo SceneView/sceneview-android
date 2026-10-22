@@ -9,6 +9,7 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
+import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -35,12 +36,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PictureAsPdf
+import androidx.compose.material.icons.rounded.SquareFoot
 import androidx.compose.material.icons.rounded.TextSnippet
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -104,6 +105,7 @@ import java.io.File
 import java.io.OutputStream
 import java.util.Locale
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -139,17 +141,18 @@ internal class PlanWords(
 )
 
 /**
- * The Plan view's words under the phone's language, its figures in that language's units: feet
- * and inches in US English, metres everywhere else ([SurveyFormat.units]).
+ * The Plan view's words under the phone's language, its figures in [units]: by default that
+ * language's, feet and inches in US English, metres everywhere else ([SurveyFormat.units]). Their
+ * decimal mark is [locale]'s, English by default ([SurveyWording.locale]).
  */
 @Composable
-internal fun rememberPlanWords(): PlanWords {
-    val units = SurveyFormat.units(LocalLocale.current.platformLocale)
-    return planWords(units)
-}
+internal fun rememberPlanWords(
+    units: MeasureUnitSystem = SurveyFormat.units(LocalLocale.current.platformLocale),
+    locale: Locale = Locale.US,
+): PlanWords = planWords(units, locale)
 
 @Composable
-private fun planWords(units: MeasureUnitSystem): PlanWords = PlanWords(
+private fun planWords(units: MeasureUnitSystem, locale: Locale): PlanWords = PlanWords(
     survey = SurveyWording(
         heading = stringResource(R.string.demo_ar_rerun_plan_heading),
         area = stringResource(R.string.demo_ar_rerun_plan_area),
@@ -182,8 +185,10 @@ private fun planWords(units: MeasureUnitSystem): PlanWords = PlanWords(
             SurveyGap.MissingWall to stringResource(R.string.demo_ar_rerun_plan_gap_missing_wall),
             SurveyGap.ObliqueWall to stringResource(R.string.demo_ar_rerun_plan_gap_oblique_wall),
             SurveyGap.Ceiling to stringResource(R.string.demo_ar_rerun_plan_gap_ceiling),
+            SurveyGap.Unmeasured to stringResource(R.string.demo_ar_rerun_plan_gap_unmeasured),
         ),
         units = units,
+        locale = locale,
     ),
     surveyTitle = stringResource(R.string.demo_ar_rerun_plan_survey_title),
     emptyTitle = stringResource(R.string.demo_ar_rerun_plan_empty_title),
@@ -219,18 +224,6 @@ internal fun planHeading(title: String, epochSeconds: Long?, locale: Locale = Lo
     return if (title.contains(short)) PlanHeading(title.replace(short, full), null) else PlanHeading(title, full)
 }
 
-/**
- * [media]'s survey, measured off the main thread once [wanted]; `null` while it is being read.
- * A scan without a dense cloud has no walls to measure: its survey says so.
- */
-@Composable
-internal fun rememberRoomSurvey(media: RerunReplayMedia?, wanted: Boolean): RoomSurvey? =
-    produceState<RoomSurvey?>(null, media, wanted) {
-    value = null
-    if (media == null || !wanted) return@produceState
-    value = withContext(Dispatchers.Default) { surveyOf(media) }
-}.value
-
 /** [media]'s survey, measured on the calling thread: call it off the main one. */
 internal fun surveyOf(media: RerunReplayMedia): RoomSurvey {
     val cloud = media.dense?.cloud ?: return RoomSurvey.empty(SurveyGap.NoDepth)
@@ -246,7 +239,7 @@ internal fun surveyOf(media: RerunReplayMedia): RoomSurvey {
  */
 @Composable
 internal fun RerunPlanScreen(media: RerunReplayMedia?, title: String, date: String?, onBack: () -> Unit) {
-    val survey = rememberRoomSurvey(media, wanted = true)
+    val survey = rememberRoomSurvey(media, wanted = true).survey
     DemoScaffold(
         title = stringResource(R.string.demo_ar_rerun_plan_export_title),
         onBack = onBack,
@@ -261,16 +254,25 @@ internal fun RerunPlanScreen(media: RerunReplayMedia?, title: String, date: Stri
 
 /**
  * The Plan view: the dimensioned plan, the survey's table, what the scan lacks, and the two
- * shares. A phone on its side puts the table beside the plan.
+ * shares. A phone on its side puts the table beside the plan. Its figures, on screen, on the PDF
+ * and in the text alike, are in [units], with [locale]'s decimal mark ([rememberPlanWords]).
  *
  * The page is text, and the header's pills float over the stage without a ground of their own:
  * the page starts under them and is clipped there, so nothing scrolls behind a pill.
  */
 @Composable
-internal fun RerunPlanView(survey: RoomSurvey?, title: String, date: String?, modifier: Modifier = Modifier) {
-    val words = rememberPlanWords()
+internal fun RerunPlanView(
+    survey: RoomSurvey?,
+    title: String,
+    date: String?,
+    modifier: Modifier = Modifier,
+    units: MeasureUnitSystem = SurveyFormat.units(LocalLocale.current.platformLocale),
+    locale: Locale = Locale.US,
+) {
+    val words = rememberPlanWords(units, locale)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val writing = remember { AtomicBoolean() }
     val failed = stringResource(R.string.demo_ar_rerun_plan_share_failed)
     BoxWithConstraints(
         modifier = modifier
@@ -294,14 +296,23 @@ internal fun RerunPlanView(survey: RoomSurvey?, title: String, date: String?, mo
             return@BoxWithConstraints
         }
         val wide = maxWidth > maxHeight
-        val sharePdf = {
+        // A file share writes its file in the background, and says so when it could not, in a
+        // toast made on the main thread whichever thread the write resumes on. A tap while one is
+        // being written is let go: two quick taps write one file, never half of two.
+        fun shareFile(share: suspend () -> Boolean) {
+            if (!writing.compareAndSet(false, true)) return
             scope.launch {
-                if (!sharePlanPdf(context, survey, words, title, date)) {
-                    Toast.makeText(context, failed, Toast.LENGTH_SHORT).show()
+                try {
+                    if (!share()) {
+                        withContext(Dispatchers.Main) { Toast.makeText(context, failed, Toast.LENGTH_SHORT).show() }
+                    }
+                } finally {
+                    writing.set(false)
                 }
             }
-            Unit
         }
+        val sharePdf = { shareFile { sharePlanPdf(context, survey, words, title, date) } }
+        val shareDxf = { shareFile { sharePlanDxf(context, survey, words, title) } }
         val shareText = { sharePlanText(context, SurveyReport.text(survey, words.survey, title, date), title) }
         val dock = maxOf(SETTINGS_FAB_RESERVED_SPACE, LocalDemoBottomChromeCover.current) + Space.md
         // Under the header: a scrolling column clips to its own box, which starts below the pills.
@@ -332,7 +343,7 @@ internal fun RerunPlanView(survey: RoomSurvey?, title: String, date: String?, mo
                         .padding(bottom = dock),
                     verticalArrangement = Arrangement.spacedBy(Space.md),
                 ) {
-                    SurveyDetails(survey, words, title, date, sharePdf, shareText)
+                    SurveyDetails(survey, words, title, date, PlanShares(sharePdf, shareDxf, shareText))
                 }
             }
         } else {
@@ -343,7 +354,7 @@ internal fun RerunPlanView(survey: RoomSurvey?, title: String, date: String?, mo
                     verticalArrangement = Arrangement.spacedBy(Space.md),
                 ) {
                     if (survey.hasPlan) PlanCard(survey, words)
-                    SurveyDetails(survey, words, title, date, sharePdf, shareText)
+                    SurveyDetails(survey, words, title, date, PlanShares(sharePdf, shareDxf, shareText))
                 }
             }
         }
@@ -445,15 +456,7 @@ private fun LegendMark(label: String, dashed: Boolean, ink: PlanInk, unit: Float
 
 /** The survey under (or beside) the plan: its figures, its walls, what is missing, the notes and the shares. */
 @Composable
-@Suppress("LongParameterList") // one survey, its words and its two shares
-private fun SurveyDetails(
-    survey: RoomSurvey,
-    words: PlanWords,
-    title: String,
-    date: String?,
-    onSharePdf: () -> Unit,
-    onShareText: () -> Unit,
-) {
+private fun SurveyDetails(survey: RoomSurvey, words: PlanWords, title: String, date: String?, shares: PlanShares) {
     val hints = SurveyReport.hints(survey, words.survey)
     PlanSection(words.surveyTitle, caption = SurveyReport.heading(words.survey, title, date)) {
         SurveyReport.rows(survey, words.survey).forEach { FigureRow(it) }
@@ -473,14 +476,25 @@ private fun SurveyDetails(
             SurveyReport.wallRows(survey, words.survey).forEach { FigureRow(it) }
         }
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+    // The share menu: the PDF, the same plan as a DXF drawing for a CAD tool, then the text.
+    // One share a line, so no label is cut short on a phone.
+    Column(
+        modifier = Modifier.fillMaxWidth().testTag(RERUN_PLAN_SHARES_TAG),
+        verticalArrangement = Arrangement.spacedBy(Space.sm),
+    ) {
         ShareButton(
             Icons.Rounded.PictureAsPdf, stringResource(R.string.demo_ar_rerun_plan_share_pdf), accent = true,
-            modifier = Modifier.weight(1f).testTag(RERUN_PLAN_SHARE_PDF_TAG), onClick = onSharePdf,
+            modifier = Modifier.fillMaxWidth().testTag(RERUN_PLAN_SHARE_PDF_TAG), onClick = shares.pdf,
         )
+        if (survey.hasPlan) {
+            ShareButton(
+                Icons.Rounded.SquareFoot, stringResource(R.string.demo_ar_rerun_plan_share_dxf), accent = false,
+                modifier = Modifier.fillMaxWidth().testTag(RERUN_PLAN_SHARE_DXF_TAG), onClick = shares.dxf,
+            )
+        }
         ShareButton(
             Icons.Rounded.TextSnippet, stringResource(R.string.demo_ar_rerun_plan_share_text), accent = false,
-            modifier = Modifier.weight(1f).testTag(RERUN_PLAN_SHARE_TEXT_TAG), onClick = onShareText,
+            modifier = Modifier.fillMaxWidth().testTag(RERUN_PLAN_SHARE_TEXT_TAG), onClick = shares.text,
         )
     }
     Column(Modifier.padding(horizontal = Space.xs), verticalArrangement = Arrangement.spacedBy(Space.xs)) {
@@ -533,6 +547,9 @@ internal fun FigureRow(row: SurveyRow) {
         )
     }
 }
+
+/** The plan's three shares, each on its own action: the PDF, the DXF drawing and the text. */
+private class PlanShares(val pdf: () -> Unit, val dxf: () -> Unit, val text: () -> Unit)
 
 @Composable
 private fun ShareButton(
@@ -867,7 +884,7 @@ internal object RoomPlanPdf {
     }
 }
 
-/** The survey's PDF, written to the share cache and handed to the share sheet; `false` when it could not be written. */
+/** The survey's PDF, written to the share cache and handed to the share sheet; `false` when it could not be. */
 private suspend fun sharePlanPdf(
     context: Context,
     survey: RoomSurvey,
@@ -875,28 +892,61 @@ private suspend fun sharePlanPdf(
     title: String,
     date: String?,
 ): Boolean {
-    val file = withContext(Dispatchers.IO) {
+    val uri = writePlanShare(context, words.pdfFile.format(title)) { RoomPlanPdf.write(it, survey, words, title, date) }
+        ?: return false
+    sharePlanFile(context, uri, PDF_MIME_TYPE, title)
+    return true
+}
+
+/**
+ * A plan file named [name], written by [write] to the share cache off the main thread, and the
+ * URI the share sheet reads it through; `null` when it could not be written or given a URI, for
+ * the caller to say so rather than crash. A file that fails half-written is deleted: no app is
+ * handed it, and the cache does not keep it.
+ */
+internal suspend fun writePlanShare(context: Context, name: String, write: (OutputStream) -> Unit): Uri? =
+    withContext(Dispatchers.IO) {
+        val file = runCatching { planShareFile(context, name) }.getOrNull() ?: return@withContext null
         runCatching {
-            val shareRoot = rerunShareDirectory(context, RERUN_SHARE_PLAN)
-            // Only the latest shared plan is kept: the share sheet has read it by the next share.
-            shareRoot.deleteRecursively()
-            val dir = File(shareRoot, UUID.randomUUID().toString()).apply { mkdirs() }
-            val name = words.pdfFile.format(title).replace(Regex("[\\\\/:*?\"<>|]"), "-")
-            File(dir, name).also { target ->
-                target.outputStream().use { RoomPlanPdf.write(it, survey, words, title, date) }
-            }
-        }.getOrNull()
-    } ?: return false
-    val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+            file.outputStream().use(write)
+            FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        }.onFailure { file.delete() }.getOrNull()
+    }
+
+/**
+ * A fresh file named [name] in the plan's share cache, in the folder of its kind, its extension:
+ * `plan/pdf/`, `plan/dxf/`. Each kind keeps its latest file only: a new PDF replaces the last
+ * one, which its share sheet has read by then, and leaves the DXF be, which an app may still be
+ * reading — so the cache never holds more than a file of each kind. Anything else under `plan/`,
+ * such as the one-folder-per-share an earlier build left there, goes with the next share.
+ */
+internal fun planShareFile(context: Context, name: String): File {
+    val safe = name.replace(Regex("[\\\\/:*?\"<>|]"), "-")
+    val kind = safe.substringAfterLast('.', missingDelimiterValue = "").lowercase(Locale.ROOT).ifEmpty { "file" }
+    val plan = rerunShareDirectory(context, RERUN_SHARE_PLAN)
+    plan.listFiles()?.filter { it.name !in PLAN_SHARE_KINDS }?.forEach { it.deleteRecursively() }
+    val folder = File(plan, kind)
+    folder.deleteRecursively()
+    val dir = File(folder, UUID.randomUUID().toString()).apply { mkdirs() }
+    return File(dir, safe)
+}
+
+/** The kinds of plan file shared, each in its own folder under `plan/`. */
+private val PLAN_SHARE_KINDS = setOf("pdf", "dxf")
+
+/**
+ * The file at [uri] alone handed to the share sheet as [mimeType]: one [Intent.ACTION_SEND],
+ * readable by the app it reaches, offered to every app that takes [mimeType].
+ */
+internal fun sharePlanFile(context: Context, uri: Uri, mimeType: String, title: String) {
     val send = Intent(Intent.ACTION_SEND).apply {
-        type = PDF_MIME_TYPE
+        type = mimeType
         putExtra(Intent.EXTRA_STREAM, uri)
         putExtra(Intent.EXTRA_SUBJECT, title)
-        clipData = ClipData.newRawUri(file.name, uri)
+        clipData = ClipData.newRawUri(uri.lastPathSegment, uri)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
     context.startActivity(Intent.createChooser(send, title).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-    return true
 }
 
 /** The survey's few lines, handed to the share sheet as plain text. */
@@ -950,7 +1000,9 @@ internal const val RERUN_PLAN_TAG = "rerun-plan"
 internal const val RERUN_PLAN_DRAWING_TAG = "rerun-plan-drawing"
 internal const val RERUN_PLAN_HINTS_TAG = "rerun-plan-hints"
 internal const val RERUN_PLAN_ROOMS_TAG = "rerun-plan-rooms"
+internal const val RERUN_PLAN_SHARES_TAG = "rerun-plan-shares"
 internal const val RERUN_PLAN_SHARE_PDF_TAG = "rerun-plan-share-pdf"
+internal const val RERUN_PLAN_SHARE_DXF_TAG = "rerun-plan-share-dxf"
 internal const val RERUN_PLAN_SHARE_TEXT_TAG = "rerun-plan-share-text"
 
 /** The title QA's synthetic scan is kept under. */

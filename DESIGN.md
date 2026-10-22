@@ -1043,6 +1043,8 @@ button is the only way out of the state the card explains.
   a camera frame. A demo card that used `surface` at 90% opacity — as the Cloud Anchors
   screen did before #3421 — is a near-white slab over the room in light mode and a
   near-black one in dark, neither contrasted against anything on purpose.
+- **Off the camera, the card takes the themed stage's card** (`overCamera = false`, Measure's
+  plan): `StageChrome.card` ground, `onCard` text (`onCardMuted` secondary), `edgeRing` hairline.
 - Title `type-card` in `on-ar-scrim`; body and captions `type-body` / `type-caption` in
   `on-ar-scrim-dim`.
 - **Codes are `font-mono` and shortened**, never wrapped prose. Show `first6…last4`; the
@@ -1108,8 +1110,8 @@ the camera mode keeps `ARSceneView`'s own plane renderer).
   `surface-container` at 88 %; text `on-surface` (13:1), secondary `on-surface-dim`
   (8.9:1); edge `on-surface` at 12 %, no halo; the chrome bands wash towards the ground
   instead of black; the one filled accent is the light scheme's `primary`; the status bar
-  keeps dark icons. The 3D Scan and Camera & Gestures demos opt in — every other stage is
-  media.
+  keeps dark icons. The 3D Scan and Camera & Gestures demos, and Measure's plan, opt in —
+  every other stage is media.
 - **Stage sky** (`StageSky`, #4089): the backdrop of a themed stage whose subjects stand on
   an open floor that the camera orbits. A flat skybox in the stage ground (the zenith) under
   Filament height fog in `surface-container` (the horizon): the fog covers the far floor and

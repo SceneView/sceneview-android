@@ -174,6 +174,12 @@ wall shadows, and never substitutes a synthetic pool for renderer shading.
 
 ## ARSceneView (low-level / manual placement)
 
+Camera-image ML pipelines place a result by casting a world ray, not through the screen:
+capture `camera.pose` and `camera.imageIntrinsics` with the CPU image, map the detector's
+output pixel back to the unrotated image with
+`DetectorImageMapping(imageSize, rotationDegrees).detectorPixelToImagePixel(x, y)`, then
+`frame.hitTest(origin, 0, direction, 0)` on a later frame.
+
 ```kotlin
 ARSceneView(
     modifier = Modifier.fillMaxSize(),
