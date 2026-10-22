@@ -22,9 +22,9 @@ import org.robolectric.annotation.Config
 
 /**
  * The turn a room's scan points to ("Turn left — no wall seen there yet") changes only once the
- * new side has been the turn for a few seconds in a row: facing a wall, the next gap's side flips
- * with every small sway of the phone, and a hint that flips back and forth says nothing. The live
- * screen holds the turn once, for the arrow and the coaching line alike.
+ * turn has left the side shown for a few seconds in a row, to the latest side: facing a wall, the
+ * next gap's side flips with every small sway of the phone, and a hint that flips back and forth
+ * says nothing. The live screen holds the turn once, for the arrow and the coaching line alike.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
