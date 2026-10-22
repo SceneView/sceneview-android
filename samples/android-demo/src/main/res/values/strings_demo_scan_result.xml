@@ -62,4 +62,17 @@
     <string name="scan_export_retry">Try again</string>
     <string name="scan_export_saved">File saved</string>
     <string name="scan_export_privacy">Everything stays on your phone until you save or share it.</string>
+
+    <!-- Parts to scan again (#4736): the result's list of what the scan missed. -->
+    <plurals name="scan_rescan_count">
+        <item quantity="one">%d part to scan again</item>
+        <item quantity="other">%d parts to scan again</item>
+    </plurals>
+    <string name="scan_rescan_title">Parts to scan again</string>
+    <string name="scan_rescan_missing_wall">Missing wall</string>
+    <string name="scan_rescan_floor_hole">Hole in the floor</string>
+    <string name="scan_rescan_low_density">Sparse area</string>
+    <string name="scan_rescan_action">Re-scan this part</string>
+    <string name="scan_rescan_unavailable">Each part is framed in amber on the model and the plan. Scanning one part on its own is not available yet: scan the room again to fill them in.</string>
+    <string name="scan_rescan_close">Close</string>
 </resources>

@@ -437,6 +437,11 @@ internal fun RerunModelScreen(
     val ground by produceState<GroundBuild?>(null, model) {
         value = model?.let { built -> withContext(Dispatchers.Default) { groundOf(built) } }
     }
+    // The parts worth scanning again (#4736), once the floor is read: framed on the model, listed on a tap.
+    val rescan by produceState<RescanBuild?>(null, source, ground) {
+        value = ground?.let { g -> withContext(Dispatchers.Default) { rescanOf(source, g.ground) } }
+    }
+    var rescanOpen by remember(source, id) { mutableStateOf(false) }
     // No drift: the camera holds still once the reveal has landed, until the user moves it.
     val orbit = remember(source, id) { ArDebugOrbitCamera(drift = false) }
     // The reveal, the 3D ↔ Plan crane and the tour (#4631), every one cut short by a touch.
@@ -504,6 +509,7 @@ internal fun RerunModelScreen(
                         .alpha(if (tourReady) 1f else 0f)
                         .then(if (tourReady) Modifier else Modifier.clearAndSetSemantics { }),
                 )
+                rescan?.takeIf { tourReady }?.let { RescanZonesPill(it.zones.size, onClick = { rescanOpen = true }) }
             }
             ModelHint(
                 text = stringResource(R.string.scan_result_hint),
@@ -635,6 +641,7 @@ internal fun RerunModelScreen(
                 ground?.let {
                     ScanGroundLayer(it.meshes, engine, materialLoader, ScanGroundColors.current())
                 }
+                rescan?.let { RescanZoneLayer(it.mesh, engine, materialLoader) }
             }
             // The ground until the model is drawn on its framing: no pose but that one is seen.
             if (!shown) Box(Modifier.matchParentSize().background(chrome.ground).testTag(RERUN_MODEL_VEIL_TAG))
@@ -650,6 +657,7 @@ internal fun RerunModelScreen(
             },
         )
     }
+    rescan?.takeIf { rescanOpen }?.let { RescanZonesDialog(it.zones, onDismiss = { rescanOpen = false }) }
 }
 
 /** The scan's name, and where it is kept; a tap renames it. */
