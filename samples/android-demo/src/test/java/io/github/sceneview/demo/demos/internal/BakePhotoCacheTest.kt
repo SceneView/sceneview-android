@@ -2,6 +2,7 @@ package io.github.sceneview.demo.demos.internal
 
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -56,6 +57,27 @@ class BakePhotoCacheTest {
         assertEquals(emptyList<String>(), cache.photosFor(0))
         assertEquals(0, cache.loads)
         assertEquals(listOf("photo 4"), cache.photosFor(1))
+    }
+
+    /**
+     * The cache lets a photo go after the last plane that paints from it, counted in the order
+     * [BakePhotoCache.photosFor] is called: a plane asked for early, or twice, would find its
+     * photos already gone and decode them again, or let go of photos a plane still to come needs.
+     * So planes are asked for in order, each once, or the cache refuses.
+     */
+    @Test
+    fun `planes asked for out of order, or twice, are refused`() {
+        val picks = listOf(listOf(0), listOf(0, 1), listOf(1))
+        val skipped = BakePhotoCache(picks) { "photo $it" }
+        assertThrows(IllegalStateException::class.java) { skipped.photosFor(1) }
+        val repeated = BakePhotoCache(picks) { "photo $it" }
+        repeated.photosFor(0)
+        assertThrows(IllegalStateException::class.java) { repeated.photosFor(0) }
+        val inOrder = BakePhotoCache(picks) { "photo $it" }
+        assertEquals(
+            listOf(listOf("photo 0"), listOf("photo 0", "photo 1"), listOf("photo 1")),
+            picks.indices.map(inOrder::photosFor),
+        )
     }
 
     @Test
