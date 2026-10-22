@@ -25,7 +25,8 @@ internal class Flattening(
  * Makes the room's big flat surfaces — floor, walls, ceiling, worktops — exactly flat. A depth
  * scan meshes a wall as a gentle ripple; the eye reads that as "scanned", not as "a wall". This
  * finds the large near-planar regions of the mesh, fits each one a plane (snapped to gravity
- * when it is within a few degrees of level or plumb), and moves the vertices onto it: onto the
+ * when it is within a few degrees of level or plumb — a floor that really slopes keeps its
+ * slope, [LEVEL_SNAP_RMS_M]), and moves the vertices onto it: onto the
  * plane inside a region, onto the line where two meet, onto the corner where three do. Anything
  * that is not part of a large flat region — a chair, a plant, a lamp — is left as it is.
  */
@@ -287,7 +288,11 @@ internal object PlaneFlattening {
         return label
     }
 
-    /** The least-squares plane of region [id]'s face centroids, area-weighted, snapped to gravity. */
+    /**
+     * The least-squares plane of region [id]'s face centroids, area-weighted, snapped to gravity:
+     * made plumb within [GRAVITY_SNAP_DEG] of it, made level within [GRAVITY_SNAP_DEG] of it when
+     * that moves its faces by no more than [LEVEL_SNAP_RMS_M].
+     */
     private fun fit(faces: FaceGeometry, label: IntArray, id: Int): Plane {
         var a = 0.0
         var cx = 0.0
@@ -333,7 +338,11 @@ internal object PlaneFlattening {
         val level = cos(Math.toRadians(GRAVITY_SNAP_DEG))
         val plumb = kotlin.math.sin(Math.toRadians(GRAVITY_SNAP_DEG))
         if (abs(normal[1]) >= level) {
-            normal = doubleArrayOf(0.0, if (normal[1] > 0) 1.0 else -1.0, 0.0)
+            // Levelled about its centroid, a face (dx, dz) away from it moves by (nx dx + nz dz) / ny.
+            val shift = normal[0] * normal[0] * cov[0] + 2.0 * normal[0] * normal[2] * cov[2] + normal[2] * normal[2] * cov[8]
+            if (sqrt(shift.coerceAtLeast(0.0) / a) / abs(normal[1]) <= LEVEL_SNAP_RMS_M) {
+                normal = doubleArrayOf(0.0, if (normal[1] > 0) 1.0 else -1.0, 0.0)
+            }
         } else if (abs(normal[1]) <= plumb) {
             val h = sqrt(normal[0] * normal[0] + normal[2] * normal[2])
             normal = doubleArrayOf(normal[0] / h, 0.0, normal[2] / h)
@@ -852,6 +861,15 @@ internal object PlaneFlattening {
 
     /** Within this of level or plumb, a plane is made exactly level or plumb. */
     const val GRAVITY_SNAP_DEG = 4.0
+
+    /**
+     * A plane near level is made level only when that moves its faces by no more than this, RMS:
+     * the tilt a scan's drift gives a level floor. A floor that really slopes moves more — 1° over
+     * 4 m is 7 cm end to end — and keeps its slope: levelled about its middle, its high end would
+     * sink under the furniture standing on it, and where it meets a level part of the floor it
+     * would leave a step. On an even slope the farthest face moves under twice this.
+     */
+    const val LEVEL_SNAP_RMS_M = 0.004
 
     /** How far past a plane's own faces a region may lie and still join it: a hole's width or two. */
     private const val GATHER_MARGIN_M = 0.3f
