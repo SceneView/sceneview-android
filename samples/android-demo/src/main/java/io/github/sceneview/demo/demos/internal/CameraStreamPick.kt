@@ -42,7 +42,15 @@ object CameraStreamPick {
         { it.gpuPixels },
     )
 
-    fun pick(streams: List<CameraStream>): CameraStream? = streams.filter(::eligible).maxWithOrNull(ORDER)
+    fun pick(streams: List<CameraStream>): CameraStream? = pickOf(streams.map { it to it })?.second
+
+    /**
+     * Of [offered], each item next to its stream, the pair whose stream [pick] chooses. The item
+     * comes with its own stream rather than by looking the stream up again, so two items whose
+     * streams are equal are never swapped.
+     */
+    fun <T> pickOf(offered: List<Pair<T, CameraStream>>): Pair<T, CameraStream>? =
+        offered.filter { eligible(it.second) }.maxWithOrNull(compareBy(ORDER) { it.second })
 
     fun eligible(stream: CameraStream): Boolean =
         stream.back && stream.minFps <= FPS && stream.maxFps >= FPS && stream.cpuPixels > 0

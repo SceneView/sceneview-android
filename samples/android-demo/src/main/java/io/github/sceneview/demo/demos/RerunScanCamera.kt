@@ -27,9 +27,9 @@ internal object RerunScanCamera {
                 .setTargetFps(EnumSet.of(CameraConfig.TargetFps.TARGET_FPS_30))
             val configs = session.getSupportedCameraConfigs(filter)
             val streams = configs.map(::streamOf)
-            val pick = CameraStreamPick.pick(streams)
-            line = CameraStreamPick.logLine(streams, pick)
-            pick?.let { configs[streams.indexOf(it)] }
+            val pick = CameraStreamPick.pickOf(configs.zip(streams))
+            line = CameraStreamPick.logLine(streams, pick?.second)
+            pick?.first
         }.onFailure { line = "camera: default config, the offered streams could not be read ($it)" }.getOrNull()
         runCatching { Log.i(LOG_TAG, line) }
         return chosen ?: session.cameraConfig
