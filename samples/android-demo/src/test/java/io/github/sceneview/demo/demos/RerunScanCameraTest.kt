@@ -63,6 +63,34 @@ class RerunScanCameraTest {
         assertSame(first, select(listOf(first, second)))
     }
 
+    @Test
+    fun `during a playback the line says the recording's stream serves, read or not`() {
+        val small = Config("small", CameraStream(640, 480, 30, 30))
+        val chosen = RerunScanCamera.select(
+            offered = { listOf(small) },
+            streamOf = Config::stream,
+            default = { DEFAULT },
+            playback = true,
+        )
+        assertSame(small, chosen)
+        assertEquals(
+            "camera: playback, the recording's own stream serves; asked for 640x480 at 30 fps, " +
+                "picked from 1 offered [640x480 30]; below 1280x720",
+            RerunScanCamera.line,
+        )
+        RerunScanCamera.select(
+            offered = { throw IllegalStateException("no camera") },
+            streamOf = Config::stream,
+            default = { DEFAULT },
+            playback = true,
+        )
+        assertEquals(
+            "camera: playback, the recording's own stream serves; asked for default config, " +
+                "the offered streams could not be read (java.lang.IllegalStateException: no camera)",
+            RerunScanCamera.line,
+        )
+    }
+
     private fun select(offered: List<Config>): Config =
         RerunScanCamera.select(offered = { offered }, streamOf = Config::stream, default = { DEFAULT })
 

@@ -106,6 +106,24 @@ class CameraStreamPickTest {
         )
     }
 
+    /**
+     * During a playback ARCore serves the recording's own stream and ignores the config asked for,
+     * so the line says the images come from the recording, then what the scan asked for.
+     */
+    @Test
+    fun `during a playback the log line says the recording's stream serves`() {
+        val offered = listOf(stream(640, 480), stream(1920, 1080))
+        assertEquals(
+            "camera: playback, the recording's own stream serves; asked for 1920x1080 at 30 fps, " +
+                "picked from 2 offered [640x480 30, 1920x1080 30]; meets 1280x720",
+            CameraStreamPick.logLine(offered, CameraStreamPick.pick(offered), playback = true),
+        )
+        assertEquals(
+            "camera: playback, the recording's own stream serves; asked for default config, none of 0 offered holds 30 fps",
+            CameraStreamPick.logLine(emptyList(), null, playback = true),
+        )
+    }
+
     private fun stream(
         width: Int,
         height: Int,
