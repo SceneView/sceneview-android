@@ -31,6 +31,7 @@ import io.github.sceneview.demo.demos.internal.DebugMesh
 import io.github.sceneview.demo.demos.internal.DebugPlane
 import io.github.sceneview.demo.demos.internal.DebugPose
 import io.github.sceneview.demo.demos.internal.DenseCloud
+import io.github.sceneview.demo.demos.internal.DenseFusion
 import io.github.sceneview.demo.demos.internal.DenseSurfels
 import io.github.sceneview.demo.demos.internal.MeasureDrawing
 import io.github.sceneview.demo.demos.internal.MeasureSize
@@ -41,6 +42,7 @@ import io.github.sceneview.demo.demos.internal.ReplayManifest
 import io.github.sceneview.demo.demos.internal.RerunCapturePack
 import io.github.sceneview.demo.demos.internal.RerunReplayAssets
 import io.github.sceneview.demo.demos.internal.RoomMeasure
+import io.github.sceneview.demo.demos.internal.ScanOpenTop
 import io.github.sceneview.demo.demos.internal.ScanPhotoPolicy
 import io.github.sceneview.demo.demos.internal.scanLabels
 import io.github.sceneview.demo.demos.internal.SteadyRoomMeasure
@@ -148,7 +150,22 @@ internal class ReplayDenseLayer(
     val offsets: FloatArray = DenseSurfels.cornerOffsets(mesh),
     /** A live scan's floor cells [cloud] covers ([CoverageGrid.coveredKeys]), found with it off the main thread. */
     val coveredCells: LongArray = LongArray(0),
+    /**
+     * The surfels where the map holds them, `x, y, z` triples: [cloud]'s own, except in a live
+     * scan's snapshot, which draws the far ones merged ([DenseFusion.liveCloud]) and keeps here
+     * the map's even stride. The saving orbit is planned round these and the open top's floor
+     * read from them (#4792): the merged cloud is dense by the eye and sparse away from it, so
+     * its mean slid to where the scan ended.
+     */
+    val whole: FloatArray = cloud.positions,
 ) {
+    /**
+     * This layer with its lid off ([ScanOpenTop.cloud]), the floor read from [whole], which it
+     * keeps: the orbit is planned round the same points before and after the cut. Off the main
+     * thread.
+     */
+    fun openTop(): ReplayDenseLayer = of(ScanOpenTop.cloud(cloud, floorFrom = whole), voxelM, whole = whole)
+
     companion object {
         /** The dense cloud [manifest] indexes in [archive], built for drawing; `null` without one. */
         fun of(manifest: ReplayManifest, archive: ByteArray): ReplayDenseLayer? {
@@ -161,14 +178,20 @@ internal class ReplayDenseLayer(
 
         /**
          * [cloud] of [voxelM] surfels, meshed and coloured for drawing, with the floor cells it
-         * covers when [withCells] (a live scan's coverage). Off the main thread.
+         * covers when [withCells] (a live scan's coverage) and the map's [whole]. Off the main thread.
          */
-        fun of(cloud: DenseCloud, voxelM: Float, withCells: Boolean = false) = ReplayDenseLayer(
+        fun of(
+            cloud: DenseCloud,
+            voxelM: Float,
+            withCells: Boolean = false,
+            whole: FloatArray = cloud.positions,
+        ) = ReplayDenseLayer(
             cloud = cloud,
             voxelM = voxelM,
             mesh = DenseSurfels.mesh(cloud, voxelM),
             atlas = DenseSurfels.atlas(cloud, fallback = DENSE_FALLBACK_COLOR),
             coveredCells = if (withCells) CoverageGrid.coveredKeys(cloud.positions, cloud.count) else LongArray(0),
+            whole = whole,
         )
 
         /** A surfel the camera never coloured: the sparse points' own neutral. */

@@ -44,7 +44,8 @@ internal class ScanDenseMap(
      * [LIVE_INTERVAL_NS] of the surfels at least two depth frames saw — from the last [project]ed
      * frame's eye, [LIVE_DRAWN_SURFELS] at most, near ones whole and far ones merged
      * ([DenseFusion.liveCloud]); without one, [LIVE_MAX_SURFELS] at most — meshed and coloured off
-     * the main thread, with the floor cells the map covers. `null` until the first one.
+     * the main thread, with the floor cells the map covers and its even stride
+     * ([ReplayDenseLayer.whole]). `null` until the first one.
      */
     @Volatile
     var live: ReplayDenseLayer? = null
@@ -170,6 +171,9 @@ internal class ScanDenseMap(
             // The floor cells are found here too, on the worker, from the map as before: the
             // live map and the area read them, however far the drawn surfels are merged.
             coveredCells = CoverageGrid.coveredKeys(whole.positions, whole.count),
+            // The saving orbit and the open top read the map as it stands, not the merged
+            // surfels, dense by the eye and sparse away from it (#4792).
+            whole = whole.positions,
         )
     }
 
