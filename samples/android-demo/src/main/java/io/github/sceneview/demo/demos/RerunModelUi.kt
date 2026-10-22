@@ -602,6 +602,7 @@ private val ModelState.settled: Boolean get() = this == ModelState.Failed || (th
  * [opened] is the kept model when the caller has already read it, so it is not read twice.
  * [floorCovered] is the scan's floor covered in m², its replay's figure (#4734); `null` when its
  * recording cannot be read, and the legend then keys the hatching alone.
+ * [onRescan] starts a re-scan of one of its parts to scan again (#4736); `null`: not offered.
  */
 @Composable
 @Suppress("LongMethod", "LongParameterList", "CyclomaticComplexMethod")
@@ -622,6 +623,7 @@ internal fun RerunModelScreen(
     hintStays: Boolean = false,
     opened: RerunScanModel? = null,
     floorCovered: Float? = null,
+    onRescan: ((RescanPick) -> Unit)? = null,
 ) {
     val state by produceState<ModelState>(ModelState.Loading, source, id) {
         val stored = opened ?: if (store != null && id != null) {
@@ -918,7 +920,7 @@ internal fun RerunModelScreen(
             },
         )
     }
-    rescan?.takeIf { rescanOpen }?.let { RescanZonesDialog(it.zones, onDismiss = { rescanOpen = false }) }
+    rescan?.takeIf { rescanOpen }?.let { RescanZonesDialog(it.zones, onDismiss = { rescanOpen = false }, onRescan = it.picker(onRescan)) }
 }
 
 /** The scan's name, and where it is kept; a tap renames it. */
