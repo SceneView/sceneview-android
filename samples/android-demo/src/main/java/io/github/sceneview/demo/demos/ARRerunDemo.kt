@@ -1912,6 +1912,7 @@ private fun RerunLiveScreen(
                                 turn = heldTurn,
                                 done = scanWalls?.done == true,
                                 facingWall = scanCoverage.facingWall,
+                                wallToFinish = scanWalls?.facingUnfinished == true,
                             ),
                             onTogglePause = {
                                 betweenRooms = false
@@ -1977,7 +1978,10 @@ private fun RerunLiveScreen(
                 surfaceType = qaCameraBackdropSurfaceType(),
                 cameraStream = if (qaBackdrop) null else cameraStream,
                 playbackDataset = arPlaybackDataset,
-                planeRenderer = true,
+                // A capture draws the walls it recognises itself (#4540): ARCore's own planes, with
+                // their upright dashes on walls and edges cut where ARCore stopped, came on top of
+                // them and read as noise (QA 2026-10-22, remarks 4 and 8).
+                planeRenderer = !recording,
                 sessionCameraConfig = { RerunScanCamera.select(it, playback = arPlaybackDataset != null) },
                 sessionConfiguration = { session: Session, config: Config ->
                     config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL

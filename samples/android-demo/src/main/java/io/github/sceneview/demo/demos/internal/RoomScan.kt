@@ -474,13 +474,23 @@ object ScanCopy {
     /** Before the first frame tracks: the scan starts by itself, as soon as AR is ready. */
     const val STARTING = "Getting AR ready — the scan starts by itself"
 
-    /** The turn to the part of the room no wall was seen on yet ([ScanGuide.cue]). */
+    /**
+     * The turn to the part of the room no wall was seen on yet ([ScanGuide.cue]). It names the
+     * dashed line the live view draws on the floor there, which nothing else explained (QA
+     * 2026-10-22, remark 4); behind the phone, that line is out of view.
+     */
     fun turnHint(turn: ScanTurn): String = when (turn) {
-        ScanTurn.Left -> "Turn left — no wall seen there yet"
-        ScanTurn.Right -> "Turn right — no wall seen there yet"
+        ScanTurn.Left -> "Turn left — no wall yet at the dashed line"
+        ScanTurn.Right -> "Turn right — no wall yet at the dashed line"
         ScanTurn.Behind -> "Turn around — no wall seen behind you yet"
-        ScanTurn.Ahead -> "Sweep ahead — no wall seen there yet"
+        ScanTurn.Ahead -> "Sweep ahead — no wall yet at the dashed line"
     }
+
+    /**
+     * The phone faces a wall drawn only where the scan saw it ([io.github.sceneview.demo.demos.internal.WallExtent]):
+     * walking along it is what finishes it (QA 2026-10-22, remark 3).
+     */
+    const val WALL_TO_FINISH = "Walk along this wall to finish it"
 
     /**
      * The gauge, said aloud: `Room 72 % scanned`, the room's scan done so far
