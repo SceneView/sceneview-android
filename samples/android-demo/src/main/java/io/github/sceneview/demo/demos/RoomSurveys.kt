@@ -52,10 +52,12 @@ internal fun rememberRoomSurvey(media: RerunReplayMedia?, wanted: Boolean): Plan
  *
  * Scans are measured one at a time, on a thread of their own ([RoomSurveys]): the scan's model and
  * pictures never hold a measure up, and two grids are never in memory at once (#4675). A measure
- * runs apart from its callers: the export sheet, the plan and the home's summary asking for the
- * same scan wait on the same one, and closing the sheet does not throw it away. A measure nobody
- * waits for any more gives way once another scan is measured, and every one when the demo closes
- * ([ForgetRoomSurveysOnExit]). A failed one is started again.
+ * runs apart from its callers: the export sheet and the plan asking for the scan that is open wait
+ * on the same one, and closing the sheet does not throw it away. A scan is known by its instance:
+ * one opened again, or the saved room the home's summary reads, is measured again, in the same
+ * queue. A measure nobody waits for any more is dropped once another scan is measured, and every
+ * one when the demo closes ([ForgetRoomSurveysOnExit]); a dropped one stops between two steps of
+ * its loops and gives the thread back. A failed one is started again.
  */
 internal suspend fun measureRoom(
     media: RerunReplayMedia,

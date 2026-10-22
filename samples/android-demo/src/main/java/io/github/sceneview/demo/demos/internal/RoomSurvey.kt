@@ -452,6 +452,7 @@ object RoomSurveyor {
             ceilingCell: MutableList<Int>,
         ) {
             for (i in 0 until positions.size / 3) {
+                stopIfInterrupted()
                 val x = positions[i * 3]
                 val z = positions[i * 3 + 2]
                 val u = x * c + z * s
@@ -518,6 +519,7 @@ object RoomSurveyor {
             }
             var head = 0
             while (head < tail) {
+                stopIfInterrupted()
                 val at = queue[head++]
                 if (anyWall(at)) continue
                 val iu = at % nu
@@ -610,6 +612,7 @@ object RoomSurveyor {
         val taken = BooleanArray(across)
         val lines = ArrayList<Line>()
         while (lines.size < MAX_LINES) {
+            stopIfInterrupted()
             var peak = -1
             for (a in 0 until across) {
                 val free = !taken[a] && support[a] > 0
@@ -733,6 +736,7 @@ object RoomSurveyor {
             }
         }
         while (queue.isNotEmpty()) {
+            stopIfInterrupted()
             val at = queue.removeFirst()
             val i = at % nx
             val j = at / nx
@@ -780,6 +784,7 @@ object RoomSurveyor {
             seed(j * nx + nx - 1)
         }
         while (queue.isNotEmpty()) {
+            stopIfInterrupted()
             val at = queue.removeFirst()
             val i = at % nx
             val j = at / nx
