@@ -5,6 +5,7 @@ import dev.romainguy.kotlin.math.Quaternion
 import dev.romainguy.kotlin.math.lookTowards
 import io.github.sceneview.math.Position
 import kotlin.math.abs
+import kotlin.math.hypot
 import kotlin.math.sqrt
 
 /*
@@ -178,8 +179,13 @@ const val MEASURE_MIN_SIDE_M = 0.05f
  * floor (#4765). A Distance chain keeps its short segments; closing an outline reuses its first
  * point and never comes here.
  */
-@Suppress("UnusedParameter", "FunctionOnlyReturningConstant") // Seam: the check comes with its fix.
-fun <P> measurePointRefusal(board: MeasureBoard<P>, at: Position, where: (P) -> Position?): MeasureRefusal? = null
+fun <P> measurePointRefusal(board: MeasureBoard<P>, at: Position, where: (P) -> Position?): MeasureRefusal? {
+    val figure = board.active?.takeIf { it.mode != MeasureMode.Distance && !it.raising } ?: return null
+    val last = figure.points.lastOrNull()?.let(where) ?: return null
+    // On the floor line: walls and rooms are levelled on their first point (measureFigureOutline),
+    // so a corner caught a few centimetres up the skirting board is still the same corner.
+    return if (hypot(at.x - last.x, at.z - last.z) < MEASURE_MIN_SIDE_M) MeasureRefusal.SameCorner else null
+}
 
 /** The add button's tap on a new point: the [board] after it, and why it did nothing, if it did nothing. */
 data class MeasurePointTap<P>(val board: MeasureBoard<P>, val refusal: MeasureRefusal?)
