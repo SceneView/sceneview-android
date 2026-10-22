@@ -550,7 +550,10 @@ internal fun ScanLiveView(
         lidOff = true
     }
     val drawn = remember(media) {
-        media.liveDense?.let { live -> media.withLiveDense { openTop?.takeIf { savingNow } ?: live() } } ?: media
+        // Over the camera its surfels are capped small; the save flight leaves the phone's eye.
+        media.liveDense?.let { live ->
+            media.withLiveDense(overCamera = { !savingNow }) { openTop?.takeIf { savingNow } ?: live() }
+        } ?: media
     }
     val observed = remember(coverage, walls) { ScanObserveGate() }
     Box(modifier = Modifier.fillMaxSize().testTag(SCAN_STAGE_TAG)) {
