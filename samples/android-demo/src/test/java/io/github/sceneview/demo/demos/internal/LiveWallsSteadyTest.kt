@@ -79,11 +79,12 @@ class LiveWallsSteadyTest {
     }
 
     @Test
-    fun `a plane refit across the foot's threshold keeps its wall`() {
-        val foot = WallRules.MAX_FOOT_M
-        fun piece(bottom: Float) = listOf(front, left, plane(24, -1f, -1f, 0.5f, -1f, bottom = bottom, top = 1.8f))
+    fun `a plane refit across the seen height's threshold keeps its wall`() {
+        // Seen over 0.40 m of its height, the survey's least, then 3 cm either side of it.
+        val span = 0.4f
+        fun piece(seen: Float) = listOf(front, left, plane(24, -1f, -1f, 0.5f, -1f, bottom = 1.8f - seen, top = 1.8f))
         // A refit a second apart, longer than a wall waits for its plane.
-        assertSteady("foot", alternate(piece(foot - 0.03f), piece(foot + 0.03f)), step = 1f, walls = 3)
+        assertSteady("seen height", alternate(piece(span + 0.03f), piece(span - 0.03f)), step = 1f, walls = 3)
     }
 
     @Test
@@ -158,8 +159,8 @@ class LiveWallsSteadyTest {
         assertEquals(2, PlaneWallSource.wallCount(listOf(front, left), floorY))
         assertEquals(2, PlaneWallSource.wallCount(listOf(front, left), floorY))
         assertEquals(3, PlaneWallSource.wallCount(listOf(front, left, piece), floorY))
-        // The same planes over a floor half a metre lower stand on nothing.
-        assertEquals(0, PlaneWallSource.wallCount(listOf(front, left), floorY - 0.5f))
+        // The same planes over a floor 1.1 m higher rise short of standing height.
+        assertEquals(0, PlaneWallSource.wallCount(listOf(front, left), floorY + 1.1f))
         assertEquals(2, PlaneWallSource.wallCount(listOf(front, left), floorY))
     }
 }

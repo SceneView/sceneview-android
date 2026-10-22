@@ -10,8 +10,9 @@ import kotlin.math.sin
 
 /**
  * The live walls (3D Scan and Measure) follow the room survey's rules: a vertical plane is a wall
- * only from near the floor to past standing height, seen long enough, along one of the room's
- * directions, and not a piece of furniture before a wall. Each scene counts the walls shown before
+ * only when it rises past standing height and is seen over 0.40 m of its height (or stands over
+ * furniture before it), is seen long enough, along one of the room's directions, and is not a piece
+ * of furniture before a wall. Each scene counts the walls shown before
  * these rules ([LegacyPlaneWalls], the tracker as it was) and after ([PlaneWallSource]).
  */
 class LiveWallsSurveyRulesTest {
@@ -91,9 +92,23 @@ class LiveWallsSurveyRulesTest {
     }
 
     @Test
-    fun `a plane that starts well above the floor is not a wall`() {
-        // A cupboard's upper half, or a picture: it does not stand on the floor.
-        assertWalls(listOf(front, left, plane(14, 0f, -1f, 1.5f, -1f, bottom = 0.6f, top = 2f)), before = 3, after = 2)
+    fun `a band seen over less than 0,40 m high is not a wall, as in the survey`() {
+        // The survey's wall is seen over 0.40 m of its height at least: a shelf's lip, a valance.
+        assertWalls(listOf(front, left, plane(14, 0f, -1f, 1.5f, -1f, bottom = 1.5f, top = 1.85f)), before = 3, after = 2)
+    }
+
+    @Test
+    fun `a panel seen from 0,6 m up, nothing behind it, is a wall, as in the survey`() {
+        // Its foot is not looked for, as the survey does not look for it: a room divider, a screen
+        // standing in the room with no wall within a metre behind it, is a wall there and here alike.
+        assertWalls(listOf(front, left, plane(14, 0f, -1f, 1.5f, -1f, bottom = 0.6f, top = 2f)), before = 3, after = 3)
+    }
+
+    @Test
+    fun `a wall whose foot unplaned furniture hides is a wall, as in the survey`() {
+        // The back wall shows from 0.9 m up only, over a sofa ARCore fitted no plane to.
+        val back = plane(26, -2f, 1f, 1f, 1f, bottom = 0.9f, top = 2.4f)
+        assertWalls(listOf(front, left, back), before = 3, after = 3)
     }
 
     @Test
@@ -111,9 +126,10 @@ class LiveWallsSurveyRulesTest {
         // ARCore found the sofa's top rather than its front: the same.
         val top = upward(28, -1.5f, 0.2f, 0.5f, 1f, height = 0.9f)
         assertEquals("over the sofa's top", 3, after(listOf(front, left, back, top)))
-        // Seen only from higher than the sofa hides, it stands on nothing: a cupboard's upper half.
-        val high = plane(26, -2f, 1f, 1f, 1f, bottom = 1.4f, top = 2.4f)
-        assertEquals("over a gap above the sofa", 2, after(listOf(front, left, high, sofa)))
+        // Seen over less than 0.40 m of its height, it is a wall only with the sofa before it.
+        val band = plane(26, -2f, 1f, 1f, 1f, bottom = 2f, top = 2.3f)
+        assertEquals("a band over the sofa", 3, after(listOf(front, left, band, sofa)))
+        assertEquals("the same band with nothing before it", 2, after(listOf(front, left, band)))
     }
 
     @Test
