@@ -673,7 +673,7 @@ themed surface — so it is theme-independent and uses the "Button glass" row.
   `chrome-scrim` itself, under its glass and cut to its own outline
   (`LocalGlassGround`): same stack (scene, scrim, glass, glyph), same contrast,
   on the chip instead of across the picture.
-- **The overflow menu is for a screen with no controls of its own (#PRNUM).** Reset, Send
+- **The overflow menu is for a screen with no controls of its own (#4807).** Reset, Send
   feedback and QA mode live in the settings sheet the dock's Controls item opens — one
   settings surface, not two. A screen that owns the whole window and has nothing of its own
   to tweak (3D Scan's live capture) passes `actionsMenu`: the same actions go in a standard
@@ -1067,7 +1067,7 @@ button is the only way out of the state the card explains.
   nothing is worse than a plain explanation (`ARCoreAvailabilityOverlay`, #3374).
 - **One card at a time, and never doubled with a pill saying the same thing.** When a card
   explains the state, the coaching overlay stays silent.
-- **A capture has one record control, in one place (#PRNUM).** The 72dp shutter (`danger`
+- **A capture has one record control, in one place (#4807).** The 72dp shutter (`danger`
   disc, a stop square while recording) sits centred from the first frame to the last; Pause
   is the secondary, a 56dp `ar-scrim` disc on its leading side that turns into a play glyph
   while paused. Its stop opens the review. No Pause / Finish text buttons in its place: the

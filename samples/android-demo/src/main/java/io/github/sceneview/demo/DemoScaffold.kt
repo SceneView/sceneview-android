@@ -587,7 +587,7 @@ fun DemoScaffold(
     dock: List<DockItem> = emptyList(),
     dockAccent: DockItem? = null,
     // The app-level actions (Reset, Send feedback, QA mode) in a ⋮ menu at the end of the
-    // identity row instead of a Settings item in the dock (#PRNUM). For a screen with no
+    // identity row instead of a Settings item in the dock (#4807). For a screen with no
     // `controls` of its own, where that dock item opened a sheet of two rows: with no other
     // dock item either, no dock is drawn at all and the bottom band reaches down to the gutter.
     actionsMenu: Boolean = false,
@@ -974,7 +974,7 @@ fun DemoScaffold(
                 // measure from this one, or it inherits the reserve's 24 dp on top of its own
                 // gutter and lands 40 dp up. Floored at the token band rather than 104 dp so the
                 // first frame, before `onDockBandHeight` reports, is already the right height.
-                // No dock at all (#PRNUM): the band rests `space-lg` off the safe area, a camera's
+                // No dock at all (#4807): the band rests `space-lg` off the safe area, a camera's
                 // shutter height above the gesture bar.
                 val noDock = actionsMenu && dock.isEmpty() && dockAccent == null
                 val dockClearance = if (noDock) {
@@ -1736,13 +1736,13 @@ private fun BoxScope.DemoIdentityRow(
             onClick = onFullScreen,
             modifier = Modifier.testTag(DemoScaffoldTestTags.FULL_SCREEN),
         )
-        // The ⋮ menu ends the row, where Android puts a screen's overflow (#PRNUM).
+        // The ⋮ menu ends the row, where Android puts a screen's overflow (#4807).
         menu?.invoke()
     }
 }
 
 /**
- * The app-level actions as a standard overflow menu (#PRNUM): a ⋮ glass button at the end of the
+ * The app-level actions as a standard overflow menu (#4807): a ⋮ glass button at the end of the
  * identity row, opening a Material menu — Record video, Reset, Send feedback, QA mode — in the
  * order the settings sheet lists them. For a screen that owns the whole window (3D Scan's live
  * capture), where a Settings item in the dock took a dock's height for two rows.
@@ -2179,7 +2179,7 @@ object DemoScaffoldTestTags {
     const val RESET_ACTION = "demo-reset-action"
     const val FEEDBACK_ACTION = "demo-feedback-action"
 
-    /** The ⋮ button of a screen that keeps its app-level actions in a menu (#PRNUM). */
+    /** The ⋮ button of a screen that keeps its app-level actions in a menu (#4807). */
     const val ACTIONS_MENU = "demo-actions-menu"
     const val QA_MODE_ACTION = "demo-qa-mode-action"
     /** The shared Record action: its sheet row and its bottom-band pill (samples step 0). */

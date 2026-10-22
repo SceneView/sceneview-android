@@ -390,7 +390,7 @@ object ScanCopy {
     /**
      * Said once, briefly, when the photos run out (#4717), and not again: past the limit the
      * scan's points, their colours and its path still record, so nothing is left to warn about.
-     * Worded as news, not as a limit hit (#PRNUM): "Photo limit reached" read as a fault.
+     * Worded as news, not as a limit hit (#4807): "Photo limit reached" read as a fault.
      */
     const val FULL = "All photos taken — still scanning"
 
@@ -402,7 +402,7 @@ object ScanCopy {
     const val RESUME = "Resume"
     const val FINISH = "Finish"
 
-    /** The stop shutter's spoken name (#PRNUM): it ends the capture and opens the review. */
+    /** The stop shutter's spoken name (#4807): it ends the capture and opens the review. */
     const val FINISH_SCAN = "Finish scan"
     const val COACH_SCANNING = "Move slowly sideways"
     const val COACH_PAUSED = "Nothing is captured while paused."
@@ -462,7 +462,7 @@ object ScanCopy {
 
     /**
      * A room whose walls close it, or whose gauge is full: the scan can end (#4540). "stop" is the
-     * red shutter that ends a capture (#PRNUM); there is no Finish button to name any more.
+     * red shutter that ends a capture (#4807); there is no Finish button to name any more.
      */
     const val ROOM_DONE = "Room complete — tap stop to finish"
 

@@ -1,2 +1,0 @@
-<!-- category: Changed -->
-- **3D Scan's live capture uses a standard record control ([#PRNUM](https://github.com/sceneview/sceneview/pull/PRNUM)).** The red shutter stays centred for the whole scan and its stop ends it; Pause sits beside it as a smaller button. The bottom Settings button is gone: Send feedback and QA mode are in a ⋮ menu at the top. The capture stays in portrait instead of squeezing into a landscape strip, the status card is one line shorter, and the photo notice now says "All photos taken — still scanning" for a moment.

@@ -135,7 +135,7 @@ internal fun ScanHud(
                 modifier = Modifier.weight(1f),
             )
         }
-        // One line for both counts on a room's scan (#PRNUM): `274,778 points captured · 3 walls`.
+        // One line for both counts on a room's scan (#4807): `274,778 points captured · 3 walls`.
         // A line less of card over the top of the camera, where the next wall's dashes are drawn.
         Text(
             text = room?.let { "${ScanCopy.pointsCaptured(points)} · ${ScanCopy.wallsFound(it.wallCount)}" }
@@ -166,7 +166,7 @@ internal fun ScanRoomGauge(room: ScanWallsState) {
             .semantics(mergeDescendants = true) { stateDescription = ScanCopy.completion(share) }
             .testTag(SCAN_ROOM_GAUGE_TAG),
     ) {
-        // The walls are counted on the HUD's points line (#PRNUM): the meter is the gauge here.
+        // The walls are counted on the HUD's points line (#4807): the meter is the gauge here.
         Row(
             horizontalArrangement = Arrangement.spacedBy(Space.xs),
             modifier = Modifier.widthIn(max = ArOverlay.maxWidth).fillMaxWidth(),
@@ -240,7 +240,7 @@ internal fun BoxScope.ScanTurnArrow(turn: ScanTurn?) {
 private const val GAUGE_SEGMENTS = 10
 
 /**
- * Under a capture still open: the one coaching line, then the camera app's record control (#PRNUM).
+ * Under a capture still open: the one coaching line, then the camera app's record control (#4807).
  * The red stop shutter — the one REC knows from every camera — sits in the middle from the first
  * frame to the last and ends the capture (Finish: the review opens); Pause, the secondary, is a
  * smaller disc beside it and turns into Resume (a play glyph) while paused. Nothing swaps places:
