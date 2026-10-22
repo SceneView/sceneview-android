@@ -9,6 +9,7 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import mockwebserver3.SocketEffect
@@ -211,6 +212,56 @@ class SceneDetectorShareTest {
         val thrown = runCatching { openSceneDetector(file) }.exceptionOrNull()
 
         assertTrue("got $thrown", thrown is UnsatisfiedLinkError)
+    }
+
+    @Test
+    fun `a device LiteRT ships no library for downloads nothing`() = runBlocking {
+        MockWebServer().use { server ->
+            server.enqueue(ok(payload))
+            server.start()
+            val opened = AtomicInteger()
+            val opens = { _: File -> opened.incrementAndGet().let { FakeDetector } }
+            // A 32-bit x86 device: the app runs as x86, which LiteRT ships no library for.
+            val detectors = share(server, opens = opens, abis = listOf("x86"))
+            val states = ArrayList<SceneModelState>()
+
+            val shared = detectors.share { states += it }
+
+            assertEquals("10 MB downloaded for a runtime that cannot run", 0, server.requestCount)
+            assertEquals(0, opened.get())
+            assertNull(shared)
+            assertEquals(listOf<SceneModelState>(SceneModelState.Unusable), states)
+        }
+    }
+
+    @Test
+    fun `on mobile data, a device LiteRT ships no library for asks for no tap`() = runBlocking {
+        MockWebServer().use { server ->
+            server.enqueue(ok(payload))
+            server.start()
+            // An x86 device that also translates ARM code still runs the app as x86, its first ABI.
+            val detectors = share(server, metered = { true }, abis = listOf("x86", "armeabi-v7a"))
+            val states = Collections.synchronizedList(ArrayList<SceneModelState>())
+
+            val replay = async(Dispatchers.Default) { detectors.share { states += it } }
+            val answered = withTimeoutOrNull(2_000) { replay.join() } != null
+            if (!answered) replay.cancelAndJoin()
+
+            assertTrue("still waiting for a tap; heard $states", answered)
+            assertEquals(listOf<SceneModelState>(SceneModelState.Unusable), states.toList())
+            assertEquals(0, server.requestCount)
+        }
+    }
+
+    @Test
+    fun `an x86_64 device, the emulator's ABI, downloads and loads it`() = runBlocking {
+        MockWebServer().use { server ->
+            server.enqueue(ok(payload))
+            server.start()
+
+            assertNotNull(share(server, abis = listOf("x86_64", "x86")).share())
+            assertEquals(1, server.requestCount)
+        }
     }
 
     @Test
