@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
@@ -160,7 +161,8 @@ internal fun SceneScope.ScanGridLayer(
     val chrome = LocalStageChrome.current
     val layers = remember(engine, materialLoader) { ScanGridNodes(engine, materialLoader) }
     DisposableEffect(layers) { onDispose { layers.destroy() } }
-    remember(layers, ground, style) { layers.upload(ground, style) }
+    // On the main dispatcher, as Filament needs; again whenever the ground or the style changes.
+    LaunchedEffect(layers, ground, style) { layers.upload(ground, style) }
     SideEffect { layers.paint(chrome.debug.gridMinor, chrome.debug.gridMajor) }
     key(layers) {
         Node(apply = { layers.nodes.forEach { addChildNode(it) } })
