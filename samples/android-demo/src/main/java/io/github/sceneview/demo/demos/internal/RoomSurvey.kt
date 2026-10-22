@@ -172,6 +172,19 @@ object RoomSurveyor {
     private const val SAME_ROW_M = 0.01f
     private const val LETTERS = 26
 
+    /**
+     * A wall cell is seen over this much of its height at least, or stands over furniture before
+     * it: [WallRules.MIN_SPAN_M] too. The structure engine reads walls as lines, not cells; the live
+     * walls keep the grid's threshold.
+     */
+    internal const val WALL_CELL_SPAN_M = 0.4f
+
+    /**
+     * A wall square to no other needs this much seen before the live walls ([WallRules]) show it.
+     * The structure engine draws oblique walls as they are, without it.
+     */
+    const val OBLIQUE_MIN_M = 1f
+
     /** The survey of a scan: [RoomStructure.read], on the page. */
     fun survey(input: RoomSurveyInput): RoomSurvey = of(RoomStructure.read(input))
 

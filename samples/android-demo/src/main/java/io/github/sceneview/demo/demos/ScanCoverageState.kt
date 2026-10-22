@@ -161,6 +161,10 @@ internal class ScanCoverageState {
      * what the capture recorded by [frame]'s time ([CoverageGrid.updateSaved]). Live, replay and
      * result ([ScanFloorArea.ofSaved]) then say the same m².
      */
+    /** The trace the last [observe] recorded into, `null` in a replay: the live walls read its camera poses. */
+    var recorded: ArDebugTrace? = null
+        private set
+
     @Suppress("LongParameterList") // the live and the replay feeds, one call each
     fun observe(
         frame: ArDebugFrame,
@@ -171,6 +175,7 @@ internal class ScanCoverageState {
         record: ArDebugTrace? = null,
         saved: ArDebugTrace? = null,
     ) {
+        recorded = record
         var grew = when {
             saved != null -> grid.updateSaved(saved, frame.time, { frame.mapPoints }, dense, denseCount)
             dense != null -> grid.update(dense, denseCount)

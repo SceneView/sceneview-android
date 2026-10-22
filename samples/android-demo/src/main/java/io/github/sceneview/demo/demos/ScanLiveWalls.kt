@@ -10,6 +10,7 @@ import com.google.android.filament.Engine
 import com.google.android.filament.Material
 import com.google.android.filament.MaterialInstance
 import io.github.sceneview.demo.demos.internal.ArDebugFrame
+import io.github.sceneview.demo.demos.internal.ArDebugTrace
 import io.github.sceneview.demo.demos.internal.DebugMesh
 import io.github.sceneview.demo.demos.internal.DebugPose
 import io.github.sceneview.demo.demos.internal.LiveWallMotion
@@ -19,6 +20,7 @@ import io.github.sceneview.demo.demos.internal.PlaneWallSource
 import io.github.sceneview.demo.demos.internal.ScanGuide
 import io.github.sceneview.demo.demos.internal.ScanTurn
 import io.github.sceneview.demo.demos.internal.WallMesh
+import io.github.sceneview.demo.demos.internal.lostBetween
 import io.github.sceneview.demo.demos.internal.openFloorEdges
 import io.github.sceneview.demo.demos.internal.update
 import io.github.sceneview.demo.theme.SceneViewTokens.ArOverlay
@@ -64,8 +66,19 @@ internal class ScanWallsState(private val source: LiveWallSource = PlaneWallSour
     private var extentFor: List<Pair<Float, Float>>? = null
     private var gridVersion = -1
 
-    fun observe(frame: ArDebugFrame, coverage: ScanCoverageState, pose: DebugPose?) {
-        val next = source.update(frame)
+    /** The trace time of the last frame observed, seconds; `NaN` before the first. */
+    private var observedAt = Float.NaN
+
+    /**
+     * [frame], the trace's latest, after [coverage] observed it. The recorder writes nothing while
+     * ARCore has lost tracking: [record], the trace being recorded ([ScanCoverageState.recorded]),
+     * has no camera pose for that long, and the first frame after the gap is not tracked
+     * ([lostBetween]); the walls skip it. How long since the last frame observed says nothing.
+     */
+    fun observe(frame: ArDebugFrame, coverage: ScanCoverageState, pose: DebugPose?, record: ArDebugTrace? = coverage.recorded) {
+        val tracking = record?.lostBetween(observedAt, frame.time) != true
+        observedAt = frame.time
+        val next = source.update(frame, tracking)
         val wallsChanged = next !== snapshot
         snapshot = next
         if (wallsChanged || coverage.extent !== extentFor || coverage.grid.version != gridVersion) {
@@ -92,6 +105,7 @@ internal class ScanWallsState(private val source: LiveWallSource = PlaneWallSour
         cueEdge = null
         extentFor = null
         gridVersion = -1
+        observedAt = Float.NaN
         wallCount = 0
         completion = 0f
         done = false
