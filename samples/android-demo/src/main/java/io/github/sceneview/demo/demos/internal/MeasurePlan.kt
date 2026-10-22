@@ -144,14 +144,24 @@ sealed interface MeasurePlanTap {
 
 /**
  * What a tap on Plan does with the board's [figures], each along its outline in [outlines]: opens
- * the plan ([measureRoomSurvey]) of the last room traced and raised ([measurePlanRoom]). `null`
- * with no such room: Plan is greyed out then, and the screen says what to do next. When that room
- * has no plan to draw (corners in a line, no floor between them), the tap is refused with
- * [MeasureRefusal.NoPlan] and says so, rather than open an older room or do nothing.
+ * the plan ([measureRoomSurvey]) of the last room traced and raised ([measurePlanRoom]). With no
+ * such room Plan is greyed out, and a tap on it says the step still missing (#4765): trace a room
+ * ([MeasureRefusal.PlanNeedsRoom]), close it ([MeasureRefusal.PlanNeedsClose]) or set its height
+ * ([MeasureRefusal.PlanNeedsHeight]), read on the last room traced. When that room has no plan to
+ * draw (corners in a line, no floor between them), the tap is refused with [MeasureRefusal.NoPlan]
+ * and says so, rather than open an older room or do nothing.
  */
-fun measurePlanTap(figures: List<MeasureFigure<*>>, outlines: List<List<Position>>): MeasurePlanTap? {
+fun measurePlanTap(figures: List<MeasureFigure<*>>, outlines: List<List<Position>>): MeasurePlanTap {
     val room = measurePlanRoom(figures)
-    if (room < 0) return null
+    if (room < 0) {
+        val traced = figures.lastOrNull { it.mode == MeasureMode.Room && it.points.isNotEmpty() }
+        val missing = when {
+            traced == null -> MeasureRefusal.PlanNeedsRoom
+            !traced.closed -> MeasureRefusal.PlanNeedsClose
+            else -> MeasureRefusal.PlanNeedsHeight
+        }
+        return MeasurePlanTap.Refused(missing)
+    }
     val survey = measureRoomSurvey(outlines.getOrNull(room).orEmpty(), figures[room].height)
         ?: return MeasurePlanTap.Refused(MeasureRefusal.NoPlan)
     return MeasurePlanTap.Open(room, survey)

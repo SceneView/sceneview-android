@@ -196,6 +196,11 @@ data class DockItem(
     val enabled: Boolean = true,
     val selected: Boolean = false,
     val caption: String = label,
+    /**
+     * Greyed out like a disabled item, but still takes the tap: for an action that cannot run yet
+     * and says why when tapped (Measure's Plan, #4765), where a disabled item would ignore the tap.
+     */
+    val dimmed: Boolean = false,
 )
 
 /**
@@ -1823,10 +1828,10 @@ private fun DockIconButton(item: DockItem, modifier: Modifier = Modifier) {
     // — no pale accent reaches 4.5:1 there, and darkening the scrim until one did would
     // blacken the whole bottom band. On the pill the caption reads at 7.3:1 whatever the
     // scene is, and the pill itself still separates from the glass at > 3:1.
-    val selectedFill = item.enabled && item.selected
+    val selectedFill = item.enabled && !item.dimmed && item.selected
     val chrome = LocalStageChrome.current
     val contentColor = when {
-        !item.enabled -> chrome.onGlass.copy(alpha = DOCK_DISABLED_ALPHA)
+        !item.enabled || item.dimmed -> chrome.onGlass.copy(alpha = DOCK_DISABLED_ALPHA)
         selectedFill -> chrome.onAccent
         else -> chrome.onGlass
     }

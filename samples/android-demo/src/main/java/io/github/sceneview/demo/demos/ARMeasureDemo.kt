@@ -579,10 +579,10 @@ fun MeasureScreen(onBack: () -> Unit) {
                                     numbers = figureNumbers[tap.room],
                                 )
                                 is MeasurePlanTap.Refused -> refuse(tap.reason)
-                                null -> Unit
                             }
                         },
-                        enabled = planRoom >= 0,
+                        // Greyed until a room is traced, closed and raised; a tap still says what is missing.
+                        dimmed = planRoom < 0,
                     ).takeIf { board.mode == MeasureMode.Room },
                     DockItem(
                         icon = Icons.Rounded.IosShare,
