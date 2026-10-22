@@ -73,6 +73,7 @@ import io.github.sceneview.demo.demos.internal.semantic.SceneRecognizer
 import io.github.sceneview.demo.demos.internal.semantic.allowSceneDetectorDownload
 import io.github.sceneview.demo.demos.internal.semantic.loadSceneDetector
 import io.github.sceneview.demo.demos.internal.semantic.nameRes
+import io.github.sceneview.demo.demos.internal.semantic.recognitionLogLine
 import io.github.sceneview.demo.demos.internal.semantic.recognizeInPasses
 import io.github.sceneview.demo.demos.internal.semantic.sceneImageOf
 import io.github.sceneview.demo.hdpack.hdPackSize
@@ -307,11 +308,9 @@ internal class ScanObjectPick(
                     }
                 },
                 onPass = { recognition ->
-                    Log.d(
-                        TAG,
-                        "recognised ${recognition.items.size} parts on ${recognition.frames.size} keyframes " +
-                            "with ${recognition.detector} in ${recognition.totalMillis} ms",
-                    )
+                    // `adb logcat -s ScanObject`. The first pass reads no photo by design — the
+                    // openings come from the dense cloud —, so it says what the walls gave instead.
+                    Log.d(TAG, recognitionLogLine(recognition))
                     last = recognition
                     recognized = recognition.items
                 },

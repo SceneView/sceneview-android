@@ -1,0 +1,2 @@
+<!-- category: Fixed -->
+- **Android 3D Scan: doors and windows are found in a scan that saw only part of the room ([#4796](https://github.com/sceneview/sceneview/pull/4796)).** Replaying a saved scan outlined no door or window: each wall was cut short where the walls the phone never saw were guessed to be, so an opening ran off the wall's end and was dropped. Each wall now spans what was scanned of it, and the room seen through a door is no longer taken for its wall. When a scan has no opening, the log says why (no wall, walls seen too low, gaps at the edge of the scan).
