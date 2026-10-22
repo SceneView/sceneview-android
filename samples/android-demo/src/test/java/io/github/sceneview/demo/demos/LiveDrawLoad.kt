@@ -53,8 +53,8 @@ internal class LiveDrawLoad(
         const val VERTICES_PER_SURFEL = 4
         const val TRIANGLES_PER_SURFEL = 2
 
-        private const val HALF_LONG = VIEW_LONG_PX / 2f
-        private const val HALF_SHORT = VIEW_SHORT_PX / 2f
+        const val HALF_LONG = VIEW_LONG_PX / 2f
+        const val HALF_SHORT = VIEW_SHORT_PX / 2f
 
         /** The focal length in pixels: half the long side over [TAN_HALF_LONG]. */
         const val FOCAL_PX = HALF_LONG / TAN_HALF_LONG
@@ -63,7 +63,6 @@ internal class LiveDrawLoad(
         const val CLIP_Y_SCALE = 1f / TAN_HALF_LONG
 
         /** [cloud] of [voxelM] surfels as the live view draws it from [eye], surfels capped at [maxSide]. */
-        @Suppress("LongMethod")
         fun of(
             cloud: DenseCloud,
             voxelM: Float,
@@ -73,10 +72,43 @@ internal class LiveDrawLoad(
             val cols = ceil(VIEW_LONG_PX / CELL_PX.toFloat()).toInt()
             val rows = ceil(VIEW_SHORT_PX / CELL_PX.toFloat()).toInt()
             val covered = BooleanArray(cols * rows)
-            val normals = cloud.normals
             var inView = 0
             var tiny = 0
             var fragments = 0.0
+            forEachSplat(cloud, voxelM, eye, maxSide) { _, u, v, _, area ->
+                inView++
+                fragments += area
+                if (area < TINY_AREA_PX) tiny++
+                // The square of the same area, axis-aligned: the cells whose centre it covers.
+                val reach = sqrt(area) / 2f
+                val c0 = ceil((u - reach + HALF_LONG - CELL_PX / 2f) / CELL_PX).toInt().coerceAtLeast(0)
+                val c1 = floor((u + reach + HALF_LONG - CELL_PX / 2f) / CELL_PX).toInt().coerceAtMost(cols - 1)
+                val r0 = ceil((v - reach + HALF_SHORT - CELL_PX / 2f) / CELL_PX).toInt().coerceAtLeast(0)
+                val r1 = floor((v + reach + HALF_SHORT - CELL_PX / 2f) / CELL_PX).toInt().coerceAtMost(rows - 1)
+                for (r in r0..r1) for (c in c0..c1) covered[r * cols + c] = true
+            }
+            return LiveDrawLoad(
+                surfels = cloud.count,
+                inView = inView,
+                overdraw = (fragments / (VIEW_LONG_PX.toDouble() * VIEW_SHORT_PX)).toFloat(),
+                coverage = covered.count { it } / covered.size.toFloat(),
+                tiny = if (inView == 0) 0f else tiny / inView.toFloat(),
+            )
+        }
+
+        /**
+         * Each surfel of [cloud] the live view puts on screen from [eye]: its index, its centre in
+         * pixels from the screen's centre (`u` along the long side, `v` up), its depth, and the
+         * pixels its foreshortened square covers before the depth test.
+         */
+        fun forEachSplat(
+            cloud: DenseCloud,
+            voxelM: Float,
+            eye: DebugPose,
+            maxSide: Float = DenseSurfels.LIVE_MAX_SCREEN_SIDE,
+            action: (index: Int, u: Float, v: Float, depth: Float, area: Float) -> Unit,
+        ) {
+            val normals = cloud.normals
             for (i in 0 until cloud.count) {
                 val wx = cloud.positions[i * 3] - eye.x
                 val wy = cloud.positions[i * 3 + 1] - eye.y
@@ -98,30 +130,13 @@ internal class LiveDrawLoad(
                 val u = cx * FOCAL_PX / depth
                 val v = cy * FOCAL_PX / depth
                 if (abs(u) > HALF_LONG + side / 2f || abs(v) > HALF_SHORT + side / 2f) continue
-                inView++
                 val nx = normals?.get(i * 3) ?: 0f
                 val ny = normals?.get(i * 3 + 1) ?: 1f
                 val nz = normals?.get(i * 3 + 2) ?: 0f
                 val distance = sqrt(wx * wx + wy * wy + wz * wz).coerceAtLeast(1e-6f)
                 val facing = abs(nx * wx + ny * wy + nz * wz) / distance
-                val area = side * side * facing
-                fragments += area
-                if (area < TINY_AREA_PX) tiny++
-                // The square of the same area, axis-aligned: the cells whose centre it covers.
-                val reach = sqrt(area) / 2f
-                val c0 = ceil((u - reach + HALF_LONG - CELL_PX / 2f) / CELL_PX).toInt().coerceAtLeast(0)
-                val c1 = floor((u + reach + HALF_LONG - CELL_PX / 2f) / CELL_PX).toInt().coerceAtMost(cols - 1)
-                val r0 = ceil((v - reach + HALF_SHORT - CELL_PX / 2f) / CELL_PX).toInt().coerceAtLeast(0)
-                val r1 = floor((v + reach + HALF_SHORT - CELL_PX / 2f) / CELL_PX).toInt().coerceAtMost(rows - 1)
-                for (r in r0..r1) for (c in c0..c1) covered[r * cols + c] = true
+                action(i, u, v, depth, side * side * facing)
             }
-            return LiveDrawLoad(
-                surfels = cloud.count,
-                inView = inView,
-                overdraw = (fragments / (VIEW_LONG_PX.toDouble() * VIEW_SHORT_PX)).toFloat(),
-                coverage = covered.count { it } / covered.size.toFloat(),
-                tiny = if (inView == 0) 0f else tiny / inView.toFloat(),
-            )
         }
 
         private fun inverseRotate(pose: DebugPose, x: Float, y: Float, z: Float): Triple<Float, Float, Float> {
