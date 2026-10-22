@@ -108,14 +108,15 @@ object WallRules {
      * Whether a vertical surface seen from [bottom] to [top] (world heights) stands as a wall over a
      * floor at [floorY]: it rises past standing height, and its foot is on the floor — or on the
      * furniture before it, up to [underY] ([furnitureTop]), which hides the rest. A first verdict
-     * takes the thresholds as they are: a cabinet whose top ARCore fits a centimetre short of
-     * standing height is not a wall. One that [held], that stood the last time, keeps standing
-     * until it is [TOLERANCE_M] and [HOLD_M] past either threshold.
+     * takes standing height as it is: a cabinet whose top ARCore fits a centimetre short of it is
+     * not a wall. The foot keeps [TOLERANCE_M]: a cabinet standing on the floor passes it anyway.
+     * One that [held], that stood the last time, keeps standing until it is [TOLERANCE_M] and
+     * [HOLD_M] past either threshold.
      */
     fun standsAsWall(bottom: Float, top: Float, floorY: Float, held: Boolean = false, underY: Float = floorY): Boolean {
-        val slack = if (held) TOLERANCE_M + HOLD_M else 0f
-        return bottom - max(floorY, underY) <= MAX_FOOT_M + slack &&
-            top - floorY >= MIN_TOP_M - slack
+        val hold = if (held) HOLD_M else 0f
+        return bottom - max(floorY, underY) <= MAX_FOOT_M + TOLERANCE_M + hold &&
+            top - floorY >= MIN_TOP_M - (if (held) TOLERANCE_M + hold else 0f)
     }
 
     /**
