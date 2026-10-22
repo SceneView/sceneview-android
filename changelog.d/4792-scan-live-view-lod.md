@@ -1,2 +1,0 @@
-<!-- category: Changed -->
-- **Android 3D Scan: a lighter, fuller live view ([#4792](https://github.com/sceneview/sceneview/pull/4792)).** While scanning, the live 3D view draws the points within a metre of the phone as the scan holds them and merges farther ones into larger points, so walls and floors show without holes instead of a thinned copy of the whole room. It draws a third as many points as before (50 000 at most). The saved scan and the floor area are unchanged; the save flight draws the merged points it last showed.

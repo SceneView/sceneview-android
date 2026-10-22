@@ -1,2 +1,0 @@
-<!-- category: Docs -->
-- **Store listings of the demo apps.** The Play listing now says what 3D Scan gives at the end (an indicative floor plan with dimensions and area, shared as PDF, on phones with ARCore depth) and that Measure measures walls as well as distances. Both the Play and App Store listings now state that SceneView has more than 1,300 stars on GitHub and that over 500 public repositories declare it as a dependency.
