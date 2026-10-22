@@ -19,7 +19,8 @@ import kotlin.math.sqrt
  * dictionaries included, which the unit tests check by reading both back. Its y runs up, as CAD has it. One drawing unit is a millimetre, metric
  * (`$INSUNITS` 4), or an inch, imperial (`$INSUNITS` 1), when the figures are in feet and inches:
  * a CAD tool set to either system then takes the drawing in at its true size, and reads the
- * distances it measures in metres, or in feet and inches. Five layers:
+ * distances it measures in metres, or in feet and inches (`$LUNITS` and, for its dimensions,
+ * `$DIMLUNIT` 4, architectural). Five layers:
  * - [WALLS]: the room's outline, one closed polyline;
  * - [OPENINGS]: each door with its leaf and swing, each window with its frame, and its size;
  * - [DIMENSIONS]: each wall's length as plain lines and text. No DIMENSION entity: a CAD tool
@@ -106,7 +107,10 @@ object RoomPlanDxf {
      * The drawing's unit: a millimetre in metric, an inch in imperial, [perMillimetre] of it to a
      * millimetre. [insUnits] and [measurement] name it to a CAD tool; [linearUnits] and
      * [precision] say how the tool shows the distances it measures: in decimals to the
-     * millimetre, or in feet and inches to the sixteenth of an inch.
+     * millimetre, or in feet and inches to the sixteenth of an inch. [dimensionUnits], when set,
+     * says it of the tool's dimensions and measuring tools too (`$DIMLUNIT`): architectural for the
+     * inch, which they would otherwise give in decimal inches. The millimetre leaves it out, and
+     * a CAD tool then takes it as 2, decimal.
      */
     private enum class DrawingUnit(
         val perMillimetre: Double,
@@ -114,9 +118,10 @@ object RoomPlanDxf {
         val measurement: Int,
         val linearUnits: Int,
         val precision: Int,
+        val dimensionUnits: Int? = null,
     ) {
         Millimetre(perMillimetre = 1.0, insUnits = 4, measurement = 1, linearUnits = 2, precision = 0),
-        Inch(perMillimetre = 1 / MM_PER_INCH, insUnits = 1, measurement = 0, linearUnits = 4, precision = 4),
+        Inch(perMillimetre = 1 / MM_PER_INCH, insUnits = 1, measurement = 0, linearUnits = 4, precision = 4, dimensionUnits = 4),
         ;
 
         companion object {
@@ -449,6 +454,8 @@ object RoomPlanDxf {
             variable("\$INSBASE") { point(10, V(0.0, 0.0)) }
             variable("\$EXTMIN") { point(10, drawn(extentMin())) }
             variable("\$EXTMAX") { point(10, drawn(extentMax())) }
+            // Before $LUNITS, where AutoCAD and ezdxf write it.
+            unit.dimensionUnits?.let { format -> variable("\$DIMLUNIT") { pair(70, format) } }
             variable("\$LUNITS") { pair(70, unit.linearUnits) }
             variable("\$LUPREC") { pair(70, unit.precision) }
             variable("\$INSUNITS") { pair(70, unit.insUnits) }
