@@ -9,9 +9,9 @@ import io.github.sceneview.demo.demos.internal.CameraStreamPick
 import java.util.EnumSet
 
 /**
- * The 3D Scan's camera config: the back stream with the largest CPU image that holds 30 fps
- * ([CameraStreamPick]), so the photos and the depth are read from the sharpest image the scan
- * keeps up with. The session's default config stays when ARCore offers none, or throws. [line]
+ * The 3D Scan's camera config: of the back streams that reach 30 fps, one that meets 1280 × 720,
+ * then one fixed at 30 fps, then the largest CPU image ([CameraStreamPick]), so the photos and the
+ * depth are read from the sharpest image the scan keeps up with. The session's default config stays when ARCore offers none, or throws. [line]
  * keeps the choice for the bake log, next to the image size the scan actually received: during a
  * playback, the recording's own stream wins.
  */

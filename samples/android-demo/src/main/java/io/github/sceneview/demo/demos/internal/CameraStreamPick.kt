@@ -20,10 +20,12 @@ data class CameraStream(
 }
 
 /**
- * The 3D Scan's camera stream. Of what ARCore offers, the back stream whose CPU image is the
- * largest while the frame rate holds 30 fps: a stream fixed at 30 fps first, then one that may
- * drop below it, never one that only runs faster. The depth sensor, then the larger GPU texture,
- * break a tie. No stream to pick keeps the session's default config.
+ * The 3D Scan's camera stream. Of the back streams ARCore offers that reach 30 fps (never one
+ * that only runs faster): one whose CPU image meets [TARGET_LONG] × [TARGET_SHORT] first, then
+ * one fixed at 30 fps rather than one that may drop below it, then the largest CPU image. The
+ * depth sensor, then the larger GPU texture, break a tie. The target comes before the steady
+ * rate so a small stream fixed at 30 fps never wins over a large one the session's default
+ * config would have taken. No stream to pick keeps the session's default config.
  */
 object CameraStreamPick {
     const val FPS = 30
@@ -33,6 +35,7 @@ object CameraStreamPick {
     const val TARGET_SHORT = 720
 
     private val ORDER = compareBy<CameraStream>(
+        { meetsTarget(it) },
         { it.minFps >= FPS },
         { it.cpuPixels },
         { it.depthSensor },
