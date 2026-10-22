@@ -269,6 +269,7 @@
     <string name="demo_loading_generic">Loading…</string>
     <string name="demo_settings_title">Settings</string>
     <string name="demo_settings_fab_cd">Demo settings</string>
+    <string name="demo_more_options_cd">More options</string>
     <!-- #4558: the identity row's last button gives the 3D view the whole screen. -->
     <string name="demo_full_screen_cd">Full screen</string>
     <string name="demo_full_screen_exit_cd">Exit full screen</string>

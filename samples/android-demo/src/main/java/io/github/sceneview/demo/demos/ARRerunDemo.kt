@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.net.Uri
 import android.os.Build
 import android.os.SystemClock
@@ -1781,10 +1782,25 @@ private fun RerunLiveScreen(
     // dialog and a lost track all stop it, and it runs on from there.
     val clockRuns = phase.clockRuns(trackingLost)
     LaunchedEffect(scan, clockRuns) { scan?.followClock(clockRuns) }
+    // A capture holds the phone upright (#4807), as Polycam, Scaniverse and the RoomPlan apps do:
+    // a room is swept with the phone vertical, and turned sideways mid-sweep the whole screen —
+    // status card, map, record control — fell into a strip a third of its height. The activity
+    // handles the rotation itself (configChanges), so nothing restarts; the lock goes with the capture.
+    val captureActivity = LocalActivity.current
+    DisposableEffect(recording, captureActivity) {
+        val activity = captureActivity ?: return@DisposableEffect onDispose {}
+        if (!recording) return@DisposableEffect onDispose {}
+        val before = activity.requestedOrientation
+        activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        onDispose { activity.requestedOrientation = before }
+    }
 
     DemoScaffold(
         title = stringResource(R.string.demo_ar_rerun_title),
         onBack = onBackFromLive,
+        // A capture owns the screen (#4807): no dock, and Send feedback / QA mode in the ⋮ menu
+        // at the top, where the Settings button took the bottom of the screen for two rows.
+        actionsMenu = recording,
         // The sheet holds what the screen must not: the connection steps a developer types
         // once. The screen itself only says what the demo does and whether it is live. A
         // capture in progress owns the screen: no Settings over it.
@@ -2616,4 +2632,5 @@ internal object QaPausedTurn {
 }
 
 /** How long the photo limit's notice holds the coaching line before it becomes the HUD's line. */
-private const val PHOTO_NOTICE_MS = 4_000L
+// Brief (#4807): news, not a warning, so it leaves the line to the coaching quickly.
+private const val PHOTO_NOTICE_MS = 2_500L
