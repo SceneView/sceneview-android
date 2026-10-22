@@ -96,6 +96,9 @@ class DenseFusion(
     private var chunkSeen = IntArray(INITIAL_CHUNKS)
     private var chunkCount = IntArray(INITIAL_CHUNKS)
 
+    /** [liveCloud]'s working arrays, kept from one live snapshot to the next. */
+    private val scratch = LiveScratch()
+
     /** The current [add] call, numbered from 1: a voxel's views grow once per call. */
     private var view = 0
 
@@ -194,6 +197,35 @@ class DenseFusion(
     }
 
     /**
+     * The positions of [cloud] with the same [minViews] and [maxPoints], and nothing else: what a
+     * live snapshot keeps of the map for its floor cells and its save flight (#4792), without the
+     * colours and normals it would drop a moment later.
+     */
+    fun cloudPositions(minViews: Int = 1, maxPoints: Int = Int.MAX_VALUE): FloatArray {
+        val cap = minOf(count, maxPoints.coerceAtLeast(0))
+        val stride = if (cap == 0) 1 else (count + cap - 1) / cap
+        var n = 0
+        var i = 0
+        while (i < count && n < cap) {
+            if (views[i] >= minViews) n++
+            i += stride
+        }
+        val positions = FloatArray(n * 3)
+        var o = 0
+        i = 0
+        while (o < n) {
+            if (views[i] >= minViews) {
+                positions[o * 3] = px[i]
+                positions[o * 3 + 1] = py[i]
+                positions[o * 3 + 2] = pz[i]
+                o++
+            }
+            i += stride
+        }
+        return positions
+    }
+
+    /**
      * The map as a live view draws it from ([eyeX], [eyeY], [eyeZ]) (#4743): the voxels at least
      * [minViews] depth frames saw, those nearer than [LIVE_FIRST_LEVEL_M] as they are and farther
      * ones merged on the map's own grid, one level coarser each time the distance doubles, up to
@@ -220,9 +252,10 @@ class DenseFusion(
         }
         val near2 = first * first
         // First pass: the merged surfel each voxel goes to, numbered as first met.
-        val outOf = IntArray(n)
-        val outLevel = ByteArray(n)
-        val near = BooleanArray(n)
+        scratch.forVoxels(n)
+        val outOf = scratch.outOf
+        val outLevel = scratch.outLevel
+        val near = scratch.near
         val index = LongIntMap(Integer.highestOneBit(minOf(n, maxPoints).coerceAtLeast(1)) shl 2)
         var out = 0
         var nearOut = 0
@@ -246,10 +279,8 @@ class DenseFusion(
                 o = out++
                 index.put(key, o)
                 outLevel[o] = target.toByte()
-                if (live == 0) {
-                    near[o] = true
-                    nearOut++
-                }
+                near[o] = live == 0
+                if (live == 0) nearOut++
             }
             lastKey = key
             lastOut = o
@@ -257,18 +288,13 @@ class DenseFusion(
         }
         if (out == 0) return DenseCloud.Empty
         // Second pass: each part weighs the surface it stands for, four times as much per level.
-        val sx = FloatArray(out)
-        val sy = FloatArray(out)
-        val sz = FloatArray(out)
-        val snx = FloatArray(out)
-        val sny = FloatArray(out)
-        val snz = FloatArray(out)
-        val sr = FloatArray(out)
-        val sg = FloatArray(out)
-        val sb = FloatArray(out)
-        val sw = FloatArray(out)
-        val scw = FloatArray(out)
-        val conf = ByteArray(out)
+        scratch.forSurfels(out)
+        val (sx, sy, sz) = scratch.position
+        val (snx, sny, snz) = scratch.normal
+        val (sr, sg, sb) = scratch.color
+        val sw = scratch.weight
+        val scw = scratch.colorWeight
+        val conf = scratch.conf
         for (i in 0 until n) {
             val o = outOf[i]
             if (o < 0) continue
@@ -291,12 +317,17 @@ class DenseFusion(
             }
             if ((confidence[i].toInt() and 0xFF) > (conf[o].toInt() and 0xFF)) conf[o] = confidence[i]
         }
-        // Past the budget still: every n-th merged surfel, the near ones whole while they fit.
+        // Past the budget still: every n-th merged surfel, the near ones whole while they fit. The
+        // n-th counts in the order the map met the cells, so a cell confirmed early in the map, or
+        // a level boundary the eye moved across, shifts every count after it: from one snapshot to
+        // the next, a far wall may keep other surfels and shimmer. This happens past the budget
+        // only, in a scan of more than a room. A pick by each cell's own key would hold them still,
+        // at the cost of the even spread a stride gives.
         val keepNear = out > maxPoints && nearOut < maxPoints
         val thinned = if (keepNear) out - nearOut else out
         val room = if (keepNear) maxPoints - nearOut else maxPoints
         val stride = if (out <= maxPoints) 1 else (thinned - 1) / room + 1
-        val keep = BooleanArray(out)
+        val keep = scratch.keep
         var kept = 0
         var seen = 0
         for (o in 0 until out) {
@@ -780,5 +811,63 @@ class DenseFusion(
         }
 
         private fun channel(v: Float) = (v + 0.5f).toInt().coerceIn(0, 255)
+    }
+}
+
+/**
+ * [DenseFusion.liveCloud]'s working arrays (#4792). A live view takes a snapshot every second:
+ * these are kept from one to the next rather than allocated each time, and grown a quarter beyond
+ * what the map needs, so a growing map does not grow them every second. One fusion at a time.
+ */
+private class LiveScratch {
+    /** Per voxel of the map: the merged surfel it goes to. */
+    var outOf = IntArray(0)
+
+    /** Per merged surfel, at most one per voxel: its level, and whether it stands near the eye. */
+    var outLevel = ByteArray(0)
+    var near = BooleanArray(0)
+
+    /** Per merged surfel: its parts' weighted sums, its best confidence, whether it is drawn. */
+    var position = Array(AXES) { FloatArray(0) }
+    var normal = Array(AXES) { FloatArray(0) }
+    var color = Array(AXES) { FloatArray(0) }
+    var weight = FloatArray(0)
+    var colorWeight = FloatArray(0)
+    var conf = ByteArray(0)
+    var keep = BooleanArray(0)
+
+    /** Room for [voxels] voxels, and as many merged surfels. */
+    fun forVoxels(voxels: Int) {
+        if (outOf.size >= voxels) return
+        val size = grown(voxels)
+        outOf = IntArray(size)
+        outLevel = ByteArray(size)
+        near = BooleanArray(size)
+    }
+
+    /** Room for [surfels] merged surfels, their sums at zero. */
+    fun forSurfels(surfels: Int) {
+        if (weight.size < surfels) {
+            val size = grown(surfels)
+            position = Array(AXES) { FloatArray(size) }
+            normal = Array(AXES) { FloatArray(size) }
+            color = Array(AXES) { FloatArray(size) }
+            weight = FloatArray(size)
+            colorWeight = FloatArray(size)
+            conf = ByteArray(size)
+            keep = BooleanArray(size)
+            return
+        }
+        for (sums in arrayOf(position, normal, color)) for (s in sums) s.fill(0f, 0, surfels)
+        weight.fill(0f, 0, surfels)
+        colorWeight.fill(0f, 0, surfels)
+        conf.fill(0, 0, surfels)
+    }
+
+    private companion object {
+        const val AXES = 3
+        const val HEADROOM = 4
+
+        fun grown(size: Int): Int = size + size / HEADROOM
     }
 }
