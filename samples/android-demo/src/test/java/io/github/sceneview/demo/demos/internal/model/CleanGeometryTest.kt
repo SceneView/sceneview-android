@@ -142,6 +142,53 @@ class CleanGeometryTest {
         for (v in 0 until filled.vertexCount) assertEquals(1f, normals[v * 3 + 1], 1e-4f)
     }
 
+    @Test
+    fun `a floor scanned twice keeps the hidden sheet where the front sheet has a hole`() {
+        // The front sheet has a 16 cm hole; the sheet 4 cm under it is whole. Under the hole
+        // the hidden sheet is the only floor there is.
+        val (kept, _) = MeshCleanup.removeDoubledSurfaces(twoFloorSheets(HOLE_HALF_M))
+        val island = areaWhere(kept) { _, y, _ -> y < -0.02f }
+        val hole = (2 * HOLE_HALF_M) * (2 * HOLE_HALF_M)
+        println("hidden sheet kept: %.4f m², hole %.4f m²".format(island, hole))
+        assertTrue("the hidden sheet under the hole goes: $island m²", island >= hole * 0.8f)
+        assertTrue("the hidden sheet stays away from the hole: $island m²", island <= hole * 1.3f)
+    }
+
+    /** A 2 m floor facing up at y = 0 with a square hole of half-side [holeHalfM] at its centre, over a whole one at y = -4 cm. */
+    private fun twoFloorSheets(holeHalfM: Float): WorkMesh {
+        val step = 0.02f
+        val cells = 100
+        val row = cells + 1
+        val positions = FloatArray(row * row * 3 * 2)
+        for (sheet in 0..1) for (j in 0..cells) for (i in 0..cells) {
+            val v = sheet * row * row + j * row + i
+            positions[v * 3] = i * step
+            positions[v * 3 + 1] = -0.04f * sheet
+            positions[v * 3 + 2] = j * step
+        }
+        val indices = ArrayList<Int>()
+        for (sheet in 0..1) for (j in 0 until cells) for (i in 0 until cells) {
+            val x = (i + 0.5f) * step
+            val z = (j + 0.5f) * step
+            if (sheet == 0 && abs(x - 1f) < holeHalfM && abs(z - 1f) < holeHalfM) continue
+            val a = sheet * row * row + j * row + i
+            val b = a + 1
+            val c = a + row
+            val d = c + 1
+            indices += listOf(a, c, b, b, c, d) // facing +Y
+        }
+        return WorkMesh(positions, IntArray(positions.size / 3) { CleanScenes.GREY }, indices.toIntArray())
+    }
+
+    private fun areaWhere(mesh: WorkMesh, test: (Float, Float, Float) -> Boolean): Float {
+        val faces = FaceGeometry(mesh.positions, mesh.indices)
+        var area = 0f
+        for (t in 0 until mesh.triangleCount) {
+            if (test(faces.centroids[t * 3], faces.centroids[t * 3 + 1], faces.centroids[t * 3 + 2])) area += faces.areas[t]
+        }
+        return area
+    }
+
     private fun trianglesWhere(mesh: WorkMesh, test: (Float, Float, Float) -> Boolean): Int {
         val faces = FaceGeometry(mesh.positions, mesh.indices)
         return (0 until mesh.triangleCount).count {
@@ -160,4 +207,9 @@ class CleanGeometryTest {
     private fun mm(m: Float) = "%.2f".format(m * 1000f)
 
     private fun pct(share: Float) = "%.2f%%".format(share * 100f)
+
+    private companion object {
+        /** Half the side of the front sheet's hole: 16 cm across, a hole the fill closes. */
+        const val HOLE_HALF_M = 0.08f
+    }
 }

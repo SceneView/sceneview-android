@@ -30,9 +30,13 @@ internal object BigScanScene {
     /** The two rooms' floor, the scattered pieces left out. */
     val ROOMS = Box(RealScanRoom.ROOM.x0, RealScanRoom.ROOM.y0, RealScanRoom.ROOM.z0, RealScanRoom.ROOM.x1 + PITCH_M, RealScanRoom.ROOM.y1, RealScanRoom.ROOM.z1)
 
-    /** The raw surface: both rooms as the marching cubes mesh them from [depth], then the scattered pieces. */
-    fun raw(depth: RealScanRoom.Depth = RealScanRoom.Depth.PHONE): RerunMesh {
-        val furnished = RealScanRoom.raw(furnished = true, depth = depth)
+    /**
+     * The raw surface: both rooms as the marching cubes mesh them from [depth], then the scattered
+     * pieces. With [driftedFloor], the furnished room's floor is scanned twice, the second pass
+     * drifted below the first ([RealScanRoom.DRIFTED_FLOOR]).
+     */
+    fun raw(depth: RealScanRoom.Depth = RealScanRoom.Depth.PHONE, driftedFloor: Boolean = false): RerunMesh {
+        val furnished = RealScanRoom.raw(furnished = true, depth = depth, driftedFloor = driftedFloor)
         val bare = RealScanRoom.raw(furnished = false, depth = depth)
         val pieces = (0 until PIECES).map { i ->
             val (x, y, z) = SCATTER[i]

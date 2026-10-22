@@ -1,6 +1,7 @@
 package io.github.sceneview.demo.demos.internal.model
 
 import kotlin.math.abs
+import kotlin.math.floor
 import kotlin.math.roundToLong
 import kotlin.math.sqrt
 
@@ -12,9 +13,21 @@ import kotlin.math.sqrt
  * within [SEARCH_M] of the lowest ([height]). Its [area] is theirs projected onto the floor, so a
  * floor rippled by the scan's noise and the same floor made flat weigh the same. Its holes are
  * the loops of its open edges, vertices welded within [WELD_M], less one — the rim around the
- * rest: [innerLoops].
+ * rest: [innerLoops]. What it leaves open of another floor: [openedOn].
  */
-internal class FloorArea private constructor(val height: Float, val area: Float, val innerLoops: Int) {
+internal class FloorArea private constructor(val height: Float, val area: Float, val innerLoops: Int, private val cells: Set<Long>) {
+    /**
+     * The share of [raw]'s floor this one leaves open: the [COVER_CELL_M] cells [raw]'s floor
+     * faces cover and this one's do not — where the eye sees through a floor the scan had.
+     */
+    fun openedOn(raw: FloorArea): Float = if (raw.cells.isEmpty()) 0f else opened(raw).size.toFloat() / raw.cells.size
+
+    /** The cells of [raw]'s floor this one leaves open, each `x index shl 32 or z index`, [COVER_CELL_M] a side. */
+    fun opened(raw: FloorArea): Set<Long> = raw.cells.filterTo(HashSet()) { it !in cells }
+
+    /** How many [COVER_CELL_M] cells this floor covers. */
+    val cellCount: Int get() = cells.size
+
     companion object {
         /** The floor of the triangle soup [positions] / [indices], at [height] when known. */
         fun of(positions: FloatArray, indices: IntArray, height: Float? = null): FloorArea {
@@ -41,11 +54,68 @@ internal class FloorArea private constructor(val height: Float, val area: Float,
                 up[t] = ny / length
                 centreY[t] = (positions[a + 1] + positions[b + 1] + positions[c + 1]) / 3f
             }
-            val floorY = height ?: height(up, centreY, area) ?: return FloorArea(Float.NaN, 0f, 0)
+            val floorY = height ?: height(up, centreY, area) ?: return FloorArea(Float.NaN, 0f, 0, emptySet())
             val floor = BooleanArray(count) { up[it] >= MIN_UP && abs(centreY[it] - floorY) <= BAND_M }
             var projected = 0.0
             for (t in 0 until count) if (floor[t]) projected += area[t] * up[t]
-            return FloorArea(floorY, projected.toFloat(), innerLoops(positions, indices, floor))
+            return FloorArea(floorY, projected.toFloat(), innerLoops(positions, indices, floor), cells(positions, indices, floor))
+        }
+
+        /** [cell]'s centre along x, in metres. */
+        fun centreX(cell: Long): Float = ((cell shr Int.SIZE_BITS).toInt() + HALF) * COVER_CELL_M
+
+        /** [cell]'s centre along z, in metres. */
+        fun centreZ(cell: Long): Float = ((cell and LOW_INT).toInt() + HALF) * COVER_CELL_M
+
+        /** How many cells the largest group of [cells] touching each other (by a side or a corner) holds: the widest hole. */
+        fun largestPatch(cells: Set<Long>): Int {
+            val seen = HashSet<Long>()
+            var largest = 0
+            for (start in cells) {
+                if (!seen.add(start)) continue
+                var size = 0
+                val stack = ArrayDeque(listOf(start))
+                while (stack.isNotEmpty()) {
+                    val cell = stack.removeLast()
+                    size++
+                    val i = (cell shr Int.SIZE_BITS).toInt()
+                    val k = (cell and LOW_INT).toInt()
+                    for (di in -1..1) for (dk in -1..1) {
+                        val next = ((i + di).toLong() shl Int.SIZE_BITS) or ((k + dk).toLong() and LOW_INT)
+                        if (next in cells && seen.add(next)) stack.addLast(next)
+                    }
+                }
+                largest = maxOf(largest, size)
+            }
+            return largest
+        }
+
+        /** The [COVER_CELL_M] cells whose sample point ([SAMPLE_AT]) one of the faces [kept] covers, seen from above. */
+        private fun cells(positions: FloatArray, indices: IntArray, kept: BooleanArray): Set<Long> {
+            val cells = HashSet<Long>()
+            for (t in kept.indices) {
+                if (!kept[t]) continue
+                val ax = positions[indices[t * 3] * 3]
+                val az = positions[indices[t * 3] * 3 + 2]
+                val bx = positions[indices[t * 3 + 1] * 3]
+                val bz = positions[indices[t * 3 + 1] * 3 + 2]
+                val cx = positions[indices[t * 3 + 2] * 3]
+                val cz = positions[indices[t * 3 + 2] * 3 + 2]
+                val det = (bx - ax) * (cz - az) - (cx - ax) * (bz - az)
+                if (det == 0f) continue
+                val i0 = floor(minOf(ax, bx, cx) / COVER_CELL_M).toInt()
+                val i1 = floor(maxOf(ax, bx, cx) / COVER_CELL_M).toInt()
+                val k0 = floor(minOf(az, bz, cz) / COVER_CELL_M).toInt()
+                val k1 = floor(maxOf(az, bz, cz) / COVER_CELL_M).toInt()
+                for (i in i0..i1) for (k in k0..k1) {
+                    val px = (i + SAMPLE_AT) * COVER_CELL_M
+                    val pz = (k + SAMPLE_AT) * COVER_CELL_M
+                    val u = ((px - ax) * (cz - az) - (cx - ax) * (pz - az)) / det
+                    val v = ((bx - ax) * (pz - az) - (px - ax) * (bz - az)) / det
+                    if (u >= 0f && v >= 0f && u + v <= 1f) cells += (i.toLong() shl Int.SIZE_BITS) or (k.toLong() and LOW_INT)
+                }
+            }
+            return cells
         }
 
         /**
@@ -125,6 +195,17 @@ internal class FloorArea private constructor(val height: Float, val area: Float,
         const val SEARCH_M = 0.5f
         const val MIN_LOWEST_SHARE = 0.01f
         const val WELD_M = 0.001f
+
+        /** Finer than a lace hole of the scan's (about 8 cm), coarser than a face of its floor. */
+        const val COVER_CELL_M = 0.04f
+
+        /**
+         * Where in its cell a cell is sampled, off the voxel grids (2 and 2.5 cm): the marching
+         * cubes put a floor's vertices on that grid, so a sample there lies on the very edge of a
+         * hole's rim, and a rim moved a tenth of a millimetre would open it.
+         */
+        const val SAMPLE_AT = 0.33f
         private const val LOW_INT = 0xFFFFFFFFL
+        private const val HALF = 0.5f
     }
 }

@@ -40,6 +40,13 @@ internal object RealScanRoom {
     val DOUBLED_X_WALL = Box(-2.53f, 0.4f, -1.0f, -2.53f, 2.3f, 2.0f)
     val DOUBLED_Z_WALL = Box(-1.5f, 0.4f, 3.53f, 1.5f, 2.3f, 3.53f)
 
+    /**
+     * With a drifted floor ([scan]), most of the floor scanned twice, the second pass 4 cm below
+     * the first: each pass misses its own patches, so the two sheets together cover the floor
+     * that neither covers alone.
+     */
+    val DRIFTED_FLOOR = Box(-2.3f, -0.04f, -2.4f, 2.3f, -0.04f, 3.3f)
+
     /** The curtain hangs on wall x = +2.5; the sofa stands against wall z = -3.5. */
     val CURTAIN = Box(2.3f, 0.06f, -1.2f, 2.5f, 2.45f, 1.0f)
     val SOFA = Box(-1.0f, 0f, -3.5f, 1.0f, 0.85f, -2.6f)
@@ -58,14 +65,14 @@ internal object RealScanRoom {
     val PHOTO_LENS = ReplayLens(PHOTO_WIDTH / 2f / PHOTO_FOCAL, PHOTO_HEIGHT / 2f / PHOTO_FOCAL)
 
     /** The marching cubes' surface of the room, its doubled walls appended, as the app meshes a recording. */
-    fun raw(furnished: Boolean, depth: Depth = Depth.PHONE, reliefs: Boolean = false): RerunMesh =
-        scan(furnished, depth, reliefs).mesh
+    fun raw(furnished: Boolean, depth: Depth = Depth.PHONE, reliefs: Boolean = false, driftedFloor: Boolean = false): RerunMesh =
+        scan(furnished, depth, reliefs, driftedFloor).mesh
 
     /** A recording of the room as the result screen opens it: its TSDF, and the surface meshed from it. */
     class Scan(val tsdf: RerunTsdf, val mesh: RerunMesh)
 
-    /** [raw], with the room's TSDF the surface was meshed from. */
-    fun scan(furnished: Boolean, depth: Depth = Depth.PHONE, reliefs: Boolean = false): Scan {
+    /** [raw], with the room's TSDF the surface was meshed from; [driftedFloor] adds [DRIFTED_FLOOR]'s second pass. */
+    fun scan(furnished: Boolean, depth: Depth = Depth.PHONE, reliefs: Boolean = false, driftedFloor: Boolean = false): Scan {
         val room = fuse(ROOM.inflate(MARGIN_M), depth, seed = 11, reliefs = reliefs) { x, y, z -> shell(x, y, z, furnished, reliefs) }
         val meshes = mutableListOf(RerunMarchingCubes.extractWhole(room, FRAMES_MIN_WEIGHT).mesh)
         // The second passes: open sheets facing the room, 3 cm behind the wall they repeat.
@@ -81,6 +88,14 @@ internal object RealScanRoom {
             },
             FRAMES_MIN_WEIGHT,
         ).mesh
+        if (driftedFloor) {
+            meshes += RerunMarchingCubes.extractWhole(
+                fuse(DRIFTED_FLOOR.inflate(SHEET_MARGIN_M), depth, seed = 53, phase = SECOND_PASS_PHASE, region = DRIFTED_FLOOR) { _, y, _ ->
+                    y - DRIFTED_FLOOR.y0
+                },
+                FRAMES_MIN_WEIGHT,
+            ).mesh
+        }
         return Scan(room, concat(meshes))
     }
 
@@ -245,6 +260,7 @@ internal object RealScanRoom {
     /** Whether ([x], [y], [z]) lies within this patch's extent on its two long axes. */
     private fun Box.spans(x: Float, y: Float, z: Float): Boolean = when {
         x0 == x1 -> y in y0..y1 && z in z0..z1
+        y0 == y1 -> x in x0..x1 && z in z0..z1
         z0 == z1 -> x in x0..x1 && y in y0..y1
         else -> x in x0..x1 && y in y0..y1 && z in z0..z1
     }
