@@ -42,8 +42,17 @@ object ReplayTap {
     /** One face spread over this share of a side measures that side on its own. */
     const val MIN_SPREAD_SHARE = 0.6f
 
-    /** A recognised box over or under the picked one is another object: they share half their height at least. */
+    /**
+     * A recognised object names the tapped box when it spans this much of the box's height at
+     * least: a set on its stand, a lamp on a table, is another object over it.
+     */
     const val MIN_HEIGHT_SHARE = 0.5f
+
+    /**
+     * …and holds this share of the box's points at least, when its points are what name it: a
+     * television that is 30 % of the region grown round it and its stand does not name the stand.
+     */
+    const val MIN_PICK_SHARE = 0.5f
 
     /** The answer for [pick] in [cloud], named from [recognized]; `null` unless something was boxed. */
     fun answer(cloud: DenseCloud, pick: ScanPick, recognized: List<RecognizedItem>): ReplayTapAnswer? {
@@ -52,24 +61,31 @@ object ReplayTap {
     }
 
     /**
-     * The name of the recognised object [found] is, by the rule scene recognition fuses its own
-     * boxes with ([SceneFusion]): they share enough surfels, or they stand on the same footprint at
-     * the same height. Doors and windows are holes in a wall, never a piece of furniture; of two
-     * candidates, the one that overlaps most.
+     * The name of the recognised object [found] is: it holds most of [found]'s points
+     * ([MIN_PICK_SHARE]), or it stands on the same footprint ([SceneFusion.SAME_FOOTPRINT], the
+     * rule scene recognition fuses its own boxes with) — and either way it spans most of
+     * [found]'s height ([MIN_HEIGHT_SHARE]). Doors and windows are holes in a wall, never a piece
+     * of furniture. Of two candidates the one that overlaps most wins, then the one whose
+     * footprint is closest, then the first label in [SceneLabel]'s order: never the order
+     * [recognized] comes in.
      */
     fun nameOf(found: ScanPick.Found, recognized: List<RecognizedItem>): SceneLabel? {
         var best: SceneLabel? = null
         var bestScore = 0f
+        var bestFootprint = 0f
         for (item in recognized) {
             if (item.label.isOpening) continue
-            val share = sharedShare(found.surfels, item.surfels)
+            if (heightShare(found.box, item.box) < MIN_HEIGHT_SHARE) continue
+            val share = pickShare(found.surfels, item.surfels)
             val footprint = SceneFusion.footprintIou(found.box, item.box)
-            val level = heightShare(found.box, item.box) >= MIN_HEIGHT_SHARE
-            val same = share >= SceneFusion.SAME_SURFELS || (footprint >= SceneFusion.SAME_FOOTPRINT && level)
+            if (share < MIN_PICK_SHARE && footprint < SceneFusion.SAME_FOOTPRINT) continue
             val score = max(share, footprint)
-            if (same && score > bestScore) {
+            val better = best == null || score > bestScore ||
+                (score == bestScore && (footprint > bestFootprint || (footprint == bestFootprint && item.label < best)))
+            if (better) {
                 best = item.label
                 bestScore = score
+                bestFootprint = footprint
             }
         }
         return best
@@ -77,10 +93,11 @@ object ReplayTap {
 
     /**
      * Whether the scan saw [found] from one side only, read from the normals of its surfels: each
-     * vertical face of its box is seen when enough of them stand on it facing out of it. A side is
-     * measured when both its ends were seen, or one face spread along most of it; an object seen
-     * face on only has its depth from its top alone, short of its back. A plant, a cushion pile, a
-     * cloud without normals tell no face and are never flagged.
+     * vertical face of its box is seen when enough of them stand on it with their normal across
+     * it, pointing in or out: the sign of a fused normal is not relied on. A side is measured when
+     * both its ends were seen, or one face spread along most of it; an object seen face on only
+     * has its depth from its top alone, short of its back. A plant, a cushion pile, a cloud
+     * without normals tell no face and are never flagged.
      */
     fun seenFromOneSide(cloud: DenseCloud, found: ScanPick.Found): Boolean {
         val normals = cloud.normals ?: return false
@@ -142,18 +159,17 @@ object ReplayTap {
         return listOf(box.length, box.depth, box.height).map { formatMeasureLength(it, units, locale) }
     }
 
-    /** The share of the smaller of [a] and [b] the other holds too; [a] is sorted, as a pick's surfels are. */
-    private fun sharedShare(a: IntArray, b: IntArray): Float {
-        if (a.isEmpty() || b.isEmpty()) return 0f
-        val shared = b.count { a.binarySearch(it) >= 0 }
-        return shared.toFloat() / min(a.size, b.size)
+    /** The share of [pick]'s points [item] holds too; [pick] is sorted, as a pick's surfels are. */
+    private fun pickShare(pick: IntArray, item: IntArray): Float {
+        if (pick.isEmpty() || item.isEmpty()) return 0f
+        val shared = item.count { pick.binarySearch(it) >= 0 }
+        return (shared.toFloat() / pick.size).coerceAtMost(1f)
     }
 
-    /** How much of the shorter of [a] and [b] stands level with the other: 1 side by side, 0 one on top of the other. */
-    private fun heightShare(a: ScanBox, b: ScanBox): Float {
-        val shared = min(a.baseY + a.height, b.baseY + b.height) - max(a.baseY, b.baseY)
-        val smaller = min(a.height, b.height)
-        return if (smaller <= 0f) 0f else (shared / smaller).coerceIn(0f, 1f)
+    /** How much of [picked]'s height [item] spans: 1 standing as tall, 0 over or under it. */
+    private fun heightShare(picked: ScanBox, item: ScanBox): Float {
+        val shared = min(picked.baseY + picked.height, item.baseY + item.height) - max(picked.baseY, item.baseY)
+        return if (picked.height <= 0f) 0f else (shared / picked.height).coerceIn(0f, 1f)
     }
 
     private const val FACES = 4

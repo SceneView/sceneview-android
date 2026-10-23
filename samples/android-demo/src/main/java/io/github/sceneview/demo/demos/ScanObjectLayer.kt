@@ -375,7 +375,7 @@ internal class ScanObjectPick(
         val camera = orbit.scanCamera()
         val ray = camera.ray(x, y)
         val started = SystemClock.elapsedRealtimeNanos()
-        // Named from what was recognised when the finger came down; a pass ending later names it again.
+        // Named from what was recognised when the finger came down; a pass ending since names it again.
         val known = recognized
         taps.tap(
             work = {
@@ -393,6 +393,9 @@ internal class ScanObjectPick(
                 }.orEmpty()
                 Log.d(TAG, "tap answered in $millis ms: ${describe(tapped.pick)}$named")
                 show(tapped.pick, Offset(x, y), tapped.answer)
+                // A pass that ended while the tap was worked on renamed the box picked before it:
+                // this one is named again from what that pass knows.
+                if (recognized !== known) rename()
             },
         )
     }
