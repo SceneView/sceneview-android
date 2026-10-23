@@ -140,7 +140,7 @@ internal object RerunCaptureBuilder {
         )
         RerunCapturePack(
             manifest = manifest.toJson().toByteArray(),
-            log = ArDebugLogWriter.write(events).toByteArray(),
+            log = ArDebugLogWriter.writeBytes(events),
             media = archive,
         )
     }
@@ -475,6 +475,10 @@ internal const val RERUN_SHARE_DIR = "rerun-share"
 internal const val RERUN_SHARE_SCAN = "scan"
 internal const val RERUN_SHARE_EXPORT = "export"
 internal const val RERUN_SHARE_PLAN = "plan"
+
+/** A scan that could not be saved on the phone, written out for the share sheet (#4815). */
+internal const val RERUN_SHARE_UNSAVED = "unsaved"
+
 private const val MILLIS = 1000L
 private const val HEAD_BYTES = 64
 private const val BUFFER_BYTES = 64 * 1024

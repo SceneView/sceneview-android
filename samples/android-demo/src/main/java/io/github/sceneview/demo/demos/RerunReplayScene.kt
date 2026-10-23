@@ -216,7 +216,7 @@ internal suspend fun loadRerunReplay(context: Context): RerunReplayMedia = withC
  */
 internal suspend fun loadRerunSession(capture: RerunCapturePack): RerunReplayMedia? = withContext(Dispatchers.Default) {
     val manifest = ReplayManifest.parse(String(capture.manifest)) ?: return@withContext null
-    openReplay(manifest, parseArDebugLog(String(capture.log).lineSequence()), capture.media)
+    openReplay(manifest, parseArDebugLog(capture.log), capture.media)
 }
 
 /** A replay from its three parts: the photos and plane textures decoded side by side. */
