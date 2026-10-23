@@ -17,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalLocale
 import com.google.android.filament.Engine
 import com.google.android.filament.Texture
 import com.google.android.filament.TextureSampler
@@ -38,7 +39,6 @@ import io.github.sceneview.material.setTexture
 import io.github.sceneview.texture.ImageTexture
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.util.Locale
 import kotlin.math.exp
 import kotlin.math.ln
 import kotlin.math.round
@@ -92,7 +92,8 @@ internal fun SceneScope.ResultMeasureLayer(
     extraOffset: Float = 0f,
 ) {
     val chrome = LocalStageChrome.current
-    val labels = measure.scanLabels(Locale.getDefault())
+    // `LocalLocale`, observable: the labels follow a change of the device's language.
+    val labels = measure.scanLabels(LocalLocale.current.platformLocale)
     val ink = chrome.debug.floorOutline.toArgb()
     val halo = chrome.ground.toArgb()
     val atlas = remember(labels, ink, halo) { MeasureAtlas.draw(labels, ink, halo) }
