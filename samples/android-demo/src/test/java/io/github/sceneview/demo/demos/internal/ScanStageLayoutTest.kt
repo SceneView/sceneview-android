@@ -115,4 +115,29 @@ class ScanStageLayoutTest {
         assertTrue(ScanPhase.Paused in ScanStageLayout.MAP_PHASES)
         assertTrue(ScanPhase.Saving !in ScanStageLayout.MAP_PHASES)
     }
+
+    @Test
+    fun aDraggedThumbnailKeepsItsSizeInItsNewCorner() {
+        val stage = layout()
+        val top = stage.thumbAt(ThumbCorner.TopStart)
+        assertEquals(stage.thumb.width, top.width, 0.01f)
+        assertEquals(stage.thumb.height, top.height, 0.01f)
+        assertEquals(32f, top.left, 0.01f)
+        assertEquals(hud + 32f, top.top, 0.01f)
+        assertEquals(stage.thumb, stage.thumbAt(ThumbCorner.BottomEnd))
+    }
+
+    @Test
+    fun aPaneIsScaledToCoverItsThumbnailAndCroppedToIt() {
+        val stage = layout()
+        val t = PaneTransform.of(width, height, stage.thumb)
+        // The thumbnail is narrower than the stage's shape: its width sets the scale.
+        assertEquals(stage.thumb.width / width, t.scale, 0.001f)
+        assertEquals(stage.thumb.width, t.crop.width * t.scale, 0.5f)
+        assertEquals(stage.thumb.height, t.crop.height * t.scale, 0.5f)
+        assertEquals(stage.thumb.left + stage.thumb.width / 2f - width / 2f, t.translationX, 0.01f)
+        val whole = PaneTransform.of(width, height, stage.main)
+        assertEquals(1f, whole.scale, 0.0001f)
+        assertEquals(0f, whole.translationX, 0.0001f)
+    }
 }

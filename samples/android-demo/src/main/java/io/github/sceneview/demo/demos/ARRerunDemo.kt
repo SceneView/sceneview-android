@@ -73,6 +73,8 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.zIndex
+import io.github.sceneview.SurfaceType
 import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -128,7 +130,6 @@ import io.github.sceneview.demo.common.QaCameraBackdrop
 import io.github.sceneview.demo.common.SceneAction
 import io.github.sceneview.demo.common.SceneActionBar
 import io.github.sceneview.demo.common.qaCameraBackdropEnabled
-import io.github.sceneview.demo.common.qaCameraBackdropSurfaceType
 import io.github.sceneview.demo.common.ArDemoPermissionGate
 import io.github.sceneview.demo.common.qaStateOverridesAllowed
 import io.github.sceneview.demo.common.rememberQaCameraBackdropActive
@@ -172,10 +173,9 @@ import kotlin.math.sin
 import io.github.sceneview.demo.demos.internal.ScanFollow
 import io.github.sceneview.demo.demos.internal.ScanLens
 import io.github.sceneview.demo.demos.internal.ScanPhase
-import io.github.sceneview.demo.demos.internal.ScanStageSplit
+import io.github.sceneview.demo.demos.internal.ScanStageLayout
+import io.github.sceneview.demo.demos.internal.ThumbCorner
 import io.github.sceneview.demo.theme.LocalStageChrome
-import androidx.compose.foundation.layout.height
-import androidx.compose.ui.unit.IntOffset
 import io.github.sceneview.demo.demos.internal.ScanCutoff
 import io.github.sceneview.demo.demos.internal.PlanOffer
 import io.github.sceneview.demo.demos.internal.ScanScope
@@ -1461,8 +1461,10 @@ private fun RerunLiveScreen(
     // Tapped open, the live map is the map to complete (#4718): the fallback card, where the
     // screen is too short to share between the live 3D map and the camera.
     var scanMapExpanded by remember(scanMedia) { mutableStateOf(false) }
-    // The live 3D map takes the larger share of the screen; the swap button gives it to the camera.
+    // The live 3D map is the main view; a tap on the camera's thumbnail trades their places.
     var scanMapFirst by remember(scanMedia) { mutableStateOf(true) }
+    // The corner the thumbnail was dragged to, kept for the whole capture.
+    var scanThumbCorner by remember(scanMedia) { mutableStateOf(ThumbCorner.BottomEnd) }
     // The phone now, written each AR frame (#4718): paused, the trace records nothing, and the
     // live view and the map follow this instead, so the cloud stays put in the room.
     val livePose = remember { LivePose() }
@@ -1807,20 +1809,33 @@ private fun RerunLiveScreen(
         onDispose { activity.requestedOrientation = before }
     }
 
-    // A room's or an area's capture shares the screen between its live 3D map and the camera
-    // (Thomas's QA of 2026-10-22): the map above, the camera below, the swap button trading their
-    // shares. Measured: where the status card ends and where the controls start, in root pixels.
+    // A room's or an area's capture makes its live 3D map the main view, the camera in a thumbnail
+    // over it (#4816): the room taking shape is what the scan is about. Measured: where the status
+    // card ends and where the controls start, in root pixels.
     var hudBottom by remember { mutableFloatStateOf(Float.NaN) }
     var controlsTop by remember { mutableFloatStateOf(Float.NaN) }
     var stageTop by remember { mutableFloatStateOf(0f) }
+    var stageWidth by remember { mutableFloatStateOf(0f) }
     var stageHeight by remember { mutableFloatStateOf(0f) }
-    val splitStage = recording && scanMedia != null && phase in SCAN_MAP_PHASES && scanScope.mapsGround &&
+    val staged = recording && scanMedia != null && phase in ScanStageLayout.MAP_PHASES && scanScope.mapsGround &&
         !debugFullScreen
-    val split = if (splitStage) {
-        ScanStageSplit.of(stageHeight, hudBottom - stageTop, controlsTop - stageTop, scanMapFirst)
+    // At the finish, the room as scanned (QA-12): the map, the camera's thumbnail faded out.
+    val finishing = phase == ScanPhase.Reviewing
+    val stageMargin = with(LocalDensity.current) { Space.md.toPx() }
+    val split = if (staged) {
+        ScanStageLayout.of(
+            stageWidth = stageWidth,
+            stageHeight = stageHeight,
+            hudBottom = hudBottom - stageTop,
+            controlsTop = controlsTop - stageTop,
+            mapFirst = scanMapFirst || finishing,
+            corner = scanThumbCorner,
+            margin = stageMargin,
+        )
     } else {
         null
     }
+    val stagePanes = rememberScanStagePanes(stageWidth, stageHeight, split, cameraHidden = finishing)
 
     DemoScaffold(
         title = stringResource(R.string.demo_ar_rerun_title),
@@ -2038,22 +2053,18 @@ private fun RerunLiveScreen(
                 .fillMaxSize()
                 .onGloballyPositioned {
                     stageTop = it.positionInRoot().y
+                    stageWidth = it.size.width.toFloat()
                     stageHeight = it.size.height.toFloat()
                 }
                 .then(if (split != null) Modifier.background(stageGround) else Modifier),
         ) {
-            // A room's scan shares the screen (remark #2): the live 3D map on top, the camera under
-            // it down to the controls. Same composables either way, so the AR session lives on.
-            val cameraPane = if (split == null) {
-                Modifier.fillMaxSize()
-            } else {
-                with(density) {
-                    Modifier
-                        .fillMaxWidth()
-                        .offset { IntOffset(0, split.cameraTop.toInt()) }
-                        .height((split.cameraBottom - split.cameraTop).toDp())
-                }
-            }
+            // Both panes stay laid out over the whole stage and are drawn into their place, eased
+            // from one to the next (#4816): same composables either way, so the AR session lives on.
+            val thumbRadius = with(density) { ThumbRadius.toPx() }
+            val cameraPane = Modifier
+                .fillMaxSize()
+                .zIndex(if (split != null && split.mapFirst) 1f else 0f)
+                .stagePane({ stagePanes.cameraRect() }, thumbRadius, alpha = { stagePanes.cameraAlpha() })
             Box(modifier = cameraPane.onSizeChanged { stageSize = it }) {
                 val photo = qaPhoto
                 if (qaBackdrop && photo != null) {
@@ -2073,7 +2084,8 @@ private fun RerunLiveScreen(
                     modelLoader = modelLoader,
                     materialLoader = materialLoader,
                     isOpaque = !qaCameraBackdropEnabled(),
-                    surfaceType = qaCameraBackdropSurfaceType(),
+                    // A texture, not a surface: a SurfaceView cannot be scaled into the thumbnail.
+                    surfaceType = SurfaceType.TextureSurface,
                     cameraStream = if (qaBackdrop) null else cameraStream,
                     playbackDataset = arPlaybackDataset,
                     // A capture draws the walls it recognises itself (#4540): ARCore's own planes, with
@@ -2182,6 +2194,10 @@ private fun RerunLiveScreen(
                         reviewing = phase == ScanPhase.Reviewing,
                     )
                 }
+                // A part scanned again (#4736): its frame over the camera, and how far along it is.
+                if (recording && rescan != null) {
+                    RescanGuide(rescan, live = { scanMedia?.liveDense?.invoke()?.cloud }, lens = scanLens, drawn = scanFollowing)
+                }
             }
 
             if (split != null && scanMedia != null) {
@@ -2194,19 +2210,28 @@ private fun RerunLiveScreen(
                     materialLoader = materialLoader,
                     livePose = scanLivePose,
                     clearTop = split.clearTop,
+                    clearBottom = split.clearBottom,
                     // A room's area waits on two walls (#4540): one wall and the floor are not a room.
                     showArea = scanWalls == null || scanWalls.wallCount >= ArDebugSession.MIN_ROOM_WALLS,
-                    mapFirst = scanMapFirst,
-                    onSwap = { scanMapFirst = !scanMapFirst },
+                    // Paused or finished, the whole room; scanning, over the phone's shoulder.
+                    overview = phase != ScanPhase.Scanning,
+                    compact = !split.mapFirst,
+                    legendAtEnd = split.corner == ThumbCorner.BottomStart || split.corner == ThumbCorner.TopStart,
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(with(density) { split.mapBottom.toDp() })
+                        .fillMaxSize()
+                        .zIndex(if (split.mapFirst) 0f else 1f)
+                        .stagePane({ stagePanes.mapRect() }, thumbRadius, alpha = { stagePanes.mapAlpha() })
                         .background(stageGround),
                 )
-            }
-            // A part scanned again (#4736): its frame over the camera, and how far along it is.
-            if (recording && rescan != null) {
-                RescanGuide(rescan, live = { scanMedia?.liveDense?.invoke()?.cloud }, lens = scanLens, drawn = scanFollowing)
+                if (!finishing) {
+                    ScanThumbHandle(
+                        panes = stagePanes,
+                        layout = split,
+                        onSwap = { scanMapFirst = !scanMapFirst },
+                        onCorner = { scanThumbCorner = it },
+                        modifier = Modifier.zIndex(2f),
+                    )
+                }
             }
 
             // Full-screen 3D view over the camera, which keeps tracking (and recording) under it.
