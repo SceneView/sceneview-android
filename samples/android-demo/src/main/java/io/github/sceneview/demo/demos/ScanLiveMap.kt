@@ -35,6 +35,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
 import com.google.android.filament.Engine
 import io.github.sceneview.demo.R
 import io.github.sceneview.demo.demos.internal.ArDebugOrbitCamera
@@ -78,8 +79,8 @@ import kotlinx.coroutines.withContext
  *
  * [clearTop] is how far down the map the chrome above it (the scan's status card) reaches, in
  * pixels, and [clearBottom] where the controls below start: the phone is drawn in the part left
- * clear, the legend just above the controls on the side [legendAtEnd] says, away from the
- * thumbnail. [showArea] says the area covered, which a room's scan waits on two walls for.
+ * clear, the legend under the status card when [legendOnTop] (the thumbnail at the bottom),
+ * otherwise just above the controls: never under the thumbnail. [showArea] says the area covered, which a room's scan waits on two walls for.
  */
 @Composable
 @Suppress("LongParameterList", "LongMethod") // the demo's shared engine, handed down once
@@ -96,7 +97,7 @@ internal fun ScanLiveMap(
     showArea: Boolean,
     overview: Boolean,
     compact: Boolean,
-    legendAtEnd: Boolean,
+    legendOnTop: Boolean,
     modifier: Modifier = Modifier,
 ) {
     var following by remember { mutableStateOf(true) }
@@ -157,6 +158,7 @@ internal fun ScanLiveMap(
                 }
                 ground = built?.first
                 zones.centres = built?.second.orEmpty()
+                zones.floorY = floorY
             }
             delay(GROUND_REFRESH_MS)
         }
@@ -191,7 +193,7 @@ internal fun ScanLiveMap(
                     ScanFollow.headingOf(phone, heading.degrees)?.let { degrees ->
                         heading.degrees = degrees
                         if (steppedBack) {
-                            ScanLiveMapFraming.overview(coverage.extent, degrees, phone)
+                            ScanLiveMapFraming.overview(coverage.extent, degrees, phone, zones.floorY)
                         } else {
                             ScanLiveMapFraming.poseAt(phone, degrees, coverage.extent, zones.centres)
                         }
@@ -210,7 +212,9 @@ internal fun ScanLiveMap(
             }
         }
         if (!compact) {
-            val below = with(LocalDensity.current) { (size.height - clearBottom).coerceAtLeast(0f).toDp() }
+            val density = LocalDensity.current
+            val below = with(density) { (size.height - clearBottom).coerceAtLeast(0f).toDp() }
+            val above = with(density) { clearTop.coerceAtLeast(0f).toDp() }
             MapLegend(
                 groundColors = groundColors,
                 text = if (showArea) {
@@ -221,8 +225,8 @@ internal fun ScanLiveMap(
                 following = following,
                 onRecenter = { orbit.recenter() },
                 modifier = Modifier
-                    .align(if (legendAtEnd) Alignment.BottomEnd else Alignment.BottomStart)
-                    .padding(bottom = below)
+                    .align(if (legendOnTop) Alignment.TopStart else Alignment.BottomStart)
+                    .padding(top = if (legendOnTop) above else 0.dp, bottom = if (legendOnTop) 0.dp else below)
                     .padding(Space.sm),
             )
         }
@@ -287,6 +291,9 @@ private fun MapLegend(
 /** The missed zones' centres the ground loop last found, read by the follow every frame. */
 private class ZonesHolder {
     @Volatile var centres: List<Pair<Float, Float>> = emptyList()
+
+    /** The floor's height, for the whole room's view to look at the floor, not at the phone. */
+    @Volatile var floorY: Float? = null
 }
 
 /** The phone's heading as the map last read it, kept while the phone looks straight down. */

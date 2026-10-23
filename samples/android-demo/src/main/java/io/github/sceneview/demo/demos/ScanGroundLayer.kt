@@ -58,10 +58,13 @@ internal data class ScanGroundColors(
         const val EDGE_SHADE = 0.28f
 
         /** How much of the brand's colour a covered tile takes over the slab: done, at a glance. */
-        const val SEEN_TINT = 0.7f
+        const val SEEN_TINT = 0.8f
 
         /** How much of the soft red a tile to redo takes over the slab. */
         const val WEAK_TINT = 0.85f
+
+        /** How much of the neutral line the hatching of a tile still to scan takes: quieter than done. */
+        const val HATCH_TINT = 0.45f
 
         private const val HALF = 0.5f
 
@@ -90,7 +93,7 @@ internal data class ScanGroundColors(
             val base = of(card, ground, container, outline)
             return base.copy(
                 missing = base.slab,
-                hatch = neutral.compositeOver(base.slab),
+                hatch = lerp(base.slab, neutral.compositeOver(base.slab), HATCH_TINT),
                 seen = lerp(base.slab, brand.compositeOver(base.slab), SEEN_TINT),
                 weak = lerp(base.slab, SceneViewTokens.ArOverlay.accentBlocked, WEAK_TINT),
             )

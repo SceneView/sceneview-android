@@ -2349,7 +2349,7 @@ private fun RerunLiveScreen(
                     // Paused or finished, the whole room; scanning, over the phone's shoulder.
                     overview = phase != ScanPhase.Scanning,
                     compact = !split.mapFirst,
-                    legendAtEnd = split.corner == ThumbCorner.BottomStart || split.corner == ThumbCorner.TopStart,
+                    legendOnTop = split.corner == ThumbCorner.BottomStart || split.corner == ThumbCorner.BottomEnd,
                     modifier = Modifier
                         .fillMaxSize()
                         .zIndex(if (split.mapFirst) 0f else 1f)

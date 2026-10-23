@@ -35,7 +35,7 @@ object ScanLiveMapFraming {
     const val OVERVIEW_ELEVATION_DEGREES = 62f
 
     /** Distance per metre of the room's radius, round its centre. */
-    const val OVERVIEW_DISTANCE_PER_RADIUS = 2.6f
+    const val OVERVIEW_DISTANCE_PER_RADIUS = 4.2f
 
     const val OVERVIEW_MIN_DISTANCE_M = 3.5f
     const val OVERVIEW_MAX_DISTANCE_M = 18f
@@ -91,9 +91,15 @@ object ScanLiveMapFraming {
 
     /**
      * The pose over the whole room [extent], seen from the phone's side ([headingDegrees]) so the
-     * step back keeps its bearings; on the [phone] while no floor is found.
+     * step back keeps its bearings; on the [phone] while no floor is found. It looks at the floor
+     * at [floorY] once known, so the room sits in the middle of the view, not below it.
      */
-    fun overview(extent: List<Pair<Float, Float>>, headingDegrees: Float, phone: DebugPose): OrbitPose {
+    fun overview(
+        extent: List<Pair<Float, Float>>,
+        headingDegrees: Float,
+        phone: DebugPose,
+        floorY: Float? = null,
+    ): OrbitPose {
         if (extent.isEmpty()) {
             return OrbitPose(Position(phone.x, phone.y, phone.z), headingDegrees, OVERVIEW_ELEVATION_DEGREES, OVERVIEW_MIN_DISTANCE_M)
         }
@@ -112,7 +118,7 @@ object ScanLiveMapFraming {
         var radius = 0f
         for ((x, z) in extent) radius = max(radius, sqrt((x - cx) * (x - cx) + (z - cz) * (z - cz)))
         return OrbitPose(
-            target = Position(cx, phone.y, cz),
+            target = Position(cx, floorY ?: phone.y, cz),
             azimuthDegrees = headingDegrees,
             elevationDegrees = OVERVIEW_ELEVATION_DEGREES,
             distance = (radius * OVERVIEW_DISTANCE_PER_RADIUS).coerceIn(OVERVIEW_MIN_DISTANCE_M, OVERVIEW_MAX_DISTANCE_M),
