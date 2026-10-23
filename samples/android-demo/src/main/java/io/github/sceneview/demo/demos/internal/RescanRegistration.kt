@@ -29,9 +29,9 @@ import kotlin.math.sqrt
  * the floor and walls of the scan as the planes), and judged on what the re-scan lands on.
  *
  * It refuses ([RescanRefusal]) when the re-scan sees no floor, no wall, too little of what the scan
- * saw, too little to pin the shift down (one flat wall), two places it fits equally well (a bare
- * corner of a symmetric room), or when, once lined up, it puts surfaces where the scan saw empty
- * space outside the parts it may fill in. A wrong merge is worse than none.
+ * saw, too little to pin it down (one flat wall, or walls too few to hold it still), two places it
+ * fits equally well (a bare corner of a symmetric room), or when, once lined up, it puts surfaces
+ * where the scan saw empty space outside the parts it may fill in. A wrong merge is worse than none.
  *
  * Frame: metres, +Y up. Pure arithmetic: off the main thread.
  */
@@ -322,16 +322,30 @@ object RescanRegistrar {
     /** The fewest re-scan samples that must land on it. */
     const val MIN_MATCHED = 150
 
-    /** The weakest direction's stiffness, per matched sample: below it, a direction slides. */
-    const val MIN_STIFFNESS = 0.01f
+    /**
+     * The weakest direction's stiffness, per matched sample: below it, a direction slides. Two
+     * sessions of a real room agree on far fewer points than two synthetic ones, so a part that
+     * pins the pose only weakly settles on the wrong one: on a corpus of real re-scans, every part
+     * below this either was another room or came back 7° to 13° off.
+     */
+    const val MIN_STIFFNESS = 0.1f
 
     /** A second fit this close to the best, by samples matched, makes the best ambiguous. */
     const val AMBIGUOUS_SHARE = 0.85f
 
-    /** Two fits are different places when they turn this much apart, degrees… */
-    const val DISTINCT_DEG = 2f
+    /**
+     * Two fits are different places when they turn this much apart, degrees… ICP run from nearby
+     * candidates on a real re-scan stops a few degrees apart in the same place, as many samples
+     * matched: those are one fit, not two. Nearer than this, a fit that scores as well is taken
+     * for the same place; on a corpus of real re-scans, every such fit up to 9.3° off sat beside
+     * a best within 2° of the truth.
+     */
+    const val DISTINCT_DEG = 10f
 
-    /** …or move the re-scan's centre this far apart, metres. */
+    /**
+     * …or move the re-scan's centre this far apart, metres. Those nearby ICP stops sit within
+     * 8 cm of each other at the centre; a fit further off that scores as well is another place.
+     */
     const val DISTINCT_M = 0.1f
 
     /** How far around a part to fill in the re-scan may add what the scan lacks, metres. */
@@ -346,8 +360,30 @@ object RescanRegistrar {
     /** …to this high, metres: a ceiling one scan saw and not the other is no contradiction. */
     const val CONTRADICTION_TOP_M = 2f
 
-    /** The most of the re-scan, outside the parts to fill in, that may contradict the scan. */
-    const val MAX_CONTRADICTION = 0.2f
+    /**
+     * The most of the re-scan, outside the parts to fill in, that may land in the scan's empty space.
+     * Some always does on a real room: what the scan missed and no part to fill in covers.
+     */
+    const val MAX_CONTRADICTION = 0.25f
+
+    /**
+     * The most of the re-scan's wall samples by the scan's surface, outside the parts to fill in,
+     * that may sit off it: a room whose walls stand a few centimetres from the scan's lands its
+     * walls beside the scan's, matching none. Two real sessions of one room leave 0.30 to 0.70
+     * of them off; one with its walls 4 to 8 cm in leaves 0.75 to 0.85.
+     */
+    const val MAX_OFF_WALL = 0.75f
+
+    /**
+     * The most of those wall samples that may sit further than [NEAR_M] from the scan, yet within
+     * [FREE_M]: walls 8 to 12 cm from the scan's are too far to match and too near to be read as
+     * open space. Real sessions of one room leave at most 0.23 of them there; such a room, 0.47
+     * and more.
+     */
+    const val MAX_BESIDE_WALL = 0.4f
+
+    /** The fewest re-scan samples, outside the parts to fill in, the scan must have to judge it by. */
+    const val MIN_JUDGED = 300
 
     /**
      * [rescan] lined up on [reference], or refused. [open] are the boxes (`[minX, minY, minZ,
@@ -397,7 +433,9 @@ object RescanRegistrar {
                 other.beyond(best) >= AMBIGUOUS_SHARE * best.beyond(other)
         }
         if (rival != null) return RescanAlignment.Refused(RescanRefusal.Ambiguous)
-        if (contradiction(reference, src, best.pose, open, floorA) > MAX_CONTRADICTION) {
+        val judgement = judge(reference, src, best.pose, open, floorA)
+        if (judgement.judged < MIN_JUDGED) return RescanAlignment.Refused(RescanRefusal.TooLittleOverlap)
+        if (judgement.free > MAX_CONTRADICTION || judgement.offWall > MAX_OFF_WALL || judgement.besideWall > MAX_BESIDE_WALL) {
             return RescanAlignment.Refused(RescanRefusal.Contradicts)
         }
         return RescanAlignment.Lined(best.pose, overlap, best.rmsM)
@@ -741,16 +779,25 @@ object RescanRegistrar {
     }
 
     /**
-     * The share of the re-scan, outside the [open] boxes and inside the scan's room, that the scan
-     * contradicts once moved by [pose]: next to the scan's surface but off it, or out in the room's
-     * empty middle where the scan saw nothing.
+     * What the scan says of the re-scan moved by [pose], outside the [open] boxes and inside the
+     * scan's room: [judged] samples, the share [free] out in the room's empty middle where the scan
+     * saw nothing, and the share [offWall] of its wall samples by the scan's surface that sit off
+     * it. A sample by the scan's surface but off it, or facing another way, is no contradiction on
+     * its own: two depth sessions of one room disagree like that on a third to a half of their
+     * points (clutter, edges, depth noise), and counting it refused every real re-scan. Walls are
+     * the exception that is kept: they are what two sessions agree on best.
      */
-    private fun contradiction(ref: RescanReference, s: RescanSamples, pose: RescanPose, open: List<FloatArray>, floorY: Float): Float {
+    internal class Judgement(val judged: Int, val free: Float, val offWall: Float, val besideWall: Float)
+
+    internal fun judge(ref: RescanReference, s: RescanSamples, pose: RescanPose, open: List<FloatArray>, floorY: Float): Judgement {
         val matched = BooleanArray(s.count)
         forEachMatch(ref, s, pose) { i, _, _ -> matched[i] = true }
         val f = ref.footprint
         var judged = 0
         var against = 0
+        var walls = 0
+        var offWall = 0
+        var beside = 0
         for (i in 0 until s.count) {
             val x0 = s.p[i * 3]
             val z0 = s.p[i * 3 + 2]
@@ -761,9 +808,22 @@ object RescanRegistrar {
             if (x < f[0] || x > f[2] || z < f[1] || z > f[3]) continue
             if (open.any { inside(it, x, y, z, OPEN_MARGIN_M) }) continue
             judged++
-            if (!matched[i] && (ref.anyWithin(x, y, z, NEAR_M) || !ref.anyWithin(x, y, z, FREE_M))) against++
+            val near = ref.anyWithin(x, y, z, FREE_M)
+            if (!matched[i] && !near) against++
+            if (near && abs(s.n[i * 3 + 1]) <= LEVEL_NORMAL) {
+                walls++
+                if (!matched[i]) {
+                    offWall++
+                    if (!ref.anyWithin(x, y, z, NEAR_M)) beside++
+                }
+            }
         }
-        return if (judged == 0) 0f else against.toFloat() / judged
+        return Judgement(
+            judged,
+            if (judged == 0) 0f else against.toFloat() / judged,
+            if (walls == 0) 0f else offWall.toFloat() / walls,
+            if (walls == 0) 0f else beside.toFloat() / walls,
+        )
     }
 
     // ---------------------------------------------------------------- arithmetic

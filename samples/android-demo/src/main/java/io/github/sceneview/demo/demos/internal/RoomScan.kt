@@ -392,7 +392,7 @@ object ScanCopy {
             RescanRefusal.TooLittleOverlap -> "too little of what you scanned before is in it"
             RescanRefusal.NoFloor -> "it shows no floor to line it up on"
             RescanRefusal.NoWalls -> "it shows no wall to line it up on"
-            RescanRefusal.Unconstrained -> "it shows a single flat wall, which could slide along itself"
+            RescanRefusal.Unconstrained -> "it shows too little of the walls around it to hold it in place"
             RescanRefusal.Ambiguous -> "two places in your scan fit it equally well"
             RescanRefusal.Contradicts -> "lined up, it would put surfaces where your scan saw open space"
             RescanRefusal.NoNormals -> "your scan holds no surface directions to line it up on"
