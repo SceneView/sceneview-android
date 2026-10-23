@@ -12,6 +12,7 @@ import java.io.File
 import java.nio.ByteBuffer
 import java.util.zip.CRC32
 import java.util.zip.DeflaterOutputStream
+import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.roundToInt
@@ -33,9 +34,11 @@ class DenseFusionFarKeyTest {
         for (budget in BUDGETS) {
             val cloud = fusion.liveCloud(EYE.x, EYE.y, EYE.z, maxPoints = budget)
             assertEquals("budget $budget", budget, cloud.count)
+            assertEquals("budget $budget: surfels a merge made", budget, made(cloud))
         }
     }
 
+    /** At the same merge layout: the floor merges from the same distance whatever the budget. */
     @Test
     fun `past the budget, a smaller budget keeps a part of what a larger one keeps`() {
         val fusion = floor()
@@ -76,7 +79,7 @@ class DenseFusionFarKeyTest {
         private var last: Cells? = null
 
         fun add(fusion: DenseFusion, eye: Vec3, cloud: DenseCloud, ms: Double) {
-            drawn += cloud.count
+            drawn += made(cloud)
             this.ms += ms
             val far = cells(cloud, fusion.voxelM, eye, fromM = FAR_FROM_M)
             last?.let { before ->
@@ -181,6 +184,9 @@ class DenseFusionFarKeyTest {
         const val PHONE_HEAP = 256L shl 20
         const val LIVE_BUDGET = 8_000
         const val MIN_SNAPSHOTS = 20
+
+        /** How far from 1 a made surfel's squared normal length may be. */
+        const val UNIT_SLACK = 1e-3f
 
         const val WALK_FROM_X = -1.5f
         const val WALK_TO_X = 19.5f
@@ -288,6 +294,17 @@ class DenseFusionFarKeyTest {
                 if (shown.get(k) >= 0) covered++
             }
             return if (cells == 0) 1.0 else covered.toDouble() / cells
+        }
+
+        /** Of [cloud]'s surfels, those a merge made: each has a unit normal, an empty slot none. */
+        fun made(cloud: DenseCloud): Int {
+            val n = checkNotNull(cloud.normals) { "a live cloud has normals" }
+            var made = 0
+            for (i in 0 until cloud.count) {
+                val l = n[i * 3] * n[i * 3] + n[i * 3 + 1] * n[i * 3 + 1] + n[i * 3 + 2] * n[i * 3 + 2]
+                if (abs(l - 1f) < UNIT_SLACK) made++
+            }
+            return made
         }
 
         fun distance2(x: Float, y: Float, z: Float, eye: Vec3): Float {

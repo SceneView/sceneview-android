@@ -370,6 +370,9 @@ class DenseFusion(
             levels[k] = outLevel[o]
             if (outLevel[o].toInt() != 0) coarse = true
         }
+        // The pick must mark exactly the surfels sized for: one short leaves an empty slot, a
+        // surfel at the origin with no normal and no colour.
+        check(k == kept - 1) { "picked ${k + 1} surfels for $kept" }
         return DenseCloud(positions, colors, normals, confidences, if (coarse) levels else null)
     }
 
