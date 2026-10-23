@@ -74,6 +74,7 @@ import dev.romainguy.kotlin.math.Quaternion
 import io.github.sceneview.DEFAULT_IBL_INTENSITY
 import io.github.sceneview.EngineDestroyQueue
 import io.github.sceneview.FrameRatePolicy
+import io.github.sceneview.SceneScope
 import io.github.sceneview.SceneView
 import io.github.sceneview.rememberCameraNode
 import io.github.sceneview.SurfaceType
@@ -861,6 +862,13 @@ internal fun ArDebugSceneView(
     walls: ScanWallsState? = null,
     drawWalls: Boolean = true,
     maxFps: Int? = null,
+    /**
+     * `false` for a second view of a session another view already drives (the live 3D map): it
+     * draws, but neither advances the session's clock nor writes its figures.
+     */
+    drivesSession: Boolean = true,
+    /** More of the scene, in the session's world space: the live 3D map's floor. */
+    content: (@Composable SceneScope.() -> Unit)? = null,
 ) {
     val shown by rememberUpdatedState(onShown)
     val wallsDrawn by rememberUpdatedState(drawWalls)
@@ -904,7 +912,7 @@ internal fun ArDebugSceneView(
     }
     // A tap on an object of the scan boxes it (#4485); the picture-in-picture takes no touch.
     val objectPick =
-        rememberScanObjectPick(replay.takeUnless { compact }, session, orbit, engine, materialLoader, selection)
+        rememberScanObjectPick(replay.takeUnless { compact || !drivesSession }, session, orbit, engine, materialLoader, selection)
     var anchors by remember { mutableStateOf(emptyList<DebugAnchor>()) }
     val clock = remember { FrameClock() }
 
@@ -938,7 +946,7 @@ internal fun ArDebugSceneView(
                     // Bloom spreads past the layers' alpha: over the camera it would haze it.
                     if (transparent) view.bloomOptions = view.bloomOptions.apply { enabled = false }
                 }
-                session.tick(dt)
+                if (drivesSession) session.tick(dt)
                 // From the phone's eye, through the phone's lens (#4716): ARCore's projection for
                 // the AR view under this one, same size, so a point lands on its camera pixel. The
                 // orbit's lens comes back with the orbit, after a drag or a pinch, or eased back
@@ -971,7 +979,7 @@ internal fun ArDebugSceneView(
                     clock.frameAtNanos = frameTimeNanos
                 }
 
-                if (session.fpsMeter.tick(frameTimeNanos)) session.fps = session.fpsMeter.fps
+                if (drivesSession && session.fpsMeter.tick(frameTimeNanos)) session.fps = session.fpsMeter.fps
 
                 // A recording is framed whole from its first frame — the camera and the grid hold
                 // still while it plays — where a live session, or a scan still recording, is framed
@@ -1087,7 +1095,7 @@ internal fun ArDebugSceneView(
                 observer?.invoke(frame)
                 if (walls != null) wallLayer?.sync(walls, dt, shown = wallsDrawn)
                 if (frame.anchors != anchors) anchors = frame.anchors
-                if (frameTimeNanos - clock.statsAtNanos >= STATS_INTERVAL_NS) {
+                if (drivesSession && frameTimeNanos - clock.statsAtNanos >= STATS_INTERVAL_NS) {
                     clock.statsAtNanos = frameTimeNanos
                     // A replay with a dense cloud counts its surfels, as the sessions list does.
                     val points = replay?.pointCountAt(frame.time) ?: frame.mapPointCount
@@ -1096,7 +1104,7 @@ internal fun ArDebugSceneView(
                 // A replay names the room it found, as a floor plan would: the one its dimensions
                 // draw ([ReplayLayers.measure]), so the two never disagree — and on the frame the
                 // floor redraws them, rather than a stats tick later.
-                if (replayLayers != null) {
+                if (replayLayers != null && drivesSession) {
                     // A scan still growing names no room before two walls are seen (#4540).
                     val room = replayLayers.measure?.takeIf { measuresRoom }
                         ?.takeIf {
@@ -1129,6 +1137,7 @@ internal fun ArDebugSceneView(
             // The picked object's tint and box are rebuilt with the replay, so they get the same
             // treatment.
             key(objectPick) { Node(apply = { objectPick?.nodes?.forEach { addChildNode(it) } }) }
+            content?.invoke(this)
             if (visible(DebugGroup.Anchors)) {
                 anchors.forEach { anchor ->
                     // One instance per anchor: a Filament model instance can only hang off one node.
