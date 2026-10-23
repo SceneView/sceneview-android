@@ -8,9 +8,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
@@ -83,8 +85,10 @@ internal fun ReconstructionChoices(
     var picked by remember(fill, initial) {
         mutableStateOf(if (fills) initial else ReconstructionMethod.Fused)
     }
+    // Scrolls, so that in landscape or with large text "Finish model" is still reached: dismissing
+    // the sheet instead would finish as scanned without the user seeing "Filled" was dropped.
     Column(
-        modifier.fillMaxWidth().padding(SceneViewTokens.Space.md),
+        modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(SceneViewTokens.Space.md),
         verticalArrangement = Arrangement.spacedBy(SceneViewTokens.Space.sm),
     ) {
         Text(stringResource(R.string.scan_finish_method_title), style = MaterialTheme.typography.titleLarge)

@@ -73,16 +73,17 @@ internal class FinishQuestion(val fill: FillPlan) {
 
 /**
  * How [source]'s model is finished. Not [asks], or with no surfels to fill from, as scanned
- * without asking; else the question goes to [show] — with what "Filled" can make of the scan,
- * worked out off the main thread — until answered, then [show] hears `null`.
+ * without asking; else the question goes to [show] — with what "Filled" can make of the scan
+ * within [maxBytes], worked out off the main thread — until answered, then [show] hears `null`.
  */
 internal suspend fun finishMethod(
     source: RerunModelSource,
     asks: Boolean,
+    maxBytes: Long = ScreenedPoisson.MAX_BYTES,
     show: (FinishQuestion?) -> Unit,
 ): ReconstructionMethod {
     if (!asks) return ReconstructionMethod.Fused
-    val fill = withContext(Dispatchers.Default) { fillPlan(source) }
+    val fill = withContext(Dispatchers.Default) { fillPlan(source, maxBytes) }
     if (fill == FillPlan.NoSurfels) return ReconstructionMethod.Fused
     val question = FinishQuestion(fill)
     show(question)
