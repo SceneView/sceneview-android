@@ -105,7 +105,8 @@ import io.github.sceneview.loaders.ModelLoader
  * points captured, counted off the scan from zero and never shown against a cap.
  *
  * [activity] says what the capture is doing ([ScanActivity]); a room's scan adds its [room] gauge:
- * the walls found and how far along the room is ([ScanRoomGauge]).
+ * the walls found and how far along the room is ([ScanRoomGauge]), [complete] once
+ * [RoomCompletion] says so. [trackingLost] reads at the top as `Tracking lost`, not as a pause.
  */
 @Composable
 internal fun ScanHud(
@@ -117,10 +118,11 @@ internal fun ScanHud(
     room: ScanWallsState? = null,
     floorShare: Float = 0f,
     covered: Float? = null,
+    complete: Boolean = room != null && CaptureChrome.complete(room.done, floorShare),
+    trackingLost: Boolean = false,
 ) {
     val clock = ArDebugFormat.clock(seconds)
-    val complete = room != null && CaptureChrome.complete(room.done, floorShare)
-    val share = room?.let { CaptureChrome.share(it.completion, it.done, floorShare) }
+    val share = room?.let { CaptureChrome.share(it.completion, it.done, floorShare, complete) }
     OverlayCard(testTag = SCAN_HUD_TAG) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -139,7 +141,7 @@ internal fun ScanHud(
             // the room is, the floor covered, stuck or paused; past the capture, what it is doing.
             val now = activity ?: if (phase.integrates) ScanActivity.Working else ScanActivity.Paused
             Text(
-                text = CaptureChrome.headline(label, phase, now, share, covered.takeIf { room == null }),
+                text = CaptureChrome.headline(label, phase, now, share, covered.takeIf { room == null }, trackingLost),
                 style = ScanLineStyle.copy(color = ArOverlay.onScrim),
                 modifier = Modifier.weight(1f),
             )

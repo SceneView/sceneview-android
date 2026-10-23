@@ -3,6 +3,8 @@ package io.github.sceneview.demo.demos
 import android.os.SystemClock
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
@@ -74,45 +75,50 @@ private val ChevronSize = 20.dp
  * Scan › Review › Model: where the capture is, the steps done ticked, the current one bold. Said
  * aloud as `Step 2 of 3: Review`.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun ScanStepRow(step: ScanStep, modifier: Modifier = Modifier) {
     Surface(
-        shape = CircleShape,
+        shape = RoundedCornerShape(SceneViewTokens.Radius.lg),
         color = ScanControlFill,
         contentColor = ArOverlay.onScrim,
         modifier = modifier
             .testTag(SCAN_STEPS_TAG)
             .semantics(mergeDescendants = true) { stateDescription = CaptureChrome.stepDescription(step) },
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
+        // A row that wraps, step by step, rather than clip "Model" on a narrow screen at a large font.
+        FlowRow(
+            itemVerticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(horizontal = Space.md, vertical = Space.xs),
         ) {
             ScanStep.entries.forEach { each ->
-                if (each.ordinal > 0) {
-                    Icon(
-                        imageVector = Icons.Rounded.ChevronRight,
-                        contentDescription = null,
-                        tint = ArOverlay.onScrimMuted,
-                        modifier = Modifier.padding(horizontal = Space.xs).size(ChevronSize),
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (each.ordinal > 0) {
+                        Icon(
+                            imageVector = Icons.Rounded.ChevronRight,
+                            contentDescription = null,
+                            tint = ArOverlay.onScrimMuted,
+                            modifier = Modifier.padding(horizontal = Space.xs).size(ChevronSize),
+                        )
+                    }
+                    val current = each == step
+                    if (each.ordinal < step.ordinal) {
+                        Icon(
+                            imageVector = Icons.Rounded.Check,
+                            contentDescription = null,
+                            tint = ArOverlay.accentProgress,
+                            modifier = Modifier.size(ChevronSize),
+                        )
+                        Spacer(Modifier.width(Space.xs))
+                    }
+                    Text(
+                        text = each.label,
+                        style = if (current) ScanLineStyle else ScanDetailStyle,
+                        color = if (current) ArOverlay.onScrim else ArOverlay.onScrimMuted,
+                        maxLines = 1,
+                        softWrap = false,
                     )
                 }
-                val current = each == step
-                if (each.ordinal < step.ordinal) {
-                    Icon(
-                        imageVector = Icons.Rounded.Check,
-                        contentDescription = null,
-                        tint = ArOverlay.accentProgress,
-                        modifier = Modifier.size(ChevronSize),
-                    )
-                    Spacer(Modifier.width(Space.xs))
-                }
-                Text(
-                    text = each.label,
-                    style = if (current) ScanLineStyle else ScanDetailStyle,
-                    color = if (current) ArOverlay.onScrim else ArOverlay.onScrimMuted,
-                    maxLines = 1,
-                )
             }
         }
     }
@@ -188,8 +194,8 @@ internal fun ScanCueLine(cue: CaptureCue, modifier: Modifier = Modifier) {
 
 /**
  * A haptic on the changes that matter while the phone is held at arm's length: a blocker showing
- * (warning), clearing (light), the room completing (success). One a second at most for blockers,
- * so a cause flickering at its threshold does not buzz; never in QA mode.
+ * (warning), clearing (light), the room completing (success). One a second at most, the room's
+ * completion included, so a cause flickering at its threshold does not buzz; never in QA mode.
  */
 @Composable
 internal fun CaptureChromeHaptics(cue: CaptureCue?, complete: Boolean) {
@@ -197,11 +203,10 @@ internal fun CaptureChromeHaptics(cue: CaptureCue?, complete: Boolean) {
     val state = CaptureChromeState.of(cue, complete)
     val memory = remember { HapticMemory(state) }
     LaunchedEffect(state) {
-        val play = CaptureChrome.haptic(memory.last, state)
-        memory.last = state
-        if (play == null || DemoSettings.qaMode) return@LaunchedEffect
         val now = SystemClock.uptimeMillis()
-        if (play != ScanHaptic.Complete && now - memory.playedAt < HAPTIC_GAP_MS) return@LaunchedEffect
+        val play = CaptureChrome.hapticToPlay(memory.last, state, now, memory.playedAt, DemoSettings.qaMode)
+        memory.last = state
+        if (play == null) return@LaunchedEffect
         memory.playedAt = now
         when (play) {
             ScanHaptic.Blocked -> haptic.warning()
@@ -212,8 +217,6 @@ internal fun CaptureChromeHaptics(cue: CaptureCue?, complete: Boolean) {
 }
 
 private class HapticMemory(var last: CaptureChromeState, var playedAt: Long = Long.MIN_VALUE / 2)
-
-private const val HAPTIC_GAP_MS = 1_000L
 
 internal const val SCAN_STEPS_TAG = "scan_steps"
 internal const val SCAN_BLOCKER_TAG = "scan_blocker"

@@ -162,6 +162,8 @@ import io.github.sceneview.demo.demos.internal.RoomDollhouse
 import io.github.sceneview.demo.demos.internal.ScanBack
 import io.github.sceneview.demo.demos.internal.ScanClock
 import io.github.sceneview.demo.demos.internal.CaptureChrome
+import io.github.sceneview.demo.demos.internal.RoomCompletion
+import io.github.sceneview.demo.demos.internal.RoomDone
 import io.github.sceneview.demo.demos.internal.CaptureCue
 import io.github.sceneview.demo.demos.internal.ScanActivity
 import io.github.sceneview.demo.demos.internal.ScanCopy
@@ -1895,6 +1897,18 @@ private fun RerunLiveScreen(
     // dialog and a lost track all stop it, and it runs on from there.
     val clockRuns = phase.clockRuns(trackingLost)
     LaunchedEffect(scan, clockRuns) { scan?.followClock(clockRuns) }
+    // A room completes once, and stays so: its floor covered, or covered as far as the room's
+    // shape lets it, the floor having stopped growing while scanning (RoomCompletion).
+    val roomCompletion = remember(scanMedia, scanScope) { RoomCompletion() }
+    var roomDone by remember(roomCompletion) { mutableStateOf<RoomDone?>(null) }
+    val roomScanning by rememberUpdatedState(phase.integrates && !trackingLost)
+    LaunchedEffect(roomCompletion, scanWalls) {
+        val walls = scanWalls ?: return@LaunchedEffect
+        while (roomDone == null) {
+            roomDone = roomCompletion.update(walls.done, scanCoverage.floorShare, roomScanning, SystemClock.uptimeMillis())
+            delay(HUD_TICK_MS)
+        }
+    }
     // A capture holds the phone upright (#4807), as Polycam, Scaniverse and the RoomPlan apps do:
     // a room is swept with the phone vertical, and turned sideways mid-sweep the whole screen —
     // status card, map, record control — fell into a strip a third of its height. The activity
@@ -1962,6 +1976,8 @@ private fun RerunLiveScreen(
                     room = scanWalls,
                     floorShare = scanCoverage.floorShare,
                     covered = scanCoverage.coveredSquareMetres,
+                    complete = roomDone != null,
+                    trackingLost = trackingLost && phase.integrates,
                 )
                 // Nothing to draw: this marks where the status card ends over the live 3D map.
                 Spacer(Modifier.fillMaxWidth().onGloballyPositioned { hudBottom = it.positionInRoot().y })
@@ -2039,8 +2055,8 @@ private fun RerunLiveScreen(
                 if (recording && !scanFollowing && phase in SCAN_MAP_PHASES) {
                     ScanRecenterPill(onRecenter = { scanOrbit.recenter() })
                 }
-                // Complete only with the walls closed and the floor covered: the map hatches no floor.
-                val scanComplete = scanWalls?.let { CaptureChrome.complete(it.done, scanCoverage.floorShare) } == true
+                // Complete only with the walls closed and the floor covered, as far as the room goes.
+                val scanComplete = roomDone != null
                 if (arCoreAvailability == null || qaState != null) {
                     when {
                         !recording -> ScanShutter(startEnabled = isTracking, onStart = onStartScan)
@@ -2110,26 +2126,29 @@ private fun RerunLiveScreen(
                             // One message at a time: a part scanned again says its own next step
                             // (RescanGuide), so only a blocker shows here over it.
                             cue = CaptureChrome.cue(
-                                ScanScopeCopy.coaching(
-                                    scope = scanScope,
-                                    line = ScanCopy.coaching(
-                                        phase = phase,
-                                        trackingLost = trackingLost,
-                                        photoLimitReached = photoLimitReached && !photoNoticeOver,
-                                        detail = scan?.denseDetail ?: qaLong?.shownDetail ?: ScanDetail.Fine,
-                                        coach = scanCoverage.coachLine,
-                                        lowTexture = lowTexture,
-                                        depthStarved = depthStarved,
-                                        pointsRising = pointsRising,
-                                        hasPoints = capturedPoints > 0,
+                                CaptureChrome.roomLine(
+                                    ScanScopeCopy.coaching(
+                                        scope = scanScope,
+                                        line = ScanCopy.coaching(
+                                            phase = phase,
+                                            trackingLost = trackingLost,
+                                            photoLimitReached = photoLimitReached && !photoNoticeOver,
+                                            detail = scan?.denseDetail ?: qaLong?.shownDetail ?: ScanDetail.Fine,
+                                            coach = scanCoverage.coachLine,
+                                            lowTexture = lowTexture,
+                                            depthStarved = depthStarved,
+                                            pointsRising = pointsRising,
+                                            hasPoints = capturedPoints > 0,
+                                        ),
+                                        nextRoom = roomNumber.takeIf { betweenRooms },
+                                        walls = scanWalls?.wallCount,
+                                        turn = heldTurn,
+                                        done = scanWalls?.done == true,
+                                        facingWall = scanCoverage.facingWall,
+                                        wallToFinish = scanWalls?.facingUnfinished == true,
+                                        floorLeft = !scanComplete,
                                     ),
-                                    nextRoom = roomNumber.takeIf { betweenRooms },
-                                    walls = scanWalls?.wallCount,
-                                    turn = heldTurn,
-                                    done = scanWalls?.done == true,
-                                    facingWall = scanCoverage.facingWall,
-                                    wallToFinish = scanWalls?.facingUnfinished == true,
-                                    floorLeft = !scanComplete,
+                                    roomDone,
                                 ),
                                 dark = trackingLost &&
                                     (ForcedTrackingFailure.override ?: trackingFailureReason) ==

@@ -486,7 +486,7 @@ object ScanCopy {
     const val REVIEW_TITLE = "Review your scan"
     const val REVIEW_DETAIL = "Keep scanning to add more, or save it on this phone."
     const val EMPTY_TITLE = "Nothing captured yet"
-    const val EMPTY_DETAIL = "Move the phone slowly around the space, then tap stop again."
+    const val EMPTY_DETAIL = "Move the phone slowly around the space, then tap Stop and review again."
     const val KEEP_SCANNING = "Keep scanning"
     const val SAVE_SCAN = "Save scan"
     const val SAVING = "Saving scan…"

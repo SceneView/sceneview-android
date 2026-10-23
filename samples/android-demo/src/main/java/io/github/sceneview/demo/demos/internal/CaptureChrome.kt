@@ -49,6 +49,44 @@ data class CaptureChromeState(val blocker: ScanBlocker?, val complete: Boolean) 
 /** The haptic a change of [CaptureChromeState] plays: one per change that matters, never per line. */
 enum class ScanHaptic { Blocked, Cleared, Complete }
 
+/** How a room came to complete: its floor covered, or covered as far as the room's shape lets it. */
+enum class RoomDone { Covered, Plateau }
+
+/**
+ * A room's completion over a scan, held once reached: a floor share wobbling round
+ * [CaptureChrome.FLOOR_DONE_SHARE] does not take it back. The floor map's reference is a convex
+ * hull, which an L-shaped room never fills (6 x 6 m short of a 4 x 4 m corner tops out near 71 %):
+ * walls closed over a floor at least [CaptureChrome.FLOOR_PLATEAU_MIN] covered that has stopped
+ * growing for [stallMs] of scanning complete it too, as [RoomDone.Plateau].
+ */
+class RoomCompletion(private val stallMs: Long = CaptureChrome.FLOOR_STALL_MS) {
+
+    /** The completion reached, if any: held for the rest of the scan. */
+    var done: RoomDone? = null
+        private set
+
+    private var best = 0f
+    private var since: Long? = null
+
+    /** One look at the room at [nowMs]; [scanning] is false while paused or without tracking. */
+    fun update(wallsDone: Boolean, floorShare: Float, scanning: Boolean, nowMs: Long): RoomDone? {
+        done?.let { return it }
+        if (CaptureChrome.complete(wallsDone, floorShare)) return RoomDone.Covered.also { done = it }
+        val started = since
+        when {
+            !wallsDone || !scanning || started == null || floorShare > best + PROGRESS -> since = nowMs
+            floorShare >= CaptureChrome.FLOOR_PLATEAU_MIN && nowMs - started >= stallMs -> done = RoomDone.Plateau
+        }
+        best = maxOf(best, floorShare)
+        return done
+    }
+
+    private companion object {
+        /** Floor share gained that counts as the floor still growing. */
+        const val PROGRESS = 0.01f
+    }
+}
+
 /**
  * The top and bottom of the 3D Scan capture screen, said in one voice: the state at the top, one
  * cue at the bottom, the primary action named after the step it opens, and a room "complete" only
@@ -62,6 +100,15 @@ object CaptureChrome {
      */
     const val FLOOR_DONE_SHARE = 0.8f
 
+    /** Floor share under which a floor that stopped growing is still too bare to call the room done. */
+    const val FLOOR_PLATEAU_MIN = 0.5f
+
+    /** How long a floor past [FLOOR_PLATEAU_MIN] stays still, while scanning, before the room is done. */
+    const val FLOOR_STALL_MS = 10_000L
+
+    /** The least time between two haptics, the room's completion included. */
+    const val HAPTIC_GAP_MS = 1_000L
+
     /** The gauge's top short of a complete room: never full, never green, before it is. */
     private const val SHORT_OF_DONE = 0.95f
 
@@ -74,6 +121,7 @@ object CaptureChrome {
     const val BUILDING = "Building the model"
     const val NOT_SAVED = "Not saved"
     const val NOTHING_COVERED = "Nothing covered yet"
+    const val FLOOR_MOSTLY = "Floor mostly covered — tap Stop and review"
 
     /** A room the walls close and the floor covers: the moment to stop, and the only one. */
     fun complete(wallsDone: Boolean, floorShare: Float): Boolean = wallsDone && floorShare >= FLOOR_DONE_SHARE
@@ -83,8 +131,13 @@ object CaptureChrome {
      * [complete]. Walls closed over a floor still hatched read the walls' part plus the floor
      * covered so far.
      */
-    fun share(completion: Float, wallsDone: Boolean, floorShare: Float): Float = when {
-        complete(wallsDone, floorShare) -> 1f
+    fun share(
+        completion: Float,
+        wallsDone: Boolean,
+        floorShare: Float,
+        complete: Boolean = complete(wallsDone, floorShare),
+    ): Float = when {
+        complete -> 1f
         wallsDone -> {
             val floor = (floorShare / FLOOR_DONE_SHARE).coerceIn(0f, 1f)
             (ScanGuide.WALLS_SHARE + (1f - ScanGuide.WALLS_SHARE) * floor).coerceAtMost(SHORT_OF_DONE)
@@ -109,6 +162,13 @@ object CaptureChrome {
         else -> CaptureCue.Next(line)
     }
 
+    /**
+     * The room's coaching [line] once [done]: a room complete as far as its floor goes says so,
+     * instead of [ScanCopy.ROOM_DONE]'s "complete".
+     */
+    fun roomLine(line: String?, done: RoomDone?): String? =
+        if (done == RoomDone.Plateau && line == ScanCopy.ROOM_DONE) FLOOR_MOSTLY else line
+
     /** `Next: Walk over the hatched floor`. */
     fun nextLine(text: String): String = "$NEXT: $text"
 
@@ -117,7 +177,8 @@ object CaptureChrome {
 
     /**
      * The capture's top line, the useful state: `Room · 72 % scanned`, `Area · 12 m² covered`,
-     * `Room · Stuck`; past the capture, what is happening (`Room · Building the model`).
+     * `Room · Stuck`, `Room · Tracking lost` while [trackingLost] holds the capture; past the
+     * capture, what is happening (`Room · Building the model`).
      */
     fun headline(
         label: String?,
@@ -125,11 +186,13 @@ object CaptureChrome {
         activity: ScanActivity,
         roomShare: Float? = null,
         covered: Float? = null,
+        trackingLost: Boolean = false,
     ): String {
         val state = when {
             phase == ScanPhase.Reviewing -> IN_REVIEW
             phase == ScanPhase.Saving -> BUILDING
             phase == ScanPhase.SaveFailed -> NOT_SAVED
+            trackingLost -> ScanBlocker.TrackingLost.cause
             activity == ScanActivity.Paused -> ScanCopy.PAUSED
             activity == ScanActivity.Stuck -> ScanCopy.STUCK
             roomShare != null -> "${(roomShare.coerceIn(0f, 1f) * PERCENT).roundToInt()} % scanned"
@@ -155,6 +218,18 @@ object CaptureChrome {
         after.complete && !before.complete -> ScanHaptic.Complete
         else -> null
     }
+
+    /**
+     * The haptic to play now, if any: [haptic], at least [HAPTIC_GAP_MS] after the last one played
+     * at [playedAtMs] — the room's completion included — and none in QA mode.
+     */
+    fun hapticToPlay(
+        before: CaptureChromeState,
+        after: CaptureChromeState,
+        nowMs: Long,
+        playedAtMs: Long,
+        qaMode: Boolean,
+    ): ScanHaptic? = haptic(before, after)?.takeIf { !qaMode && nowMs - playedAtMs >= HAPTIC_GAP_MS }
 
     private const val PERCENT = 100
 }
