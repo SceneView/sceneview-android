@@ -29,6 +29,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
@@ -118,9 +119,9 @@ internal fun zonesOf(cloud: DenseCloud?, survey: RoomSurvey?): List<RescanZone> 
 /**
  * The parts to scan again in the scan's own world space (#4736, #4735): each part a dashed frame
  * over a translucent veil of its box, in the `warning` amber the live map marks "still to scan"
- * with. Unlit, so it reads the same on the light and the dark stage; the frame opaque and drawn
- * from both sides, the veil faint enough to leave the scan under it readable. A part marked "not
- * scanned yet", not a hatch on the model.
+ * with ([ZoneInk]): the frame `warning-strong` on the light stage, where `warning` is too faint
+ * for a thin line. Unlit; the frame opaque and drawn from both sides, the veil faint enough to
+ * leave the scan under it readable. A part marked "not scanned yet", not a hatch on the model.
  */
 @Composable
 internal fun SceneScope.RescanZoneLayer(mesh: DebugMesh, veil: DebugMesh, engine: Engine, materialLoader: MaterialLoader) {
@@ -265,9 +266,22 @@ internal object ZoneInk {
     /** The veil over a part: `warning` at [VEIL_ALPHA], on either stage. */
     val veil: Color = SceneViewTokens.ArOverlay.accentGuidance.copy(alpha = VEIL_ALPHA)
 
-    /** The frame round a part on [chrome]'s stage. */
-    @Suppress("UnusedParameter")
-    fun frame(chrome: StageChrome): Color = SceneViewTokens.ArOverlay.accentGuidance
+    /**
+     * `warning-strong` (DESIGN.md): `warning` darkened for a thin line on a light surface, where
+     * `warning` itself is 1.9:1 on the ground.
+     */
+    val warningStrong = Color(0xFFB45309)
+
+    /**
+     * The frame round a part on [chrome]'s stage: `warning` on the dark one, `warning-strong` on
+     * the light one. 3:1 or more there against the ground, the plan's glass, the pill's card and
+     * the veil over each (WCAG 1.4.11): 3.9:1 at the least in light, 4:1 in dark.
+     */
+    fun frame(chrome: StageChrome): Color =
+        if (chrome.ground.luminance() > LIGHT_GROUND) warningStrong else SceneViewTokens.ArOverlay.accentGuidance
+
+    /** Over this luminance a stage is a light one, as [io.github.sceneview.demo.theme.themedStageChrome] tells them. */
+    private const val LIGHT_GROUND = 0.5f
 }
 
 private const val TAG = "ScanRescan"
