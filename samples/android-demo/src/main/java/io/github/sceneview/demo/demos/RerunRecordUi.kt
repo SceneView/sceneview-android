@@ -620,7 +620,7 @@ internal fun ScanLiveView(
                 if (observed.isNew(frame, pose, cells)) {
                     coverage.observe(frame, pose = pose, snapshotCells = cells, record = media.trace)
                     // The depth cloud tells how much of each wall was seen: a wall is drawn that far.
-                    walls?.observe(frame, coverage, pose, dense = dense?.cloud?.positions)
+                    walls?.observe(frame, coverage, pose, dense = dense)
                 }
             },
             // The walls stand in the room while it is scanned; saving, the orbit shows the cloud.

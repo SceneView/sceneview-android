@@ -69,6 +69,19 @@ class ScreenedPoissonTest {
     }
 
     @Test
+    fun `the grid it would solve on is known before solving, and is the one it solves on`() {
+        val cloud = ball()
+        val full = assertNotNull(ScreenedPoisson.reconstruct(cloud))
+        assertEquals(full.voxelM, ScreenedPoisson.spacing(cloud))
+        val tight = full.solveBytes - 1
+        assertEquals(assertNotNull(ScreenedPoisson.reconstruct(cloud, maxBytes = tight)).voxelM, ScreenedPoisson.spacing(cloud, maxBytes = tight))
+        assertEquals(RerunTsdf.VOXEL_M * 2f, ScreenedPoisson.spacing(cloud, maxBytes = tight))
+        assertNull(ScreenedPoisson.spacing(cloud, maxBytes = 1024))
+        assertNull(ScreenedPoisson.spacing(DenseCloud(cloud.positions, cloud.colors)))
+        assertNull(ScreenedPoisson.spacing(DenseCloud(FloatArray(0), IntArray(0), FloatArray(0))))
+    }
+
+    @Test
     fun `no normals or no surfels give nothing`() {
         val ball = ball()
         assertNull(ScreenedPoisson.reconstruct(DenseCloud(ball.positions, ball.colors)))
