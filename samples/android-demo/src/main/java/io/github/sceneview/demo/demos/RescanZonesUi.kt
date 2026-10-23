@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
@@ -45,6 +46,9 @@ import io.github.sceneview.demo.demos.internal.RescanKind
 import io.github.sceneview.demo.demos.internal.RescanSources
 import io.github.sceneview.demo.demos.internal.RescanZone
 import io.github.sceneview.demo.demos.internal.RescanZoneMesh
+import io.github.sceneview.demo.demos.internal.ResultFloor
+import io.github.sceneview.demo.demos.internal.RoomMeasure
+import io.github.sceneview.demo.demos.internal.RoomSurvey
 import io.github.sceneview.demo.demos.internal.ScanGround
 import io.github.sceneview.demo.theme.LocalStageChrome
 import io.github.sceneview.demo.theme.SceneViewTokens
@@ -59,10 +63,17 @@ internal const val RERUN_MODEL_RESCAN_TAG = "rerun_model_rescan"
 internal const val RERUN_MODEL_RESCAN_ACTION_TAG = "rerun_model_rescan_action"
 
 /**
- * The parts of a scan worth scanning again, the frames the result draws them with, and the
- * scan's [cloud] they were read from, which a re-scan lines up on.
+ * The parts of a scan worth scanning again, the dashed frames the result draws them with over
+ * their translucent [veil], the scan's [cloud] they were read from, which a re-scan lines up on,
+ * and the room's [measure] read off the same cloud's walls, `null` when none stand (#4735).
  */
-internal class RescanBuild(val zones: List<RescanZone>, val mesh: DebugMesh, val cloud: DenseCloud) {
+internal class RescanBuild(
+    val zones: List<RescanZone>,
+    val mesh: DebugMesh,
+    val cloud: DenseCloud,
+    val veil: DebugMesh = RescanZoneMesh.veil(zones),
+    val measure: RoomMeasure? = null,
+) {
     /**
      * "Re-scan this part" for [onRescan], `null` when there is none or the cloud has no normals
      * to line a re-scan up on.
@@ -73,8 +84,8 @@ internal class RescanBuild(val zones: List<RescanZone>, val mesh: DebugMesh, val
 
 /**
  * The parts of [source]'s scan worth scanning again (#4736), [ground] the floor read off its
- * model, or `null` when there are none or no points to read them from. Off the main thread: it
- * reads the whole cloud.
+ * model, and the room's dimensions read off the same walls (#4735); `null` when there is neither,
+ * or no points to read them from. Off the main thread: it reads the whole cloud.
  */
 internal fun rescanOf(source: RerunModelSource?, ground: ScanGround?): RescanBuild? = runCatching {
     val cloud = (source as? RerunModelSource.Live)?.cloud
@@ -82,29 +93,56 @@ internal fun rescanOf(source: RerunModelSource?, ground: ScanGround?): RescanBui
         ?: if (source is RerunModelSource.Synthetic) syntheticCloud() else null
     if (cloud == null || cloud.count == 0) return@runCatching null
     val started = System.nanoTime()
-    val zones = RescanSources.zones(cloud, ground)
+    // One survey for both: the zones' walls are the walls the dimensions are read off.
+    val survey = RescanSources.surveyOf(cloud)
+    val zones = RescanSources.zones(cloud, ground, survey)
+    val measure = survey?.let(ResultFloor::measureOf)
     Log.i(TAG, "${zones.size} zones from ${cloud.count} points in ${(System.nanoTime() - started) / NS_PER_MS} ms")
     zones.forEach { Log.i(TAG, "  $it") }
-    zones.takeIf { it.isNotEmpty() }?.let { RescanBuild(it, RescanZoneMesh.of(it), cloud) }
+    if (zones.isEmpty() && measure == null) null else RescanBuild(zones, RescanZoneMesh.of(zones), cloud, measure = measure)
 }.onFailure { Log.w(TAG, "zones failed", it) }.getOrNull()
 
 /**
- * The parts to scan again framed in the scan's own world space (#4736): one amber frame per
- * part, the `warning` amber the live map marks "still to scan" with, opaque and unlit so it reads
- * the same on the light and the dark stage, from the side in 3D as from above on the plan.
+ * The parts of a recording's scan still to scan, for the views that draw them without a re-scan —
+ * the plan and the dollhouse (#4735): read off its dense [cloud], [survey] the room the view
+ * already measured off it. Empty without a cloud, or when they cannot be read. Off the main thread.
+ */
+internal fun zonesOf(cloud: DenseCloud?, survey: RoomSurvey?): List<RescanZone> = runCatching {
+    if (cloud == null || cloud.count == 0) return@runCatching emptyList()
+    val ground = ScanGround.of(cloud.positions, cloud.normals, cloud.count)
+    RescanSources.zones(cloud, ground, survey)
+}.onFailure { Log.w(TAG, "zones failed", it) }.getOrDefault(emptyList())
+
+/**
+ * The parts to scan again in the scan's own world space (#4736, #4735): each part a dashed frame
+ * over a translucent veil of its box, in the `warning` amber the live map marks "still to scan"
+ * with. Unlit, so it reads the same on the light and the dark stage; the frame opaque and drawn
+ * from both sides, the veil faint enough to leave the scan under it readable. A part marked "not
+ * scanned yet", not a hatch on the model.
  */
 @Composable
-internal fun SceneScope.RescanZoneLayer(mesh: DebugMesh, engine: Engine, materialLoader: MaterialLoader) {
-    // Remembered before the node, so Compose releases the material after the node destroyed the layer.
-    val layer = remember(engine, materialLoader, mesh) {
+internal fun SceneScope.RescanZoneLayer(mesh: DebugMesh, veil: DebugMesh, engine: Engine, materialLoader: MaterialLoader) {
+    // Remembered before the nodes, so Compose releases the materials after the nodes destroyed the layers.
+    val frame = remember(engine, materialLoader, mesh) {
         val material = materialLoader.createUnlitColorInstance(SceneViewTokens.ArOverlay.accentGuidance).also {
             it.setCullingMode(Material.CullingMode.NONE)
         }
         material to DebugLayerNode(engine, material, PRIORITY).also { it.upload(mesh) }
     }
-    DisposableEffect(layer) { onDispose { materialLoader.destroyMaterialInstance(layer.first) } }
-    key(layer) {
-        Node(apply = { addChildNode(layer.second) })
+    DisposableEffect(frame) { onDispose { materialLoader.destroyMaterialInstance(frame.first) } }
+    // Translucent: its outer faces only, so a box never doubles its own amber.
+    val fill = remember(engine, materialLoader, veil) {
+        val material = materialLoader.createUnlitColorInstance(
+            SceneViewTokens.ArOverlay.accentGuidance.copy(alpha = VEIL_ALPHA),
+        ).also { it.setCullingMode(Material.CullingMode.BACK) }
+        material to DebugLayerNode(engine, material, PRIORITY).also { it.upload(veil) }
+    }
+    DisposableEffect(fill) { onDispose { materialLoader.destroyMaterialInstance(fill.first) } }
+    key(frame, fill) {
+        Node(apply = {
+            addChildNode(fill.second)
+            addChildNode(frame.second)
+        })
     }
 }
 
@@ -139,14 +177,21 @@ internal fun RescanZonesPill(count: Int, onClick: () -> Unit, modifier: Modifier
     }
 }
 
-/** The amber frame the 3D view draws a part with, at text size. */
+/** The dashed amber frame over its veil the result views draw a part with, at text size. */
 @Composable
-private fun ZoneSwatch() {
+internal fun ZoneSwatch() {
     val amber = SceneViewTokens.ArOverlay.accentGuidance
     Canvas(Modifier.size(Space.md)) {
         val stroke = size.width * SWATCH_STROKE
         val inset = stroke / 2f
-        drawRect(amber, Offset(inset, inset), Size(size.width - stroke, size.height - stroke), style = Stroke(stroke))
+        val side = size.width - stroke
+        drawRect(amber.copy(alpha = VEIL_ALPHA), Offset(inset, inset), Size(side, side))
+        // Each side a dash, its middle a gap: a frame left open, as on the model.
+        val dash = side * SWATCH_DASH
+        drawRect(
+            amber, Offset(inset, inset), Size(side, side),
+            style = Stroke(stroke, pathEffect = PathEffect.dashPathEffect(floatArrayOf(dash, side - dash), dash / 2f)),
+        )
     }
 }
 
@@ -200,6 +245,15 @@ private const val PRIORITY = 2
 
 /** The swatch's stroke, a share of its side: the frame's weight on the model at text size. */
 private const val SWATCH_STROKE = 0.18f
+
+/** The swatch's dash, a share of its side, centred on each corner. */
+private const val SWATCH_DASH = 0.6f
+
+/**
+ * The veil's opacity over the scan: enough to tint the part amber in light and in dark, little
+ * enough to leave what was caught of it readable (DESIGN.md, `warning`).
+ */
+internal const val VEIL_ALPHA = 0.22f
 
 private const val TAG = "ScanRescan"
 private const val NS_PER_MS = 1_000_000L
