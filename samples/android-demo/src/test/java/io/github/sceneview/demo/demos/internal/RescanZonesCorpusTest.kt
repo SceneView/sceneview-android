@@ -58,19 +58,6 @@ class RescanZonesCorpusTest {
         println(summary)
     }
 
-    /** [scan]'s dense cloud, `null` for a scan without one (a v1 or sparse scan). */
-    private fun cloudOf(scan: File): DenseCloud? {
-        val bytes = scan.readBytes()
-        val pack = when (RerunFileKind.of(scan.name, bytes.copyOf(min(bytes.size, HEAD_BYTES)))) {
-            RerunFileKind.Scan -> RerunScanFile.read(bytes)
-            RerunFileKind.Rrd -> RerunRrdReader.capturePack(bytes, scan.name, FakeRerunImageCodec)
-            null -> null
-        } ?: return null
-        val opened = pack.open() ?: return null
-        val dense = opened.manifest.dense ?: return null
-        return opened.bytesOf(dense.path)?.let { SvpcCodec.decode(it) }?.takeIf { it.count > 0 }
-    }
-
     /**
      * The cloud from above, x to the right and z down, each zone framed in its kind's colour.
      * java.awt is not on an Android module's test classpath: the raster is plain RGB, written as a
@@ -156,30 +143,44 @@ class RescanZonesCorpusTest {
         RescanKind.LowDensity -> BLUE
     }
 
-    private companion object {
+    companion object {
         const val CORPUS = "SCENEVIEW_SCAN_CORPUS"
-        const val OUT = "SCENEVIEW_SCAN_OUT"
+        private const val OUT = "SCENEVIEW_SCAN_OUT"
         val EXTENSIONS = setOf("svscan", "rrd")
-        const val HEAD_BYTES = 64
-        const val NS_PER_MS = 1_000_000L
-        const val PX_PER_M = 120f
-        const val MAX_PX = 1600f
-        const val MARGIN = 24
-        const val STROKE_PX = 3
-        const val MIN_SPAN_M = 0.01f
-        const val CEILING_SHARE = 0.9f
-        const val LIGHT = 215f
-        const val DARK = 40f
-        const val BYTE = 0xFF
-        const val IHDR_BYTES = 13
-        const val BIT_DEPTH: Byte = 8
-        const val COLOUR_RGB: Byte = 2
-        val PNG_SIGNATURE = byteArrayOf(-119, 80, 78, 71, 13, 10, 26, 10)
-        const val WHITE = 0xFFFFFF
+
+        /** [scan]'s dense cloud, `null` for a scan without one (a v1 or sparse scan). */
+        fun cloudOf(scan: File): DenseCloud? {
+            val bytes = scan.readBytes()
+            val pack = when (RerunFileKind.of(scan.name, bytes.copyOf(min(bytes.size, HEAD_BYTES)))) {
+                RerunFileKind.Scan -> RerunScanFile.read(bytes)
+                RerunFileKind.Rrd -> RerunRrdReader.capturePack(bytes, scan.name, FakeRerunImageCodec)
+                null -> null
+            } ?: return null
+            val opened = pack.open() ?: return null
+            val dense = opened.manifest.dense ?: return null
+            return opened.bytesOf(dense.path)?.let { SvpcCodec.decode(it) }?.takeIf { it.count > 0 }
+        }
+
+        private const val HEAD_BYTES = 64
+        private const val NS_PER_MS = 1_000_000L
+        private const val PX_PER_M = 120f
+        private const val MAX_PX = 1600f
+        private const val MARGIN = 24
+        private const val STROKE_PX = 3
+        private const val MIN_SPAN_M = 0.01f
+        private const val CEILING_SHARE = 0.9f
+        private const val LIGHT = 215f
+        private const val DARK = 40f
+        private const val BYTE = 0xFF
+        private const val IHDR_BYTES = 13
+        private const val BIT_DEPTH: Byte = 8
+        private const val COLOUR_RGB: Byte = 2
+        private val PNG_SIGNATURE = byteArrayOf(-119, 80, 78, 71, 13, 10, 26, 10)
+        private const val WHITE = 0xFFFFFF
 
         /** The `warning` amber the result frames zones with. */
-        const val AMBER = 0xF59E0B
-        const val RED = 0xDC2626
-        const val BLUE = 0x2563EB
+        private const val AMBER = 0xF59E0B
+        private const val RED = 0xDC2626
+        private const val BLUE = 0x2563EB
     }
 }

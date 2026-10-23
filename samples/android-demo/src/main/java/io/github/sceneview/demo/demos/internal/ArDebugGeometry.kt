@@ -616,11 +616,14 @@ object ArDebugGeometry {
     /** Every n-th grid line is a major (1 m) line. */
     const val GRID_MAJOR_EVERY = 4
 
-    /** Past the room's corners, how far the grid stays whole before it starts to fade. */
-    const val GRID_FADE_START_M = 0.5f
+    /**
+     * Past the room's corners, how far the grid stays whole before it starts to fade: 2 m, so the
+     * grid reads as a floor the room stands on, not a mat under it (QA 2026-10-22: "too small").
+     */
+    const val GRID_FADE_START_M = 2f
 
     /** Over how many metres the grid fades out, from whole to gone ([gridFade]). */
-    const val GRID_FADE_M = 3f
+    const val GRID_FADE_M = 6f
 
     /** Axis gizmo arm length at the session origin. */
     const val AXIS_LENGTH_M = 0.3f

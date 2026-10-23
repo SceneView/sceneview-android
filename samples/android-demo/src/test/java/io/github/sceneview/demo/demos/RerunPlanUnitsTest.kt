@@ -31,8 +31,9 @@ import java.io.File
 
 /**
  * The plan's units follow the phone's language: feet and inches in US English, metres everywhere
- * else — on the screen, on the PDF and in the shared text alike. Each screen run leaves its render
- * in `build/plan-renders/` (not committed).
+ * else — on the screen, on the PDF and in the shared text alike. Its figures take the phone's
+ * decimal separator, as Measure's plan does: `4,00 m` in French and German, `4.00 m` in English.
+ * Each screen run leaves its render in `build/plan-renders/` (not committed).
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -164,14 +165,47 @@ class RerunPlanUnitsTest {
     }
 
     @Test
+    @Config(qualifiers = "en-rGB")
+    fun `in British English the PDF and the shared text write the decimal point`() {
+        assertMetricReport(words(), ".")
+    }
+
+    @Test
+    @Config(qualifiers = "fr-rFR-w411dp-h891dp-xhdpi")
+    fun `in French the plan screen writes metres with the decimal comma`() {
+        val texts = render(StageChrome.Light, "units-fr-light")
+        assertTrue(texts.toString(), "11,5 m²" in texts)
+        assertTrue(texts.toString(), texts.none { "ft" in it || "11.5" in it })
+    }
+
+    @Test
     @Config(qualifiers = "fr-rFR")
-    fun `in French the PDF stays in metres`() {
-        val words = words()
-        assertEquals("4.00 × 3.00 m", SurveyReport.rows(traced, words.survey)[1].value)
-        assertEquals(listOf("3.00", "1.40", "2.00", "4.00", "3.00"), SurveyReport.planTexts(traced, words.survey).walls)
+    fun `in French the PDF and the shared text write the decimal comma`() {
+        assertMetricReport(words(), ",")
+    }
+
+    @Test
+    @Config(qualifiers = "de-rDE")
+    fun `in German the PDF and the shared text write the decimal comma`() {
+        assertMetricReport(words(), ",")
+    }
+
+    /**
+     * The traced room's figures in metres with [mark] as the decimal separator: the PDF's rows, the
+     * plan's wall labels, its scale bar and the shared text.
+     */
+    private fun assertMetricReport(words: PlanWords, mark: String) {
+        fun decimal(figure: String) = figure.replace(".", mark)
+        assertEquals(decimal("4.00 × 3.00 m"), SurveyReport.rows(traced, words.survey)[1].value)
+        assertEquals(
+            listOf("3.00", "1.40", "2.00", "4.00", "3.00").map(::decimal),
+            SurveyReport.planTexts(traced, words.survey).walls,
+        )
         assertTrue(words.pdfScale, words.pdfScale.endsWith("dimensions in metres"))
         val (label, metres) = pdfScaleBar(words)
-        assertEquals(label, label.removeSuffix(" m").toFloat(), metres, 0.001f)
+        assertEquals(label, label.removeSuffix(" m").replace(mark, ".").toFloat(), metres, 0.001f)
+        val text = SurveyReport.text(traced, words.survey, "Traced room", null)
+        assertTrue(text, decimal("11.5 m²") in text && decimal("4.00 × 3.00 m") in text)
     }
 
     /** One of the PDF page's own measures, in points. */

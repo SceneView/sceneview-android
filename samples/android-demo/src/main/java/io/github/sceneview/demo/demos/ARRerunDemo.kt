@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.net.Uri
 import android.os.Build
 import android.os.SystemClock
@@ -155,6 +156,7 @@ import io.github.sceneview.demo.demos.internal.RerunSessionSource
 import io.github.sceneview.demo.demos.internal.RerunSessionStore
 import io.github.sceneview.demo.demos.internal.RerunSetupStep
 import io.github.sceneview.demo.demos.internal.RerunStatusUx
+import io.github.sceneview.demo.demos.internal.DenseCloud
 import io.github.sceneview.demo.demos.internal.DollhouseCopy
 import io.github.sceneview.demo.demos.internal.RoomDollhouse
 import io.github.sceneview.demo.demos.internal.ScanBack
@@ -292,6 +294,9 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
     var scanTitle by remember { mutableStateOf(ScanCopy.REPLAY_TITLE) }
     // The scan's own files, for the export sheet; the sample's are read from the assets there.
     var scanPack by remember { mutableStateOf<RerunCapturePack?>(null) }
+    // A part of the open scan scanned again (#4736): for the live screen it was started for only.
+    var rescanTarget by remember { mutableStateOf<RescanTarget?>(null) }
+    LaunchedEffect(screen) { if (screen != RerunScreen.Live) rescanTarget = null }
     // What the scan shows (#4683), kept with it: an object's has no floor plan and no room figures.
     var scanKind by remember { mutableStateOf(ScanScope.Room) }
     // The floor it covered, the figure its replay ends on, said on its result too (#4734).
@@ -363,7 +368,7 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
             when (qaState) {
                 QA_STATE_RECORD_OBJECT -> ScanScope.Object
                 QA_STATE_RECORD_HOME, QA_STATE_HOME_SUMMARY -> ScanScope.Home
-                QA_STATE_RECORD, QA_STATE_RECORD_NO_DEPTH, QA_STATE_RECORD_WALLS -> ScanScope.Room
+                QA_STATE_RECORD, QA_STATE_RECORD_NO_DEPTH, QA_STATE_RECORD_WALLS, QA_STATE_RECORD_WALLS_STALLED -> ScanScope.Room
                 QA_STATE_RECORD_AREA -> ScanScope.Area
                 else -> ScanScopeStore.last(context)
             },
@@ -722,6 +727,7 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
                 materialLoader = materialLoader,
                 arPlaybackDataset = arPlaybackDataset,
                 qaState = qaState,
+                rescan = rescanTarget,
             )
         }
         RerunScreen.Replay -> RerunReplayScreen(
@@ -799,6 +805,16 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
             hintStays = qaState != null,
             opened = resultModel,
             floorCovered = scanFloorCovered,
+            // One room or area of yours: a part scanned again is kept as a completed copy (#4736).
+            onRescan = scanPack?.takeIf { showingScan && !scanKind.roomByRoom }?.let { pack ->
+                val completed = stringResource(R.string.scan_rescan_merged_title, scanTitle)
+                val start: (RescanPick) -> Unit = { pick ->
+                    rescanTarget = RescanTarget(pick, pack, completed)
+                    scanScope = scanKind
+                    screen = RerunScreen.Live
+                }
+                start
+            },
         )
     }
     val exportable = when (screen) {
@@ -1301,6 +1317,8 @@ private fun RerunLiveScreen(
     materialLoader: MaterialLoader,
     arPlaybackDataset: File?,
     qaState: String?,
+    /** A part of a scan scanned again (#4736): guided live, merged into a copy of the scan on save. */
+    rescan: RescanTarget? = null,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -1388,7 +1406,7 @@ private fun RerunLiveScreen(
         val source = sample?.takeIf { qaRecord } ?: return@LaunchedEffect
         val events = withContext(Dispatchers.IO) {
             // #4540: a turn round a synthetic room, whose walls the sample's close take lacks.
-            if (qaState == QA_STATE_RECORD_WALLS) {
+            if (qaState == QA_STATE_RECORD_WALLS || qaState == QA_STATE_RECORD_WALLS_STALLED) {
                 ScanWallWalk.events()
             } else {
                 context.assets.open(RerunReplayAssets.LOG).bufferedReader().useLines { parseArDebugLog(it) }
@@ -1625,7 +1643,11 @@ private fun RerunLiveScreen(
             val built = runCatching {
                 builtPack ?: when {
                     qaTrace != null && sample != null ->
-                        qaSessionOf(qaTrace, sample, scanScope, depth = qaState != QA_STATE_RECORD_NO_DEPTH)
+                        qaSessionOf(
+                            qaTrace, sample, scanScope,
+                            depth = qaState != QA_STATE_RECORD_NO_DEPTH,
+                            depthStalled = qaState == QA_STATE_RECORD_WALLS_STALLED,
+                        )
                     capture != null -> capture.finish()
                     else -> null
                 }
@@ -1645,12 +1667,22 @@ private fun RerunLiveScreen(
                 dropCapture()
                 return@launch
             }
-            val title = builtTitle
+            // A part scanned again (#4736) is lined up on its scan and merged into a copy of it,
+            // kept as a new scan, the scan itself untouched; one that does not line up is refused,
+            // never merged wrong, and the guide says so over "Couldn't save".
+            val rescanned = rescan?.let { withContext(Dispatchers.Default) { it.merge(pack) } }
+            if (rescanned is RescanSave.Refused) {
+                phase = ScanPhase.SaveFailed
+                if (!attached.get()) onSaveFailedAway()
+                return@launch
+            }
+            val saved = (rescanned as? RescanSave.Merged)?.pack ?: pack
+            val title = rescan?.mergedTitle ?: builtTitle
             // The saved entry's id opens its result screen, where the name is edited (#4597).
             val savedId = withContext(Dispatchers.IO) {
                 runCatching {
                     check(!qaSaveFails) { "QA: forced save failure" }
-                    store.save(pack, title, RerunSessionSource.Recorded, now, scope = scanScope).id
+                    store.save(saved, title, RerunSessionSource.Recorded, now, scope = scanScope).id
                 }.getOrNull()
             }
             if (savedId == null) {
@@ -1658,7 +1690,7 @@ private fun RerunLiveScreen(
                 if (!attached.get()) onSaveFailedAway()
                 return@launch
             }
-            val opened = runCatching { loadRerunSession(pack) }.getOrNull()
+            val opened = runCatching { loadRerunSession(saved) }.getOrNull()
             dropCapture()
             if (!attached.get()) {
                 // The screen was left while it saved: the scan is kept and listed, nothing opens.
@@ -1667,7 +1699,7 @@ private fun RerunLiveScreen(
             }
             if (opened == null) return@launch
             when (next) {
-                SaveNext.Open -> onScanned(opened, title, pack, savedId)
+                SaveNext.Open -> onScanned(opened, title, saved, savedId)
                 SaveNext.FinishHome -> {
                     onRoomSaved(opened, title, savedId)
                     onFinishHome()
@@ -1762,6 +1794,18 @@ private fun RerunLiveScreen(
     // dialog and a lost track all stop it, and it runs on from there.
     val clockRuns = phase.clockRuns(trackingLost)
     LaunchedEffect(scan, clockRuns) { scan?.followClock(clockRuns) }
+    // A capture holds the phone upright (#4807), as Polycam, Scaniverse and the RoomPlan apps do:
+    // a room is swept with the phone vertical, and turned sideways mid-sweep the whole screen —
+    // status card, map, record control — fell into a strip a third of its height. The activity
+    // handles the rotation itself (configChanges), so nothing restarts; the lock goes with the capture.
+    val captureActivity = LocalActivity.current
+    DisposableEffect(recording, captureActivity) {
+        val activity = captureActivity ?: return@DisposableEffect onDispose {}
+        if (!recording) return@DisposableEffect onDispose {}
+        val before = activity.requestedOrientation
+        activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        onDispose { activity.requestedOrientation = before }
+    }
 
     // A room's or an area's capture shares the screen between its live 3D map and the camera
     // (Thomas's QA of 2026-10-22): the map above, the camera below, the swap button trading their
@@ -1781,6 +1825,9 @@ private fun RerunLiveScreen(
     DemoScaffold(
         title = stringResource(R.string.demo_ar_rerun_title),
         onBack = onBackFromLive,
+        // A capture owns the screen (#4807): no dock, and Send feedback / QA mode in the ⋮ menu
+        // at the top, where the Settings button took the bottom of the screen for two rows.
+        actionsMenu = recording,
         // The sheet holds what the screen must not: the connection steps a developer types
         // once. The screen itself only says what the demo does and whether it is live. A
         // capture in progress owns the screen: no Settings over it.
@@ -1933,12 +1980,14 @@ private fun RerunLiveScreen(
                                     lowTexture = lowTexture,
                                     depthStarved = depthStarved,
                                     pointsRising = pointsRising,
+                                    hasPoints = capturedPoints > 0,
                                 ),
                                 nextRoom = roomNumber.takeIf { betweenRooms },
                                 walls = scanWalls?.wallCount,
                                 turn = heldTurn,
                                 done = scanWalls?.done == true,
                                 facingWall = scanCoverage.facingWall,
+                                wallToFinish = scanWalls?.facingUnfinished == true,
                             ),
                             onTogglePause = {
                                 betweenRooms = false
@@ -2027,7 +2076,10 @@ private fun RerunLiveScreen(
                     surfaceType = qaCameraBackdropSurfaceType(),
                     cameraStream = if (qaBackdrop) null else cameraStream,
                     playbackDataset = arPlaybackDataset,
-                    planeRenderer = true,
+                    // A capture draws the walls it recognises itself (#4540): ARCore's own planes, with
+                    // their upright dashes on walls and edges cut where ARCore stopped, came on top of
+                    // them and read as noise (QA 2026-10-22, remarks 4 and 8).
+                    planeRenderer = !recording,
                     sessionCameraConfig = { RerunScanCamera.select(it, playback = arPlaybackDataset != null) },
                     sessionConfiguration = { session: Session, config: Config ->
                         config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
@@ -2151,6 +2203,10 @@ private fun RerunLiveScreen(
                         .height(with(density) { split.mapBottom.toDp() })
                         .background(stageGround),
                 )
+            }
+            // A part scanned again (#4736): its frame over the camera, and how far along it is.
+            if (recording && rescan != null) {
+                RescanGuide(rescan, live = { scanMedia?.liveDense?.invoke()?.cloud }, lens = scanLens, drawn = scanFollowing)
             }
 
             // Full-screen 3D view over the camera, which keeps tracking (and recording) under it.
@@ -2483,10 +2539,17 @@ private const val QA_STATE_HOME_SUMMARY = "home-summary"
 /** QA only (#4540): a room's scan turning round a synthetic room, its walls rising as they are found. */
 private const val QA_STATE_RECORD_WALLS = "record-walls"
 
+/**
+ * QA only (QA 2026-10-22): the same turn whose depth stalled - its fused cloud a floor and no
+ * wall, the walls on ARCore's planes only - for the plan the export offers from the counted walls.
+ */
+private const val QA_STATE_RECORD_WALLS_STALLED = "record-walls-stalled"
+
 private val RECORD_QA_STATES =
     setOf(
         QA_STATE_RECORD,
         QA_STATE_RECORD_WALLS,
+        QA_STATE_RECORD_WALLS_STALLED,
         QA_STATE_RECORD_TRACKING_LOST,
         QA_STATE_RECORD_SAVE_FAILED,
         QA_STATE_RECORD_OBJECT,
@@ -2520,6 +2583,7 @@ private suspend fun qaSessionOf(
     sample: RerunReplayMedia,
     scope: ScanScope,
     depth: Boolean = true,
+    depthStalled: Boolean = false,
 ): RerunCapturePack? {
     val events = trace.journal?.toList().orEmpty()
     trace.journal = null
@@ -2540,7 +2604,7 @@ private suspend fun qaSessionOf(
     }
     // The emulator has no depth: the ray-cast room stands in for a scan's fused points, so the
     // result the QA take opens on is built, kept and reopened as a real scan's is.
-    val dense = withContext(Dispatchers.Default) { syntheticCloud() }
+    val dense = withContext(Dispatchers.Default) { syntheticCloud().let { if (depthStalled) it.floorOnly() else it } }
     val device = ScanDevice("android", Build.MODEL, ScanDevice.TIER_DEPTH, ScanDevice.SOURCE_RAW_DEPTH)
     return RerunCaptureBuilder.build(events, sample.manifest.lens, photos, device = device, dense = dense)
 }
@@ -2653,4 +2717,23 @@ internal object QaPausedTurn {
 }
 
 /** How long the photo limit's notice holds the coaching line before it becomes the HUD's line. */
-private const val PHOTO_NOTICE_MS = 4_000L
+// Brief (#4807): news, not a warning, so it leaves the line to the coaching quickly.
+private const val PHOTO_NOTICE_MS = 2_500L
+
+/** QA only: the cloud's floor alone, what a stalled depth leaves (QA 2026-10-22). */
+private fun DenseCloud.floorOnly(): DenseCloud {
+    val n = normals ?: return this
+    val minY = (0 until count).minOfOrNull { positions[it * 3 + 1] } ?: return this
+    val keep = (0 until count).filter { n[it * 3 + 1] > QA_FLOOR_NORMAL_Y && positions[it * 3 + 1] < minY + QA_FLOOR_BAND_M }
+    fun FloatArray.pick() = FloatArray(keep.size * 3) { this[keep[it / 3] * 3 + it % 3] }
+    return DenseCloud(
+        positions.pick(),
+        IntArray(keep.size) { colors[keep[it]] },
+        n.pick(),
+        confidences?.let { c -> ByteArray(keep.size) { c[keep[it]] } },
+        levels?.let { l -> ByteArray(keep.size) { l[keep[it]] } },
+    )
+}
+
+private const val QA_FLOOR_NORMAL_Y = 0.9f
+private const val QA_FLOOR_BAND_M = 0.15f

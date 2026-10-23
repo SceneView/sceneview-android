@@ -1,0 +1,2 @@
+<!-- category: Changed -->
+- **Live 3D map while scanning a room ([#4810](https://github.com/sceneview/sceneview/pull/4810)).** In the Android demo's 3D Scan, the small "Map to complete" card becomes a live 3D view of what has been captured, sharing the screen with the camera: the coloured cloud seen from above and behind the phone, heading-up, with the floor still to scan hatched in amber. A swap button gives that part of the screen back to the camera. In landscape, where the screen is too short to share, the 2D card stays.

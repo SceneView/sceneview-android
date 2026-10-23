@@ -135,13 +135,13 @@ internal fun ScanLiveMap(
                 val floorY = stageFloorY(trace.frameAt(trace.duration))
                 val cell = grid.cellMetres
                 ground = withContext(Dispatchers.Default) {
-                    LiveCoverageGround.of(keys, cell, outline, floorY)?.let(ScanGroundMeshes::of)
+                    LiveCoverageGround.of(keys, cell, outline, floorY)?.let { ScanGroundMeshes.of(it, hatchMissing = true) }
                 }
             }
             delay(GROUND_REFRESH_MS)
         }
     }
-    val groundColors = ScanGroundColors.current()
+    val groundColors = ScanGroundColors.currentLive()
     val pose by rememberUpdatedState(livePose)
     val heading = remember { HeadingHolder() }
 
@@ -216,7 +216,7 @@ internal fun ScanLiveMap(
                     text = if (showArea) {
                         stringResource(R.string.scan_live_map_area, area)
                     } else {
-                        stringResource(R.string.scan_coverage_hatched)
+                        stringResource(R.string.scan_coverage_missing)
                     },
                     style = SceneViewTokens.Type.caption,
                     color = ArOverlay.onScrim,

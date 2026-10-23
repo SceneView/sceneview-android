@@ -4,9 +4,9 @@ import android.graphics.Bitmap
 import android.util.Log
 import androidx.annotation.StringRes
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.Canvas
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Edit
@@ -51,7 +52,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.platform.testTag
@@ -87,8 +87,10 @@ import io.github.sceneview.demo.demos.internal.DenseFusion
 import io.github.sceneview.demo.demos.internal.DepthBackProjection
 import io.github.sceneview.demo.demos.internal.DepthFrame
 import io.github.sceneview.demo.demos.internal.DollhouseFraming
+import io.github.sceneview.demo.demos.internal.ArDebugStyle
 import io.github.sceneview.demo.demos.internal.DollhouseOpening
 import io.github.sceneview.demo.demos.internal.FramingInsets
+import io.github.sceneview.demo.demos.internal.ReconstructionMethod
 import io.github.sceneview.demo.demos.internal.RerunCapturePack
 import io.github.sceneview.demo.demos.internal.RerunGlbMesh
 import io.github.sceneview.demo.demos.internal.RerunMarchingCubes
@@ -432,9 +434,14 @@ private class Meshed(
  * The surface is meshed within what the heap's finish takes ([CleanModel.maxRawTriangles]): on a
  * Pixel 4a's 192 MB, a scan past it meshes with cells twice as coarse, and finishes.
  */
-private fun mesh(source: RerunModelSource, progress: (Float) -> Unit): Meshed {
+private fun mesh(
+    source: RerunModelSource,
+    progress: (Float) -> Unit,
+    reconstruction: ReconstructionMethod = ReconstructionMethod.Fused,
+): Meshed {
     val started = System.nanoTime()
-    val tsdf = when (source) {
+    val reconstructed = reconstructedTsdf(source, reconstruction) { progress(it * FUSE_SHARE) }
+    val tsdf = reconstructed ?: when (source) {
         is RerunModelSource.Live -> checkNotNull(source.tsdf) { "TSDF released" }
         is RerunModelSource.Surfels -> RerunTsdf().also { t ->
             t.integrateSurfels(source.cloud) { progress(it * FUSE_SHARE) }
@@ -450,11 +457,11 @@ private fun mesh(source: RerunModelSource, progress: (Float) -> Unit): Meshed {
     val fuseMs = (System.nanoTime() - started) / NS_PER_MS
     // A surfel's weight counts surfels, each already seen in DenseFusion.MIN_VIEWS frames or more:
     // the default keeps the lateral fade between two surfel columns. Depth frames count views.
-    val minWeight = if (source is RerunModelSource.Surfels) RerunMarchingCubes.DEFAULT_MIN_WEIGHT else FRAMES_MIN_WEIGHT
-    val base = if (source is RerunModelSource.Live) 0f else FUSE_SHARE
+    val minWeight = if (reconstructed != null || source is RerunModelSource.Surfels) RerunMarchingCubes.DEFAULT_MIN_WEIGHT else FRAMES_MIN_WEIGHT
+    val base = if (source is RerunModelSource.Live && reconstructed == null) 0f else FUSE_SHARE
     val maxTriangles = CleanModel.maxRawTriangles(Runtime.getRuntime().maxMemory())
     val extraction = RerunMarchingCubes.extractWhole(tsdf, minWeight, maxTriangles) { progress(base + (MESH_SHARE - base) * it) }
-    val release = source is RerunModelSource.Live && tsdf.bytes >= tsdf.maxBytes / 2
+    val release = source is RerunModelSource.Live && reconstructed == null && tsdf.bytes >= tsdf.maxBytes / 2
     if (release && source is RerunModelSource.Live) source.release()
     return Meshed(
         surface = RawSurface(extraction.mesh),
@@ -601,7 +608,8 @@ private val ModelState.settled: Boolean get() = this == ModelState.Failed || (th
  * [onModel] hears the model once it is known (`null` when there is none), for the export sheet.
  * [opened] is the kept model when the caller has already read it, so it is not read twice.
  * [floorCovered] is the scan's floor covered in m², its replay's figure (#4734); `null` when its
- * recording cannot be read, and the legend then keys the hatching alone.
+ * recording cannot be read, and no legend is shown.
+ * [onRescan] starts a re-scan of one of its parts to scan again (#4736); `null`: not offered.
  */
 @Composable
 @Suppress("LongMethod", "LongParameterList", "CyclomaticComplexMethod")
@@ -622,6 +630,7 @@ internal fun RerunModelScreen(
     hintStays: Boolean = false,
     opened: RerunScanModel? = null,
     floorCovered: Float? = null,
+    onRescan: ((RescanPick) -> Unit)? = null,
 ) {
     val state by produceState<ModelState>(ModelState.Loading, source, id) {
         val stored = opened ?: if (store != null && id != null) {
@@ -757,8 +766,9 @@ internal fun RerunModelScreen(
             ) {
                 val floor = ground?.ground?.takeIf { tourReady && it.seen + it.missing > 0 }
                 val locale = LocalLocale.current.platformLocale
-                // Without a readable recording there is no figure, but the hatching still needs its key.
-                if (floor != null) FloorLegend(floorCovered?.takeIf { it > 0f }?.let { scanFloorArea(it, locale) })
+                // Without a readable recording there is no figure, and nothing to key.
+                val covered = floorCovered?.takeIf { it > 0f }?.let { scanFloorArea(it, locale) }
+                if (floor != null && covered != null) FloorLegend(covered)
                 ScanTourPill(
                     touring = touring,
                     enabled = tourReady,
@@ -900,12 +910,39 @@ internal fun RerunModelScreen(
                 // The scan in its own world space, metres, Y up: framed by its bounds, not moved.
                 instance?.let { ModelNode(modelInstance = it, autoAnimate = false) }
                 ground?.let {
+                    // The replay's grid round the slab (QA 2026-10-22), its lines sized for the
+                    // camera the result opens on, bucketed so a reframe rarely rebuilds them.
+                    val style = ArDebugStyle.forOrbit(
+                        home.value()?.distance ?: 1f,
+                        orbit.verticalFovDegrees,
+                        constraints.maxHeight,
+                    )
+                    ScanGridLayer(it.ground, style, engine, materialLoader)
                     ScanGroundLayer(it.meshes, engine, materialLoader, ScanGroundColors.current())
                 }
                 rescan?.let { RescanZoneLayer(it.mesh, engine, materialLoader) }
             }
             // The ground until the model is drawn on its framing: no pose but that one is seen.
-            if (!shown) Box(Modifier.matchParentSize().background(chrome.ground).testTag(RERUN_MODEL_VEIL_TAG))
+            // Then it fades as the camera reveal flies in (`motion-entrance`), never a cut from the
+            // save's "Fusing" to the model (QA 2026-10-22). Opacity only: kept under reduced motion.
+            val veil by animateFloatAsState(
+                targetValue = if (shown) 0f else 1f,
+                animationSpec = if (shown) {
+                    tween(SceneViewTokens.Duration.longMillis, easing = SceneViewTokens.Ease.expressive)
+                } else {
+                    snap()
+                },
+                label = "veil",
+            )
+            if (veil > 0f) {
+                Box(
+                    Modifier
+                        .matchParentSize()
+                        .alpha(veil)
+                        .background(chrome.ground)
+                        .then(if (shown) Modifier else Modifier.testTag(RERUN_MODEL_VEIL_TAG)),
+                )
+            }
         }
     }
     if (renaming && onRename != null) {
@@ -918,7 +955,7 @@ internal fun RerunModelScreen(
             },
         )
     }
-    rescan?.takeIf { rescanOpen }?.let { RescanZonesDialog(it.zones, onDismiss = { rescanOpen = false }) }
+    rescan?.takeIf { rescanOpen }?.let { RescanZonesDialog(it.zones, onDismiss = { rescanOpen = false }, onRescan = it.picker(onRescan)) }
 }
 
 /** The scan's name, and where it is kept; a tap renames it. */
@@ -1109,52 +1146,29 @@ private fun groundOf(model: RerunScanModel): GroundBuild? = runCatching {
 }.onFailure { Log.w(TAG, "ground failed", it) }.getOrNull()
 
 /**
- * How much of the floor the scan covers, and the hatching that marks the rest: the live map's
- * own words and swatch, so the result reads as the map the scan was filling in. Without [area] (a
- * recording that cannot be read) it keys the hatching alone.
+ * How much of the floor the scan covers, in the live map's own words. The floor it did not see is
+ * not hatched on the result any more: its holes read as the slab, and the parts worth scanning
+ * again have their own pill (#4736).
  */
 @Composable
-private fun FloorLegend(area: String?) {
+private fun FloorLegend(area: String) {
     val chrome = LocalStageChrome.current
     val shape = RoundedCornerShape(SceneViewTokens.Radius.full)
-    val label = area?.let { stringResource(R.string.scan_coverage_label, it) }
-        ?: stringResource(R.string.scan_coverage_label_hatched)
-    val colors = ScanGroundColors.current()
-    Row(
+    val text = stringResource(R.string.scan_coverage_floor, area)
+    Text(
+        text = text,
+        style = SceneViewTokens.Type.caption,
+        color = chrome.onCard,
         modifier = Modifier
             .heightIn(min = SceneViewTokens.Layout.touchTarget)
             .clip(shape)
             .background(chrome.card, shape)
             .overMediaEdge(shape, chrome.edgeRing, chrome.edgeHalo)
+            .wrapContentHeight(Alignment.CenterVertically)
             .padding(horizontal = Space.md, vertical = Space.sm)
-            .clearAndSetSemantics { contentDescription = label }
+            .clearAndSetSemantics { contentDescription = text }
             .testTag(RERUN_MODEL_FLOOR_TAG),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Space.sm),
-    ) {
-        val swatch = RoundedCornerShape(SceneViewTokens.Radius.xs)
-        // On a dark stage the hole's veil and the amber are close in tone, and three fine stripes
-        // melt into one beige disc at this size: the swatch takes the dark ground's own look —
-        // fewer, bolder stripes, framed by the hole's `outline-variant` edge.
-        val lines = if (colors.dark) DARK_HATCH_LINES else HATCH_LINES
-        val share = if (colors.dark) DARK_HATCH_STROKE else HATCH_STROKE
-        val ring = Modifier.border(SceneViewTokens.Layout.selectedOutlineWidth, colors.edge, swatch)
-        Canvas(Modifier.size(Space.md).clip(swatch).then(if (colors.dark) ring else Modifier)) {
-            drawRect(colors.missing)
-            val step = size.width / lines
-            val stroke = step * share
-            for (i in -lines..lines) {
-                val x = i * step
-                drawLine(colors.hatch, Offset(x, size.height), Offset(x + size.height, 0f), strokeWidth = stroke)
-            }
-        }
-        Text(
-            text = area?.let { stringResource(R.string.scan_coverage_floor, it) }
-                ?: stringResource(R.string.scan_coverage_hatched),
-            style = SceneViewTokens.Type.caption,
-            color = chrome.onCard,
-        )
-    }
+    )
 }
 
 /** The one-line gesture hint, a pill that leaves after a few seconds. */
@@ -1261,11 +1275,6 @@ internal const val RERUN_MODEL_TOUR_TAG = "rerun_model_tour"
 internal const val RERUN_MODEL_VEIL_TAG = "rerun_model_veil"
 internal const val RERUN_MODEL_FLOOR_TAG = "rerun_model_floor"
 
-/** The legend's swatch: this many hatching lines across it, each this share of their spacing. */
-private const val HATCH_LINES = 3
-private const val HATCH_STROKE = 0.35f
-private const val DARK_HATCH_LINES = 2
-private const val DARK_HATCH_STROKE = 0.42f
 private const val CM_PER_M = 100f
 
 /** The smallest scan the tour pushes into, metres: an object on a table. */

@@ -116,9 +116,9 @@ object SurveyFormat {
     fun areaSpread(squareMetres: Float, locale: Locale = Locale.US): String =
         "%.1f".format(locale, max(1, ceil(squareMetres / AREA_STEP_M2 - EPSILON).toInt()) * AREA_STEP_M2)
 
-    /** A wall's length as the plan labels it: `≈ 4.00` when part of it was not seen. */
+    /** A wall's length as the plan labels it: `≈ 4.00` when part of it was not seen, nothing when it is not [SurveyWall.sized]. */
     fun wall(wall: SurveyWall, locale: Locale = Locale.US): String =
-        (if (wall.length.estimate) ESTIMATE else "") + length(wall.length.value, locale)
+        if (!wall.sized) "" else (if (wall.length.estimate) ESTIMATE else "") + length(wall.length.value, locale)
 
     private const val EPSILON = 1e-3f
 }

@@ -92,7 +92,7 @@ class SurveyWording(
     val units: MeasureUnitSystem = MeasureUnitSystem.Metric,
     /**
      * The language whose decimal mark its figures take: `4.00` in English, `4,00` in French.
-     * English by default, as 3D Scan's screens are; Measure's plan passes the phone's.
+     * English when none is given; the Plan view, 3D Scan's and Measure's alike, passes the phone's.
      */
     val locale: Locale = Locale.US,
 )
@@ -280,6 +280,8 @@ object SurveyReport {
     fun wallRows(survey: RoomSurvey, wording: SurveyWording): List<SurveyRow> = survey.walls.map { wall ->
         val label = wording.wall.format(wall.tag)
         when {
+            !wall.sized ->
+                SurveyRow(label, wording.notMeasured + (if (wall.seen) "" else SEPARATOR + wording.notSeen), muted = true)
             !wall.seen -> SurveyRow(label, wallFigure(wall, wording) + SEPARATOR + wording.notSeen, muted = true)
             wall.length.estimate ->
                 SurveyRow(label, wallFigure(wall, wording) + SEPARATOR + wording.estimated, muted = true)

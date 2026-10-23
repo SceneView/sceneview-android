@@ -68,6 +68,7 @@ import io.github.sceneview.demo.LocalDemoBottomChromeCover
 import io.github.sceneview.demo.R
 import io.github.sceneview.demo.SETTINGS_FAB_RESERVED_SPACE
 import io.github.sceneview.demo.demos.internal.ArDebugEvent
+import io.github.sceneview.demo.demos.internal.ArDebugGeometry
 import io.github.sceneview.demo.demos.internal.DenseCloud
 import io.github.sceneview.demo.demos.internal.DebugPose
 import io.github.sceneview.demo.demos.internal.DenseFusion
@@ -78,6 +79,7 @@ import io.github.sceneview.demo.demos.internal.PlanMetrics
 import io.github.sceneview.demo.demos.internal.PlanStroke
 import io.github.sceneview.demo.demos.internal.PlanTextRole
 import io.github.sceneview.demo.demos.internal.ReplayLens
+import io.github.sceneview.demo.demos.internal.orPlanes
 import io.github.sceneview.demo.demos.internal.RerunCapturePack
 import io.github.sceneview.demo.demos.internal.RerunSyntheticRoom
 import io.github.sceneview.demo.demos.internal.SyntheticScene
@@ -143,12 +145,12 @@ internal class PlanWords(
 /**
  * The Plan view's words under the phone's language, its figures in [units]: by default that
  * language's, feet and inches in US English, metres everywhere else ([SurveyFormat.units]). Their
- * decimal mark is [locale]'s, English by default ([SurveyWording.locale]).
+ * decimal mark is [locale]'s, the phone's by default: `4,00 m` in French, `4.00 m` in English.
  */
 @Composable
 internal fun rememberPlanWords(
     units: MeasureUnitSystem = SurveyFormat.units(LocalLocale.current.platformLocale),
-    locale: Locale = Locale.US,
+    locale: Locale = LocalLocale.current.platformLocale,
 ): PlanWords = planWords(units, locale)
 
 @Composable
@@ -182,6 +184,7 @@ private fun planWords(units: MeasureUnitSystem, locale: Locale): PlanWords = Pla
         gaps = mapOf(
             SurveyGap.NoDepth to stringResource(R.string.demo_ar_rerun_plan_gap_no_depth),
             SurveyGap.NoWalls to stringResource(R.string.demo_ar_rerun_plan_gap_no_walls),
+            SurveyGap.WallEnd to stringResource(R.string.demo_ar_rerun_plan_gap_wall_end),
             SurveyGap.MissingWall to stringResource(R.string.demo_ar_rerun_plan_gap_missing_wall),
             SurveyGap.ObliqueWall to stringResource(R.string.demo_ar_rerun_plan_gap_oblique_wall),
             SurveyGap.Ceiling to stringResource(R.string.demo_ar_rerun_plan_gap_ceiling),
@@ -227,8 +230,11 @@ internal fun planHeading(title: String, epochSeconds: Long?, locale: Locale = Lo
 /** [media]'s survey, measured on the calling thread: call it off the main one. */
 internal fun surveyOf(media: RerunReplayMedia): RoomSurvey {
     val cloud = media.dense?.cloud ?: return RoomSurvey.empty(SurveyGap.NoDepth)
-    val trail = media.trace.let { it.frameAt(it.duration) }.trail
-    return RoomSurveyor.survey(RoomSurveyInput(cloud.positions, cloud.normals, trail))
+    val last = media.trace.let { it.frameAt(it.duration) }
+    // The cloud holds no wall when the depth stalled while ARCore kept finding them: the walls
+    // the capture counted then give the plan, not "scan the walls" under a count of ten.
+    return RoomSurveyor.survey(RoomSurveyInput(cloud.positions, cloud.normals, last.trail))
+        .orPlanes(last.planes, ArDebugGeometry.floorHeight(last))
 }
 
 /**
@@ -267,7 +273,7 @@ internal fun RerunPlanView(
     date: String?,
     modifier: Modifier = Modifier,
     units: MeasureUnitSystem = SurveyFormat.units(LocalLocale.current.platformLocale),
-    locale: Locale = Locale.US,
+    locale: Locale = LocalLocale.current.platformLocale,
 ) {
     val words = rememberPlanWords(units, locale)
     val context = LocalContext.current

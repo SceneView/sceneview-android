@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -23,6 +24,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.graphics.Color
@@ -53,10 +55,12 @@ import io.github.sceneview.demo.demos.internal.ArDebugStyle
 import io.github.sceneview.demo.demos.internal.DebugGroup
 import io.github.sceneview.demo.demos.internal.DebugMesh
 import io.github.sceneview.demo.demos.internal.DenseSurfels
+import io.github.sceneview.demo.demos.internal.LabelRect
 import io.github.sceneview.demo.demos.internal.OrbitPose
 import io.github.sceneview.demo.demos.internal.ScanBox
 import io.github.sceneview.demo.demos.internal.ScanCard
 import io.github.sceneview.demo.demos.internal.ScanChrome
+import io.github.sceneview.demo.demos.internal.ScanLabels
 import io.github.sceneview.demo.demos.internal.ScanObjectMeshes
 import io.github.sceneview.demo.demos.internal.ScanObjects
 import io.github.sceneview.demo.demos.internal.ScanPick
@@ -73,6 +77,7 @@ import io.github.sceneview.demo.demos.internal.semantic.SceneRecognizer
 import io.github.sceneview.demo.demos.internal.semantic.allowSceneDetectorDownload
 import io.github.sceneview.demo.demos.internal.semantic.loadSceneDetector
 import io.github.sceneview.demo.demos.internal.semantic.nameRes
+import io.github.sceneview.demo.demos.internal.semantic.recognitionLogLine
 import io.github.sceneview.demo.demos.internal.semantic.recognizeInPasses
 import io.github.sceneview.demo.demos.internal.semantic.sceneImageOf
 import io.github.sceneview.demo.hdpack.hdPackSize
@@ -261,6 +266,7 @@ internal class ScanObjectPick(
             reveal.settled()
         }
         val known = selection.recognized
+            ?: if (QaRecognizedLabels.active()) QaRecognizedLabels.items(dense.cloud).also { selection.recognized = it } else null
         if (known != null) recognized = known else recognize()
     }
 
@@ -307,11 +313,9 @@ internal class ScanObjectPick(
                     }
                 },
                 onPass = { recognition ->
-                    Log.d(
-                        TAG,
-                        "recognised ${recognition.items.size} parts on ${recognition.frames.size} keyframes " +
-                            "with ${recognition.detector} in ${recognition.totalMillis} ms",
-                    )
+                    // `adb logcat -s ScanObject`. The first pass reads no photo by design — the
+                    // openings come from the dense cloud —, so it says what the walls gave instead.
+                    Log.d(TAG, recognitionLogLine(recognition))
                     last = recognition
                     recognized = recognition.items
                 },
@@ -327,7 +331,7 @@ internal class ScanObjectPick(
     private fun detectorIs(state: SceneModelState) {
         noticeJob?.cancel()
         detectorState = state.takeUnless { it == SceneModelState.Ready }
-        if (state == SceneModelState.Offline || state == SceneModelState.Unusable) {
+        if (state == SceneModelState.Offline || state == SceneModelState.Unavailable || state == SceneModelState.Unusable) {
             noticeJob = scope.launch {
                 delay(NOTICE_MILLIS)
                 detectorState = null
@@ -628,13 +632,9 @@ internal fun ScanObjectOverlay(pick: ScanObjectPick?, modifier: Modifier = Modif
             )
         }
     }
-    // The recognised parts of the room, each named over its box; hidden under a picked one's label.
-    pick.recognized.forEachIndexed { index, item ->
-        val at = { pick.recognizedAnchors.getOrElse(index) { Offset.Unspecified } }
-        Anchored(above = at, below = at, chrome = chrome, modifier = modifier) {
-            RecognizedLabel(item)
-        }
-    }
+    // The recognised parts of the room, each named over its box, none over another; hidden under
+    // a picked one's label.
+    RecognizedLabels(pick, chrome, modifier)
     DetectorStatus(pick.detectorState, modifier, onDownload = pick::download)
 }
 
@@ -672,13 +672,13 @@ private fun DetectorStatus(state: SceneModelState?, modifier: Modifier, onDownlo
                         progress = shown.fraction,
                     )
                 }
-                SceneModelState.Offline, SceneModelState.Unusable -> ObjectLabel(
+                SceneModelState.Offline, SceneModelState.Unavailable, SceneModelState.Unusable -> ObjectLabel(
                     title = stringResource(R.string.demo_ar_rerun_detector_off),
                     caption = stringResource(
-                        if (shown == SceneModelState.Offline) {
-                            R.string.demo_ar_rerun_detector_offline_caption
-                        } else {
-                            R.string.demo_ar_rerun_detector_unusable_caption
+                        when (shown) {
+                            SceneModelState.Offline -> R.string.demo_ar_rerun_detector_offline_caption
+                            SceneModelState.Unavailable -> R.string.demo_ar_rerun_detector_unavailable_caption
+                            else -> R.string.demo_ar_rerun_detector_unusable_caption
                         },
                     ),
                     description = null,
@@ -715,7 +715,69 @@ private fun DetectorStatus(state: SceneModelState?, modifier: Modifier, onDownlo
     }
 }
 
-/** A recognised part of the room: what it is, over its box's three dimensions. */
+/**
+ * The labels of [pick]'s recognised parts, laid out together so that none covers another
+ * ([ScanLabels.declutter]): each over its box where it is free, else slid to the nearest free
+ * place with a leader line down to its box, or left out when no place is near — the surest
+ * keep theirs first. The boxes' points are read while placing, so the labels follow the camera
+ * without being recomposed; the leader lines are drawn behind them.
+ */
+@Composable
+private fun RecognizedLabels(pick: ScanObjectPick, chrome: ScanChrome, modifier: Modifier) {
+    val items = pick.recognized
+    if (items.isEmpty()) return
+    val stage = LocalStageChrome.current
+    val density = LocalDensity.current
+    val line = with(density) { SceneViewTokens.Layout.hairlineWidth.toPx() }
+    val dot = with(density) { (Space.xs / 2).toPx() }
+    val maxShift = with(density) { (Space.x4l + Space.x2l).roundToPx() }
+    var leaders by remember(pick) { mutableStateOf(emptyList<Pair<Offset, Offset>>()) }
+    Layout(
+        content = { items.forEach { RecognizedLabel(it) } },
+        modifier = modifier.drawBehind {
+            leaders.forEach { (from, to) ->
+                drawLine(stage.onCardMuted, from, to, strokeWidth = line)
+                drawCircle(stage.onCardMuted, radius = dot, center = from)
+            }
+        },
+    ) { measurables, constraints ->
+        val loose = constraints.copy(minWidth = 0, minHeight = 0)
+        val placeables = measurables.map { it.measure(loose) }
+        val width = constraints.maxWidth
+        val height = constraints.maxHeight
+        layout(width, height) {
+            val anchors = pick.recognizedAnchors
+            val wanted = placeables.mapIndexed { index, placeable ->
+                val at = anchors.getOrElse(index) { Offset.Unspecified }
+                if (!at.isSpecified || placeable.height <= 0) {
+                    null
+                } else {
+                    val (x, y) = chrome.labelAt(at.x, at.y, at.y, placeable.width, placeable.height, width, height)
+                    LabelRect(x, y, placeable.width, placeable.height)
+                }
+            }
+            val placed = ScanLabels.declutter(
+                wanted,
+                area = chrome.labelArea(width, height),
+                gap = chrome.gap,
+                maxShift = maxShift,
+                obstacles = listOfNotNull(chrome.cardRect(width)),
+            )
+            val lines = ArrayList<Pair<Offset, Offset>>()
+            placed.forEachIndexed { index, rect ->
+                if (rect == null) return@forEachIndexed
+                placeables[index].place(rect.left, rect.top)
+                if (rect != wanted[index]) {
+                    val at = anchors[index]
+                    ScanLabels.leaderEnd(at.x, at.y, rect)?.let { (x, y) -> lines += at to Offset(x, y) }
+                }
+            }
+            if (lines != leaders) leaders = lines
+        }
+    }
+}
+
+/** A recognised part of the room: what it is and how sure the scan is, over its box's three dimensions. */
 @Composable
 private fun RecognizedLabel(item: RecognizedItem) {
     val (length, depth, height) = item.box.sizes()
@@ -733,7 +795,14 @@ private fun RecognizedLabel(item: RecognizedItem) {
             .padding(horizontal = Space.sm, vertical = Space.xs),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(name, style = SceneViewTokens.Type.caption.copy(color = chrome.onCard))
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(name, style = SceneViewTokens.Type.caption.copy(color = chrome.onCard))
+            Text(
+                stringResource(R.string.demo_ar_rerun_recognized_confidence, sure),
+                style = SceneViewTokens.Type.caption.copy(color = chrome.onCardMuted, fontFeatureSettings = "tnum"),
+                modifier = Modifier.padding(start = Space.xs),
+            )
+        }
         Text(
             stringResource(R.string.demo_ar_rerun_object_size, length, depth, height),
             style = SceneViewTokens.Type.caption.copy(color = chrome.onCardMuted, fontFeatureSettings = "tnum"),

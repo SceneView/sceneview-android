@@ -64,4 +64,19 @@ class LiveCoverageGroundTest {
         assertTrue(LiveCoverageGround.contains(triangle, 0.5f, 0.5f))
         assertFalse(LiveCoverageGround.contains(triangle, 1.5f, 1.5f))
     }
+
+    @Test
+    fun onlyTheLiveMapHatchesTheFloorStillToScan() {
+        // Half the room covered: the result draws its slab whole, the live map hatches the rest.
+        val covered = LongArray(32) { CoverageGrid.key(it % 8, it / 8) }
+        val ground = requireNotNull(LiveCoverageGround.of(covered, cell, square, 0f))
+        val result = ScanGroundMeshes.of(ground)
+        val live = ScanGroundMeshes.of(ground, hatchMissing = true)
+        assertEquals(0, result.missingFill.triangleCount)
+        assertEquals(0, result.hatch.triangleCount)
+        // One inset tile and one diagonal ribbon, two triangles each, per missing cell.
+        assertEquals(2 * 32, live.missingFill.triangleCount)
+        assertEquals(2 * 32, live.hatch.triangleCount)
+        assertEquals(result.slab.triangleCount, live.slab.triangleCount)
+    }
 }

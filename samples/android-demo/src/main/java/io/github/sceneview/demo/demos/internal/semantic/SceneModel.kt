@@ -1,6 +1,7 @@
 package io.github.sceneview.demo.demos.internal.semantic
 
 import io.github.sceneview.demo.hdpack.HdAsset
+import io.github.sceneview.demo.hdpack.HdPackHttpException
 import io.github.sceneview.demo.hdpack.HdPackIntegrityException
 import io.github.sceneview.demo.hdpack.HdPackManifest
 import io.github.sceneview.demo.hdpack.HdPackStore
@@ -53,8 +54,14 @@ sealed interface SceneModelState {
     /** On the wire, [fraction] of it on the device. */
     data class Downloading(val fraction: Float) : SceneModelState
 
-    /** No network, or the server failed: what arrived is kept, and a later replay resumes it. */
+    /** No network, or it dropped mid-file: what arrived is kept, and a later replay resumes it. */
     data object Offline : SceneModelState
+
+    /**
+     * The network works but the server did not send the file — a 404, a 5xx: what arrived is kept,
+     * and a later replay asks again. Not "no connection", which would send the user to their Wi-Fi.
+     */
+    data object Unavailable : SceneModelState
 
     /**
      * Not on the device, and the network is metered: nothing is fetched until the user asks — the
@@ -137,6 +144,10 @@ class SceneModelStore(
             withContext(Dispatchers.IO) { part.delete() }
             onFailure(corrupt)
             onState(SceneModelState.Unusable)
+            null
+        } catch (refused: HdPackHttpException) {
+            onFailure(refused)
+            onState(SceneModelState.Unavailable)
             null
         } catch (offline: IOException) {
             onFailure(offline)

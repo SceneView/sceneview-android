@@ -5,6 +5,7 @@ import io.github.sceneview.demo.demos.internal.RoomPlanDxf.OpeningKind
 import io.github.sceneview.demo.demos.internal.RoomPlanLayoutTest.Companion.WORDING
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -238,6 +239,22 @@ class RoomPlanDxfTest {
         assertTrue("$dimensions", dimensions.containsAll(listOf("13' 1\"", "16' 5\"")))
         val area = SurveyReport.area(room.area!!, MeasureUnitSystem.Imperial)
         assertTrue(area, dxf.entities("TEXT", "TEXT").any { it.text == area })
+    }
+
+    @Test
+    fun `figures in feet and inches set the dimension units to architectural, DIMLUNIT 4`() {
+        val dxf = dxf(room, imperialWording(), openings = OPENINGS)
+        // Without it, a CAD tool dimensions and measures the inch drawing in decimal inches, 157.48 rather than 13'-1 1/2".
+        assertEquals("architectural, under the integer code 70", 70 to "4", dxf.headerPair("\$DIMLUNIT"))
+        assertEquals("written once", 1, dxf.headerNames.count { it == "\$DIMLUNIT" })
+        assertEquals("the metric header's variables besides", METRIC_HEADER, dxf.headerNames - "\$DIMLUNIT")
+    }
+
+    @Test
+    fun `figures in metres leave the header as it was, its dimension units the decimal default`() {
+        val dxf = dxf(room, openings = OPENINGS)
+        assertEquals(METRIC_HEADER, dxf.headerNames)
+        assertNull("no DIMLUNIT, which a CAD tool then reads as 2, decimal", dxf.headerPair("\$DIMLUNIT"))
     }
 
     /**
@@ -566,6 +583,17 @@ class RoomPlanDxfTest {
             return variables.getOrNull(at + 1)?.takeIf { at >= 0 && it.first != 9 }?.second
         }
 
+        /** The header's variables, in the file's order. */
+        val headerNames: List<String>
+            get() = sections["HEADER"]?.firstOrNull { it.type.isEmpty() }?.pairs.orEmpty().filter { it.first == 9 }.map { it.second }
+
+        /** The group code and value the header variable [name] holds, its value trimmed; null when it is not there. */
+        fun headerPair(name: String): Pair<Int, String>? {
+            val variables = sections["HEADER"]?.firstOrNull { it.type.isEmpty() }?.pairs ?: return null
+            val at = variables.indexOf(9 to name)
+            return variables.getOrNull(at + 1)?.takeIf { at >= 0 && it.first != 9 }?.let { it.first to it.second.trim() }
+        }
+
         /** The point the header variable [name] holds: its x and y. */
         fun headerPoint(name: String): DoubleArray {
             val variables = sections["HEADER"]?.firstOrNull { it.type.isEmpty() }?.pairs.orEmpty()
@@ -582,6 +610,12 @@ class RoomPlanDxfTest {
 
     private companion object {
         val LAYERS = listOf("WALLS", "OPENINGS", "DIMENSIONS", "TEXT", "LEGEND")
+
+        /** The metric drawing's header variables, in order, as they were before the dimension units. */
+        val METRIC_HEADER = listOf(
+            "\$ACADVER", "\$DWGCODEPAGE", "\$INSBASE", "\$EXTMIN", "\$EXTMAX",
+            "\$LUNITS", "\$LUPREC", "\$INSUNITS", "\$MEASUREMENT", "\$HANDSEED",
+        )
 
         /**
          * The empty R2000 drawing ezdxf 1.4.2 writes, `ezdxf.new("R2000").saveas("ezdxf-new-R2000.dxf")`:
