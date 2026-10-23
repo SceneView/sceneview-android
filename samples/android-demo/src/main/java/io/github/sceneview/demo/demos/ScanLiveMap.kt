@@ -27,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.layout.onSizeChanged
@@ -200,7 +201,8 @@ internal fun ScanLiveMap(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Space.xs),
             ) {
-                Canvas(Modifier.size(SwatchSize)) {
+                // Clipped: its diagonals run past the swatch, and drew over the area's first digit.
+                Canvas(Modifier.size(SwatchSize).clipToBounds()) {
                     drawRect(groundColors.missing)
                     val w = this.size.width
                     for (i in -1..2) {
@@ -228,6 +230,7 @@ internal fun ScanLiveMap(
                     icon = Icons.Rounded.MyLocation,
                     contentDescription = stringResource(R.string.demo_ar_rerun_recenter_description),
                     onClick = { orbit.recenter() },
+                    ground = ArOverlay.scrimDark,
                 )
             }
             GlassIconButton(
@@ -236,6 +239,8 @@ internal fun ScanLiveMap(
                     if (mapFirst) R.string.scan_live_map_swap_camera else R.string.scan_live_map_swap_map,
                 ),
                 onClick = onSwap,
+                // The legend's scrim: bare glass vanished over the light theme's pale floor.
+                ground = ArOverlay.scrimDark,
                 modifier = Modifier.testTag(SCAN_LIVE_MAP_SWAP_TAG),
             )
         }
