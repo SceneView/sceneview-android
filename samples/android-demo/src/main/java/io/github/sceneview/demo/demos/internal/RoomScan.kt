@@ -342,6 +342,68 @@ object ScanCopy {
     const val OPEN_FAILED = "This scan could not be opened."
     const val SAVE_FAILED = "Couldn't save your scan"
     const val SAVE_FAILED_DETAIL = "Your scan is still here, not saved yet. Try again, or discard it."
+    const val SAVE_AS_FILE = "Save as file"
+    const val SAVING_FILE = "Preparing the file…"
+    const val SAVE_AS_FILE_FAILED = "The file could not be written either. Free up some space, then try again."
+
+    /**
+     * What the "Couldn't save" card says under its title: why the save failed and what to do,
+     * [scanBytes] being what the scan needs on the phone, [refusal] why a part scanned again did
+     * not line up (#4815). `null` — a failure not yet read — says what it always said.
+     */
+    fun saveFailedDetail(
+        failure: ScanSaveFailure?,
+        scanBytes: Long = 0L,
+        refusal: RescanRefusal? = null,
+    ): String = when (failure) {
+        ScanSaveFailure.Memory ->
+            "Your phone ran out of memory saving this long scan. It is still here: try again, " +
+                "or save it as a file to keep it."
+        ScanSaveFailure.Storage ->
+            "Your phone's storage is full" +
+                (if (scanBytes > 0) ": this scan needs about ${ScanSaveFailure.mb(scanBytes)}" else "") +
+                ". Free up some space, then try again. Your scan is still here."
+        ScanSaveFailure.Empty ->
+            "This scan caught no camera path, points or surfaces, so there is nothing to keep. " +
+                "Discard it and scan again."
+        ScanSaveFailure.Other ->
+            "Something went wrong saving this scan. It is still here: try again, or save it as a file."
+        ScanSaveFailure.Refused -> rescanRefusedDetail(refusal)
+        null -> SAVE_FAILED_DETAIL
+    }
+
+    /** The card's title: a part that did not line up was never a failed write. */
+    fun saveFailedTitle(failure: ScanSaveFailure?): String =
+        if (failure == ScanSaveFailure.Refused) RESCAN_REFUSED_TITLE else SAVE_FAILED
+
+    /**
+     * The card's main action: Try again, or — for a part that did not line up, which lines up
+     * no better a second time — Save as a separate scan.
+     */
+    fun saveFailedAction(failure: ScanSaveFailure?): String =
+        if (failure == ScanSaveFailure.Refused) SAVE_SEPARATE else TRY_AGAIN
+
+    /**
+     * Why a part scanned again (#4736) did not line up on its scan, [why] being what lining it up
+     * came to (`null`: the re-scan held no depth points), and what keeps it (#4815).
+     */
+    fun rescanRefusedDetail(why: RescanRefusal?): String {
+        val reason = when (why) {
+            RescanRefusal.TooLittleOverlap -> "too little of what you scanned before is in it"
+            RescanRefusal.NoFloor -> "it shows no floor to line it up on"
+            RescanRefusal.NoWalls -> "it shows no wall to line it up on"
+            RescanRefusal.Unconstrained -> "it shows too little of the walls around it to hold it in place"
+            RescanRefusal.Ambiguous -> "two places in your scan fit it equally well"
+            RescanRefusal.Contradicts -> "lined up, it would put surfaces where your scan saw open space"
+            RescanRefusal.NoNormals -> "your scan holds no surface directions to line it up on"
+            null -> "it holds no depth points to line up"
+        }
+        return "This part didn't line up with your scan: $reason. Save it as a separate scan to keep " +
+            "it, or discard it. Your scan stays as it was."
+    }
+
+    const val RESCAN_REFUSED_TITLE = "Couldn't line up this part"
+    const val SAVE_SEPARATE = "Save as a separate scan"
 
     /** A save that failed after its capture screen was left (#4500): said on the landing. */
     const val SAVE_FAILED_AWAY = "Couldn't save your last scan."
