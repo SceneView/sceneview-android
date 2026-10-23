@@ -16,6 +16,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
@@ -27,12 +28,9 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import io.github.sceneview.demo.R
-import io.github.sceneview.demo.demos.internal.DenseCloud
 import io.github.sceneview.demo.demos.internal.ReconstructionMethod
-import io.github.sceneview.demo.demos.internal.RerunTsdf
 import io.github.sceneview.demo.theme.SceneViewDemoTheme
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -44,9 +42,10 @@ import java.io.File
 
 /**
  * The end of a scan's choice of reconstruction (#4630): the two methods the phone runs and
- * nothing else, "As scanned" picked first, "Filled" only when the scan has its surfels. Each run
- * leaves the sheet's content, light and dark, in `build/reconstruction-sheet-renders/` (not
- * committed).
+ * nothing else, "As scanned" picked first, "Filled" only when the scan has its surfels and fits
+ * the fill's memory — and, when it fits only on a coarser grid, saying so before it is picked.
+ * Each run leaves the sheet's content, light and dark, en-US and fr-FR, in
+ * `build/reconstruction-sheet-renders/` (not committed).
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = "w411dp-h891dp-xhdpi")
@@ -58,20 +57,22 @@ class ReconstructionSheetTest {
 
     private var finished: ReconstructionMethod? = null
 
-    private fun show(canFill: Boolean) {
+    private fun show(fill: FillPlan) {
         composeRule.setContent {
             SceneViewDemoTheme(darkTheme = false) {
                 Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
-                    ReconstructionChoices(canFill, ReconstructionMethod.Fused, onFinish = { finished = it })
+                    ReconstructionChoices(fill, ReconstructionMethod.Fused, onFinish = { finished = it })
                 }
             }
         }
         composeRule.waitForIdle()
     }
 
+    private fun text(id: Int): String = ApplicationProvider.getApplicationContext<android.content.Context>().getString(id)
+
     @Test
     fun `only the two methods the phone runs are offered, as scanned first`() {
-        show(canFill = true)
+        show(FillPlan.Fills(1))
         val choices = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton)
         composeRule.onAllNodes(choices).assertCountEquals(ReconstructionMethod.entries.size)
         composeRule.onNodeWithTag(choiceTag(ReconstructionMethod.Fused)).assertIsSelected()
@@ -80,7 +81,7 @@ class ReconstructionSheetTest {
 
     @Test
     fun `filled can be picked and the model finishes with it`() {
-        show(canFill = true)
+        show(FillPlan.Fills(1))
         composeRule.onNodeWithTag(choiceTag(ReconstructionMethod.Poisson)).performClick().assertIsSelected()
         composeRule.onNodeWithTag(choiceTag(ReconstructionMethod.Fused)).assertIsNotSelected()
         composeRule.onNodeWithTag(FINISH_TAG).performClick()
@@ -88,11 +89,35 @@ class ReconstructionSheetTest {
     }
 
     @Test
-    fun `without surfels filled is shown, says why, and cannot be picked`() {
-        show(canFill = false)
-        val unavailable = ApplicationProvider.getApplicationContext<android.content.Context>()
-            .getString(R.string.scan_finish_method_filled_unavailable)
-        composeRule.onNodeWithText(unavailable).assertExists()
+    fun `in full detail filled says nothing of a coarser grid`() {
+        show(FillPlan.Fills(1))
+        composeRule.onNodeWithText(text(R.string.scan_finish_method_filled_detail)).assertExists()
+        composeRule.onNodeWithText(text(R.string.scan_finish_method_filled_half)).assertDoesNotExist()
+        composeRule.onNodeWithText(text(R.string.scan_finish_method_filled_quarter)).assertDoesNotExist()
+    }
+
+    @Test
+    fun `a scan that fills only on a coarser grid says so, and can still be filled`() {
+        show(FillPlan.Fills(2))
+        composeRule.onNodeWithText(text(R.string.scan_finish_method_filled_detail)).assertExists()
+        composeRule.onNodeWithText(text(R.string.scan_finish_method_filled_half)).assertExists()
+        composeRule.onNodeWithTag(choiceTag(ReconstructionMethod.Poisson)).assertIsEnabled().performClick()
+        composeRule.onNodeWithTag(FINISH_TAG).performClick()
+        assertEquals(ReconstructionMethod.Poisson, finished)
+    }
+
+    @Test
+    fun `at a quarter of the detail filled says so`() {
+        show(FillPlan.Fills(4))
+        composeRule.onNodeWithText(text(R.string.scan_finish_method_filled_quarter)).assertExists()
+        composeRule.onNodeWithText(text(R.string.scan_finish_method_filled_half)).assertDoesNotExist()
+    }
+
+    @Test
+    fun `a scan too big to fill shows filled, says why, and cannot be picked`() {
+        show(FillPlan.TooBig)
+        composeRule.onNodeWithText(text(R.string.scan_finish_method_filled_too_big)).assertExists()
+        composeRule.onNodeWithText(text(R.string.scan_finish_method_filled_detail)).assertDoesNotExist()
         composeRule.onNodeWithTag(choiceTag(ReconstructionMethod.Poisson)).assertIsNotEnabled().performClick()
         composeRule.onNodeWithTag(choiceTag(ReconstructionMethod.Fused)).assertIsSelected()
         composeRule.onNodeWithTag(FINISH_TAG).performClick()
@@ -100,34 +125,45 @@ class ReconstructionSheetTest {
     }
 
     @Test
-    fun `a scan can be filled when it kept surfels with normals`() {
-        val withNormals = DenseCloud(FloatArray(3), IntArray(1), normals = floatArrayOf(0f, 1f, 0f))
-        val withoutNormals = DenseCloud(FloatArray(3), IntArray(1))
-        assertTrue(canFill(RerunModelSource.Surfels(withNormals)))
-        assertFalse(canFill(RerunModelSource.Surfels(withoutNormals)))
-        assertTrue(canFill(RerunModelSource.Live(RerunTsdf(), withNormals)))
-        assertFalse(canFill(RerunModelSource.Live(RerunTsdf(), null)))
-        assertTrue(canFill(RerunModelSource.Synthetic()))
+    fun `without surfels filled is shown, says why, and cannot be picked`() {
+        show(FillPlan.NoSurfels)
+        composeRule.onNodeWithText(text(R.string.scan_finish_method_filled_unavailable)).assertExists()
+        composeRule.onNodeWithTag(choiceTag(ReconstructionMethod.Poisson)).assertIsNotEnabled().performClick()
+        composeRule.onNodeWithTag(choiceTag(ReconstructionMethod.Fused)).assertIsSelected()
+        composeRule.onNodeWithTag(FINISH_TAG).performClick()
+        assertEquals(ReconstructionMethod.Fused, finished)
     }
 
     @Test
     fun `the sheet renders in light and dark`() {
-        var look by mutableStateOf(LOOKS.first())
+        render(LOOKS, prefix = "en-US")
+    }
+
+    @Test
+    @Config(qualifiers = "fr-rFR-w411dp-h891dp-xhdpi")
+    fun `the sheet renders in light and dark in French`() {
+        // The demo is not translated: French falls back to the English strings, none missing.
+        render(LOOKS, prefix = "fr-FR")
+        assertTrue(text(R.string.scan_finish_method_title).isNotEmpty())
+    }
+
+    private fun render(looks: List<Look>, prefix: String) {
+        var look by mutableStateOf(looks.first())
         composeRule.setContent {
             key(look) {
                 SceneViewDemoTheme(darkTheme = look.dark) {
                     Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
-                        ReconstructionChoices(look.canFill, look.initial, onFinish = {}, Modifier.testTag(SHEET_TAG))
+                        ReconstructionChoices(look.fill, look.initial, onFinish = {}, Modifier.testTag(SHEET_TAG))
                     }
                 }
             }
         }
-        for (each in LOOKS) {
+        for (each in looks) {
             look = each
             composeRule.waitForIdle()
             composeRule.onAllNodesWithTag(SHEET_TAG).assertCountEquals(1)
             val image = composeRule.onNodeWithTag(SHEET_TAG).captureToImage().asAndroidBitmap()
-            save(image, each.name)
+            save(image, "$prefix-${each.name}")
             val ground = Color(image.getPixel(image.width - 1, image.height - 1)).luminance()
             assertTrue("${each.name}: ground $ground", if (each.dark) ground < DARK_GROUND else ground > LIGHT_GROUND)
         }
@@ -138,18 +174,21 @@ class ReconstructionSheetTest {
         out.outputStream().use { image.compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
 
-    private data class Look(val name: String, val dark: Boolean, val canFill: Boolean, val initial: ReconstructionMethod)
+    private data class Look(val name: String, val dark: Boolean, val fill: FillPlan, val initial: ReconstructionMethod)
 
     private companion object {
         const val SHEET_TAG = "reconstruction-sheet"
         const val DARK_GROUND = 0.2f
         const val LIGHT_GROUND = 0.5f
-        val LOOKS = listOf(
-            Look("light", dark = false, canFill = true, initial = ReconstructionMethod.Fused),
-            Look("light-filled", dark = false, canFill = true, initial = ReconstructionMethod.Poisson),
-            Look("light-unavailable", dark = false, canFill = false, initial = ReconstructionMethod.Fused),
-            Look("dark", dark = true, canFill = true, initial = ReconstructionMethod.Fused),
-            Look("dark-filled", dark = true, canFill = true, initial = ReconstructionMethod.Poisson),
-        )
+        val LOOKS = listOf(false, true).flatMap { dark ->
+            val theme = if (dark) "dark" else "light"
+            listOf(
+                Look(theme, dark, FillPlan.Fills(1), ReconstructionMethod.Fused),
+                Look("$theme-filled", dark, FillPlan.Fills(1), ReconstructionMethod.Poisson),
+                Look("$theme-half", dark, FillPlan.Fills(2), ReconstructionMethod.Poisson),
+                Look("$theme-too-big", dark, FillPlan.TooBig, ReconstructionMethod.Fused),
+                Look("$theme-unavailable", dark, FillPlan.NoSurfels, ReconstructionMethod.Fused),
+            )
+        }
     }
 }
