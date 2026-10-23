@@ -15,9 +15,10 @@ import kotlin.random.Random
  * Lining a re-scan up on the scan it completes (#4736). The ray-cast room is scanned once with a
  * stretch of its back wall missed, then a second session, started somewhere else and facing some
  * other way, looks at that wall. Moved by a known turn and shift, with 5 mm of noise, the second
- * session must come back within 2 cm and 1° — or be refused, never merged wrong. Then what must be
- * refused: another room, one flat wall, a floor alone, a bare corner of a square room, a room that
- * looks the same turned round, the part alone, a cloud without normals.
+ * session must come back within 2 cm and 1° — or be refused, never merged wrong — even with a third
+ * of its surface directions disagreeing with the scan's, as a real second session does. Then what
+ * must be refused: another room, one flat wall, a floor alone, a bare corner of a square room, a
+ * room that looks the same turned round, the part alone, a cloud without normals.
  */
 class RescanRegistrationTest {
 
@@ -51,6 +52,16 @@ class RescanRegistrationTest {
             }
         }
         assertTrue("only $lined of $RANDOM_TRIALS lined up", lined >= RANDOM_TRIALS - 1)
+    }
+
+    @Test
+    fun `a session whose surfaces face another way on a third of its points still lines up`() {
+        // Two depth sessions of a real room disagree like this next to each other's surfaces:
+        // clutter, edges, depth noise. Read as contradictions, it refused every real re-scan.
+        for (offset in OFFSETS) {
+            val found = RescanRegistrar.register(scan, turnedAway(session(offset), DISAGREEING_SHARE, SEED), listOf(ZONE))
+            assertWithin("offset $offset", offset, found)
+        }
     }
 
     @Test
@@ -221,6 +232,35 @@ class RescanRegistrationTest {
             val p = FloatArray(cloud.positions.size) { cloud.positions[it] + (random.nextGaussian() * NOISE_M).toFloat() }
             return DenseCloud(p, cloud.colors, cloud.normals, cloud.confidences, cloud.levels)
         }
+
+        /** [cloud] with [share] of its normals, at random, turned [TURNED_AWAY_DEG] off the surface's. */
+        fun turnedAway(cloud: DenseCloud, share: Float, seed: Int): DenseCloud {
+            val random = Random(seed)
+            val n = requireNotNull(cloud.normals).copyOf()
+            val c = cos(Math.toRadians(TURNED_AWAY_DEG)).toFloat()
+            val s = sin(Math.toRadians(TURNED_AWAY_DEG)).toFloat()
+            for (i in 0 until cloud.count) {
+                if (random.nextFloat() >= share) continue
+                val nx = n[i * 3]
+                val ny = n[i * 3 + 1]
+                val nz = n[i * 3 + 2]
+                // A direction across the normal: its cross product with up, or with +X on a floor.
+                var tx = if (abs(ny) > UP) 0f else -nz
+                var ty = if (abs(ny) > UP) nz else 0f
+                var tz = if (abs(ny) > UP) -ny else nx
+                val l = sqrt(tx * tx + ty * ty + tz * tz)
+                tx /= l
+                ty /= l
+                tz /= l
+                n[i * 3] = nx * c + tx * s
+                n[i * 3 + 1] = ny * c + ty * s
+                n[i * 3 + 2] = nz * c + tz * s
+            }
+            return DenseCloud(cloud.positions, cloud.colors, n, cloud.confidences, cloud.levels)
+        }
+
+        private const val DISAGREEING_SHARE = 0.35f
+        private const val TURNED_AWAY_DEG = 60.0
 
         /** A turn within 30° and a shift within 2 m, at random. */
         fun randomOffset(random: Random): RescanPose {

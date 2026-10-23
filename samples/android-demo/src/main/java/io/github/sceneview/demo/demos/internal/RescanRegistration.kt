@@ -29,9 +29,9 @@ import kotlin.math.sqrt
  * the floor and walls of the scan as the planes), and judged on what the re-scan lands on.
  *
  * It refuses ([RescanRefusal]) when the re-scan sees no floor, no wall, too little of what the scan
- * saw, too little to pin the shift down (one flat wall), two places it fits equally well (a bare
- * corner of a symmetric room), or when, once lined up, it puts surfaces where the scan saw empty
- * space outside the parts it may fill in. A wrong merge is worse than none.
+ * saw, too little to pin it down (one flat wall, or walls too few to hold it still), two places it
+ * fits equally well (a bare corner of a symmetric room), or when, once lined up, it puts surfaces
+ * where the scan saw empty space outside the parts it may fill in. A wrong merge is worse than none.
  *
  * Frame: metres, +Y up. Pure arithmetic: off the main thread.
  */
@@ -322,17 +322,26 @@ object RescanRegistrar {
     /** The fewest re-scan samples that must land on it. */
     const val MIN_MATCHED = 150
 
-    /** The weakest direction's stiffness, per matched sample: below it, a direction slides. */
-    const val MIN_STIFFNESS = 0.01f
+    /**
+     * The weakest direction's stiffness, per matched sample: below it, a direction slides. Two
+     * sessions of a real room agree on far fewer points than two synthetic ones, so a part that
+     * pins the pose only weakly settles on the wrong one: on a corpus of real re-scans, every part
+     * below this either was another room or came back 7° to 13° off.
+     */
+    const val MIN_STIFFNESS = 0.1f
 
     /** A second fit this close to the best, by samples matched, makes the best ambiguous. */
     const val AMBIGUOUS_SHARE = 0.85f
 
-    /** Two fits are different places when they turn this much apart, degrees… */
-    const val DISTINCT_DEG = 2f
+    /**
+     * Two fits are different places when they turn this much apart, degrees… ICP run from nearby
+     * candidates on a real re-scan stops a few degrees and centimetres apart, in the same place:
+     * those are one fit, not two.
+     */
+    const val DISTINCT_DEG = 10f
 
     /** …or move the re-scan's centre this far apart, metres. */
-    const val DISTINCT_M = 0.1f
+    const val DISTINCT_M = 0.3f
 
     /** How far around a part to fill in the re-scan may add what the scan lacks, metres. */
     const val OPEN_MARGIN_M = 0.3f
@@ -346,8 +355,11 @@ object RescanRegistrar {
     /** …to this high, metres: a ceiling one scan saw and not the other is no contradiction. */
     const val CONTRADICTION_TOP_M = 2f
 
-    /** The most of the re-scan, outside the parts to fill in, that may contradict the scan. */
-    const val MAX_CONTRADICTION = 0.2f
+    /**
+     * The most of the re-scan, outside the parts to fill in, that may land in the scan's empty space.
+     * Some always does on a real room: what the scan missed and no part to fill in covers.
+     */
+    const val MAX_CONTRADICTION = 0.25f
 
     /**
      * [rescan] lined up on [reference], or refused. [open] are the boxes (`[minX, minY, minZ,
@@ -742,8 +754,10 @@ object RescanRegistrar {
 
     /**
      * The share of the re-scan, outside the [open] boxes and inside the scan's room, that the scan
-     * contradicts once moved by [pose]: next to the scan's surface but off it, or out in the room's
-     * empty middle where the scan saw nothing.
+     * contradicts once moved by [pose]: out in the room's empty middle, where the scan saw nothing.
+     * A sample next to the scan's surface but off it, or facing another way, is no contradiction:
+     * two depth sessions of one room disagree like that on a third to a half of their points
+     * (clutter, edges, depth noise), and counting it refused every real re-scan.
      */
     private fun contradiction(ref: RescanReference, s: RescanSamples, pose: RescanPose, open: List<FloatArray>, floorY: Float): Float {
         val matched = BooleanArray(s.count)
@@ -761,7 +775,7 @@ object RescanRegistrar {
             if (x < f[0] || x > f[2] || z < f[1] || z > f[3]) continue
             if (open.any { inside(it, x, y, z, OPEN_MARGIN_M) }) continue
             judged++
-            if (!matched[i] && (ref.anyWithin(x, y, z, NEAR_M) || !ref.anyWithin(x, y, z, FREE_M))) against++
+            if (!matched[i] && !ref.anyWithin(x, y, z, FREE_M)) against++
         }
         return if (judged == 0) 0f else against.toFloat() / judged
     }
