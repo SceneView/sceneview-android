@@ -15,9 +15,11 @@ import kotlin.random.Random
  * Lining a re-scan up on the scan it completes (#4736). The ray-cast room is scanned once with a
  * stretch of its back wall missed, then a second session, started somewhere else and facing some
  * other way, looks at that wall. Moved by a known turn and shift, with 5 mm of noise, the second
- * session must come back within 2 cm and 1° — or be refused, never merged wrong. Then what must be
- * refused: another room, one flat wall, a floor alone, a bare corner of a square room, a room that
- * looks the same turned round, the part alone, a cloud without normals.
+ * session must come back within 2 cm and 1° — or be refused, never merged wrong — even with a third
+ * of its surface directions disagreeing with the scan's, as a real second session does. Then what
+ * must be refused: another room, the same room with a cupboard where the scan saw open floor, a room
+ * a few centimetres smaller, one flat wall, a floor alone, a bare corner of a square room, a room
+ * that looks the same turned round, the part alone, a cloud without normals.
  */
 class RescanRegistrationTest {
 
@@ -54,6 +56,16 @@ class RescanRegistrationTest {
     }
 
     @Test
+    fun `a session whose surfaces face another way on a third of its points still lines up`() {
+        // Two depth sessions of a real room disagree like this next to each other's surfaces:
+        // clutter, edges, depth noise. Read as contradictions, it refused every real re-scan.
+        for (offset in OFFSETS) {
+            val found = RescanRegistrar.register(scan, turnedAway(session(offset), DISAGREEING_SHARE, SEED), listOf(ZONE))
+            assertWithin("offset $offset", offset, found)
+        }
+    }
+
+    @Test
     fun `the moved session lands on the scan it completes`() {
         val offset = OFFSETS.first()
         val found = RescanRegistrar.register(scan, session(offset), listOf(ZONE)) as RescanAlignment.Lined
@@ -69,6 +81,38 @@ class RescanRegistrationTest {
         for (offset in OFFSETS) {
             val found = RescanRegistrar.register(scan, offset.inverse().moved(bedroom), listOf(ZONE))
             assertTrue("offset $offset: $found", found is RescanAlignment.Refused)
+        }
+    }
+
+    @Test
+    fun `a session that puts a cupboard where the scan saw open floor is refused`() {
+        // The same room, lined up right, but with a cupboard standing in the middle of it, outside
+        // the part to fill in: where the scan looked through to the back wall, it is in the way.
+        val cupboard = SyntheticShape.Box(Vec3(-0.6f, 0f, 0.8f), Vec3(0.9f, 1.5f, 1.15f)) { _, _, _ -> PLAIN }
+        val furnished = fuse(SyntheticScene(RerunSyntheticRoom.scene.shapes + cupboard), aimed(RESCAN_STOPS, PI.toFloat()))
+        for ((k, offset) in OFFSETS.withIndex()) {
+            assertRefused(RescanRefusal.Contradicts, RescanRegistrar.register(scan, noisy(offset.inverse().moved(furnished), SEED + k), listOf(ZONE)))
+        }
+    }
+
+    @Test
+    fun `a room whose walls stand a few centimetres in from the scan's contradicts it, the same room does not`() {
+        // Lined up where the scan's room is, a neighbouring room a few centimetres smaller lands
+        // every wall beside the scan's: by the scan's surface, so no open space, but matching none.
+        // At 6 cm the share off the walls reads 0.749, on its threshold, so 6 cm is not asserted.
+        val reference = requireNotNull(RescanReference.of(scan))
+        val floor = requireNotNull(reference.floorY)
+        val furniture = RerunSyntheticRoom.scene.shapes.filter { it !is SyntheticShape.Room }
+        for (inset in INSETS_M) {
+            val shell = SyntheticShape.Room(Vec3(-2f + inset, 0f, -1.8f + inset), Vec3(2f - inset, 2.6f, 1.8f - inset)) { _, _, _ -> PLAIN }
+            val session = noisy(fuse(SyntheticScene(listOf(shell) + furniture), aimed(RESCAN_STOPS, PI.toFloat())), SEED)
+            val samples = requireNotNull(RescanSamples.of(session, RescanRegistrar.SAMPLE_M, RescanRegistrar.MAX_SAMPLES))
+            val judged = RescanRegistrar.judge(reference, samples, RescanPose.Identity, listOf(ZONE), floor)
+            val contradicts = judged.free > RescanRegistrar.MAX_CONTRADICTION || judged.offWall > RescanRegistrar.MAX_OFF_WALL ||
+                judged.besideWall > RescanRegistrar.MAX_BESIDE_WALL
+            val reading = "inset ${inset * MM} mm: judged ${judged.judged}, free ${judged.free}, off the walls ${judged.offWall}, beside ${judged.besideWall}"
+            assertTrue(reading, judged.judged >= RescanRegistrar.MIN_JUDGED)
+            assertEquals(reading, inset > 0f, contradicts)
         }
     }
 
@@ -186,10 +230,14 @@ class RescanRegistrationTest {
 
         /** The second session, in the first one's frame: two stops facing the back wall. */
         val rescan: DenseCloud by lazy {
-            fuse(RerunSyntheticRoom.scene, aimed(listOf(Vec3(0.3f, 1.4f, 0.3f), Vec3(-0.4f, 1.3f, 0.7f)), PI.toFloat()))
+            fuse(RerunSyntheticRoom.scene, aimed(RESCAN_STOPS, PI.toFloat()))
         }
 
+        /** Where the second session stood. */
+        val RESCAN_STOPS = listOf(Vec3(0.3f, 1.4f, 0.3f), Vec3(-0.4f, 1.3f, 0.7f))
+
         private const val MISSED_FROM_M = 0.05f
+        private val INSETS_M = listOf(0f, 0.04f, 0.05f, 0.07f, 0.08f, 0.09f, 0.1f, 0.11f, 0.12f)
         private const val AIM_SPREAD_DEG = 60
         private const val AIM_STEP_DEG = 10
         private val PITCHES_DEG = listOf(-40, -12, 18)
@@ -221,6 +269,35 @@ class RescanRegistrationTest {
             val p = FloatArray(cloud.positions.size) { cloud.positions[it] + (random.nextGaussian() * NOISE_M).toFloat() }
             return DenseCloud(p, cloud.colors, cloud.normals, cloud.confidences, cloud.levels)
         }
+
+        /** [cloud] with [share] of its normals, at random, turned [TURNED_AWAY_DEG] off the surface's. */
+        fun turnedAway(cloud: DenseCloud, share: Float, seed: Int): DenseCloud {
+            val random = Random(seed)
+            val n = requireNotNull(cloud.normals).copyOf()
+            val c = cos(Math.toRadians(TURNED_AWAY_DEG)).toFloat()
+            val s = sin(Math.toRadians(TURNED_AWAY_DEG)).toFloat()
+            for (i in 0 until cloud.count) {
+                if (random.nextFloat() >= share) continue
+                val nx = n[i * 3]
+                val ny = n[i * 3 + 1]
+                val nz = n[i * 3 + 2]
+                // A direction across the normal: its cross product with up, or with +X on a floor.
+                var tx = if (abs(ny) > UP) 0f else -nz
+                var ty = if (abs(ny) > UP) nz else 0f
+                var tz = if (abs(ny) > UP) -ny else nx
+                val l = sqrt(tx * tx + ty * ty + tz * tz)
+                tx /= l
+                ty /= l
+                tz /= l
+                n[i * 3] = nx * c + tx * s
+                n[i * 3 + 1] = ny * c + ty * s
+                n[i * 3 + 2] = nz * c + tz * s
+            }
+            return DenseCloud(cloud.positions, cloud.colors, n, cloud.confidences, cloud.levels)
+        }
+
+        private const val DISAGREEING_SHARE = 0.35f
+        private const val TURNED_AWAY_DEG = 60.0
 
         /** A turn within 30° and a shift within 2 m, at random. */
         fun randomOffset(random: Random): RescanPose {
