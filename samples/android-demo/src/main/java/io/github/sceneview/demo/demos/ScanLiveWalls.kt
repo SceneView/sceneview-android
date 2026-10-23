@@ -48,6 +48,10 @@ internal class ScanWallsState(private val source: LiveWallSource = PlaneWallSour
     private var clippedFor: Any? = null
     private var clippedPoints = -1
 
+    /** What the cut reads of the depth map ([depthOf]), and the snapshot it was read from. */
+    private var read: FloatArray? = null
+    private var readFor: ReplayDenseLayer? = null
+
     /** The floor edges seen with no wall on them: where the room still opens onto the unscanned. */
     var openEdges: List<FloatArray> = emptyList()
         private set
@@ -88,6 +92,8 @@ internal class ScanWallsState(private val source: LiveWallSource = PlaneWallSour
      * ARCore has lost tracking: [record], the trace being recorded ([ScanCoverageState.recorded]),
      * has no camera pose for that long, and the first frame after the gap is not tracked
      * ([lostBetween]); the walls skip it. How long since the last frame observed says nothing.
+     * [dense], the depth map's live snapshot, cuts the walls back with the frame's feature points
+     * ([depthOf]).
      */
     @Suppress("LongParameterList") // the frame, its coverage, the phone, and the two point sources
     fun observe(
@@ -95,7 +101,7 @@ internal class ScanWallsState(private val source: LiveWallSource = PlaneWallSour
         coverage: ScanCoverageState,
         pose: DebugPose?,
         record: ArDebugTrace? = coverage.recorded,
-        dense: FloatArray? = null,
+        dense: ReplayDenseLayer? = null,
     ) {
         val tracking = record?.lostBetween(observedAt, frame.time) != true
         observedAt = frame.time
@@ -104,10 +110,15 @@ internal class ScanWallsState(private val source: LiveWallSource = PlaneWallSour
         found = next
         // Cut back to the points seen on each wall: again when the walls or the points change.
         val points = frame.mapPointCount
-        if (wallsChanged || dense !== clippedFor || points != clippedPoints) {
-            clippedFor = dense
+        if (dense !== readFor) {
+            readFor = dense
+            read = dense?.let(::depthOf)
+        }
+        val depth = read
+        if (wallsChanged || depth !== clippedFor || points != clippedPoints) {
+            clippedFor = depth
             clippedPoints = points
-            val clouds = listOfNotNull(frame.mapPoints, dense)
+            val clouds = listOfNotNull(frame.mapPoints, depth)
             val walls = WallExtent.clip(next.walls, clouds, next.floorY, next.height)
             val drawn = if (walls === next.walls) next else next.copy(walls = walls)
             if (drawn.walls != snapshot.walls || drawn.floorY != snapshot.floorY || drawn.height != snapshot.height ||
@@ -141,6 +152,8 @@ internal class ScanWallsState(private val source: LiveWallSource = PlaneWallSour
         found = LiveWallSnapshot.Empty
         clippedFor = null
         clippedPoints = -1
+        read = null
+        readFor = null
         facingUnfinished = false
         openEdges = emptyList()
         cueEdge = null
@@ -151,6 +164,11 @@ internal class ScanWallsState(private val source: LiveWallSource = PlaneWallSour
         completion = 0f
         done = false
         turn = null
+    }
+
+    companion object {
+        /** What the cut reads of [layer], the depth map's live snapshot: the cloud it draws. */
+        fun depthOf(layer: ReplayDenseLayer): FloatArray = layer.cloud.positions
     }
 }
 
