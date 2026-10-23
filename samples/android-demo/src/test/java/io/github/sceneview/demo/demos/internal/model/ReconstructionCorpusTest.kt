@@ -1,5 +1,7 @@
 package io.github.sceneview.demo.demos.internal.model
 
+import io.github.sceneview.demo.demos.RerunModelSource
+import io.github.sceneview.demo.demos.fillPlan
 import io.github.sceneview.demo.demos.internal.DenseCloud
 import io.github.sceneview.demo.demos.internal.DenseFusion
 import io.github.sceneview.demo.demos.internal.DepthBackProjection
@@ -37,7 +39,8 @@ import java.io.File
  *
  * Every scan of the corpus ([CleanModelCorpus.isScan]) with surfels gets a folder in the output:
  * `fused.glb` and `poisson.glb`, a thumbnail of each, and `reconstruction.json` (triangles, the
- * holes' rims, times); `summary.json` lists them all. Skipped without the two variables. The
+ * holes' rims, times, and the plan the end-of-scan sheet would show for "Filled" with the time it
+ * took to work out); `summary.json` lists them all. Skipped without the two variables. The
  * second test runs the same code on the synthetic room, so it is known to work end to end.
  */
 class ReconstructionCorpusTest {
@@ -73,12 +76,16 @@ class ReconstructionCorpusTest {
             assertEquals(emptyList<String>(), GlbCheck.problems(File(out, "$name.glb").readBytes()))
             assertTrue("$name.png", JvmImages.decode(File(out, "$name.png").readBytes()) != null)
         }
-        assertTrue(File(out, "reconstruction.json").readText().contains("poisson_triangles"))
+        val json = File(out, "reconstruction.json").readText()
+        assertTrue(json, json.contains("poisson_triangles") && json.contains("fill_plan_ms"))
     }
 
     /** [cloud] reconstructed both ways into [out]; its figures, also written to `reconstruction.json`. */
     private fun run(name: String, cloud: DenseCloud, out: File): JsonObject {
         out.mkdirs()
+        val planStart = System.nanoTime()
+        val plan = fillPlan(RerunModelSource.Surfels(cloud))
+        val planMs = since(planStart)
         val fuseStart = System.nanoTime()
         val fused = RerunMarchingCubes.extractWhole(RerunTsdf().apply { integrateSurfels(cloud) }).mesh
         val fusedMs = since(fuseStart)
@@ -92,6 +99,8 @@ class ReconstructionCorpusTest {
         val stats = buildJsonObject {
             put("file", name)
             put("surfels", cloud.count)
+            put("fill_plan", plan.toString())
+            put("fill_plan_ms", planMs)
             put("fused_triangles", fused.triangleCount)
             put("fused_boundary_edges", fusedEdges)
             put("fused_boundary_m", fusedRim)

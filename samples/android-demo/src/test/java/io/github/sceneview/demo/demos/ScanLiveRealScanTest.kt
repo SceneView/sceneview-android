@@ -112,7 +112,7 @@ class ScanLiveRealScanTest {
 
     private class Result(val name: String, val saved: Int, val eyes: Int, val before: Figures, val after: Figures)
 
-    private companion object {
+    internal companion object {
         const val CORPUS = "SCENEVIEW_SCAN_CORPUS"
         const val OUT = "SCENEVIEW_SCAN_OUT"
         const val REPORT = "scan-live-real.md"
@@ -150,7 +150,7 @@ class ScanLiveRealScanTest {
             .toList()
 
         /** Every scan of [scans] through both live views; the report and images go to [out]. */
-        fun run(scans: List<File>, out: File): List<Result> {
+        private fun run(scans: List<File>, out: File): List<Result> {
             out.mkdirs()
             val report = StringBuilder("# 3D Scan live view over real scans\n\n")
             report.append("Before: the map's stride, ${ScanDenseMap.LIVE_MAX_SURFELS} surfels at most. ")
@@ -200,7 +200,7 @@ class ScanLiveRealScanTest {
         }
 
         @Suppress("LongMethod")
-        fun measure(file: File, opened: OpenedCapture, saved: DenseCloud, voxelM: Float, out: File): Pair<Result, String> {
+        private fun measure(file: File, opened: OpenedCapture, saved: DenseCloud, voxelM: Float, out: File): Pair<Result, String> {
             val fusion = refuse(saved, voxelM)
             val trace = opened.trace
             val eyes = ArrayList<DebugPose>()
