@@ -4,7 +4,12 @@ import android.content.Context
 import android.graphics.Bitmap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
@@ -42,6 +47,7 @@ import io.github.sceneview.demo.demos.internal.RerunSessionStore
 import io.github.sceneview.demo.demos.internal.ScanCopy
 import io.github.sceneview.demo.demos.internal.ScanLens
 import io.github.sceneview.demo.demos.internal.ScanSaveFailure
+import io.github.sceneview.demo.demos.internal.ScanStageSplit
 import io.github.sceneview.demo.demos.internal.SvpcCodec
 import io.github.sceneview.demo.theme.LocalStageChrome
 import io.github.sceneview.demo.theme.SceneViewDemoTheme
@@ -136,6 +142,49 @@ class RescanGuideTest {
         assertTrue("fill ${whole.fill}", RescanGuidance.covered(whole.fill))
         line(context.getString(R.string.scan_rescan_covered))
         save(composeRule.onNodeWithTag(RESCAN_GUIDE_FRAME_TAG).captureToImage().asAndroidBitmap(), "rescan-guide-covered")
+    }
+
+    @Test
+    fun `while the live 3D map shares the screen, the frame and its line stay on the camera's band, dark`() =
+        splitGuide(dark = true)
+
+    @Test
+    fun `while the live 3D map shares the screen, the frame and its line stay on the camera's band, light`() =
+        splitGuide(dark = false)
+
+    /** A room's capture: the map on top (drawn as a plain surface here), the camera under it (#4810). */
+    private fun splitGuide(dark: Boolean) {
+        val offset = RescanRegistrationTest.OFFSETS.first()
+        val lens = eye(offset)
+        val target = target()
+        var split: ScanStageSplit? = null
+        composeRule.mainClock.autoAdvance = false
+        composeRule.setContent {
+            SceneViewDemoTheme(darkTheme = dark) {
+                CompositionLocalProvider(LocalStageChrome provides StageChrome.Media) {
+                    BoxWithConstraints(Modifier.fillMaxSize().background(StageChrome.Media.ground)) {
+                        val height = constraints.maxHeight.toFloat()
+                        val shared = ScanStageSplit.of(height, height * HUD_SHARE, height * CONTROLS_SHARE, mapFirst = true)
+                        split = shared
+                        val mapHeight = with(LocalDensity.current) { (shared?.mapBottom ?: 0f).toDp() }
+                        Box(Modifier.fillMaxWidth().height(mapHeight).background(MaterialTheme.colorScheme.surfaceVariant))
+                        Box(Modifier.scanCameraPane(shared)) {
+                            RescanGuide(target, live = { null }, lens = lens, drawn = true)
+                        }
+                    }
+                }
+            }
+        }
+        step()
+        composeRule.runOnIdle { target.follow(RescanRegistrationTest.session(offset)) }
+        step()
+        val band = split!!
+        for (tag in listOf(RESCAN_GUIDE_FRAME_TAG, RESCAN_GUIDE_TAG)) {
+            val bounds = composeRule.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot
+            assertTrue("$tag at $bounds, the map ends at ${band.cameraTop}", bounds.top >= band.cameraTop - 1f)
+            assertTrue("$tag at $bounds, the controls start at ${band.cameraBottom}", bounds.bottom <= band.cameraBottom + 1f)
+        }
+        save(composeRule.onRoot().captureToImage().asAndroidBitmap(), "rescan-guide-split-${if (dark) "dark" else "light"}")
     }
 
     @Test
@@ -326,6 +375,9 @@ class RescanGuideTest {
     }
 
     private companion object {
+        // Where the status card ends and the controls start, as shares of the stage.
+        const val HUD_SHARE = 0.18f
+        const val CONTROLS_SHARE = 0.84f
         val ZONE = RescanRegistrationTest.ZONE
         const val SEED = 4736
         const val HALF_X_M = 0.3f

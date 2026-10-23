@@ -179,7 +179,6 @@ import io.github.sceneview.demo.demos.internal.ScanPhase
 import io.github.sceneview.demo.demos.internal.ScanStageSplit
 import io.github.sceneview.demo.theme.LocalStageChrome
 import androidx.compose.foundation.layout.height
-import androidx.compose.ui.unit.IntOffset
 import io.github.sceneview.demo.demos.internal.ScanCutoff
 import io.github.sceneview.demo.demos.internal.PlanOffer
 import io.github.sceneview.demo.demos.internal.ScanScope
@@ -2194,17 +2193,7 @@ private fun RerunLiveScreen(
         ) {
             // A room's scan shares the screen (remark #2): the live 3D map on top, the camera under
             // it down to the controls. Same composables either way, so the AR session lives on.
-            val cameraPane = if (split == null) {
-                Modifier.fillMaxSize()
-            } else {
-                with(density) {
-                    Modifier
-                        .fillMaxWidth()
-                        .offset { IntOffset(0, split.cameraTop.toInt()) }
-                        .height((split.cameraBottom - split.cameraTop).toDp())
-                }
-            }
-            Box(modifier = cameraPane.onSizeChanged { stageSize = it }) {
+            Box(modifier = Modifier.scanCameraPane(split).onSizeChanged { stageSize = it }) {
                 val photo = qaPhoto
                 if (qaBackdrop && photo != null) {
                     Image(
