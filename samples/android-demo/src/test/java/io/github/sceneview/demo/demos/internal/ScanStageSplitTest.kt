@@ -40,6 +40,27 @@ class ScanStageSplitTest {
         assertNull(ScanStageSplit.of(0f, 0f, 0f, mapFirst = true))
     }
 
+    @Test
+    fun aCoachingLineWrappingAndBackKeepsTheCameraBand() {
+        // The card grows by a line, then shrinks back; the controls do the same, upward.
+        var hud = Float.NaN
+        var controls = Float.NaN
+        for ((cardBottom, controlsStart) in listOf(400f to 1600f, 460f to 1540f, 400f to 1600f)) {
+            hud = ScanStageSplit.holdLowest(hud, cardBottom)
+            controls = ScanStageSplit.holdHighest(controls, controlsStart)
+        }
+        assertEquals(460f, hud, 0f)
+        assertEquals(1540f, controls, 0f)
+        val split = present(ScanStageSplit.of(2000f, hud, controls, mapFirst = true))
+        assertEquals(1540f, split.cameraBottom, 0f)
+    }
+
+    @Test
+    fun theFirstMeasurementIsTakenAsIs() {
+        assertEquals(420f, ScanStageSplit.holdLowest(Float.NaN, 420f), 0f)
+        assertEquals(1500f, ScanStageSplit.holdHighest(Float.NaN, 1500f), 0f)
+    }
+
     private fun <T> present(value: T?): T {
         org.junit.Assert.assertNotNull(value)
         return value!!

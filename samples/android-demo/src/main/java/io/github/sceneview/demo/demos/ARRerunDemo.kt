@@ -1810,8 +1810,10 @@ private fun RerunLiveScreen(
     // A room's or an area's capture shares the screen between its live 3D map and the camera
     // (Thomas's QA of 2026-10-22): the map above, the camera below, the swap button trading their
     // shares. Measured: where the status card ends and where the controls start, in root pixels.
-    var hudBottom by remember { mutableFloatStateOf(Float.NaN) }
-    var controlsTop by remember { mutableFloatStateOf(Float.NaN) }
+    // Held for the capture's length: the coaching line going from one line to two moved both
+    // edges, and the camera band jumped with them.
+    var hudBottom by remember(scanMedia) { mutableFloatStateOf(Float.NaN) }
+    var controlsTop by remember(scanMedia) { mutableFloatStateOf(Float.NaN) }
     var stageTop by remember { mutableFloatStateOf(0f) }
     var stageHeight by remember { mutableFloatStateOf(0f) }
     val splitStage = recording && scanMedia != null && phase in SCAN_MAP_PHASES && scanScope.mapsGround &&
@@ -1844,24 +1846,31 @@ private fun RerunLiveScreen(
                 }
                 // Tracking loss freezes the capture, so the HUD says so: the coaching line
                 // reads "Scan paused", and a red "Scanning" dot above it would contradict it.
-                ScanHud(
-                    phase = if (trackingLost && phase.integrates) ScanPhase.Paused else phase,
-                    seconds = scan?.elapsedSeconds(now) ?: qaLong?.shownSeconds ?: stats.duration,
-                    points = capturedPoints,
-                    label = ScanScopeCopy.label(scanScope, roomNumber),
-                    activity = ScanActivity.of(
-                        phase = phase,
-                        trackingLost = trackingLost,
-                        coach = scanCoverage.coachLine,
-                        lowTexture = lowTexture,
-                        depthStarved = depthStarved,
-                        done = scanWalls?.done == true,
-                        pointsRising = pointsRising,
-                    ),
-                    room = scanWalls,
-                )
-                // Nothing to draw: this marks where the status card ends over the live 3D map.
-                Spacer(Modifier.fillMaxWidth().onGloballyPositioned { hudBottom = it.positionInRoot().y })
+                // Where the status card ends over the live 3D map: its lowest edge in this capture.
+                Box(
+                    Modifier.onGloballyPositioned {
+                        if (phase in SCAN_MAP_PHASES) {
+                            hudBottom = ScanStageSplit.holdLowest(hudBottom, it.positionInRoot().y + it.size.height)
+                        }
+                    },
+                ) {
+                    ScanHud(
+                        phase = if (trackingLost && phase.integrates) ScanPhase.Paused else phase,
+                        seconds = scan?.elapsedSeconds(now) ?: qaLong?.shownSeconds ?: stats.duration,
+                        points = capturedPoints,
+                        label = ScanScopeCopy.label(scanScope, roomNumber),
+                        activity = ScanActivity.of(
+                            phase = phase,
+                            trackingLost = trackingLost,
+                            coach = scanCoverage.coachLine,
+                            lowTexture = lowTexture,
+                            depthStarved = depthStarved,
+                            done = scanWalls?.done == true,
+                            pointsRising = pointsRising,
+                        ),
+                        room = scanWalls,
+                    )
+                }
             } else if (debugFullScreen) {
                 ArDebugLegend(debugSession)
             } else {
@@ -1916,9 +1925,7 @@ private fun RerunLiveScreen(
                 )
                 // The floor map is room guidance, and an area's: an object has no ground to cover (#4647).
                 val mapsFloor = phase in SCAN_MAP_PHASES && scanScope.mapsGround
-                // Where the controls start: the live 3D map and the camera share the band above.
-                Spacer(Modifier.fillMaxWidth().onGloballyPositioned { controlsTop = it.positionInRoot().y })
-                // The 2D card only when the screen has no room for the live 3D map (landscape).
+                // The 2D card only when the screen has no room for the live 3D map.
                 if (recording && scanMedia != null && mapsFloor && split == null) {
                     ScanCoverageMap(
                         state = scanCoverage,
@@ -1937,68 +1944,79 @@ private fun RerunLiveScreen(
                     ScanRecenterPill(onRecenter = { scanOrbit.recenter() })
                 }
                 if (arCoreAvailability == null || qaState != null) {
-                    when {
-                        !recording -> ScanShutter(startEnabled = isTracking, onStart = onStartScan)
-                        phase == ScanPhase.Reviewing && scanScope.roomByRoom -> HomeReviewCard(
-                            roomNumber = roomNumber,
-                            empty = captureEmpty,
-                            figures = ScanCopy.reviewFigures(capturedPoints, capturedPhotos, capturedClock),
-                            onKeepScanning = { moveTo(ScanPhase.Scanning) },
-                            onNextRoom = { saveScan(SaveNext.NextRoom) },
-                            onSaveAndFinish = { saveScan(SaveNext.FinishHome) },
-                            onFinish = if (roomNumber > 1) {
-                                {
-                                    dropCapture()
-                                    onFinishHome()
-                                }
-                            } else {
-                                null
-                            },
-                        )
-                        phase == ScanPhase.Reviewing -> ScanReviewCard(
-                            empty = captureEmpty,
-                            figures = ScanCopy.reviewFigures(capturedPoints, capturedPhotos, capturedClock),
-                            onKeepScanning = { moveTo(ScanPhase.Scanning) },
-                            onSave = onSaveScan,
-                        )
-                        phase == ScanPhase.Saving -> ScanSavingCard(points = capturedPoints)
-                        phase == ScanPhase.SaveFailed -> ScanSaveFailedCard(
-                            // The scan was never written: discarding it asks first.
-                            onDiscard = { discardAsked = true },
-                            onRetry = { saveScan(saveNext) },
-                        )
-                        else -> ScanControls(
-                            phase = phase,
-                            coaching = ScanScopeCopy.coaching(
-                                scope = scanScope,
-                                line = ScanCopy.coaching(
-                                    phase = phase,
-                                    trackingLost = trackingLost,
-                                    photoLimitReached = photoLimitReached && !photoNoticeOver,
-                                    detail = scan?.denseDetail ?: qaLong?.shownDetail ?: ScanDetail.Fine,
-                                    coach = scanCoverage.coachLine,
-                                    lowTexture = lowTexture,
-                                    depthStarved = depthStarved,
-                                    pointsRising = pointsRising,
-                                    hasPoints = capturedPoints > 0,
+                    // Where the controls start, their highest edge in this capture: the live 3D
+                    // map and the camera share the band above.
+                    Box(
+                        Modifier.onGloballyPositioned {
+                            // The review's and the shutter's cards are taller: only the capture's controls count.
+                            if (recording && phase in SCAN_MAP_PHASES) {
+                                controlsTop = ScanStageSplit.holdHighest(controlsTop, it.positionInRoot().y)
+                            }
+                        },
+                    ) {
+                        when {
+                            !recording -> ScanShutter(startEnabled = isTracking, onStart = onStartScan)
+                            phase == ScanPhase.Reviewing && scanScope.roomByRoom -> HomeReviewCard(
+                                roomNumber = roomNumber,
+                                empty = captureEmpty,
+                                figures = ScanCopy.reviewFigures(capturedPoints, capturedPhotos, capturedClock),
+                                onKeepScanning = { moveTo(ScanPhase.Scanning) },
+                                onNextRoom = { saveScan(SaveNext.NextRoom) },
+                                onSaveAndFinish = { saveScan(SaveNext.FinishHome) },
+                                onFinish = if (roomNumber > 1) {
+                                    {
+                                        dropCapture()
+                                        onFinishHome()
+                                    }
+                                } else {
+                                    null
+                                },
+                            )
+                            phase == ScanPhase.Reviewing -> ScanReviewCard(
+                                empty = captureEmpty,
+                                figures = ScanCopy.reviewFigures(capturedPoints, capturedPhotos, capturedClock),
+                                onKeepScanning = { moveTo(ScanPhase.Scanning) },
+                                onSave = onSaveScan,
+                            )
+                            phase == ScanPhase.Saving -> ScanSavingCard(points = capturedPoints)
+                            phase == ScanPhase.SaveFailed -> ScanSaveFailedCard(
+                                // The scan was never written: discarding it asks first.
+                                onDiscard = { discardAsked = true },
+                                onRetry = { saveScan(saveNext) },
+                            )
+                            else -> ScanControls(
+                                phase = phase,
+                                coaching = ScanScopeCopy.coaching(
+                                    scope = scanScope,
+                                    line = ScanCopy.coaching(
+                                        phase = phase,
+                                        trackingLost = trackingLost,
+                                        photoLimitReached = photoLimitReached && !photoNoticeOver,
+                                        detail = scan?.denseDetail ?: qaLong?.shownDetail ?: ScanDetail.Fine,
+                                        coach = scanCoverage.coachLine,
+                                        lowTexture = lowTexture,
+                                        depthStarved = depthStarved,
+                                        pointsRising = pointsRising,
+                                        hasPoints = capturedPoints > 0,
+                                    ),
+                                    nextRoom = roomNumber.takeIf { betweenRooms },
+                                    walls = scanWalls?.wallCount,
+                                    turn = heldTurn,
+                                    done = scanWalls?.done == true,
+                                    facingWall = scanCoverage.facingWall,
+                                    wallToFinish = scanWalls?.facingUnfinished == true,
                                 ),
-                                nextRoom = roomNumber.takeIf { betweenRooms },
-                                walls = scanWalls?.wallCount,
-                                turn = heldTurn,
-                                done = scanWalls?.done == true,
-                                facingWall = scanCoverage.facingWall,
-                                wallToFinish = scanWalls?.facingUnfinished == true,
-                            ),
-                            onTogglePause = {
-                                betweenRooms = false
-                                moveTo(phase.togglePause())
-                            },
-                            onFinish = {
-                                betweenRooms = false
-                                moveTo(phase.finish())
-                            },
-                            resumeLabel = if (betweenRooms) ScanScopeCopy.START_ROOM else ScanCopy.RESUME,
-                        )
+                                onTogglePause = {
+                                    betweenRooms = false
+                                    moveTo(phase.togglePause())
+                                },
+                                onFinish = {
+                                    betweenRooms = false
+                                    moveTo(phase.finish())
+                                },
+                                resumeLabel = if (betweenRooms) ScanScopeCopy.START_ROOM else ScanCopy.RESUME,
+                            )
+                        }
                     }
                 }
             }
@@ -2182,6 +2200,16 @@ private fun RerunLiveScreen(
                         reviewing = phase == ScanPhase.Reviewing,
                     )
                 }
+                // A part scanned again (#4736): its frame over the camera, and how far along it is.
+                // In the camera's pane, whose size the frame is projected on: never over the map.
+                if (recording && rescan != null) {
+                    RescanGuide(
+                        rescan,
+                        live = { scanMedia?.liveDense?.invoke()?.cloud },
+                        lens = scanLens,
+                        drawn = scanFollowing,
+                    )
+                }
             }
 
             if (split != null && scanMedia != null) {
@@ -2203,10 +2231,6 @@ private fun RerunLiveScreen(
                         .height(with(density) { split.mapBottom.toDp() })
                         .background(stageGround),
                 )
-            }
-            // A part scanned again (#4736): its frame over the camera, and how far along it is.
-            if (recording && rescan != null) {
-                RescanGuide(rescan, live = { scanMedia?.liveDense?.invoke()?.cloud }, lens = scanLens, drawn = scanFollowing)
             }
 
             // Full-screen 3D view over the camera, which keeps tracking (and recording) under it.

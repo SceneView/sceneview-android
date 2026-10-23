@@ -33,6 +33,17 @@ data class ScanStageSplit(
         const val DEFAULT_CONTROLS_TOP = 0.78f
 
         /**
+         * The status card's bottom edge held for a capture: the lowest it has reached, so a
+         * coaching line wrapping to two lines and back never moves the camera band. NaN = unmeasured.
+         */
+        fun holdLowest(held: Float, measured: Float): Float =
+            if (held.isFinite()) maxOf(held, measured) else measured
+
+        /** The controls' top edge held the same way: the highest it has reached. NaN = unmeasured. */
+        fun holdHighest(held: Float, measured: Float): Float =
+            if (held.isFinite()) minOf(held, measured) else measured
+
+        /**
          * The split of a stage [stageHeight] tall whose status card ends at [hudBottom] and
          * whose controls start at [controlsTop] (both from the stage's top, NaN before they are
          * measured), or null when it is too short to share (a phone in landscape).
