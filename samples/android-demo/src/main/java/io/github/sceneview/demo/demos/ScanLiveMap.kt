@@ -185,7 +185,7 @@ internal fun ScanLiveMap(
             modifier = Modifier.fillMaxSize(),
             replay = drawn,
             measuresRoom = false,
-            // The grid and the room's axes stay from the 3D preview (QA-1): the map reads as that
+            // The grid and the room's axes stay from the 3D preview: the map reads as that
             // view grown, not a new one.
             visible = { it == DebugGroup.Points || it == DebugGroup.Trail || it == DebugGroup.Stage },
             follow = { frame ->

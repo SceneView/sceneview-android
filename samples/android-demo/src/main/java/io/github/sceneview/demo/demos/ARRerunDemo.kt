@@ -1912,24 +1912,24 @@ private fun RerunLiveScreen(
 
     // A room's or an area's capture makes its live 3D map the main view, the camera in a thumbnail
     // over it (#4816): the room taking shape is what the scan is about. Measured: where the status
-    // card ends and where the controls start, in root pixels. Held for the capture's length: the
-    // coaching line going from one line to two moved both edges, and the thumbnail jumped with them.
-    var hudBottom by remember(scanMedia) { mutableFloatStateOf(Float.NaN) }
-    var controlsTop by remember(scanMedia) { mutableFloatStateOf(Float.NaN) }
+    // card ends and where the controls start, held for the capture's length (StageEdges).
     var stageTop by remember { mutableFloatStateOf(0f) }
     var stageWidth by remember { mutableFloatStateOf(0f) }
     var stageHeight by remember { mutableFloatStateOf(0f) }
     val staged = recording && scanMedia != null && phase in ScanStageLayout.MAP_PHASES && scanScope.mapsGround &&
         !debugFullScreen
-    // At the finish, the room as scanned (QA-12): the map, the camera's thumbnail faded out.
+    // At the finish, the room as scanned: the map, the camera's thumbnail faded out.
     val finishing = phase == ScanPhase.Reviewing
+    // Measured afresh at the finish, whose card is taller, and again if the capture resumes.
+    val stageEdges = remember(scanMedia, finishing) { StageEdges() }
+    val measuringEdges = recording && phase in ScanStageLayout.MAP_PHASES
     val stageMargin = with(LocalDensity.current) { Space.md.toPx() }
     val split = if (staged) {
         ScanStageLayout.of(
             stageWidth = stageWidth,
             stageHeight = stageHeight,
-            hudBottom = hudBottom - stageTop,
-            controlsTop = controlsTop - stageTop,
+            hudBottom = stageEdges.cardBottom - stageTop,
+            controlsTop = stageEdges.controlsTop - stageTop,
             mapFirst = scanMapFirst || finishing,
             corner = scanThumbCorner,
             margin = stageMargin,
@@ -1962,13 +1962,7 @@ private fun RerunLiveScreen(
                 // Tracking loss freezes the capture, so the HUD says so: the coaching line
                 // reads "Scan paused", and a red "Scanning" dot above it would contradict it.
                 // Where the status card ends over the live 3D map: its lowest edge in this capture.
-                Box(
-                    Modifier.onGloballyPositioned {
-                        if (phase in SCAN_MAP_PHASES) {
-                            hudBottom = ScanStageLayout.holdLowest(hudBottom, it.positionInRoot().y + it.size.height)
-                        }
-                    },
-                ) {
+                Box(Modifier.cardEdge(stageEdges, measuringEdges)) {
                     ScanHud(
                         phase = if (trackingLost && phase.integrates) ScanPhase.Paused else phase,
                         seconds = scan?.elapsedSeconds(now) ?: qaLong?.shownSeconds ?: stats.duration,
@@ -2040,8 +2034,9 @@ private fun RerunLiveScreen(
                 )
                 // The floor map is room guidance, and an area's: an object has no ground to cover (#4647).
                 val mapsFloor = phase in SCAN_MAP_PHASES && scanScope.mapsGround
-                // Where the controls start: the live 3D map and the camera share the band above.
-                Spacer(Modifier.fillMaxWidth().onGloballyPositioned { controlsTop = it.positionInRoot().y })
+                // Where the controls start, the pill included: the live 3D map and the camera share
+                // the band above. The only writer of that edge.
+                Spacer(Modifier.fillMaxWidth().controlsEdge(stageEdges, measuringEdges))
                 // The 2D card only when the screen has no room for the live 3D map (landscape).
                 if (recording && scanMedia != null && mapsFloor && split == null) {
                     ScanCoverageMap(
@@ -2061,16 +2056,7 @@ private fun RerunLiveScreen(
                     ScanRecenterPill(onRecenter = { scanOrbit.recenter() })
                 }
                 if (arCoreAvailability == null || qaState != null) {
-                    // Where the controls start, their highest edge in this capture: the live 3D
-                    // map and the camera share the band above.
-                    Box(
-                        Modifier.onGloballyPositioned {
-                            // The review's and the shutter's cards are taller: only the capture's controls count.
-                            if (recording && phase in SCAN_MAP_PHASES) {
-                                controlsTop = ScanStageLayout.holdHighest(controlsTop, it.positionInRoot().y)
-                            }
-                        },
-                    ) {
+                    Box {
                         when {
                             !recording -> ScanShutter(startEnabled = isTracking, onStart = onStartScan)
                             phase == ScanPhase.Reviewing && scanScope.roomByRoom -> HomeReviewCard(

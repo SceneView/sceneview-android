@@ -18,6 +18,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -33,6 +36,8 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -147,7 +152,7 @@ internal fun rememberScanStagePanes(
     val panes = remember { ScanStagePanes(scope) }
     val cameraTarget = layout?.camera ?: StageRect(0f, 0f, stageWidth, stageHeight)
     val mapTarget = layout?.map
-    // The map grows out of the top corner the 3D preview sat in before the scan (QA-1).
+    // The map grows out of the top corner the 3D preview sat in before the scan.
     val entry = layout?.thumbAt(ThumbCorner.TopEnd)
     LaunchedEffect(cameraTarget) { panes.moveCamera(cameraTarget) }
     LaunchedEffect(mapTarget) { panes.moveMap(mapTarget, entry) }
@@ -264,3 +269,33 @@ internal val ThumbRadius = SceneViewTokens.Radius.md
 private val ThumbBorder = Space.xs / 4
 private val BadgeSize = Space.md
 private const val BORDER_ALPHA = 0.7f
+
+/**
+ * Where the status card ends and where the controls start over the 3D Scan stage, in root pixels,
+ * NaN until measured. Each edge has one writer, and it holds: the card's lowest bottom, the
+ * controls' highest top. A coaching line wrapping, a pill showing up or the controls changing on
+ * pause would otherwise move the thumbnail, the map's framing and cancel a drag in progress.
+ */
+@Stable
+internal class StageEdges {
+    var cardBottom by mutableFloatStateOf(Float.NaN)
+        private set
+    var controlsTop by mutableFloatStateOf(Float.NaN)
+        private set
+
+    fun card(bottom: Float) {
+        cardBottom = ScanStageLayout.holdLowest(cardBottom, bottom)
+    }
+
+    fun controls(top: Float) {
+        controlsTop = ScanStageLayout.holdHighest(controlsTop, top)
+    }
+}
+
+/** Measures the status card's bottom edge into [edges] while [measuring]. */
+internal fun Modifier.cardEdge(edges: StageEdges, measuring: Boolean): Modifier =
+    onGloballyPositioned { if (measuring) edges.card(it.positionInRoot().y + it.size.height) }
+
+/** Measures the controls' top edge into [edges] while [measuring]. */
+internal fun Modifier.controlsEdge(edges: StageEdges, measuring: Boolean): Modifier =
+    onGloballyPositioned { if (measuring) edges.controls(it.positionInRoot().y) }
