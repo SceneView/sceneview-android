@@ -143,15 +143,27 @@ class RescanGuideTest {
     }
 
     @Test
-    fun `while the live 3D map is in its thumbnail, the frame and its line stay on the camera, dark`() =
-        stagedGuide(dark = true)
+    fun `while the live 3D map is in its thumbnail, the guide's line stays clear of it, dark`() =
+        stagedGuide(dark = true, mapFirst = false)
 
     @Test
-    fun `while the live 3D map is in its thumbnail, the frame and its line stay on the camera, light`() =
-        stagedGuide(dark = false)
+    fun `while the live 3D map is in its thumbnail, the guide's line stays clear of it, light`() =
+        stagedGuide(dark = false, mapFirst = false)
 
-    /** A rescan's capture: the camera leads, the live map in its thumbnail (a plain surface here). */
-    private fun stagedGuide(dark: Boolean) {
+    @Test
+    fun `swapped into the thumbnail, the guide is scaled with the camera and its line stays inside it, dark`() =
+        stagedGuide(dark = true, mapFirst = true)
+
+    @Test
+    fun `swapped into the thumbnail, the guide is scaled with the camera and its line stays inside it, light`() =
+        stagedGuide(dark = false, mapFirst = true)
+
+    /**
+     * A rescan's capture on the 3D Scan stage, the live map drawn as a plain surface: camera-first,
+     * as a rescan starts, the guide's line must not sit under the map's thumbnail; swapped, the
+     * guide is scaled into the camera's thumbnail and its line stays inside it.
+     */
+    private fun stagedGuide(dark: Boolean, mapFirst: Boolean) {
         val offset = RescanRegistrationTest.OFFSETS.first()
         val lens = eye(offset)
         val target = target()
@@ -168,18 +180,18 @@ class RescanGuideTest {
                             stageHeight = height,
                             hudBottom = height * HUD_SHARE,
                             controlsTop = height * CONTROLS_SHARE,
-                            mapFirst = false,
+                            mapFirst = mapFirst,
                             corner = ThumbCorner.BottomEnd,
                             margin = 0f,
                         )
                         staged = layout
+                        val map = Modifier.fillMaxSize().stagePane({ layout?.map }, 0f)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                        if (mapFirst) Box(map)
                         Box(Modifier.fillMaxSize().stagePane({ layout?.camera }, 0f)) {
                             RescanGuide(target, live = { null }, lens = lens, drawn = true)
                         }
-                        Box(
-                            Modifier.fillMaxSize().stagePane({ layout?.map }, 0f)
-                                .background(MaterialTheme.colorScheme.surfaceVariant),
-                        )
+                        if (!mapFirst) Box(map)
                     }
                 }
             }
@@ -187,13 +199,33 @@ class RescanGuideTest {
         step()
         composeRule.runOnIdle { target.follow(RescanRegistrationTest.session(offset)) }
         step()
-        val camera = staged!!.camera
-        for (tag in listOf(RESCAN_GUIDE_FRAME_TAG, RESCAN_GUIDE_TAG)) {
-            val bounds = composeRule.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot
-            assertTrue("$tag at $bounds, the camera at $camera", bounds.top >= camera.top - 1f)
-            assertTrue("$tag at $bounds, the camera at $camera", bounds.bottom <= camera.bottom + 1f)
+        val layout = staged!!
+        val camera = layout.camera
+        // The frame is drawn over the camera's own picture, scaled with it: it covers what the
+        // camera's pane shows, cropped where the pane crops the picture.
+        val frame = composeRule.onNodeWithTag(RESCAN_GUIDE_FRAME_TAG).fetchSemanticsNode().boundsInRoot
+        assertTrue(
+            "frame at $frame, the camera at $camera",
+            frame.left <= camera.left + 1f && frame.right >= camera.right - 1f &&
+                frame.top <= camera.top + 1f && frame.bottom >= camera.bottom - 1f,
+        )
+        val line = composeRule.onNodeWithTag(RESCAN_GUIDE_TAG).fetchSemanticsNode().boundsInRoot
+        if (mapFirst) {
+            assertTrue(
+                "line at $line, the camera's thumbnail at $camera",
+                line.left >= camera.left - 1f && line.right <= camera.right + 1f &&
+                    line.top >= camera.top - 1f && line.bottom <= camera.bottom + 1f,
+            )
+        } else {
+            val map = layout.map
+            assertTrue(
+                "line at $line, the map's thumbnail at $map",
+                line.right <= map.left + 1f || line.left >= map.right - 1f ||
+                    line.bottom <= map.top + 1f || line.top >= map.bottom - 1f,
+            )
         }
-        save(composeRule.onRoot().captureToImage().asAndroidBitmap(), "rescan-guide-staged-${if (dark) "dark" else "light"}")
+        val name = if (mapFirst) "swapped" else "staged"
+        save(composeRule.onRoot().captureToImage().asAndroidBitmap(), "rescan-guide-$name-${if (dark) "dark" else "light"}")
     }
 
     @Test
