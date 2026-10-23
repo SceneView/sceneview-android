@@ -1,6 +1,6 @@
 <!--
   GENERATED FILE — DO NOT EDIT.
-  Source of truth: /llms.txt  (SceneView 4.60.0)
+  Source of truth: /llms.txt  (SceneView 4.62.0)
   Regenerate:      node tools/generate-gpt-knowledge.js
   Drift is caught in CI (ci.yml -> repo-hygiene). Edit llms.txt instead.
   See issue #2724.
@@ -9,7 +9,7 @@
 # SceneView — API Reference
 
 > Composables, node types, resource loading, camera, math, and per-platform APIs.
-> Auto-generated from `llms.txt` (SceneView 4.60.0). This is a slice of the machine-readable API reference — the same content an AI reads to generate SceneView code.
+> Auto-generated from `llms.txt` (SceneView 4.62.0). This is a slice of the machine-readable API reference — the same content an AI reads to generate SceneView code.
 
 ## Docs
 
@@ -232,7 +232,7 @@ fun ARSceneView(
     onGestureListener: GestureDetector.OnGestureListener? = rememberOnGestureListener(),
     onTouchEvent: ((e: MotionEvent, hitResult: HitResult?) -> Boolean)? = null,
     permissionHandler: ARPermissionHandler? = null,   // omit for auto-detect from ComponentActivity; passing null explicitly SKIPS permission checks
-    lifecycle: Lifecycle = LocalLifecycleOwner.current.lifecycle,
+    lifecycle: Lifecycle = LocalLifecycleOwner.current.lifecycle,   // inside a NavHost with transitions pass rememberHostLifecycle() — see the note below
     cameraPermissionOverlay: (@Composable BoxScope.(ARCameraPermissionState) -> Unit)? = { ARCameraPermissionOverlay(it) },   // Built-in "Camera access needed" card; null draws nothing.
     arCoreAvailabilityOverlay: (@Composable BoxScope.(ARCoreAvailabilityState) -> Unit)? = { ARCoreAvailabilityOverlay(it) },  // Built-in "ARCore missing / couldn't start AR" card; null draws nothing.
     onARCoreAvailability: ((availability: ARCoreAvailability?) -> Unit)? = null,   // Non-null = ARCore cannot serve the session; null = it can again.
@@ -245,6 +245,31 @@ fun ARSceneView(
 without touching the screen, so the composable sets `keepScreenOn` on its host view and hands
 the previous value back when it leaves the composition. Nothing to add in app code; a 3D
 `SceneView` leaves the display timeout alone.
+
+**Note — AR screen inside a `NavHost`: pass `lifecycle = rememberHostLifecycle()`.** By default
+`ARSceneView` follows `LocalLifecycleOwner`, which inside a `NavHost` is the destination: it leaves
+`RESUMED` when the exit transition *starts*, so the camera stops and its last image stays frozen on
+screen for the whole transition. `rememberHostLifecycle()` (opt-in, `io.github.sceneview.ar`)
+returns the host ACTIVITY's lifecycle: the session runs while the composable is in the
+composition and the activity is resumed, pauses when the activity pauses, and is closed on
+disposal. Do not add your own `session.pause()` on navigation.
+
+```kotlin
+@Composable
+fun ArDestination() {   // the content of a NavHost `composable("ar") { ArDestination() }`
+    ARSceneView(
+        modifier = Modifier.fillMaxSize(),
+        lifecycle = rememberHostLifecycle(),
+    )
+}
+```
+
+Keep the default where the host keeps the AR screen composed but not visible (a `ViewPager2`
+page, a screen under a full-screen `dialog()` destination): with `rememberHostLifecycle()` the
+camera would stay on there. Two `ARSceneView`s resumed at once share the single camera: the one
+that resumed last runs, the other keeps its last frame and gets the camera back when the newer
+one is disposed, paused or fails to resume. Known limit: on a predictive back gesture from one AR
+screen to another, the screen under the finger is frozen until the gesture ends.
 
 **Note — `renderQuality` on `ARSceneView` is NULLABLE (#2524, v4.19.0+).** Unlike the 3D
 `SceneView` (where it defaults to `RenderQuality.Default`), the AR composable defaults
@@ -2299,6 +2324,23 @@ fun Frame.semanticLabelFraction(label: SemanticLabel): Float   // 0f..1f — pix
 // pipelines. (#1733)
 fun Frame.cameraImage(): Image?
 
+// Detector output -> camera CPU image pixel, the pixel `camera.imageIntrinsics` describes.
+// Feed it the size of the unrotated CPU image and the clockwise rotation handed to the vision
+// API (ML Kit reports in the rotated image). Pure Kotlin, safe to keep while the detector runs.
+// To place a result: capture camera.pose + camera.imageIntrinsics with the image, cast a world
+// ray from that pose through detectorPixelToImagePixel(x, y), then
+// frame.hitTest(origin, 0, direction, 0) on any later frame.
+class CameraImageSize(val width: Int, val height: Int)          // image pixels, never a view size
+class CameraImagePoint(val x: Float, val y: Float)              // value equality
+class DetectorImageMapping(
+    val imageSize: CameraImageSize,                             // unrotated CPU image
+    val inputRotationDegrees: Int,                              // 0, 90, 180 or 270
+) {
+    val detectorWidth: Int                                      // rotated output width
+    val detectorHeight: Int
+    fun detectorPixelToImagePixel(x: Float, y: Float): CameraImagePoint
+}
+
 // ArCoreApk — suspend-friendly availability check (the sync variant can ANR briefly).
 suspend fun ArCoreApk.awaitAvailability(context: Context): ArCoreApk.Availability
 ```
@@ -3897,6 +3939,8 @@ class ModelLoader(engine: Engine, context: Context) {
 }
 ```
 
+**Failures:** a `load*Async` that fails (missing file, a `.gltf` whose `.bin` cannot be read, unreachable URL, unparsable payload) calls `onResult(null)` (an empty list for `loadInstancedModelAsync`) on the main thread and logs a `Log.w` under the `ModelLoader` logcat tag (`rememberModelInstance` for that composable); it never crashes the app. A missing texture is logged and the model loads without it. The synchronous `createModel*` / `createInstancedModel` throw `IllegalArgumentException` (model destroyed, logged) when a `.bin` cannot be resolved; a texture that fails to resolve is logged and skipped. `clear()` cancels the running loads and leaves the loader reusable; only `destroy()` ends it.
+
 **WebP textures:** every entry point above re-encodes embedded `EXT_texture_webp` textures to PNG
 before Filament sees them, because Filament's Android build ships no `image/webp` decoder (#2305).
 The cost is one decode + PNG encode per WebP texture — on the calling thread for the synchronous
@@ -4612,7 +4656,7 @@ class SceneRenderer(engine: Engine, view: View, renderer: Renderer) {
 
     fun attachToSurfaceView(surfaceView: SurfaceView, isOpaque: Boolean, context: Context, display: Display, onTouch: ((MotionEvent) -> Unit)? = null)
     fun attachToTextureView(textureView: TextureView, isOpaque: Boolean, context: Context, display: Display, onTouch: ((MotionEvent) -> Unit)? = null)
-    fun renderFrame(frameTimeNanos: Long, onBeforeRender: () -> Unit)
+    fun renderFrame(frameTimeNanos: Long, shouldPresent: (() -> Boolean)? = null, onBeforeRender: () -> Unit): Boolean  // true when a frame reached the surface
     fun applyResize(width: Int, height: Int)
     fun destroy()
 }
@@ -4912,7 +4956,7 @@ cube.updateCollisionShape()              // opt back in: re-derive, and resume t
 ## Compose Multiplatform (sceneview-compose)
 
 One composable from `commonMain`, several renderers underneath. Artifact:
-`io.github.sceneview:sceneview-compose:4.60.0` — on Maven Central since 4.27.0, released
+`io.github.sceneview:sceneview-compose:4.62.0` — on Maven Central since 4.27.0, released
 in lock-step with `sceneview`. 4.26.0 and earlier do NOT contain this module — never
 emit a version below 4.27.0 for it.
 
@@ -5117,7 +5161,7 @@ Full rationale: `docs/docs/compose-multiplatform.md`.
 
 ## SceneView Web (Kotlin/JS + Filament.js)
 
-Package: `sceneview-web` v4.60.0 — npm `sceneview-web`
+Package: `sceneview-web` v4.62.0 — npm `sceneview-web`
 Renderer: **Filament.js (WebGL2/WASM)** — same Filament engine as SceneView Android, compiled to WebAssembly.
 Requires: Chrome 79+, Edge 79+, Firefox 78+ (WebGL2). Safari 15+ (WebGL2).
 
@@ -5752,7 +5796,7 @@ Renderer: **RealityKit**. Requires iOS 18+ / macOS 15+ / visionOS 2+.
 
 SPM dependency (Package.swift or Xcode):
 ```swift
-.package(url: "https://github.com/sceneview/sceneview.git", from: "4.60.0")
+.package(url: "https://github.com/sceneview/sceneview.git", from: "4.62.0")
 ```
 
 Import: `import SceneViewSwift`

@@ -1,6 +1,6 @@
 <!--
   GENERATED FILE — DO NOT EDIT.
-  Source of truth: /llms.txt  (SceneView 4.60.0)
+  Source of truth: /llms.txt  (SceneView 4.62.0)
   Regenerate:      node tools/generate-gpt-knowledge.js
   Drift is caught in CI (ci.yml -> repo-hygiene). Edit llms.txt instead.
   See issue #2724.
@@ -9,7 +9,7 @@
 # SceneView — Best Practices & Troubleshooting
 
 > Threading, performance, error handling, debugging, recording, and media.
-> Auto-generated from `llms.txt` (SceneView 4.60.0). This is a slice of the machine-readable API reference — the same content an AI reads to generate SceneView code.
+> Auto-generated from `llms.txt` (SceneView 4.62.0). This is a slice of the machine-readable API reference — the same content an AI reads to generate SceneView code.
 
 ## Render Quality
 
@@ -81,6 +81,7 @@ The extension `View.applyRenderQuality(RenderQuality)` configures `shadowOptions
 | Problem | Cause | Fix |
 |---------|-------|-----|
 | Model not showing | `rememberModelInstance` returns null | Always null-check: `model?.let { ModelNode(...) }` |
+| Model stays `null` / `onResult(null)` | Load failed: missing file or `.bin`, bad URL, unparsable payload | Read logcat tags `ModelLoader` and `rememberModelInstance`; the loader stays usable after a failure and after `clear()` |
 | Black screen | No environment / no light | Add `mainLightNode` and `environment` |
 | Crash on background thread | Filament JNI on wrong thread | Use `rememberModelInstance` or `Dispatchers.Main` |
 | AR not starting | Missing CAMERA permission or ARCore | Handle `onSessionFailure`, check `ArCoreApk.checkAvailability()` |
