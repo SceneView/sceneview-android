@@ -132,19 +132,36 @@ object ScreenedPoisson {
         progress: (Float) -> Unit = {},
     ): Result? {
         val normals = cloud.normals ?: return null
+        val fit = fit(cloud, normals, voxelM, maxBytes) ?: return null
+        progress(BAND_SHARE)
+        // The solve's arrays go before the output's TSDF comes.
+        val field = solve(cloud, normals, fit.band, screening, progress)
+        val tsdf = output(cloud, normals, fit.band, field.f, field.iso)
+        progress(1f)
+        return Result(tsdf, fit.h, fit.band.nodes, cloud.count, field.iterations, field.residual, fit.bytes)
+    }
+
+    /**
+     * The grid spacing [reconstruct] would solve [cloud] at within [maxBytes], known before
+     * solving: [voxelM], or coarser to fit. `null` when it would give nothing — no normals, no
+     * surfels, or no grid within [MAX_COARSENING] doublings fits.
+     */
+    fun spacing(cloud: DenseCloud, voxelM: Float = RerunTsdf.VOXEL_M, maxBytes: Long = MAX_BYTES): Float? {
+        val normals = cloud.normals ?: return null
+        return fit(cloud, normals, voxelM, maxBytes)?.h
+    }
+
+    /** A band that fits the budget, at spacing [h], and its solve's [bytes]. */
+    private class Fit(val band: Band, val h: Float, val bytes: Long)
+
+    /** The finest band of [cloud] from [voxelM] up, within [MAX_COARSENING] doublings, that fits [maxBytes]. */
+    private fun fit(cloud: DenseCloud, normals: FloatArray, voxelM: Float, maxBytes: Long): Fit? {
         if (cloud.count == 0) return null
         var h = voxelM
-        for (attempt in 0..MAX_COARSENING) {
+        repeat(MAX_COARSENING + 1) {
             val band = Band.around(cloud, normals, h)
             val bytes = band.nodes.toLong() * NODE_BYTES + cloud.count.toLong() * SAMPLE_BYTES + band.tiles.toLong() * TILE_BYTES
-            if (band.tiles > 0 && bytes <= maxBytes) {
-                progress(BAND_SHARE)
-                // The solve's arrays go before the output's TSDF comes.
-                val field = solve(cloud, normals, band, screening, progress)
-                val tsdf = output(cloud, normals, band, field.f, field.iso)
-                progress(1f)
-                return Result(tsdf, h, band.nodes, cloud.count, field.iterations, field.residual, bytes)
-            }
+            if (band.tiles > 0 && bytes <= maxBytes) return Fit(band, h, bytes)
             h *= 2f
         }
         return null
