@@ -140,4 +140,22 @@ class ScanStageLayoutTest {
         assertEquals(1f, whole.scale, 0.0001f)
         assertEquals(0f, whole.translationX, 0.0001f)
     }
+
+    @Test
+    fun theCardAndControlsEdgesAreHeldForTheCapture() {
+        var hud = Float.NaN
+        var controls = Float.NaN
+        for ((cardBottom, controlsStart) in listOf(400f to 1600f, 460f to 1540f, 400f to 1600f)) {
+            hud = ScanStageLayout.holdLowest(hud, cardBottom)
+            controls = ScanStageLayout.holdHighest(controls, controlsStart)
+        }
+        assertEquals(460f, hud, 0f)
+        assertEquals(1540f, controls, 0f)
+    }
+
+    @Test
+    fun theFirstMeasurementIsTakenAsIs() {
+        assertEquals(420f, ScanStageLayout.holdLowest(Float.NaN, 420f), 0f)
+        assertEquals(1500f, ScanStageLayout.holdHighest(Float.NaN, 1500f), 0f)
+    }
 }

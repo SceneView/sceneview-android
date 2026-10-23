@@ -92,10 +92,20 @@ data class ScanStageLayout(
         /** At most this share of the band between card and controls, a short band shrinks it. */
         const val THUMB_MAX_BAND_SHARE = 0.45f
 
-
         /** Not measured yet: where the status card usually ends, and the controls start. */
         const val DEFAULT_HUD_BOTTOM = 0.2f
         const val DEFAULT_CONTROLS_TOP = 0.78f
+
+        /**
+         * The status card's bottom edge held for the capture's length: the lowest it has reached,
+         * so a coaching line going from one line to two does not move the thumbnail. NaN = unmeasured.
+         */
+        fun holdLowest(held: Float, measured: Float): Float =
+            if (held.isFinite()) maxOf(held, measured) else measured
+
+        /** The controls' top edge held the same way: the highest it has reached. NaN = unmeasured. */
+        fun holdHighest(held: Float, measured: Float): Float =
+            if (held.isFinite()) minOf(held, measured) else measured
 
         /**
          * The phases the map leads in: scanning, paused and the finish screen, the room seen whole
