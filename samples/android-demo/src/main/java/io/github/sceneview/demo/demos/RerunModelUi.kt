@@ -327,10 +327,11 @@ internal fun buildRerunModel(
     source: RerunModelSource,
     onRaw: ((RerunModelBuild) -> Unit)? = null,
     shown: ByteArray? = null,
+    reconstruction: ReconstructionMethod = ReconstructionMethod.Fused,
     progress: (Float) -> Unit,
 ): RerunModelBuild {
     val started = System.nanoTime()
-    val meshed = mesh(source, progress)
+    val meshed = mesh(source, progress, reconstruction)
     val raw = meshed.surface
     val meshedAt = System.nanoTime()
     val photos = when (source) {
@@ -531,6 +532,7 @@ internal fun buildScanModel(
     source: RerunModelSource,
     onRaw: ((RerunScanModel) -> Unit)? = null,
     shown: ByteArray? = null,
+    reconstruction: ReconstructionMethod = ReconstructionMethod.Fused,
     progress: (Float) -> Unit,
 ): RerunScanModel? {
     val skipMesh = source is RerunModelSource.Synthetic && source.meshFails
@@ -538,7 +540,7 @@ internal fun buildScanModel(
         null
     } else {
         val raw = onRaw?.let { show -> { build: RerunModelBuild -> show(build.scanModel()) } }
-        runCatching { buildRerunModel(source, raw, shown) { progress(it * MESH_PART) } }
+        runCatching { buildRerunModel(source, raw, shown, reconstruction) { progress(it * MESH_PART) } }
             .onFailure { if (it is CancellationException) throw it }
             .onFailure { Log.w(TAG, "meshing failed", it) }
             .getOrNull()
@@ -612,6 +614,9 @@ private val ModelState.settled: Boolean get() = this == ModelState.Failed || (th
  * [floorCovered] is the scan's floor covered in m², its replay's figure (#4734); `null` when its
  * recording cannot be read, and no legend is shown.
  * [onRescan] starts a re-scan of one of its parts to scan again (#4736); `null`: not offered.
+ * With [asks], a model built here first asks how to finish it ([ReconstructionSheet]): as
+ * scanned or filled, with what filling can make of this scan ([finishMethod]); the QA states,
+ * whose hint stays, build it as scanned without asking.
  */
 @Composable
 @Suppress("LongMethod", "LongParameterList", "CyclomaticComplexMethod")
@@ -633,7 +638,10 @@ internal fun RerunModelScreen(
     opened: RerunScanModel? = null,
     floorCovered: Float? = null,
     onRescan: ((RescanPick) -> Unit)? = null,
+    asks: Boolean = !hintStays,
 ) {
+    // The question of how to finish the model, while it waits for an answer.
+    var question by remember(source, id) { mutableStateOf<FinishQuestion?>(null) }
     val state by produceState<ModelState>(ModelState.Loading, source, id) {
         val stored = opened ?: if (store != null && id != null) {
             withContext(Dispatchers.IO) { runCatching { store.model(id) }.getOrNull() }
@@ -647,6 +655,9 @@ internal fun RerunModelScreen(
         var shownFirst: RerunScanModel? = retry
         if (retry != null) value = ModelState.Ready(retry, final = false)
         val built = kept ?: source?.let { from ->
+            // A raw surface finished again is not asked again: the method it was built by is not
+            // kept, and it finishes as scanned.
+            val method = if (retry == null) finishMethod(from, asks) { question = it } else ReconstructionMethod.Fused
             withContext(Dispatchers.Default) {
                 val job = coroutineContext.job
                 // The line narrates the step without a share (one indicator, `DESIGN.md`): the
@@ -661,7 +672,7 @@ internal fun RerunModelScreen(
                         value = ModelState.Ready(surface, final = false)
                     }
                 }
-                runCatching { buildScanModel(from, raw, retry?.glb, report) }
+                runCatching { buildScanModel(from, raw, retry?.glb, method, report) }
                     .onFailure { if (it is CancellationException) throw it }
                     .onFailure { Log.w(TAG, "model build failed", it) }
                     .getOrNull()
@@ -967,6 +978,9 @@ internal fun RerunModelScreen(
         )
     }
     rescan?.takeIf { rescanOpen && it.zones.isNotEmpty() }?.let { RescanZonesDialog(it.zones, onDismiss = { rescanOpen = false }, onRescan = it.picker(onRescan)) }
+    question?.let { asked ->
+        ReconstructionSheet(asked.fill, ReconstructionMethod.Fused, onFinish = asked::finish, onDismiss = asked::dismiss)
+    }
 }
 
 /** The scan's name, and where it is kept; a tap renames it. */
