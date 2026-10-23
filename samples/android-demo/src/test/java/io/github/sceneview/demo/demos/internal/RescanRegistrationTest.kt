@@ -17,8 +17,9 @@ import kotlin.random.Random
  * other way, looks at that wall. Moved by a known turn and shift, with 5 mm of noise, the second
  * session must come back within 2 cm and 1° — or be refused, never merged wrong — even with a third
  * of its surface directions disagreeing with the scan's, as a real second session does. Then what
- * must be refused: another room, one flat wall, a floor alone, a bare corner of a square room, a
- * room that looks the same turned round, the part alone, a cloud without normals.
+ * must be refused: another room, the same room with a cupboard where the scan saw open floor, a room
+ * a few centimetres smaller, one flat wall, a floor alone, a bare corner of a square room, a room
+ * that looks the same turned round, the part alone, a cloud without normals.
  */
 class RescanRegistrationTest {
 
@@ -80,6 +81,38 @@ class RescanRegistrationTest {
         for (offset in OFFSETS) {
             val found = RescanRegistrar.register(scan, offset.inverse().moved(bedroom), listOf(ZONE))
             assertTrue("offset $offset: $found", found is RescanAlignment.Refused)
+        }
+    }
+
+    @Test
+    fun `a session that puts a cupboard where the scan saw open floor is refused`() {
+        // The same room, lined up right, but with a cupboard standing in the middle of it, outside
+        // the part to fill in: where the scan looked through to the back wall, it is in the way.
+        val cupboard = SyntheticShape.Box(Vec3(-0.6f, 0f, 0.8f), Vec3(0.9f, 1.5f, 1.15f)) { _, _, _ -> PLAIN }
+        val furnished = fuse(SyntheticScene(RerunSyntheticRoom.scene.shapes + cupboard), aimed(RESCAN_STOPS, PI.toFloat()))
+        for ((k, offset) in OFFSETS.withIndex()) {
+            assertRefused(RescanRefusal.Contradicts, RescanRegistrar.register(scan, noisy(offset.inverse().moved(furnished), SEED + k), listOf(ZONE)))
+        }
+    }
+
+    @Test
+    fun `a room whose walls stand a few centimetres in from the scan's contradicts it, the same room does not`() {
+        // Lined up where the scan's room is, a neighbouring room a few centimetres smaller lands
+        // every wall beside the scan's: by the scan's surface, so no open space, but matching none.
+        // At 6 cm the share off the walls reads 0.749, on its threshold, so 6 cm is not asserted.
+        val reference = requireNotNull(RescanReference.of(scan))
+        val floor = requireNotNull(reference.floorY)
+        val furniture = RerunSyntheticRoom.scene.shapes.filter { it !is SyntheticShape.Room }
+        for (inset in INSETS_M) {
+            val shell = SyntheticShape.Room(Vec3(-2f + inset, 0f, -1.8f + inset), Vec3(2f - inset, 2.6f, 1.8f - inset)) { _, _, _ -> PLAIN }
+            val session = noisy(fuse(SyntheticScene(listOf(shell) + furniture), aimed(RESCAN_STOPS, PI.toFloat())), SEED)
+            val samples = requireNotNull(RescanSamples.of(session, RescanRegistrar.SAMPLE_M, RescanRegistrar.MAX_SAMPLES))
+            val judged = RescanRegistrar.judge(reference, samples, RescanPose.Identity, listOf(ZONE), floor)
+            val contradicts = judged.free > RescanRegistrar.MAX_CONTRADICTION || judged.offWall > RescanRegistrar.MAX_OFF_WALL ||
+                judged.besideWall > RescanRegistrar.MAX_BESIDE_WALL
+            val reading = "inset ${inset * MM} mm: judged ${judged.judged}, free ${judged.free}, off the walls ${judged.offWall}, beside ${judged.besideWall}"
+            assertTrue(reading, judged.judged >= RescanRegistrar.MIN_JUDGED)
+            assertEquals(reading, inset > 0f, contradicts)
         }
     }
 
@@ -197,10 +230,14 @@ class RescanRegistrationTest {
 
         /** The second session, in the first one's frame: two stops facing the back wall. */
         val rescan: DenseCloud by lazy {
-            fuse(RerunSyntheticRoom.scene, aimed(listOf(Vec3(0.3f, 1.4f, 0.3f), Vec3(-0.4f, 1.3f, 0.7f)), PI.toFloat()))
+            fuse(RerunSyntheticRoom.scene, aimed(RESCAN_STOPS, PI.toFloat()))
         }
 
+        /** Where the second session stood. */
+        val RESCAN_STOPS = listOf(Vec3(0.3f, 1.4f, 0.3f), Vec3(-0.4f, 1.3f, 0.7f))
+
         private const val MISSED_FROM_M = 0.05f
+        private val INSETS_M = listOf(0f, 0.04f, 0.05f, 0.07f, 0.08f, 0.09f, 0.1f, 0.11f, 0.12f)
         private const val AIM_SPREAD_DEG = 60
         private const val AIM_STEP_DEG = 10
         private val PITCHES_DEG = listOf(-40, -12, 18)
