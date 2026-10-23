@@ -14,5 +14,9 @@
     <string name="scan_finish_method_filled">Filled</string>
     <string name="scan_finish_method_filled_detail">Closes small gaps, for far fewer holes. Takes about 2 to 10 times as long to finish, and may miss a little more at the edges of what was seen.</string>
     <string name="scan_finish_method_filled_unavailable">Not available: this scan didn\'t keep the surface points it needs.</string>
+    <!-- Filled within its 40 MB: on a coarser grid when the scan is big, or not at all. -->
+    <string name="scan_finish_method_filled_half">This scan is too big to fill in full detail: it fills at half the detail, so small things come out softer.</string>
+    <string name="scan_finish_method_filled_quarter">This scan is too big to fill in full detail: it fills at a quarter of the detail, so small things come out much softer.</string>
+    <string name="scan_finish_method_filled_too_big">Not available: this scan is too big to fill in the phone\'s memory.</string>
     <string name="scan_finish_method_finish">Finish model</string>
 </resources>

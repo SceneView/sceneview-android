@@ -20,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,50 +31,57 @@ import io.github.sceneview.demo.R
 import io.github.sceneview.demo.common.DemoModalBottomSheet
 import io.github.sceneview.demo.demos.internal.ReconstructionMethod
 import io.github.sceneview.demo.theme.SceneViewTokens
+import kotlinx.coroutines.launch
 
 /*
  * The end of a scan's choice of reconstruction (#4630): the two the phone can run, what each
- * gives, and how long the filled one takes against the other, as the benchmark measured it.
+ * gives, and how long the filled one takes against the other, as the benchmark measured it —
+ * with what "Filled" can make of this scan within its memory ([FillPlan]).
  */
-
-/** Whether [source] can be filled: [ReconstructionMethod.Poisson] needs the scan's surfels. */
-internal fun canFill(source: RerunModelSource): Boolean = when (source) {
-    is RerunModelSource.Live -> source.cloud?.normals != null
-    is RerunModelSource.Surfels -> source.cloud.normals != null
-    is RerunModelSource.Synthetic -> true
-}
 
 /**
  * The sheet that asks how to finish the model: [ReconstructionChoices] in the demo's sheet.
- * [onFinish] gets the method picked; dismissing it finishes nothing.
+ * [onFinish] gets the method picked once the sheet is down; dismissing it ([onDismiss])
+ * finishes the model as scanned.
  */
 @Composable
 internal fun ReconstructionSheet(
-    canFill: Boolean,
+    fill: FillPlan,
     initial: ReconstructionMethod,
     onFinish: (ReconstructionMethod) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
     DemoModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         shape = RoundedCornerShape(topStart = SceneViewTokens.Radius.xl, topEnd = SceneViewTokens.Radius.xl),
     ) {
-        ReconstructionChoices(canFill, initial, onFinish, Modifier.navigationBarsPadding())
+        ReconstructionChoices(
+            fill,
+            initial,
+            onFinish = { method -> scope.launch { sheetState.hide() }.invokeOnCompletion { onFinish(method) } },
+            modifier = Modifier.navigationBarsPadding(),
+        )
     }
 }
 
-/** The sheet's content: the two methods, one picked, and the button that finishes with it. */
+/**
+ * The sheet's content: the two methods, one picked, and the button that finishes with it.
+ * "Filled" is picked only when [fill] fills; when only on a coarser grid, it says so first.
+ */
 @Composable
 internal fun ReconstructionChoices(
-    canFill: Boolean,
+    fill: FillPlan,
     initial: ReconstructionMethod,
     onFinish: (ReconstructionMethod) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var picked by remember(canFill, initial) {
-        mutableStateOf(if (canFill) initial else ReconstructionMethod.Fused)
+    val fills = fill is FillPlan.Fills
+    var picked by remember(fill, initial) {
+        mutableStateOf(if (fills) initial else ReconstructionMethod.Fused)
     }
     Column(
         modifier.fillMaxWidth().padding(SceneViewTokens.Space.md),
@@ -98,10 +106,15 @@ internal fun ReconstructionChoices(
                 method = ReconstructionMethod.Poisson,
                 title = stringResource(R.string.scan_finish_method_filled),
                 detail = stringResource(
-                    if (canFill) R.string.scan_finish_method_filled_detail else R.string.scan_finish_method_filled_unavailable,
+                    when (fill) {
+                        is FillPlan.Fills -> R.string.scan_finish_method_filled_detail
+                        FillPlan.TooBig -> R.string.scan_finish_method_filled_too_big
+                        FillPlan.NoSurfels -> R.string.scan_finish_method_filled_unavailable
+                    },
                 ),
+                note = coarserNote(fill)?.let { stringResource(it) },
                 selected = picked == ReconstructionMethod.Poisson,
-                enabled = canFill,
+                enabled = fills,
                 onPick = { picked = it },
             )
         }
@@ -112,6 +125,13 @@ internal fun ReconstructionChoices(
     }
 }
 
+/** What filling on a grid coarser than the voxel's costs, said before "Filled" is picked. */
+private fun coarserNote(fill: FillPlan): Int? = when ((fill as? FillPlan.Fills)?.coarser ?: 1) {
+    1 -> null
+    2 -> R.string.scan_finish_method_filled_half
+    else -> R.string.scan_finish_method_filled_quarter
+}
+
 @Composable
 private fun Choice(
     method: ReconstructionMethod,
@@ -120,6 +140,7 @@ private fun Choice(
     selected: Boolean,
     enabled: Boolean,
     onPick: (ReconstructionMethod) -> Unit,
+    note: String? = null,
 ) {
     Row(
         modifier = Modifier
@@ -135,6 +156,14 @@ private fun Choice(
             val color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = DISABLED_ALPHA)
             Text(title, style = MaterialTheme.typography.titleMedium, color = color)
             Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            note?.let {
+                Text(
+                    it,
+                    modifier = Modifier.padding(top = SceneViewTokens.Space.xs),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
         }
     }
 }
