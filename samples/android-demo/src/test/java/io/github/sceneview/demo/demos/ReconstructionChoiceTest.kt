@@ -110,9 +110,14 @@ class ReconstructionChoiceTest {
 
     @Test
     fun `a scan too big to fill is still asked, so the sheet says why`() = runTest {
-        val question = FinishQuestion(FillPlan.TooBig)
-        question.finish(ReconstructionMethod.Fused)
-        assertEquals(ReconstructionMethod.Fused, question.await())
+        val shown = ArrayList<FinishQuestion?>()
+        val method = finishMethod(RerunModelSource.Surfels(ball()), asks = true, maxBytes = 1024) { question ->
+            shown += question
+            question?.dismiss()
+        }
+        assertEquals(ReconstructionMethod.Fused, method)
+        assertEquals(FillPlan.TooBig, assertNotNull(shown.first()).fill)
+        assertNull("the question still shown", shown.last())
     }
 
     @Test

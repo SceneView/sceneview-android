@@ -1,8 +1,10 @@
 package io.github.sceneview.demo.demos
 
 import android.graphics.Bitmap
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -11,11 +13,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotSelected
@@ -26,6 +30,8 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.unit.Density
 import androidx.test.core.app.ApplicationProvider
 import io.github.sceneview.demo.R
 import io.github.sceneview.demo.demos.internal.ReconstructionMethod
@@ -44,8 +50,8 @@ import java.io.File
  * The end of a scan's choice of reconstruction (#4630): the two methods the phone runs and
  * nothing else, "As scanned" picked first, "Filled" only when the scan has its surfels and fits
  * the fill's memory — and, when it fits only on a coarser grid, saying so before it is picked.
- * Each run leaves the sheet's content, light and dark, en-US and fr-FR, in
- * `build/reconstruction-sheet-renders/` (not committed).
+ * Each run leaves the sheet's content, light and dark, en-US and fr-FR, and in landscape with
+ * large text, in `build/reconstruction-sheet-renders/` (not committed).
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = "w411dp-h891dp-xhdpi")
@@ -135,6 +141,27 @@ class ReconstructionSheetTest {
     }
 
     @Test
+    @Config(qualifiers = "w891dp-h411dp-land-xhdpi")
+    fun `in landscape with large text the sheet scrolls to its finish button`() {
+        composeRule.setContent {
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = LARGE_FONT_SCALE)) {
+                SceneViewDemoTheme(darkTheme = false) {
+                    Surface(Modifier.fillMaxSize().testTag(SHEET_TAG), color = MaterialTheme.colorScheme.surfaceContainer) {
+                        ReconstructionChoices(FillPlan.Fills(2), ReconstructionMethod.Fused, onFinish = { finished = it })
+                    }
+                }
+            }
+        }
+        composeRule.onNodeWithTag(choiceTag(ReconstructionMethod.Poisson)).performClick()
+        save(composeRule.onNodeWithTag(SHEET_TAG).captureToImage().asAndroidBitmap(), "landscape-large-text-top")
+        // The note on the lower detail pushes the button below the fold: it must still be reached.
+        composeRule.onNodeWithTag(FINISH_TAG).performScrollTo().assertIsDisplayed().performClick()
+        save(composeRule.onNodeWithTag(SHEET_TAG).captureToImage().asAndroidBitmap(), "landscape-large-text-end")
+        assertEquals(ReconstructionMethod.Poisson, finished)
+    }
+
+    @Test
     fun `the sheet renders in light and dark`() {
         render(LOOKS, prefix = "en-US")
     }
@@ -180,6 +207,7 @@ class ReconstructionSheetTest {
         const val SHEET_TAG = "reconstruction-sheet"
         const val DARK_GROUND = 0.2f
         const val LIGHT_GROUND = 0.5f
+        const val LARGE_FONT_SCALE = 2f
         val LOOKS = listOf(false, true).flatMap { dark ->
             val theme = if (dark) "dark" else "light"
             listOf(
