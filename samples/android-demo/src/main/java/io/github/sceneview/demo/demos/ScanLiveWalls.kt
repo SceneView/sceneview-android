@@ -167,8 +167,24 @@ internal class ScanWallsState(private val source: LiveWallSource = PlaneWallSour
     }
 
     companion object {
-        /** What the cut reads of [layer], the depth map's live snapshot: the cloud it draws. */
-        fun depthOf(layer: ReplayDenseLayer): FloatArray = layer.cloud.positions
+        /**
+         * What the cut reads of [layer], the depth map's live snapshot: the map's even stride
+         * ([ReplayDenseLayer.whole]), thinned evenly to one read of the cut ([WallExtent.MAX_READ]),
+         * so a wall's far end is cut where the map saw it and the cut costs no more than the cloud
+         * drawn did. Not the cloud drawn: it merges the far surfels into coarse cells
+         * ([io.github.sceneview.demo.demos.internal.DenseFusion.liveCloud]), dense by the eye and
+         * sparse away from it, so a far wall lost the end the map had seen, and moved each time
+         * the eye did. Once a snapshot, on the main thread.
+         */
+        fun depthOf(layer: ReplayDenseLayer): FloatArray {
+            val whole = layer.whole
+            val n = whole.size / 3
+            val stride = (n + WallExtent.MAX_READ - 1) / WallExtent.MAX_READ
+            if (stride <= 1) return whole
+            val read = FloatArray((n + stride - 1) / stride * 3)
+            for (k in 0 until read.size / 3) whole.copyInto(read, k * 3, k * stride * 3, k * stride * 3 + 3)
+            return read
+        }
     }
 }
 
