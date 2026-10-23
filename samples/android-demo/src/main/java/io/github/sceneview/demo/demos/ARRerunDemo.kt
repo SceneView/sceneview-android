@@ -808,8 +808,9 @@ fun ARRerunDemo(onBack: () -> Unit, startInDollhouse: Boolean = false) {
             // One room or area of yours: a part scanned again is kept as a completed copy (#4736).
             onRescan = scanPack?.takeIf { showingScan && !scanKind.roomByRoom }?.let { pack ->
                 val completed = stringResource(R.string.scan_rescan_merged_title, scanTitle)
+                val part = stringResource(R.string.scan_rescan_part_title, scanTitle)
                 val start: (RescanPick) -> Unit = { pick ->
-                    rescanTarget = RescanTarget(pick, pack, completed)
+                    rescanTarget = RescanTarget(pick, pack, completed, part)
                     scanScope = scanKind
                     screen = RerunScreen.Live
                 }
@@ -1386,6 +1387,9 @@ private fun RerunLiveScreen(
     // not keep — the merged copy, for a part scanned again — which Save as file still writes out.
     var saveFailure by remember { mutableStateOf<ScanSaveFailure?>(null) }
     var unsaved by remember { mutableStateOf<Pair<RerunCapturePack, String>?>(null) }
+    // The built scan [unsaved] was made from: Try again writes that same copy, never merging the
+    // re-scan a second time beside it — two copies of a long scan where one ran out of memory.
+    var unsavedFrom by remember { mutableStateOf<RerunCapturePack?>(null) }
     // Save as file: writing the copy for the share sheet, and whether that failed too.
     var fileSaving by remember { mutableStateOf(false) }
     var fileSaveFailed by remember { mutableStateOf(false) }
@@ -1627,6 +1631,7 @@ private fun RerunLiveScreen(
         builtPack = null
         saveFailure = null
         unsaved = null
+        unsavedFrom = null
         fileSaveFailed = false
         rescanRefusal = null
         rescanSeparate = false
@@ -1693,7 +1698,7 @@ private fun RerunLiveScreen(
             }.onFailure { if (it is CancellationException) throw it }
             if (built.isFailure) {
                 val error = built.exceptionOrNull()
-                failed("build", error, error?.let(ScanSaveFailure::of) ?: ScanSaveFailure.Other, null)
+                failed("build", error, error?.let { ScanSaveFailure.of(it) } ?: ScanSaveFailure.Other, null)
                 return@launch
             }
             val pack = built.getOrNull()?.also {
@@ -1710,10 +1715,20 @@ private fun RerunLiveScreen(
             // merged wrong. It used to fail the whole save, and Try again lined it up the same way
             // to the same refusal: the scan was lost (#4815). Now the card says why and saves
             // it as a separate scan — the part on its own, under its own name — and a save that
-            // ends away from the screen keeps it that way at once.
-            val rescanned = rescan?.takeUnless { rescanSeparate }?.let {
-                withContext(Dispatchers.Default) { it.merge(pack) }
+            // ends away from the screen keeps it that way at once. Try again after a failed
+            // write writes the copy already merged (#4815).
+            val held = unsaved?.takeIf { unsavedFrom === pack }
+            val merging = runCatching {
+                rescan?.takeUnless { held != null || rescanSeparate }?.let {
+                    withContext(Dispatchers.Default) { it.merge(pack) }
+                }
+            }.onFailure { if (it is CancellationException) throw it }
+            if (merging.isFailure) {
+                val error = merging.exceptionOrNull()
+                failed("rescan", error, error?.let { ScanSaveFailure.of(it) } ?: ScanSaveFailure.Other, pack)
+                return@launch
             }
+            val rescanned = merging.getOrNull()
             if (rescanned is RescanSave.Refused) {
                 rescanRefusal = rescanned.why
                 rescanSeparate = true
@@ -1724,9 +1739,13 @@ private fun RerunLiveScreen(
                 }
             }
             val merged = (rescanned as? RescanSave.Merged)?.pack
-            val saved = merged ?: pack
-            val title = rescan?.mergedTitle?.takeIf { merged != null } ?: builtTitle
+            // Kept on its own, a part scanned again is named after its scan: "Living room · part".
+            val (saved, title) = held ?: when {
+                merged != null -> merged to (rescan?.mergedTitle ?: builtTitle)
+                else -> pack to (rescan?.takeIf { rescanSeparate }?.partTitle ?: builtTitle)
+            }
             unsaved = saved to title
+            unsavedFrom = pack
             // Opened once, before it is written: the result screen shows it, and the save counts
             // its figures off it instead of parsing a long scan's log a second time (#4815).
             val openedResult = runCatching { loadRerunSession(saved) }
@@ -1749,7 +1768,11 @@ private fun RerunLiveScreen(
                 val failure = when {
                     // The QA state shows the card a long scan's full heap gets, Save as file included.
                     qaSaveFails -> ScanSaveFailure.Memory
-                    error != null -> ScanSaveFailure.of(error)
+                    error != null -> ScanSaveFailure.of(
+                        error,
+                        scanBytes = saved.manifest.size.toLong() + saved.log.size + saved.media.size,
+                        freeStorageBytes = appContext.filesDir.usableSpace,
+                    )
                     else -> ScanSaveFailure.Other
                 }
                 failed("write", error, failure, saved)
@@ -2241,8 +2264,9 @@ private fun RerunLiveScreen(
                     reviewing = phase == ScanPhase.Reviewing,
                 )
             }
-            // A part scanned again (#4736): its frame over the camera, and how far along it is.
-            if (recording && rescan != null) {
+            // A part scanned again (#4736): its frame over the camera, and how far along it is —
+            // gone once it did not line up: the card says so, once, and saves it on its own (#4815).
+            if (recording && rescan != null && phase != ScanPhase.SaveFailed && !rescanSeparate) {
                 RescanGuide(rescan, live = { scanMedia?.liveDense?.invoke()?.cloud }, lens = scanLens, drawn = scanFollowing)
             }
 

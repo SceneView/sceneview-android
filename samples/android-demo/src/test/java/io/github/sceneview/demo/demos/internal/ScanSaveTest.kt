@@ -74,20 +74,25 @@ class ScanSaveTest {
     }
 
     @Test
-    fun `a storage that cannot be written fails the save as Storage`() {
+    fun `a write that fails is a full storage only when the phone has less room than the scan`() {
         val notADirectory = folder.newFile("sessions")
-        val error = runCatching {
-            RerunSessionStore(notADirectory).save(bundled(), "Room", RerunSessionSource.Recorded)
-        }.exceptionOrNull()
+        val error = requireNotNull(
+            runCatching { RerunSessionStore(notADirectory).save(bundled(), "Room", RerunSessionSource.Recorded) }
+                .exceptionOrNull(),
+        )
         assertTrue("got $error", error is IOException)
-        assertEquals(ScanSaveFailure.Storage, ScanSaveFailure.of(requireNotNull(error)))
+        val scan = 85L * MB
+        // Room enough: not the user's to free up, and Save as file may still keep it.
+        assertEquals(ScanSaveFailure.Other, ScanSaveFailure.of(error, scanBytes = scan, freeStorageBytes = 3_000L * MB))
+        assertEquals(ScanSaveFailure.Other, ScanSaveFailure.of(error))
+        assertEquals(ScanSaveFailure.Storage, ScanSaveFailure.of(error, scanBytes = scan, freeStorageBytes = 12L * MB))
     }
 
     @Test
     fun `each failure is read off what stopped the save, or one of its causes`() {
         assertEquals(ScanSaveFailure.Memory, ScanSaveFailure.of(OutOfMemoryError("Failed to allocate")))
         assertEquals(ScanSaveFailure.Memory, ScanSaveFailure.of(IllegalStateException("build", OutOfMemoryError())))
-        assertEquals(ScanSaveFailure.Storage, ScanSaveFailure.of(IOException("No space left on device")))
+        assertEquals(ScanSaveFailure.Storage, ScanSaveFailure.of(IOException("No space left on device"), MB, 0L))
         assertEquals(ScanSaveFailure.Empty, ScanSaveFailure.of(RerunImportFailure.Empty("Room")))
         assertEquals(ScanSaveFailure.Other, ScanSaveFailure.of(RerunImportFailure.Unreadable("Room")))
         assertEquals(ScanSaveFailure.Other, ScanSaveFailure.of(IllegalStateException("QA")))
@@ -183,6 +188,7 @@ class ScanSaveTest {
     }
 
     private companion object {
+        const val MB = 1024L * 1024L
         const val FPS = 30
         const val FRAME_NANOS = 33_333_333L
     }

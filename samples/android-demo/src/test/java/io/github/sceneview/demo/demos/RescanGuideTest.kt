@@ -224,7 +224,7 @@ class RescanGuideTest {
     @Test
     fun `a part that did not line up says why on the card and saves as a separate scan, light`() = refusedCard(dark = false)
 
-    /** The stage after Save on a re-scan of another room: the guide's line over the card (#4815). */
+    /** The stage after Save on a re-scan of another room: the card alone, the guide gone (#4815). */
     private fun refusedCard(dark: Boolean) {
         val target = target()
         val bedroom = RescanMergeTest.capture(RescanRegistrationTest.fuse(RerunSyntheticBedroom.scene, RerunSyntheticBedroom.poses()))
@@ -235,7 +235,6 @@ class RescanGuideTest {
             SceneViewDemoTheme(darkTheme = dark) {
                 CompositionLocalProvider(LocalStageChrome provides StageChrome.Media) {
                     Box(Modifier.fillMaxSize().background(StageChrome.Media.ground)) {
-                        RescanGuide(target, live = { null }, lens = eye(RescanPose.Identity), drawn = true)
                         Box(Modifier.align(Alignment.BottomCenter).padding(16.dp)) {
                             ScanSaveFailedCard(
                                 onDiscard = {},
@@ -249,7 +248,6 @@ class RescanGuideTest {
             }
         }
         step()
-        line(context.getString(R.string.scan_rescan_refused))
         composeRule.onNodeWithText(ScanCopy.RESCAN_REFUSED_TITLE).assertExists()
         composeRule.onNodeWithText(ScanCopy.rescanRefusedDetail(why)).assertExists()
         composeRule.onNodeWithText(ScanCopy.TRY_AGAIN).assertDoesNotExist()

@@ -12,7 +12,7 @@ enum class ScanSaveFailure {
     /** The heap ran out: a long scan built, opened or written whole. */
     Memory,
 
-    /** A file could not be written: the storage is full, or gone. */
+    /** A file could not be written, and the phone has less room left than the scan needs. */
     Storage,
 
     /** The scan holds no camera path, point or surface: nothing to keep, however often it is saved. */
@@ -29,12 +29,16 @@ enum class ScanSaveFailure {
     val offersFile: Boolean get() = this == Memory || this == Other
 
     companion object {
-        /** What stopped the save, from [error] or the first of its causes that says. */
-        fun of(error: Throwable): ScanSaveFailure {
+        /**
+         * What stopped the save, from [error] or the first of its causes that says. A write that
+         * failed is called a full storage only when [freeStorageBytes] is short of the
+         * [scanBytes] the scan needs: any other I/O error is not the user's to free up.
+         */
+        fun of(error: Throwable, scanBytes: Long = 0L, freeStorageBytes: Long = Long.MAX_VALUE): ScanSaveFailure {
             for (cause in generateSequence(error) { it.cause?.takeIf { next -> next !== it } }.take(MAX_CAUSES)) {
                 when (cause) {
                     is OutOfMemoryError -> return Memory
-                    is IOException -> return Storage
+                    is IOException -> return if (freeStorageBytes < scanBytes) Storage else Other
                     is RerunImportFailure.Empty -> return Empty
                     else -> Unit
                 }
