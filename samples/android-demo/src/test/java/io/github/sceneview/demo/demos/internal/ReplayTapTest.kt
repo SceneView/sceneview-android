@@ -174,6 +174,32 @@ class ReplayTapTest {
         assertEquals(SceneLabel.Chair, ReplayTap.nameOf(found, listOf(same, near)))
     }
 
+    @Test
+    fun `a television on its stand does not name the stand and the set boxed together`() {
+        // One region: a 1.8 m stand and the set on it, 1.2 m high in all; the set is 30 % of its points.
+        val found = standWithSet()
+        assertNull(ReplayTap.nameOf(found, listOf(setOn(found))))
+    }
+
+    @Test
+    fun `two recognised objects in the tapped box name it the same whatever their order`() {
+        val found = standWithSet()
+        val tv = setOn(found)
+        val table = RecognizedItem(SceneLabel.Table, found.box, 0.6f, views = 3, surfels = found.surfels)
+        assertEquals(SceneLabel.Table, ReplayTap.nameOf(found, listOf(tv, table)))
+        assertEquals(SceneLabel.Table, ReplayTap.nameOf(found, listOf(table, tv)))
+        // The same points both, one fitted on the box and the other half a metre off it: the
+        // footprint breaks the tie.
+        val b = found.box
+        val off = RecognizedItem(
+            SceneLabel.Bench,
+            ScanBox(b.centerX + 0.5f, b.centerZ, b.baseY, b.yaw, b.length, b.depth, b.height),
+            0.9f, views = 5, surfels = found.surfels,
+        )
+        assertEquals(SceneLabel.Table, ReplayTap.nameOf(found, listOf(off, table)))
+        assertEquals(SceneLabel.Table, ReplayTap.nameOf(found, listOf(table, off)))
+    }
+
     // ── Its sizes ─────────────────────────────────────────────────────────────
 
     @Test
@@ -384,5 +410,15 @@ class ReplayTapTest {
         fun turned(): ScanPick.Found = furnished.objects.pick(EYE, toward(Vec3(0.9f, 0.7f, 0.8f))) as ScanPick.Found
 
         fun chairAt(found: ScanPick.Found) = RecognizedItem(SceneLabel.Chair, found.box, 0.8f, views = 3, surfels = found.surfels)
+
+        /** A tap that grew one region round a TV stand and the set on it: 1.8 × 0.45 × 1.2 m, 1,000 points. */
+        fun standWithSet() = ScanPick.Found(ScanBox(0f, 0f, 0f, 0f, 1.8f, 0.45f, 1.2f), IntArray(1_000) { it })
+
+        /** The set on [found]'s stand as recognition boxes it: 1.2 m wide, 0.5 m up, 30 % of the points. */
+        fun setOn(found: ScanPick.Found) = RecognizedItem(
+            SceneLabel.Television,
+            ScanBox(found.box.centerX, found.box.centerZ, 0.5f, 0f, 1.2f, 0.1f, 0.7f),
+            0.9f, views = 4, surfels = found.surfels.copyOfRange(0, found.surfels.size * 3 / 10),
+        )
     }
 }
