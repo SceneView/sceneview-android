@@ -86,10 +86,16 @@ internal sealed interface RescanSave {
 
 /**
  * A re-scan of [pick]'s part of the scan [pack] holds (#4736), saved as a new scan named
- * [mergedTitle]. The scan is read for lining up once, off the main thread, on first use.
+ * [mergedTitle] — or, when it does not line up, on its own as [partTitle] (#4815). The scan is
+ * read for lining up once, off the main thread, on first use.
  */
 @Stable
-internal class RescanTarget(val pick: RescanPick, val pack: RerunCapturePack, val mergedTitle: String) {
+internal class RescanTarget(
+    val pick: RescanPick,
+    val pack: RerunCapturePack,
+    val mergedTitle: String,
+    val partTitle: String = mergedTitle,
+) {
     private val reference: RescanReference? by lazy { RescanReference.of(pick.cloud) }
 
     /** The parts the re-scan may fill in: its points there say nothing against the scan. */
