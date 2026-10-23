@@ -161,6 +161,8 @@ import io.github.sceneview.demo.demos.internal.DollhouseCopy
 import io.github.sceneview.demo.demos.internal.RoomDollhouse
 import io.github.sceneview.demo.demos.internal.ScanBack
 import io.github.sceneview.demo.demos.internal.ScanClock
+import io.github.sceneview.demo.demos.internal.CaptureChrome
+import io.github.sceneview.demo.demos.internal.CaptureCue
 import io.github.sceneview.demo.demos.internal.ScanActivity
 import io.github.sceneview.demo.demos.internal.ScanCopy
 import io.github.sceneview.demo.demos.internal.ScanWallWalk
@@ -1859,6 +1861,8 @@ private fun RerunLiveScreen(
                         pointsRising = pointsRising,
                     ),
                     room = scanWalls,
+                    floorShare = scanCoverage.floorShare,
+                    covered = scanCoverage.coveredSquareMetres,
                 )
                 // Nothing to draw: this marks where the status card ends over the live 3D map.
                 Spacer(Modifier.fillMaxWidth().onGloballyPositioned { hudBottom = it.positionInRoot().y })
@@ -1936,6 +1940,8 @@ private fun RerunLiveScreen(
                 if (recording && !scanFollowing && phase in SCAN_MAP_PHASES) {
                     ScanRecenterPill(onRecenter = { scanOrbit.recenter() })
                 }
+                // Complete only with the walls closed and the floor covered: the map hatches no floor.
+                val scanComplete = scanWalls?.let { CaptureChrome.complete(it.done, scanCoverage.floorShare) } == true
                 if (arCoreAvailability == null || qaState != null) {
                     when {
                         !recording -> ScanShutter(startEnabled = isTracking, onStart = onStartScan)
@@ -1969,26 +1975,35 @@ private fun RerunLiveScreen(
                         )
                         else -> ScanControls(
                             phase = phase,
-                            coaching = ScanScopeCopy.coaching(
-                                scope = scanScope,
-                                line = ScanCopy.coaching(
-                                    phase = phase,
-                                    trackingLost = trackingLost,
-                                    photoLimitReached = photoLimitReached && !photoNoticeOver,
-                                    detail = scan?.denseDetail ?: qaLong?.shownDetail ?: ScanDetail.Fine,
-                                    coach = scanCoverage.coachLine,
-                                    lowTexture = lowTexture,
-                                    depthStarved = depthStarved,
-                                    pointsRising = pointsRising,
-                                    hasPoints = capturedPoints > 0,
+                            // One message at a time: a part scanned again says its own next step
+                            // (RescanGuide), so only a blocker shows here over it.
+                            cue = CaptureChrome.cue(
+                                ScanScopeCopy.coaching(
+                                    scope = scanScope,
+                                    line = ScanCopy.coaching(
+                                        phase = phase,
+                                        trackingLost = trackingLost,
+                                        photoLimitReached = photoLimitReached && !photoNoticeOver,
+                                        detail = scan?.denseDetail ?: qaLong?.shownDetail ?: ScanDetail.Fine,
+                                        coach = scanCoverage.coachLine,
+                                        lowTexture = lowTexture,
+                                        depthStarved = depthStarved,
+                                        pointsRising = pointsRising,
+                                        hasPoints = capturedPoints > 0,
+                                    ),
+                                    nextRoom = roomNumber.takeIf { betweenRooms },
+                                    walls = scanWalls?.wallCount,
+                                    turn = heldTurn,
+                                    done = scanWalls?.done == true,
+                                    facingWall = scanCoverage.facingWall,
+                                    wallToFinish = scanWalls?.facingUnfinished == true,
+                                    floorLeft = !scanComplete,
                                 ),
-                                nextRoom = roomNumber.takeIf { betweenRooms },
-                                walls = scanWalls?.wallCount,
-                                turn = heldTurn,
-                                done = scanWalls?.done == true,
-                                facingWall = scanCoverage.facingWall,
-                                wallToFinish = scanWalls?.facingUnfinished == true,
-                            ),
+                                dark = trackingLost &&
+                                    (ForcedTrackingFailure.override ?: trackingFailureReason) ==
+                                    TrackingFailureReason.INSUFFICIENT_LIGHT,
+                            )?.takeIf { rescan == null || it is CaptureCue.Blocked },
+                            complete = scanComplete,
                             onTogglePause = {
                                 betweenRooms = false
                                 moveTo(phase.togglePause())
