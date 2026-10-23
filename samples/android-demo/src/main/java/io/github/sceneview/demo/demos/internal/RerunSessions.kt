@@ -273,7 +273,7 @@ class RerunSessionStore(val root: File) {
      * session only lists once it is whole.
      *
      * [opened] is [capture] already opened — a scan just recorded is, for its result screen — so
-     * a long scan's log is not parsed a second time just to count its figures (#SAVEFIX).
+     * a long scan's log is not parsed a second time just to count its figures (#4815).
      *
      * @throws RerunImportFailure.Unreadable when its manifest does not parse.
      * @throws RerunImportFailure.Empty when it holds nothing to replay.
@@ -599,7 +599,7 @@ internal object StoredZip {
 
     /**
      * The same zip as [write], streamed into [sink]: a file or a share copy is written without
-     * the whole archive ever sitting in memory a second time (#SAVEFIX).
+     * the whole archive ever sitting in memory a second time (#4815).
      */
     fun write(files: List<Pair<String, ByteArray>>, sink: OutputStream) {
         val out = LittleEndianBuffer(sink)

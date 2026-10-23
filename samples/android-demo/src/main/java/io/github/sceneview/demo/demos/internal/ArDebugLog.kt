@@ -126,7 +126,7 @@ fun parseArDebugLog(lines: Sequence<String>): List<ArDebugEvent> = lines.mapNotN
 
 /**
  * Parses a whole log from its UTF-8 [bytes], a line at a time: the log is never decoded into one
- * string, which on Android weighs twice the file (#SAVEFIX).
+ * string, which on Android weighs twice the file (#4815).
  */
 fun parseArDebugLog(bytes: ByteArray): List<ArDebugEvent> =
     bytes.inputStream().bufferedReader(Charsets.UTF_8).useLines(::parseArDebugLog)

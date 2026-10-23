@@ -66,7 +66,7 @@ object ArDebugLogWriter {
      * string: each line goes straight into small fixed chunks, then into one array of the exact size.
      * A long scan's log runs to tens of megabytes, and on Android a `String` of it weighs twice
      * that, its `StringBuilder` up to four times while it grows — the copies that ran a save out
-     * of memory (#SAVEFIX).
+     * of memory (#4815).
      */
     fun writeBytes(events: List<ArDebugEvent>): ByteArray {
         val chunks = ArrayList<ByteArray>()

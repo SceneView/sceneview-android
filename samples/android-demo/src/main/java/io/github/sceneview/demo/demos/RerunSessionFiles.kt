@@ -476,7 +476,7 @@ internal const val RERUN_SHARE_SCAN = "scan"
 internal const val RERUN_SHARE_EXPORT = "export"
 internal const val RERUN_SHARE_PLAN = "plan"
 
-/** A scan that could not be saved on the phone, written out for the share sheet (#SAVEFIX). */
+/** A scan that could not be saved on the phone, written out for the share sheet (#4815). */
 internal const val RERUN_SHARE_UNSAVED = "unsaved"
 
 private const val MILLIS = 1000L

@@ -197,7 +197,7 @@ class RescanGuideTest {
 
     @Test
     fun `a refused re-scan is refused again on Try again, and still saves as a separate scan`() {
-        // What lost Thomas's scans on 4.62.0 (#SAVEFIX): lining up is deterministic, so Try again
+        // What lost Thomas's scans on 4.62.0 (#4815): lining up is deterministic, so Try again
         // refused the same re-scan the same way, and Discard was the only way out.
         val target = target()
         val fused = RescanMergeTest.capture(RescanRegistrationTest.fuse(RerunSyntheticBedroom.scene, RerunSyntheticBedroom.poses()))
@@ -224,7 +224,7 @@ class RescanGuideTest {
     @Test
     fun `a part that did not line up says why on the card and saves as a separate scan, light`() = refusedCard(dark = false)
 
-    /** The stage after Save on a re-scan of another room: the guide's line over the card (#SAVEFIX). */
+    /** The stage after Save on a re-scan of another room: the guide's line over the card (#4815). */
     private fun refusedCard(dark: Boolean) {
         val target = target()
         val bedroom = RescanMergeTest.capture(RescanRegistrationTest.fuse(RerunSyntheticBedroom.scene, RerunSyntheticBedroom.poses()))

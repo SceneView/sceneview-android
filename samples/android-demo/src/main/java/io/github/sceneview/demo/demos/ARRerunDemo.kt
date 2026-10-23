@@ -1382,7 +1382,7 @@ private fun RerunLiveScreen(
     // The built scan, held across a failed write so Try again writes the same one.
     var builtPack by remember { mutableStateOf<RerunCapturePack?>(null) }
     var builtTitle by remember { mutableStateOf("") }
-    // Why the last save failed, said on the "Couldn't save" card (#SAVEFIX), and the scan it could
+    // Why the last save failed, said on the "Couldn't save" card (#4815), and the scan it could
     // not keep — the merged copy, for a part scanned again — which Save as file still writes out.
     var saveFailure by remember { mutableStateOf<ScanSaveFailure?>(null) }
     var unsaved by remember { mutableStateOf<Pair<RerunCapturePack, String>?>(null) }
@@ -1391,7 +1391,7 @@ private fun RerunLiveScreen(
     var fileSaveFailed by remember { mutableStateOf(false) }
     // A part scanned again that did not line up on its scan (#4736): why, said on the card, and
     // whether it is now saved as a separate scan of its own — lining it up again would only
-    // refuse it again, so the save never waits on it a second time (#SAVEFIX).
+    // refuse it again, so the save never waits on it a second time (#4815).
     var rescanRefusal by remember { mutableStateOf<RescanRefusal?>(null) }
     var rescanSeparate by remember { mutableStateOf(false) }
     var leaveAsked by remember { mutableStateOf(false) }
@@ -1654,7 +1654,7 @@ private fun RerunLiveScreen(
         fileSaveFailed = false
         val appContext = context.applicationContext
         // Every way a save ends short lands here: the card says why, logcat says it with the
-        // figures — `adb logcat -s ScanSave` — and the scan stays held for Try again (#SAVEFIX).
+        // figures — `adb logcat -s ScanSave` — and the scan stays held for Try again (#4815).
         val failed = { stage: String, error: Throwable?, failure: ScanSaveFailure, pack: RerunCapturePack? ->
             val heap = Runtime.getRuntime()
             Log.w(
@@ -1708,7 +1708,7 @@ private fun RerunLiveScreen(
             // A part scanned again (#4736) is lined up on its scan and merged into a copy of it,
             // kept as a new scan, the scan itself untouched; one that does not line up is never
             // merged wrong. It used to fail the whole save, and Try again lined it up the same way
-            // to the same refusal: the scan was lost (#SAVEFIX). Now the card says why and saves
+            // to the same refusal: the scan was lost (#4815). Now the card says why and saves
             // it as a separate scan — the part on its own, under its own name — and a save that
             // ends away from the screen keeps it that way at once.
             val rescanned = rescan?.takeUnless { rescanSeparate }?.let {
@@ -1728,7 +1728,7 @@ private fun RerunLiveScreen(
             val title = rescan?.mergedTitle?.takeIf { merged != null } ?: builtTitle
             unsaved = saved to title
             // Opened once, before it is written: the result screen shows it, and the save counts
-            // its figures off it instead of parsing a long scan's log a second time (#SAVEFIX).
+            // its figures off it instead of parsing a long scan's log a second time (#4815).
             val openedResult = runCatching { loadRerunSession(saved) }
                 .onFailure { if (it is CancellationException) throw it }
             openedResult.exceptionOrNull()?.let {
@@ -1817,7 +1817,7 @@ private fun RerunLiveScreen(
     // What the review and the save say: the points the saved scan keeps, which "Your scans" lists
     // too. On a depth scan that is fewer than the HUD's count once the map coarsens (#4717) —
     // 404,337 confirmed against 232k kept on a long outdoor scan — so the review never promises
-    // more than the list will show (#SAVEFIX).
+    // more than the list will show (#4815).
     val keptPoints = if (scan?.rawDepth == true) scan?.denseCount ?: 0 else capturedPoints
     // Points still rising are a scan at work, whatever the floor's coverage says: the top line
     // and the coaching line both read it.
@@ -2022,7 +2022,7 @@ private fun RerunLiveScreen(
                             fileSaving = fileSaving,
                             fileSaveFailed = fileSaveFailed,
                             // Save as file: the scan written as a .svscan for the share sheet — Files,
-                            // Drive — when saving on the phone keeps failing the same way (#SAVEFIX).
+                            // Drive — when saving on the phone keeps failing the same way (#4815).
                             onSaveAsFile = unsaved?.takeIf { saveFailure?.offersFile == true }?.let { (pack, title) ->
                                 {
                                     if (!fileSaving) {
@@ -2602,7 +2602,7 @@ private const val QA_RECORD_NEVER_LOOP_S = 3_600f
 /** Seconds the tracking-loss QA scan captures before it loses tracking. */
 private const val QA_TRACKING_LOST_AFTER_S = 3f
 
-/** `adb logcat -s ScanSave`: why a 3D Scan was not saved, with its size and the phone's heap (#SAVEFIX). */
+/** `adb logcat -s ScanSave`: why a 3D Scan was not saved, with its size and the phone's heap (#4815). */
 private const val SCAN_SAVE_LOG_TAG = "ScanSave"
 
 /** How often the live screen checks whether ARCore has found the room, to start recording. */

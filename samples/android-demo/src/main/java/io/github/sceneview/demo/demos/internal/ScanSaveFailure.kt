@@ -4,7 +4,7 @@ import java.io.IOException
 import java.util.Locale
 
 /**
- * Why a 3D Scan was not saved, read off what stopped it (#SAVEFIX): the "Couldn't save" card says
+ * Why a 3D Scan was not saved, read off what stopped it (#4815): the "Couldn't save" card says
  * it with the action that helps, and `adb logcat -s ScanSave` says it with the figures. Pure
  * Kotlin, tested on the JVM.
  */

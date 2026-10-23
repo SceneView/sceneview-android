@@ -349,7 +349,7 @@ object ScanCopy {
     /**
      * What the "Couldn't save" card says under its title: why the save failed and what to do,
      * [scanBytes] being what the scan needs on the phone, [refusal] why a part scanned again did
-     * not line up (#SAVEFIX). `null` — a failure not yet read — says what it always said.
+     * not line up (#4815). `null` — a failure not yet read — says what it always said.
      */
     fun saveFailedDetail(
         failure: ScanSaveFailure?,
@@ -385,7 +385,7 @@ object ScanCopy {
 
     /**
      * Why a part scanned again (#4736) did not line up on its scan, [why] being what lining it up
-     * came to (`null`: the re-scan held no depth points), and what keeps it (#SAVEFIX).
+     * came to (`null`: the re-scan held no depth points), and what keeps it (#4815).
      */
     fun rescanRefusedDetail(why: RescanRefusal?): String {
         val reason = when (why) {

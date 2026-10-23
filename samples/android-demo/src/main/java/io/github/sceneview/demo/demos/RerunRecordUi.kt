@@ -424,7 +424,7 @@ internal fun ScanSavingCard(points: Int = 0) {
  * A write that failed stays on screen until it is answered: the built scan is still held, Try
  * again writes it again, Discard drops it. Never a toast, never "Saved". It says why ([failure],
  * [scanBytes]) and, when a file can still keep the scan, offers Save as file ([onSaveAsFile]) —
- * a way out when the same failure would only come back (#SAVEFIX). A part scanned again that did
+ * a way out when the same failure would only come back (#4815). A part scanned again that did
  * not line up ([refusal]) lines up no better a second time: its main action saves it as a
  * separate scan instead of Try again.
  */

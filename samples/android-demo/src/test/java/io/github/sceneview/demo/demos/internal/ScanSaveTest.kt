@@ -14,7 +14,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * A long scan's save (#SAVEFIX): its log written and read without one giant string, the save that
+ * A long scan's save (#4815): its log written and read without one giant string, the save that
  * does not parse it twice, the scan file streamed — all byte for byte what they were — and why a
  * save failed, said in the user's words.
  */
