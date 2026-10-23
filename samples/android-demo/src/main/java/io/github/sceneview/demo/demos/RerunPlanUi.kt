@@ -413,8 +413,8 @@ internal fun PlanCard(
     val floor = PlanFloorInk(
         gridMinor = stage.debug.gridMinor.toArgb(),
         gridMajor = stage.debug.gridMajor.toArgb(),
-        zone = SceneViewTokens.ArOverlay.accentGuidance.toArgb(),
-        veil = SceneViewTokens.ArOverlay.accentGuidance.copy(alpha = VEIL_ALPHA).toArgb(),
+        zone = ZoneInk.frame(stage).toArgb(),
+        veil = ZoneInk.veil.toArgb(),
     )
     val texts = remember(survey, words) { SurveyReport.planTexts(survey, words.survey) }
     val grid = remember(survey) { ResultFloor.planGrid(survey) }

@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.testTag
@@ -53,6 +54,7 @@ import io.github.sceneview.demo.demos.internal.ScanGround
 import io.github.sceneview.demo.theme.LocalStageChrome
 import io.github.sceneview.demo.theme.SceneViewTokens
 import io.github.sceneview.demo.theme.SceneViewTokens.Space
+import io.github.sceneview.demo.theme.StageChrome
 import io.github.sceneview.demo.ui.overMediaEdge
 import io.github.sceneview.loaders.MaterialLoader
 
@@ -122,9 +124,10 @@ internal fun zonesOf(cloud: DenseCloud?, survey: RoomSurvey?): List<RescanZone> 
  */
 @Composable
 internal fun SceneScope.RescanZoneLayer(mesh: DebugMesh, veil: DebugMesh, engine: Engine, materialLoader: MaterialLoader) {
+    val ink = ZoneInk.frame(LocalStageChrome.current)
     // Remembered before the nodes, so Compose releases the materials after the nodes destroyed the layers.
-    val frame = remember(engine, materialLoader, mesh) {
-        val material = materialLoader.createUnlitColorInstance(SceneViewTokens.ArOverlay.accentGuidance).also {
+    val frame = remember(engine, materialLoader, mesh, ink) {
+        val material = materialLoader.createUnlitColorInstance(ink).also {
             it.setCullingMode(Material.CullingMode.NONE)
         }
         material to DebugLayerNode(engine, material, PRIORITY).also { it.upload(mesh) }
@@ -132,9 +135,8 @@ internal fun SceneScope.RescanZoneLayer(mesh: DebugMesh, veil: DebugMesh, engine
     DisposableEffect(frame) { onDispose { materialLoader.destroyMaterialInstance(frame.first) } }
     // Translucent: its outer faces only, so a box never doubles its own amber.
     val fill = remember(engine, materialLoader, veil) {
-        val material = materialLoader.createUnlitColorInstance(
-            SceneViewTokens.ArOverlay.accentGuidance.copy(alpha = VEIL_ALPHA),
-        ).also { it.setCullingMode(Material.CullingMode.BACK) }
+        val material = materialLoader.createUnlitColorInstance(ZoneInk.veil)
+            .also { it.setCullingMode(Material.CullingMode.BACK) }
         material to DebugLayerNode(engine, material, PRIORITY).also { it.upload(veil) }
     }
     DisposableEffect(fill) { onDispose { materialLoader.destroyMaterialInstance(fill.first) } }
@@ -180,16 +182,16 @@ internal fun RescanZonesPill(count: Int, onClick: () -> Unit, modifier: Modifier
 /** The dashed amber frame over its veil the result views draw a part with, at text size. */
 @Composable
 internal fun ZoneSwatch() {
-    val amber = SceneViewTokens.ArOverlay.accentGuidance
+    val frame = ZoneInk.frame(LocalStageChrome.current)
     Canvas(Modifier.size(Space.md)) {
         val stroke = size.width * SWATCH_STROKE
         val inset = stroke / 2f
         val side = size.width - stroke
-        drawRect(amber.copy(alpha = VEIL_ALPHA), Offset(inset, inset), Size(side, side))
+        drawRect(ZoneInk.veil, Offset(inset, inset), Size(side, side))
         // Each side a dash, its middle a gap: a frame left open, as on the model.
         val dash = side * SWATCH_DASH
         drawRect(
-            amber, Offset(inset, inset), Size(side, side),
+            frame, Offset(inset, inset), Size(side, side),
             style = Stroke(stroke, pathEffect = PathEffect.dashPathEffect(floatArrayOf(dash, side - dash), dash / 2f)),
         )
     }
@@ -254,6 +256,19 @@ private const val SWATCH_DASH = 0.6f
  * enough to leave what was caught of it readable (DESIGN.md, `warning`).
  */
 internal const val VEIL_ALPHA = 0.22f
+
+/**
+ * The amber a part "not scanned yet" is drawn in, on the stage it stands on (#4735): the veil over
+ * it, and the frame round it and round its swatch.
+ */
+internal object ZoneInk {
+    /** The veil over a part: `warning` at [VEIL_ALPHA], on either stage. */
+    val veil: Color = SceneViewTokens.ArOverlay.accentGuidance.copy(alpha = VEIL_ALPHA)
+
+    /** The frame round a part on [chrome]'s stage. */
+    @Suppress("UnusedParameter")
+    fun frame(chrome: StageChrome): Color = SceneViewTokens.ArOverlay.accentGuidance
+}
 
 private const val TAG = "ScanRescan"
 private const val NS_PER_MS = 1_000_000L
