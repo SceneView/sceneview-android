@@ -77,6 +77,6 @@
     <string name="scan_rescan_lining_up">Point at a part you scanned before so this lines up.</string>
     <string name="scan_rescan_fill">Fill the amber frame: %1$d%%</string>
     <string name="scan_rescan_covered">This part is covered. Save to add it to your scan.</string>
-    <string name="scan_rescan_refused">Couldn\'t line up this part. Scan it again from where you started.</string>
+    <string name="scan_rescan_refused">Couldn\'t line up this part with your scan.</string>
     <string name="scan_rescan_merged_title">%1$s, completed</string>
 </resources>

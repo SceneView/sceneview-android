@@ -163,6 +163,10 @@ import io.github.sceneview.demo.demos.internal.ScanBack
 import io.github.sceneview.demo.demos.internal.ScanClock
 import io.github.sceneview.demo.demos.internal.ScanActivity
 import io.github.sceneview.demo.demos.internal.ScanCopy
+import io.github.sceneview.demo.demos.internal.RescanRefusal
+import io.github.sceneview.demo.demos.internal.ScanSaveFailure
+import io.github.sceneview.demo.demos.internal.OpenedCapture
+import io.github.sceneview.demo.demos.internal.RerunShareCopy
 import io.github.sceneview.demo.demos.internal.ScanWallWalk
 import io.github.sceneview.demo.demos.internal.DebugPose
 import io.github.sceneview.demo.demos.internal.ScanDetail
@@ -1378,6 +1382,18 @@ private fun RerunLiveScreen(
     // The built scan, held across a failed write so Try again writes the same one.
     var builtPack by remember { mutableStateOf<RerunCapturePack?>(null) }
     var builtTitle by remember { mutableStateOf("") }
+    // Why the last save failed, said on the "Couldn't save" card (#SAVEFIX), and the scan it could
+    // not keep — the merged copy, for a part scanned again — which Save as file still writes out.
+    var saveFailure by remember { mutableStateOf<ScanSaveFailure?>(null) }
+    var unsaved by remember { mutableStateOf<Pair<RerunCapturePack, String>?>(null) }
+    // Save as file: writing the copy for the share sheet, and whether that failed too.
+    var fileSaving by remember { mutableStateOf(false) }
+    var fileSaveFailed by remember { mutableStateOf(false) }
+    // A part scanned again that did not line up on its scan (#4736): why, said on the card, and
+    // whether it is now saved as a separate scan of its own — lining it up again would only
+    // refuse it again, so the save never waits on it a second time (#SAVEFIX).
+    var rescanRefusal by remember { mutableStateOf<RescanRefusal?>(null) }
+    var rescanSeparate by remember { mutableStateOf(false) }
     var leaveAsked by remember { mutableStateOf(false) }
     // Discard on the "Couldn't save" card: the scan was never written, so it asks first.
     var discardAsked by remember { mutableStateOf(false) }
@@ -1609,6 +1625,11 @@ private fun RerunLiveScreen(
         }
         qaScan = null
         builtPack = null
+        saveFailure = null
+        unsaved = null
+        fileSaveFailed = false
+        rescanRefusal = null
+        rescanSeparate = false
         leaveAsked = false
         discardAsked = false
         phase = ScanPhase.Scanning
@@ -1629,6 +1650,31 @@ private fun RerunLiveScreen(
         // The home this room belongs to, when it is one: read now, for a save that ends away.
         val homeOf = homeSession.takeIf { next != SaveNext.Open }
         RerunScanBuilds.started()
+        saveFailure = null
+        fileSaveFailed = false
+        val appContext = context.applicationContext
+        // Every way a save ends short lands here: the card says why, logcat says it with the
+        // figures — `adb logcat -s ScanSave` — and the scan stays held for Try again (#SAVEFIX).
+        val failed = { stage: String, error: Throwable?, failure: ScanSaveFailure, pack: RerunCapturePack? ->
+            val heap = Runtime.getRuntime()
+            Log.w(
+                SCAN_SAVE_LOG_TAG,
+                ScanSaveFailure.logLine(
+                    stage = stage,
+                    failure = failure,
+                    error = error,
+                    logBytes = pack?.log?.size?.toLong() ?: 0L,
+                    mediaBytes = pack?.media?.size?.toLong() ?: 0L,
+                    heapUsedBytes = heap.totalMemory() - heap.freeMemory(),
+                    heapMaxBytes = heap.maxMemory(),
+                    freeStorageBytes = appContext.filesDir.usableSpace,
+                ),
+                error,
+            )
+            saveFailure = failure
+            phase = ScanPhase.SaveFailed
+            if (!attached.get()) onSaveFailedAway()
+        }
         val job = RerunScanBuilds.scope.launch {
             val now = System.currentTimeMillis()
             // The build can throw too — out of memory on a long scan, painting its planes. That
@@ -1646,9 +1692,8 @@ private fun RerunLiveScreen(
                 }
             }.onFailure { if (it is CancellationException) throw it }
             if (built.isFailure) {
-                Log.w(SCAN_LOG_TAG, "3D Scan: building the scan failed", built.exceptionOrNull())
-                phase = ScanPhase.SaveFailed
-                if (!attached.get()) onSaveFailedAway()
+                val error = built.exceptionOrNull()
+                failed("build", error, error?.let(ScanSaveFailure::of) ?: ScanSaveFailure.Other, null)
                 return@launch
             }
             val pack = built.getOrNull()?.also {
@@ -1661,29 +1706,55 @@ private fun RerunLiveScreen(
                 return@launch
             }
             // A part scanned again (#4736) is lined up on its scan and merged into a copy of it,
-            // kept as a new scan, the scan itself untouched; one that does not line up is refused,
-            // never merged wrong, and the guide says so over "Couldn't save".
-            val rescanned = rescan?.let { withContext(Dispatchers.Default) { it.merge(pack) } }
-            if (rescanned is RescanSave.Refused) {
-                phase = ScanPhase.SaveFailed
-                if (!attached.get()) onSaveFailedAway()
-                return@launch
+            // kept as a new scan, the scan itself untouched; one that does not line up is never
+            // merged wrong. It used to fail the whole save, and Try again lined it up the same way
+            // to the same refusal: the scan was lost (#SAVEFIX). Now the card says why and saves
+            // it as a separate scan — the part on its own, under its own name — and a save that
+            // ends away from the screen keeps it that way at once.
+            val rescanned = rescan?.takeUnless { rescanSeparate }?.let {
+                withContext(Dispatchers.Default) { it.merge(pack) }
             }
-            val saved = (rescanned as? RescanSave.Merged)?.pack ?: pack
-            val title = rescan?.mergedTitle ?: builtTitle
+            if (rescanned is RescanSave.Refused) {
+                rescanRefusal = rescanned.why
+                rescanSeparate = true
+                if (attached.get()) {
+                    val why = IllegalStateException("re-scan not lined up: ${rescanned.why ?: "no depth points"}")
+                    failed("rescan", why, ScanSaveFailure.Refused, pack)
+                    return@launch
+                }
+            }
+            val merged = (rescanned as? RescanSave.Merged)?.pack
+            val saved = merged ?: pack
+            val title = rescan?.mergedTitle?.takeIf { merged != null } ?: builtTitle
+            unsaved = saved to title
+            // Opened once, before it is written: the result screen shows it, and the save counts
+            // its figures off it instead of parsing a long scan's log a second time (#SAVEFIX).
+            val openedResult = runCatching { loadRerunSession(saved) }
+                .onFailure { if (it is CancellationException) throw it }
+            openedResult.exceptionOrNull()?.let {
+                Log.w(SCAN_SAVE_LOG_TAG, "3D Scan: opening the built scan failed; saving it anyway", it)
+            }
+            val opened = openedResult.getOrNull()
             // The saved entry's id opens its result screen, where the name is edited (#4597).
-            val savedId = withContext(Dispatchers.IO) {
+            val savedResult = withContext(Dispatchers.IO) {
                 runCatching {
                     check(!qaSaveFails) { "QA: forced save failure" }
-                    store.save(saved, title, RerunSessionSource.Recorded, now, scope = scanScope).id
-                }.getOrNull()
+                    val read = opened?.let { OpenedCapture(it.trace, it.manifest, saved.media) }
+                    store.save(saved, title, RerunSessionSource.Recorded, now, scope = scanScope, opened = read).id
+                }
             }
+            val savedId = savedResult.getOrNull()
             if (savedId == null) {
-                phase = ScanPhase.SaveFailed
-                if (!attached.get()) onSaveFailedAway()
+                val error = savedResult.exceptionOrNull()
+                val failure = when {
+                    // The QA state shows the card a long scan's full heap gets, Save as file included.
+                    qaSaveFails -> ScanSaveFailure.Memory
+                    error != null -> ScanSaveFailure.of(error)
+                    else -> ScanSaveFailure.Other
+                }
+                failed("write", error, failure, saved)
                 return@launch
             }
-            val opened = runCatching { loadRerunSession(saved) }.getOrNull()
             dropCapture()
             if (!attached.get()) {
                 // The screen was left while it saved: the scan is kept and listed, nothing opens.
@@ -1743,6 +1814,11 @@ private fun RerunLiveScreen(
         qaLong != null -> qaLong?.shownCount ?: 0
         else -> stats.mapPoints
     }
+    // What the review and the save say: the points the saved scan keeps, which "Your scans" lists
+    // too. On a depth scan that is fewer than the HUD's count once the map coarsens (#4717) —
+    // 404,337 confirmed against 232k kept on a long outdoor scan — so the review never promises
+    // more than the list will show (#SAVEFIX).
+    val keptPoints = if (scan?.rawDepth == true) scan?.denseCount ?: 0 else capturedPoints
     // Points still rising are a scan at work, whatever the floor's coverage says: the top line
     // and the coaching line both read it.
     val pointsRising = rememberPointsRising(capturedPoints) {
@@ -1915,7 +1991,7 @@ private fun RerunLiveScreen(
                         phase == ScanPhase.Reviewing && scanScope.roomByRoom -> HomeReviewCard(
                             roomNumber = roomNumber,
                             empty = captureEmpty,
-                            figures = ScanCopy.reviewFigures(capturedPoints, capturedPhotos, capturedClock),
+                            figures = ScanCopy.reviewFigures(keptPoints, capturedPhotos, capturedClock),
                             onKeepScanning = { moveTo(ScanPhase.Scanning) },
                             onNextRoom = { saveScan(SaveNext.NextRoom) },
                             onSaveAndFinish = { saveScan(SaveNext.FinishHome) },
@@ -1930,15 +2006,48 @@ private fun RerunLiveScreen(
                         )
                         phase == ScanPhase.Reviewing -> ScanReviewCard(
                             empty = captureEmpty,
-                            figures = ScanCopy.reviewFigures(capturedPoints, capturedPhotos, capturedClock),
+                            figures = ScanCopy.reviewFigures(keptPoints, capturedPhotos, capturedClock),
                             onKeepScanning = { moveTo(ScanPhase.Scanning) },
                             onSave = onSaveScan,
                         )
-                        phase == ScanPhase.Saving -> ScanSavingCard(points = capturedPoints)
+                        phase == ScanPhase.Saving -> ScanSavingCard(points = keptPoints)
                         phase == ScanPhase.SaveFailed -> ScanSaveFailedCard(
                             // The scan was never written: discarding it asks first.
                             onDiscard = { discardAsked = true },
+                            // Try again, or — for a part that did not line up — Save as a separate scan.
                             onRetry = { saveScan(saveNext) },
+                            failure = saveFailure,
+                            refusal = rescanRefusal,
+                            scanBytes = unsaved?.first?.let { it.manifest.size.toLong() + it.log.size + it.media.size } ?: 0L,
+                            fileSaving = fileSaving,
+                            fileSaveFailed = fileSaveFailed,
+                            // Save as file: the scan written as a .svscan for the share sheet — Files,
+                            // Drive — when saving on the phone keeps failing the same way (#SAVEFIX).
+                            onSaveAsFile = unsaved?.takeIf { saveFailure?.offersFile == true }?.let { (pack, title) ->
+                                {
+                                    if (!fileSaving) {
+                                        fileSaving = true
+                                        fileSaveFailed = false
+                                        val appContext = context.applicationContext
+                                        RerunScanBuilds.scope.launch {
+                                            val file = withContext(Dispatchers.IO) {
+                                                runCatching {
+                                                    RerunShareCopy.write(
+                                                        pack, title, rerunShareDirectory(appContext, RERUN_SHARE_UNSAVED),
+                                                        includePhotos = true, scope = scanScope,
+                                                    )
+                                                }
+                                            }
+                                            fileSaving = false
+                                            file.onSuccess { sharePreparedScan(appContext, it, title) }
+                                                .onFailure {
+                                                    Log.w(SCAN_SAVE_LOG_TAG, "3D Scan: Save as file failed", it)
+                                                    fileSaveFailed = true
+                                                }
+                                        }
+                                    }
+                                }
+                            },
                         )
                         else -> ScanControls(
                             phase = phase,
@@ -2152,6 +2261,7 @@ private fun RerunLiveScreen(
             if (leaveAsked) {
                 ScanLeaveDialog(
                     saveFailed = phase == ScanPhase.SaveFailed,
+                    saveFailure = saveFailure,
                     // A capture that caught nothing has nothing to save: Keep scanning or Discard.
                     empty = captureEmpty && builtPack == null,
                     onKeepScanning = {
@@ -2492,8 +2602,8 @@ private const val QA_RECORD_NEVER_LOOP_S = 3_600f
 /** Seconds the tracking-loss QA scan captures before it loses tracking. */
 private const val QA_TRACKING_LOST_AFTER_S = 3f
 
-/** `adb logcat -s ARRerunDemo`: a scan build that threw. */
-private const val SCAN_LOG_TAG = "ARRerunDemo"
+/** `adb logcat -s ScanSave`: why a 3D Scan was not saved, with its size and the phone's heap (#SAVEFIX). */
+private const val SCAN_SAVE_LOG_TAG = "ScanSave"
 
 /** How often the live screen checks whether ARCore has found the room, to start recording. */
 private const val AUTO_START_POLL_MS = 100L
