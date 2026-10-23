@@ -15,6 +15,8 @@ import androidx.compose.runtime.setValue
 import io.github.sceneview.demo.demos.internal.CaptureChrome
 import io.github.sceneview.demo.demos.internal.CaptureCue
 import io.github.sceneview.demo.demos.internal.ScanActivity
+import io.github.sceneview.demo.demos.internal.RescanRefusal
+import io.github.sceneview.demo.demos.internal.ScanSaveFailure
 import io.github.sceneview.demo.demos.internal.ScanTurn
 import io.github.sceneview.math.Position
 import io.github.sceneview.demo.demos.internal.OrbitPose
@@ -441,19 +443,52 @@ internal fun ScanSavingCard(points: Int = 0) {
 
 /**
  * A write that failed stays on screen until it is answered: the built scan is still held, Try
- * again writes it again, Discard drops it. Never a toast, never "Saved".
+ * again writes it again, Discard drops it. Never a toast, never "Saved". It says why ([failure],
+ * [scanBytes]) and, when a file can still keep the scan, offers Save as file ([onSaveAsFile]) —
+ * a way out when the same failure would only come back (#4815). A part scanned again that did
+ * not line up ([refusal]) lines up no better a second time: its main action saves it as a
+ * separate scan instead of Try again.
  */
 @Composable
-internal fun ScanSaveFailedCard(onDiscard: () -> Unit, onRetry: () -> Unit) {
+internal fun ScanSaveFailedCard(
+    onDiscard: () -> Unit,
+    onRetry: () -> Unit,
+    failure: ScanSaveFailure? = null,
+    scanBytes: Long = 0L,
+    fileSaving: Boolean = false,
+    fileSaveFailed: Boolean = false,
+    onSaveAsFile: (() -> Unit)? = null,
+    refusal: RescanRefusal? = null,
+) {
     OverlayCard(testTag = SCAN_SAVE_FAILED_TAG) {
         Text(
-            text = ScanCopy.SAVE_FAILED,
+            text = ScanCopy.saveFailedTitle(failure),
             style = SceneViewTokens.Type.title.copy(color = ArOverlay.accentGuidance),
         )
-        Text(text = ScanCopy.SAVE_FAILED_DETAIL, style = OnScrimBody)
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
-            FilledTonalButton(onClick = onDiscard, modifier = Modifier.weight(1f)) { Text(ScanCopy.DISCARD) }
-            Button(onClick = onRetry, modifier = Modifier.weight(1f)) { Text(ScanCopy.TRY_AGAIN) }
+        Text(text = ScanCopy.saveFailedDetail(failure, scanBytes, refusal), style = OnScrimBody)
+        if (fileSaveFailed) Text(text = ScanCopy.SAVE_AS_FILE_FAILED, style = OnScrimBody)
+        if (failure == ScanSaveFailure.Refused) {
+            // "Save as a separate scan" is too long for half the card: one action a row.
+            Button(onClick = onRetry, modifier = Modifier.fillMaxWidth().testTag(SCAN_SAVE_RETRY_TAG)) {
+                Text(ScanCopy.saveFailedAction(failure))
+            }
+            FilledTonalButton(onClick = onDiscard, modifier = Modifier.fillMaxWidth()) { Text(ScanCopy.DISCARD) }
+        } else {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+                FilledTonalButton(onClick = onDiscard, modifier = Modifier.weight(1f)) { Text(ScanCopy.DISCARD) }
+                if (failure != ScanSaveFailure.Empty) {
+                    Button(onClick = onRetry, modifier = Modifier.weight(1f).testTag(SCAN_SAVE_RETRY_TAG)) {
+                        Text(ScanCopy.saveFailedAction(failure))
+                    }
+                }
+            }
+        }
+        if (onSaveAsFile != null) {
+            FilledTonalButton(
+                onClick = onSaveAsFile,
+                enabled = !fileSaving,
+                modifier = Modifier.fillMaxWidth().testTag(SCAN_SAVE_AS_FILE_TAG),
+            ) { Text(if (fileSaving) ScanCopy.SAVING_FILE else ScanCopy.SAVE_AS_FILE) }
         }
     }
 }
@@ -467,6 +502,7 @@ internal fun ScanSaveFailedCard(onDiscard: () -> Unit, onRetry: () -> Unit) {
 internal fun ScanLeaveDialog(
     saveFailed: Boolean,
     empty: Boolean,
+    saveFailure: ScanSaveFailure? = null,
     onKeepScanning: () -> Unit,
     onSave: () -> Unit,
     onDiscard: () -> Unit,
@@ -484,7 +520,7 @@ internal fun ScanLeaveDialog(
             if (empty) {
                 TextButton(onClick = onKeepScanning) { Text(ScanCopy.KEEP_SCANNING) }
             } else {
-                TextButton(onClick = onSave) { Text(if (saveFailed) ScanCopy.TRY_AGAIN else ScanCopy.SAVE_SCAN) }
+                TextButton(onClick = onSave) { Text(if (saveFailed) ScanCopy.saveFailedAction(saveFailure) else ScanCopy.SAVE_SCAN) }
             }
         },
         dismissButton = {
@@ -628,7 +664,7 @@ internal fun ScanLiveView(
                 if (observed.isNew(frame, pose, cells)) {
                     coverage.observe(frame, pose = pose, snapshotCells = cells, record = media.trace)
                     // The depth cloud tells how much of each wall was seen: a wall is drawn that far.
-                    walls?.observe(frame, coverage, pose, dense = dense?.cloud?.positions)
+                    walls?.observe(frame, coverage, pose, dense = dense)
                 }
             },
             // The walls stand in the room while it is scanned; saving, the orbit shows the cloud.
@@ -687,5 +723,7 @@ internal const val SCAN_HINT_TAG = "ar_rerun_scan_hint"
 internal const val SCAN_REVIEW_TAG = "ar_rerun_scan_review"
 internal const val SCAN_SAVING_TAG = "ar_rerun_scan_saving"
 internal const val SCAN_SAVE_FAILED_TAG = "ar_rerun_scan_save_failed"
+internal const val SCAN_SAVE_AS_FILE_TAG = "ar_rerun_scan_save_as_file"
+internal const val SCAN_SAVE_RETRY_TAG = "ar_rerun_scan_save_retry"
 internal const val SCAN_LEAVE_TAG = "ar_rerun_scan_leave"
 internal const val SCAN_DISCARD_TAG = "ar_rerun_scan_discard"

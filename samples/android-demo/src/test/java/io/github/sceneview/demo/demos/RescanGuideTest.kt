@@ -5,17 +5,28 @@ import android.graphics.Bitmap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import io.github.sceneview.demo.R
+import io.github.sceneview.demo.demos.internal.ArDebugEvent
+import io.github.sceneview.demo.demos.internal.ArDebugLogWriter
+import io.github.sceneview.demo.demos.internal.DebugPose
 import io.github.sceneview.demo.demos.internal.DenseCloud
+import io.github.sceneview.demo.demos.internal.RerunCapturePack
 import io.github.sceneview.demo.demos.internal.RerunSyntheticBedroom
 import io.github.sceneview.demo.demos.internal.RescanGuidance
 import io.github.sceneview.demo.demos.internal.RescanKind
@@ -26,7 +37,11 @@ import io.github.sceneview.demo.demos.internal.RescanRegistrar
 import io.github.sceneview.demo.demos.internal.RescanRegistrationTest
 import io.github.sceneview.demo.demos.internal.RescanZone
 import io.github.sceneview.demo.demos.internal.RescanZonesTest.Companion.filter
+import io.github.sceneview.demo.demos.internal.RerunSessionSource
+import io.github.sceneview.demo.demos.internal.RerunSessionStore
+import io.github.sceneview.demo.demos.internal.ScanCopy
 import io.github.sceneview.demo.demos.internal.ScanLens
+import io.github.sceneview.demo.demos.internal.ScanSaveFailure
 import io.github.sceneview.demo.demos.internal.SvpcCodec
 import io.github.sceneview.demo.theme.LocalStageChrome
 import io.github.sceneview.demo.theme.SceneViewDemoTheme
@@ -178,6 +193,67 @@ class RescanGuideTest {
         step()
         line(context.getString(R.string.scan_rescan_refused))
         save(composeRule.onNodeWithTag(RESCAN_GUIDE_TAG).captureToImage().asAndroidBitmap(), "rescan-guide-refused")
+    }
+
+    @Test
+    fun `a refused re-scan is refused again on Try again, and still saves as a separate scan`() {
+        // What lost Thomas's scans on 4.62.0 (#4815): lining up is deterministic, so Try again
+        // refused the same re-scan the same way, and Discard was the only way out.
+        val target = target()
+        val fused = RescanMergeTest.capture(RescanRegistrationTest.fuse(RerunSyntheticBedroom.scene, RerunSyntheticBedroom.poses()))
+        // A recorded re-scan: its camera path in the log, beside its dense cloud.
+        val path = ArDebugLogWriter.writeBytes(listOf(ArDebugEvent.CameraPose(1_000L, DebugPose(0f, 1.4f, 0f, 0f, 0f, 0f, 1f))))
+        val bedroom = RerunCapturePack(fused.manifest, path, fused.media)
+        val first = target.merge(bedroom) as RescanSave.Refused
+        val again = target.merge(bedroom) as RescanSave.Refused
+        assertEquals(first.why, again.why)
+        // Save as a separate scan: the re-scan's own capture, never lined up, is kept and reopens.
+        val store = RerunSessionStore(File(context.cacheDir, "rescan-separate").apply { deleteRecursively() })
+        val saved = store.save(bedroom, "Scan · Oct 23", RerunSessionSource.Recorded)
+        assertEquals(listOf(saved.id), store.list().map { it.id })
+        val kept = requireNotNull(store.capture(saved.id))
+        assertArrayEquals(bedroom.log, kept.log)
+        assertArrayEquals(bedroom.media, kept.media)
+        assertTrue(kept.open() != null)
+        assertTrue(ScanCopy.rescanRefusedDetail(first.why).startsWith("This part didn't line up with your scan: "))
+    }
+
+    @Test
+    fun `a part that did not line up says why on the card and saves as a separate scan, dark`() = refusedCard(dark = true)
+
+    @Test
+    fun `a part that did not line up says why on the card and saves as a separate scan, light`() = refusedCard(dark = false)
+
+    /** The stage after Save on a re-scan of another room: the card alone, the guide gone (#4815). */
+    private fun refusedCard(dark: Boolean) {
+        val target = target()
+        val bedroom = RescanMergeTest.capture(RescanRegistrationTest.fuse(RerunSyntheticBedroom.scene, RerunSyntheticBedroom.poses()))
+        val why = (target.merge(bedroom) as RescanSave.Refused).why
+        var separate = 0
+        composeRule.mainClock.autoAdvance = false
+        composeRule.setContent {
+            SceneViewDemoTheme(darkTheme = dark) {
+                CompositionLocalProvider(LocalStageChrome provides StageChrome.Media) {
+                    Box(Modifier.fillMaxSize().background(StageChrome.Media.ground)) {
+                        Box(Modifier.align(Alignment.BottomCenter).padding(16.dp)) {
+                            ScanSaveFailedCard(
+                                onDiscard = {},
+                                onRetry = { separate++ },
+                                failure = ScanSaveFailure.Refused,
+                                refusal = why,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        step()
+        composeRule.onNodeWithText(ScanCopy.RESCAN_REFUSED_TITLE).assertExists()
+        composeRule.onNodeWithText(ScanCopy.rescanRefusedDetail(why)).assertExists()
+        composeRule.onNodeWithText(ScanCopy.TRY_AGAIN).assertDoesNotExist()
+        composeRule.onNodeWithTag(SCAN_SAVE_RETRY_TAG).assertTextEquals(ScanCopy.SAVE_SEPARATE).performClick()
+        assertEquals(1, separate)
+        save(composeRule.onRoot().captureToImage().asAndroidBitmap(), "rescan-refused-card-${if (dark) "dark" else "light"}")
     }
 
     @Test
