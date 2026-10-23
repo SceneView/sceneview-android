@@ -90,6 +90,7 @@ import io.github.sceneview.demo.demos.internal.DollhouseFraming
 import io.github.sceneview.demo.demos.internal.ArDebugStyle
 import io.github.sceneview.demo.demos.internal.DollhouseOpening
 import io.github.sceneview.demo.demos.internal.FramingInsets
+import io.github.sceneview.demo.demos.internal.ReconstructionMethod
 import io.github.sceneview.demo.demos.internal.RerunCapturePack
 import io.github.sceneview.demo.demos.internal.RerunGlbMesh
 import io.github.sceneview.demo.demos.internal.RerunMarchingCubes
@@ -433,9 +434,14 @@ private class Meshed(
  * The surface is meshed within what the heap's finish takes ([CleanModel.maxRawTriangles]): on a
  * Pixel 4a's 192 MB, a scan past it meshes with cells twice as coarse, and finishes.
  */
-private fun mesh(source: RerunModelSource, progress: (Float) -> Unit): Meshed {
+private fun mesh(
+    source: RerunModelSource,
+    progress: (Float) -> Unit,
+    reconstruction: ReconstructionMethod = ReconstructionMethod.Fused,
+): Meshed {
     val started = System.nanoTime()
-    val tsdf = when (source) {
+    val reconstructed = reconstructedTsdf(source, reconstruction) { progress(it * FUSE_SHARE) }
+    val tsdf = reconstructed ?: when (source) {
         is RerunModelSource.Live -> checkNotNull(source.tsdf) { "TSDF released" }
         is RerunModelSource.Surfels -> RerunTsdf().also { t ->
             t.integrateSurfels(source.cloud) { progress(it * FUSE_SHARE) }
@@ -451,11 +457,11 @@ private fun mesh(source: RerunModelSource, progress: (Float) -> Unit): Meshed {
     val fuseMs = (System.nanoTime() - started) / NS_PER_MS
     // A surfel's weight counts surfels, each already seen in DenseFusion.MIN_VIEWS frames or more:
     // the default keeps the lateral fade between two surfel columns. Depth frames count views.
-    val minWeight = if (source is RerunModelSource.Surfels) RerunMarchingCubes.DEFAULT_MIN_WEIGHT else FRAMES_MIN_WEIGHT
-    val base = if (source is RerunModelSource.Live) 0f else FUSE_SHARE
+    val minWeight = if (reconstructed != null || source is RerunModelSource.Surfels) RerunMarchingCubes.DEFAULT_MIN_WEIGHT else FRAMES_MIN_WEIGHT
+    val base = if (source is RerunModelSource.Live && reconstructed == null) 0f else FUSE_SHARE
     val maxTriangles = CleanModel.maxRawTriangles(Runtime.getRuntime().maxMemory())
     val extraction = RerunMarchingCubes.extractWhole(tsdf, minWeight, maxTriangles) { progress(base + (MESH_SHARE - base) * it) }
-    val release = source is RerunModelSource.Live && tsdf.bytes >= tsdf.maxBytes / 2
+    val release = source is RerunModelSource.Live && reconstructed == null && tsdf.bytes >= tsdf.maxBytes / 2
     if (release && source is RerunModelSource.Live) source.release()
     return Meshed(
         surface = RawSurface(extraction.mesh),
